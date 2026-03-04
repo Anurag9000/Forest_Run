@@ -32,6 +32,7 @@ A high-fidelity, colorful 2D endless runner for Android. A spiritual successor t
 | [TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) | Kotlin class design, engine, state machines, spawner |
 | [ANDROID_SETUP.md](docs/ANDROID_SETUP.md) | Manifest, build.gradle, asset naming, setup checklist |
 | [UNDERTALE_VIBE.md](docs/UNDERTALE_VIBE.md) | Personality layer — Mercy system, Flavour Text, Ghost Run, Persistent Memory, Leitmotif, entity dialogue |
+| [IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) | **Start here** — 27 ordered phases from blank project to Google Play, one fully-complete step at a time |
 
 ---
 
