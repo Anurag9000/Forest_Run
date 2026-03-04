@@ -15,7 +15,10 @@ A high-fidelity, colorful 2D endless runner for Android. A spiritual successor t
 - **Bloom State** — Collect 10 Seeds for a 5-second invincibility power-up that transforms the world
 - **Garden Meta-Loop** — Seeds grow permanent plants in your personal Garden on the main screen
 - **48-Frame Run Cycle** — Fluid pixel-art character animations with squash & stretch physics
-- **Adaptive Music** — Tempo syncs with run speed; orchestral swell during Bloom
+- **Adaptive Music** — Tempo syncs with run speed; orchestral swell during Bloom; Forest Leitmotif woven into every track
+- **Undertale Personality** — Flavour text, Mercy system, Spare mechanics, entity dialogue bubbles, and Determination quotes on the REST screen
+- **Persistent Memory** — The game remembers across sessions: entity encounters unlock costumes; repeat killers taunt you; a Ghost of your best run runs alongside you
+- **Pacifist System** — Complete a biome without scaring any animals for a Friendship Bonus; collect 5 Mercy Hearts to Spare the next Fox
 
 ---
 
@@ -24,10 +27,11 @@ A high-fidelity, colorful 2D endless runner for Android. A spiritual successor t
 | Document | Description |
 |---|---|
 | [GDD.md](docs/GDD.md) | Full Game Design Document — vision, flow, mechanics, scoring |
-| [ENTITY_DATABASE.md](docs/ENTITY_DATABASE.md) | All 19 entities — AI, hitboxes, behaviours, biome affinity |
+| [ENTITY_DATABASE.md](docs/ENTITY_DATABASE.md) | All 19 entities — AI, hitboxes, behaviours, biome affinity, Undertale addendums |
 | [VISUAL_FX_SPEC.md](docs/VISUAL_FX_SPEC.md) | Parallax, particles, wind sway, lighting, camera effects |
 | [TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) | Kotlin class design, engine, state machines, spawner |
 | [ANDROID_SETUP.md](docs/ANDROID_SETUP.md) | Manifest, build.gradle, asset naming, setup checklist |
+| [UNDERTALE_VIBE.md](docs/UNDERTALE_VIBE.md) | Personality layer — Mercy system, Flavour Text, Ghost Run, Persistent Memory, Leitmotif, entity dialogue |
 
 ---
 
@@ -79,7 +83,9 @@ app/src/main/
 │   │   ├── birds/
 │   │   └── animals/
 │   ├── systems/         ← EntityManager, BiomeManager, ParticleManager
-│   ├── ui/              ← HUD, GameOverScreen, GardenScreen
+│   │                      FlavorTextManager, MercySystem, GhostRecorder
+│   │                      PersistentMemoryManager, LeitmotifManager
+│   ├── ui/              ← HUD, GameOverScreen, GardenScreen, DialogueBubble
 │   └── utils/           ← SpriteSheetHelper, SaveManager, MathUtils
 └── assets/              ← Pixel art .png sprite files
 ```
@@ -102,3 +108,4 @@ Personal project — not for commercial distribution.
 ---
 
 *Project: Forest_Run | Platform: Android | Language: Kotlin*
+*"The Eucalyptus fills you with determination."*

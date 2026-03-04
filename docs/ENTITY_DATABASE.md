@@ -625,4 +625,27 @@ All entity classes must:
 
 ---
 
-*Document version: 1.0 | Project: Forest_Run | Last updated: 2026-03-04*
+*Document version: 2.0 | Project: Forest_Run | Last updated: 2026-03-04*
+
+---
+
+## SECTION 7 — Undertale Personality Addendum
+
+> Full system specs are in [UNDERTALE_VIBE.md](UNDERTALE_VIBE.md). This section lists the per-entity personality layers.
+
+| Entity | Dialogue Bubble Trigger | Animal Says | PersistentMemory Costume (10 enc.) | Spare Behaviour |
+|---|---|---|---|---|
+| **Cat** | Player jumps over | `"Meow?"` / `"Phew."` | Tiny pixel hat 🎩 → Flower crown 🌸 at 25 enc. | At 5 mercy hearts: waves and exits peacefully |
+| **Dog** | Bark fires / Running Buddy mode | `"BORF!"` / `"Hi!!"` / `"See ya!"` | Tiny bandana → Bowtie at 25 enc. | 20% chance enters Running Buddy mode (harmless, runs beside player for 3–5s) |
+| **Fox** | Mirror jump fires / Player beats fox | `"Heh."` / `"Next time..."` | Tiny pixel scarf | At 5 mercy hearts: sits and waves, does NOT jump |
+| **Wolf** | Charge activates / Player clears wolf | `"GRRR..."` / `"..."` (silence — embarrassed) | Scar added to sprite at 20 enc. | At 8 mercy hearts: stops halfway, turns, trots offscreen |
+| **Hedgehog** | Player jumps just in time | `"Eep!"` | Tiny sunglasses at 10 enc. | Not applicable (non-lethal already) |
+| **Owl** | Player near, owl stays / Owl dives | `"..."` / `"HOOT!"` | Crescent moon charm at 10 (night) enc. | Not applicable |
+| **Duck** | Player ducks under | `"Quack."` | — | Not applicable |
+| **Cactus** | 5+ run-ending hits: Deja Vu badge | `"Again? Really?"` (pre-spawn floating text) | Skull-and-crossbones badge at 5 kills | Not applicable (flora) |
+
+### The Déjà Vu Rule
+If the same entity TYPE ends two runs in a row, that entity type gets a floating `"Again?"` text bubble the next time it spawns — telegraphed 0.8s before it reaches the player.
+
+### Ghost Run
+A semi-transparent ghost (40% opacity, white-blue tint) replays the player's personal best run alongside them. When the ghost reaches its previous endpoint, it waves and fades with a sparkle. See `GhostRecorder` / `GhostPlayer` in [UNDERTALE_VIBE.md](UNDERTALE_VIBE.md).
