@@ -4,6 +4,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.yourname.forest_run.engine.SpriteManager
+import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.utils.MathUtils
 
 /**
@@ -25,6 +27,7 @@ import com.yourname.forest_run.utils.MathUtils
 class Player(
     screenWidth: Int,
     screenHeight: Int,
+    private val spriteManager: SpriteManager,
     groundYOverride: Float = -1f    // -1 = use default (82% of screen); set by ParallaxBackground
 ) {
 
@@ -92,6 +95,22 @@ class Player(
     // Hitbox
     // -----------------------------------------------------------------------
     val hitbox = RectF()
+
+    // -----------------------------------------------------------------------
+    // Animations (Phase 6)
+    // -----------------------------------------------------------------------
+    private val animRun       = spriteManager.playerRun.copy()
+    private val animJumpStart = spriteManager.playerJumpStart.copy()
+    private val animJumping   = spriteManager.playerJumping.copy()
+    private val animApex      = spriteManager.playerApex.copy()
+    private val animFalling   = spriteManager.playerFalling.copy()
+    private val animLanding   = spriteManager.playerLanding.copy()
+    private val animDuck      = spriteManager.playerDuck.copy()
+    // Bloom uses the running animation but invincible.
+    // Rest uses the ducking animation stopped on the last frame.
+
+    private var currentAnimation: SpriteSheet = animRun
+    private val drawRect = RectF()
 
     // -----------------------------------------------------------------------
     // Squash / stretch
@@ -203,6 +222,7 @@ class Player(
             else                -> updatePhysics(deltaTime)
         }
         updateHitbox()
+        currentAnimation.update(deltaTime)
     }
 
     // -----------------------------------------------------------------------
@@ -306,6 +326,25 @@ class Player(
     private fun transitionTo(newState: PlayerState) {
         state      = newState
         stateTimer = 0f
+
+        // Swap to the correct animation and reset it to frame 0
+        currentAnimation = when (state) {
+            PlayerState.RUNNING    -> animRun
+            PlayerState.JUMP_START -> animJumpStart
+            PlayerState.JUMPING    -> animJumping
+            PlayerState.APEX       -> animApex
+            PlayerState.FALLING    -> animFalling
+            PlayerState.LANDING    -> animLanding
+            PlayerState.DUCKING    -> animDuck
+            PlayerState.BLOOM      -> animRun       // Bloom uses run animation
+            PlayerState.REST       -> animDuck      // Rest sits down (duck sprite)
+        }
+        currentAnimation.reset()
+
+        if (state == PlayerState.REST) {
+            // Force it to stay on the final frame of the duck animation
+            currentAnimation.setFrame(currentAnimation.frameCount - 1)
+        }
     }
 
     private fun updateHitbox() {
@@ -318,11 +357,10 @@ class Player(
     }
 
     // -----------------------------------------------------------------------
-    // Draw (Phase 3: debug rectangle – Phase 6 replaces with sprites)
+    // Draw (Phase 6: animated sprites via SpriteSheet)
     // -----------------------------------------------------------------------
 
     /** Paint pool – created once, never inside draw(). */
-    private val fillPaint = Paint().apply { style = Paint.Style.FILL }
     private val hitboxPaint = Paint().apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f
@@ -335,9 +373,6 @@ class Player(
     }
 
     fun draw(canvas: Canvas) {
-        // Pick colour based on state
-        fillPaint.color = stateColour()
-
         // Save + scale around the bottom-centre of the sprite
         // (feet stay planted, top stretches/squashes)
         val cx = x + BASE_WIDTH  / 2f          // horizontal centre
@@ -346,8 +381,9 @@ class Player(
         canvas.save()
         canvas.scale(scaleX, scaleY, cx, fy)
 
-        // Draw body rect (in un-scaled space; canvas.scale does the work)
-        canvas.drawRect(x, y, x + BASE_WIDTH, y + BASE_HEIGHT, fillPaint)
+        // Draw body sprint (in un-scaled space; canvas.scale does the work)
+        drawRect.set(x, y, x + BASE_WIDTH, y + BASE_HEIGHT)
+        currentAnimation.draw(canvas, drawRect)
 
         canvas.restore()
 
@@ -359,18 +395,6 @@ class Player(
 
         // State label
         drawStateLabel(canvas, cx, y - 20f)
-    }
-
-    private fun stateColour(): Int = when (state) {
-        PlayerState.RUNNING    -> Color.rgb( 70, 160, 255)   // blue
-        PlayerState.JUMP_START -> Color.rgb(255, 230,  50)   // warm yellow (squash)
-        PlayerState.JUMPING    -> Color.rgb(255, 255, 120)   // bright yellow
-        PlayerState.APEX       -> Color.rgb(255, 200, 255)   // lavender
-        PlayerState.FALLING    -> Color.rgb(255, 160,  60)   // orange
-        PlayerState.LANDING    -> Color.rgb(255,  80,  80)   // red-orange (impact)
-        PlayerState.DUCKING    -> Color.rgb( 80, 220, 180)   // teal
-        PlayerState.BLOOM      -> Color.rgb(220, 120, 255)   // purple-pink
-        PlayerState.REST       -> Color.rgb(140, 140, 140)   // grey
     }
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

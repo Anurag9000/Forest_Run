@@ -48,10 +48,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private lateinit var parallaxBackground: ParallaxBackground
 
     // -----------------------------------------------------------------------
-    // Phase 5: Game state + HUD – initialized in surfaceCreated
+    // Phase 5: Game state + HUD
+    // Phase 6: Sprite Manager
     // -----------------------------------------------------------------------
     private lateinit var gameState: GameStateManager
     private lateinit var hud: HUD
+    private lateinit var spriteManager: SpriteManager
 
     // -----------------------------------------------------------------------
     // FPS tracking
@@ -138,6 +140,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             parallaxBackground = ParallaxBackground(screenWidth, screenHeight)
         }
 
+        // Phase 6: SpriteManager
+        if (!::spriteManager.isInitialized) {
+            spriteManager = SpriteManager(context)
+        }
+
         // Phase 5: HUD
         if (!::hud.isInitialized) {
             hud = HUD(context, screenWidth, screenHeight)
@@ -145,7 +152,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 3: Player
         if (!::player.isInitialized) {
-            player = Player(screenWidth, screenHeight, parallaxBackground.groundY)
+            player = Player(screenWidth, screenHeight, spriteManager, parallaxBackground.groundY)
             wirePlayerToInput()
         }
 
