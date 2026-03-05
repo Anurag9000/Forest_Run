@@ -6,6 +6,9 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleEmitter
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.utils.MathUtils
 
 /**
@@ -195,10 +198,15 @@ class Player(
     // -----------------------------------------------------------------------
     // Bloom
     // -----------------------------------------------------------------------
+    private var bloomAuraEmitter: ParticleEmitter? = null
+
     fun activateBloom() {
         isInvincible = true
         bloomTimer   = 0f
         transitionTo(PlayerState.BLOOM)
+        // Register continuous aura emitter
+        val aura = FxPreset.BLOOM_AURA.build(x + BASE_WIDTH / 2f, y + BASE_HEIGHT / 2f)
+        bloomAuraEmitter = ParticleManager.addContinuous(aura)
     }
 
     // -----------------------------------------------------------------------
@@ -209,6 +217,11 @@ class Player(
         y         = groundY - BASE_HEIGHT
         transitionTo(PlayerState.REST)
         isInvincible = false
+        // Stop bloom aura if it was active
+        bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
+        bloomAuraEmitter = null
+        // HIT particle burst
+        ParticleManager.emit(FxPreset.HIT_BURST, x + BASE_WIDTH / 2f, y + BASE_HEIGHT / 2f)
     }
 
     // -----------------------------------------------------------------------
@@ -324,6 +337,17 @@ class Player(
     // -----------------------------------------------------------------------
 
     private fun transitionTo(newState: PlayerState) {
+        // Emit particle FX on certain transitions
+        val footX = x + BASE_WIDTH / 2f
+        val footY = y + BASE_HEIGHT
+        when (newState) {
+            PlayerState.JUMP_START -> ParticleManager.emit(FxPreset.JUMP_DUST, footX, footY)
+            PlayerState.LANDING    -> ParticleManager.emit(FxPreset.LAND_THUD, footX, footY)
+            PlayerState.DUCKING    -> ParticleManager.emit(FxPreset.SLIDE_GRASS, footX, footY)
+            PlayerState.BLOOM      -> { /* Aura registered separately in activateBloom() */ }
+            else -> { /* No FX */ }
+        }
+
         state      = newState
         stateTimer = 0f
 

@@ -12,6 +12,8 @@ import android.view.SurfaceView
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.FlavorTextManager
 import com.yourname.forest_run.ui.HUD
 
@@ -307,13 +309,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (collision != null) {
                 when (collision.result) {
                     CollisionResult.HIT -> {
-                        // Force player into REST state (game over for this run)
-                        player.triggerRest()
+                        // Force player into REST state
+                        player.triggerRest()  // also emits HIT_BURST particles
                         // Phase 15: triggerShake(8f, 0.5f) goes here
                     }
                     CollisionResult.MERCY_MISS -> {
                         // Green border flash
                         mercyFlashTimer = mercyFlashDuration
+                        // Stars burst at player centre
+                        ParticleManager.emit(FxPreset.MERCY_STARS,
+                            player.x + Player.BASE_WIDTH / 2f,
+                            player.y + Player.BASE_HEIGHT / 2f)
                     }
                     CollisionResult.NONE -> { /* handled above, shouldn't reach here */ }
                 }
@@ -323,8 +329,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (mercyFlashTimer > 0f) mercyFlashTimer -= deltaTime
         }
 
+        // Phase 14: Track bloom aura position with player
+        if (::player.isInitialized && player.state == PlayerState.BLOOM) {
+            // ParticleManager continuous emitters track emitter.x/.y at spawn time;
+            // the aura emitter is recreated on each Bloom trigger so position is correct.
+        }
+
         // Flavor text float animation
         FlavorTextManager.update(deltaTime)
+
+        // Phase 14: Update all particles
+        ParticleManager.update(deltaTime)
     }
 
     override fun draw(canvas: Canvas) {
@@ -342,8 +357,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // 4. Player (above entities)
         if (::player.isInitialized) player.draw(canvas)
 
-        // 5. Floating flavor text
+        // 5. Floating flavor text + Particles (same layer — world space FX)
         FlavorTextManager.draw(canvas)
+        ParticleManager.draw(canvas)
 
         // 6. MERCY_MISS green border flash
         if (mercyFlashTimer > 0f) {
