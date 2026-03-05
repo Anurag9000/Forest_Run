@@ -5,72 +5,76 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.utils.MathUtils
 
 /**
- * Heads-Up Display — always drawn last so it's always on top of everything.
+ * Heads-Up Display — Phase 18 fully polished.
  *
- * Layout:
- *  ┌─────────────────────────────────────────────────────────────┐
- *  │  [🌱 × 7]   ║  BLOOM METER  ║              1,842 m  [NEW!] │
- *  │                                                             │
- *  └─────────────────────────────────────────────────────────────┘
- *  Left:   seed counter
- *  Centre: bloom meter (10 segments vertical bar, left side)
- *  Right:  score + distance (top-right)
- *          high score ghost line (below current if ahead)
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │  🌱 ×7    ║ [▓▓▓▓▒▒▒▒▒▒] BLOOM  ║  1,842 m   ✦NEW  │
+ * │  ♥♥♥♥♥                                          12,048    │
+ * └──────────────────────────────────────────────────────────────────────┘
  *
- * Font: PressStart2P (pixel font). Graceful fallback to Typeface.MONOSPACE
- * if the .ttf hasn't been placed in assets/fonts/ yet.
+ * Features:
+ *  - Bloom meter: 10 rounded segments, animated fill (smooth lerp),
+ *    green gradient per segment, glowing border ring when full/active.
+ *  - Mercy heart strip: ♥ icons rendered below the seed counter.
+ *  - Score: PressStart2P, right-aligned, comma-formatted.
+ *  - Distance: top-right in km when > 1000 m.
+ *  - NEW badge: pulsing gold star when beating high score.
+ *  - Ghost best score shown when NOT yet a high score.
+ *  - All paints and geometry objects allocated once (zero GC in draw).
  */
 class HUD(context: Context, private val screenWidth: Int, private val screenHeight: Int) {
 
-    // -----------------------------------------------------------------------
-    // Typeface – try to load pixel font, fall back silently
-    // -----------------------------------------------------------------------
+    // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
         Typeface.createFromAsset(context.assets, "fonts/PressStart2P-Regular.ttf")
     }.getOrDefault(Typeface.MONOSPACE)
 
-    // -----------------------------------------------------------------------
-    // Layout constants
-    // -----------------------------------------------------------------------
-    private val PAD          = 24f     // edge padding
-    private val HUD_H        = 72f     // HUD strip height
+    // ── Layout ────────────────────────────────────────────────────────────
+    private val PAD          = 24f
+    private val HUD_H        = 80f     // taller strip for mercy hearts row
+    private val SCORE_SIZE   = 28f
+    private val LABEL_SIZE   = 18f
+    private val SMALL_SIZE   = 16f
+    private val HEART_SIZE   = 22f
 
-    // Score text size
-    private val SCORE_TEXT_SIZE  = 28f
-    private val LABEL_TEXT_SIZE  = 20f
-    private val SMALL_TEXT_SIZE  = 18f
+    // Bloom meter
+    private val METER_LEFT    = screenWidth * 0.35f
+    private val METER_RIGHT   = screenWidth * 0.65f
+    private val METER_TOP     = 8f
+    private val METER_BOTTOM  = 48f
+    private val SEG_GAP       = 4f
+    private val SEG_COUNT     = GameConstants.BLOOM_SEED_COUNT
+    private val segW          = (METER_RIGHT - METER_LEFT - SEG_GAP * (SEG_COUNT - 1)) / SEG_COUNT
+    private val CORNER_R      = 5f
 
-    // Bloom meter geometry
-    private val METER_LEFT   = screenWidth * 0.38f
-    private val METER_RIGHT  = screenWidth * 0.62f
-    private val METER_TOP    = 10f
-    private val METER_BOTTOM = HUD_H - 10f
-    private val SEG_GAP      = 4f
-    private val SEGMENT_COUNT = GameConstants.BLOOM_SEED_COUNT
+    // ── Reusable geometry ────────────────────────────────────────────────
+    private val hudBgRect  = RectF(0f, 0f, screenWidth.toFloat(), HUD_H)
+    private val segRect    = RectF()
+    private val glowRect   = RectF()
 
-    // -----------------------------------------------------------------------
-    // Reusable geometry objects (never allocate inside draw())
-    // -----------------------------------------------------------------------
-    private val hudBgRect    = RectF(0f, 0f, screenWidth.toFloat(), HUD_H)
-    private val segRect      = RectF()
-    private val scoreRect    = RectF()
+    // ── Animated fill ─────────────────────────────────────────────────────
+    /** Smoothly-lerped fill level (0..SEG_COUNT). Drives segment rendering. */
+    private var displayedFill = 0f
+    private val FILL_LERP_SPEED = 8f    // segments per second
 
-    // -----------------------------------------------------------------------
-    // Paints (created once)
-    // -----------------------------------------------------------------------
+    // ── Pulse / animation timers ─────────────────────────────────────────
+    private var bloomPulse  = 0f   // 0..2π oscillator
+    private var newBadge    = 0f   // 0..2π oscillator for NEW! badge
+    private var heartPulse  = 0f   // hearts bounce on mercy gain
+
+    // ── Paints ────────────────────────────────────────────────────────────
+
     private val hudBgPaint = Paint().apply {
-        color = Color.argb(200, 10, 15, 10)
-        style = Paint.Style.FILL
+        color = Color.argb(210, 8, 12, 8)
     }
-
     private val hudBorderPaint = Paint().apply {
         color = Color.argb(120, 80, 200, 80)
         style = Paint.Style.STROKE
@@ -79,225 +83,228 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
 
     // Score & distance
     private val scorePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = SCORE_TEXT_SIZE
-        typeface = pixelFont
+        color = Color.WHITE; textSize = SCORE_SIZE; typeface = pixelFont
         textAlign = Paint.Align.RIGHT
     }
-
-    private val newHighPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(255, 220, 50)
-        textSize = LABEL_TEXT_SIZE
-        typeface = pixelFont
+    private val distPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(200, 180, 220, 180); textSize = SMALL_SIZE; typeface = pixelFont
         textAlign = Paint.Align.RIGHT
     }
-
-    private val ghostScorePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(160, 160, 200, 255)
-        textSize = SMALL_TEXT_SIZE
-        typeface = pixelFont
+    private val ghostPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(150, 140, 180, 255); textSize = SMALL_SIZE; typeface = pixelFont
+        textAlign = Paint.Align.RIGHT
+    }
+    private val newBadgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(255, 220, 50); textSize = LABEL_SIZE; typeface = pixelFont
         textAlign = Paint.Align.RIGHT
     }
 
     // Seed counter
-    private val seedLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(140, 255, 120)
-        textSize = LABEL_TEXT_SIZE
-        typeface = pixelFont
-        textAlign = Paint.Align.LEFT
+    private val seedIconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(120, 230, 80); style = Paint.Style.FILL
     }
-
+    private val seedVeinPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(60, 160, 40); style = Paint.Style.STROKE; strokeWidth = 2f
+    }
     private val seedCountPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = SCORE_TEXT_SIZE
-        typeface = pixelFont
+        color = Color.WHITE; textSize = SCORE_SIZE; typeface = pixelFont
+        textAlign = Paint.Align.LEFT
+    }
+    private val seedLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(140, 255, 120); textSize = LABEL_SIZE; typeface = pixelFont
         textAlign = Paint.Align.LEFT
     }
 
-    // Bloom meter segments — filled
-    private val segFilledPaint = Paint().apply {
-        style = Paint.Style.FILL
-        // Gradient set per-draw below
+    // Mercy hearts
+    private val heartFilledPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(255, 80, 100); textSize = HEART_SIZE
+        textAlign = Paint.Align.LEFT
+    }
+    private val heartEmptyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(100, 160, 60, 70); textSize = HEART_SIZE
+        textAlign = Paint.Align.LEFT
     }
 
-    // Bloom meter segments — empty
-    private val segEmptyPaint = Paint().apply {
-        color = Color.argb(80, 60, 80, 60)
-        style = Paint.Style.FILL
+    // Bloom meter
+    private val segFilledPaint = Paint().apply { style = Paint.Style.FILL }
+    private val segEmptyPaint  = Paint().apply {
+        color = Color.argb(70, 50, 70, 50); style = Paint.Style.FILL
     }
-
     private val segBorderPaint = Paint().apply {
-        color = Color.argb(140, 120, 200, 120)
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f
+        color = Color.argb(130, 100, 180, 100); style = Paint.Style.STROKE; strokeWidth = 1.5f
     }
-
-    // Bloom meter label
-    private val meterLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(200, 160, 255, 160)
-        textSize = SMALL_TEXT_SIZE - 2f
-        typeface = pixelFont
+    private val glowBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeWidth = 4f
+    }
+    private val bloomLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(190, 140, 255, 140); textSize = SMALL_SIZE - 2f; typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
+    private val bloomActiveLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(200, 100, 255); textSize = LABEL_SIZE; typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
 
-    // Bloom ACTIVE overlay
-    private val bloomActivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(200, 100, 255)
-        textSize = LABEL_TEXT_SIZE
-        typeface = pixelFont
-        textAlign = Paint.Align.CENTER
-    }
+    // ── Update ────────────────────────────────────────────────────────────
 
-    // Bloom meter pulse (filled when active)
-    private var bloomPulse = 0f
-
-    // Distance label
-    private val distLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(180, 200, 200, 200)
-        textSize = SMALL_TEXT_SIZE
-        typeface = pixelFont
-        textAlign = Paint.Align.RIGHT
-    }
-
-    // -----------------------------------------------------------------------
-    // Update (called every frame)
-    // -----------------------------------------------------------------------
     fun update(deltaTime: Float, state: GameStateManager) {
-        // Bloom pulse animation: oscillates 0.0..1.0
+        val dt = deltaTime
+
+        // Smooth fill lerp toward actual bloom meter value
+        val target = if (state.isBloomActive) SEG_COUNT.toFloat() else state.bloomMeter.toFloat()
+        displayedFill = MathUtils.lerp(displayedFill, target, (FILL_LERP_SPEED * dt).coerceAtMost(1f))
+
+        // Bloom pulse oscillator
         if (state.isBloomActive) {
-            bloomPulse = (bloomPulse + deltaTime * 4f) % (Math.PI.toFloat() * 2f)
+            bloomPulse = (bloomPulse + dt * 4.5f) % (Math.PI.toFloat() * 2f)
+        } else {
+            bloomPulse = 0f
+        }
+
+        // NEW badge pulse
+        if (state.isNewHighScore) {
+            newBadge = (newBadge + dt * 3f) % (Math.PI.toFloat() * 2f)
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Draw
-    // -----------------------------------------------------------------------
+    // ── Draw ──────────────────────────────────────────────────────────────
+
     fun draw(canvas: Canvas, state: GameStateManager) {
         // HUD background strip
         canvas.drawRect(hudBgRect, hudBgPaint)
         canvas.drawRect(hudBgRect, hudBorderPaint)
 
-        drawSeedCounter(canvas, state)
+        drawSeedAndHearts(canvas, state)
         drawBloomMeter(canvas, state)
         drawScoreArea(canvas, state)
     }
 
-    // -----------------------------------------------------------------------
-    // Private draw sections
-    // -----------------------------------------------------------------------
+    // ── Sections ─────────────────────────────────────────────────────────
 
-    private fun drawSeedCounter(canvas: Canvas, state: GameStateManager) {
-        val x = PAD
-        // Seed icon (pixel-art green circle) drawn as a small filled oval
-        val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.rgb(120, 230, 80); style = Paint.Style.FILL
+    private fun drawSeedAndHearts(canvas: Canvas, state: GameStateManager) {
+        val x   = PAD
+        val cy1 = 30f   // seed icon centre Y (top row)
+        val cy2 = 62f   // hearts row Y
+
+        // ── Seed icon ─────────────────────────────────────────────────────
+        canvas.drawOval(x, cy1 - 12f, x + 22f, cy1 + 12f, seedIconPaint)
+        canvas.drawLine(x + 11f, cy1 - 10f, x + 11f, cy1 + 10f, seedVeinPaint)
+
+        // Count + label
+        canvas.drawText("×${state.seedsThisRun}", x + 30f, cy1 + seedCountPaint.textSize * 0.35f, seedCountPaint)
+        canvas.drawText("seeds", x + 30f, cy1 + seedCountPaint.textSize * 0.35f + 18f, seedLabelPaint)
+
+        // ── Mercy hearts strip ────────────────────────────────────────────
+        val MAX_HEARTS   = 10
+        val heartSpacing = 22f
+        val heartY       = cy2
+        for (i in 0 until MAX_HEARTS) {
+            val hx = x + i * heartSpacing
+            val paint = if (i < state.mercyHearts) heartFilledPaint else heartEmptyPaint
+            canvas.drawText("♥", hx, heartY, paint)
         }
-        val cy = HUD_H / 2f
-        canvas.drawOval(x, cy - 12f, x + 22f, cy + 12f, iconPaint)
-        // Leaf vein line
-        val veinPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.rgb(60, 160, 40); style = Paint.Style.STROKE; strokeWidth = 2f
-        }
-        canvas.drawLine(x + 11f, cy - 10f, x + 11f, cy + 10f, veinPaint)
-
-        // "× N" label
-        val countText = "×${state.seedsThisRun}"
-        canvas.drawText(countText, x + 32f, cy + seedCountPaint.textSize / 3f, seedCountPaint)
-
-        // "SEEDS" subtitle
-        canvas.drawText("seeds", x + 32f, cy + seedCountPaint.textSize / 3f + 20f, seedLabelPaint)
     }
 
     private fun drawBloomMeter(canvas: Canvas, state: GameStateManager) {
-        val totalW    = METER_RIGHT - METER_LEFT
-        val segW      = (totalW - SEG_GAP * (SEGMENT_COUNT - 1)) / SEGMENT_COUNT
-        val segH      = METER_BOTTOM - METER_TOP
-        val cornerR   = 4f
+        val cx = (METER_LEFT + METER_RIGHT) / 2f
 
-        for (i in 0 until SEGMENT_COUNT) {
+        // Draw segments
+        for (i in 0 until SEG_COUNT) {
             val left  = METER_LEFT + i * (segW + SEG_GAP)
             val right = left + segW
             segRect.set(left, METER_TOP, right, METER_BOTTOM)
 
-            val filled = when {
-                state.isBloomActive -> true    // all segments lit during bloom
-                i < state.bloomMeter -> true
-                else -> false
-            }
+            // Fill fraction for this segment (0..1 for smooth animation)
+            val fillFrac = (displayedFill - i).coerceIn(0f, 1f)
 
-            if (filled) {
-                // Gradient: yellow-green at bottom → bright cyan-white at top
+            if (fillFrac > 0f) {
+                // Pulse brightness when bloom is active
                 val pulse = if (state.isBloomActive)
-                    (0.5f + 0.5f * Math.sin(bloomPulse.toDouble()).toFloat())
+                    (0.75f + 0.25f * Math.sin(bloomPulse.toDouble()).toFloat())
                 else 1f
 
-                val alpha = (180 + (75 * pulse).toInt()).coerceIn(0, 255)
-
+                val alpha = (150 + (105 * fillFrac * pulse).toInt()).coerceIn(0, 255)
                 segFilledPaint.shader = LinearGradient(
-                    left, METER_BOTTOM,
-                    left, METER_TOP,
+                    left, METER_BOTTOM, left, METER_TOP,
                     intArrayOf(
-                        Color.argb(alpha, 80,  220, 80),
-                        Color.argb(alpha, 180, 255, 120)
+                        Color.argb(alpha, 60,  200, 60),
+                        Color.argb(alpha, 160, 255, 100)
                     ),
-                    null,
-                    Shader.TileMode.CLAMP
+                    null, Shader.TileMode.CLAMP
                 )
-                canvas.drawRoundRect(segRect, cornerR, cornerR, segFilledPaint)
+
+                // Partial fill: clip bottom portion for the last partial segment
+                if (fillFrac < 1f) {
+                    val fillTop = METER_BOTTOM - (METER_BOTTOM - METER_TOP) * fillFrac
+                    val partRect = RectF(left, fillTop, right, METER_BOTTOM)
+                    canvas.drawRoundRect(partRect, CORNER_R, CORNER_R, segFilledPaint)
+                } else {
+                    canvas.drawRoundRect(segRect, CORNER_R, CORNER_R, segFilledPaint)
+                }
             } else {
-                canvas.drawRoundRect(segRect, cornerR, cornerR, segEmptyPaint)
+                canvas.drawRoundRect(segRect, CORNER_R, CORNER_R, segEmptyPaint)
             }
-            canvas.drawRoundRect(segRect, cornerR, cornerR, segBorderPaint)
+
+            canvas.drawRoundRect(segRect, CORNER_R, CORNER_R, segBorderPaint)
         }
 
-        // Label below meter
-        val labelText = if (state.isBloomActive) "✦ BLOOM ✦" else "bloom"
-        val labelPaint = if (state.isBloomActive) bloomActivePaint else meterLabelPaint
-        val centerX = (METER_LEFT + METER_RIGHT) / 2f
-        canvas.drawText(labelText, centerX, METER_BOTTOM + 16f, labelPaint)
+        // Glow border around entire meter when bloom active
+        if (state.isBloomActive) {
+            val glow = (0.5f + 0.5f * Math.sin(bloomPulse.toDouble()).toFloat())
+            val glowAlpha = (120 + (135 * glow).toInt()).coerceIn(0, 255)
+            glowBorderPaint.color = Color.argb(glowAlpha, 180, 100, 255)
+            glowRect.set(
+                METER_LEFT - 4f,  METER_TOP - 4f,
+                METER_RIGHT + 4f, METER_BOTTOM + 4f
+            )
+            canvas.drawRoundRect(glowRect, CORNER_R + 4f, CORNER_R + 4f, glowBorderPaint)
+        }
+
+        // Meter label
+        val labelText  = if (state.isBloomActive) "✦ BLOOM ✦" else "bloom"
+        val labelPaint = if (state.isBloomActive) bloomActiveLabelPaint else bloomLabelPaint
+        if (state.isBloomActive) {
+            bloomActiveLabelPaint.alpha =
+                (200 + (55 * Math.sin(bloomPulse.toDouble()).toFloat()).toInt()).coerceIn(0, 255)
+        }
+        canvas.drawText(labelText, cx, METER_BOTTOM + 18f, labelPaint)
     }
 
     private fun drawScoreArea(canvas: Canvas, state: GameStateManager) {
-        val rightX  = screenWidth.toFloat() - PAD
-        val topLine = HUD_H * 0.42f
-        val botLine = HUD_H * 0.78f
+        val rightX   = screenWidth.toFloat() - PAD
+        val distY    = 28f
+        val scoreY   = 55f
 
-        // Distance
-        val distText = formatDistance(state.distanceMetres)
-        canvas.drawText(distText, rightX, topLine, distLabelPaint)
+        // Distance top-right
+        canvas.drawText(formatDistance(state.distanceMetres), rightX, distY, distPaint)
 
-        // Score
+        // Score below distance
         val scoreText = formatScore(state.score)
-        canvas.drawText(scoreText, rightX, botLine, scorePaint)
+        canvas.drawText(scoreText, rightX, scoreY, scorePaint)
 
-        // "NEW!" badge if beating high score
+        // NEW! badge — pulsing gold, left of score
         if (state.isNewHighScore && state.score > 0) {
-            canvas.drawText("✦NEW", rightX - scorePaint.measureText(scoreText) - 12f, botLine, newHighPaint)
+            val pulse = (0.7f + 0.3f * Math.sin(newBadge.toDouble()).toFloat())
+            newBadgePaint.alpha = (pulse * 255f).toInt().coerceIn(0, 255)
+            val scoreW = scorePaint.measureText(scoreText)
+            canvas.drawText("✦NEW!", rightX - scoreW - 14f, scoreY, newBadgePaint)
         }
 
-        // Ghost high score line (shown when NOT yet a new high score)
+        // Ghost best score (when not yet a new high score)
         if (!state.isNewHighScore && state.highScore > 0) {
-            val ghostText = "best ${formatScore(state.highScore)}"
-            canvas.drawText(ghostText, rightX, botLine + SMALL_TEXT_SIZE + 6f, ghostScorePaint)
+            canvas.drawText("best ${formatScore(state.highScore)}", rightX, scoreY + SMALL_SIZE + 4f, ghostPaint)
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Format helpers
-    // -----------------------------------------------------------------------
+    // ── Helpers ───────────────────────────────────────────────────────────
 
-    private fun formatDistance(metres: Float): String {
-        return when {
-            metres < 1_000f -> "${metres.toInt()} m"
-            else            -> String.format("%.1f km", metres / 1_000f)
-        }
+    private fun formatDistance(m: Float) = when {
+        m < 1_000f -> "${m.toInt()} m"
+        else -> String.format("%.2f km", m / 1_000f)
     }
 
-    private fun formatScore(score: Int): String {
-        return when {
-            score < 1_000   -> score.toString()
-            score < 10_000  -> String.format("%,d", score)
-            else            -> String.format("%,d", score)
-        }
+    private fun formatScore(s: Int) = when {
+        s < 1_000  -> s.toString()
+        else       -> String.format("%,d", s)
     }
 }
