@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleEmitter
 import com.yourname.forest_run.systems.ParticleManager
@@ -180,6 +181,7 @@ class Player(
         if (state != PlayerState.JUMP_START && state != PlayerState.RUNNING) return
         val t = MathUtils.clamp01(holdSec / MAX_HOLD_DURATION_S)
         velocityY = MathUtils.lerp(MIN_JUMP_FORCE, MAX_JUMP_FORCE, t)
+        SfxManager.playJump()   // Phase 20
         transitionTo(PlayerState.JUMPING)
     }
 
@@ -304,6 +306,7 @@ class Player(
             y         = groundY - BASE_HEIGHT
             velocityY = 0f
             if (state == PlayerState.FALLING || state == PlayerState.APEX) {
+                SfxManager.playLand()   // Phase 20
                 transitionTo(PlayerState.LANDING)
             }
         }

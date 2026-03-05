@@ -201,6 +201,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (frames.isNotEmpty()) ghostPlayer.load(frames)
         }
 
+        // Phase 20: Init audio managers
+        LeitmotifManager.init(context)
+        SfxManager.init(context)
+        LeitmotifManager.playRunStart()
+
         // Phase 5: HUD
         if (!::hud.isInitialized) {
             hud = HUD(context, screenWidth, screenHeight)
@@ -227,10 +232,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     fun pause() {
         stopThread()
+        LeitmotifManager.pause()   // Phase 20
         if (::gameState.isInitialized) gameState.save()   // persist high score
     }
 
     fun resume() {
+        LeitmotifManager.resume()  // Phase 20
         // Re-create thread (Java threads can't be restarted after stop)
         gameThread = GameThread(holder, this)
         // Thread starts when surfaceCreated fires again (or immediately if surface exists)
@@ -348,6 +355,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         ghostPlayer.reset()
                         val newFrames = SaveManager.loadGhostRun(context)
                         if (newFrames.isNotEmpty()) ghostPlayer.load(newFrames)
+                        LeitmotifManager.playRunStart()   // Phase 20: restart music
                     }
                     runState = RunState.PLAYING
                 }
@@ -393,6 +401,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     CollisionResult.HIT -> {
                         player.triggerRest()  // emits HIT_BURST particles
                         CameraSystem.shakeHit()
+                        SfxManager.playHit()          // Phase 20
+                        LeitmotifManager.playRest()   // Phase 20
                         // Phase 19: save ghost if this run is a new best distance
                         if (::gameState.isInitialized && gameState.isNewHighScore) {
                             SaveManager.saveGhostRun(context, ghostRecorder.snapshot())
@@ -405,6 +415,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     }
                     CollisionResult.MERCY_MISS -> {
                         mercyFlashTimer = mercyFlashDuration
+                        SfxManager.playMercyMiss()    // Phase 20
                         // Stars burst at player centre
                         ParticleManager.emit(FxPreset.MERCY_STARS,
                             player.x + Player.BASE_WIDTH / 2f,
@@ -428,6 +439,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 19: Record ghost frame + advance ghost playback
         if (::player.isInitialized) ghostRecorder.record(deltaTime, player)
         ghostPlayer.update(deltaTime)
+
+        // Phase 20: Music layer transition + tempo scaling
+        if (::gameState.isInitialized) {
+            LeitmotifManager.updateDistance(gameState.distanceMetres)
+            LeitmotifManager.updateTempo(gameState.scrollSpeed)
+        }
 
         // Flavor text float animation
         FlavorTextManager.update(deltaTime)
