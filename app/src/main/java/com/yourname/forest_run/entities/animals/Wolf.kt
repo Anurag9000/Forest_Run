@@ -4,11 +4,14 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.RectF
+import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.FlavorTextManager
 
 /**
@@ -60,6 +63,7 @@ class Wolf(
                     wolfState = WolfState.HOWLING
                     howlTimer = 0f
                     FlavorTextManager.spawn("GRRR...", x, y - 30f, Color.rgb(200, 60, 60))
+                    CameraSystem.shakeWolfHowl()   // Phase 15 shake
                     // Phase 20: play howl SFX
                 }
             }
@@ -73,7 +77,8 @@ class Wolf(
             }
             WolfState.CHARGING -> {
                 x += velocityX * deltaTime
-                // Phase 14: emit dust/dirt particles
+                // Emit dust cloud from wolf feet during charge
+                ParticleManager.emit(FxPreset.WOLF_CHARGE_DUST, x + wolfW, y + wolfH)
             }
             WolfState.SPARED -> {
                 // Turn and trot right slowly

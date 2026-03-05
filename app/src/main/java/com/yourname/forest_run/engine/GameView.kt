@@ -269,6 +269,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             fpsElapsed   -= 1f
         }
 
+        // Phase 15: Advance camera shake
+        CameraSystem.update(deltaTime)
+
         // Input tick
         inputHandler.tick(deltaTime)
 
@@ -311,15 +314,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     CollisionResult.HIT -> {
                         // Force player into REST state
                         player.triggerRest()  // also emits HIT_BURST particles
-                        // Phase 15: triggerShake(8f, 0.5f) goes here
+                        CameraSystem.shakeHit()
                     }
                     CollisionResult.MERCY_MISS -> {
-                        // Green border flash
                         mercyFlashTimer = mercyFlashDuration
                         // Stars burst at player centre
                         ParticleManager.emit(FxPreset.MERCY_STARS,
                             player.x + Player.BASE_WIDTH / 2f,
                             player.y + Player.BASE_HEIGHT / 2f)
+                        CameraSystem.shakeMercyMiss()
                     }
                     CollisionResult.NONE -> { /* handled above, shouldn't reach here */ }
                 }
@@ -345,30 +348,35 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
 
-        // 1. Black fill (clean slate every frame)
+        // 1. Black fill (never shakes — clean border always visible)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
 
-        // 2. Parallax background
-        if (::parallaxBackground.isInitialized) parallaxBackground.draw(canvas)
+        // 2–5: All gameplay layers wrapped in camera shake offset
+        CameraSystem.applyTo(canvas) {
 
-        // 3. Entities (behind player, above background)
-        if (::entityManager.isInitialized) entityManager.draw(canvas)
+            // 2. Parallax background
+            if (::parallaxBackground.isInitialized) parallaxBackground.draw(canvas)
 
-        // 4. Player (above entities)
-        if (::player.isInitialized) player.draw(canvas)
+            // 3. Entities (behind player, above background)
+            if (::entityManager.isInitialized) entityManager.draw(canvas)
 
-        // 5. Floating flavor text + Particles (same layer — world space FX)
-        FlavorTextManager.draw(canvas)
-        ParticleManager.draw(canvas)
+            // 4. Player
+            if (::player.isInitialized) player.draw(canvas)
 
-        // 6. MERCY_MISS green border flash
+            // 5. World-space FX: flavor text + particles
+            FlavorTextManager.draw(canvas)
+            ParticleManager.draw(canvas)
+
+        }   // ← camera shake scope ends here
+
+        // 6. MERCY_MISS green border flash (screen-space — not shaken)
         if (mercyFlashTimer > 0f) {
             val alpha = ((mercyFlashTimer / mercyFlashDuration) * 200).toInt().coerceIn(0, 200)
             mercyFlashPaint.alpha = alpha
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), mercyFlashPaint)
         }
 
-        // 6b. Ambient night/dusk darkness overlay (Phase 13)
+        // 7. Ambient night/dusk darkness overlay (screen-space)
         if (::entityManager.isInitialized) {
             val ambient = entityManager.biomeManager.ambientAlpha
             if (ambient > 0) {
@@ -377,11 +385,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
         }
 
-        // 7. HUD (always above gameplay, above all overlays)
+        // 8. HUD — always screen-space, never shakes
         if (::hud.isInitialized && ::gameState.isInitialized)
             hud.draw(canvas, gameState)
 
-        // 8. Debug overlays (always topmost)
+        // 9. Debug overlays (topmost)
         drawFps(canvas)
         drawInputDebugPanel(canvas)
         drawInputStateIndicator(canvas)

@@ -3,6 +3,7 @@ package com.yourname.forest_run.entities.birds
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
+import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
@@ -48,6 +49,7 @@ class Eagle(
         val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat().coerceAtLeast(1f)
         velX = dx / dist * diveSpeed
         velY = dy / dist * diveSpeed
+        CameraSystem.shakeEagle()  // Phase 15: lock-on tremor
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
