@@ -75,17 +75,46 @@ class GameStateManager(context: Context) {
     private var bloomTimer: Float = 0f
 
     // -----------------------------------------------------------------------
+    // Mercy System (Phase 17 turns this into MercySystem.kt, for now lives here)
+    // -----------------------------------------------------------------------
+
+    /** Hearts earned this run by close calls. Resets on REST. */
+    var mercyHearts: Int = 0
+        private set
+
+    // -----------------------------------------------------------------------
+    // Speed Debuff (applied by Hedgehog / Hyacinth brush)
+    // -----------------------------------------------------------------------
+
+    /** Current speed multiplier (1.0 = normal, 0.5 = Hedgehog debuffed). */
+    var speedDebuffMultiplier: Float = 1f
+        private set
+
+    private var speedDebuffTimer: Float = 0f
+
+    // -----------------------------------------------------------------------
     // Update (called every frame by GameView)
     // -----------------------------------------------------------------------
 
     fun update(deltaTime: Float) {
         // ── Scroll speed ramp ────────────────────────────────────────────
         distanceMetres += scrollSpeed / 1000f * deltaTime
-        scrollSpeed = MathUtils.clamp(
+
+        val baseSpeed = MathUtils.clamp(
             GameConstants.BASE_SCROLL_SPEED + distanceMetres * GameConstants.SPEED_PER_METRE,
             GameConstants.BASE_SCROLL_SPEED,
             GameConstants.MAX_SCROLL_SPEED
         )
+        scrollSpeed = baseSpeed * speedDebuffMultiplier
+
+        // ── Speed debuff timer ───────────────────────────────────────────
+        if (speedDebuffTimer > 0f) {
+            speedDebuffTimer -= deltaTime
+            if (speedDebuffTimer <= 0f) {
+                speedDebuffTimer       = 0f
+                speedDebuffMultiplier = 1f
+            }
+        }
 
         // ── Score ────────────────────────────────────────────────────────
         score += (GameConstants.POINTS_PER_METRE * scoreMultiplier * scrollSpeed / 1000f * deltaTime * 1000f).toInt()
@@ -120,21 +149,52 @@ class GameStateManager(context: Context) {
         }
     }
 
+    /**
+     * Award bonus points and seeds (e.g. Cat kindness pass, Mercy spare).
+     * @param points     Raw points added before multiplier.
+     * @param seeds      Seeds to collect (full bloom-credit each).
+     * @param multiplierBoost Temporary bump to scoreMultiplier (e.g. 2.0f for double; 0 = no change).
+     * @param durationSec How long the multiplier boost lasts (0 = permanent for this call).
+     */
+    fun addBonus(points: Int = 0, seeds: Int = 0, multiplierBoost: Float = 0f) {
+        score += (points * scoreMultiplier).toInt()
+        repeat(seeds) { collectSeed() }
+        if (multiplierBoost > 0f) scoreMultiplier = multiplierBoost
+    }
+
+    /**
+     * Temporarily reduce scroll speed (Hedgehog collision, Hyacinth brush).
+     * @param multiplier e.g. 0.5f = half speed.
+     * @param durationMs Duration in milliseconds.
+     */
+    fun applySpeedDebuff(multiplier: Float, durationMs: Int) {
+        speedDebuffMultiplier = multiplier
+        speedDebuffTimer      = durationMs / 1000f
+    }
+
+    /** Increment mercy hearts (called by collision system on MERCY_MISS). */
+    fun addMercyHeart() {
+        mercyHearts++
+    }
+
     // -----------------------------------------------------------------------
     // Run lifecycle
     // -----------------------------------------------------------------------
 
     /** Reset all per-run state (called at the start of a new run). */
     fun resetRun() {
-        distanceMetres = 0f
-        scrollSpeed    = GameConstants.BASE_SCROLL_SPEED
-        score          = 0
-        scoreMultiplier = 1f
-        seedsThisRun   = 0
-        bloomMeter     = 0
-        isBloomActive  = false
-        bloomTimer     = 0f
-        isNewHighScore = false
+        distanceMetres        = 0f
+        scrollSpeed           = GameConstants.BASE_SCROLL_SPEED
+        score                 = 0
+        scoreMultiplier       = 1f
+        seedsThisRun          = 0
+        bloomMeter            = 0
+        isBloomActive         = false
+        bloomTimer            = 0f
+        isNewHighScore        = false
+        mercyHearts           = 0
+        speedDebuffMultiplier = 1f
+        speedDebuffTimer      = 0f
     }
 
     /** Persist high score and lifetime seeds to SharedPreferences. */

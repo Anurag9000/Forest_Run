@@ -2,6 +2,7 @@ package com.yourname.forest_run.entities
 
 import android.content.Context
 import com.yourname.forest_run.engine.SpriteManager
+import com.yourname.forest_run.entities.animals.*
 import com.yourname.forest_run.entities.birds.*
 import com.yourname.forest_run.entities.flora.*
 import com.yourname.forest_run.entities.trees.*
@@ -43,26 +44,11 @@ object EntityFactory {
             EntityType.OWL       -> Owl(context, startX, groundY, spriteManager.owlSprite.copy())
             EntityType.EAGLE     -> Eagle(context, startX, screenWidth, groundY, spriteManager.eagleSprite.copy())
 
-            // Phase 11: Implement the rest
-            else -> {
-                object : Entity(context) {
-                    init {
-                        x = startX
-                        y = groundY - 50f // Default dummy placement above ground
-                        hitbox.set(x, y, x + 50f, y + 50f)
-                    }
-
-                    override fun update(deltaTime: Float, scrollSpeed: Float) {
-                        x -= scrollSpeed * deltaTime
-                        hitbox.offsetTo(x, y)
-                        if (x < -100f) isActive = false
-                    }
-
-                    override fun draw(canvas: android.graphics.Canvas) {}
-
-                    override fun onCollision(player: Player, gameState: com.yourname.forest_run.engine.GameStateManager) = CollisionResult.NONE
-                }
-            }
+            EntityType.CAT       -> Cat(context, startX, groundY, spriteManager.catSprite.copy())
+            EntityType.WOLF      -> Wolf(context, startX, groundY, screenWidth, spriteManager.wolfSprite.copy())
+            EntityType.FOX       -> Fox(context, startX, groundY, spriteManager.foxSprite.copy())
+            EntityType.HEDGEHOG  -> Hedgehog(context, startX, groundY, spriteManager.hedgehogSprite.copy())
+            EntityType.DOG       -> Dog(context, startX, groundY, screenWidth, spriteManager.dogSprite.copy())
         }
     }
 }
