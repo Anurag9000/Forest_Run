@@ -13,6 +13,8 @@ import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
 import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.GhostPlayer
+import com.yourname.forest_run.systems.GhostRecorder
 import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.FlavorTextManager
 import com.yourname.forest_run.ui.GameOverScreen
@@ -85,6 +87,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     // Phase 13: Night/dusk ambient darkness overlay
     private val ambientOverlayPaint = Paint().apply { color = Color.BLACK }
+
+    // ── Phase 19: Ghost Run ───────────────────────────────────────────────
+    private val ghostRecorder = GhostRecorder()
+    private val ghostPlayer   = GhostPlayer()
 
     // -----------------------------------------------------------------------
     // FPS tracking
@@ -187,6 +193,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 17: GameOverScreen
         if (!::gameOverScreen.isInitialized) {
             gameOverScreen = GameOverScreen(context, screenWidth, screenHeight)
+        }
+
+        // Phase 19: Load ghost run
+        if (!ghostPlayer.hasGhost) {
+            val frames = SaveManager.loadGhostRun(context)
+            if (frames.isNotEmpty()) ghostPlayer.load(frames)
         }
 
         // Phase 5: HUD
@@ -331,6 +343,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     if (::entityManager.isInitialized && ::player.isInitialized &&
                         ::gameState.isInitialized) {
                         runResetManager.executeReset(gameState, entityManager, player)
+                        // Phase 19: reset recorder; reload ghost (may have just been saved)
+                        ghostRecorder.reset()
+                        ghostPlayer.reset()
+                        val newFrames = SaveManager.loadGhostRun(context)
+                        if (newFrames.isNotEmpty()) ghostPlayer.load(newFrames)
                     }
                     runState = RunState.PLAYING
                 }
@@ -376,6 +393,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     CollisionResult.HIT -> {
                         player.triggerRest()  // emits HIT_BURST particles
                         CameraSystem.shakeHit()
+                        // Phase 19: save ghost if this run is a new best distance
+                        if (::gameState.isInitialized && gameState.isNewHighScore) {
+                            SaveManager.saveGhostRun(context, ghostRecorder.snapshot())
+                            SaveManager.saveBestDistance(context, gameState.distanceMetres)
+                        }
+                        ghostRecorder.reset()
                         // Transition to DYING
                         if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
                         runState = RunState.DYING
@@ -401,6 +424,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             // ParticleManager continuous emitters track emitter.x/.y at spawn time;
             // the aura emitter is recreated on each Bloom trigger so position is correct.
         }
+
+        // Phase 19: Record ghost frame + advance ghost playback
+        if (::player.isInitialized) ghostRecorder.record(deltaTime, player)
+        ghostPlayer.update(deltaTime)
 
         // Flavor text float animation
         FlavorTextManager.update(deltaTime)
@@ -431,7 +458,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 entityManager.drawOrbs(canvas, bloomFrac)
             }
 
-            // 4. Player
+            // 4. Ghost player (behind live player, 40% opacity white-blue) — Phase 19
+            if (::spriteManager.isInitialized) ghostPlayer.draw(canvas, spriteManager)
+
+            // 5. Live Player
             if (::player.isInitialized) player.draw(canvas)
 
             // 5. World-space FX: flavor text + particles
