@@ -20,10 +20,19 @@ class SpriteSheet(
     val bitmap: Bitmap,
     val frameCount: Int,
     var framesPerSec: Float,
-    val isLooping: Boolean = true
+    val isLooping: Boolean = true,
+    /** Offset into the strip — allows multiple SpriteSheets to share one bitmap. */
+    private val startFrame: Int = 0
 ) {
+    /**
+     * Total frames in the FULL bitmap strip.
+     * Used to compute frameWidth from the total pixel width.
+     */
+    private val totalFramesInBitmap: Int get() = (bitmap.width / frameWidth).coerceAtLeast(1)
+
     /** Width of a single frame in pixels. */
-    val frameWidth: Int = bitmap.width / frameCount
+    val frameWidth: Int = if (frameCount > 0) bitmap.width / (startFrame + frameCount).coerceAtLeast(1) else bitmap.width
+
     /** Height of a single frame in pixels (same as bitmap height). */
     val frameHeight: Int = bitmap.height
 
@@ -79,17 +88,16 @@ class SpriteSheet(
      * Draws the current frame stretching/squashing it to exactly fit [drawRect].
      */
     fun draw(canvas: Canvas, drawRect: android.graphics.RectF) {
-        // Calculate the slice of the source bitmap for the current frame
-        val srcLeft = currentFrame * frameWidth
+        // Offset by startFrame so a shared bitmap plays only the right segment
+        val absoluteFrame = startFrame + currentFrame
+        val srcLeft = absoluteFrame * frameWidth
         srcRect.set(srcLeft, 0, srcLeft + frameWidth, frameHeight)
 
-        // Android's Canvas.drawBitmap takes a Rect for dst if we want exact integer pixel snapping,
-        // but since we allow floating-point squash/stretch, RectF is better.
         canvas.drawBitmap(bitmap, srcRect, drawRect, paint)
     }
 
     /** Clones this instance (sharing the underlying Bitmap memory) so multiple entities can use it. */
     fun copy(): SpriteSheet {
-        return SpriteSheet(bitmap, frameCount, framesPerSec, isLooping)
+        return SpriteSheet(bitmap, frameCount, framesPerSec, isLooping, startFrame)
     }
 }

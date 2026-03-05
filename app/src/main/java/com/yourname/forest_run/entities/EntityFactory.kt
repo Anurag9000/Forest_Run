@@ -1,6 +1,8 @@
 package com.yourname.forest_run.entities
 
 import android.content.Context
+import com.yourname.forest_run.engine.SpriteManager
+import com.yourname.forest_run.entities.birds.*
 import com.yourname.forest_run.entities.flora.*
 import com.yourname.forest_run.entities.trees.*
 
@@ -13,7 +15,14 @@ object EntityFactory {
      * Creates and returns a new Entity of the specified type.
      * In Phase 8-11, these missing classes will be implemented.
      */
-    fun create(context: Context, type: EntityType, startX: Float, screenHeight: Float): Entity {
+    fun create(
+        context: Context,
+        type: EntityType,
+        startX: Float,
+        screenWidth: Float,
+        screenHeight: Float,
+        spriteManager: SpriteManager
+    ): Entity {
         val groundY = screenHeight * 0.82f // Same as default ground in Player
 
         return when (type) {
@@ -27,8 +36,14 @@ object EntityFactory {
             EntityType.JACARANDA      -> Jacaranda(context, startX, screenHeight, groundY)
             EntityType.BAMBOO         -> Bamboo(context, startX, screenHeight, groundY)
             EntityType.CHERRY_BLOSSOM -> CherryBlossom(context, startX, screenHeight, groundY)
-            
-            // Phase 10-11: Implement the rest
+
+            EntityType.DUCK      -> Duck(context, startX, groundY, spriteManager.duckSprite.copy())
+            EntityType.TIT       -> TitGroup(context, startX, groundY, spriteManager.titSprite.copy())
+            EntityType.CHICKADEE -> ChickadeeGroup(context, startX, groundY, spriteManager.chickadeeSprite.copy())
+            EntityType.OWL       -> Owl(context, startX, groundY, spriteManager.owlSprite.copy())
+            EntityType.EAGLE     -> Eagle(context, startX, screenWidth, groundY, spriteManager.eagleSprite.copy())
+
+            // Phase 11: Implement the rest
             else -> {
                 object : Entity(context) {
                     init {
