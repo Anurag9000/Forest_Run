@@ -6,7 +6,7 @@ import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityFactory
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
-import com.yourname.forest_run.entities.animals.Cat
+import com.yourname.forest_run.systems.SeedOrbManager
 import kotlin.random.Random
 
 /**
@@ -28,6 +28,9 @@ class EntityManager(
     /** Injected from GameView — updated every frame before EntityManager.update() is called. */
     val biomeManager: BiomeManager = BiomeManager()
 ) {
+
+    /** Seed orb spawner — public so GameView can call draw() with bloomFraction. */
+    val seedOrbManager = SeedOrbManager()
 
     /** All entities currently on screen or within the active window. */
     val activeEntities: MutableList<Entity> = mutableListOf()
@@ -85,8 +88,17 @@ class EntityManager(
             // 3. Pass detection — entity has scrolled past the player's position
             if (entity.hitbox.right < playerPassX) {
                 entity.performUniqueAction(player, gameState)
+                // Trigger seed orb spawn above the entity (60% base chance)
+                seedOrbManager.trySpawn(
+                    centreX    = entity.hitbox.centerX(),
+                    topY       = entity.hitbox.top,
+                    spawnRate  = 1.0f
+                )
             }
         }
+
+        // Update orbs (collection check + scroll)
+        seedOrbManager.update(deltaTime, gameState, player)
     }
 
     /**
@@ -119,6 +131,14 @@ class EntityManager(
         for (entity in activeEntities) {
             entity.draw(canvas)
         }
+    }
+
+    /**
+     * Draw seed orbs. Call AFTER entity draw, BEFORE player draw so orbs appear between.
+     * @param bloomFraction 0..1 — Bloom Meter fill proportion (drives orb colour).
+     */
+    fun drawOrbs(canvas: android.graphics.Canvas, bloomFraction: Float) {
+        seedOrbManager.draw(canvas, bloomFraction)
     }
 
     // ── Spawning Helper ───────────────────────────────────────────────────
@@ -174,10 +194,11 @@ class EntityManager(
         else -> null
     }
 
-    /** Clear all entities (on run reset). */
+    /** Clear all entities and orbs (on run reset). */
     fun reset() {
         activeEntities.clear()
         recyclePool.clear()
+        seedOrbManager.reset()
         spawnTimer = 0f
     }
 }

@@ -171,6 +171,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             entityManager = EntityManager(context, screenWidth.toFloat(), screenHeight.toFloat(), spriteManager)
         }
 
+        // Phase 16: init FlavorTextManager pixel font
+        FlavorTextManager.init(context)
+
         // Phase 5: HUD
         if (!::hud.isInitialized) {
             hud = HUD(context, screenWidth, screenHeight)
@@ -358,7 +361,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (::parallaxBackground.isInitialized) parallaxBackground.draw(canvas)
 
             // 3. Entities (behind player, above background)
-            if (::entityManager.isInitialized) entityManager.draw(canvas)
+            if (::entityManager.isInitialized) {
+                entityManager.draw(canvas)
+                // 3b. Seed orbs — drawn above entities, below player
+                val bloomFrac = if (::gameState.isInitialized)
+                    gameState.bloomMeter / GameConstants.BLOOM_SEED_COUNT.toFloat()
+                else 0f
+                entityManager.drawOrbs(canvas, bloomFrac)
+            }
 
             // 4. Player
             if (::player.isInitialized) player.draw(canvas)
