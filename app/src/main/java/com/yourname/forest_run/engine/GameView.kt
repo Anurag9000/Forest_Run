@@ -9,6 +9,7 @@ import android.graphics.Typeface
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import com.yourname.forest_run.entities.Player
 
 private const val TAG = "ForestRun"
 
@@ -19,6 +20,7 @@ private const val TAG = "ForestRun"
  *  - Phase 0: SurfaceView + GameThread scaffold
  *  - Phase 1: 60 FPS loop with nanosecond deltaTime
  *  - Phase 2: [InputHandler] wired + on-screen debug panel
+ *  - Phase 3: [Player] physics, state machine, squash/stretch, hitbox
  *
  * Upcoming phases will progressively fill [update] and [draw] with real systems.
  */
@@ -33,6 +35,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // Input
     // -----------------------------------------------------------------------
     val inputHandler = InputHandler()
+
+    // -----------------------------------------------------------------------
+    // Player (Phase 3) – initialized in surfaceCreated once we know screen size
+    // -----------------------------------------------------------------------
+    private lateinit var player: Player
 
     // -----------------------------------------------------------------------
     // FPS tracking
@@ -108,6 +115,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     override fun surfaceCreated(holder: SurfaceHolder) {
         screenWidth  = width
         screenHeight = height
+
+        // Phase 3: create Player now that screen dimensions are known
+        if (!::player.isInitialized) {
+            player = Player(screenWidth, screenHeight)
+            wirePlayerToInput()
+        }
+
         gameThread.isRunning = true
         if (gameThread.state == Thread.State.NEW) gameThread.start()
     }
@@ -147,33 +161,30 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
 
     private fun wireInputCallbacks() {
-        inputHandler.onJumpPressed = {
-            Log.d(TAG, "INPUT → JUMP PRESSED")
-            addInputLog("▲ Jump pressed")
-        }
-
-        inputHandler.onJumpHeld = { holdSec ->
-            // Fires every frame while held – only log at 0.1s intervals to avoid spam
-            if ((holdSec * 10).toInt() != ((holdSec - 0.016f) * 10).toInt()) {
-                Log.d(TAG, "INPUT → JUMP HELD ${String.format("%.2f", holdSec)}s")
-            }
-        }
-
+        // Phase 2: logging only (runs regardless of player init order)
+        inputHandler.onJumpPressed  = { Log.d(TAG, "INPUT → JUMP PRESSED");  addInputLog("▲ Jump pressed") }
+        inputHandler.onJumpHeld     = { _ -> /* logged in wirePlayerToInput */ }
         inputHandler.onJumpReleased = { holdSec ->
             val type = if (holdSec < 0.12f) "TAP" else "HOLD(${String.format("%.2f", holdSec)}s)"
             Log.d(TAG, "INPUT → JUMP RELEASED [$type]")
             addInputLog("▲ Jump $type")
         }
+        inputHandler.onDuckPressed  = { Log.d(TAG, "INPUT → DUCK");     addInputLog("▼ Duck") }
+        inputHandler.onDuckReleased = { Log.d(TAG, "INPUT → DUCK END"); addInputLog("▼ Duck end") }
+    }
 
-        inputHandler.onDuckPressed = {
-            Log.d(TAG, "INPUT → DUCK")
-            addInputLog("▼ Duck")
-        }
+    /** Called once after [player] is initialized to attach physics callbacks. */
+    private fun wirePlayerToInput() {
+        val prev_pressed  = inputHandler.onJumpPressed
+        val prev_released = inputHandler.onJumpReleased
+        val prev_duck     = inputHandler.onDuckPressed
+        val prev_duckEnd  = inputHandler.onDuckReleased
 
-        inputHandler.onDuckReleased = {
-            Log.d(TAG, "INPUT → DUCK END")
-            addInputLog("▼ Duck end")
-        }
+        inputHandler.onJumpPressed  = { prev_pressed?.invoke();           player.onJumpPressed() }
+        inputHandler.onJumpHeld     = { holdSec -> player.onJumpHeld(holdSec) }
+        inputHandler.onJumpReleased = { holdSec -> prev_released?.invoke(holdSec); player.onJumpReleased(holdSec) }
+        inputHandler.onDuckPressed  = { prev_duck?.invoke();              player.onDuckPressed() }
+        inputHandler.onDuckReleased = { prev_duckEnd?.invoke();           player.onDuckReleased() }
     }
 
     private fun addInputLog(msg: String) {
@@ -198,7 +209,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Tick the input handler so hold duration accumulates
         inputHandler.tick(deltaTime)
 
-        // Phase 3+ will call subsystems here:
+        // Phase 3: update player physics
+        if (::player.isInitialized) player.update(deltaTime)
+
+        // Phase 4+ will call subsystems here:
+        // parallaxBackground.update(deltaTime, scrollSpeed)
+        // entityManager.update(deltaTime)
         // gameStateManager.update(deltaTime)
     }
 
@@ -217,12 +233,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // ── Input state indicator (bottom-right) ─────────────────
         drawInputStateIndicator(canvas)
 
-        // Phase 3+ draw calls go here ─────────────────────────────
-        // parallaxBackground.draw(canvas)
-        // player.draw(canvas)
-        // entityManager.draw(canvas)
-        // hud.draw(canvas)
-        // flavorTextManager.draw(canvas)
+        // ── Phase 3: Player ──────────────────────────────────────
+        if (::player.isInitialized) player.draw(canvas)
+
+        // Phase 4+ draw calls go here ─────────────────────────────
+        // parallaxBackground.draw(canvas)   [Phase 4]
+        // entityManager.draw(canvas)        [Phase 8+]
+        // hud.draw(canvas)                  [Phase 5]
+        // flavorTextManager.draw(canvas)    [Phase 16]
     }
 
     // -----------------------------------------------------------------------
@@ -259,11 +277,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         debugTextPaint.color = Color.WHITE
 
         ty += lineH
-        // Live status line
+        // Live status line: show player state if available, else input state
+        val playerStateStr = if (::player.isInitialized) "[${player.state.name}]" else ""
         val liveStatus = when {
-            inputHandler.isDucking      -> "▼ DUCKING"
-            inputHandler.isChargingJump -> "▲ CHARGING ${String.format("%.2f", inputHandler.holdDuration)}s"
-            else                        -> "· idle"
+            inputHandler.isDucking      -> "▼ DUCKING $playerStateStr"
+            inputHandler.isChargingJump -> "▲ CHARGING ${String.format("%.2f", inputHandler.holdDuration)}s $playerStateStr"
+            else                        -> "· idle $playerStateStr"
         }
         debugTextPaint.color = if (inputHandler.isDucking) Color.CYAN
                                else if (inputHandler.isChargingJump) Color.YELLOW
