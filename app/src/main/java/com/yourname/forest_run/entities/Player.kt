@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.engine.HapticManager
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleEmitter
@@ -182,6 +183,7 @@ class Player(
         val t = MathUtils.clamp01(holdSec / MAX_HOLD_DURATION_S)
         velocityY = MathUtils.lerp(MIN_JUMP_FORCE, MAX_JUMP_FORCE, t)
         SfxManager.playJump()   // Phase 20
+        HapticManager.shortPulse() // Phase 21
         transitionTo(PlayerState.JUMPING)
     }
 

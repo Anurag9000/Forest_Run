@@ -49,6 +49,16 @@ class GameStateManager(context: Context) {
     var isNewHighScore: Boolean = false
         private set
 
+    /** Score milestone last fired (every 1000 pts). Consumed by GameView for haptic. */
+    private var lastMilestone: Int = 0
+    private var milestoneReady: Boolean = false
+
+    /** Returns true once per milestone crossing — GameView consumes it for haptics/shake. */
+    fun consumeMilestone(): Boolean {
+        if (milestoneReady) { milestoneReady = false; return true }
+        return false
+    }
+
     // -----------------------------------------------------------------------
     // Seeds & Bloom Meter
     // -----------------------------------------------------------------------
@@ -121,6 +131,12 @@ class GameStateManager(context: Context) {
         if (score > highScore) {
             highScore = score
             isNewHighScore = true
+        }
+        // Milestone every 1000 pts — Phase 21
+        val milestone = score / 1000
+        if (milestone > lastMilestone) {
+            lastMilestone  = milestone
+            milestoneReady = true
         }
 
         // ── Bloom timer ──────────────────────────────────────────────────

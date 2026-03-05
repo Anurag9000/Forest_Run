@@ -206,6 +206,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         SfxManager.init(context)
         LeitmotifManager.playRunStart()
 
+        // Phase 21: Init haptics
+        HapticManager.init(context)
+
         // Phase 5: HUD
         if (!::hud.isInitialized) {
             hud = HUD(context, screenWidth, screenHeight)
@@ -403,6 +406,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         CameraSystem.shakeHit()
                         SfxManager.playHit()          // Phase 20
                         LeitmotifManager.playRest()   // Phase 20
+                        HapticManager.longPulse()     // Phase 21 — strong death feedback
                         // Phase 19: save ghost if this run is a new best distance
                         if (::gameState.isInitialized && gameState.isNewHighScore) {
                             SaveManager.saveGhostRun(context, ghostRecorder.snapshot())
@@ -416,6 +420,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     CollisionResult.MERCY_MISS -> {
                         mercyFlashTimer = mercyFlashDuration
                         SfxManager.playMercyMiss()    // Phase 20
+                        HapticManager.doubleTap()     // Phase 21 — close call buzz
                         // Stars burst at player centre
                         ParticleManager.emit(FxPreset.MERCY_STARS,
                             player.x + Player.BASE_WIDTH / 2f,
@@ -444,6 +449,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (::gameState.isInitialized) {
             LeitmotifManager.updateDistance(gameState.distanceMetres)
             LeitmotifManager.updateTempo(gameState.scrollSpeed)
+
+            // Phase 21: 1000-point milestone haptic + camera nudge
+            if (gameState.consumeMilestone()) {
+                HapticManager.mediumPulse()
+                CameraSystem.addTrauma(0.3f)   // gentle nudge on 1000-pt milestone
+            }
         }
 
         // Flavor text float animation
