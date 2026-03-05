@@ -2,6 +2,7 @@ package com.yourname.forest_run.entities
 
 import android.content.Context
 import com.yourname.forest_run.entities.flora.*
+import com.yourname.forest_run.entities.trees.*
 
 /**
  * Instantiates the correct Entity subclass based on the requested EntityType.
@@ -22,7 +23,12 @@ object EntityFactory {
             EntityType.EUCALYPTUS     -> Eucalyptus(context, startX, groundY)
             EntityType.VANILLA_ORCHID -> VanillaOrchid(context, startX, groundY)
             
-            // Phase 9-11: Implement the rest
+            EntityType.WEEPING_WILLOW -> WeepingWillow(context, startX, screenHeight, groundY)
+            EntityType.JACARANDA      -> Jacaranda(context, startX, screenHeight, groundY)
+            EntityType.BAMBOO         -> Bamboo(context, startX, screenHeight, groundY)
+            EntityType.CHERRY_BLOSSOM -> CherryBlossom(context, startX, screenHeight, groundY)
+            
+            // Phase 10-11: Implement the rest
             else -> {
                 object : Entity(context) {
                     init {
