@@ -15,6 +15,7 @@ import com.yourname.forest_run.entities.PlayerState
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.FlavorTextManager
+import com.yourname.forest_run.ui.GameOverScreen
 import com.yourname.forest_run.ui.HUD
 
 private const val TAG = "ForestRun"
@@ -58,11 +59,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // Phase 5: Game state + HUD
     // Phase 6: Sprite Manager
     // Phase 12: Entity Manager
+    // Phase 17: GameOverScreen + run-state machine
     // -----------------------------------------------------------------------
     private lateinit var gameState: GameStateManager
     private lateinit var hud: HUD
     private lateinit var spriteManager: SpriteManager
     private lateinit var entityManager: EntityManager
+    private lateinit var gameOverScreen: GameOverScreen
+
+    // ── Run State (Phase 17) ──────────────────────────────────────────────
+    private var runState: RunState = RunState.PLAYING
+    private val runResetManager    = RunResetManager()
+
+    // Restart fade-to-black overlay
+    private val restartFadePaint = Paint().apply { color = Color.BLACK }
 
     // Screen-flash overlay for MERCY_MISS (green border pulse)
     private var mercyFlashTimer = 0f
@@ -174,6 +184,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 16: init FlavorTextManager pixel font
         FlavorTextManager.init(context)
 
+        // Phase 17: GameOverScreen
+        if (!::gameOverScreen.isInitialized) {
+            gameOverScreen = GameOverScreen(context, screenWidth, screenHeight)
+        }
+
         // Phase 5: HUD
         if (!::hud.isInitialized) {
             hud = HUD(context, screenWidth, screenHeight)
@@ -228,15 +243,29 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun wireInputCallbacks() {
         // Phase 2: logging only (runs regardless of player init order)
-        inputHandler.onJumpPressed  = { Log.d(TAG, "INPUT → JUMP PRESSED");  addInputLog("▲ Jump pressed") }
+        inputHandler.onJumpPressed  = {
+            Log.d(TAG, "INPUT → JUMP PRESSED")
+            addInputLog("▲ Jump pressed")
+        }
         inputHandler.onJumpHeld     = { _ -> /* logged in wirePlayerToInput */ }
         inputHandler.onJumpReleased = { holdSec ->
-            val type = if (holdSec < 0.12f) "TAP" else "HOLD(${String.format("%.2f", holdSec)}s)"
-            Log.d(TAG, "INPUT → JUMP RELEASED [$type]")
-            addInputLog("▲ Jump $type")
+            // Phase 17: If GAME_OVER, any tap begins the restart sequence
+            if (runState == RunState.GAME_OVER) {
+                runState = runResetManager.beginRestart()
+            } else {
+                val type = if (holdSec < 0.12f) "TAP" else "HOLD(${String.format("%.2f", holdSec)}s)"
+                Log.d(TAG, "INPUT → JUMP RELEASED [$type]")
+                addInputLog("▲ Jump $type")
+            }
         }
-        inputHandler.onDuckPressed  = { Log.d(TAG, "INPUT → DUCK");     addInputLog("▼ Duck") }
-        inputHandler.onDuckReleased = { Log.d(TAG, "INPUT → DUCK END"); addInputLog("▼ Duck end") }
+        inputHandler.onDuckPressed  = {
+            Log.d(TAG, "INPUT → DUCK")
+            addInputLog("▼ Duck")
+        }
+        inputHandler.onDuckReleased = {
+            Log.d(TAG, "INPUT → DUCK END")
+            addInputLog("▼ Duck end")
+        }
     }
 
     /** Called once after [player] is initialized to attach physics callbacks. */
@@ -280,6 +309,36 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         if (!::gameState.isInitialized) return
 
+        // Phase 17: State gate — freeze physics in DYING / GAME_OVER / RESTARTING
+        when (runState) {
+            RunState.DYING -> {
+                val next = runResetManager.update(deltaTime, runState)
+                if (next == RunState.GAME_OVER) runState = RunState.GAME_OVER
+                CameraSystem.update(deltaTime)
+                ParticleManager.update(deltaTime)
+                FlavorTextManager.update(deltaTime)
+                if (::gameOverScreen.isInitialized) gameOverScreen.update(deltaTime)
+                return
+            }
+            RunState.GAME_OVER -> {
+                if (::gameOverScreen.isInitialized) gameOverScreen.update(deltaTime)
+                return   // Hard stop — no physics updates
+            }
+            RunState.RESTARTING -> {
+                val next = runResetManager.update(deltaTime, runState)
+                restartFadePaint.alpha = runResetManager.restartFadeAlpha
+                if (next == RunState.PLAYING && runResetManager.restartFadeAlpha >= 255) {
+                    if (::entityManager.isInitialized && ::player.isInitialized &&
+                        ::gameState.isInitialized) {
+                        runResetManager.executeReset(gameState, entityManager, player)
+                    }
+                    runState = RunState.PLAYING
+                }
+                return
+            }
+            RunState.PLAYING -> { /* fall through to physics */ }
+        }
+
         // Phase 5: update game state (scroll speed lives here now)
         gameState.update(deltaTime)
 
@@ -315,9 +374,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (collision != null) {
                 when (collision.result) {
                     CollisionResult.HIT -> {
-                        // Force player into REST state
-                        player.triggerRest()  // also emits HIT_BURST particles
+                        player.triggerRest()  // emits HIT_BURST particles
                         CameraSystem.shakeHit()
+                        // Transition to DYING
+                        if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
+                        runState = RunState.DYING
                     }
                     CollisionResult.MERCY_MISS -> {
                         mercyFlashTimer = mercyFlashDuration
@@ -399,7 +460,26 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (::hud.isInitialized && ::gameState.isInitialized)
             hud.draw(canvas, gameState)
 
-        // 9. Debug overlays (topmost)
+        // 9. Game Over overlay (DYING: faint, GAME_OVER: full)
+        if (runState == RunState.GAME_OVER || runState == RunState.DYING) {
+            if (::gameOverScreen.isInitialized && ::gameState.isInitialized) {
+                gameOverScreen.draw(
+                    canvas          = canvas,
+                    score           = gameState.score,
+                    distanceM       = gameState.distanceMetres,
+                    isNewHighScore  = gameState.isNewHighScore,
+                    highScore       = gameState.highScore,
+                    mercyHearts     = gameState.mercyHearts
+                )
+            }
+        }
+
+        // 10. RESTARTING — fade to black
+        if (runState == RunState.RESTARTING) {
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), restartFadePaint)
+        }
+
+        // 11. Debug overlays (topmost)
         drawFps(canvas)
         drawInputDebugPanel(canvas)
         drawInputStateIndicator(canvas)
