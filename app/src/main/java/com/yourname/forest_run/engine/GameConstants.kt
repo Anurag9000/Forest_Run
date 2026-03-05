@@ -25,7 +25,9 @@ object GameConstants {
 
     // ── Biomes ────────────────────────────────────────────────────────────
     /** Metres between biome transitions. */
-    const val BIOME_LENGTH_M     = 500f
+    const val BIOME_LENGTH_M       = 500f
+    /** Canonical alias used by BiomeManager and Biome enum. */
+    const val BIOME_LENGTH_METRES  = 500f
 
     // ── Score ─────────────────────────────────────────────────────────────
     /** Points per metre of distance travelled. */

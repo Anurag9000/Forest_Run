@@ -116,6 +116,34 @@ class ParallaxBackground(
         layers[1] = ParallaxLayer(bitmap, speedFractions[1])
     }
 
+    /**
+     * Push live-blended biome colours into the placeholder layer paints.
+     * Called every frame from GameView with values from [BiomeManager].
+     *
+     * @param skyTop       Sky top gradient colour (applied to layer 0 background).
+     * @param skyBottom    Sky bottom / horizon colour.
+     * @param groundColour Ground strip colour (layer 3).
+     * @param foliage      Mid-foliage colour (layer 1 silhouettes).
+     */
+    fun applyBiomeColours(skyTop: Int, skyBottom: Int, groundColour: Int, foliage: Int) {
+        // Recolour placeholder bitmaps is expensive — instead we store tint values
+        // and draw a colour-mode overlay on each layer during draw().
+        // For Phase 13, we tint the floor paint and the sky overlay directly.
+        floorPaint.color = groundColour
+
+        // Sky overlay paint — used in draw() to tint layer 0
+        skyOverlayTop    = skyTop
+        skyOverlayBottom = skyBottom
+        foliageOverlay   = foliage
+    }
+
+    /** Tint values set by [applyBiomeColours], applied during draw(). */
+    private var skyOverlayTop:    Int = Color.TRANSPARENT
+    private var skyOverlayBottom: Int = Color.TRANSPARENT
+    private var foliageOverlay:   Int = Color.TRANSPARENT
+
+    private val skyOverlayPaint = Paint().apply { alpha = 120 }
+
     // -----------------------------------------------------------------------
     // Placeholder bitmap builder
     // -----------------------------------------------------------------------

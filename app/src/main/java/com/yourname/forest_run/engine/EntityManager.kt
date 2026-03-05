@@ -24,7 +24,9 @@ class EntityManager(
     private val context: Context,
     private val screenWidth: Float,
     private val screenHeight: Float,
-    private val spriteManager: SpriteManager
+    private val spriteManager: SpriteManager,
+    /** Injected from GameView — updated every frame before EntityManager.update() is called. */
+    val biomeManager: BiomeManager = BiomeManager()
 ) {
 
     /** All entities currently on screen or within the active window. */
@@ -122,7 +124,7 @@ class EntityManager(
     // ── Spawning Helper ───────────────────────────────────────────────────
 
     private fun spawnRandom(distanceMetres: Float) {
-        val pool = DifficultyScaler.getSpawnPool(distanceMetres)
+        val pool = DifficultyScaler.getSpawnPool(distanceMetres, biomeManager)
         val type = pool[Random.nextInt(pool.size)]
         spawn(type)
     }

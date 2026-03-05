@@ -71,6 +71,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         color = Color.argb(200, 60, 240, 80)
     }
 
+    // Phase 13: Night/dusk ambient darkness overlay
+    private val ambientOverlayPaint = Paint().apply { color = Color.BLACK }
+
     // -----------------------------------------------------------------------
     // FPS tracking
     // -----------------------------------------------------------------------
@@ -280,6 +283,18 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (::hud.isInitialized) hud.update(deltaTime, gameState)
 
         // Phase 3: update player physics
+        // Phase 13: BiomeManager update (colours, entity pool)
+        if (::entityManager.isInitialized) {
+            entityManager.biomeManager.update(gameState.distanceMetres)
+            if (::parallaxBackground.isInitialized) {
+                val bm = entityManager.biomeManager
+                parallaxBackground.applyBiomeColours(
+                    bm.currentSkyTop, bm.currentSkyBottom,
+                    bm.currentGround, bm.currentFoliage
+                )
+            }
+        }
+
         if (!::player.isInitialized) return
         player.update(deltaTime)
 
@@ -337,7 +352,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), mercyFlashPaint)
         }
 
-        // 7. HUD (always above gameplay)
+        // 6b. Ambient night/dusk darkness overlay (Phase 13)
+        if (::entityManager.isInitialized) {
+            val ambient = entityManager.biomeManager.ambientAlpha
+            if (ambient > 0) {
+                ambientOverlayPaint.alpha = ambient
+                canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), ambientOverlayPaint)
+            }
+        }
+
+        // 7. HUD (always above gameplay, above all overlays)
         if (::hud.isInitialized && ::gameState.isInitialized)
             hud.draw(canvas, gameState)
 

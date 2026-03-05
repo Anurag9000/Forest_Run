@@ -70,11 +70,15 @@ object DifficultyScaler {
 
     /**
      * Returns the spawn pool to use at the given distance.
-     * Phase 13 (BiomeManager) will replace this with biome-specific pools.
+     * If a [biomeManager] is supplied, uses its biome-specific pool (with crossfade mixing).
+     * Falls back to the distance-tiered pools for test contexts without a BiomeManager.
      */
-    fun getSpawnPool(distanceMetres: Float): List<EntityType> = when {
-        distanceMetres < 500f  -> POOL_EARLY
-        distanceMetres < 1500f -> POOL_MID
-        else                   -> POOL_LATE
+    fun getSpawnPool(distanceMetres: Float, biomeManager: BiomeManager? = null): List<EntityType> {
+        if (biomeManager != null) return biomeManager.entityPool
+        return when {
+            distanceMetres < 500f  -> POOL_EARLY
+            distanceMetres < 1500f -> POOL_MID
+            else                   -> POOL_LATE
+        }
     }
 }
