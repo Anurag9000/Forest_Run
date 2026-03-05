@@ -24,7 +24,8 @@ import com.yourname.forest_run.utils.MathUtils
  */
 class Player(
     screenWidth: Int,
-    screenHeight: Int
+    screenHeight: Int,
+    groundYOverride: Float = -1f    // -1 = use default (82% of screen); set by ParallaxBackground
 ) {
 
     // -----------------------------------------------------------------------
@@ -124,7 +125,7 @@ class Player(
     init {
         // Player runs at 25 % from the left edge
         x        = screenWidth * 0.25f - BASE_WIDTH / 2f
-        groundY  = screenHeight - 80f        // 80 px floor strip
+        groundY  = if (groundYOverride > 0f) groundYOverride else screenHeight * 0.82f
         y        = groundY - BASE_HEIGHT
         updateHitbox()
     }

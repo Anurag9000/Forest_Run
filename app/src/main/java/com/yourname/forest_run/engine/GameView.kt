@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.utils.MathUtils
 
 private const val TAG = "ForestRun"
 
@@ -21,8 +22,9 @@ private const val TAG = "ForestRun"
  *  - Phase 1: 60 FPS loop with nanosecond deltaTime
  *  - Phase 2: [InputHandler] wired + on-screen debug panel
  *  - Phase 3: [Player] physics, state machine, squash/stretch, hitbox
+ *  - Phase 4: [ParallaxBackground] 4-layer scroll, floor line, game scroll speed
  *
- * Upcoming phases will progressively fill [update] and [draw] with real systems.
+ * Upcoming phases will add HUD, sprites, entities, and game state.
  */
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
 
@@ -37,9 +39,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     val inputHandler = InputHandler()
 
     // -----------------------------------------------------------------------
-    // Player (Phase 3) – initialized in surfaceCreated once we know screen size
+    // Phase 3: Player – initialized in surfaceCreated once we know screen size
     // -----------------------------------------------------------------------
     private lateinit var player: Player
+
+    // -----------------------------------------------------------------------
+    // Phase 4: Background + scroll speed
+    // -----------------------------------------------------------------------
+    private lateinit var parallaxBackground: ParallaxBackground
+
+    /** Current game scroll speed in pixels/second. Updated in [update]. */
+    private var scrollSpeed: Float = GameConstants.BASE_SCROLL_SPEED
+
+    /** Total metres run this session (for difficulty scaling in Phase 12). */
+    private var distanceM: Float = 0f
 
     // -----------------------------------------------------------------------
     // FPS tracking
@@ -116,9 +129,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         screenWidth  = width
         screenHeight = height
 
-        // Phase 3: create Player now that screen dimensions are known
+        // Phase 4: create background first so groundY is available for Player
+        if (!::parallaxBackground.isInitialized) {
+            parallaxBackground = ParallaxBackground(screenWidth, screenHeight)
+        }
+
+        // Phase 3: create Player with groundY from the background
         if (!::player.isInitialized) {
-            player = Player(screenWidth, screenHeight)
+            player = Player(screenWidth, screenHeight, parallaxBackground.groundY)
             wirePlayerToInput()
         }
 
@@ -209,12 +227,25 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Tick the input handler so hold duration accumulates
         inputHandler.tick(deltaTime)
 
+        if (!::parallaxBackground.isInitialized) return   // not yet ready
+
+        // Phase 4: update scroll speed (gentle ramp with distance)
+        distanceM   += scrollSpeed / 1000f * deltaTime    // px/s ÷ px/m = m/s
+        scrollSpeed  = MathUtils.clamp(
+            GameConstants.BASE_SCROLL_SPEED + distanceM * GameConstants.SPEED_PER_METRE,
+            GameConstants.BASE_SCROLL_SPEED,
+            GameConstants.MAX_SCROLL_SPEED
+        )
+
+        // Phase 4: update parallax layers
+        parallaxBackground.update(deltaTime, scrollSpeed)
+
         // Phase 3: update player physics
         if (::player.isInitialized) player.update(deltaTime)
 
-        // Phase 4+ will call subsystems here:
-        // parallaxBackground.update(deltaTime, scrollSpeed)
-        // entityManager.update(deltaTime)
+        // Phase 5+ subsystems:
+        // hud.update(distanceM, score, seedCount)
+        // entityManager.update(deltaTime, scrollSpeed)
         // gameStateManager.update(deltaTime)
     }
 
@@ -233,13 +264,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // ── Input state indicator (bottom-right) ─────────────────
         drawInputStateIndicator(canvas)
 
-        // ── Phase 3: Player ──────────────────────────────────────
+        // ── Phase 4: Background (drawn first, behind everything) ────────────
+        if (::parallaxBackground.isInitialized) parallaxBackground.draw(canvas)
+
+        // ── Phase 3: Player (drawn above background, below HUD) ────────────
         if (::player.isInitialized) player.draw(canvas)
 
-        // Phase 4+ draw calls go here ─────────────────────────────
-        // parallaxBackground.draw(canvas)   [Phase 4]
-        // entityManager.draw(canvas)        [Phase 8+]
+        // Phase 5+: HUD drawn last (always on top)
         // hud.draw(canvas)                  [Phase 5]
+        // entityManager.draw(canvas)        [Phase 8+]
         // flavorTextManager.draw(canvas)    [Phase 16]
     }
 
