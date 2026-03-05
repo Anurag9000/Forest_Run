@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Srishgift"
+rootProject.name = "Forest_Run"
 include(":app")

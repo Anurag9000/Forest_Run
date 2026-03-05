@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.Srishgift" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+        NoActionBar + black background.
+        The game draws everything on a SurfaceView via Canvas.
+        Status bar and nav bar are hidden in code (immersive sticky).
+    -->
+    <style name="Theme.ForestRun" parent="android:Theme.Material.NoTitleBar.Fullscreen">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
 </resources>
