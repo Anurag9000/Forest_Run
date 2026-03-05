@@ -10,21 +10,20 @@ import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import com.yourname.forest_run.entities.Player
-import com.yourname.forest_run.utils.MathUtils
+import com.yourname.forest_run.ui.HUD
 
 private const val TAG = "ForestRun"
 
 /**
  * The top-level game view.
  *
- * Current phases implemented:
+ * Phases implemented:
  *  - Phase 0: SurfaceView + GameThread scaffold
  *  - Phase 1: 60 FPS loop with nanosecond deltaTime
  *  - Phase 2: [InputHandler] wired + on-screen debug panel
  *  - Phase 3: [Player] physics, state machine, squash/stretch, hitbox
- *  - Phase 4: [ParallaxBackground] 4-layer scroll, floor line, game scroll speed
- *
- * Upcoming phases will add HUD, sprites, entities, and game state.
+ *  - Phase 4: [ParallaxBackground] 4-layer scroll, floor line
+ *  - Phase 5: [GameStateManager] scroll/score/seeds/bloom; [HUD] drawn last
  */
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
 
@@ -44,15 +43,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private lateinit var player: Player
 
     // -----------------------------------------------------------------------
-    // Phase 4: Background + scroll speed
+    // Phase 4: Background
     // -----------------------------------------------------------------------
     private lateinit var parallaxBackground: ParallaxBackground
 
-    /** Current game scroll speed in pixels/second. Updated in [update]. */
-    private var scrollSpeed: Float = GameConstants.BASE_SCROLL_SPEED
-
-    /** Total metres run this session (for difficulty scaling in Phase 12). */
-    private var distanceM: Float = 0f
+    // -----------------------------------------------------------------------
+    // Phase 5: Game state + HUD – initialized in surfaceCreated
+    // -----------------------------------------------------------------------
+    private lateinit var gameState: GameStateManager
+    private lateinit var hud: HUD
 
     // -----------------------------------------------------------------------
     // FPS tracking
@@ -129,12 +128,22 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         screenWidth  = width
         screenHeight = height
 
-        // Phase 4: create background first so groundY is available for Player
+        // Phase 5: GameStateManager first (owns scroll speed)
+        if (!::gameState.isInitialized) {
+            gameState = GameStateManager(context)
+        }
+
+        // Phase 4: background (groundY used by Player)
         if (!::parallaxBackground.isInitialized) {
             parallaxBackground = ParallaxBackground(screenWidth, screenHeight)
         }
 
-        // Phase 3: create Player with groundY from the background
+        // Phase 5: HUD
+        if (!::hud.isInitialized) {
+            hud = HUD(context, screenWidth, screenHeight)
+        }
+
+        // Phase 3: Player
         if (!::player.isInitialized) {
             player = Player(screenWidth, screenHeight, parallaxBackground.groundY)
             wirePlayerToInput()
@@ -153,7 +162,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         stopThread()
     }
 
-    fun pause() { stopThread() }
+    fun pause() {
+        stopThread()
+        if (::gameState.isInitialized) gameState.save()   // persist high score
+    }
 
     fun resume() {
         // Re-create thread (Java threads can't be restarted after stop)
@@ -224,56 +236,50 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             fpsElapsed   -= 1f
         }
 
-        // Tick the input handler so hold duration accumulates
+        // Input tick
         inputHandler.tick(deltaTime)
 
-        if (!::parallaxBackground.isInitialized) return   // not yet ready
+        if (!::gameState.isInitialized) return
 
-        // Phase 4: update scroll speed (gentle ramp with distance)
-        distanceM   += scrollSpeed / 1000f * deltaTime    // px/s ÷ px/m = m/s
-        scrollSpeed  = MathUtils.clamp(
-            GameConstants.BASE_SCROLL_SPEED + distanceM * GameConstants.SPEED_PER_METRE,
-            GameConstants.BASE_SCROLL_SPEED,
-            GameConstants.MAX_SCROLL_SPEED
-        )
+        // Phase 5: update game state (scroll speed lives here now)
+        gameState.update(deltaTime)
 
-        // Phase 4: update parallax layers
-        parallaxBackground.update(deltaTime, scrollSpeed)
+        // Phase 4: update parallax with state's scroll speed
+        if (::parallaxBackground.isInitialized)
+            parallaxBackground.update(deltaTime, gameState.scrollSpeed)
+
+        // Phase 5: update HUD
+        if (::hud.isInitialized) hud.update(deltaTime, gameState)
 
         // Phase 3: update player physics
         if (::player.isInitialized) player.update(deltaTime)
 
-        // Phase 5+ subsystems:
-        // hud.update(distanceM, score, seedCount)
-        // entityManager.update(deltaTime, scrollSpeed)
-        // gameStateManager.update(deltaTime)
+        // Phase 6+ subsystems:
+        // entityManager.update(deltaTime, gameState.scrollSpeed)
     }
 
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
 
-        // ── Background ──────────────────────────────────────────────
+        // 1. Black fill (clean slate every frame)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
 
-        // ── FPS counter (top-left) ────────────────────────────────
-        drawFps(canvas)
-
-        // ── Input debug panel (bottom-left) ──────────────────────
-        drawInputDebugPanel(canvas)
-
-        // ── Input state indicator (bottom-right) ─────────────────
-        drawInputStateIndicator(canvas)
-
-        // ── Phase 4: Background (drawn first, behind everything) ────────────
+        // 2. Parallax background (back-most gameplay layer)
         if (::parallaxBackground.isInitialized) parallaxBackground.draw(canvas)
 
-        // ── Phase 3: Player (drawn above background, below HUD) ────────────
+        // 3. Player (above background, below HUD)
         if (::player.isInitialized) player.draw(canvas)
 
-        // Phase 5+: HUD drawn last (always on top)
-        // hud.draw(canvas)                  [Phase 5]
-        // entityManager.draw(canvas)        [Phase 8+]
-        // flavorTextManager.draw(canvas)    [Phase 16]
+        // 4. [Phase 8+] entities drawn here
+
+        // 5. HUD (always above gameplay)
+        if (::hud.isInitialized && ::gameState.isInitialized)
+            hud.draw(canvas, gameState)
+
+        // 6. Debug overlays (always topmost)
+        drawFps(canvas)
+        drawInputDebugPanel(canvas)
+        drawInputStateIndicator(canvas)
     }
 
     // -----------------------------------------------------------------------
