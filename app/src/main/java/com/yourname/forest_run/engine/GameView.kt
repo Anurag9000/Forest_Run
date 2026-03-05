@@ -9,7 +9,10 @@ import android.graphics.Typeface
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.entities.PlayerState
+import com.yourname.forest_run.ui.FlavorTextManager
 import com.yourname.forest_run.ui.HUD
 
 private const val TAG = "ForestRun"
@@ -24,6 +27,8 @@ private const val TAG = "ForestRun"
  *  - Phase 3: [Player] physics, state machine, squash/stretch, hitbox
  *  - Phase 4: [ParallaxBackground] 4-layer scroll, floor line
  *  - Phase 5: [GameStateManager] scroll/score/seeds/bloom; [HUD] drawn last
+ *  - Phase 6: [SpriteManager] loaded, passed to Player
+ *  - Phase 12: [EntityManager] spawner + collision loop live
  */
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
 
@@ -50,10 +55,21 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
     // Phase 5: Game state + HUD
     // Phase 6: Sprite Manager
+    // Phase 12: Entity Manager
     // -----------------------------------------------------------------------
     private lateinit var gameState: GameStateManager
     private lateinit var hud: HUD
     private lateinit var spriteManager: SpriteManager
+    private lateinit var entityManager: EntityManager
+
+    // Screen-flash overlay for MERCY_MISS (green border pulse)
+    private var mercyFlashTimer = 0f
+    private val mercyFlashDuration = 0.3f
+    private val mercyFlashPaint = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 20f
+        color = Color.argb(200, 60, 240, 80)
+    }
 
     // -----------------------------------------------------------------------
     // FPS tracking
@@ -143,6 +159,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 6: SpriteManager
         if (!::spriteManager.isInitialized) {
             spriteManager = SpriteManager(context)
+        }
+
+        // Phase 12: EntityManager (needs spriteManager and screen dimensions)
+        if (!::entityManager.isInitialized) {
+            entityManager = EntityManager(context, screenWidth.toFloat(), screenHeight.toFloat(), spriteManager)
         }
 
         // Phase 5: HUD
@@ -259,10 +280,36 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (::hud.isInitialized) hud.update(deltaTime, gameState)
 
         // Phase 3: update player physics
-        if (::player.isInitialized) player.update(deltaTime)
+        if (!::player.isInitialized) return
+        player.update(deltaTime)
 
-        // Phase 6+ subsystems:
-        // entityManager.update(deltaTime, gameState.scrollSpeed)
+        // Phase 12: EntityManager update (spawn, scroll, pass-detection)
+        if (::entityManager.isInitialized) {
+            entityManager.update(deltaTime, gameState, player)
+
+            // Collision loop
+            val collision = entityManager.checkCollisions(player, gameState)
+            if (collision != null) {
+                when (collision.result) {
+                    CollisionResult.HIT -> {
+                        // Force player into REST state (game over for this run)
+                        player.triggerRest()
+                        // Phase 15: triggerShake(8f, 0.5f) goes here
+                    }
+                    CollisionResult.MERCY_MISS -> {
+                        // Green border flash
+                        mercyFlashTimer = mercyFlashDuration
+                    }
+                    CollisionResult.NONE -> { /* handled above, shouldn't reach here */ }
+                }
+            }
+
+            // Tick down mercy flash
+            if (mercyFlashTimer > 0f) mercyFlashTimer -= deltaTime
+        }
+
+        // Flavor text float animation
+        FlavorTextManager.update(deltaTime)
     }
 
     override fun draw(canvas: Canvas) {
@@ -271,19 +318,30 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // 1. Black fill (clean slate every frame)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
 
-        // 2. Parallax background (back-most gameplay layer)
+        // 2. Parallax background
         if (::parallaxBackground.isInitialized) parallaxBackground.draw(canvas)
 
-        // 3. Player (above background, below HUD)
+        // 3. Entities (behind player, above background)
+        if (::entityManager.isInitialized) entityManager.draw(canvas)
+
+        // 4. Player (above entities)
         if (::player.isInitialized) player.draw(canvas)
 
-        // 4. [Phase 8+] entities drawn here
+        // 5. Floating flavor text
+        FlavorTextManager.draw(canvas)
 
-        // 5. HUD (always above gameplay)
+        // 6. MERCY_MISS green border flash
+        if (mercyFlashTimer > 0f) {
+            val alpha = ((mercyFlashTimer / mercyFlashDuration) * 200).toInt().coerceIn(0, 200)
+            mercyFlashPaint.alpha = alpha
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), mercyFlashPaint)
+        }
+
+        // 7. HUD (always above gameplay)
         if (::hud.isInitialized && ::gameState.isInitialized)
             hud.draw(canvas, gameState)
 
-        // 6. Debug overlays (always topmost)
+        // 8. Debug overlays (always topmost)
         drawFps(canvas)
         drawInputDebugPanel(canvas)
         drawInputStateIndicator(canvas)
