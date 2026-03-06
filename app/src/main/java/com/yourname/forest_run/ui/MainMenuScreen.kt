@@ -39,6 +39,9 @@ class MainMenuScreen(
     var shouldStartRun: Boolean = false
         private set
 
+    /** Called when the user taps the Garden button in IDLE phase. */
+    var onGardenTap: (() -> Unit)? = null
+
     // Timers
     private var standTimer = 0f
     private val STAND_DURATION = 1.8f
@@ -92,7 +95,12 @@ class MainMenuScreen(
     // ── API ───────────────────────────────────────────────────────────────
 
     /** Called on each tap from GameView.onTouchListener. */
-    fun onTap() {
+    fun onTap(tapX: Float = 0f, tapY: Float = 0f) {
+        // Garden button: bottom-left strip in IDLE phase
+        if (phase == Phase.IDLE && tapX < screenW * 0.35f && tapY > screenH * 0.85f) {
+            onGardenTap?.invoke()
+            return
+        }
         when (phase) {
             Phase.IDLE         -> { phase = Phase.STANDING_UP; standTimer = 0f }
             Phase.STANDING_UP  -> { /* wait for animation */ }

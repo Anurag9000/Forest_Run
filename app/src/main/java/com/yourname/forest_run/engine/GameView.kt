@@ -18,6 +18,7 @@ import com.yourname.forest_run.systems.GhostRecorder
 import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.FlavorTextManager
 import com.yourname.forest_run.ui.GameOverScreen
+import com.yourname.forest_run.ui.GardenScreen
 import com.yourname.forest_run.ui.HUD
 import com.yourname.forest_run.ui.MainMenuScreen
 
@@ -75,9 +76,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val runResetManager    = RunResetManager()
 
     // ── App Game State (Phase 22) ─────────────────────────────────────────
-    /** Top-level lifecycle state — MENU, PLAYING, BLOOM, REST. */
+    /** Top-level lifecycle state — MENU, GARDEN, PLAYING, BLOOM, REST. */
     private var appState: AppGameState = AppGameState.MENU
     private lateinit var mainMenuScreen: MainMenuScreen
+    private lateinit var gardenScreen: GardenScreen
 
     // Restart fade-to-black overlay
     private val restartFadePaint = Paint().apply { color = Color.BLACK }
@@ -223,6 +225,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 22: MainMenuScreen
         if (!::mainMenuScreen.isInitialized) {
             mainMenuScreen = MainMenuScreen(context, screenWidth, screenHeight)
+            mainMenuScreen.onGardenTap = { appState = AppGameState.GARDEN }
+        }
+
+        // Phase 23: GardenScreen
+        if (!::gardenScreen.isInitialized) {
+            gardenScreen = GardenScreen(context, screenWidth, screenHeight)
+            gardenScreen.onBack = { appState = AppGameState.MENU }
+            gardenScreen.load()
         }
 
         // Phase 5: HUD
@@ -364,6 +374,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 }
             }
             return   // No physics / entity updates while in menu
+        }
+
+        // Phase 23: GARDEN state
+        if (appState == AppGameState.GARDEN) {
+            if (::gardenScreen.isInitialized) {
+                gardenScreen.refresh()
+                gardenScreen.update(deltaTime)
+            }
+            return   // No physics while in garden
         }
 
         // Phase 17: State gate — freeze physics in DYING / GAME_OVER / RESTARTING
@@ -508,6 +527,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 22: MENU renders its own full-screen scene
         if (appState == AppGameState.MENU) {
             if (::mainMenuScreen.isInitialized) mainMenuScreen.draw(canvas)
+            return
+        }
+
+        // Phase 23: GARDEN renders plant meta-loop
+        if (appState == AppGameState.GARDEN) {
+            if (::gardenScreen.isInitialized) gardenScreen.draw(canvas)
             return
         }
 

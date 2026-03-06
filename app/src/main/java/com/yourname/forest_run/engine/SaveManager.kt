@@ -105,6 +105,17 @@ object SaveManager {
 
     fun hasGhostRun(context: Context): Boolean = ghostFile(context).exists()
 
+    // ── Garden progress (Phase 23) ─────────────────────────────────────────
+
+    private const val KEY_GARDEN = "garden_unlocked"
+
+    fun saveGardenProgress(context: Context, unlockedCount: Int) {
+        prefs(context).edit().putInt(KEY_GARDEN, unlockedCount).apply()
+    }
+
+    fun loadGardenProgress(context: Context): Int =
+        prefs(context).getInt(KEY_GARDEN, 1)
+
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private fun prefs(context: Context) =

@@ -14,6 +14,7 @@ package com.yourname.forest_run.engine
  */
 enum class AppGameState {
     MENU,
+    GARDEN,
     PLAYING,
     BLOOM,
     REST
