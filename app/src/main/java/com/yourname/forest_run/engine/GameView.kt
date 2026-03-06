@@ -19,6 +19,7 @@ import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.FlavorTextManager
 import com.yourname.forest_run.ui.GameOverScreen
 import com.yourname.forest_run.ui.HUD
+import com.yourname.forest_run.ui.MainMenuScreen
 
 private const val TAG = "ForestRun"
 
@@ -72,6 +73,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // ── Run State (Phase 17) ──────────────────────────────────────────────
     private var runState: RunState = RunState.PLAYING
     private val runResetManager    = RunResetManager()
+
+    // ── App Game State (Phase 22) ─────────────────────────────────────────
+    /** Top-level lifecycle state — MENU, PLAYING, BLOOM, REST. */
+    private var appState: AppGameState = AppGameState.MENU
+    private lateinit var mainMenuScreen: MainMenuScreen
 
     // Restart fade-to-black overlay
     private val restartFadePaint = Paint().apply { color = Color.BLACK }
@@ -204,10 +210,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 20: Init audio managers
         LeitmotifManager.init(context)
         SfxManager.init(context)
-        LeitmotifManager.playRunStart()
+        // Phase 22: Start with garden music in MENU, run music when PLAYING
+        if (appState == AppGameState.MENU) {
+            LeitmotifManager.transitionTo(LeitmotifManager.MusicState.MENU)
+        } else {
+            LeitmotifManager.playRunStart()
+        }
 
         // Phase 21: Init haptics
         HapticManager.init(context)
+
+        // Phase 22: MainMenuScreen
+        if (!::mainMenuScreen.isInitialized) {
+            mainMenuScreen = MainMenuScreen(context, screenWidth, screenHeight)
+        }
 
         // Phase 5: HUD
         if (!::hud.isInitialized) {
@@ -271,13 +287,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
         inputHandler.onJumpHeld     = { _ -> /* logged in wirePlayerToInput */ }
         inputHandler.onJumpReleased = { holdSec ->
-            // Phase 17: If GAME_OVER, any tap begins the restart sequence
-            if (runState == RunState.GAME_OVER) {
-                runState = runResetManager.beginRestart()
-            } else {
-                val type = if (holdSec < 0.12f) "TAP" else "HOLD(${String.format("%.2f", holdSec)}s)"
-                Log.d(TAG, "INPUT → JUMP RELEASED [$type]")
-                addInputLog("▲ Jump $type")
+            when {
+                // Phase 22: Menu taps drive the menu screen
+                appState == AppGameState.MENU -> {
+                    if (::mainMenuScreen.isInitialized) mainMenuScreen.onTap()
+                }
+                // Phase 17: GAME_OVER tap begins restart
+                runState == RunState.GAME_OVER -> {
+                    runState = runResetManager.beginRestart()
+                }
+                else -> {
+                    val type = if (holdSec < 0.12f) "TAP" else "HOLD(${String.format("%.2f", holdSec)}s)"
+                    Log.d(TAG, "INPUT → JUMP RELEASED [$type]")
+                    addInputLog("▲ Jump $type")
+                }
             }
         }
         inputHandler.onDuckPressed  = {
@@ -330,6 +353,18 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         inputHandler.tick(deltaTime)
 
         if (!::gameState.isInitialized) return
+
+        // Phase 22: MENU state — update menu screen, gate physics
+        if (appState == AppGameState.MENU) {
+            if (::mainMenuScreen.isInitialized) {
+                mainMenuScreen.update(deltaTime)
+                if (mainMenuScreen.shouldStartRun) {
+                    appState = AppGameState.PLAYING
+                    LeitmotifManager.playRunStart()
+                }
+            }
+            return   // No physics / entity updates while in menu
+        }
 
         // Phase 17: State gate — freeze physics in DYING / GAME_OVER / RESTARTING
         when (runState) {
@@ -469,6 +504,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // 1. Black fill (never shakes — clean border always visible)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+        // Phase 22: MENU renders its own full-screen scene
+        if (appState == AppGameState.MENU) {
+            if (::mainMenuScreen.isInitialized) mainMenuScreen.draw(canvas)
+            return
+        }
 
         // 2–5: All gameplay layers wrapped in camera shake offset
         CameraSystem.applyTo(canvas) {
