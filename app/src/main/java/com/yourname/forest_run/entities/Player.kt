@@ -111,6 +111,8 @@ class Player(
     private val animFalling   = spriteManager.playerFalling.copy()
     private val animLanding   = spriteManager.playerLanding.copy()
     private val animDuck      = spriteManager.playerDuck.copy()
+    private val animHit       = spriteManager.playerHit.copy()
+    private val animDeath     = spriteManager.playerDeath.copy()
     // Bloom uses the running animation but invincible.
     // Rest uses the ducking animation stopped on the last frame.
 
@@ -224,8 +226,15 @@ class Player(
         // Stop bloom aura if it was active
         bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomAuraEmitter = null
-        // HIT particle burst
-        ParticleManager.emit(FxPreset.HIT_BURST, x + BASE_WIDTH / 2f, y + BASE_HEIGHT / 2f)
+        // DEATH particle burst
+        ParticleManager.emit(FxPreset.DEATH_EXPLOSION, x + BASE_WIDTH / 2f, y + BASE_HEIGHT / 2f)
+    }
+
+    /** Triggers a non-lethal stumble animation. */
+    fun triggerStumble() {
+        if (state != PlayerState.REST && state != PlayerState.BLOOM) {
+            transitionTo(PlayerState.STUMBLE)
+        }
     }
 
     /** Called on run restart to restore the player to a clean running state. */
@@ -242,14 +251,31 @@ class Player(
     // Update (called every game frame)
     // -----------------------------------------------------------------------
     fun update(deltaTime: Float) {
+        stateTimer += deltaTime
         when (state) {
             PlayerState.REST    -> { /* frozen */ }
             PlayerState.BLOOM   -> updateBloom(deltaTime)
             PlayerState.DUCKING -> updateDucking(deltaTime)
+            PlayerState.STUMBLE -> updateStumble(deltaTime)
             else                -> updatePhysics(deltaTime)
         }
         updateHitbox()
         currentAnimation.update(deltaTime)
+    }
+
+    private fun updateStumble(deltaTime: Float) {
+        // Character flails while still moving forward with ground
+        if (currentAnimation.isFinished || stateTimer >= 0.8f) {
+            transitionTo(PlayerState.RUNNING)
+        }
+        // Basic ground physics (clamps Y)
+        if (y < groundY - BASE_HEIGHT) {
+             velocityY += GRAVITY * deltaTime
+             y += velocityY * deltaTime
+        } else {
+             y = groundY - BASE_HEIGHT
+             velocityY = 0f
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -309,6 +335,8 @@ class Player(
             }
 
             PlayerState.RUNNING -> { /* ground locomotion – no vertical physics */ }
+
+            PlayerState.STUMBLE -> { /* handled in updateStumble */ }
 
             else -> {}
         }
@@ -375,8 +403,9 @@ class Player(
             PlayerState.FALLING    -> animFalling
             PlayerState.LANDING    -> animLanding
             PlayerState.DUCKING    -> animDuck
+            PlayerState.STUMBLE    -> animHit
             PlayerState.BLOOM      -> animRun       // Bloom uses run animation
-            PlayerState.REST       -> animDuck      // Rest sits down (duck sprite)
+            PlayerState.REST       -> animDeath     // Game over sits down (death sprite)
         }
         currentAnimation.reset()
 

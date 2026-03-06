@@ -31,6 +31,8 @@ class SpriteManager(private val context: Context) {
     val playerFalling: SpriteSheet
     val playerLanding: SpriteSheet
     val playerDuck: SpriteSheet
+    val playerHit: SpriteSheet
+    val playerDeath: SpriteSheet
 
     // -----------------------------------------------------------------------
     // Flora / Plant Sprites  (4-frame idle animations)
@@ -50,13 +52,18 @@ class SpriteManager(private val context: Context) {
     val cherryBlossomSprite: SpriteSheet
 
     // -----------------------------------------------------------------------
-    // Bird Sprites  (4-frame fly loops)
+    // Bird Sprites  (4-frame idle AND 4-frame flying loops)
     // -----------------------------------------------------------------------
     val duckSprite: SpriteSheet
+    val duckFlying: SpriteSheet
     val titSprite: SpriteSheet
+    val titFlying: SpriteSheet
     val chickadeeSprite: SpriteSheet
+    val chickadeeFlying: SpriteSheet
     val owlSprite: SpriteSheet
+    val owlFlying: SpriteSheet
     val eagleSprite: SpriteSheet
+    val eagleFlying: SpriteSheet
 
     // -----------------------------------------------------------------------
     // Animal Sprites  (4-frame idle / walk loops)
@@ -91,6 +98,14 @@ class SpriteManager(private val context: Context) {
             Color.rgb(80, 220, 180), frameW, frameH, 48)
         playerDuck      = SpriteSheet(duckBmp, frameCount = 8, framesPerSec = 12f, isLooping = true)
 
+        val hitBmp = loadOrFallback("sprites/char/runner_girl_hit_sequence.png",
+            Color.rgb(220, 100, 100), frameW, frameH, 48)
+        playerHit       = SpriteSheet(hitBmp, frameCount = 12, framesPerSec = 15f, isLooping = false)
+
+        val deathBmp = loadOrFallback("sprites/char/runner_girl_death_sequence.png",
+            Color.rgb(100, 100, 100), frameW, frameH, 48)
+        playerDeath     = SpriteSheet(deathBmp, frameCount = 24, framesPerSec = 12f, isLooping = false)
+
         // ---- Flora ---------------------------------------------------------
         cactusSprite    = loadEntity("sprites/plants/cactus_4frames.png",       Color.rgb(30,140,50),   4)
         lilySprite      = loadEntity("sprites/plants/lily_of_valley_4frames.png",Color.WHITE,           4)
@@ -106,10 +121,19 @@ class SpriteManager(private val context: Context) {
 
         // ---- Birds ---------------------------------------------------------
         duckSprite      = loadEntity("sprites/birds/duck_4frames.png",      Color.rgb(200,200,50),  4)
+        duckFlying      = loadEntity("sprites/birds/duck_flying.png",       Color.rgb(200,200,50),  4)
+        
         titSprite       = loadEntity("sprites/birds/tit_4frames.png",       Color.rgb(100,180,220), 4)
+        titFlying       = loadEntity("sprites/birds/tit_flying.png",       Color.rgb(100,180,220), 4)
+        
         chickadeeSprite = loadEntity("sprites/birds/chickadee_4frames.png", Color.rgb(180,140,100), 4)
+        chickadeeFlying = loadEntity("sprites/birds/chickadee_flying.png", Color.rgb(180,140,100), 4)
+        
         owlSprite       = loadEntity("sprites/birds/owl_4frames.png",       Color.rgb(100,80,60),   4)
+        owlFlying       = loadEntity("sprites/birds/owl_flying.png",        Color.rgb(100,80,60),   4)
+        
         eagleSprite     = loadEntity("sprites/birds/eagle_4frames.png",     Color.rgb(160,120,60),  4)
+        eagleFlying     = loadEntity("sprites/birds/eagle_flying.png",     Color.rgb(160,120,60),  4)
 
         // ---- Animals -------------------------------------------------------
         catSprite      = loadEntity("sprites/animals/cat_4frames.png",     Color.rgb(220,190,160), 4)

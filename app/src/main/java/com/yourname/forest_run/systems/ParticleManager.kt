@@ -333,6 +333,23 @@ enum class FxPreset {
             gravity = 300f, drag = 0.82f,
             lifetimeMin = 0.3f, lifetimeMax = 0.7f
         )
+    },
+
+    /** Feather and petal burst on player death. */
+    DEATH_EXPLOSION {
+        override fun build(x: Float, y: Float) = ParticleEmitter(
+            x = x, y = y,
+            isBurst = true, count = 24,
+            angleMin = 0f, angleMax = 360f,
+            speedMin = 100f, speedMax = 500f,
+            startColor = Color.argb(255, 255, 180, 200), // Pink petals
+            endColor   = Color.TRANSPARENT,
+            startSize = 12f, endSize = 2f,
+            isCircle = false,
+            spinRateMin = 180f, spinRateMax = 720f,
+            gravity = 150f, drag = 0.90f,
+            lifetimeMin = 0.5f, lifetimeMax = 1.0f
+        )
     };
 
     /** Construct a [ParticleEmitter] configured at position (x, y). */

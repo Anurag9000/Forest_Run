@@ -18,7 +18,8 @@ class Owl(
     context: Context,
     startX: Float,
     private val groundY: Float,
-    private val sprite: SpriteSheet
+    private val idleSprite: SpriteSheet,
+    private val actionSprite: SpriteSheet
 ) : Entity(context) {
 
     private val birdW = 50f
@@ -27,6 +28,7 @@ class Owl(
 
     private enum class OwlState { SLEEPING, DIVING }
     private var owlState = OwlState.SLEEPING
+    private var currentSprite = idleSprite
 
     private var velX = 0f
     private var velY = 0f
@@ -38,7 +40,7 @@ class Owl(
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
-        sprite.update(deltaTime)
+        currentSprite.update(deltaTime)
 
         when (owlState) {
             OwlState.SLEEPING -> {
@@ -62,6 +64,8 @@ class Owl(
     fun triggerDive(targetX: Float, targetY: Float) {
         if (owlState == OwlState.SLEEPING) {
             owlState = OwlState.DIVING
+            currentSprite = actionSprite
+            currentSprite.reset()
             val diveSpeed = 600f
             val dx = targetX - x
             val dy = targetY - y
@@ -73,7 +77,7 @@ class Owl(
 
     override fun draw(canvas: Canvas) {
         val drawRect = RectF(x, y, x + birdW, y + birdH)
-        sprite.draw(canvas, drawRect)
+        currentSprite.draw(canvas, drawRect)
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

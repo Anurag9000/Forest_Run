@@ -39,11 +39,11 @@ object EntityFactory {
             EntityType.CHERRY_BLOSSOM -> CherryBlossom(context, startX, screenHeight, groundY, spriteManager.cherryBlossomSprite.copy())
 
             // ── Birds ────────────────────────────────────────────────────────
-            EntityType.DUCK      -> Duck(context, startX, groundY, spriteManager.duckSprite.copy())
-            EntityType.TIT       -> TitGroup(context, startX, groundY, spriteManager.titSprite.copy())
-            EntityType.CHICKADEE -> ChickadeeGroup(context, startX, groundY, spriteManager.chickadeeSprite.copy())
-            EntityType.OWL       -> Owl(context, startX, groundY, spriteManager.owlSprite.copy())
-            EntityType.EAGLE     -> Eagle(context, startX, screenWidth, groundY, spriteManager.eagleSprite.copy())
+            EntityType.DUCK      -> Duck(context, startX, groundY, spriteManager.duckFlying.copy())
+            EntityType.TIT       -> TitGroup(context, startX, groundY, spriteManager.titFlying.copy())
+            EntityType.CHICKADEE -> ChickadeeGroup(context, startX, groundY, spriteManager.chickadeeFlying.copy())
+            EntityType.OWL       -> Owl(context, startX, groundY, spriteManager.owlSprite.copy(), spriteManager.owlFlying.copy())
+            EntityType.EAGLE     -> Eagle(context, startX, screenWidth, groundY, spriteManager.eagleFlying.copy())
 
             // ── Animals ──────────────────────────────────────────────────────
             EntityType.CAT      -> Cat(context, startX, groundY, spriteManager.catSprite.copy())

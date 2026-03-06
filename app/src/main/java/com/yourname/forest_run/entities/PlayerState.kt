@@ -48,6 +48,12 @@ enum class PlayerState {
     BLOOM,
 
     /**
+     * Stumble – character hits an obstacle but recovers (e.g., non-lethal).
+     * Character flails briefly, then returns to RUNNING.
+     */
+    STUMBLE,
+
+    /**
      * Game-over / rest state.
      * Character sits on the ground; game loop is still running (background scrolls).
      */
