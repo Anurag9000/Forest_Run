@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.HapticManager
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.systems.FxPreset
@@ -178,15 +179,16 @@ class Player(
 
     /**
      * Commit the jump with [holdSec] seconds of charge.
-     * Force is linearly scaled between [MIN_JUMP_FORCE] and [MAX_JUMP_FORCE].
+     * Force is applied immediately at JUMP_START; release just triggers JUMPING.
      */
-    fun onJumpReleased(holdSec: Float) {
-        if (state != PlayerState.JUMP_START && state != PlayerState.RUNNING) return
-        val t = MathUtils.clamp01(holdSec / MAX_HOLD_DURATION_S)
-        velocityY = MathUtils.lerp(MIN_JUMP_FORCE, MAX_JUMP_FORCE, t)
-        SfxManager.playJump()   // Phase 20
-        HapticManager.shortPulse() // Phase 21
-        transitionTo(PlayerState.JUMPING)
+    fun onJumpReleased(@Suppress("UNUSED_PARAMETER") holdSec: Float) {
+        if (state == PlayerState.JUMP_START) {
+            transitionTo(PlayerState.JUMPING)
+        } else if (state == PlayerState.JUMPING && velocityY < 0f) {
+            // "Mario" variable jump: if user lets go while still rising, cut upward velocity by half
+            velocityY *= 0.5f
+        }
+        // Audio and haptics handled in updatePhysics when force is applied
     }
 
     fun onDuckPressed() {
@@ -250,7 +252,7 @@ class Player(
     // -----------------------------------------------------------------------
     // Update (called every game frame)
     // -----------------------------------------------------------------------
-    fun update(deltaTime: Float) {
+    fun update(deltaTime: Float, scrollSpeed: Float = 400f) {
         stateTimer += deltaTime
         when (state) {
             PlayerState.REST    -> { /* frozen */ }
@@ -260,6 +262,14 @@ class Player(
             else                -> updatePhysics(deltaTime)
         }
         updateHitbox()
+        
+        // Velocity Sync: Scale run animation FPS based on scroll speed
+        if (state == PlayerState.RUNNING || state == PlayerState.BLOOM) {
+            // Base speed ~400 -> 24 fps. Max speed ~800 -> 32 fps
+            val targetFps = MathUtils.map(scrollSpeed, GameConstants.BASE_SCROLL_SPEED, GameConstants.MAX_SCROLL_SPEED, 24f, 32f)
+            animRun.framesPerSec = targetFps
+        }
+        
         currentAnimation.update(deltaTime)
     }
 
@@ -289,12 +299,11 @@ class Player(
 
             PlayerState.JUMP_START -> {
                 // Hold the squash on the ground for JUMP_START_DURATION_S
-                // Jump force is applied by onJumpReleased before the timer expires,
-                // which transitions us to JUMPING automatically.
-                // If the timer fires before release (tap so fast it was simultaneous),
-                // we self-force a standard hop.
+                // If the timer expires, auto-transition to JUMPING and apply MAX jump force.
                 if (stateTimer >= JUMP_START_DURATION_S && y >= groundY - BASE_HEIGHT - 1f) {
-                    velocityY = MIN_JUMP_FORCE
+                    velocityY = MAX_JUMP_FORCE
+                    SfxManager.playJump()   // Phase 20
+                    HapticManager.shortPulse() // Phase 21
                     transitionTo(PlayerState.JUMPING)
                 }
             }
@@ -434,9 +443,16 @@ class Player(
         val cx = x + BASE_WIDTH  / 2f   // horizontal centre
         val fy = y + BASE_HEIGHT         // feet Y (squash/stretch pivot)
 
+        // Y-Offsetting logic: "The Passing Position (Frame 12 and 36): Body rises slightly (+8px) compared to contact."
+        var yOffset = 0f
+        if ((state == PlayerState.RUNNING || state == PlayerState.BLOOM) && 
+            (currentAnimation.currentFrame == 11 || currentAnimation.currentFrame == 35)) {
+             yOffset = -8f // Up is negative Y in Android Canvas
+        }
+
         canvas.save()
         canvas.scale(scaleX, scaleY, cx, fy)
-        drawRect.set(x, y, x + BASE_WIDTH, y + BASE_HEIGHT)
+        drawRect.set(x, y + yOffset, x + BASE_WIDTH, y + BASE_HEIGHT + yOffset)
         currentAnimation.draw(canvas, drawRect)
         canvas.restore()
     }

@@ -122,7 +122,7 @@ class Fox(
         performUniqueAction(player, gameState)
 
         if (RectF.intersects(player.hitbox, hitbox)) {
-            return CollisionResult.HIT
+            return CollisionResult.STUMBLE
         }
         val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
         if (RectF.intersects(player.hitbox, mercy)) {

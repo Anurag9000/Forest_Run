@@ -367,7 +367,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         if (!::player.isInitialized) return
-        player.update(deltaTime)
+        player.update(deltaTime, gameState.scrollSpeed)
 
         // Phase 12: EntityManager update (spawn, scroll, pass-detection)
         if (::entityManager.isInitialized) {
@@ -393,8 +393,21 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
                         runState = RunState.DYING
                     }
+                    CollisionResult.STUMBLE -> {
+                        // User Prompt "accompanied by a screen-flash of the forest's dominant color"
+                        player.triggerStumble()
+                        mercyFlashTimer = mercyFlashDuration
+                        val dominantColor = if (::entityManager.isInitialized) entityManager.biomeManager.currentFoliage else Color.rgb(255, 180, 200)
+                        mercyFlashPaint.color = Color.argb(200, Color.red(dominantColor), Color.green(dominantColor), Color.blue(dominantColor))
+                        SfxManager.playHit() // Non-lethal hit
+                        CameraSystem.shakeHit()
+                        HapticManager.mediumPulse()
+                        // Stumble triggers brief invincibility via the player state machine
+                        collision.entity.isActive = false // Despawn the animal we hit
+                    }
                     CollisionResult.MERCY_MISS -> {
                         mercyFlashTimer = mercyFlashDuration
+                        mercyFlashPaint.color = Color.argb(200, 60, 240, 80) // reset green
                         SfxManager.playMercyMiss()    // Phase 20
                         HapticManager.doubleTap()     // Phase 21 — close call buzz
                         // Stars burst at player centre

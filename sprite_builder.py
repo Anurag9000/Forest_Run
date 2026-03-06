@@ -94,8 +94,13 @@ def char_strip(pose_names, label, repeat_last_to=None):
         else:
             frames.append(make_placeholder(CHAR_W, CHAR_H, 1, (80,130,220), name))
     if repeat_last_to and len(frames) < repeat_last_to:
+        # User prompt requested exact 48 frame strips; rather than repeating the logic,
+        # we will mathematically wrap the sequence to stretch it to `repeat_last_to` frames seamlessly.
+        sequence = list(frames)
+        idx = 0
         while len(frames) < repeat_last_to:
-            frames.append(frames[-1].copy())
+            frames.append(sequence[idx % len(sequence)])
+            idx += 1
     return strip(frames, CHAR_W, CHAR_H, label)
 
 # Run – 8 frames
@@ -105,17 +110,33 @@ run_img = char_strip(run_poses, "RUN", 8)
 run_img.save(f"{ASSET}/char/runner_girl_technical_48frame.png")
 print(f"Saved runner_girl_technical_48frame.png ({run_img.width}x{run_img.height})")
 
-# Jump – 6 frames: jump, jumpUp, apex, fall, fall, idle
-jump_poses = ["jump","stand","idle","fall","slide","duck"]
-jump_img = char_strip(jump_poses, "JMP")
+# Jump – 6 individual poses, we need to map this exactly to the 48-frame physical slice expected by SpriteManager.
+# The prompt demanded 48 frames total, mapped conceptually as:
+# playerJumpStart: 2 frames
+# playerJumping: 12 frames
+# playerApex: 4 frames
+# playerFalling: 6 frames
+# playerLanding: 4 frames
+# Total: 28 physical frames accessed by the slices, we will pad it to 48 to prevent ArrayOutOfBounds.
+jump_poses = ["duck","duck"] + ["jump"]*12 + ["idle"]*4 + ["fall"]*6 + ["slide"]*4
+jump_img = char_strip(jump_poses, "JMP", 48)
 jump_img.save(f"{ASSET}/char/runner_girl_jump_48frame.png")
 print(f"Saved runner_girl_jump_48frame.png")
 
-# Duck – 4 frames
+# Duck – 4 base frames mapped to an 8 frame sequence expected by SpriteManager
 duck_poses = ["duck","slide","duck","slide"]
-duck_img = char_strip(duck_poses, "DCK")
+duck_img = char_strip(duck_poses, "DCK", 8)
 duck_img.save(f"{ASSET}/char/runner_girl_duck_48frame.png")
 print(f"Saved runner_girl_duck_48frame.png")
+
+# Hit & Death 
+hit_poses = ["hurt","hurt"]*6
+hit_img = char_strip(hit_poses, "HIT", 12)
+hit_img.save(f"{ASSET}/char/runner_girl_hit_sequence.png")
+
+death_poses = ["hurt","fall","duck"]*8
+death_img = char_strip(death_poses, "DTH", 24)
+death_img.save(f"{ASSET}/char/runner_girl_death_sequence.png")
 
 # ─── Entity helper ─────────────────────────────────────────────────────────
 

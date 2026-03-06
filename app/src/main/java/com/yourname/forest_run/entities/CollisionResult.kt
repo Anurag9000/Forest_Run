@@ -11,5 +11,8 @@ enum class CollisionResult {
     HIT,
 
     /** Player passed extremely close (within 12px) of a hazard but did not hit it. */
-    MERCY_MISS
+    MERCY_MISS,
+
+    /** Player hit a non-lethal hazard (e.g., Fox/Wolf) and stumbles instead of dying. */
+    STUMBLE
 }
