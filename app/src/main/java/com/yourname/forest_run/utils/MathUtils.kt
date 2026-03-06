@@ -55,12 +55,12 @@ object MathUtils {
     /**
      * Returns sine of [angleDegrees].
      */
-    fun sinDeg(angleDegrees: Float): Float = Math.sin(Math.toRadians(angleDegrees.toDouble())).toFloat()
+    fun sinDeg(angleDegrees: Float): Float = kotlin.math.sin(angleDegrees * kotlin.math.PI.toFloat() / 180f)
 
     /**
      * Returns cosine of [angleDegrees].
      */
-    fun cosDeg(angleDegrees: Float): Float = Math.cos(Math.toRadians(angleDegrees.toDouble())).toFloat()
+    fun cosDeg(angleDegrees: Float): Float = kotlin.math.cos(angleDegrees * kotlin.math.PI.toFloat() / 180f)
 
     /**
      * Convert dp to pixel using the provided [density].

@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.os.Build
+import android.annotation.SuppressLint
 import android.util.Log
 
 /**
@@ -27,6 +28,7 @@ import android.util.Log
  * Call [destroy] from MainActivity.onDestroy() and Activity.onPause() to
  * prevent resource leaks.
  */
+@SuppressLint("StaticFieldLeak", "DiscouragedApi")
 object LeitmotifManager {
 
     private const val TAG = "LeitmotifMgr"

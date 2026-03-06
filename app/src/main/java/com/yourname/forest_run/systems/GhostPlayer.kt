@@ -70,6 +70,7 @@ class GhostPlayer {
 
     // Reusable draw rect
     private val drawRect = RectF()
+    private val spriteRect = RectF()
 
     // ── API ───────────────────────────────────────────────────────────────
 
@@ -141,7 +142,8 @@ class GhostPlayer {
         val sprite = spriteForState(frame.stateOrdinal, spriteManager)
         canvas.save()
         canvas.scale(frame.scaleX, frame.scaleY, drawRect.centerX(), drawRect.bottom)
-        sprite.draw(canvas, RectF(frame.x, frame.y, frame.x + Player.BASE_WIDTH, frame.y + Player.BASE_HEIGHT))
+        spriteRect.set(frame.x, frame.y, frame.x + Player.BASE_WIDTH, frame.y + Player.BASE_HEIGHT)
+        sprite.draw(canvas, spriteRect)
         canvas.restore()
 
         // After restoring, draw the ghost paint overlay (tint)  — done via the sprite draw above

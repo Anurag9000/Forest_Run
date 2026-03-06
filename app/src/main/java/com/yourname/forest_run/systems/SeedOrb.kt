@@ -40,6 +40,7 @@ class SeedOrb(
 
     // Bobbing Y offset
     private val bobRect  = RectF()
+    private val checkRect = RectF()
 
     // ── Paints ─────────────────────────────────────────────────────────────
     private val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -106,13 +107,13 @@ class SeedOrb(
     /** Returns true if player hitbox overlaps the orb. */
     fun checkCollection(playerHitbox: android.graphics.RectF): Boolean {
         if (!isActive || isCollected) return false
-        val orbRect = RectF(
+        checkRect.set(
             bobRect.centerX() - RADIUS,
             bobRect.centerY() - RADIUS,
             bobRect.centerX() + RADIUS,
             bobRect.centerY() + RADIUS
         )
-        return android.graphics.RectF.intersects(playerHitbox, orbRect)
+        return android.graphics.RectF.intersects(playerHitbox, checkRect)
     }
 }
 

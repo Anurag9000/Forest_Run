@@ -1,5 +1,7 @@
 package com.yourname.forest_run.engine
 
+import kotlin.math.sin
+
 /**
  * Calculates a horizontal offset using a sine wave to simulate wind.
  * Attached to Entity subclasses that need procedural animation (e.g. Trees, Flora).
@@ -20,6 +22,6 @@ class SwayComponent(
     fun getOffset(deltaTime: Float, globalWindMultiplier: Float = 1.0f): Float {
         time += deltaTime * speed * globalWindMultiplier
         // sin() returns -1.0 to 1.0. Multiply by intensity for pixel offset.
-        return Math.sin(time.toDouble()).toFloat() * intensity
+        return sin(time) * intensity
     }
 }

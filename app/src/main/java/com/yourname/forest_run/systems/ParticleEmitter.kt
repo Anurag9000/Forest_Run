@@ -59,13 +59,13 @@ class ParticleEmitter(
 
     /** Fill [particle] with randomised values from this emitter's config. */
     fun configure(particle: Particle) {
-        val angle  = Math.toRadians((angleMin + Random.nextFloat() * (angleMax - angleMin)).toDouble())
+        val angleRad = (angleMin + Random.nextFloat() * (angleMax - angleMin)) * kotlin.math.PI.toFloat() / 180f
         val speed  = speedMin + Random.nextFloat() * (speedMax - speedMin)
 
         particle.x          = x + (Random.nextFloat() - 0.5f) * 2f * spawnRadiusX
         particle.y          = y + (Random.nextFloat() - 0.5f) * 2f * spawnRadiusY
-        particle.velX       = cos(angle).toFloat() * speed
-        particle.velY       = sin(angle).toFloat() * speed
+        particle.velX       = cos(angleRad) * speed
+        particle.velY       = sin(angleRad) * speed
         particle.gravity    = gravity
         particle.drag       = drag
         particle.lifetime   = lifetimeMin + Random.nextFloat() * (lifetimeMax - lifetimeMin)

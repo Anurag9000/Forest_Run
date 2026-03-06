@@ -60,6 +60,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     private val hudBgRect  = RectF(0f, 0f, screenWidth.toFloat(), HUD_H)
     private val segRect    = RectF()
     private val glowRect   = RectF()
+    private val partRect   = RectF()
 
     // ── Animated fill ─────────────────────────────────────────────────────
     /** Smoothly-lerped fill level (0..SEG_COUNT). Drives segment rendering. */
@@ -237,7 +238,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
                 // Partial fill: clip bottom portion for the last partial segment
                 if (fillFrac < 1f) {
                     val fillTop = METER_BOTTOM - (METER_BOTTOM - METER_TOP) * fillFrac
-                    val partRect = RectF(left, fillTop, right, METER_BOTTOM)
+                    partRect.set(left, fillTop, right, METER_BOTTOM)
                     canvas.drawRoundRect(partRect, CORNER_R, CORNER_R, segFilledPaint)
                 } else {
                     canvas.drawRoundRect(segRect, CORNER_R, CORNER_R, segFilledPaint)

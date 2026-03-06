@@ -93,7 +93,10 @@ class InputHandler : View.OnTouchListener {
             MotionEvent.ACTION_DOWN        -> handleDown(event)
             MotionEvent.ACTION_POINTER_DOWN -> false // ignore extra fingers
             MotionEvent.ACTION_MOVE        -> handleMove(event)
-            MotionEvent.ACTION_UP          -> handleUp(event)
+            MotionEvent.ACTION_UP          -> {
+                v.performClick()
+                handleUp(event)
+            }
             MotionEvent.ACTION_POINTER_UP  -> handlePointerUp(event)
             MotionEvent.ACTION_CANCEL      -> handleCancel()
             else                           -> false

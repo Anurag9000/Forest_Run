@@ -45,6 +45,7 @@ object SfxManager {
 
     // ── Init ──────────────────────────────────────────────────────────────
 
+    @android.annotation.SuppressLint("DiscouragedApi")
     fun init(context: Context) {
         val attrs = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_GAME)

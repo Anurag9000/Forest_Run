@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import kotlin.math.sin
+import kotlin.math.PI
 
 object BitmapHelper {
 
@@ -39,7 +41,7 @@ object BitmapHelper {
 
         for (i in 0 until frameCount) {
             // Pulse the brightness slightly per frame to show active animation
-            val pulse = Math.sin((i.toDouble() / frameCount) * Math.PI * 2.0).toFloat()
+            val pulse = sin(i.toFloat() / frameCount * PI.toFloat() * 2f)
             val mod = (pulse * 30f).toInt()
 
             val cr = (r + mod).coerceIn(0, 255)

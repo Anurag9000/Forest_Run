@@ -31,11 +31,9 @@ object FlavorTextManager {
 
     // ── Font (loaded lazily on first spawn) ──────────────────────────────
     private var pixelFont: Typeface? = null
-    private var ctx: Context? = null
 
     /** Call once from GameView.surfaceCreated() so the font loads before first spawn. */
     fun init(context: Context) {
-        ctx = context
         pixelFont = runCatching {
             Typeface.createFromAsset(context.assets, "fonts/PressStart2P-Regular.ttf")
         }.getOrNull()
