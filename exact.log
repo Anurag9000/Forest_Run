@@ -1,0 +1,2 @@
+e: file:///D:/Projects/Forest_Run/app/src/main/java/com/yourname/forest_run/entities/animals/Dog.kt:50:19 Companion object is not allowed here
+e: file:///D:/Projects/Forest_Run/app/src/main/java/com/yourname/forest_run/entities/animals/Dog.kt:56:56 Unresolved reference: PROJECTILE_SPEED

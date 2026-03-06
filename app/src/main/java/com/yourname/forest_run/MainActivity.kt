@@ -7,6 +7,7 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import com.yourname.forest_run.engine.GameView
 
 /**
  * Single Activity – does nothing except host the [GameView] full-screen.

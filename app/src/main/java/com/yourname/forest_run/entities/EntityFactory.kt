@@ -9,13 +9,11 @@ import com.yourname.forest_run.entities.trees.*
 
 /**
  * Instantiates the correct Entity subclass based on the requested EntityType.
+ * Phase 27: all entities now receive a SpriteSheet from SpriteManager via .copy() so
+ * each instance owns its own animation state.
  */
 object EntityFactory {
 
-    /**
-     * Creates and returns a new Entity of the specified type.
-     * In Phase 8-11, these missing classes will be implemented.
-     */
     fun create(
         context: Context,
         type: EntityType,
@@ -24,31 +22,35 @@ object EntityFactory {
         screenHeight: Float,
         spriteManager: SpriteManager
     ): Entity {
-        val groundY = screenHeight * 0.82f // Same as default ground in Player
+        val groundY = screenHeight * 0.82f
 
         return when (type) {
-            EntityType.CACTUS         -> Cactus(context, startX, groundY)
-            EntityType.LILY_OF_VALLEY -> LilyOfValley(context, startX, groundY)
-            EntityType.HYACINTH       -> Hyacinth(context, startX, groundY)
-            EntityType.EUCALYPTUS     -> Eucalyptus(context, startX, groundY)
-            EntityType.VANILLA_ORCHID -> VanillaOrchid(context, startX, groundY)
-            
-            EntityType.WEEPING_WILLOW -> WeepingWillow(context, startX, screenHeight, groundY)
-            EntityType.JACARANDA      -> Jacaranda(context, startX, screenHeight, groundY)
-            EntityType.BAMBOO         -> Bamboo(context, startX, screenHeight, groundY)
-            EntityType.CHERRY_BLOSSOM -> CherryBlossom(context, startX, screenHeight, groundY)
+            // ── Flora ────────────────────────────────────────────────────────
+            EntityType.CACTUS         -> Cactus(context, startX, groundY, spriteManager.cactusSprite.copy())
+            EntityType.LILY_OF_VALLEY -> LilyOfValley(context, startX, groundY, spriteManager.lilySprite.copy())
+            EntityType.HYACINTH       -> Hyacinth(context, startX, groundY, spriteManager.hyacinthSprite.copy())
+            EntityType.EUCALYPTUS     -> Eucalyptus(context, startX, groundY, spriteManager.eucalyptusSprite.copy())
+            EntityType.VANILLA_ORCHID -> VanillaOrchid(context, startX, groundY, spriteManager.orchidSprite.copy())
 
+            // ── Trees ────────────────────────────────────────────────────────
+            EntityType.WEEPING_WILLOW -> WeepingWillow(context, startX, screenHeight, groundY, spriteManager.willowSprite.copy())
+            EntityType.JACARANDA      -> Jacaranda(context, startX, screenHeight, groundY, spriteManager.jacarandaSprite.copy())
+            EntityType.BAMBOO         -> Bamboo(context, startX, screenHeight, groundY, spriteManager.bambooSprite.copy())
+            EntityType.CHERRY_BLOSSOM -> CherryBlossom(context, startX, screenHeight, groundY, spriteManager.cherryBlossomSprite.copy())
+
+            // ── Birds ────────────────────────────────────────────────────────
             EntityType.DUCK      -> Duck(context, startX, groundY, spriteManager.duckSprite.copy())
             EntityType.TIT       -> TitGroup(context, startX, groundY, spriteManager.titSprite.copy())
             EntityType.CHICKADEE -> ChickadeeGroup(context, startX, groundY, spriteManager.chickadeeSprite.copy())
             EntityType.OWL       -> Owl(context, startX, groundY, spriteManager.owlSprite.copy())
             EntityType.EAGLE     -> Eagle(context, startX, screenWidth, groundY, spriteManager.eagleSprite.copy())
 
-            EntityType.CAT       -> Cat(context, startX, groundY, spriteManager.catSprite.copy())
-            EntityType.WOLF      -> Wolf(context, startX, groundY, screenWidth, spriteManager.wolfSprite.copy())
-            EntityType.FOX       -> Fox(context, startX, groundY, spriteManager.foxSprite.copy())
-            EntityType.HEDGEHOG  -> Hedgehog(context, startX, groundY, spriteManager.hedgehogSprite.copy())
-            EntityType.DOG       -> Dog(context, startX, groundY, screenWidth, spriteManager.dogSprite.copy())
+            // ── Animals ──────────────────────────────────────────────────────
+            EntityType.CAT      -> Cat(context, startX, groundY, spriteManager.catSprite.copy())
+            EntityType.WOLF     -> Wolf(context, startX, groundY, screenWidth, spriteManager.wolfSprite.copy())
+            EntityType.FOX      -> Fox(context, startX, groundY, spriteManager.foxSprite.copy())
+            EntityType.HEDGEHOG -> Hedgehog(context, startX, groundY, spriteManager.hedgehogSprite.copy())
+            EntityType.DOG      -> Dog(context, startX, groundY, screenWidth, spriteManager.dogSprite.copy())
         }
     }
 }

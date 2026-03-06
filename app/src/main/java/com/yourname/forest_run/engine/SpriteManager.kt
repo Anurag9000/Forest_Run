@@ -98,11 +98,11 @@ class SpriteManager(private val context: Context) {
         eucalyptusSprite= loadEntity("sprites/plants/eucalyptus_4frames.png",   Color.rgb(80,160,120),  4)
         orchidSprite    = loadEntity("sprites/plants/vanilla_orchid_4frames.png",Color.rgb(255,250,200), 4)
 
-        // ---- Trees ---------------------------------------------------------
-        willowSprite        = loadEntity("sprites/trees/weeping_willow_4frames.png", Color.rgb(30,100,50),   4)
-        jacarandaSprite     = loadEntity("sprites/trees/jacaranda_4frames.png",       Color.rgb(150,80,200),  4)
-        bambooSprite        = loadEntity("sprites/trees/bamboo_4frames.png",          Color.rgb(60,200,60),   4)
-        cherryBlossomSprite = loadEntity("sprites/trees/cherry_blossom_4frames.png",  Color.rgb(255,180,200), 4)
+        // ---- Trees --------------------------------------------------------- (64×128 frames for tall silhouettes)
+        willowSprite        = loadTreeEntity("sprites/trees/weeping_willow_4frames.png", Color.rgb(30,100,50))
+        jacarandaSprite     = loadTreeEntity("sprites/trees/jacaranda_4frames.png",      Color.rgb(150,80,200))
+        bambooSprite        = loadTreeEntity("sprites/trees/bamboo_4frames.png",         Color.rgb(60,200,60))
+        cherryBlossomSprite = loadTreeEntity("sprites/trees/cherry_blossom_4frames.png", Color.rgb(255,180,200))
 
         // ---- Birds ---------------------------------------------------------
         duckSprite      = loadEntity("sprites/birds/duck_4frames.png",      Color.rgb(200,200,50),  4)
@@ -138,9 +138,15 @@ class SpriteManager(private val context: Context) {
         }
     }
 
-    /** Loads a 4-frame entity sprite (default 64×64 frames) with fallback. */
+    /** Loads a 4-frame entity sprite (64×64 frames) with fallback. */
     private fun loadEntity(assetPath: String, fallbackColour: Int, frames: Int = 4): SpriteSheet {
         val bmp = loadOrFallback(assetPath, fallbackColour, 64, 64, frames)
         return SpriteSheet(bmp, frameCount = frames, framesPerSec = 8f, isLooping = true)
+    }
+
+    /** Loads a 4-frame TREE entity sprite (64×128 frames — taller ratio) with fallback. */
+    private fun loadTreeEntity(assetPath: String, fallbackColour: Int, frames: Int = 4): SpriteSheet {
+        val bmp = loadOrFallback(assetPath, fallbackColour, 64, 128, frames)
+        return SpriteSheet(bmp, frameCount = frames, framesPerSec = 6f, isLooping = true)
     }
 }

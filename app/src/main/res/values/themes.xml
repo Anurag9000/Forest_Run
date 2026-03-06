@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-        NoActionBar + black background.
-        The game draws everything on a SurfaceView via Canvas.
-        Status bar and nav bar are hidden in code (immersive sticky).
+        Full-screen immersive game theme.
+        Uses Theme.AppCompat.NoActionBar as parent (stable in compileSdk 34).
+        Status bar / nav bar are hidden in code via immersive sticky flags.
     -->
-    <style name="Theme.ForestRun" parent="android:Theme.Material.NoTitleBar.Fullscreen">
+    <style name="Theme.ForestRun" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowBackground">@android:color/black</item>

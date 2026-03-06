@@ -389,50 +389,16 @@ class Player(
     // Draw (Phase 6: animated sprites via SpriteSheet)
     // -----------------------------------------------------------------------
 
-    /** Paint pool – created once, never inside draw(). */
-    private val hitboxPaint = Paint().apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
-        color = Color.RED
-    }
-    private val groundLinePaint = Paint().apply {
-        color = Color.argb(180, 100, 255, 100)
-        strokeWidth = 2f
-        style = Paint.Style.STROKE
-    }
+    // Paint pool — none needed for debug artifacts (removed in Phase 27)
 
     fun draw(canvas: Canvas) {
-        // Save + scale around the bottom-centre of the sprite
-        // (feet stay planted, top stretches/squashes)
-        val cx = x + BASE_WIDTH  / 2f          // horizontal centre
-        val fy = y + BASE_HEIGHT               // feet Y
+        val cx = x + BASE_WIDTH  / 2f   // horizontal centre
+        val fy = y + BASE_HEIGHT         // feet Y (squash/stretch pivot)
 
         canvas.save()
         canvas.scale(scaleX, scaleY, cx, fy)
-
-        // Draw body sprint (in un-scaled space; canvas.scale does the work)
         drawRect.set(x, y, x + BASE_WIDTH, y + BASE_HEIGHT)
         currentAnimation.draw(canvas, drawRect)
-
         canvas.restore()
-
-        // Hitbox outline (not scaled – always correct collision shape)
-        canvas.drawRect(hitbox, hitboxPaint)
-
-        // Ground reference line
-        canvas.drawLine(0f, groundY, canvas.width.toFloat(), groundY, groundLinePaint)
-
-        // State label
-        drawStateLabel(canvas, cx, y - 20f)
-    }
-
-    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 24f
-        textAlign = Paint.Align.CENTER
-    }
-
-    private fun drawStateLabel(canvas: Canvas, cx: Float, y: Float) {
-        canvas.drawText(state.name, cx, y, labelPaint)
     }
 }

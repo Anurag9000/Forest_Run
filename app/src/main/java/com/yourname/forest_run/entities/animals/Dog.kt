@@ -47,7 +47,7 @@ class Dog(
      * Travels forward at [PROJECTILE_SPEED] px/s and despawns off-screen left.
      */
     private inner class BarkProjectile(spawnX: Float, spawnY: Float) {
-        companion object { const val PROJECTILE_SPEED = 500f }
+        private val PROJECTILE_SPEED = 500f
         val rect = RectF(spawnX, spawnY - 20f, spawnX + 60f, spawnY)
         var active = true
 

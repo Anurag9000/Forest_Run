@@ -105,7 +105,7 @@ class Fox(
             val playerIsJumping = player.state in listOf(
                 PlayerState.JUMPING, PlayerState.JUMP_START, PlayerState.APEX
             )
-            val inRange = (player.x + player.BASE_WIDTH) > (x - detectionRange) &&
+            val inRange = (player.x + Player.BASE_WIDTH) > (x - detectionRange) &&
                           player.x < (x + foxW)
 
             if (playerIsJumping && inRange) {

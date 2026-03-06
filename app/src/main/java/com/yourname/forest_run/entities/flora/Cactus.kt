@@ -1,72 +1,51 @@
-package com.yourname.forest_run.entities
+package com.yourname.forest_run.entities.flora
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
+import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.entities.CollisionResult
+import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.Player
 
 /**
- * Cactus (Phase 8)
- * Static flora. No sway. Tight hitbox.
- * Hits result in game over.
- * Phase 18 will add the Skull badge overlay if hit 5+ times.
+ * Cactus — Phase 27: rendered via SpriteSheet. Sprite loaded from assets/sprites/plants/cactus_4frames.png.
+ * Falls back to BitmapHelper placeholder automatically if file is missing.
  */
-class Cactus(context: Context, startX: Float, groundY: Float) : Entity(context) {
+class Cactus(
+    context: Context,
+    startX: Float,
+    groundY: Float,
+    private val sprite: SpriteSheet
+) : Entity(context) {
 
-    private val cactusWidth = 40f
+    private val cactusWidth  = 48f
     private val cactusHeight = 80f
-
-    private val paint = Paint().apply {
-        color = Color.rgb(30, 140, 50)
-        style = Paint.Style.FILL
-    }
-
-    private val spikePaint = Paint().apply {
-        color = Color.rgb(20, 80, 20)
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
-    }
+    private val drawRect     = RectF()
 
     init {
         x = startX
         y = groundY - cactusHeight
-        // Tight hitbox (inset by 5px)
-        hitbox.set(x + 5f, y + 5f, x + cactusWidth - 5f, y + cactusHeight)
+        hitbox.set(x + 8f, y + 8f, x + cactusWidth - 8f, y + cactusHeight)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
-        hitbox.offsetTo(x + 5f, y + 5f)
-        if (x < -cactusWidth) isActive = false
+        hitbox.offsetTo(x + 8f, y + 8f)
+        sprite.update(deltaTime)
+        if (x < -cactusWidth - 20f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
-        // Draw main body
-        canvas.drawRoundRect(x, y, x + cactusWidth, y + cactusHeight, 10f, 10f, paint)
-        
-        // Draw some simple spikes
-        canvas.drawLine(x - 5f, y + 20f, x + 5f, y + 20f, spikePaint)
-        canvas.drawLine(x + cactusWidth - 5f, y + 40f, x + cactusWidth + 5f, y + 40f, spikePaint)
-        canvas.drawLine(x - 5f, y + 60f, x + 5f, y + 60f, spikePaint)
-
-        // Phase 18: draw skull badge if encounters > threshold
+        drawRect.set(x, y, x + cactusWidth, y + cactusHeight)
+        sprite.draw(canvas, drawRect)
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        if (RectF.intersects(player.hitbox, hitbox)) {
-            return CollisionResult.HIT
-        }
-        
-        // Check for mercy miss (within 12px)
-        val mercyBox = android.graphics.RectF(
-            hitbox.left - 12f, hitbox.top - 12f,
-            hitbox.right + 12f, hitbox.bottom + 12f
-        )
-        if (android.graphics.RectF.intersects(player.hitbox, mercyBox)) {
-            return CollisionResult.MERCY_MISS
-        }
-
+        if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
+        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }
 }

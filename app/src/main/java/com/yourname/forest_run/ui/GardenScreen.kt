@@ -169,8 +169,8 @@ class GardenScreen(
                     unlockedCount++
                     unlockIdx  = i
                     unlockAnim = 0f
-                    // Bloom burst
-                    ParticleManager.emit(FxPreset.BLOOM_ACTIVATE, cx, cy)
+                    // Bloom burst (using SEED_COLLECT preset for a nice golden unlock pop)
+                    ParticleManager.emit(FxPreset.SEED_COLLECT, cx, cy)
                     // Persist
                     SaveManager.saveGardenProgress(context, unlockedCount)
                     SaveManager.saveLifetimeSeeds(context, lifeSeeds)
