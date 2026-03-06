@@ -180,15 +180,19 @@ object LeitmotifManager {
     private fun crossFade(from: MediaPlayer?, to: MediaPlayer) {
         stopFade()
         fadeThread = Thread {
-            for (step in 0..FADE_STEPS) {
-                val t      = step.toFloat() / FADE_STEPS
-                val volIn  = t
-                val volOut = 1f - t
-                try {
-                    to.setVolume(volIn, volIn)
-                    from?.setVolume(volOut, volOut)
-                } catch (_: IllegalStateException) { break }
-                Thread.sleep(FADE_STEP_MS)
+            try {
+                for (step in 0..FADE_STEPS) {
+                    val t      = step.toFloat() / FADE_STEPS
+                    val volIn  = t
+                    val volOut = 1f - t
+                    try {
+                        to.setVolume(volIn, volIn)
+                        from?.setVolume(volOut, volOut)
+                    } catch (_: IllegalStateException) { break }
+                    Thread.sleep(FADE_STEP_MS)
+                }
+            } catch (_: InterruptedException) {
+                // Fade interrupted by a new transition
             }
             try {
                 from?.stop()
