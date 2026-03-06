@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import kotlin.math.sin
 
 /**
  * Full-screen Game Over overlay.
@@ -147,7 +148,7 @@ class GameOverScreen(
 
         // 6. New best badge (if applicable)
         if (isNewHighScore) {
-            val pulse = (Math.sin(pulseTimer * 4.0) * 0.2 + 0.8).toFloat()
+            val pulse = sin(pulseTimer * 4f) * 0.2f + 0.8f
             newBestPaint.alpha = (pulse * 255f).toInt()
             canvas.drawText("★ NEW BEST! ${formatNumber(highScore)} ★", cx, ty, newBestPaint)
             ty += 38f
@@ -161,7 +162,7 @@ class GameOverScreen(
         }
 
         // 8. Tap prompt — pulsing alpha
-        val promptAlpha = ((Math.sin(pulseTimer * 2.5) * 0.4 + 0.6) * 200).toInt().coerceIn(0, 255)
+        val promptAlpha = ((sin(pulseTimer * 2.5f) * 0.4f + 0.6f) * 200).toInt().coerceIn(0, 255)
         promptPaint.alpha = promptAlpha
         canvas.drawText("tap anywhere to run again", cx, ty + 20f, promptPaint)
     }

@@ -1,7 +1,7 @@
 package com.yourname.forest_run.systems
 
 import android.graphics.Color
-
+import kotlin.math.pow
 /**
  * A single particle instance.
  *
@@ -66,7 +66,7 @@ data class Particle(
         elapsed += deltaTime
 
         // Drag
-        val d = Math.pow(drag.toDouble(), deltaTime.toDouble()).toFloat()
+        val d = drag.pow(deltaTime)
         velX *= d
         velY *= d
 

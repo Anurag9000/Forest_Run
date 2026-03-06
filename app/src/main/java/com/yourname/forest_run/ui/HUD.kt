@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import kotlin.math.sin
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.utils.MathUtils
@@ -220,7 +221,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
             if (fillFrac > 0f) {
                 // Pulse brightness when bloom is active
                 val pulse = if (state.isBloomActive)
-                    (0.75f + 0.25f * Math.sin(bloomPulse.toDouble()).toFloat())
+                    (0.75f + 0.25f * sin(bloomPulse))
                 else 1f
 
                 val alpha = (150 + (105 * fillFrac * pulse).toInt()).coerceIn(0, 255)
@@ -250,7 +251,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
 
         // Glow border around entire meter when bloom active
         if (state.isBloomActive) {
-            val glow = (0.5f + 0.5f * Math.sin(bloomPulse.toDouble()).toFloat())
+            val glow = 0.5f + 0.5f * sin(bloomPulse)
             val glowAlpha = (120 + (135 * glow).toInt()).coerceIn(0, 255)
             glowBorderPaint.color = Color.argb(glowAlpha, 180, 100, 255)
             glowRect.set(
@@ -265,7 +266,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         val labelPaint = if (state.isBloomActive) bloomActiveLabelPaint else bloomLabelPaint
         if (state.isBloomActive) {
             bloomActiveLabelPaint.alpha =
-                (200 + (55 * Math.sin(bloomPulse.toDouble()).toFloat()).toInt()).coerceIn(0, 255)
+                (200 + (55 * sin(bloomPulse)).toInt()).coerceIn(0, 255)
         }
         canvas.drawText(labelText, cx, METER_BOTTOM + 18f, labelPaint)
     }
@@ -284,7 +285,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
 
         // NEW! badge — pulsing gold, left of score
         if (state.isNewHighScore && state.score > 0) {
-            val pulse = (0.7f + 0.3f * Math.sin(newBadge.toDouble()).toFloat())
+            val pulse = 0.7f + 0.3f * sin(newBadge)
             newBadgePaint.alpha = (pulse * 255f).toInt().coerceIn(0, 255)
             val scoreW = scorePaint.measureText(scoreText)
             canvas.drawText("✦NEW!", rightX - scoreW - 14f, scoreY, newBadgePaint)

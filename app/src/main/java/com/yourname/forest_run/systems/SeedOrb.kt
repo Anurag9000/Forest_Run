@@ -3,6 +3,7 @@ package com.yourname.forest_run.systems
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import kotlin.math.sin
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 
@@ -56,7 +57,7 @@ class SeedOrb(
         // Scroll left with the world
         x -= scrollSpeed * deltaTime
         // Sine bob
-        val bob = Math.sin((bobTime * BOB_SPEED * 2.0 * Math.PI)).toFloat() * BOB_AMP
+        val bob = sin((bobTime * BOB_SPEED * 2f * Math.PI.toFloat())) * BOB_AMP
 
         // Recompute rect for this frame
         val cy = y + bob
@@ -80,7 +81,7 @@ class SeedOrb(
         val col = Color.rgb(r, g, b)
 
         // Pulsing radius
-        val pulse = (1f + 0.08f * Math.sin(bobTime * 5.0).toFloat())
+        val pulse = 1f + 0.08f * sin(bobTime * 5f)
         val radius = RADIUS * pulse
 
         // Halo (semi-transparent, slightly larger)
