@@ -144,61 +144,192 @@ class ParallaxBackground(
 
     private val skyOverlayPaint = Paint().apply { alpha = 120 }
 
-    // -----------------------------------------------------------------------
-    // Placeholder bitmap builder
-    // -----------------------------------------------------------------------
+    // ── Phase 24: Rich bitmap builder ─────────────────────────────────────
 
     /**
-     * Creates a simple gradient/solid-colour bitmap for the given layer index.
-     * Width = 2× screen width so we always have a full copy ready when looping.
-     * This is replaced in Phase 24 with real hand-drawn assets.
+     * Builds a detailed 2× wide bitmap for a given layer index.
+     *
+     * Layer 0: Sky gradient + sun/moon + clouds
+     * Layer 1: Mountain/hill silhouettes — biome-aware (falls back to generic forest)
+     * Layer 2: Ground path — grass tufts + pebble dots
+     * Layer 3: Near foreground strip — bright grass with colour accent edge
      */
     private fun buildPlaceholderBitmap(layerIndex: Int): Bitmap {
-        val bmpW = screenWidth * 2    // 2× wide for seamless loop
+        val bmpW = screenWidth * 2
         val bmpH = screenHeight
-
-        val bmp = Bitmap.createBitmap(bmpW, bmpH, Bitmap.Config.ARGB_8888)
+        val bmp    = Bitmap.createBitmap(bmpW, bmpH, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
+        val rng    = java.util.Random(layerIndex * 777L + 13L)
 
-        val band = bands[layerIndex]
-        val colour = placeholderColours[layerIndex]
-
-        val topY    = bmpH * band.topFrac
-        val bottomY = bmpH * band.bottomFrac
-
-        // Layer 0: sky, draw a vertical gradient manually (top=navy, bottom=dusky)
-        if (layerIndex == 0) {
-            // Fill entire bitmap as sky background first
-            canvas.drawColor(Color.rgb(20, 35, 70))
-            // Lighter horizon band
-            val horizonPaint = Paint().apply { color = Color.rgb(50, 80, 140); alpha = 180 }
-            canvas.drawRect(0f, bmpH * 0.55f, bmpW.toFloat(), bmpH * 0.78f, horizonPaint)
+        when (layerIndex) {
+            0 -> drawSkyLayer(canvas, bmpW, bmpH, rng)
+            1 -> drawMidLayer(canvas, bmpW, bmpH, rng)
+            2 -> drawGroundLayer(canvas, bmpW, bmpH, rng)
+            3 -> drawForegroundLayer(canvas, bmpW, bmpH, rng)
         }
-
-        // All layers: draw their colour band
-        val p = Paint().apply {
-            color = colour
-            style = Paint.Style.FILL
-        }
-        canvas.drawRect(0f, topY, bmpW.toFloat(), bottomY, p)
-
-        // Layer 1: add simple tree-silhouette bumps
-        if (layerIndex == 1) {
-            drawTreeSilhouettes(canvas, bmpW, bmpH, band, Color.rgb(15, 50, 25))
-        }
-
-        // Layer 3: add slightly lighter near-grass texture line at top
-        if (layerIndex == 3) {
-            val topLine = Paint().apply { color = Color.rgb(90, 180, 70); style = Paint.Style.FILL }
-            canvas.drawRect(0f, topY, bmpW.toFloat(), topY + 6f, topLine)
-        }
-
         return bmp
     }
 
+    // ── Layer painters ─────────────────────────────────────────────────────
+
+    private fun drawSkyLayer(canvas: Canvas, w: Int, h: Int, rng: java.util.Random) {
+        val groundLine = h * 0.78f
+
+        // Sky gradient — deep sky blue → horizon amber
+        val gradPaint = Paint().apply {
+            shader = android.graphics.LinearGradient(
+                0f, 0f, 0f, groundLine,
+                intArrayOf(
+                    Color.rgb(15,  35, 90),
+                    Color.rgb(60, 100, 170),
+                    Color.rgb(130, 180, 230)
+                ),
+                floatArrayOf(0f, 0.55f, 1f),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRect(0f, 0f, w.toFloat(), groundLine, gradPaint)
+
+        // Sun — warm glow disc
+        val sunPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(255, 225, 100) }
+        val sunX     = w * 0.72f
+        val sunY     = h * 0.16f
+        val sunR     = h * 0.055f
+        canvas.drawCircle(sunX, sunY, sunR, sunPaint)
+        // Outer halo
+        val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(60, 255, 230, 120) }
+        canvas.drawCircle(sunX, sunY, sunR * 1.65f, haloPaint)
+
+        // Cloud puffs — 6 clouds scattered across the wide bitmap
+        val cloudPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(190, 255, 255, 255) }
+        repeat(6) {
+            val cx   = rng.nextFloat() * w
+            val cy   = h * (0.08f + rng.nextFloat() * 0.28f)
+            val crw  = h * (0.05f + rng.nextFloat() * 0.10f)
+            val crh  = crw * 0.5f
+            for (puff in -2..2) {
+                canvas.drawOval(
+                    cx + puff * crw * 0.65f - crw,
+                    cy - crh * (0.5f + 0.3f * Math.abs(puff)),
+                    cx + puff * crw * 0.65f + crw,
+                    cy + crh,
+                    cloudPaint
+                )
+            }
+        }
+
+        // Horizon glow
+        val horizPaint = Paint().apply {
+            shader = android.graphics.LinearGradient(
+                0f, groundLine - h * 0.12f, 0f, groundLine + h * 0.04f,
+                intArrayOf(Color.argb(0, 255, 160, 80), Color.argb(140, 255, 130, 50)),
+                null, android.graphics.Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRect(0f, groundLine - h * 0.12f, w.toFloat(), groundLine + h * 0.04f, horizPaint)
+    }
+
+    private fun drawMidLayer(canvas: Canvas, w: Int, h: Int, rng: java.util.Random) {
+        val groundLine = h * 0.78f
+
+        // Distant mountain range — 3 layers of ridgelines
+        val ridgeColours = intArrayOf(
+            Color.argb(200, 30,  60, 35),
+            Color.argb(220, 22,  80, 42),
+            Color.argb(240, 16,  55, 28)
+        )
+        val ridgeHeights = floatArrayOf(0.42f, 0.52f, 0.62f)
+
+        for (r in 0..2) {
+            val ridgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ridgeColours[r] }
+            val path    = android.graphics.Path()
+            path.moveTo(0f, groundLine)
+
+            var x = 0f
+            while (x < w + 120f) {
+                val peakH = h * (ridgeHeights[r] + rng.nextFloat() * 0.12f)
+                path.lineTo(x, peakH)
+                x += (60f + rng.nextFloat() * 100f)
+            }
+            path.lineTo(w.toFloat(), groundLine)
+            path.close()
+            canvas.drawPath(path, ridgePaint)
+        }
+
+        // Detailed tree silhouettes on the nearest ridgeline
+        drawTreeSilhouettes(canvas, w, h, bands[1], Color.argb(255, 12, 42, 18))
+    }
+
+    private fun drawGroundLayer(canvas: Canvas, w: Int, h: Int, rng: java.util.Random) {
+        val groundLine = h * 0.78f
+
+        // Base earth fill
+        val earthPaint = Paint().apply { color = Color.rgb(55, 120, 48) }
+        canvas.drawRect(0f, groundLine, w.toFloat(), h.toFloat(), earthPaint)
+
+        // Darker path strip (where the player runs)
+        val pathPaint = Paint().apply { color = Color.rgb(80, 155, 65) }
+        canvas.drawRect(0f, groundLine, w.toFloat(), groundLine + h * 0.06f, pathPaint)
+
+        // Grass tufts
+        val tuftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(100, 190, 75); style = Paint.Style.STROKE; strokeWidth = 3f
+        }
+        var tx = 0f
+        while (tx < w) {
+            val ty = groundLine + rng.nextFloat() * h * 0.03f
+            val th = h * 0.015f + rng.nextFloat() * h * 0.02f
+            canvas.drawLine(tx, ty, tx - 6f + rng.nextFloat() * 12f, ty - th, tuftPaint)
+            tx += 14f + rng.nextFloat() * 22f
+        }
+
+        // Small pebble dots
+        val pebblePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(130, 110, 80) }
+        repeat(60) {
+            val px = rng.nextFloat() * w
+            val py = groundLine + 4f + rng.nextFloat() * h * 0.04f
+            val pr = 3f + rng.nextFloat() * 5f
+            canvas.drawOval(px - pr, py - pr * 0.5f, px + pr, py + pr * 0.5f, pebblePaint)
+        }
+
+        // Exposed roots / cracks
+        val rootPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(60, 40, 20); style = Paint.Style.STROKE; strokeWidth = 2f
+        }
+        repeat(8) {
+            val rx = rng.nextFloat() * w
+            val ry = groundLine + h * 0.015f
+            canvas.drawLine(rx, ry, rx + rng.nextFloat() * 40f - 20f, ry + h * 0.03f, rootPaint)
+        }
+    }
+
+    private fun drawForegroundLayer(canvas: Canvas, w: Int, h: Int, rng: java.util.Random) {
+        val groundLine = h * 0.88f
+
+        // Near bright-grass strip
+        val stripPaint = Paint().apply { color = Color.rgb(70, 170, 55) }
+        canvas.drawRect(0f, groundLine, w.toFloat(), h.toFloat(), stripPaint)
+
+        // Vivid top edge
+        val edgePaint = Paint().apply { color = Color.rgb(110, 210, 80) }
+        canvas.drawRect(0f, groundLine, w.toFloat(), groundLine + 7f, edgePaint)
+
+        // Large foreground blade tufts
+        val bladePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(120, 220, 85); style = Paint.Style.STROKE; strokeWidth = 4f
+        }
+        var bx = 0f
+        while (bx < w) {
+            val bh = h * 0.025f + rng.nextFloat() * h * 0.04f
+            canvas.drawLine(bx, groundLine, bx + rng.nextFloat() * 16f - 8f, groundLine - bh, bladePaint)
+            bx += 18f + rng.nextFloat() * 28f
+        }
+    }
+
+    // ── Existing tree-silhouette helper (unchanged API) ─────────────────────
+
     /**
-     * Draws a row of simple rounded "tree crown" silhouettes across the bitmap.
-     * These are pure placeholder shapes — Phase 24 replaces with pixel art.
+     * Draws a row of simple rounded \"tree crown\" silhouettes across the bitmap.
      */
     private fun drawTreeSilhouettes(
         canvas: Canvas,
@@ -219,15 +350,13 @@ class ParallaxBackground(
 
         val groundLine = bmpH * band.bottomFrac
         var tx = 80f
-        val rng = java.util.Random(42L)   // seeded so it's deterministic
+        val rng = java.util.Random(42L)
 
         while (tx < bmpW + 120f) {
             val crownR = 55f + rng.nextFloat() * 60f
             val crownY = groundLine - crownR * 1.8f + rng.nextFloat() * 30f
             val trunkW = 14f + rng.nextFloat() * 8f
-            val trunkH = crownR * 0.8f
 
-            // Trunk
             canvas.drawRect(
                 tx - trunkW / 2f,
                 crownY + crownR * 0.6f,
@@ -235,13 +364,11 @@ class ParallaxBackground(
                 groundLine,
                 trunkPaint
             )
-            // Crown (ellipse)
             canvas.drawOval(
                 tx - crownR, crownY - crownR * 0.6f,
                 tx + crownR, crownY + crownR,
                 treePaint
             )
-
             tx += 90f + rng.nextFloat() * 80f
         }
     }
