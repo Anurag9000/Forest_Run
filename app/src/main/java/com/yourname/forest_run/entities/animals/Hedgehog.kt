@@ -57,6 +57,7 @@ class Hedgehog(
                 // Speed debuff: 50% speed for 3 seconds
                 gameState.applySpeedDebuff(0.5f, 3000)
                 // curl — freeze on last sprite frame
+                sprite.isLooping = false
                 sprite.setFrame(sprite.frameCount - 1)
                 FlavorTextManager.spawn("Oof!", player.x, player.y - 40f, Color.rgb(255, 180, 80))
             }

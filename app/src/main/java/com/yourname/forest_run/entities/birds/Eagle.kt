@@ -37,6 +37,9 @@ class Eagle(
         y = -birdH - 20f
         hitbox.set(x + 8f, y + 8f, x + birdW - 8f, y + birdH - 8f)
 
+        // Auto-lock onto the player's typical horizontal running line
+        lockOnTarget(screenWidth * 0.25f, groundY - 50f)
+
         // Phase 20: play screech SFX on spawn
     }
 
@@ -57,8 +60,8 @@ class Eagle(
         y += velY * deltaTime
         hitbox.offsetTo(x + 8f, y + 8f)
         sprite.update(deltaTime)
-        // Despawn when completely off screen
-        if (y > groundY + birdH || x < -birdW - 50f || x > screenWidth + 50f) isActive = false
+        // Despawn when completely off screen (using +150f to allow time for the diagonal dive)
+        if (y > groundY + birdH || x < -birdW - 50f || x > screenWidth + 150f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {

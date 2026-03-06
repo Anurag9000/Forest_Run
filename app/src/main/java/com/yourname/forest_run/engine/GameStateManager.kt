@@ -38,6 +38,9 @@ class GameStateManager(context: Context) {
     var score: Int = 0
         private set
 
+    /** Exact fractional score accumulated per frame to prevent integer rounding loss. */
+    private var exactScore: Float = 0f
+
     /** Current score multiplier (1× base, boosted by Kindness Bonus etc.). */
     var scoreMultiplier: Float = 1f
 
@@ -127,10 +130,17 @@ class GameStateManager(context: Context) {
         }
 
         // ── Score ────────────────────────────────────────────────────────
-        score += (GameConstants.POINTS_PER_METRE * scoreMultiplier * scrollSpeed / 1000f * deltaTime * 1000f).toInt()
-        if (score > highScore) {
-            highScore = score
-            isNewHighScore = true
+        val distanceDelta = scrollSpeed / 1000f * deltaTime
+        exactScore += GameConstants.POINTS_PER_METRE * scoreMultiplier * distanceDelta
+        val deltaInt = exactScore.toInt()
+        if (deltaInt > 0) {
+            score += deltaInt
+            exactScore -= deltaInt
+            
+            if (score > highScore) {
+                highScore = score
+                isNewHighScore = true
+            }
         }
         // Milestone every 1000 pts — Phase 21
         val milestone = score / 1000
@@ -173,9 +183,18 @@ class GameStateManager(context: Context) {
      * @param durationSec How long the multiplier boost lasts (0 = permanent for this call).
      */
     fun addBonus(points: Int = 0, seeds: Int = 0, multiplierBoost: Float = 0f) {
-        score += (points * scoreMultiplier).toInt()
+        val finalPoints = (points * scoreMultiplier).toInt()
+        score += finalPoints
+        if (score > highScore) {
+            highScore = score
+            isNewHighScore = true
+        }
+        
         repeat(seeds) { collectSeed() }
-        if (multiplierBoost > 0f) scoreMultiplier = multiplierBoost
+        
+        if (multiplierBoost > 0f) {
+            scoreMultiplier = multiplierBoost
+        }
     }
 
     /**
@@ -202,6 +221,7 @@ class GameStateManager(context: Context) {
         distanceMetres        = 0f
         scrollSpeed           = GameConstants.BASE_SCROLL_SPEED
         score                 = 0
+        exactScore            = 0f
         scoreMultiplier       = 1f
         seedsThisRun          = 0
         bloomMeter            = 0

@@ -120,6 +120,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
     init {
         holder.addCallback(this)
+        wireInputCallbacks()
         setOnTouchListener(inputHandler)
     }
 
@@ -240,6 +241,23 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
     // Input callback wiring
     // -----------------------------------------------------------------------
+
+    private fun wireInputCallbacks() {
+        // These callbacks run regardless of whether the player is initialized yet.
+        inputHandler.onJumpReleased = {
+            when {
+                // Menu taps drive the menu screen
+                appState == AppGameState.MENU -> {
+                    if (::mainMenuScreen.isInitialized) mainMenuScreen.onTap()
+                }
+                // GAME_OVER tap begins restart
+                runState == RunState.GAME_OVER -> {
+                    runState = runResetManager.beginRestart()
+                }
+                else -> { /* handled by wirePlayerToInput when PLAYING */ }
+            }
+        }
+    }
 
     /** Called once after [player] is initialized to attach physics callbacks. */
     private fun wirePlayerToInput() {

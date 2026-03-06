@@ -20,7 +20,7 @@ class SpriteSheet(
     val bitmap: Bitmap,
     val frameCount: Int,
     var framesPerSec: Float,
-    val isLooping: Boolean = true,
+    var isLooping: Boolean = true,
     /** Offset into the strip — allows multiple SpriteSheets to share one bitmap. */
     private val startFrame: Int = 0
 ) {

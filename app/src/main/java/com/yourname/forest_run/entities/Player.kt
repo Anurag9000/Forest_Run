@@ -228,6 +228,16 @@ class Player(
         ParticleManager.emit(FxPreset.HIT_BURST, x + BASE_WIDTH / 2f, y + BASE_HEIGHT / 2f)
     }
 
+    /** Called on run restart to restore the player to a clean running state. */
+    fun reset() {
+        y = groundY - BASE_HEIGHT
+        velocityY = 0f
+        isInvincible = false
+        bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
+        bloomAuraEmitter = null
+        transitionTo(PlayerState.RUNNING)
+    }
+
     // -----------------------------------------------------------------------
     // Update (called every game frame)
     // -----------------------------------------------------------------------

@@ -94,8 +94,8 @@ class Dog(
         y = groundY - dogH
 
         if (mode == DogMode.BUDDY) {
-            // Start alongside player (well ahead — buddy shows up to the player's left)
-            x = screenWidth * 0.25f
+            // Start alongside player (run slightly ahead of the player)
+            x = screenWidth * 0.25f + 160f
         }
 
         hitbox.set(x + 10f, y + 5f, x + dogW - 10f, y + dogH)

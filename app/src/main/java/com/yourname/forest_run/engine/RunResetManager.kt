@@ -109,8 +109,7 @@ class RunResetManager {
 
         gameState.resetRun()
         entityManager.reset()
-        player.triggerRest()    // puts player in REST state at groundY
-        player.onJumpReleased(0f) // immediately transitions to RUNNING (0-duration = tap)
+        player.reset()
 
         FlavorTextManager.clear()
         ParticleManager.clear()

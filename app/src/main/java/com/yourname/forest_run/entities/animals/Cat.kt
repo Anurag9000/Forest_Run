@@ -68,8 +68,8 @@ class Cat(
         // Called by EntityManager when player has fully passed (player.hitbox.left > hitbox.right)
         if (!playerHasPassed) {
             playerHasPassed = true
-            // Kindness bonus: double seeds + 2× multiplier + 150 pts
-            gameState.addBonus(points = 150, seeds = 2, multiplierBoost = 2f)
+            // Kindness bonus: flat 500 pts + double seeds (removed broken permanent 2x multiplier)
+            gameState.addBonus(points = 500, seeds = 2)
             FlavorTextManager.spawn("Meow?", x - 10f, y - 30f, Color.rgb(255, 200, 255))
 
             // Check for Spare threshold (5 clean passes for this cat type)
