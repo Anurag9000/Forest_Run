@@ -88,11 +88,11 @@ class SpriteManager(private val context: Context) {
         val frameW = 72
         val frameH = 100
 
-        val runBmp = loadOrFallback("sprites/char/runner_girl_technical_48frame.png",
+        val runBmp = loadOrFallback(AssetPaths.Char.RUN,
             Color.rgb(70, 160, 255), frameW, frameH, PLAYER_RUN_FRAMES)
         playerRun       = SpriteSheet(runBmp, frameCount = PLAYER_RUN_FRAMES, framesPerSec = 24f, isLooping = true)
 
-        val jumpBmp = loadOrFallback("sprites/char/runner_girl_jump_48frame.png",
+        val jumpBmp = loadOrFallback(AssetPaths.Char.JUMP,
             Color.rgb(255, 220, 60), frameW, frameH, PLAYER_JUMP_STRIP_FRAMES)
         // Slice the jump strip logically:
         playerJumpStart = SpriteSheet(jumpBmp, frameCount = 2,  framesPerSec = 20f, isLooping = false, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
@@ -101,53 +101,53 @@ class SpriteManager(private val context: Context) {
         playerFalling   = SpriteSheet(jumpBmp, frameCount = 6,  framesPerSec = 12f, isLooping = true,  startFrame = 18, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
         playerLanding   = SpriteSheet(jumpBmp, frameCount = 4,  framesPerSec = 25f, isLooping = false, startFrame = 24, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
 
-        val duckBmp = loadOrFallback("sprites/char/runner_girl_duck_48frame.png",
+        val duckBmp = loadOrFallback(AssetPaths.Char.DUCK,
             Color.rgb(80, 220, 180), frameW, frameH, PLAYER_DUCK_FRAMES)
         playerDuck      = SpriteSheet(duckBmp, frameCount = PLAYER_DUCK_FRAMES, framesPerSec = 12f, isLooping = true)
 
-        val hitBmp = loadOrFallback("sprites/char/runner_girl_hit_sequence.png",
+        val hitBmp = loadOrFallback(AssetPaths.Char.HIT,
             Color.rgb(220, 100, 100), frameW, frameH, PLAYER_HIT_FRAMES)
         playerHit       = SpriteSheet(hitBmp, frameCount = PLAYER_HIT_FRAMES, framesPerSec = 15f, isLooping = false)
 
-        val deathBmp = loadOrFallback("sprites/char/runner_girl_death_sequence.png",
+        val deathBmp = loadOrFallback(AssetPaths.Char.DEATH,
             Color.rgb(100, 100, 100), frameW, frameH, PLAYER_DEATH_FRAMES)
         playerDeath     = SpriteSheet(deathBmp, frameCount = PLAYER_DEATH_FRAMES, framesPerSec = 12f, isLooping = false)
 
         // ---- Flora ---------------------------------------------------------
-        cactusSprite    = loadEntity("sprites/plants/cactus_4frames.png",       Color.rgb(30,140,50),   4)
-        lilySprite      = loadEntity("sprites/plants/lily_of_valley_4frames.png",Color.WHITE,           4)
-        hyacinthSprite  = loadEntity("sprites/plants/hyacinth_4frames.png",     Color.rgb(180,100,220), 4)
-        eucalyptusSprite= loadEntity("sprites/plants/eucalyptus_4frames.png",   Color.rgb(80,160,120),  4)
-        orchidSprite    = loadEntity("sprites/plants/vanilla_orchid_4frames.png",Color.rgb(255,250,200), 4)
+        cactusSprite    = loadEntity(AssetPaths.Plants.CACTUS, Color.rgb(30,140,50), 4)
+        lilySprite      = loadEntity(AssetPaths.Plants.LILY_OF_VALLEY, Color.WHITE, 4)
+        hyacinthSprite  = loadEntity(AssetPaths.Plants.HYACINTH, Color.rgb(180,100,220), 4)
+        eucalyptusSprite= loadEntity(AssetPaths.Plants.EUCALYPTUS, Color.rgb(80,160,120), 4)
+        orchidSprite    = loadEntity(AssetPaths.Plants.VANILLA_ORCHID, Color.rgb(255,250,200), 4)
 
         // ---- Trees --------------------------------------------------------- (64×128 frames for tall silhouettes)
-        willowSprite        = loadTreeEntity("sprites/trees/weeping_willow_4frames.png", Color.rgb(30,100,50))
-        jacarandaSprite     = loadTreeEntity("sprites/trees/jacaranda_4frames.png",      Color.rgb(150,80,200))
-        bambooSprite        = loadTreeEntity("sprites/trees/bamboo_4frames.png",         Color.rgb(60,200,60))
-        cherryBlossomSprite = loadTreeEntity("sprites/trees/cherry_blossom_4frames.png", Color.rgb(255,180,200))
+        willowSprite = loadTreeEntity(AssetPaths.Trees.WEEPING_WILLOW, Color.rgb(30,100,50))
+        jacarandaSprite = loadTreeEntity(AssetPaths.Trees.JACARANDA, Color.rgb(150,80,200))
+        bambooSprite = loadTreeEntity(AssetPaths.Trees.BAMBOO, Color.rgb(60,200,60))
+        cherryBlossomSprite = loadTreeEntity(AssetPaths.Trees.CHERRY_BLOSSOM, Color.rgb(255,180,200))
 
         // ---- Birds ---------------------------------------------------------
-        duckSprite      = loadEntity("sprites/birds/duck_4frames.png",      Color.rgb(200,200,50),  4)
-        duckFlying      = loadEntity("sprites/birds/duck_flying.png",       Color.rgb(200,200,50),  4)
+        duckSprite      = loadEntity(AssetPaths.Birds.DUCK, Color.rgb(200,200,50), 4)
+        duckFlying      = loadEntity(AssetPaths.Birds.DUCK_FLYING, Color.rgb(200,200,50), 4)
         
-        titSprite       = loadEntity("sprites/birds/tit_4frames.png",       Color.rgb(100,180,220), 4)
-        titFlying       = loadEntity("sprites/birds/tit_flying.png",       Color.rgb(100,180,220), 4)
+        titSprite       = loadEntity(AssetPaths.Birds.TIT, Color.rgb(100,180,220), 4)
+        titFlying       = loadEntity(AssetPaths.Birds.TIT_FLYING, Color.rgb(100,180,220), 4)
         
-        chickadeeSprite = loadEntity("sprites/birds/chickadee_4frames.png", Color.rgb(180,140,100), 4)
-        chickadeeFlying = loadEntity("sprites/birds/chickadee_flying.png", Color.rgb(180,140,100), 4)
+        chickadeeSprite = loadEntity(AssetPaths.Birds.CHICKADEE, Color.rgb(180,140,100), 4)
+        chickadeeFlying = loadEntity(AssetPaths.Birds.CHICKADEE_FLYING, Color.rgb(180,140,100), 4)
         
-        owlSprite       = loadEntity("sprites/birds/owl_4frames.png",       Color.rgb(100,80,60),   4)
-        owlFlying       = loadEntity("sprites/birds/owl_flying.png",        Color.rgb(100,80,60),   4)
+        owlSprite       = loadEntity(AssetPaths.Birds.OWL, Color.rgb(100,80,60), 4)
+        owlFlying       = loadEntity(AssetPaths.Birds.OWL_FLYING, Color.rgb(100,80,60), 4)
         
-        eagleSprite     = loadEntity("sprites/birds/eagle_4frames.png",     Color.rgb(160,120,60),  4)
-        eagleFlying     = loadEntity("sprites/birds/eagle_flying.png",     Color.rgb(160,120,60),  4)
+        eagleSprite     = loadEntity(AssetPaths.Birds.EAGLE, Color.rgb(160,120,60), 4)
+        eagleFlying     = loadEntity(AssetPaths.Birds.EAGLE_FLYING, Color.rgb(160,120,60), 4)
 
         // ---- Animals -------------------------------------------------------
-        catSprite      = loadEntity("sprites/animals/cat_4frames.png",     Color.rgb(220,190,160), 4)
-        wolfSprite     = loadEntity("sprites/animals/wolf_4frames.png",    Color.rgb(100,100,120), 4)
-        foxSprite      = loadEntity("sprites/animals/fox_4frames.png",     Color.rgb(220,120,60),  4)
-        hedgehogSprite = loadEntity("sprites/animals/hedgehog_4frames.png",Color.rgb(120,100,80),  4)
-        dogSprite      = loadEntity("sprites/animals/dog_4frames.png",     Color.rgb(200,170,130), 4)
+        catSprite      = loadEntity(AssetPaths.Animals.CAT, Color.rgb(220,190,160), 4)
+        wolfSprite     = loadEntity(AssetPaths.Animals.WOLF, Color.rgb(100,100,120), 4)
+        foxSprite      = loadEntity(AssetPaths.Animals.FOX, Color.rgb(220,120,60), 4)
+        hedgehogSprite = loadEntity(AssetPaths.Animals.HEDGEHOG, Color.rgb(120,100,80), 4)
+        dogSprite      = loadEntity(AssetPaths.Animals.DOG, Color.rgb(200,170,130), 4)
     }
 
     /**

@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.utils.MathUtils
 
 /**
@@ -35,7 +36,7 @@ object FlavorTextManager {
     /** Call once from GameView.surfaceCreated() so the font loads before first spawn. */
     fun init(context: Context) {
         pixelFont = runCatching {
-            Typeface.createFromAsset(context.assets, "fonts/PressStart2P-Regular.ttf")
+            Typeface.createFromAsset(context.assets, AssetPaths.PIXEL_FONT)
         }.getOrNull()
     }
 

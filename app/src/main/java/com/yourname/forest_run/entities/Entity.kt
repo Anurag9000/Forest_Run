@@ -29,6 +29,9 @@ abstract class Entity(val context: Context) {
     /** If false, the EntityManager will remove this object from play. */
     var isActive: Boolean = true
 
+    /** True after EntityManager has already awarded the pass bonus for this instance. */
+    var hasBeenPassed: Boolean = false
+
     /** Optional procedural wind animation. */
     var swayComponent: SwayComponent? = null
 

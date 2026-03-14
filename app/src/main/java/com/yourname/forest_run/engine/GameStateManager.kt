@@ -1,7 +1,6 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
-import android.content.SharedPreferences
 import com.yourname.forest_run.utils.MathUtils
 
 /**
@@ -14,9 +13,7 @@ import com.yourname.forest_run.utils.MathUtils
  * or write game state.
  */
 class GameStateManager(context: Context) {
-
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences("forest_run_save", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
 
     // -----------------------------------------------------------------------
     // Scroll & distance
@@ -45,7 +42,7 @@ class GameStateManager(context: Context) {
     var scoreMultiplier: Float = 1f
 
     /** High score loaded from SharedPreferences. */
-    var highScore: Int = prefs.getInt("high_score", 0)
+    var highScore: Int = SaveManager.loadHighScore(appContext)
         private set
 
     /** Whether the current run has beaten the high score yet. */
@@ -71,7 +68,7 @@ class GameStateManager(context: Context) {
         private set
 
     /** Lifetime seeds (persists across sessions – used for Garden meta-loop). */
-    var lifetimeSeeds: Int = prefs.getInt("lifetime_seeds", 0)
+    var lifetimeSeeds: Int = SaveManager.loadLifetimeSeeds(appContext)
         private set
 
     /**
@@ -231,14 +228,13 @@ class GameStateManager(context: Context) {
         mercyHearts           = 0
         speedDebuffMultiplier = 1f
         speedDebuffTimer      = 0f
+        lastMilestone         = 0
+        milestoneReady        = false
     }
 
     /** Persist high score and lifetime seeds to SharedPreferences. */
     fun save() {
-        prefs.edit().apply {
-            putInt("high_score",     highScore)
-            putInt("lifetime_seeds", lifetimeSeeds)
-            apply()
-        }
+        SaveManager.saveHighScore(appContext, highScore)
+        SaveManager.saveLifetimeSeeds(appContext, lifetimeSeeds)
     }
 }

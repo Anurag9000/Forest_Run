@@ -8,10 +8,11 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
-import kotlin.math.sin
+import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.utils.MathUtils
+import kotlin.math.sin
 
 /**
  * Heads-Up Display — Phase 18 fully polished.
@@ -35,7 +36,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
-        Typeface.createFromAsset(context.assets, "fonts/PressStart2P-Regular.ttf")
+        Typeface.createFromAsset(context.assets, AssetPaths.PIXEL_FONT)
     }.getOrDefault(Typeface.MONOSPACE)
 
     // ── Layout ────────────────────────────────────────────────────────────

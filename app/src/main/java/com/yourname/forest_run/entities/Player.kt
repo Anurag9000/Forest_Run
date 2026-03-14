@@ -217,6 +217,16 @@ class Player(
         bloomAuraEmitter = ParticleManager.addContinuous(aura)
     }
 
+    fun deactivateBloom() {
+        isInvincible = false
+        bloomTimer = 0f
+        bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
+        bloomAuraEmitter = null
+        if (state == PlayerState.BLOOM) {
+            transitionTo(PlayerState.RUNNING)
+        }
+    }
+
     // -----------------------------------------------------------------------
     // REST / Game-over
     // -----------------------------------------------------------------------
@@ -293,8 +303,6 @@ class Player(
     // -----------------------------------------------------------------------
 
     private fun updatePhysics(deltaTime: Float) {
-        stateTimer += deltaTime
-
         when (state) {
 
             PlayerState.JUMP_START -> {

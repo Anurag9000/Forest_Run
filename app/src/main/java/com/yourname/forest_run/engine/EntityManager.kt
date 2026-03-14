@@ -86,7 +86,8 @@ class EntityManager(
             }
 
             // 3. Pass detection — entity has scrolled past the player's position
-            if (entity.hitbox.right < playerPassX) {
+            if (!entity.hasBeenPassed && entity.hitbox.right < playerPassX) {
+                entity.hasBeenPassed = true
                 entity.performUniqueAction(player, gameState)
                 // Trigger seed orb spawn above the entity (60% base chance)
                 seedOrbManager.trySpawn(
@@ -157,7 +158,8 @@ class EntityManager(
         )
         // Guarantee it's active and placed at spawn X
         entity.isActive = true
-        entity.x       = spawnX
+        entity.hasBeenPassed = false
+        entity.x = spawnX
         activeEntities.add(entity)
     }
 

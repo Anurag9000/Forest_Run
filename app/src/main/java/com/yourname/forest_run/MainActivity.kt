@@ -8,6 +8,8 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import com.yourname.forest_run.engine.GameView
+import com.yourname.forest_run.engine.LeitmotifManager
+import com.yourname.forest_run.engine.SfxManager
 
 /**
  * Single Activity – does nothing except host the [GameView] full-screen.
@@ -44,6 +46,12 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         gameView.resume()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        LeitmotifManager.destroy()
+        SfxManager.destroy()
     }
 
     // ---------------------------------------------------------------------------

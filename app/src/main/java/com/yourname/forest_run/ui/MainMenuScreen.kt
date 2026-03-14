@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import com.yourname.forest_run.engine.AssetPaths
 import kotlin.math.sin
 
 /**
@@ -51,7 +52,7 @@ class MainMenuScreen(
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
-        Typeface.createFromAsset(context.assets, "fonts/PressStart2P-Regular.ttf")
+        Typeface.createFromAsset(context.assets, AssetPaths.PIXEL_FONT)
     }.getOrDefault(Typeface.MONOSPACE)
 
     // ── Paints ────────────────────────────────────────────────────────────

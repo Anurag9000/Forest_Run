@@ -48,6 +48,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // Input
     // -----------------------------------------------------------------------
     val inputHandler = InputHandler()
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
 
     // -----------------------------------------------------------------------
     // Phase 3: Player – initialized in surfaceCreated once we know screen size
@@ -121,7 +123,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     init {
         holder.addCallback(this)
         wireInputCallbacks()
-        setOnTouchListener(inputHandler)
+        setOnTouchListener { view, event ->
+            val idx = event.actionIndex.coerceAtLeast(0)
+            lastTouchX = event.getX(idx)
+            lastTouchY = event.getY(idx)
+            inputHandler.onTouch(view, event)
+        }
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
@@ -248,7 +255,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             when {
                 // Menu taps drive the menu screen
                 appState == AppGameState.MENU -> {
-                    if (::mainMenuScreen.isInitialized) mainMenuScreen.onTap()
+                    if (::mainMenuScreen.isInitialized) {
+                        mainMenuScreen.onTap(lastTouchX, lastTouchY)
+                    }
+                }
+                appState == AppGameState.GARDEN -> {
+                    if (::gardenScreen.isInitialized) {
+                        gardenScreen.onTap(lastTouchX, lastTouchY)
+                    }
                 }
                 // GAME_OVER tap begins restart
                 runState == RunState.GAME_OVER -> {
@@ -344,6 +358,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         // Phase 5: update game state (scroll speed lives here now)
+        val bloomWasActive = gameState.isBloomActive
         gameState.update(deltaTime)
 
         // Phase 4: update parallax with state's scroll speed
@@ -367,6 +382,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         if (!::player.isInitialized) return
+
+        if (!bloomWasActive && gameState.isBloomActive) {
+            player.activateBloom()
+            LeitmotifManager.playBloom()
+            SfxManager.playBloomActivate()
+        } else if (bloomWasActive && !gameState.isBloomActive) {
+            player.deactivateBloom()
+            LeitmotifManager.endBloom(gameState.distanceMetres)
+        }
+
         player.update(deltaTime, gameState.scrollSpeed)
 
         // Phase 12: EntityManager update (spawn, scroll, pass-detection)
@@ -384,7 +409,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         LeitmotifManager.playRest()   // Phase 20
                         HapticManager.longPulse()     // Phase 21 — strong death feedback
                         // Phase 19: save ghost if this run is a new best distance
-                        if (::gameState.isInitialized && gameState.isNewHighScore) {
+                        if (::gameState.isInitialized &&
+                            gameState.distanceMetres > SaveManager.loadBestDistance(context)
+                        ) {
                             SaveManager.saveGhostRun(context, ghostRecorder.snapshot())
                             SaveManager.saveBestDistance(context, gameState.distanceMetres)
                         }
