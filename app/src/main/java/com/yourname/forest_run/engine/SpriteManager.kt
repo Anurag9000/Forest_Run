@@ -19,10 +19,18 @@ import com.yourname.forest_run.utils.BitmapHelper
  */
 class SpriteManager(private val context: Context) {
 
+    companion object {
+        private const val PLAYER_RUN_FRAMES = 8
+        private const val PLAYER_JUMP_STRIP_FRAMES = 48
+        private const val PLAYER_DUCK_FRAMES = 8
+        private const val PLAYER_HIT_FRAMES = 12
+        private const val PLAYER_DEATH_FRAMES = 24
+    }
+
     private val assets: AssetManager = context.assets
 
     // -----------------------------------------------------------------------
-    // Player Animations  (48-frame strips from real PNGs)
+    // Player Animations
     // -----------------------------------------------------------------------
     val playerRun: SpriteSheet
     val playerJumpStart: SpriteSheet
@@ -76,35 +84,34 @@ class SpriteManager(private val context: Context) {
 
     init {
         // ---- Player --------------------------------------------------------
-        // The 48-frame jump and duck sheets are split into logical segments
-        // for each animation state.
+        // Player character strips are loaded as packed horizontal sheets.
         val frameW = 72
         val frameH = 100
 
         val runBmp = loadOrFallback("sprites/char/runner_girl_technical_48frame.png",
-            Color.rgb(70, 160, 255), frameW, frameH, 48)
-        playerRun       = SpriteSheet(runBmp, frameCount = 48, framesPerSec = 24f, isLooping = true)
+            Color.rgb(70, 160, 255), frameW, frameH, PLAYER_RUN_FRAMES)
+        playerRun       = SpriteSheet(runBmp, frameCount = PLAYER_RUN_FRAMES, framesPerSec = 24f, isLooping = true)
 
         val jumpBmp = loadOrFallback("sprites/char/runner_girl_jump_48frame.png",
-            Color.rgb(255, 220, 60), frameW, frameH, 48)
+            Color.rgb(255, 220, 60), frameW, frameH, PLAYER_JUMP_STRIP_FRAMES)
         // Slice the jump strip logically:
-        playerJumpStart = SpriteSheet(jumpBmp, frameCount = 2,  framesPerSec = 20f, isLooping = false)
-        playerJumping   = SpriteSheet(jumpBmp, frameCount = 12, framesPerSec = 15f, isLooping = true,  startFrame = 2)
-        playerApex      = SpriteSheet(jumpBmp, frameCount = 4,  framesPerSec = 8f,  isLooping = true,  startFrame = 14)
-        playerFalling   = SpriteSheet(jumpBmp, frameCount = 6,  framesPerSec = 12f, isLooping = true,  startFrame = 18)
-        playerLanding   = SpriteSheet(jumpBmp, frameCount = 4,  framesPerSec = 25f, isLooping = false, startFrame = 24)
+        playerJumpStart = SpriteSheet(jumpBmp, frameCount = 2,  framesPerSec = 20f, isLooping = false, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
+        playerJumping   = SpriteSheet(jumpBmp, frameCount = 12, framesPerSec = 15f, isLooping = true,  startFrame = 2, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
+        playerApex      = SpriteSheet(jumpBmp, frameCount = 4,  framesPerSec = 8f,  isLooping = true,  startFrame = 14, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
+        playerFalling   = SpriteSheet(jumpBmp, frameCount = 6,  framesPerSec = 12f, isLooping = true,  startFrame = 18, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
+        playerLanding   = SpriteSheet(jumpBmp, frameCount = 4,  framesPerSec = 25f, isLooping = false, startFrame = 24, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
 
         val duckBmp = loadOrFallback("sprites/char/runner_girl_duck_48frame.png",
-            Color.rgb(80, 220, 180), frameW, frameH, 48)
-        playerDuck      = SpriteSheet(duckBmp, frameCount = 8, framesPerSec = 12f, isLooping = true)
+            Color.rgb(80, 220, 180), frameW, frameH, PLAYER_DUCK_FRAMES)
+        playerDuck      = SpriteSheet(duckBmp, frameCount = PLAYER_DUCK_FRAMES, framesPerSec = 12f, isLooping = true)
 
         val hitBmp = loadOrFallback("sprites/char/runner_girl_hit_sequence.png",
-            Color.rgb(220, 100, 100), frameW, frameH, 48)
-        playerHit       = SpriteSheet(hitBmp, frameCount = 12, framesPerSec = 15f, isLooping = false)
+            Color.rgb(220, 100, 100), frameW, frameH, PLAYER_HIT_FRAMES)
+        playerHit       = SpriteSheet(hitBmp, frameCount = PLAYER_HIT_FRAMES, framesPerSec = 15f, isLooping = false)
 
         val deathBmp = loadOrFallback("sprites/char/runner_girl_death_sequence.png",
-            Color.rgb(100, 100, 100), frameW, frameH, 48)
-        playerDeath     = SpriteSheet(deathBmp, frameCount = 24, framesPerSec = 12f, isLooping = false)
+            Color.rgb(100, 100, 100), frameW, frameH, PLAYER_DEATH_FRAMES)
+        playerDeath     = SpriteSheet(deathBmp, frameCount = PLAYER_DEATH_FRAMES, framesPerSec = 12f, isLooping = false)
 
         // ---- Flora ---------------------------------------------------------
         cactusSprite    = loadEntity("sprites/plants/cactus_4frames.png",       Color.rgb(30,140,50),   4)

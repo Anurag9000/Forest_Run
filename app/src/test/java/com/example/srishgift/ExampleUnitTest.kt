@@ -1,4 +1,4 @@
-package com.example.srishgift
+package com.yourname.forest_run
 
 import org.junit.Test
 

@@ -22,16 +22,22 @@ class SpriteSheet(
     var framesPerSec: Float,
     var isLooping: Boolean = true,
     /** Offset into the strip — allows multiple SpriteSheets to share one bitmap. */
-    private val startFrame: Int = 0
+    private val startFrame: Int = 0,
+    /** Number of physical frames packed into the backing bitmap strip. */
+    private val totalFramesInBitmap: Int = frameCount
 ) {
-    /**
-     * Total frames in the FULL bitmap strip.
-     * Used to compute frameWidth from the total pixel width.
-     */
-    private val totalFramesInBitmap: Int get() = (bitmap.width / frameWidth).coerceAtLeast(1)
+    init {
+        require(frameCount > 0) { "frameCount must be > 0" }
+        require(totalFramesInBitmap > 0) { "totalFramesInBitmap must be > 0" }
+        require(startFrame >= 0) { "startFrame must be >= 0" }
+        require(startFrame + frameCount <= totalFramesInBitmap) {
+            "Requested frames [$startFrame, ${startFrame + frameCount}) exceed bitmap strip size $totalFramesInBitmap"
+        }
+    }
 
     /** Width of a single frame in pixels. */
-    val frameWidth: Int = if (frameCount > 0) bitmap.width / (startFrame + frameCount).coerceAtLeast(1) else bitmap.width
+    val frameWidth: Int =
+        if (totalFramesInBitmap > 0) bitmap.width / totalFramesInBitmap.coerceAtLeast(1) else bitmap.width
 
     /** Height of a single frame in pixels (same as bitmap height). */
     val frameHeight: Int = bitmap.height
@@ -98,6 +104,6 @@ class SpriteSheet(
 
     /** Clones this instance (sharing the underlying Bitmap memory) so multiple entities can use it. */
     fun copy(): SpriteSheet {
-        return SpriteSheet(bitmap, frameCount, framesPerSec, isLooping, startFrame)
+        return SpriteSheet(bitmap, frameCount, framesPerSec, isLooping, startFrame, totalFramesInBitmap)
     }
 }

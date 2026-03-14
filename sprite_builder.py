@@ -28,14 +28,48 @@ Output layout:
                           dog_4frames.png
 """
 
-from PIL import Image, ImageDraw, ImageFont
-import os, sys, math
+from pathlib import Path
+from PIL import Image, ImageDraw
+import argparse
+import math
+import os
 
-ROOT   = "d:/Projects/Forest_Run"
-TMP    = f"{ROOT}/tmp_sprites"
-PLAT   = f"{TMP}/plat"
-TOON   = f"{TMP}/toon"
-ASSET  = f"{ROOT}/app/src/main/assets/sprites"
+ROOT = Path(__file__).resolve().parent
+DEFAULT_TMP = ROOT / "tmp_sprites"
+DEFAULT_ASSET = ROOT / "app" / "src" / "main" / "assets" / "sprites"
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Build sprite strips into the Android assets directory."
+    )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=ROOT,
+        help="Repo root. Defaults to the directory containing this script.",
+    )
+    parser.add_argument(
+        "--tmp-dir",
+        type=Path,
+        default=None,
+        help="Directory containing tmp_sprites/plat and tmp_sprites/toon input art.",
+    )
+    parser.add_argument(
+        "--asset-dir",
+        type=Path,
+        default=None,
+        help="Output directory for generated sprite sheets.",
+    )
+    return parser.parse_args()
+
+
+ARGS = parse_args()
+ROOT = ARGS.root.resolve()
+TMP = (ARGS.tmp_dir or (ROOT / "tmp_sprites")).resolve()
+PLAT = TMP / "plat"
+TOON = TMP / "toon"
+ASSET = (ARGS.asset_dir or (ROOT / "app" / "src" / "main" / "assets" / "sprites")).resolve()
 
 def ensure(path):
     os.makedirs(path, exist_ok=True)
@@ -82,7 +116,7 @@ def make_placeholder(w, h, n, base_rgb, name):
 #  ─── Character frames ─────────────────────────────────────────────────────
 
 CHAR_W, CHAR_H = 72, 100
-ensure(f"{ASSET}/char")
+ensure(ASSET / "char")
 
 def char_strip(pose_names, label, repeat_last_to=None):
     """Build a character strip from Kenney pose names."""
@@ -107,7 +141,7 @@ def char_strip(pose_names, label, repeat_last_to=None):
 run_poses = ["walk1","walk2","walk1","walk2","run1","run2","run1","run2"]
 run_img = char_strip(run_poses, "RUN", 8)
 # Duplicate frames to fill 48-slot naming but SpriteManager uses frameCount=8 now (doc says 48 but fallback=8)
-run_img.save(f"{ASSET}/char/runner_girl_technical_48frame.png")
+run_img.save(ASSET / "char" / "runner_girl_technical_48frame.png")
 print(f"Saved runner_girl_technical_48frame.png ({run_img.width}x{run_img.height})")
 
 # Jump – 6 individual poses, we need to map this exactly to the 48-frame physical slice expected by SpriteManager.
@@ -120,23 +154,23 @@ print(f"Saved runner_girl_technical_48frame.png ({run_img.width}x{run_img.height
 # Total: 28 physical frames accessed by the slices, we will pad it to 48 to prevent ArrayOutOfBounds.
 jump_poses = ["duck","duck"] + ["jump"]*12 + ["idle"]*4 + ["fall"]*6 + ["slide"]*4
 jump_img = char_strip(jump_poses, "JMP", 48)
-jump_img.save(f"{ASSET}/char/runner_girl_jump_48frame.png")
+jump_img.save(ASSET / "char" / "runner_girl_jump_48frame.png")
 print(f"Saved runner_girl_jump_48frame.png")
 
 # Duck – 4 base frames mapped to an 8 frame sequence expected by SpriteManager
 duck_poses = ["duck","slide","duck","slide"]
 duck_img = char_strip(duck_poses, "DCK", 8)
-duck_img.save(f"{ASSET}/char/runner_girl_duck_48frame.png")
+duck_img.save(ASSET / "char" / "runner_girl_duck_48frame.png")
 print(f"Saved runner_girl_duck_48frame.png")
 
 # Hit & Death 
 hit_poses = ["hurt","hurt"]*6
 hit_img = char_strip(hit_poses, "HIT", 12)
-hit_img.save(f"{ASSET}/char/runner_girl_hit_sequence.png")
+hit_img.save(ASSET / "char" / "runner_girl_hit_sequence.png")
 
 death_poses = ["hurt","fall","duck"]*8
 death_img = char_strip(death_poses, "DTH", 24)
-death_img.save(f"{ASSET}/char/runner_girl_death_sequence.png")
+death_img.save(ASSET / "char" / "runner_girl_death_sequence.png")
 
 # ─── Entity helper ─────────────────────────────────────────────────────────
 
@@ -160,10 +194,10 @@ def entity_strip(search_root, names, w, h, fallback_rgb, label):
     frames = frames[:4]
     return strip(frames, w, h)
 
-ensure(f"{ASSET}/plants")
-ensure(f"{ASSET}/trees")
-ensure(f"{ASSET}/birds")
-ensure(f"{ASSET}/animals")
+ensure(ASSET / "plants")
+ensure(ASSET / "trees")
+ensure(ASSET / "birds")
+ensure(ASSET / "animals")
 
 # ─── Flora ─────────────────────────────────────────────────────────────────
 flora = [
@@ -176,7 +210,7 @@ flora = [
 
 for fname, names, col, lbl in flora:
     img = entity_strip(PLAT, names, ENT_W, ENT_H, col, lbl)
-    img.save(f"{ASSET}/plants/{fname}")
+    img.save(ASSET / "plants" / fname)
     print(f"Saved plants/{fname}")
 
 # ─── Trees (taller) ────────────────────────────────────────────────────────
@@ -190,7 +224,7 @@ trees = [
 
 for fname, names, col, lbl in trees:
     img = entity_strip(PLAT, names, TREE_W, TREE_H, col, lbl)
-    img.save(f"{ASSET}/trees/{fname}")
+    img.save(ASSET / "trees" / fname)
     print(f"Saved trees/{fname}")
 
 # ─── Birds ─────────────────────────────────────────────────────────────────
@@ -204,7 +238,7 @@ birds = [
 
 for fname, names, col, lbl in birds:
     img = entity_strip(TOON, names, ENT_W, ENT_H, col, lbl)
-    img.save(f"{ASSET}/birds/{fname}")
+    img.save(ASSET / "birds" / fname)
     print(f"Saved birds/{fname}")
 
 # ─── Animals ───────────────────────────────────────────────────────────────
@@ -218,7 +252,7 @@ animals = [
 
 for fname, names, col, lbl in animals:
     img = entity_strip(TOON, names, ENT_W, ENT_H, col, lbl)
-    img.save(f"{ASSET}/animals/{fname}")
+    img.save(ASSET / "animals" / fname)
     print(f"Saved animals/{fname}")
 
 print("\nAll sprite strips generated successfully!")
