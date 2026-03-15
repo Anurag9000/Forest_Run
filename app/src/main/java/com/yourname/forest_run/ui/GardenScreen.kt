@@ -10,10 +10,12 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.GameConstants
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.SaveManager
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
 import kotlin.math.sin
@@ -83,12 +85,16 @@ class GardenScreen(
 
     /** Callback — called when player taps the back button area. */
     var onBack: (() -> Unit)? = null
+    var onRun: (() -> Unit)? = null
 
     // Unlock animation
     private var unlockAnim: Float = -1f   // -1 = none; 0..1 = progress
     private var unlockIdx:  Int   = -1
 
     private var elapsed = 0f
+    private var bestDistance = 0f
+    private var lastKillerLabel = "None"
+    private var sparedTotal = 0
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -104,6 +110,8 @@ class GardenScreen(
     private val ROW_Y       = screenH * 0.20f
     private val cardRect    = RectF()
     private val spriteRect  = RectF()
+    private val runButtonRect = RectF()
+    private val statsRect = RectF()
 
     // ── Paints ────────────────────────────────────────────────────────────
 
@@ -144,6 +152,42 @@ class GardenScreen(
     private val backPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(180, 220, 220, 220); textSize = 16f; typeface = pixelFont; textAlign = Paint.Align.CENTER
     }
+    private val statsPanelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(145, 20, 40, 30)
+        style = Paint.Style.FILL
+    }
+    private val statsBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(180, 150, 220, 160)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val statsLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(210, 220, 240, 220)
+        textSize = 14f
+        typeface = pixelFont
+        textAlign = Paint.Align.LEFT
+    }
+    private val statsValuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 16f
+        typeface = pixelFont
+        textAlign = Paint.Align.LEFT
+    }
+    private val runButtonPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(225, 245, 226, 130)
+        style = Paint.Style.FILL
+    }
+    private val runButtonBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(90, 120, 40)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val runButtonTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(40, 55, 20)
+        textSize = 20f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
 
     // ── API ───────────────────────────────────────────────────────────────
 
@@ -151,11 +195,13 @@ class GardenScreen(
     fun load() {
         unlockedCount = SaveManager.loadGardenProgress(context).coerceAtLeast(1)
         lifeSeeds     = SaveManager.loadLifetimeSeeds(context)
+        refreshStats()
     }
 
     /** Called after a run to refresh the seed count. */
     fun refresh() {
         lifeSeeds = SaveManager.loadLifetimeSeeds(context)
+        refreshStats()
     }
 
     fun update(deltaTime: Float) {
@@ -172,6 +218,11 @@ class GardenScreen(
      * Returns true if the tap was consumed.
      */
     fun onTap(tapX: Float, tapY: Float): Boolean {
+        if (runButtonRect.contains(tapX, tapY)) {
+            onRun?.invoke()
+            return true
+        }
+
         // Back area — bottom strip
         if (tapY > screenH * 0.88f) { onBack?.invoke(); return true }
 
@@ -212,6 +263,9 @@ class GardenScreen(
 
         // Seed count
         canvas.drawText("🌱 $lifeSeeds", 28f, ch * 0.10f, seedCountPaint)
+
+        drawStatsPanel(canvas, cw, ch)
+        drawRunButton(canvas, cw, ch)
 
         // Cards
         for (i in catalogue.indices) {
@@ -300,4 +354,47 @@ class GardenScreen(
         // Particle layer
         ParticleManager.draw(canvas)
     }
+
+    private fun drawStatsPanel(canvas: Canvas, cw: Float, ch: Float) {
+        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.30f)
+        canvas.drawRoundRect(statsRect, 18f, 18f, statsPanelPaint)
+        canvas.drawRoundRect(statsRect, 18f, 18f, statsBorderPaint)
+
+        var y = statsRect.top + 34f
+        canvas.drawText("Best Run", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(formatDistance(bestDistance), statsRect.left + 18f, y + 20f, statsValuePaint)
+        y += 54f
+        canvas.drawText("Last Killer", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(lastKillerLabel, statsRect.left + 18f, y + 20f, statsValuePaint)
+        y += 54f
+        canvas.drawText("Spared", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(sparedTotal.toString(), statsRect.left + 18f, y + 20f, statsValuePaint)
+    }
+
+    private fun drawRunButton(canvas: Canvas, cw: Float, ch: Float) {
+        runButtonRect.set(cw * 0.70f, ch * 0.14f, cw * 0.93f, ch * 0.26f)
+        val pulse = 0.9f + 0.1f * sin(elapsed * 2.8f)
+        runButtonPaint.alpha = (225f * pulse).toInt().coerceIn(0, 255)
+        canvas.drawRoundRect(runButtonRect, 20f, 20f, runButtonPaint)
+        canvas.drawRoundRect(runButtonRect, 20f, 20f, runButtonBorderPaint)
+        val labelY = runButtonRect.centerY() - (runButtonTextPaint.descent() + runButtonTextPaint.ascent()) / 2f
+        canvas.drawText("RUN", runButtonRect.centerX(), labelY, runButtonTextPaint)
+    }
+
+    private fun refreshStats() {
+        bestDistance = SaveManager.loadBestDistance(context)
+        lastKillerLabel = PersistentMemoryManager.getLastKiller(context)?.let { formatEntityName(it) } ?: "None"
+        sparedTotal =
+            PersistentMemoryManager.getSparedCount(context, EntityType.CAT) +
+            PersistentMemoryManager.getSparedCount(context, EntityType.FOX) +
+            PersistentMemoryManager.getSparedCount(context, EntityType.WOLF)
+    }
+
+    private fun formatDistance(distanceMetres: Float): String =
+        if (distanceMetres < 1_000f) "${distanceMetres.toInt()} m" else String.format("%.2f km", distanceMetres / 1_000f)
+
+    private fun formatEntityName(type: EntityType): String =
+        type.name.lowercase().split("_").joinToString(" ") { part ->
+            part.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        }
 }
