@@ -297,6 +297,38 @@ enum class FxPreset {
         )
     },
 
+    /** One-shot activation burst when Bloom begins. */
+    BLOOM_ACTIVATE {
+        override fun build(x: Float, y: Float) = ParticleEmitter(
+            x = x, y = y,
+            isBurst = true, count = 28,
+            angleMin = 0f, angleMax = 360f,
+            speedMin = 120f, speedMax = 360f,
+            startColor = Color.argb(255, 255, 232, 150),
+            endColor = Color.TRANSPARENT,
+            startSize = 14f, endSize = 0f,
+            gravity = -40f, drag = 0.91f,
+            lifetimeMin = 0.30f, lifetimeMax = 0.80f,
+            spawnRadiusX = 30f, spawnRadiusY = 42f
+        )
+    },
+
+    /** Trailing petals that follow the player during Bloom. */
+    BLOOM_TRAIL {
+        override fun build(x: Float, y: Float) = ParticleEmitter(
+            x = x, y = y,
+            isBurst = false, count = 8,
+            angleMin = 145f, angleMax = 215f,
+            speedMin = 80f, speedMax = 220f,
+            startColor = Color.argb(210, 255, 190, 220),
+            endColor = Color.TRANSPARENT,
+            startSize = 8f, endSize = 0f,
+            gravity = -25f, drag = 0.93f,
+            lifetimeMin = 0.25f, lifetimeMax = 0.60f,
+            spawnRadiusX = 14f, spawnRadiusY = 18f
+        )
+    },
+
     // ── Animal FX ─────────────────────────────────────────────────────────
 
     /** Wolf charge dust trail. Continuous — register on CHARGING transition. */

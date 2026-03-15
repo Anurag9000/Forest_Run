@@ -277,7 +277,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         canvas.drawText(labelText, cx, METER_BOTTOM + 22f, labelPaint)
 
         val statusText = if (state.isBloomActive) {
-            String.format("%.1fs active", state.bloomSecondsRemaining)
+            String.format("%.1fs  •  %d converts", state.bloomSecondsRemaining, state.bloomConversionsThisRun)
         } else {
             "${state.bloomMeter}/${state.bloomSeedTarget}"
         }

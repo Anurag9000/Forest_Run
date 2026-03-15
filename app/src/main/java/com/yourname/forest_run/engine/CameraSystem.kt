@@ -124,4 +124,6 @@ object CameraSystem {
     fun shakeEagle()      = addTrauma(0.25f)
     /** Near-miss feedback. */
     fun shakeMercyMiss()  = addTrauma(0.15f)
+    /** Bloom activation surge. */
+    fun shakeBloom()      = addTrauma(0.32f)
 }

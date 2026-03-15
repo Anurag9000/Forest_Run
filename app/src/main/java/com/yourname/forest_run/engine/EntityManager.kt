@@ -8,7 +8,15 @@ import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.animals.Dog
 import com.yourname.forest_run.entities.animals.Wolf
+import com.yourname.forest_run.entities.flora.Cactus
+import com.yourname.forest_run.entities.flora.Eucalyptus
+import com.yourname.forest_run.entities.flora.Hyacinth
 import com.yourname.forest_run.entities.flora.LilyOfValley
+import com.yourname.forest_run.entities.flora.VanillaOrchid
+import com.yourname.forest_run.entities.trees.Bamboo
+import com.yourname.forest_run.entities.trees.CherryBlossom
+import com.yourname.forest_run.entities.trees.Jacaranda
+import com.yourname.forest_run.entities.trees.WeepingWillow
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.systems.SeedOrbManager
@@ -111,6 +119,7 @@ class EntityManager(
                 if (gameState.isBloomActive) {
                     gameState.recordBloomConversion()
                     ParticleManager.emit(FxPreset.BLOOM_CONVERT, entity.hitbox.centerX(), entity.hitbox.centerY())
+                    emitBloomEnvironmentReaction(entity)
                     entity.isActive = false
                 }
                 // Trigger seed orb spawn above the entity (60% base chance)
@@ -165,6 +174,26 @@ class EntityManager(
      */
     fun drawOrbs(canvas: android.graphics.Canvas, bloomFraction: Float) {
         seedOrbManager.draw(canvas, bloomFraction)
+    }
+
+    private fun emitBloomEnvironmentReaction(entity: Entity) {
+        val x = entity.hitbox.centerX()
+        val y = entity.hitbox.centerY()
+        when (entity) {
+            is LilyOfValley, is Hyacinth, is VanillaOrchid -> {
+                ParticleManager.emit(FxPreset.POLLEN_BURST, x, y)
+                ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 18f)
+            }
+            is Eucalyptus, is WeepingWillow, is Jacaranda, is CherryBlossom, is Bamboo -> {
+                ParticleManager.emit(FxPreset.PETAL_DRIFT, x, y - 24f)
+                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
+            }
+            is Cactus -> {
+                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
+                ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 10f)
+            }
+            else -> ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
+        }
     }
 
     // ── Spawning Helper ───────────────────────────────────────────────────

@@ -115,6 +115,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // Phase 13: Night/dusk ambient darkness overlay
     private val ambientOverlayPaint = Paint().apply { color = Color.BLACK }
     private var bloomScreenPulse = 0f
+    private var bloomActivationFlash = 0f
     private val bloomScreenPaint = Paint().apply {
         color = Color.argb(0, 255, 204, 96)
     }
@@ -122,6 +123,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         color = Color.argb(0, 255, 232, 170)
         style = Paint.Style.STROKE
         strokeWidth = 14f
+    }
+    private val bloomFlashPaint = Paint().apply {
+        color = Color.argb(0, 255, 245, 220)
     }
     private val debugHitboxPaint = Paint().apply {
         color = Color.argb(210, 255, 96, 96)
@@ -364,6 +368,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         if (!::gameState.isInitialized) return
         bloomScreenPulse = if (gameState.isBloomActive) bloomScreenPulse + deltaTime * 4.8f else 0f
+        if (bloomActivationFlash > 0f) {
+            bloomActivationFlash = (bloomActivationFlash - deltaTime).coerceAtLeast(0f)
+        }
 
         // Phase 22: MENU state — update menu screen, gate physics
         if (appState == AppGameState.MENU) {
@@ -451,6 +458,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             player.activateBloom()
             LeitmotifManager.playBloom()
             SfxManager.playBloomActivate()
+            HapticManager.longPulse()
+            CameraSystem.shakeBloom()
+            bloomActivationFlash = 0.32f
+            ParticleManager.emit(FxPreset.BLOOM_ACTIVATE, player.x + Player.BASE_WIDTH / 2f, player.y + Player.BASE_HEIGHT / 2f)
         } else if (!gameState.isBloomActive && player.isInvincible) {
             player.deactivateBloom()
             LeitmotifManager.endBloom(gameState.distanceMetres)
@@ -536,12 +547,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
             // Tick down mercy flash
             if (mercyFlashTimer > 0f) mercyFlashTimer -= deltaTime
-        }
-
-        // Phase 14: Track bloom aura position with player
-        if (::player.isInitialized && player.state == PlayerState.BLOOM) {
-            // ParticleManager continuous emitters track emitter.x/.y at spawn time;
-            // the aura emitter is recreated on each Bloom trigger so position is correct.
         }
 
         // Phase 19: Record ghost frame + advance ghost playback
@@ -654,10 +659,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         if (::gameState.isInitialized && gameState.isBloomActive) {
             val pulse = 0.55f + 0.45f * kotlin.math.sin(bloomScreenPulse)
-            bloomScreenPaint.alpha = (55f + 45f * pulse).toInt().coerceIn(0, 255)
-            bloomFramePaint.alpha = (120f + 70f * pulse).toInt().coerceIn(0, 255)
+            bloomScreenPaint.alpha = (70f + 60f * pulse).toInt().coerceIn(0, 255)
+            bloomFramePaint.alpha = (150f + 80f * pulse).toInt().coerceIn(0, 255)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomScreenPaint)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomFramePaint)
+        }
+        if (bloomActivationFlash > 0f) {
+            val flashAlpha = ((bloomActivationFlash / 0.32f) * 170f).toInt().coerceIn(0, 170)
+            bloomFlashPaint.alpha = flashAlpha
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomFlashPaint)
         }
 
         // 8. HUD — always screen-space, never shakes

@@ -212,21 +212,28 @@ class Player(
     // Bloom
     // -----------------------------------------------------------------------
     private var bloomAuraEmitter: ParticleEmitter? = null
+    private var bloomTrailEmitter: ParticleEmitter? = null
 
     fun activateBloom() {
         isInvincible = true
         bloomTimer   = 0f
         transitionTo(PlayerState.BLOOM)
-        // Register continuous aura emitter
-        val aura = FxPreset.BLOOM_AURA.build(x + BASE_WIDTH / 2f, y + BASE_HEIGHT / 2f)
+        val centerX = x + BASE_WIDTH / 2f
+        val centerY = y + BASE_HEIGHT / 2f
+        val aura = FxPreset.BLOOM_AURA.build(centerX, centerY)
         bloomAuraEmitter = ParticleManager.addContinuous(aura)
+        val trail = FxPreset.BLOOM_TRAIL.build(centerX - BASE_WIDTH * 0.18f, y + BASE_HEIGHT * 0.72f)
+        bloomTrailEmitter = ParticleManager.addContinuous(trail)
+        ParticleManager.emit(FxPreset.BLOOM_ACTIVATE, centerX, centerY)
     }
 
     fun deactivateBloom() {
         isInvincible = false
         bloomTimer = 0f
         bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
+        bloomTrailEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomAuraEmitter = null
+        bloomTrailEmitter = null
         if (state == PlayerState.BLOOM) {
             transitionTo(PlayerState.RUNNING)
         }
@@ -242,7 +249,9 @@ class Player(
         isInvincible = false
         // Stop bloom aura if it was active
         bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
+        bloomTrailEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomAuraEmitter = null
+        bloomTrailEmitter = null
         // DEATH particle burst
         ParticleManager.emit(FxPreset.DEATH_EXPLOSION, x + BASE_WIDTH / 2f, y + BASE_HEIGHT / 2f)
     }
@@ -260,7 +269,9 @@ class Player(
         velocityY = 0f
         isInvincible = false
         bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
+        bloomTrailEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomAuraEmitter = null
+        bloomTrailEmitter = null
         transitionTo(PlayerState.RUNNING)
     }
 
@@ -389,6 +400,20 @@ class Player(
         }
         // Bloom is grounded (she runs at high speed but physics still apply)
         updatePhysics(deltaTime)
+        syncBloomEffects()
+    }
+
+    private fun syncBloomEffects() {
+        val centerX = x + BASE_WIDTH / 2f
+        val centerY = y + BASE_HEIGHT / 2f
+        bloomAuraEmitter?.let { emitter ->
+            emitter.x = centerX
+            emitter.y = centerY
+        }
+        bloomTrailEmitter?.let { emitter ->
+            emitter.x = centerX - BASE_WIDTH * 0.18f
+            emitter.y = y + BASE_HEIGHT * 0.72f
+        }
     }
 
     private fun checkLanding() {
