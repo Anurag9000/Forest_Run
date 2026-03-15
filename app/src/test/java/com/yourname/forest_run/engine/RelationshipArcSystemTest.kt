@@ -97,4 +97,39 @@ class RelationshipArcSystemTest {
         assertEquals(CostumeStyle.VINE_SCARF, reward?.costumeReward)
         assertTrue(RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.FOX))
     }
+
+    @Test
+    fun `encounter cue lines deepen with warm or cautious history`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        repeat(2) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+
+        val catMercy = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.CAT,
+            RelationshipArcSystem.EncounterCue.MERCY
+        )
+        val wolfCharge = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.WOLF,
+            RelationshipArcSystem.EncounterCue.WOLF_CHARGE
+        )
+
+        assertTrue(catMercy.contains("friend", ignoreCase = true) || catMercy.contains("know", ignoreCase = true))
+        assertTrue(wolfCharge.contains("remember", ignoreCase = true))
+    }
+
+    @Test
+    fun `dog buddy dialogue and duration improve with warmer bond`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+
+        val dialogue = RelationshipArcSystem.dogBuddyDialogue(context)
+        val durationBonus = RelationshipArcSystem.dogBuddyDurationBonusSec(context)
+
+        assertEquals(3, dialogue.size)
+        assertTrue(dialogue.first().isNotBlank())
+        assertTrue(durationBonus > 0f)
+    }
 }

@@ -479,6 +479,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 when (collision.result) {
                     CollisionResult.HIT -> {
                         gameState.recordHit()
+                        ghostPlayer.suppress(1.35f)
                         player.triggerRest()  // emits HIT_BURST particles
                         CameraSystem.shakeHit()
                         SfxManager.playHit()          // Phase 20
@@ -519,6 +520,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     }
                     CollisionResult.STUMBLE -> {
                         gameState.recordHit()
+                        ghostPlayer.suppress(0.9f)
                         // User Prompt "accompanied by a screen-flash of the forest's dominant color"
                         player.triggerStumble()
                         mercyFlashTimer = mercyFlashDuration

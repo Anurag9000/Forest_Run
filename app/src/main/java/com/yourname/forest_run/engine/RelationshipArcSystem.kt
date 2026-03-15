@@ -68,6 +68,15 @@ object RelationshipArcSystem {
         RETURN
     }
 
+    enum class EncounterCue {
+        MERCY,
+        FOX_LANDING,
+        WOLF_CHARGE,
+        DOG_GREETING,
+        DOG_MIDDLE,
+        DOG_FAREWELL
+    }
+
     fun isTracked(type: EntityType): Boolean = type in trackedTypes
 
     fun refreshStage(context: Context, type: EntityType): RelationshipStage {
@@ -360,6 +369,34 @@ object RelationshipArcSystem {
         }
     }
 
+    fun encounterCueLine(context: Context, type: EntityType, cue: EncounterCue): String {
+        val stage = stageFor(context, type)
+        val tone = toneFor(context, type)
+        return when (type) {
+            EntityType.CAT -> catCueLine(stage, tone, cue)
+            EntityType.FOX -> foxCueLine(stage, tone, cue)
+            EntityType.WOLF -> wolfCueLine(stage, tone, cue)
+            EntityType.DOG -> dogCueLine(stage, tone, cue)
+            else -> lineFor(context, type, Event.THREAT)
+        }
+    }
+
+    fun dogBuddyDialogue(context: Context): List<String> = listOf(
+        encounterCueLine(context, EntityType.DOG, EncounterCue.DOG_GREETING),
+        encounterCueLine(context, EntityType.DOG, EncounterCue.DOG_MIDDLE),
+        encounterCueLine(context, EntityType.DOG, EncounterCue.DOG_FAREWELL)
+    )
+
+    fun dogBuddyDurationBonusSec(context: Context): Float {
+        val appContext = context.applicationContext
+        return when (stageFor(appContext, EntityType.DOG)) {
+            RelationshipStage.FIRST_IMPRESSION -> 0f
+            RelationshipStage.RECOGNITION -> 0.25f
+            RelationshipStage.TRUST -> if (toneFor(appContext, EntityType.DOG) == RelationshipTone.WARM) 0.8f else 0.45f
+            RelationshipStage.MILESTONE -> if (toneFor(appContext, EntityType.DOG) == RelationshipTone.WARM) 1.25f else 0.8f
+        }
+    }
+
     fun lineFor(context: Context, type: EntityType, event: Event): String {
         val stage = stageFor(context, type)
         val tone = toneFor(context, type)
@@ -486,6 +523,64 @@ object RelationshipArcSystem {
             RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "The garden still feels wagged awake."
             else -> "A bark seems closer than before."
         }
+    }
+
+    private fun catCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
+        EncounterCue.MERCY -> when {
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Easy. I know you."
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Close, friend."
+            tone == RelationshipTone.CAUTIOUS -> "Still nervous?"
+            stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Softly."
+            else -> "Close one."
+        }
+        else -> catLine(stage, tone, Event.THREAT)
+    }
+
+    private fun foxCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
+        EncounterCue.FOX_LANDING -> when {
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Knew you'd stay with me."
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "You remembered."
+            tone == RelationshipTone.CAUTIOUS -> "Still flinching?"
+            stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Caught that."
+            else -> "Next time..."
+        }
+        else -> foxLine(stage, tone, Event.THREAT)
+    }
+
+    private fun wolfCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
+        EncounterCue.WOLF_CHARGE -> when {
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Hold steady."
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Stand your ground."
+            tone == RelationshipTone.CAUTIOUS -> "I remember this."
+            stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Keep your feet."
+            else -> "Here it comes."
+        }
+        else -> wolfLine(stage, tone, Event.THREAT)
+    }
+
+    private fun dogCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
+        EncounterCue.DOG_GREETING -> when {
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "You came back!"
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Run with me!"
+            tone == RelationshipTone.CAUTIOUS -> "Easy!!"
+            stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Hi again!"
+            else -> "BORF!"
+        }
+        EncounterCue.DOG_MIDDLE -> when {
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Still beside me!"
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Knew you'd keep up!"
+            tone == RelationshipTone.CAUTIOUS -> "Still with me?"
+            stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Nice pace!"
+            else -> "Hi!!"
+        }
+        EncounterCue.DOG_FAREWELL -> when {
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "See you home!"
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Come back soon!"
+            tone == RelationshipTone.CAUTIOUS -> "Back soon?"
+            stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "See ya!"
+            else -> "Bye!!"
+        }
+        else -> dogLine(stage, tone, Event.PASS)
     }
 
     private fun owlLine(stage: RelationshipStage, tone: RelationshipTone, event: Event): String = when (event) {

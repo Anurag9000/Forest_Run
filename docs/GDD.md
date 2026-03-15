@@ -145,6 +145,7 @@ Current baseline:
 
 - major-creature relationship stages now exist in runtime and persist across sessions
 - stage-aware lines now affect pass, threat, spare, and return tone for Cat, Fox, Wolf, Dog, Owl, and Eagle
+- ordinary encounter beats now also swap Cat near-miss, Fox landing, Wolf charge, and Dog buddy dialogue based on relationship history instead of generic fallback cues
 - Garden now surfaces the strongest current bond and a baseline bond reward
 - milestone bonds now leave named keepsake traces in the sanctuary, with matching costume paths for Cat, Fox, and Wolf
 - deeper Garden presence and broader behavior shifts are still TODO
@@ -199,7 +200,8 @@ Jump height is tied to touch duration. Short tap = low hop. Full hold = maximum 
 ### Current Status
 
 - Implemented: tap, hold, swipe-down.
-- TODO: validate all touch affordances on device across long sessions and eliminate any confusion caused by ghost overlap or visual clutter.
+- Partial: ghost playback now delays reveal and suppresses briefly after impacts so the live runner stays clearer during crowded moments.
+- TODO: validate all touch affordances on device across long sessions and finish eliminating any confusion caused by ghost overlap or visual clutter.
 
 ---
 

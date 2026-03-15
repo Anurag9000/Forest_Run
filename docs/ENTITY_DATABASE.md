@@ -116,21 +116,21 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: sprinter/charger.
 - Dream traits: howl, then charge; intimidating but readable.
-- Current: howl/charge code and stronger threat presentation now exist.
+- Current: howl/charge code, stronger threat presentation, and relationship-aware charge cueing now exist.
 - TODO: finish device-proofing and deepen the spare payoff.
 
 ### Cat
 
 - Role: kindness-rewarding decoy.
 - Dream traits: tiny optional reward hazard, kindness bonus, spare-like warmth.
-- Current: kindness reward logic and stronger reward presentation now exist.
+- Current: kindness reward logic, stronger reward presentation, and relationship-aware near-miss cueing now exist.
 - TODO: deepen repeated-friend payoff and device-proof the feel.
 
 ### Fox
 
 - Role: mirror-jump trickster.
 - Dream traits: sly counter-jump, playful line delivery, mercy-based wave-off.
-- Current: mirror-jump logic and stronger detection/clean-pass presentation now exist.
+- Current: mirror-jump logic, stronger detection/clean-pass presentation, and history-aware landing payoff now exist.
 - TODO: finish final telegraph charm and repeated-memory payoff.
 
 ### Hedgehog
@@ -144,7 +144,7 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: barker and occasional running buddy.
 - Dream traits: bark projectile timing plus lovable buddy variant.
-- Current: both modes exist and are materially clearer in play.
+- Current: both modes exist, are materially clearer in play, and now use relationship-aware buddy dialogue with longer bonded buddy runs.
 - TODO: make buddy mode truly memorable and finish bark timing validation on device.
 
 ## Mandatory Entity TODOs

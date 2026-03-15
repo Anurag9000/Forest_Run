@@ -47,6 +47,7 @@ class Dog(
     private val readability = ReadabilityProfile.entityForGround(EntityType.DOG, groundY)
     private val relationshipTuning: RelationshipEncounterTuning =
         RelationshipArcSystem.encounterTuning(context, EntityType.DOG)
+    private val buddyDurationBonusSec = RelationshipArcSystem.dogBuddyDurationBonusSec(context)
     private val dogH = readability.heightPx
     private val dogW = SpriteSizing.widthForHeight(sprite, dogH, minWidth = readability.minWidthPx)
     private val insetX = dogW * readability.hitInsetXRatio
@@ -96,12 +97,12 @@ class Dog(
     private val projectiles  = mutableListOf<BarkProjectile>()
 
     // Buddy
-    private var buddyTimer   = 3f + Random.nextFloat() * 2f
+    private var buddyTimer   = 3f + Random.nextFloat() * 2f + buddyDurationBonusSec
     private var buddyDialogueStep = 0
     private var buddyDialogueTimer = 0f
     private var buddyRewarded = false
 
-    private val buddyDialogue = listOf("BORF!", "Hi!!", "See ya!")
+    private val buddyDialogue = RelationshipArcSystem.dogBuddyDialogue(context)
 
     init {
         x = startX
@@ -170,7 +171,13 @@ class Dog(
 
         if (buddyTimer <= 0f) {
             // Final "See ya!" then dash ahead
-            DialogueBubbleManager.spawn("See ya!", x + dogW * 0.5f, y - 20f, Color.rgb(255, 248, 210), Color.rgb(170, 120, 45))
+            DialogueBubbleManager.spawn(
+                buddyDialogue.last(),
+                x + dogW * 0.5f,
+                y - 20f,
+                Color.rgb(255, 248, 210),
+                Color.rgb(170, 120, 45)
+            )
             mode = DogMode.BUDDY_DASH
         }
     }

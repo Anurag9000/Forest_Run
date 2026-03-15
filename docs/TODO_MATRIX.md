@@ -43,6 +43,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: repeat-killer deja vu lines exist in baseline form; deepen them into stronger visual and narrative payoff.
 - DONE: dedicated dialogue bubble system.
 - PARTIAL: biome-level friendship bonus baseline exists; deepen it into stronger sanctuary and route-like payoff.
+- PARTIAL: encounter-level history now surfaces through tracked Cat/Fox/Wolf/Dog cues instead of fallback one-liners; expand the same depth across more creatures and normal-run payoff.
 - PARTIAL: stronger spare events and pacifist route feel started; complete broader world-state and feedback.
 - DONE: face/eye state system baseline for the heroine.
 
@@ -119,7 +120,7 @@ This file is the strict implementation ledger for everything from the original d
 ## Architecture TODOs
 
 - PARTIAL: dedicated readability tuning layer now exists via `ReadabilityProfile`, including central spawn pacing plus full flora, tree, bird, and animal sizing/staging/mercy baselines; final device retuning is still required.
-- PARTIAL: stronger presentation architecture for ghost UX.
+- PARTIAL: ghost presentation now uses delayed reveal and post-impact suppression so it stops competing with the live runner at the most confusing moments; final device-proof tuning is still required.
 - PARTIAL: persistent encounter memory architecture exists; broaden it into richer payoff and authoring tools.
 - DONE: costume overlay architecture baseline exists.
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.

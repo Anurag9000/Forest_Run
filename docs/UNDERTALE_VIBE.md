@@ -79,7 +79,7 @@ Examples:
 ### Current Status
 
 - Implemented: floating flavor text manager.
-- Partial: rest quote system and dialogue bubble staging now exist; much richer trigger coverage and repeat-killer messaging are still needed.
+- Partial: rest quote system and dialogue bubble staging now exist, and tracked Cat/Fox/Wolf/Dog encounter beats now swap history-aware lines in ordinary play; much richer trigger coverage and repeat-killer messaging are still needed.
 
 ---
 
@@ -146,6 +146,7 @@ Examples:
 ### Current Status
 
 - Implemented: ghost persistence, persistent memory manager baseline, and costume wardrobe baseline.
+- Partial: ghost readability now delays reveal at run start and suppresses after impacts so it stops crowding the live runner during recovery.
 - TODO: richer repeat-killer system and final tasteful ghost UX tuning.
 
 ### 4.5 Forest Memory Layer
@@ -201,6 +202,7 @@ Examples:
 ### Current Status
 
 - Implemented: buddy variant exists in code.
+- Partial: bonded Dog runs now keep company longer and speak with relationship-aware buddy lines instead of one static script.
 - TODO: make it obvious and delightful enough that players actually notice and remember it.
 
 ---

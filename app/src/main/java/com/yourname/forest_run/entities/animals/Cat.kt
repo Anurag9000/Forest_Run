@@ -145,7 +145,13 @@ class Cat(
         val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             if (!playerHasPassed) {
-                DialogueBubbleManager.spawn("Phew...", player.x + Player.BASE_WIDTH * 0.5f, player.y - 24f, Color.rgb(255, 245, 220), Color.rgb(180, 140, 70))
+                DialogueBubbleManager.spawn(
+                    RelationshipArcSystem.encounterCueLine(context, EntityType.CAT, RelationshipArcSystem.EncounterCue.MERCY),
+                    player.x + Player.BASE_WIDTH * 0.5f,
+                    player.y - 24f,
+                    Color.rgb(255, 245, 220),
+                    Color.rgb(180, 140, 70)
+                )
             }
             return CollisionResult.MERCY_MISS
         }

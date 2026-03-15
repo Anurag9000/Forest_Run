@@ -103,7 +103,11 @@ class Wolf(
                     wolfState  = WolfState.CHARGING
                     velocityX  = -(walkSpeed * 2f + scrollSpeed * 0.3f) * relationshipTuning.aggressionMultiplier
                     DialogueBubbleManager.spawn(
-                        text = "Here it comes.",
+                        text = RelationshipArcSystem.encounterCueLine(
+                            context,
+                            EntityType.WOLF,
+                            RelationshipArcSystem.EncounterCue.WOLF_CHARGE
+                        ),
                         anchorX = x + wolfW * 0.5f,
                         anchorY = y - 24f,
                         fillColor = Color.rgb(255, 232, 232),

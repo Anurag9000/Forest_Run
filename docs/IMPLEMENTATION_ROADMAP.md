@@ -25,7 +25,7 @@ This restores the original roadmap as the required implementation target. Items 
 | 16 | Partial | flavor text exists, full quote/dialogue coverage missing |
 | 17 | Partial | mercy, pacifist, and friendship systems exist; deeper route-like payoff still missing |
 | 18 | Partial | persistent encounter memory and costumes now exist in baseline form |
-| 19 | Partial | ghost exists and readability baseline is improved; final tuning and validation still needed |
+| 19 | Partial | ghost exists, now delays reveal and suppresses after impacts for clearer live play, and still needs final tuning and validation |
 | 20 | Partial | audio states exist, full leitmotif system incomplete |
 | 21 | Partial | haptics exist, tuning incomplete |
 | 22 | Partial | canonical lifecycle and canonical run-summary carryover now exist; authored rest richness still incomplete |
@@ -173,4 +173,4 @@ Goal: complete, shippable, polished store-ready product.
 - TODO: verify every entity behavior on actual device
 - DONE: seeds, Bloom, mercy hearts, and garden loop are materially clearer in play
 - PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist, including baseline relationship keepsake rewards; finish deeper cross-run payoff and richer route feel
-- PARTIAL: forest mood, personal return moments, major-creature relationship arcs, and quiet story fragments now exist as explicit implementation work, including repeated-harm caution beats, milestone-sensitive warmth, and Bloom-afterglow baseline; deeper authored payoff still needs to be built
+- PARTIAL: forest mood, personal return moments, major-creature relationship arcs, and quiet story fragments now exist as explicit implementation work, including repeated-harm caution beats, milestone-sensitive warmth, Bloom-afterglow baseline, and tracked live encounter cue swaps; deeper authored payoff still needs to be built

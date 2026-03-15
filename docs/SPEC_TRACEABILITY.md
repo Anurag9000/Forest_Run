@@ -327,6 +327,7 @@ Background assets:
 
 - `Implemented`: local save manager.
 - `Partial`: richer JSON save system and memory fields.
+- `Partial`: relationship milestones, return-state data, run summaries, and fragment unlocks now persist; broader repeated-history presentation state is still incomplete.
 
 #### Dynamic Difficulty Curve
 
@@ -378,6 +379,11 @@ Background assets:
 
 - `Partial`: aura, activation burst, HUD conversion feedback, and stronger screen treatment now exist.
 - `TODO`: stronger world transformation, obstacle dissolves, UI pulse ring, and full power-fantasy spectacle.
+
+#### Ghost Readability
+
+- `Partial`: ghost playback now delays its reveal at run start and suppresses briefly after impacts so the live runner stays visually dominant.
+- `TODO`: final on-device threshold tuning and acceptance validation.
 
 ### E. Entity Database (`947e4e1:docs/ENTITY_DATABASE.md`)
 
@@ -463,18 +469,18 @@ Tit / Chickadee:
 Wolf:
 
 - `Implemented`: howl and charge logic.
-- `Partial`: dramatic readability is materially stronger.
+- `Partial`: dramatic readability and relationship-aware charge cueing are materially stronger.
 - `TODO`: stronger mercy-based spare payoff.
 
 Cat:
 
 - `Implemented`: kindness reward and some spare-like behavior.
-- `Partial`: optional reward-hazard readability is materially stronger.
+- `Partial`: optional reward-hazard readability and relationship-aware near-miss cueing are materially stronger.
 
 Fox:
 
 - `Implemented`: mirror-jump behavior.
-- `Partial`: sly timing-game readability and spare path clarity are materially stronger.
+- `Partial`: sly timing-game readability, history-aware landing payoff, and spare path clarity are materially stronger.
 
 Hedgehog:
 
@@ -485,7 +491,7 @@ Hedgehog:
 Dog:
 
 - `Implemented`: bark-projectile hazard and buddy variant.
-- `Partial`: readability and memorability of both modes are materially stronger.
+- `Partial`: readability and memorability of both modes are materially stronger, with relationship-aware buddy dialogue and longer bonded buddy runs.
 
 #### Biome Affinity Map
 
@@ -531,7 +537,7 @@ Dog:
 #### Ghost Run — Spirit Of The Best
 
 - `Implemented`: ghost recorder/player and persistence.
-- `Partial`: endpoint behavior / motivational UX.
+- `Partial`: endpoint behavior / motivational UX, plus delayed reveal and post-impact suppression for cleaner readability.
 - `TODO`: overtake wave-off, sparkle vanish, and default clarity policy.
 
 #### Undertale Dog — Buddy Mode

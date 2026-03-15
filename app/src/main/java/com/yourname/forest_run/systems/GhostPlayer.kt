@@ -39,6 +39,9 @@ class GhostPlayer {
     companion object {
         const val GHOST_ALPHA  = 102   // 40% of 255
         const val WAVE_DURATION = 0.8f  // seconds for wave + fade-out
+        private const val START_DELAY = 1.15f
+        private const val FADE_IN_DURATION = 0.65f
+        private const val MIN_SEPARATION_RATIO = 0.18f
 
         // White-blue colour filter: cool tint, low saturation
         private val GHOST_FILTER: ColorMatrixColorFilter by lazy {
@@ -62,6 +65,7 @@ class GhostPlayer {
     private var isWaving:  Boolean = false
     private var waveTimer: Float   = 0f
     private var isActive:  Boolean = false
+    private var suppressedFor: Float = 0f
 
     // ── Paints ────────────────────────────────────────────────────────────
     private val ghostPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -82,6 +86,7 @@ class GhostPlayer {
         frameIdx  = 0
         isWaving  = false
         waveTimer = 0f
+        suppressedFor = 0f
         isActive  = recordedFrames.isNotEmpty()
     }
 
@@ -97,6 +102,9 @@ class GhostPlayer {
         if (!isActive) return
 
         elapsed += deltaTime
+        if (suppressedFor > 0f) {
+            suppressedFor = (suppressedFor - deltaTime).coerceAtLeast(0f)
+        }
 
         if (isWaving) {
             waveTimer += deltaTime
@@ -119,6 +127,10 @@ class GhostPlayer {
         }
     }
 
+    fun suppress(durationSec: Float) {
+        suppressedFor = maxOf(suppressedFor, durationSec)
+    }
+
     /**
      * Draw the ghost. Call BEFORE the live player.
      * @param spriteManager Supplies the same sprite sheets used by the live player.
@@ -135,8 +147,18 @@ class GhostPlayer {
             (1f - (waveTimer / WAVE_DURATION)).coerceIn(0f, 1f)
         } else 1f
 
+        if (suppressedFor > 0f) {
+            return
+        }
+        val revealProgress = ((elapsed - START_DELAY) / FADE_IN_DURATION).coerceIn(0f, 1f)
+        if (revealProgress <= 0f) return
+        alphaMulti *= revealProgress
+
         livePlayer?.let { player ->
             val horizontalDistance = abs((player.x + Player.BASE_WIDTH / 2f) - (frame.x + Player.BASE_WIDTH / 2f))
+            if (horizontalDistance <= Player.BASE_WIDTH * MIN_SEPARATION_RATIO) {
+                return
+            }
             val overlapFade = when {
                 horizontalDistance <= Player.BASE_WIDTH * 0.30f -> 0.08f
                 horizontalDistance >= Player.BASE_WIDTH * 0.90f -> 1f

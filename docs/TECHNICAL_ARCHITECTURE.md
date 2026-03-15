@@ -202,7 +202,7 @@ Expected qualities:
 - Implemented: `RelationshipArcSystem` now exists as a first-class runtime and persistence layer for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - Partial: `ReturnMomentsSystem` now exists in baseline form.
 - Partial: `ReturnMomentsSystem` now also surfaces repeated-harm caution beats, milestone-bond warmth, Bloom-heavy afterglow returns, and richer absence-sensitive Garden returns; broader authored combinations still need expansion.
-- Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, and baseline milestone keepsake rewards; deeper authored stage consequences still need expansion.
+- Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, baseline milestone keepsake rewards, and tracked live encounter cue swaps for Cat/Fox/Wolf/Dog; deeper authored stage consequences still need expansion.
 - Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
 - Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, repeated-harm caution pages, milestone-gentleness pages, and Bloom-afterglow pages in baseline form.
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, and repeated-harm caution traces from mood, summary, and relationship state.
@@ -225,7 +225,7 @@ Expected data per major creature family:
 ### Current Status
 
 - Implemented: formal relationship stages and baseline authoring data now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
-- Partial: encounter counts, stage persistence, stage-aware dialogue, stage-aware encounter tuning, and baseline milestone keepsake/costume reward hooks now exist; deepen Garden presence and broader authored consequences.
+- Partial: encounter counts, stage persistence, stage-aware dialogue, stage-aware encounter tuning, history-aware live encounter cues, and baseline milestone keepsake/costume reward hooks now exist; deepen Garden presence and broader authored consequences.
 
 ## 14. Personal Return Moments Authoring
 
@@ -244,6 +244,19 @@ Expected layers:
 
 - Implemented: dedicated return-state data now exists for greetings, absence reactions, rough-run comfort beats, milestone Garden messages, and stronger Bloom / gentle-bond combinations.
 - TODO: deepen authoring hooks further and broaden emotional-state coverage beyond the current milestone, Bloom, and gentle-return combinations.
+
+## 14A. Ghost Readability Policy
+
+Expected qualities:
+
+- ghost should teach or motivate without competing with the live player
+- early run readability should favor the live runner first
+- collisions and stumbles should not create ghost clutter during recovery
+
+### Current Status
+
+- Partial: ghost playback now delays its reveal at run start and briefly suppresses after impacts so the live player remains visually dominant in the most confusing moments.
+- TODO: finish final on-device tuning for distance thresholds, fade timing, and overall readability under dense encounters.
 
 ## 15. Quiet Story Fragment Authoring
 

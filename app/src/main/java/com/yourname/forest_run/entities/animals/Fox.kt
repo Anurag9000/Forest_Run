@@ -92,7 +92,13 @@ class Fox(
                     y = groundY - foxH
                     foxVelY = 0f
                     foxState = FoxState.LANDING
-                    DialogueBubbleManager.spawn("Next time...", x + foxW * 0.55f, y - 18f, Color.rgb(255, 236, 214), Color.rgb(190, 110, 55))
+                    DialogueBubbleManager.spawn(
+                        RelationshipArcSystem.encounterCueLine(context, EntityType.FOX, RelationshipArcSystem.EncounterCue.FOX_LANDING),
+                        x + foxW * 0.55f,
+                        y - 18f,
+                        Color.rgb(255, 236, 214),
+                        Color.rgb(190, 110, 55)
+                    )
                 }
             }
             FoxState.LANDING -> {
