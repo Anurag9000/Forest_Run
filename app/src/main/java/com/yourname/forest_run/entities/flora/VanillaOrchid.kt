@@ -2,6 +2,7 @@ package com.yourname.forest_run.entities.flora
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -10,6 +11,9 @@ import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Vanilla Orchid — Phase 27: rendered as two-segment sprite (low vine + overhead branch).
@@ -71,7 +75,10 @@ class VanillaOrchid(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        // Phase 14: emit white sparkle particles on pass
+        gameState.addBonus(points = 140)
+        ParticleManager.emit(FxPreset.LILY_NIGHT_GLOW, x + floraWidth * 0.68f, y + floraHeight * 0.16f)
+        ParticleManager.emit(FxPreset.POLLEN_BURST, x + floraWidth * 0.34f, groundY - floraHeight * 0.18f)
+        DialogueBubbleManager.spawn("A safe thread", x + floraWidth * 0.55f, y - 14f, Color.rgb(255, 246, 252), Color.rgb(170, 120, 160))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

@@ -2,6 +2,7 @@ package com.yourname.forest_run.entities.trees
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -10,6 +11,9 @@ import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Jacaranda — Phase 27: sprite rendered with sway. Upper branch hitbox; player must duck to pass.
@@ -59,7 +63,10 @@ class Jacaranda(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        // Phase 14: spawn full-screen petal curtain FX
+        gameState.addBonus(points = 110)
+        ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.30f, branchTop)
+        ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.72f, branchTop + 12f)
+        DialogueBubbleManager.spawn("Petal hush", x + treeWidth * 0.5f, y - 16f, Color.rgb(244, 234, 255), Color.rgb(130, 100, 170))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

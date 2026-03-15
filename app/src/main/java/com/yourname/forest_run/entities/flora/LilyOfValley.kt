@@ -2,6 +2,7 @@ package com.yourname.forest_run.entities.flora
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -10,6 +11,9 @@ import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Lily of the Valley — Phase 27: sprite rendered with sway rotation.
@@ -52,7 +56,9 @@ class LilyOfValley(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        // Phase 12: double seed spawn rate
+        gameState.addBonus(points = 90)
+        ParticleManager.emit(FxPreset.LILY_NIGHT_GLOW, x + floraWidth * 0.5f, y + floraHeight * 0.25f)
+        DialogueBubbleManager.spawn("Soft glow", x + floraWidth * 0.5f, y - 10f, Color.rgb(242, 255, 252), Color.rgb(110, 170, 150))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

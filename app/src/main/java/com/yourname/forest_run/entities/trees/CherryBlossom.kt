@@ -2,6 +2,7 @@ package com.yourname.forest_run.entities.trees
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -10,6 +11,9 @@ import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Cherry Blossom — Phase 27: mid-height branch hitbox, sprite rendered with gentle sway.
@@ -59,7 +63,11 @@ class CherryBlossom(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        // Phase 14: temporarily increase global wind speed, spike petal emission
+        gameState.addBonus(points = 120, seeds = 1)
+        ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.24f, branchHeightHigh)
+        ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.78f, branchHeightHigh + 18f)
+        ParticleManager.emit(FxPreset.POLLEN_BURST, x + treeWidth * 0.5f, branchHeightLow)
+        DialogueBubbleManager.spawn("Blossom gust", x + treeWidth * 0.5f, y - 14f, Color.rgb(255, 238, 244), Color.rgb(190, 120, 150))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
