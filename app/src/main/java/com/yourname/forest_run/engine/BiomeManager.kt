@@ -27,6 +27,7 @@ class BiomeManager {
         private set
 
     private var nextBiome: Biome = Biome.next(currentBiome)
+    private var forcedDebugBiome: Biome? = null
 
     /**
      * Crossfade progress 0..1 within the transition window.
@@ -72,7 +73,17 @@ class BiomeManager {
      * Call every frame from GameView.update() with current total distance.
      */
     fun update(distanceMetres: Float) {
-        val biomeIndex       = (distanceMetres / BIOME_LEN).toInt()
+        forcedDebugBiome?.let { forced ->
+            currentBiome = forced
+            nextBiome = Biome.next(forced)
+            crossfadeAlpha = 0f
+            currentSkyTop = currentBiome.skyTopColour
+            currentSkyBottom = currentBiome.skyBottomColour
+            currentGround = currentBiome.groundColour
+            currentFoliage = currentBiome.midFoliageColour
+            return
+        }
+
         val progressInBiome  = (distanceMetres % BIOME_LEN) / BIOME_LEN  // 0..1
 
         val newCurrent = Biome.at(distanceMetres)
@@ -93,6 +104,19 @@ class BiomeManager {
         currentSkyBottom = blendColour(currentBiome.skyBottomColour,     nextBiome.skyBottomColour,     crossfadeAlpha)
         currentGround    = blendColour(currentBiome.groundColour,        nextBiome.groundColour,        crossfadeAlpha)
         currentFoliage   = blendColour(currentBiome.midFoliageColour,    nextBiome.midFoliageColour,    crossfadeAlpha)
+    }
+
+    fun forceDebugBiome(biome: Biome?) {
+        forcedDebugBiome = biome
+        if (biome != null) {
+            currentBiome = biome
+            nextBiome = Biome.next(biome)
+            crossfadeAlpha = 0f
+            currentSkyTop = biome.skyTopColour
+            currentSkyBottom = biome.skyBottomColour
+            currentGround = biome.groundColour
+            currentFoliage = biome.midFoliageColour
+        }
     }
 
     // ── Colour helpers ────────────────────────────────────────────────────

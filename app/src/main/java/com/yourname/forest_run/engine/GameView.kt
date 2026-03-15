@@ -537,7 +537,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (::player.isInitialized && encounterDirector?.isScenarioActive != true) {
             ghostRecorder.record(deltaTime, player)
         }
-        if (encounterDirector?.isScenarioActive != true) {
+        if (shouldDrawGhostPlayback()) {
             ghostPlayer.update(deltaTime)
         }
 
@@ -607,7 +607,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
 
             // 4. Ghost player (behind live player, 40% opacity white-blue) — Phase 19
-            if (::spriteManager.isInitialized && encounterDirector?.isScenarioActive != true) {
+            if (::spriteManager.isInitialized && shouldDrawGhostPlayback()) {
                 ghostPlayer.draw(canvas, spriteManager, if (::player.isInitialized) player else null)
             }
 
@@ -666,7 +666,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 director = director ?: return,
                 biomeLabel = entityManager.biomeManager.currentBiome.displayName,
                 activeEntityCount = entityManager.activeEntities.size,
-                bloomText = "${gameState.bloomMeter}/${gameState.bloomSeedTarget}"
+                bloomText = "${gameState.bloomMeter}/${gameState.bloomSeedTarget}",
+                mercyHearts = gameState.mercyHearts,
+                kindnessChain = gameState.kindnessChain,
+                bloomConversions = gameState.bloomConversionsThisRun
             )
         }
 
@@ -702,6 +705,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
+        entityManager.biomeManager.forceDebugBiome(null)
         entityManager.seedOpeningSequence()
         ghostRecorder.reset()
         reloadGhost()
@@ -712,8 +716,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private fun prepareEncounterScenario() {
         val director = encounterDirector ?: return
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
+        val scenario = director.selectedScenario
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
+        entityManager.biomeManager.forceDebugBiome(scenario.forcedBiome)
+        if (scenario.startsWithBloom) {
+            gameState.debugActivateBloom()
+        } else {
+            gameState.debugPrimeBloomMeter(0)
+        }
         ghostRecorder.reset()
         currentRestQuote = "Scenario verification active."
         director.startSelectedScenario()
@@ -750,5 +761,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         ghostPlayer.reset()
         val frames = SaveManager.loadGhostRun(context)
         if (frames.isNotEmpty()) ghostPlayer.load(frames)
+    }
+
+    private fun shouldDrawGhostPlayback(): Boolean {
+        val director = encounterDirector
+        if (director?.isScenarioActive == true) {
+            return director.activeScenario?.allowGhostPlayback == true
+        }
+        return true
     }
 }

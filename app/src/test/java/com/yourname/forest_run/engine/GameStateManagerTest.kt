@@ -106,4 +106,17 @@ class GameStateManagerTest {
         assertEquals(GameConstants.BLOOM_SEED_COUNT + 1, state.seedsThisRun)
         assertTrue(state.score >= 140)
     }
+
+    @Test
+    fun `debug bloom helpers allow deterministic showcase setup`() {
+        val state = GameStateManager(context)
+
+        state.debugPrimeBloomMeter(GameConstants.BLOOM_SEED_COUNT - 1)
+        assertEquals(GameConstants.BLOOM_SEED_COUNT - 1, state.bloomMeter)
+        assertFalse(state.isBloomActive)
+
+        state.debugActivateBloom()
+        assertTrue(state.isBloomActive)
+        assertEquals(0, state.bloomMeter)
+    }
 }

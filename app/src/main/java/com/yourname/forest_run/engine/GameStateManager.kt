@@ -217,6 +217,18 @@ class GameStateManager(context: Context) {
         addBonus(points = 140, seeds = 1)
     }
 
+    fun debugPrimeBloomMeter(seedCount: Int) {
+        bloomMeter = seedCount.coerceIn(0, GameConstants.BLOOM_SEED_COUNT - 1)
+        isBloomActive = false
+        bloomTimer = 0f
+    }
+
+    fun debugActivateBloom() {
+        bloomMeter = 0
+        isBloomActive = true
+        bloomTimer = 0f
+    }
+
     /**
      * Temporarily reduce scroll speed (Hedgehog collision, Hyacinth brush).
      * @param multiplier e.g. 0.5f = half speed.

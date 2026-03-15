@@ -5,7 +5,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class EncounterDirectorTest {
 
     @Test
@@ -47,5 +50,21 @@ class EncounterDirectorTest {
 
         assertFalse(director.isScenarioActive)
         assertEquals(0, director.remainingSteps)
+    }
+
+    @Test
+    fun `suite includes dedicated bloom and ghost verification scenarios`() {
+        assertTrue(EncounterScenario.BLOOM_SHOWCASE.startsWithBloom)
+        assertTrue(EncounterScenario.GHOST_READABILITY.allowGhostPlayback)
+        assertEquals(Biome.MEADOW, EncounterScenario.GHOST_READABILITY.forcedBiome)
+    }
+
+    @Test
+    fun `suite includes all major entity family showcase scenarios`() {
+        assertTrue(EncounterScenario.entries.size >= 20)
+        assertEquals(EntityType.CACTUS, EncounterScenario.CACTUS_READ.steps.first().type)
+        assertEquals(EntityType.WEEPING_WILLOW, EncounterScenario.WILLOW_CURTAIN.steps.first().type)
+        assertEquals(EntityType.OWL, EncounterScenario.OWL_DIVE.steps.first().type)
+        assertEquals(EntityType.WOLF, EncounterScenario.WOLF_CHARGE.steps.first().type)
     }
 }

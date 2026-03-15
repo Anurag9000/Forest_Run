@@ -73,7 +73,10 @@ class DebugEncounterOverlay(
         director: EncounterDirector,
         biomeLabel: String,
         activeEntityCount: Int,
-        bloomText: String
+        bloomText: String,
+        mercyHearts: Int,
+        kindnessChain: Int,
+        bloomConversions: Int
     ) {
         syncLayout()
         canvas.drawRoundRect(panelRect, 18f, 18f, panelPaint)
@@ -82,21 +85,24 @@ class DebugEncounterOverlay(
         var y = panelRect.top + 22f
         canvas.drawText("DEBUG ENCOUNTERS", panelRect.left + 14f, y, titlePaint)
         y += 18f
-        val scenario = director.selectedScenario
-        canvas.drawText("Scenario: ${scenario.title}", panelRect.left + 14f, y, bodyPaint)
+        val selected = director.selectedScenario
+        val activeTitle = director.activeScenario?.title ?: "none"
+        canvas.drawText("Selected: ${selected.title}", panelRect.left + 14f, y, bodyPaint)
         y += 16f
-        canvas.drawText("Plan: ${scenario.summary}", panelRect.left + 14f, y, bodyPaint)
+        canvas.drawText("Plan: ${selected.summary}", panelRect.left + 14f, y, bodyPaint)
         y += 16f
         canvas.drawText(
-            "Mode: ${if (director.isScenarioActive) "SCENARIO" else "LIVE"}  Steps: ${director.remainingSteps}",
+            "Mode: ${if (director.isScenarioActive) "SCENARIO" else "LIVE"}  Active: $activeTitle",
             panelRect.left + 14f,
             y,
             bodyPaint
         )
         y += 16f
-        canvas.drawText("Biome: $biomeLabel  Active: $activeEntityCount", panelRect.left + 14f, y, bodyPaint)
+        canvas.drawText("Biome: $biomeLabel  Steps Left: ${director.remainingSteps}  Suite: ${director.scenarioCount}", panelRect.left + 14f, y, bodyPaint)
         y += 16f
-        canvas.drawText("Bloom: $bloomText", panelRect.left + 14f, y, bodyPaint)
+        canvas.drawText("Bloom: $bloomText  Conversions: $bloomConversions", panelRect.left + 14f, y, bodyPaint)
+        y += 16f
+        canvas.drawText("Mercy: $mercyHearts  Kindness: $kindnessChain  Active: $activeEntityCount", panelRect.left + 14f, y, bodyPaint)
 
         drawButton(canvas, prevRect, "PREV")
         drawButton(canvas, toggleRect, if (director.isScenarioActive) "LIVE" else "RUN")
@@ -111,7 +117,7 @@ class DebugEncounterOverlay(
     }
 
     private fun syncLayout() {
-        panelRect.set(screenWidth * 0.48f, 12f, screenWidth * 0.98f, 124f)
+        panelRect.set(screenWidth * 0.44f, 12f, screenWidth * 0.98f, 144f)
         val buttonTop = panelRect.bottom - 36f
         val buttonBottom = panelRect.bottom - 10f
         val buttonGap = 10f
