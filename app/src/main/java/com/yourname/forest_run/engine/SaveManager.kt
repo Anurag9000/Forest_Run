@@ -51,6 +51,7 @@ object SaveManager {
     private const val KEY_LAST_ACTIVE_AT_MS = "last_active_at_ms"
     private const val KEY_LAST_GARDEN_GREETING_DAY = "last_garden_greeting_day"
     private const val KEY_ROUGH_RUN_STREAK = "rough_run_streak"
+    private const val KEY_UNLOCKED_MEMORY_PAGES = "unlocked_memory_pages"
     private const val GHOST_FILENAME = "ghost_run.bin"
 
     // ── High score ────────────────────────────────────────────────────────
@@ -298,6 +299,13 @@ object SaveManager {
             roughRunStreak = prefs.getInt(KEY_ROUGH_RUN_STREAK, 0)
         )
     }
+
+    fun saveUnlockedMemoryPages(context: Context, pages: Set<String>) {
+        prefs(context).edit().putStringSet(KEY_UNLOCKED_MEMORY_PAGES, pages).apply()
+    }
+
+    fun loadUnlockedMemoryPages(context: Context): Set<String> =
+        prefs(context).getStringSet(KEY_UNLOCKED_MEMORY_PAGES, emptySet()).orEmpty()
 
     fun saveRelationshipStage(context: Context, type: EntityType, stage: RelationshipStage) {
         prefs(context).edit().putString("relationship_stage_${type.name.lowercase()}", stage.name).apply()

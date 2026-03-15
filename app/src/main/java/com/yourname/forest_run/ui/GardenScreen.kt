@@ -15,6 +15,7 @@ import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.engine.SaveManager
+import com.yourname.forest_run.engine.StoryFragmentSystem
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -114,6 +115,8 @@ class GardenScreen(
     private var returnMoment: ReturnMoment? = null
     private var returnVisitorSprite: SpriteSheet? = null
     private var strongestBondLabel = "None"
+    private var memoryPageCount = 0
+    private var gardenReflectionLine = ""
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -176,6 +179,12 @@ class GardenScreen(
     }
     private val returnLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(220, 240, 245, 236); textSize = 12f; typeface = pixelFont; textAlign = Paint.Align.CENTER
+    }
+    private val reflectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(205, 228, 240, 228)
+        textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.LEFT
     }
     private val seedCountPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(160, 255, 120); textSize = 22f; typeface = pixelFont; textAlign = Paint.Align.LEFT
@@ -446,25 +455,28 @@ class GardenScreen(
     }
 
     private fun drawStatsPanel(canvas: Canvas, cw: Float, ch: Float) {
-        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.35f)
+        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.44f)
         canvas.drawRoundRect(statsRect, 18f, 18f, statsPanelPaint)
         canvas.drawRoundRect(statsRect, 18f, 18f, statsBorderPaint)
 
-        var y = statsRect.top + 34f
+        var y = statsRect.top + 30f
         canvas.drawText("Best Run", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(formatDistance(bestDistance), statsRect.left + 18f, y + 20f, statsValuePaint)
-        y += 54f
+        canvas.drawText(formatDistance(bestDistance), statsRect.left + 18f, y + 18f, statsValuePaint)
+        y += 44f
         canvas.drawText("Last Killer", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(lastKillerLabel, statsRect.left + 18f, y + 20f, statsValuePaint)
-        y += 54f
+        canvas.drawText(lastKillerLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
+        y += 44f
         canvas.drawText("Spared", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(sparedTotal.toString(), statsRect.left + 18f, y + 20f, statsValuePaint)
-        y += 54f
+        canvas.drawText(sparedTotal.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
+        y += 44f
         canvas.drawText("Friend Biomes", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(friendshipTotal.toString(), statsRect.left + 18f, y + 20f, statsValuePaint)
-        y += 54f
+        canvas.drawText(friendshipTotal.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
+        y += 44f
         canvas.drawText("Strongest Bond", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(strongestBondLabel, statsRect.left + 18f, y + 20f, statsValuePaint)
+        canvas.drawText(strongestBondLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
+        y += 44f
+        canvas.drawText("Memory Pages", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(memoryPageCount.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
     }
 
     private fun drawRunButton(canvas: Canvas, @Suppress("UNUSED_PARAMETER") cw: Float, @Suppress("UNUSED_PARAMETER") ch: Float) {
@@ -536,6 +548,10 @@ class GardenScreen(
         canvas.drawText("Last killer: $killerText", lastRunRect.left + 18f, y, statsLabelPaint)
         y += 22f
         canvas.drawText(summary.restQuote.take(92), lastRunRect.left + 18f, y, wardrobeHintPaint)
+        if (gardenReflectionLine.isNotBlank()) {
+            y += 24f
+            canvas.drawText(gardenReflectionLine.take(88), lastRunRect.left + 18f, y, reflectionPaint)
+        }
     }
 
     private fun drawCostumeIcon(canvas: Canvas, rect: RectF, style: CostumeStyle, unlocked: Boolean) {
@@ -598,6 +614,8 @@ class GardenScreen(
         returnMoment = ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
         returnVisitorSprite = returnMoment?.visitor?.let(::spriteForVisitor)
         strongestBondLabel = RelationshipArcSystem.strongestRelationshipLabel(context) ?: "None"
+        memoryPageCount = StoryFragmentSystem.memoryPageCount(context)
+        gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
     }
 
     private fun syncWardrobe() {
@@ -612,7 +630,7 @@ class GardenScreen(
 
     private fun syncInteractiveLayout(cw: Float, ch: Float) {
         runButtonRect.set(cw * 0.70f, ch * 0.14f, cw * 0.93f, ch * 0.26f)
-        lastRunRect.set(cw * 0.62f, ch * 0.30f, cw * 0.95f, ch * 0.56f)
+        lastRunRect.set(cw * 0.62f, ch * 0.30f, cw * 0.95f, ch * 0.60f)
         wardrobeRect.set(cw * 0.05f, ch * 0.73f, cw * 0.95f, ch * 0.87f)
         val cardGap = wardrobeRect.width() * 0.015f
         val cardWidth = (wardrobeRect.width() - cardGap * 5f) / 5f

@@ -149,4 +149,14 @@ class SaveManagerTest {
 
         assertEquals(RelationshipStage.TRUST, SaveManager.loadRelationshipStage(context, EntityType.CAT))
     }
+
+    @Test
+    fun `memory pages persist across reloads`() {
+        SaveManager.saveUnlockedMemoryPages(context, setOf("page_repeat_wolf", "page_after_best"))
+
+        assertEquals(
+            setOf("page_repeat_wolf", "page_after_best"),
+            SaveManager.loadUnlockedMemoryPages(context)
+        )
+    }
 }

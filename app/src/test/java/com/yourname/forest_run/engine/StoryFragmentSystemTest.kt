@@ -1,0 +1,63 @@
+package com.yourname.forest_run.engine
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.yourname.forest_run.entities.EntityType
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+@RunWith(RobolectricTestRunner::class)
+class StoryFragmentSystemTest {
+
+    private lateinit var context: Context
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        context.getSharedPreferences("forest_run_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+    }
+
+    @Test
+    fun `rest fragments unlock memory pages for repeat killers`() {
+        PersistentMemoryManager.recordHit(context, EntityType.WOLF)
+        PersistentMemoryManager.recordHit(context, EntityType.WOLF)
+
+        val quote = StoryFragmentSystem.restQuote(context, Biome.DUSK_CANYON, EntityType.WOLF)
+
+        assertTrue(quote.contains("howl") || quote.contains("pattern"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_repeat_wolf"))
+    }
+
+    @Test
+    fun `garden reflections unlock a page after a gentle spared run`() {
+        val summary = RunSummary(
+            score = 900,
+            distanceM = 510f,
+            isNewHighScore = false,
+            highScore = 1200,
+            mercyHearts = 3,
+            mercyMisses = 2,
+            kindnessChain = 4,
+            cleanPasses = 5,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 7,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertTrue(line!!.contains("trusted") || line.contains("breathes"))
+        assertEquals(1, StoryFragmentSystem.memoryPageCount(context))
+    }
+}

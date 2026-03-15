@@ -70,6 +70,11 @@ object RelationshipArcSystem {
     }
 
     fun strongestRelationshipLabel(context: Context): String? {
+        val strongest = strongestRelationship(context) ?: return null
+        return "${formatName(strongest.first)} ${strongest.second.displayName}"
+    }
+
+    fun strongestRelationship(context: Context): Pair<EntityType, RelationshipStage>? {
         val strongest = trackedTypes.maxWithOrNull(
             compareBy<EntityType> { stageFor(context, it).ordinal }
                 .thenBy { affinityScore(context, it) }
@@ -80,7 +85,7 @@ object RelationshipArcSystem {
         ) {
             return null
         }
-        return "${formatName(strongest)} ${stage.displayName}"
+        return strongest to stage
     }
 
     fun lineFor(context: Context, type: EntityType, event: Event): String {
