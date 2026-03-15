@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
@@ -27,10 +28,11 @@ class Cactus(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val cactusHeight = 132f
-    private val cactusWidth  = SpriteSizing.widthForHeight(sprite, cactusHeight, minWidth = 66f)
-    private val insetX       = cactusWidth * 0.16f
-    private val insetY       = cactusHeight * 0.10f
+    private val readability = ReadabilityProfile.entityForGround(EntityType.CACTUS, groundY)
+    private val cactusHeight = readability.heightPx
+    private val cactusWidth  = SpriteSizing.widthForHeight(sprite, cactusHeight, minWidth = readability.minWidthPx)
+    private val insetX       = cactusWidth * readability.hitInsetXRatio
+    private val insetY       = cactusHeight * readability.hitInsetYRatio
     private val drawRect     = RectF()
     private val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(48, 255, 204, 154)
@@ -59,8 +61,9 @@ class Cactus(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
-        canvas.drawRoundRect(x - 10f, y + cactusHeight * 0.12f, x + cactusWidth + 10f, y + cactusHeight + 4f, 16f, 16f, warningPaint)
-        canvas.drawRoundRect(x - 10f, y + cactusHeight * 0.12f, x + cactusWidth + 10f, y + cactusHeight + 4f, 16f, 16f, warningStrokePaint)
+        val pad = readability.stagingPaddingPx
+        canvas.drawRoundRect(x - pad, y + cactusHeight * 0.12f, x + cactusWidth + pad, y + cactusHeight + 4f, 16f, 16f, warningPaint)
+        canvas.drawRoundRect(x - pad, y + cactusHeight * 0.12f, x + cactusWidth + pad, y + cactusHeight + 4f, 16f, 16f, warningStrokePaint)
         drawRect.set(x, y, x + cactusWidth, y + cactusHeight)
         canvas.save()
         canvas.rotate(sway * 1.5f, x + cactusWidth / 2f, y + cactusHeight)
@@ -82,7 +85,8 @@ class Cactus(
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }

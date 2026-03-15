@@ -6,11 +6,13 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
@@ -24,10 +26,11 @@ class Eucalyptus(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val floraHeight = 134f
-    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 62f)
-    private val hitInsetX   = floraWidth * 0.18f
-    private val hitTopY     = floraHeight * 0.14f
+    private val readability = ReadabilityProfile.entityForGround(EntityType.EUCALYPTUS, groundY)
+    private val floraHeight = readability.heightPx
+    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = readability.minWidthPx)
+    private val hitInsetX   = floraWidth * readability.hitInsetXRatio
+    private val hitTopY     = floraHeight * readability.hitInsetYRatio
     private val drawRect    = RectF()
     private val windGuidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(110, 164, 222, 160)
@@ -73,7 +76,8 @@ class Eucalyptus(
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }

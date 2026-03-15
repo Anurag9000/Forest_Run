@@ -6,11 +6,13 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
@@ -28,8 +30,9 @@ class VanillaOrchid(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val floraHeight = 228f
-    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 96f)
+    private val readability = ReadabilityProfile.entityForGround(EntityType.VANILLA_ORCHID, groundY)
+    private val floraHeight = readability.heightPx
+    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = readability.minWidthPx)
 
     // Two distinct hitboxes
     private val bottomHitbox = RectF()
@@ -67,8 +70,9 @@ class VanillaOrchid(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
-        val safeLeft = bottomHitbox.left + floraWidth * 0.08f
-        val safeRight = topHitbox.right - floraWidth * 0.08f
+        val safeInset = readability.stagingPaddingPx
+        val safeLeft = bottomHitbox.left + safeInset
+        val safeRight = topHitbox.right - safeInset
         val safeTop = topHitbox.bottom
         val safeBottom = bottomHitbox.top
         if (safeBottom > safeTop) {
@@ -101,8 +105,9 @@ class VanillaOrchid(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, bottomHitbox) ||
             RectF.intersects(player.hitbox, topHitbox)) return CollisionResult.HIT
-        val bm = RectF(bottomHitbox.left - 12f, bottomHitbox.top - 12f, bottomHitbox.right + 12f, bottomHitbox.bottom + 12f)
-        val tm = RectF(topHitbox.left - 12f, topHitbox.top - 12f, topHitbox.right + 12f, topHitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val bm = RectF(bottomHitbox.left - mercyPad, bottomHitbox.top - mercyPad, bottomHitbox.right + mercyPad, bottomHitbox.bottom + mercyPad)
+        val tm = RectF(topHitbox.left - mercyPad, topHitbox.top - mercyPad, topHitbox.right + mercyPad, topHitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, bm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }

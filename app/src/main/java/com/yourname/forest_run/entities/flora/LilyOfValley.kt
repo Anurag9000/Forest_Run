@@ -6,11 +6,13 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
@@ -26,9 +28,10 @@ class LilyOfValley(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val floraHeight = 92f
-    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 56f)
-    private val hitInsetX   = floraWidth * 0.22f
+    private val readability = ReadabilityProfile.entityForGround(EntityType.LILY_OF_VALLEY, groundY)
+    private val floraHeight = readability.heightPx
+    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = readability.minWidthPx)
+    private val hitInsetX   = floraWidth * readability.hitInsetXRatio
     private val hitTopY     = floraHeight * 0.45f
     private val drawRect    = RectF()
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -81,7 +84,8 @@ class LilyOfValley(
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }

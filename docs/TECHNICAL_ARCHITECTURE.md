@@ -205,6 +205,7 @@ Expected qualities:
 - Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
 - Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, and weather-linked sanctuary writing in baseline form.
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience and bond traces from mood, summary, and relationship state.
+- Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
 - TODO: persistence schema must still expand further for richer fragment unlock state and relationship milestone presentation.
 
 ## 13. Relationship Arc Authoring

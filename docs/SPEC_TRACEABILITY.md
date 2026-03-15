@@ -642,8 +642,8 @@ These synthesize the entire historical spec set into unified workstreams.
 
 ### Readability
 
-- `Implemented`: a central `ReadabilityProfile` now owns spawn pacing plus core bird/animal sizing, telegraph, and mercy-padding baselines.
-- `Partial`: many unique systems now read more clearly, but final flora/tree coverage and actual-device validation are still required.
+- `Implemented`: a central `ReadabilityProfile` now owns spawn pacing plus flora, tree, bird, and animal sizing/staging/mercy-padding baselines.
+- `Partial`: many unique systems now read more clearly, but actual-device validation and final retuning are still required.
 
 ### Bloom
 

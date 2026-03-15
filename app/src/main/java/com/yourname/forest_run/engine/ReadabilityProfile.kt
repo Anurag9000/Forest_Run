@@ -15,6 +15,8 @@ data class EntityReadability(
     val hitInsetYRatio: Float,
     val mercyPaddingPx: Float = 12f,
     val stagingPaddingPx: Float = 10f,
+    val secondaryWidthPx: Float = 0f,
+    val secondarySpacingPx: Float = 0f,
     val detectionRangeBodies: Float = 3f,
     val telegraphDurationSec: Float = 0.3f,
     val movementSpeedPxPerSec: Float = 0f
@@ -27,6 +29,8 @@ private data class EntityReadabilityTemplate(
     val hitInsetYRatio: Float,
     val mercyPaddingPx: Float = 12f,
     val stagingPaddingPx: Float = 10f,
+    val secondaryWidthPx: Float = 0f,
+    val secondarySpacingPx: Float = 0f,
     val detectionRangeBodies: Float = 3f,
     val telegraphDurationSec: Float = 0.3f,
     val movementSpeedPxPerSec: Float = 0f
@@ -39,6 +43,15 @@ object ReadabilityProfile {
     private const val INTERVAL_RAMP_METRES = 2000f
 
     private val templates = mapOf(
+        EntityType.CACTUS to EntityReadabilityTemplate(134f, 68f, 0.16f, 0.10f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
+        EntityType.LILY_OF_VALLEY to EntityReadabilityTemplate(94f, 58f, 0.22f, 0.16f, mercyPaddingPx = 13f, stagingPaddingPx = 10f),
+        EntityType.HYACINTH to EntityReadabilityTemplate(120f, 50f, 0.22f, 0.28f, mercyPaddingPx = 13f, stagingPaddingPx = 10f),
+        EntityType.EUCALYPTUS to EntityReadabilityTemplate(136f, 64f, 0.18f, 0.14f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
+        EntityType.VANILLA_ORCHID to EntityReadabilityTemplate(232f, 100f, 0.18f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
+        EntityType.WEEPING_WILLOW to EntityReadabilityTemplate(692f, 282f, 0.18f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
+        EntityType.JACARANDA to EntityReadabilityTemplate(626f, 238f, 0.16f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
+        EntityType.BAMBOO to EntityReadabilityTemplate(0f, 0f, 0f, 0f, mercyPaddingPx = 10f, stagingPaddingPx = 14f, secondaryWidthPx = 22f, secondarySpacingPx = 40f),
+        EntityType.CHERRY_BLOSSOM to EntityReadabilityTemplate(605f, 238f, 0.16f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 16f),
         EntityType.CAT to EntityReadabilityTemplate(84f, 70f, 0.14f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
         EntityType.FOX to EntityReadabilityTemplate(102f, 84f, 0.12f, 0.09f, mercyPaddingPx = 14f, stagingPaddingPx = 12f, detectionRangeBodies = 3.2f),
         EntityType.WOLF to EntityReadabilityTemplate(118f, 94f, 0.11f, 0.07f, mercyPaddingPx = 14f, stagingPaddingPx = 14f, telegraphDurationSec = 1.05f),
@@ -78,6 +91,8 @@ object ReadabilityProfile {
             hitInsetYRatio = template.hitInsetYRatio,
             mercyPaddingPx = template.mercyPaddingPx * scale,
             stagingPaddingPx = template.stagingPaddingPx * scale,
+            secondaryWidthPx = template.secondaryWidthPx * scale,
+            secondarySpacingPx = template.secondarySpacingPx * scale,
             detectionRangeBodies = template.detectionRangeBodies,
             telegraphDurationSec = template.telegraphDurationSec,
             movementSpeedPxPerSec = template.movementSpeedPxPerSec * scale

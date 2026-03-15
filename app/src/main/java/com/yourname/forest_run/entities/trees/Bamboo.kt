@@ -6,10 +6,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.ui.DialogueBubbleManager
 import kotlin.random.Random
@@ -26,9 +28,10 @@ class Bamboo(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
+    private val readability = ReadabilityProfile.entity(EntityType.BAMBOO, screenHeight)
     private val stalkCount        = 5
-    private val stalkWidth        = 22f
-    private val gapBetweenStalks  = 40f
+    private val stalkWidth        = readability.secondaryWidthPx
+    private val gapBetweenStalks  = readability.secondarySpacingPx
     private val totalWidth        = stalkCount * stalkWidth + (stalkCount - 1) * gapBetweenStalks
 
     private val topHitboxes       = Array(stalkCount) { RectF() }
@@ -77,7 +80,8 @@ class Bamboo(
             if (right > left) {
                 val gapTop = topHitboxes[i].bottom
                 val gapBottom = bottomHitboxes[i].top
-                canvas.drawRoundRect(left, gapTop, right, gapBottom, 14f, 14f, gapGuidePaint)
+                val radius = readability.stagingPaddingPx
+                canvas.drawRoundRect(left, gapTop, right, gapBottom, radius, radius, gapGuidePaint)
             }
         }
         for (i in 0 until stalkCount) {
@@ -100,8 +104,9 @@ class Bamboo(
         for (i in 0 until stalkCount) {
             if (RectF.intersects(player.hitbox, topHitboxes[i]) ||
                 RectF.intersects(player.hitbox, bottomHitboxes[i])) return CollisionResult.HIT
-            val tm = RectF(topHitboxes[i].left - 6f, topHitboxes[i].top, topHitboxes[i].right + 6f, topHitboxes[i].bottom + 6f)
-            val bm = RectF(bottomHitboxes[i].left - 6f, bottomHitboxes[i].top - 6f, bottomHitboxes[i].right + 6f, bottomHitboxes[i].bottom)
+            val mercyPad = readability.mercyPaddingPx * 0.5f
+            val tm = RectF(topHitboxes[i].left - mercyPad, topHitboxes[i].top, topHitboxes[i].right + mercyPad, topHitboxes[i].bottom + mercyPad)
+            val bm = RectF(bottomHitboxes[i].left - mercyPad, bottomHitboxes[i].top - mercyPad, bottomHitboxes[i].right + mercyPad, bottomHitboxes[i].bottom)
             if (RectF.intersects(player.hitbox, tm) || RectF.intersects(player.hitbox, bm)) nearMiss = true
         }
         return if (nearMiss) CollisionResult.MERCY_MISS else CollisionResult.NONE

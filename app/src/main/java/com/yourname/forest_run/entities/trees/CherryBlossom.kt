@@ -6,11 +6,13 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
@@ -27,8 +29,9 @@ class CherryBlossom(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val treeHeight       = screenHeight * 0.56f
-    private val treeWidth        = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = screenHeight * 0.22f)
+    private val readability = ReadabilityProfile.entity(EntityType.CHERRY_BLOSSOM, screenHeight)
+    private val treeHeight       = readability.heightPx
+    private val treeWidth        = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = readability.minWidthPx)
     private val trunkWidth       = treeWidth * 0.16f
     private val branchHeightLow  = groundY - treeHeight * 0.26f
     private val branchHeightHigh = groundY - treeHeight * 0.58f
@@ -65,8 +68,9 @@ class CherryBlossom(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
-        canvas.drawRoundRect(branchHitbox.left - 16f, branchHitbox.top - 8f, branchHitbox.right + 16f, branchHitbox.bottom + 8f, 24f, 24f, gustPaint)
-        canvas.drawRoundRect(branchHitbox.left - 16f, branchHitbox.top - 8f, branchHitbox.right + 16f, branchHitbox.bottom + 8f, 24f, 24f, gustStrokePaint)
+        val pad = readability.stagingPaddingPx
+        canvas.drawRoundRect(branchHitbox.left - pad, branchHitbox.top - pad * 0.5f, branchHitbox.right + pad, branchHitbox.bottom + pad * 0.5f, 24f, 24f, gustPaint)
+        canvas.drawRoundRect(branchHitbox.left - pad, branchHitbox.top - pad * 0.5f, branchHitbox.right + pad, branchHitbox.bottom + pad * 0.5f, 24f, 24f, gustStrokePaint)
         drawRect.set(x, groundY - treeHeight, x + treeWidth, groundY)
         canvas.save()
         canvas.rotate(sway * 0.6f, x + treeWidth / 2f, groundY)
@@ -86,8 +90,9 @@ class CherryBlossom(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox) ||
             RectF.intersects(player.hitbox, branchHitbox)) return CollisionResult.HIT
-        val bm = RectF(branchHitbox.left - 12f, branchHitbox.top - 12f, branchHitbox.right + 12f, branchHitbox.bottom + 12f)
-        val tm = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val bm = RectF(branchHitbox.left - mercyPad, branchHitbox.top - mercyPad, branchHitbox.right + mercyPad, branchHitbox.bottom + mercyPad)
+        val tm = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, bm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }

@@ -31,4 +31,16 @@ class ReadabilityProfileTest {
         assertEquals(1.7f, ReadabilityProfile.spawnInterval(0f), 0.0001f)
         assertEquals(0.62f, ReadabilityProfile.spawnInterval(5_000f), 0.0001f)
     }
+
+    @Test
+    fun `flora and trees now have explicit readability coverage`() {
+        val lily = ReadabilityProfile.entity(EntityType.LILY_OF_VALLEY, screenHeight = 1080f)
+        val willow = ReadabilityProfile.entity(EntityType.WEEPING_WILLOW, screenHeight = 1080f)
+        val bamboo = ReadabilityProfile.entity(EntityType.BAMBOO, screenHeight = 1080f)
+
+        assertTrue(lily.heightPx > 0f)
+        assertTrue(willow.heightPx > 0f)
+        assertTrue(bamboo.secondaryWidthPx > 0f)
+        assertTrue(bamboo.secondarySpacingPx > 0f)
+    }
 }
