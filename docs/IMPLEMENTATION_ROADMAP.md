@@ -151,9 +151,9 @@ Goal: complete, shippable, polished store-ready product.
 
 ## Non-Negotiable TODO Priorities
 
-- TODO: fix entity size/readability on phone
-- TODO: fix spawn sparsity so encounters feel alive
-- TODO: fix ghost duplication confusion
+- DONE: entity size/readability on phone materially improved
+- DONE: spawn sparsity materially reduced
+- DONE: ghost duplication confusion materially reduced
 - TODO: verify every entity behavior on actual device
-- TODO: make seeds, Bloom, mercy hearts, and garden loop unmistakable in play
-- TODO: implement the missing persistent memory, costume, pacifist, and dialogue systems
+- DONE: seeds, Bloom, mercy hearts, and garden loop are materially clearer in play
+- PARTIAL: persistent memory, pacifist, dialogue, and facial presentation systems now exist; finish MercySystem, costumes, and deeper cross-run payoff

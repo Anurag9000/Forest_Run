@@ -222,7 +222,8 @@ Dream-spec supporting systems include:
 ### Current Status
 
 - Implemented: `FlavorTextManager`, `GhostRecorder`, `GhostPlayer`, `LeitmotifManager` in partial form.
-- TODO: `PersistentMemoryManager`, `MercySystem` as dedicated system, `PacifistTracker`, `DialogueBubble`, `CostumeOverlay`.
+- Implemented: `PersistentMemoryManager`, `PacifistTracker`, `DialogueBubbleManager`, and a baseline `FaceManager`.
+- TODO: `MercySystem` as dedicated system and `CostumeOverlay`.
 
 ---
 

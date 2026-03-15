@@ -2,13 +2,19 @@
 
 This file is the strict implementation ledger for everything from the original dream specs that is not fully realized yet.
 
-## Immediate Product Bugs
+## Recently Closed
 
-- TODO: increase the on-screen size/readability of birds, plants, trees, and animals on phone.
-- TODO: tighten spawn pacing so the world does not feel empty or too far between.
-- TODO: fix ghost playback so it does not look like a broken duplicate runner.
-- TODO: make seed orbs, Bloom meter, Bloom activation, hearts, score, distance, and garden loop visually undeniable in normal play.
-- TODO: verify that each entity’s unique behavior is visible and understandable without reading the code.
+- DONE: increased on-screen readability of birds, plants, trees, and animals on phone.
+- DONE: tightened spawn pacing so the world no longer opens with long dead stretches.
+- DONE: fixed the ghost playback presentation so it no longer reads like a broken duplicate body.
+- DONE: made seeds, Bloom meter, Bloom activation, hearts, score, distance, and the Garden hub much more visible in normal play.
+- DONE: added readable dialogue bubbles, pacifist rewards, face-state presentation, and clearer owl/eagle telegraphs.
+
+## Immediate Remaining Product Gaps
+
+- TODO: verify every entity’s unique behavior on actual device and retune any behavior that still fails to read in normal play.
+- TODO: finish the remaining weak flora/tree/bird interactions that still feel lighter than the dream spec.
+- TODO: make Bloom feel like a full world-transforming power event rather than only a stronger readable buff.
 
 ## Documentation And Canonical Spec TODOs
 
@@ -27,13 +33,13 @@ This file is the strict implementation ledger for everything from the original d
 ## Personality TODOs
 
 - TODO: contextual rest quotes by biome and last killer.
-- TODO: full `PersistentMemoryManager`.
+- PARTIAL: `PersistentMemoryManager` exists; expand it into full repeated-encounter payoff, unlock, and presentation architecture.
 - TODO: costume overlays for repeated encounters.
 - TODO: repeat-killer deja vu lines and visuals.
-- TODO: dedicated dialogue bubble system.
-- TODO: biome-level friendship bonus.
-- TODO: stronger spare events and pacifist route feel.
-- TODO: face/eye state system for the heroine.
+- DONE: dedicated dialogue bubble system.
+- PARTIAL: biome-level friendship bonus baseline exists; deepen it into stronger sanctuary and route-like payoff.
+- PARTIAL: stronger spare events and pacifist route feel started; complete broader world-state and feedback.
+- DONE: face/eye state system baseline for the heroine.
 
 ## Entity TODOs
 
@@ -74,7 +80,7 @@ This file is the strict implementation ledger for everything from the original d
 - TODO: stronger presentation architecture for ghost UX.
 - TODO: persistent encounter memory architecture.
 - TODO: costume overlay architecture.
-- TODO: pacifist and friendship tracking systems.
+- PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - TODO: deeper authored biome scene system.
 
 ## Visual And Audio TODOs

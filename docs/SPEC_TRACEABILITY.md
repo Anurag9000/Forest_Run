@@ -52,12 +52,12 @@ Core classes currently present:
 
 Missing dream-spec dedicated classes called out by historical docs:
 
-- `TODO`: `PersistentMemoryManager`
+- `Implemented`: `PersistentMemoryManager`
 - `TODO`: `MercySystem` as dedicated class
-- `TODO`: `PacifistTracker`
-- `TODO`: `DialogueBubble`
+- `Implemented`: `PacifistTracker`
+- `Implemented`: `DialogueBubbleManager`
 - `TODO`: `CostumeOverlay`
-- `TODO`: `FaceManager`
+- `Implemented`: `FaceManager`
 
 ## Traceability By Source
 
