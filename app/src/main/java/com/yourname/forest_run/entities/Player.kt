@@ -120,6 +120,7 @@ class Player(
 
     private var currentAnimation: SpriteSheet = animRun
     private val drawRect = RectF()
+    private val faceManager = FaceManager()
 
     // -----------------------------------------------------------------------
     // Squash / stretch
@@ -282,6 +283,7 @@ class Player(
         }
         
         currentAnimation.update(deltaTime)
+        faceManager.update(deltaTime)
     }
 
     private fun updateStumble(deltaTime: Float) {
@@ -459,6 +461,7 @@ class Player(
         canvas.scale(scaleX, scaleY, cx, fy)
         drawRect.set(x, y + yOffset, x + BASE_WIDTH, y + BASE_HEIGHT + yOffset)
         currentAnimation.draw(canvas, drawRect)
+        faceManager.draw(canvas, drawRect, state, velocityY, isInvincible)
         canvas.restore()
     }
 }
