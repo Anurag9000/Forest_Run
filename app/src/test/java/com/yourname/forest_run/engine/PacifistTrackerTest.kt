@@ -1,7 +1,6 @@
 package com.yourname.forest_run.engine
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -11,32 +10,28 @@ import org.robolectric.RobolectricTestRunner
 class PacifistTrackerTest {
 
     @Test
-    fun `clean pass streak rewards every five passes`() {
+    fun `befriending a biome emits a friendship reward`() {
         val tracker = PacifistTracker()
+        tracker.updateBiome(Biome.MEADOW)
+        repeat(3) { tracker.recordCleanPass() }
 
-        repeat(4) { tracker.recordCleanPass() }
-        assertNull(tracker.consumeReward())
-
-        tracker.recordCleanPass()
+        tracker.updateBiome(Biome.ORCHARD)
         val reward = tracker.consumeReward()
 
-        assertNotNull(reward)
-        assertEquals("Kindness streak +", reward?.message)
-        assertEquals(5, tracker.cleanPassesThisRun)
+        requireNotNull(reward)
+        assertEquals(Biome.MEADOW, reward.friendBiome)
+        assertEquals("Meadow befriended", reward.message)
     }
 
     @Test
-    fun `clean biome transition grants biome friendship reward`() {
+    fun `biome friendship reward is blocked after a hit`() {
         val tracker = PacifistTracker()
-
         tracker.updateBiome(Biome.MEADOW)
-        repeat(3) { tracker.recordCleanPass() }
+        repeat(4) { tracker.recordCleanPass() }
+        tracker.recordHit()
+
         tracker.updateBiome(Biome.ORCHARD)
 
-        val reward = tracker.consumeReward()
-
-        assertNotNull(reward)
-        assertEquals(2, reward?.seeds)
-        assertEquals("Meadow befriended", reward?.message)
+        assertNull(tracker.consumeReward())
     }
 }

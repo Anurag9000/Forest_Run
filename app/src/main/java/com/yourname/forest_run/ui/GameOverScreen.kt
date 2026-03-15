@@ -132,6 +132,11 @@ class GameOverScreen(
         isNewHighScore: Boolean,
         highScore:     Int,
         mercyHearts:   Int,
+        mercyMisses:   Int,
+        kindnessChain: Int,
+        cleanPasses:   Int,
+        sparedCount:   Int,
+        hitsTaken:     Int,
         seedsCollected: Int,
         restQuote: String
     ) {
@@ -182,6 +187,21 @@ class GameOverScreen(
             val hearts = "♥".repeat(mercyHearts.coerceAtMost(10))
             canvas.drawText(hearts, cx, ty, heartPaint)
             ty += 40f
+        }
+
+        val summaryBits = buildList {
+            if (mercyMisses > 0) add("$mercyMisses close calls")
+            if (cleanPasses > 0) add("$cleanPasses clean")
+            if (sparedCount > 0) add("$sparedCount spared")
+            if (hitsTaken > 0) add("$hitsTaken hit")
+        }
+        if (summaryBits.isNotEmpty()) {
+            canvas.drawText(summaryBits.joinToString("  •  "), cx, ty, scoreLabelPaint)
+            ty += 34f
+        }
+        if (kindnessChain > 0) {
+            canvas.drawText("best kindness chain $kindnessChain", cx, ty, distancePaint)
+            ty += 34f
         }
 
         // 8. Tap prompt — pulsing alpha

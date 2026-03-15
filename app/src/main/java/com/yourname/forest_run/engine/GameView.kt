@@ -498,6 +498,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             LeitmotifManager.updateTempo(gameState.scrollSpeed)
             gameState.consumePacifistReward()?.let { reward ->
                 gameState.addBonus(points = reward.points, seeds = reward.seeds)
+                reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }
                 DialogueBubbleManager.spawn(
                     text = reward.message,
                     anchorX = player.x + Player.BASE_WIDTH * 0.5f,
@@ -599,6 +600,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     isNewHighScore  = gameState.isNewHighScore,
                     highScore       = gameState.highScore,
                     mercyHearts     = gameState.mercyHearts,
+                    mercyMisses     = gameState.mercyMissesThisRun,
+                    kindnessChain   = gameState.kindnessChain,
+                    cleanPasses     = gameState.cleanPassesThisRun,
+                    sparedCount     = gameState.sparedThisRun,
+                    hitsTaken       = gameState.hitsThisRun,
                     seedsCollected  = gameState.seedsThisRun,
                     restQuote       = currentRestQuote
                 )

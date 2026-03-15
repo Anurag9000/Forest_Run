@@ -37,4 +37,11 @@ object PersistentMemoryManager {
 
     fun getLastKiller(context: Context): EntityType? =
         SaveManager.loadLastKiller(context.applicationContext)
+
+    fun recordBiomeFriendship(context: Context, biome: Biome) {
+        SaveManager.incrementBiomeFriendship(context.applicationContext, biome)
+    }
+
+    fun getBiomeFriendship(context: Context, biome: Biome): Int =
+        SaveManager.loadBiomeFriendship(context.applicationContext, biome)
 }

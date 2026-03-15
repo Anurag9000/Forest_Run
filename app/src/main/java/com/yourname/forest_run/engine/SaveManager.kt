@@ -174,6 +174,13 @@ object SaveManager {
             runCatching { EntityType.valueOf(raw) }.getOrNull()
         }
 
+    fun incrementBiomeFriendship(context: Context, biome: Biome) {
+        incrementInt(context, "friendship_${biome.name.lowercase()}")
+    }
+
+    fun loadBiomeFriendship(context: Context, biome: Biome): Int =
+        prefs(context).getInt("friendship_${biome.name.lowercase()}", 0)
+
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private fun prefs(context: Context) =

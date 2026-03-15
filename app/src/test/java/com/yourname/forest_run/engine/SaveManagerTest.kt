@@ -77,4 +77,14 @@ class SaveManagerTest {
         )
         assertEquals(CostumeStyle.MOON_CAPE, SaveManager.loadActiveCostume(context))
     }
+
+    @Test
+    fun `biome friendship persists across reloads`() {
+        SaveManager.incrementBiomeFriendship(context, Biome.MEADOW)
+        SaveManager.incrementBiomeFriendship(context, Biome.MEADOW)
+        SaveManager.incrementBiomeFriendship(context, Biome.NIGHT_FOREST)
+
+        assertEquals(2, SaveManager.loadBiomeFriendship(context, Biome.MEADOW))
+        assertEquals(1, SaveManager.loadBiomeFriendship(context, Biome.NIGHT_FOREST))
+    }
 }

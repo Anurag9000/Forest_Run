@@ -3,7 +3,8 @@ package com.yourname.forest_run.engine
 data class PacifistReward(
     val message: String,
     val points: Int,
-    val seeds: Int
+    val seeds: Int,
+    val friendBiome: Biome? = null
 )
 
 /**
@@ -48,7 +49,8 @@ class PacifistTracker {
                 pendingReward = PacifistReward(
                     message = "$biomeName befriended",
                     points = 350,
-                    seeds = 2
+                    seeds = 2,
+                    friendBiome = currentBiome
                 )
             }
 

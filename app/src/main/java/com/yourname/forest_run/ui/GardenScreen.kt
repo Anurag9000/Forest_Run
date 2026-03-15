@@ -16,6 +16,7 @@ import com.yourname.forest_run.engine.SaveManager
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.engine.Biome
 import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.FxPreset
@@ -97,6 +98,7 @@ class GardenScreen(
     private var bestDistance = 0f
     private var lastKillerLabel = "None"
     private var sparedTotal = 0
+    private var friendshipTotal = 0
     private var unlockedCostumes: List<CostumeStyle> = listOf(CostumeStyle.NONE)
     private var activeCostume: CostumeStyle = CostumeStyle.NONE
     private var wardrobeMessage = ""
@@ -426,6 +428,9 @@ class GardenScreen(
         y += 54f
         canvas.drawText("Spared", statsRect.left + 18f, y, statsLabelPaint)
         canvas.drawText(sparedTotal.toString(), statsRect.left + 18f, y + 20f, statsValuePaint)
+        y += 54f
+        canvas.drawText("Friend Biomes", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(friendshipTotal.toString(), statsRect.left + 18f, y + 20f, statsValuePaint)
     }
 
     private fun drawRunButton(canvas: Canvas, @Suppress("UNUSED_PARAMETER") cw: Float, @Suppress("UNUSED_PARAMETER") ch: Float) {
@@ -519,6 +524,7 @@ class GardenScreen(
             PersistentMemoryManager.getSparedCount(context, EntityType.CAT) +
             PersistentMemoryManager.getSparedCount(context, EntityType.FOX) +
             PersistentMemoryManager.getSparedCount(context, EntityType.WOLF)
+        friendshipTotal = Biome.entries.sumOf { PersistentMemoryManager.getBiomeFriendship(context, it) }
     }
 
     private fun syncWardrobe() {
