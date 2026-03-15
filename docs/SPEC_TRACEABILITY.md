@@ -43,7 +43,7 @@ The repo now treats the following as the frozen coherent canon for implementatio
 - `Conflict`: biome count is `5` in current code and later docs, but `6` in some historical docs and the original technical architecture / README.
 - `Conflict`: Bloom seed threshold is `10` in older GDD and setup checks, `8` in current code and current docs.
 - `Conflict`: Bloom duration is `5s` in older docs, `6s` in current code.
-- `Conflict`: original GDD frames failure as transition back to Garden, current code uses game-over / restart loop with separate garden navigation.
+- `Conflict`: original GDD frames failure as a soft return to Garden, while older intermediate runtime revisions used a game-over / restart loop before the current rest-summary-to-Garden canon was restored.
 - `Conflict`: older spec says jump on one side of screen and duck on the other, while current game uses tap / hold / swipe gestures anywhere.
 - `Conflict`: older spec claims codebase is finalized and production-ready, but the actual repo and user feedback clearly contradict that.
 
@@ -139,7 +139,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 
 #### Soft Fall / Rest State
 
-- `Conflict`: GDD framed soft sit-down and return-to-garden, current runtime uses game-over/restart overlay and separate garden screen.
+- `Partial`: current runtime restores the return-to-Garden loop, but the full calm reflective sit-down framing and authored emotional recovery are still weaker than the original dream spec.
 - `Partial`: rest-like player state exists.
 - `Partial`: short death-to-overlay pacing exists.
 - `TODO`: true calm reflective end-run summary with seeds, combo/streak, contextual quote, and more restorative emotional framing.

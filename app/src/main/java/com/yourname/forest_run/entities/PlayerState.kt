@@ -42,7 +42,7 @@ enum class PlayerState {
     DUCKING,
 
     /**
-     * Bloom State – 5-second invincibility power-up.
+     * Bloom State – 6-second invincibility power-up.
      * Transitions back to [RUNNING] after the timer expires.
      */
     BLOOM,

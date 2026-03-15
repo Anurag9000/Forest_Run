@@ -16,7 +16,7 @@ The dream architecture includes:
 ### Current Status
 
 - Implemented: broad package structure exists.
-- Partial: several dream-spec systems now exist as first-class modules, but the runtime still lacks a deterministic verification harness and fuller authored content tooling.
+- Partial: several dream-spec systems now exist as first-class modules, including a deterministic encounter verification harness, but fuller authored content tooling and final content depth are still in progress.
 
 ## 2. Engine — GameView & Game Loop
 
@@ -50,7 +50,7 @@ Expected transitions:
 
 ### Current Status
 
-- Implemented: menu, playing, Bloom, rest/game-over, restart routing.
+- Implemented: garden/menu, playing, Bloom, rest summary, and fade-back-to-Garden routing.
 - TODO: more fully authored emotional transitions and softer rest presentation.
 
 ## 4. Player State Machine

@@ -5,12 +5,12 @@ package com.yourname.forest_run.engine
  *
  * MENU     — Main menu / Garden idle scene.
  * PLAYING  — Active run (all physics, entities, HUD live).
- * BLOOM    — 5-second invincibility window (character glows, seed magnet active).
- * REST     — Death / run-end overlay (GameOverScreen shown).
+ * BLOOM    — 6-second invincibility window (character glows, pulls in seeds, converts passed encounters).
+ * REST     — Death / run-end summary before fading back into the Garden hub.
  *
  * Note: The per-run death cycle (DYING → GAME_OVER → RESTARTING) is handled
  * separately by [RunState] and [RunResetManager]. AppGameState wraps the larger
- * lifecycle: Menu → Playing → [Bloom →] Playing → Rest → Menu.
+ * lifecycle: Garden/Menu -> Playing -> [Bloom ->] Playing -> Rest -> Garden.
  */
 enum class AppGameState {
     MENU,
