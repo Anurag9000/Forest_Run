@@ -11,11 +11,12 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: added readable dialogue bubbles, pacifist rewards, face-state presentation, and clearer owl/eagle telegraphs.
 - DONE: added a deterministic acceptance suite with per-family and per-entity verification scenarios, including Bloom, ghost, and rest-loop checks.
 - DONE: strengthened Lily, Hyacinth, Eucalyptus, Vanilla Orchid, Weeping Willow, and Bamboo readability/payoff delivery.
+- DONE: strengthened Duck, TitGroup, ChickadeeGroup, Cat, Fox, Wolf, Hedgehog, and Dog readability/telegraph/payoff delivery.
 
 ## Immediate Remaining Product Gaps
 
 - TODO: verify every entity’s unique behavior on actual device and retune any behavior that still fails to read in normal play.
-- TODO: finish the remaining weak cactus, jacaranda, cherry blossom, bird, and animal interactions that still feel lighter than the dream spec.
+- TODO: finish the remaining weak cactus, jacaranda, cherry blossom, and final bird/animal device-proofing that still feel lighter than the dream spec.
 - TODO: make Bloom feel like a full world-transforming power event rather than only a stronger readable buff.
 
 ## Documentation And Canonical Spec TODOs
@@ -61,19 +62,19 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Birds
 
-- TODO: Duck low-flight readability and duck cue clarity.
-- TODO: Tit flock wave readability.
-- TODO: Chickadee erratic altitude feel.
+- PARTIAL: Duck low-flight readability and duck cue clarity are materially stronger; finish on-device validation and final cue polish.
+- PARTIAL: Tit flock wave readability is materially stronger; finish device-proofing and stronger rhythm payoff.
+- PARTIAL: Chickadee erratic altitude feel is materially stronger; finish final clarity/charm tuning.
 - TODO: Owl reactive dive drama and night mood.
 - TODO: Eagle lock-on cue and threat clarity.
 
 ### Animals
 
-- TODO: Cat kindness bonus must feel obvious and rewarding.
-- TODO: Fox mirror jump must read clearly in normal play.
-- TODO: Wolf howl/charge drama must be unmistakable.
-- TODO: Hedgehog must be visible enough to feel fair.
-- TODO: Dog bark projectile and buddy mode must be readable and memorable.
+- PARTIAL: Cat kindness bonus is much more obvious; finish repeated-friend payoff and device validation.
+- PARTIAL: Fox mirror jump reads more clearly; finish final telegraph charm and repeated-memory payoff.
+- PARTIAL: Wolf howl/charge drama is materially stronger; finish device-proofing and stronger spare payoff.
+- PARTIAL: Hedgehog visibility/fairness is materially stronger; finish final tuning on phone.
+- PARTIAL: Dog bark projectile and buddy mode are clearer; finish memorable buddy payoff and device validation.
 
 ## Architecture TODOs
 

@@ -79,36 +79,36 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: night watcher that punishes reckless jumping.
 - Dream traits: sleeping perch, reactive dive, eerie glow.
-- Current: dive trigger logic exists.
+- Current: dive trigger logic and clearer telegraphing now exist.
 - TODO: stronger night mood and clearer telegraphing.
 
 ### Duck
 
 - Role: low flyer that teaches ducking instead of jumping.
 - Dream traits: unmistakable head-height obstruction and clear quack cue.
-- Current: low-flying hazard exists.
-- TODO: make it larger and more readable on phone.
+- Current: larger readable hazard and duck-lane cue now exist.
+- TODO: finish final on-device tuning and clearer quack/event payoff.
 
 ### Eagle
 
 - Role: hunter dive threat.
 - Dream traits: screech cue, target lock, diagonal punishment.
-- Current: dive hazard exists.
+- Current: dive hazard and stronger lock-on telegraph now exist.
 - TODO: stronger dramatic cue and player understanding.
 
 ### TitGroup
 
 - Role: rhythm-wave flock.
 - Dream traits: group sine motion and timing-based reads.
-- Current: group hazard exists.
-- TODO: make flock behavior visually appreciable during play.
+- Current: wave readability and clean-pass payoff are stronger.
+- TODO: finish device-proofing and stronger rhythm identity.
 
 ### ChickadeeGroup
 
 - Role: erratic aerial chaos.
 - Dream traits: unpredictable altitude shifts and cute panic energy.
-- Current: group hazard exists.
-- TODO: stronger charm and clarity.
+- Current: erratic altitude and clean-pass payoff are clearer.
+- TODO: finish final charm and clarity tuning on device.
 
 ## Animals
 
@@ -116,36 +116,36 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: sprinter/charger.
 - Dream traits: howl, then charge; intimidating but readable.
-- Current: howl/charge code exists.
-- TODO: make the drama impossible to miss in actual play.
+- Current: howl/charge code and stronger threat presentation now exist.
+- TODO: finish device-proofing and deepen the spare payoff.
 
 ### Cat
 
 - Role: kindness-rewarding decoy.
 - Dream traits: tiny optional reward hazard, kindness bonus, spare-like warmth.
-- Current: kindness reward logic exists.
-- TODO: make the reward and personality actually read to players.
+- Current: kindness reward logic and stronger reward presentation now exist.
+- TODO: deepen repeated-friend payoff and device-proof the feel.
 
 ### Fox
 
 - Role: mirror-jump trickster.
 - Dream traits: sly counter-jump, playful line delivery, mercy-based wave-off.
-- Current: mirror-jump logic exists.
-- TODO: stronger telegraphing and cuteness.
+- Current: mirror-jump logic and stronger detection/clean-pass presentation now exist.
+- TODO: finish final telegraph charm and repeated-memory payoff.
 
 ### Hedgehog
 
 - Role: small friction threat that debuffs instead of killing.
 - Dream traits: fair but sneaky, visible enough to feel earned, not cheap.
-- Current: speed-debuff trap exists.
-- TODO: fix fairness through size/readability.
+- Current: speed-debuff trap and stronger readability/fairness pass now exist.
+- TODO: finish final size/timing validation on device.
 
 ### Dog
 
 - Role: barker and occasional running buddy.
 - Dream traits: bark projectile timing plus lovable buddy variant.
-- Current: both modes exist in code.
-- TODO: make buddy mode memorable and bark timing readable.
+- Current: both modes exist and are materially clearer in play.
+- TODO: make buddy mode truly memorable and finish bark timing validation on device.
 
 ## Mandatory Entity TODOs
 
