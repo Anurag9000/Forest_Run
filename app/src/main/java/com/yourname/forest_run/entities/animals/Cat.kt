@@ -12,7 +12,7 @@ import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
-import com.yourname.forest_run.ui.FlavorTextManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Cat (Phase 11)
@@ -75,7 +75,14 @@ class Cat(
             playerHasPassed = true
             // Kindness bonus: flat 500 pts + double seeds (removed broken permanent 2x multiplier)
             gameState.addBonus(points = 500, seeds = 2)
-            FlavorTextManager.spawn("Meow?", x - 10f, y - 30f, Color.rgb(255, 200, 255))
+            val encounterCount = PersistentMemoryManager.getEncounterCount(context, EntityType.CAT)
+            DialogueBubbleManager.spawn(
+                text = if (encounterCount >= 3) "You again?" else "Meow?",
+                anchorX = x + catW * 0.5f,
+                anchorY = y - 12f,
+                fillColor = Color.rgb(255, 235, 248),
+                borderColor = Color.rgb(150, 80, 130)
+            )
 
             // Check for Spare threshold (5 clean passes for this cat type)
             // Phase 18: PersistentMemoryManager.getSpared(CAT) >= 5
@@ -90,19 +97,19 @@ class Cat(
         waving = true
         waveTimer = 2.5f
         PersistentMemoryManager.recordSpare(context, EntityType.CAT)
-        FlavorTextManager.spawn("See you!", x, y - 50f, Color.rgb(255, 220, 255))
+        DialogueBubbleManager.spawn("See you!", x + catW * 0.5f, y - 18f, Color.rgb(255, 240, 252), Color.rgb(150, 80, 130))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) {
-            FlavorTextManager.spawn("Hiss!", x, y - 30f, Color.RED)
+            DialogueBubbleManager.spawn("Hiss!", x + catW * 0.5f, y - 14f, Color.rgb(255, 226, 226), Color.rgb(180, 60, 60))
             return CollisionResult.HIT
         }
 
         val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
         if (RectF.intersects(player.hitbox, mercy)) {
             if (!playerHasPassed) {
-                FlavorTextManager.spawn("Phew~", player.x, player.y - 40f, Color.rgb(255, 200, 100))
+                DialogueBubbleManager.spawn("Phew...", player.x + Player.BASE_WIDTH * 0.5f, player.y - 24f, Color.rgb(255, 245, 220), Color.rgb(180, 140, 70))
             }
             return CollisionResult.MERCY_MISS
         }

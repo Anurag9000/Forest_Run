@@ -13,7 +13,7 @@ import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
-import com.yourname.forest_run.ui.FlavorTextManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Fox (Phase 11)
@@ -74,7 +74,7 @@ class Fox(
                     y = groundY - foxH
                     foxVelY = 0f
                     foxState = FoxState.LANDING
-                    FlavorTextManager.spawn("Next time...", x, y - 40f, Color.rgb(220, 140, 60))
+                    DialogueBubbleManager.spawn("Next time...", x + foxW * 0.55f, y - 18f, Color.rgb(255, 236, 214), Color.rgb(190, 110, 55))
                 }
             }
             FoxState.LANDING -> {
@@ -102,7 +102,7 @@ class Fox(
             foxState = FoxState.SPARED
             gameState.addBonus(points = 120, seeds = 2)
             PersistentMemoryManager.recordSpare(context, EntityType.FOX)
-            FlavorTextManager.spawn("Fine.", x, y - 30f, Color.rgb(255, 200, 120))
+            DialogueBubbleManager.spawn("Fine.", x + foxW * 0.55f, y - 16f, Color.rgb(255, 240, 220), Color.rgb(190, 110, 55))
             return
         }
 
@@ -118,7 +118,14 @@ class Fox(
                 hasJumped = true
                 foxState  = FoxState.JUMPING
                 foxVelY   = foxJumpForce
-                FlavorTextManager.spawn("Heh.", x + 5f, y - 35f, Color.rgb(220, 120, 60))
+                val encounterCount = PersistentMemoryManager.getEncounterCount(context, EntityType.FOX)
+                DialogueBubbleManager.spawn(
+                    text = if (encounterCount >= 4) "Same jump?" else "Heh.",
+                    anchorX = x + foxW * 0.55f,
+                    anchorY = y - 16f,
+                    fillColor = Color.rgb(255, 238, 220),
+                    borderColor = Color.rgb(190, 110, 55)
+                )
             }
         }
     }

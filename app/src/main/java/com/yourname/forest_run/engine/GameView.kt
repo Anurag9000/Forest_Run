@@ -21,6 +21,7 @@ import com.yourname.forest_run.ui.GameOverScreen
 import com.yourname.forest_run.ui.GardenScreen
 import com.yourname.forest_run.ui.HUD
 import com.yourname.forest_run.ui.MainMenuScreen
+import com.yourname.forest_run.ui.DialogueBubbleManager
 import com.yourname.forest_run.ui.RestQuoteManager
 
 private const val TAG = "ForestRun"
@@ -163,6 +164,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 16: init FlavorTextManager pixel font
         FlavorTextManager.init(context)
+        DialogueBubbleManager.init(context)
 
         // Phase 17: GameOverScreen
         if (!::gameOverScreen.isInitialized) {
@@ -336,6 +338,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 CameraSystem.update(deltaTime)
                 ParticleManager.update(deltaTime)
                 FlavorTextManager.update(deltaTime)
+                DialogueBubbleManager.update(deltaTime)
                 if (::gameOverScreen.isInitialized) gameOverScreen.update(deltaTime)
                 return
             }
@@ -494,6 +497,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Flavor text float animation
         FlavorTextManager.update(deltaTime)
+        DialogueBubbleManager.update(deltaTime)
 
         // Phase 14: Update all particles
         ParticleManager.update(deltaTime)
@@ -540,6 +544,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (::player.isInitialized) player.draw(canvas)
 
             // 5. World-space FX: flavor text + particles
+            DialogueBubbleManager.draw(canvas)
             FlavorTextManager.draw(canvas)
             ParticleManager.draw(canvas)
 

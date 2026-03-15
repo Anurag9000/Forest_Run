@@ -12,7 +12,7 @@ import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
-import com.yourname.forest_run.ui.FlavorTextManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 import kotlin.random.Random
 
 /**
@@ -144,7 +144,13 @@ class Dog(
         // Periodic bark dialogue
         buddyDialogueTimer -= deltaTime
         if (buddyDialogueTimer <= 0f && buddyDialogueStep < buddyDialogue.size - 1) {
-            FlavorTextManager.spawn(buddyDialogue[buddyDialogueStep], x, y - 35f, Color.rgb(255, 240, 100))
+            DialogueBubbleManager.spawn(
+                buddyDialogue[buddyDialogueStep],
+                x + dogW * 0.5f,
+                y - 18f,
+                Color.rgb(255, 248, 210),
+                Color.rgb(170, 120, 45)
+            )
             SfxManager.playBark()
             buddyDialogueStep++
             buddyDialogueTimer = (buddyTimer / buddyDialogue.size).coerceAtLeast(0.8f)
@@ -152,7 +158,7 @@ class Dog(
 
         if (buddyTimer <= 0f) {
             // Final "See ya!" then dash ahead
-            FlavorTextManager.spawn("See ya!", x, y - 45f, Color.rgb(255, 240, 100))
+            DialogueBubbleManager.spawn("See ya!", x + dogW * 0.5f, y - 20f, Color.rgb(255, 248, 210), Color.rgb(170, 120, 45))
             mode = DogMode.BUDDY_DASH
         }
     }
@@ -165,7 +171,7 @@ class Dog(
 
     private fun bark() {
         // Spawn projectile from dog's mouth position (left edge of dog = toward player)
-        FlavorTextManager.spawn("BORF!", x, y - 30f, Color.rgb(255, 220, 80))
+        DialogueBubbleManager.spawn("BORF!", x + dogW * 0.5f, y - 18f, Color.rgb(255, 246, 214), Color.rgb(170, 120, 45))
         projectiles.add(BarkProjectile(x, y + dogH * 0.4f))
         SfxManager.playBark()
     }

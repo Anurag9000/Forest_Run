@@ -1,6 +1,7 @@
 package com.yourname.forest_run.engine
 
 import com.yourname.forest_run.systems.ParticleManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 import com.yourname.forest_run.ui.FlavorTextManager
 
 /**
@@ -107,6 +108,7 @@ class RunResetManager {
         player.reset()
 
         FlavorTextManager.clear()
+        DialogueBubbleManager.clear()
         ParticleManager.clear()
         CameraSystem.reset()
     }

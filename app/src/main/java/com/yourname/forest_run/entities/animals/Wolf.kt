@@ -16,7 +16,7 @@ import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
-import com.yourname.forest_run.ui.FlavorTextManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Wolf (Phase 11)
@@ -68,7 +68,14 @@ class Wolf(
                 if (x < screenWidth * 0.5f && !spared) {
                     wolfState = WolfState.HOWLING
                     howlTimer = 0f
-                    FlavorTextManager.spawn("GRRR...", x, y - 30f, Color.rgb(200, 60, 60))
+                    val hitCount = PersistentMemoryManager.getHitCount(context, EntityType.WOLF)
+                    DialogueBubbleManager.spawn(
+                        text = if (hitCount >= 1) "I remember." else "GRRR...",
+                        anchorX = x + wolfW * 0.5f,
+                        anchorY = y - 20f,
+                        fillColor = Color.rgb(245, 228, 232),
+                        borderColor = Color.rgb(150, 50, 50)
+                    )
                     CameraSystem.shakeWolfHowl()   // Phase 15 shake
                     SfxManager.playHowl()
                 }
@@ -109,7 +116,7 @@ class Wolf(
             wolfState = WolfState.SPARED
             gameState.addBonus(points = 200, seeds = 3)
             PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
-            FlavorTextManager.spawn("...", x, y - 30f, Color.rgb(200, 200, 220))
+            DialogueBubbleManager.spawn("Go on.", x + wolfW * 0.5f, y - 20f, Color.rgb(232, 236, 245), Color.rgb(110, 110, 140))
         }
     }
 

@@ -10,7 +10,7 @@ import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
-import com.yourname.forest_run.ui.FlavorTextManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Hedgehog (Phase 11)
@@ -62,7 +62,7 @@ class Hedgehog(
                 // curl — freeze on last sprite frame
                 sprite.isLooping = false
                 sprite.setFrame(sprite.frameCount - 1)
-                FlavorTextManager.spawn("Oof!", player.x, player.y - 40f, Color.rgb(255, 180, 80))
+                DialogueBubbleManager.spawn("Oof!", player.x + Player.BASE_WIDTH * 0.5f, player.y - 20f, Color.rgb(255, 242, 220), Color.rgb(160, 120, 70))
             }
             // Hedgehog is NOT a game-over — return NONE so the system doesn't kill the player
             return CollisionResult.NONE
@@ -70,7 +70,7 @@ class Hedgehog(
 
         val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
         if (RectF.intersects(player.hitbox, mercy)) {
-            FlavorTextManager.spawn("Eep!", x + 5f, y - 30f, Color.rgb(255, 220, 120))
+            DialogueBubbleManager.spawn("Eep!", x + hogW * 0.5f, y - 14f, Color.rgb(255, 246, 220), Color.rgb(160, 120, 70))
             return CollisionResult.MERCY_MISS
         }
 
