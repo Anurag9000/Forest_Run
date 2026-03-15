@@ -32,7 +32,7 @@ This file is the strict implementation ledger for everything from the original d
 - TODO: stronger early-game readability and onboarding.
 - TODO: full Bloom spectacle, including stronger transformation feel.
 - TODO: softer authored failure presentation with richer reflection.
-- TODO: make the garden feel like sanctuary rather than minimal unlock screen.
+- PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, and visible bond traces; finish the full restorative scene and startup atmosphere.
 
 ## Personality TODOs
 
@@ -51,17 +51,17 @@ This file is the strict implementation ledger for everything from the original d
 ### Forest Memory Layer
 
 - DONE: added a save-backed `ForestMoodSystem` with run classification into gentle, reckless, fearful, and steady.
-- PARTIAL: current tone now affects Garden palette and rest/Garden labeling; deepen ambience, creature warmth, and broader presentation response.
+- PARTIAL: current tone now affects Garden palette, rest/Garden labeling, sanctuary ambience, and visible carry-home framing; deepen creature warmth and broader presentation response.
 - TODO: surface repeated panic or repeated harm from the same creature as emotional consequences, not only counters.
-- TODO: let repeated kindness visibly brighten the sanctuary through ambience, blooms, or trust signs.
+- PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, and trust traces; deepen the effect and tie it more directly to repeated creature-specific history.
 - TODO: ensure the player can feel that the world has formed an opinion about how they play.
 
 ### Named Relationship Arcs
 
 - DONE: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - DONE: each relationship now has first-impression, recognition, trust, and milestone states.
-- PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, and Garden strongest-bond presentation.
-- TODO: bind relationship stages more deeply to encounter reactions, Garden presence, and cosmetics.
+- PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, Garden strongest-bond presentation, bonded visitors, and sanctuary traces.
+- TODO: bind relationship stages more deeply to encounter reactions, milestone rewards, and cosmetics.
 - TODO: make repeated positive interactions produce more visible warmth and familiarity.
 - TODO: make repeated negative interactions produce stronger tension, fear, disappointment, or caution where appropriate.
 - TODO: add milestone rewards that feel relational, not merely numerical.

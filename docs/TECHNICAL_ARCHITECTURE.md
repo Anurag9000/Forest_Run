@@ -201,9 +201,10 @@ Expected qualities:
 - Implemented: `ForestMoodSystem` now exists as a first-class runtime and persistence layer.
 - Implemented: `RelationshipArcSystem` now exists as a first-class runtime and persistence layer for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - Partial: `ReturnMomentsSystem` now exists in baseline form.
-- Partial: relationship stages are now persisted and surfaced in creature dialogue plus Garden strongest-bond presentation; Garden visitation, milestone presentation, and deeper authored stage consequences still need expansion.
+- Partial: relationship stages are now persisted and surfaced in creature dialogue plus Garden strongest-bond presentation, bonded visitors, and sanctuary traces; milestone presentation and deeper authored stage consequences still need expansion.
 - Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
-- Partial: fragment coverage now drives rest quotes and Garden reflection/carry-home presentation in baseline form.
+- Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, and weather-linked sanctuary writing in baseline form.
+- Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience and bond traces from mood, summary, and relationship state.
 - TODO: persistence schema must still expand further for richer fragment unlock state and relationship milestone presentation.
 
 ## 13. Relationship Arc Authoring

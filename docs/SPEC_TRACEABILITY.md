@@ -693,14 +693,14 @@ These items are not from the earliest historical repo docs. They are explicit us
 #### Forest Memory Layer
 
 - `Implemented`: a world-tone system now classifies recent runs into gentle, reckless, fearful, and steady.
-- `Partial`: world tone now affects Garden palette and rest/Garden framing.
+- `Partial`: world tone now affects Garden palette, sanctuary ambience, and rest/Garden framing.
 - `TODO`: deepen ambience, creature warmth, and broader world-state response.
 
 #### Named Relationship Arcs
 
 - `Implemented`: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - `Partial`: relationship-driven dialogue now affects pass, threat, spare, and return tone, and Garden surfaces the strongest bond.
-- `Partial`: bonded creatures now influence Garden return moments and visible Garden presence in baseline form.
+- `Partial`: bonded creatures now influence Garden return moments, visible Garden presence, and sanctuary traces in baseline form.
 - `TODO`: deepen encounter shifts, milestone presentation, and broader relationship consequences.
 - `TODO`: make visible warmth from repeated positive interactions and visible caution or tension from repeated negative ones more pronounced in play.
 

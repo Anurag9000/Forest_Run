@@ -96,6 +96,25 @@ object RelationshipArcSystem {
         return strongest.first.takeIf { strongest.second.ordinal >= minimumStage.ordinal }
     }
 
+    fun relationshipsAtOrAbove(
+        context: Context,
+        minimumStage: RelationshipStage = RelationshipStage.TRUST
+    ): List<Pair<EntityType, RelationshipStage>> {
+        val appContext = context.applicationContext
+        return trackedTypes.mapNotNull { type ->
+            val stage = stageFor(appContext, type)
+            val encounters = SaveManager.loadEncounterCount(appContext, type)
+            if (encounters == 0 || stage.ordinal < minimumStage.ordinal) {
+                null
+            } else {
+                type to stage
+            }
+        }.sortedWith(
+            compareByDescending<Pair<EntityType, RelationshipStage>> { it.second.ordinal }
+                .thenByDescending { affinityScore(appContext, it.first) }
+        )
+    }
+
     fun isWarmBond(context: Context, type: EntityType): Boolean =
         isTracked(type) && toneFor(context.applicationContext, type) == RelationshipTone.WARM
 

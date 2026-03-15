@@ -10,6 +10,8 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.CostumeManager
+import com.yourname.forest_run.engine.GardenSanctuaryPlanner
+import com.yourname.forest_run.engine.GardenSanctuaryState
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.RelationshipArcSystem
@@ -119,6 +121,7 @@ class GardenScreen(
     private var gardenReflectionLine = ""
     private var creatureThoughtLine = ""
     private var weatherThoughtLine = ""
+    private var sanctuaryState = GardenSanctuaryState()
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -193,6 +196,32 @@ class GardenScreen(
         textSize = 12f
         typeface = pixelFont
         textAlign = Paint.Align.LEFT
+    }
+    private val sanctuaryLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(220, 240, 248, 228)
+        textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
+    private val canopyShadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val traceChipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val traceChipBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(180, 245, 246, 232)
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+    }
+    private val traceChipTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(32, 44, 28)
+        textSize = 11f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
+    private val ambiencePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
     }
     private val seedCountPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(160, 255, 120); textSize = 22f; typeface = pixelFont; textAlign = Paint.Align.LEFT
@@ -354,6 +383,7 @@ class GardenScreen(
         applyMoodPalette(ch)
         canvas.drawRect(0f, 0f, cw, ch, skyPaint)
         canvas.drawRect(0f, groundY, cw, ch, groundPaint)
+        drawSanctuaryAtmosphere(canvas, cw, ch, groundY)
 
         // Title
         titlePaint.color = forestMoodState.currentMood.accentColor
@@ -364,6 +394,10 @@ class GardenScreen(
             canvas.drawText(moment.line, cw / 2f, ch * 0.185f, returnLinePaint)
             drawReturnVisitor(canvas, cw, ch)
         }
+        if (sanctuaryState.sanctuaryLine.isNotBlank()) {
+            canvas.drawText(sanctuaryState.sanctuaryLine, cw / 2f, ch * 0.212f, sanctuaryLinePaint)
+        }
+        drawSanctuaryTraces(canvas, cw, ch)
 
         // Seed count
         canvas.drawText("🌱 $lifeSeeds", 28f, ch * 0.10f, seedCountPaint)
@@ -568,6 +602,10 @@ class GardenScreen(
             y += 20f
             canvas.drawText(creatureThoughtLine.take(90), lastRunRect.left + 18f, y, thoughtPaint)
         }
+        if (sanctuaryState.carryHomeLine.isNotBlank()) {
+            y += 22f
+            canvas.drawText(sanctuaryState.carryHomeLine.take(94), lastRunRect.left + 18f, y, thoughtPaint)
+        }
     }
 
     private fun drawCostumeIcon(canvas: Canvas, rect: RectF, style: CostumeStyle, unlocked: Boolean) {
@@ -635,6 +673,7 @@ class GardenScreen(
         gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
         weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)
         creatureThoughtLine = StoryFragmentSystem.creatureThought(context, strongestBond?.first).orEmpty()
+        sanctuaryState = GardenSanctuaryPlanner.build(context, lastRunSummary)
     }
 
     private fun syncWardrobe() {
@@ -692,6 +731,60 @@ class GardenScreen(
         val left = cw * 0.76f
         spriteRect.set(left, top, left + width, top + height)
         sprite.draw(canvas, spriteRect)
+    }
+
+    private fun drawSanctuaryAtmosphere(canvas: Canvas, cw: Float, ch: Float, groundY: Float) {
+        canopyShadePaint.color = Color.argb(sanctuaryState.canopyShadeAlpha, 24, 44, 38)
+        canvas.drawRect(0f, 0f, cw, ch * 0.34f, canopyShadePaint)
+
+        repeat(sanctuaryState.fireflyCount) { index ->
+            val drift = sin(elapsed * (1.2f + index * 0.08f) + index) * 14f
+            val x = cw * (0.10f + ((index * 0.13f) % 0.76f)) + drift
+            val y = ch * (0.16f + (index % 4) * 0.05f) + sin(elapsed * 1.6f + index * 0.7f) * 10f
+            ambiencePaint.color = Color.argb(150, 252, 246, 180)
+            canvas.drawCircle(x, y, 4f + (index % 3), ambiencePaint)
+            ambiencePaint.color = Color.argb(72, 252, 246, 180)
+            canvas.drawCircle(x, y, 9f + (index % 3) * 2f, ambiencePaint)
+        }
+
+        repeat(sanctuaryState.petalCount) { index ->
+            val drift = (elapsed * (18f + index * 1.6f) + index * 46f) % (cw + 80f)
+            val x = cw - drift
+            val y = ch * (0.18f + (index % 5) * 0.07f) + sin(elapsed * 1.4f + index) * 10f
+            ambiencePaint.color = Color.argb(96, 255, 220, 236)
+            canvas.drawOval(x, y, x + 12f, y + 7f, ambiencePaint)
+        }
+
+        repeat(sanctuaryState.bloomPatchCount) { index ->
+            val x = cw * (0.18f + index * 0.19f)
+            val y = groundY + ch * 0.06f + sin(elapsed * 0.8f + index) * 5f
+            ambiencePaint.color = Color.argb(64, 232, 255, 204)
+            canvas.drawCircle(x, y, 18f, ambiencePaint)
+            ambiencePaint.color = Color.argb(112, 255, 240, 186)
+            canvas.drawCircle(x - 8f, y + 4f, 7f, ambiencePaint)
+            canvas.drawCircle(x + 10f, y - 2f, 6f, ambiencePaint)
+        }
+    }
+
+    private fun drawSanctuaryTraces(canvas: Canvas, cw: Float, ch: Float) {
+        if (sanctuaryState.traces.isEmpty()) return
+        val chipWidth = cw * 0.16f
+        val chipHeight = ch * 0.045f
+        val gap = cw * 0.012f
+        val totalWidth = sanctuaryState.traces.size * chipWidth + (sanctuaryState.traces.size - 1) * gap
+        var left = (cw - totalWidth) / 2f
+        val top = ch * 0.225f
+
+        sanctuaryState.traces.forEach { trace ->
+            val rect = RectF(left, top, left + chipWidth, top + chipHeight)
+            traceChipPaint.color = trace.color
+            traceChipPaint.alpha = 205
+            canvas.drawRoundRect(rect, 16f, 16f, traceChipPaint)
+            canvas.drawRoundRect(rect, 16f, 16f, traceChipBorderPaint)
+            val labelY = rect.centerY() - (traceChipTextPaint.descent() + traceChipTextPaint.ascent()) / 2f
+            canvas.drawText(trace.label, rect.centerX(), labelY, traceChipTextPaint)
+            left += chipWidth + gap
+        }
     }
 
     private fun spriteForVisitor(type: EntityType): SpriteSheet = when (type) {

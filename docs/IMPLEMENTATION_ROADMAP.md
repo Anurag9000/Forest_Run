@@ -29,7 +29,7 @@ This restores the original roadmap as the required implementation target. Items 
 | 20 | Partial | audio states exist, full leitmotif system incomplete |
 | 21 | Partial | haptics exist, tuning incomplete |
 | 22 | Partial | canonical lifecycle and canonical run-summary carryover now exist; authored rest richness still incomplete |
-| 23 | Partial | garden exists as real hub with wardrobe, memory stats, and last-run carry-home; full sanctuary feel incomplete |
+| 23 | Partial | garden exists as real hub with wardrobe, memory stats, last-run carry-home, mood ambience, and bond traces; full sanctuary feel still incomplete |
 | 24 | TODO | full bespoke background artwork not finished |
 | 25 | TODO | major polish pass still required |
 | 26 | TODO | full performance/device truth validation incomplete |
