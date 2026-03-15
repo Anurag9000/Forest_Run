@@ -2,8 +2,11 @@ package com.yourname.forest_run.ui
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.yourname.forest_run.engine.CostumeManager
 import com.yourname.forest_run.engine.SaveManager
 import com.yourname.forest_run.engine.SpriteManager
+import com.yourname.forest_run.entities.CostumeStyle
+import com.yourname.forest_run.entities.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -44,5 +47,25 @@ class GardenScreenTest {
         assertTrue(screen.onTap(tapX, tapY))
         assertEquals(2, SaveManager.loadGardenProgress(context))
         assertEquals(30, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
+    fun `tapping unlocked costume equips it from the wardrobe`() {
+        repeat(3) { SaveManager.incrementSparedCount(context, EntityType.CAT) }
+        CostumeManager.refreshUnlocks(context)
+
+        val screen = GardenScreen(context, spriteManager, 1_920, 1_080)
+        screen.load()
+
+        val wardrobeLeft = 1_920 * 0.05f
+        val wardrobeTop = 1_080 * 0.73f
+        val wardrobeWidth = 1_920 * 0.90f
+        val gap = wardrobeWidth * 0.015f
+        val cardWidth = (wardrobeWidth - gap * 5f) / 5f
+        val tapX = wardrobeLeft + 18f + cardWidth + gap + cardWidth / 2f
+        val tapY = wardrobeTop + 34f + (1_080 * 0.14f - 52f) * 0.5f
+
+        assertTrue(screen.onTap(tapX, tapY))
+        assertEquals(CostumeStyle.FLOWER_CROWN, SaveManager.loadActiveCostume(context))
     }
 }

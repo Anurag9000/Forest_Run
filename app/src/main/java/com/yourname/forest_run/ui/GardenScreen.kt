@@ -9,12 +9,14 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
+import com.yourname.forest_run.engine.CostumeManager
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.SaveManager
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
@@ -95,6 +97,10 @@ class GardenScreen(
     private var bestDistance = 0f
     private var lastKillerLabel = "None"
     private var sparedTotal = 0
+    private var unlockedCostumes: List<CostumeStyle> = listOf(CostumeStyle.NONE)
+    private var activeCostume: CostumeStyle = CostumeStyle.NONE
+    private var wardrobeMessage = ""
+    private var wardrobeMessageTimer = 0f
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -112,6 +118,8 @@ class GardenScreen(
     private val spriteRect  = RectF()
     private val runButtonRect = RectF()
     private val statsRect = RectF()
+    private val wardrobeRect = RectF()
+    private val wardrobeCardRects = MutableList(CostumeStyle.entries.size) { RectF() }
 
     // ── Paints ────────────────────────────────────────────────────────────
 
@@ -188,6 +196,30 @@ class GardenScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val wardrobePanelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(165, 28, 48, 38)
+        style = Paint.Style.FILL
+    }
+    private val wardrobeBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(180, 180, 225, 175)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val wardrobeCardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val wardrobeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
+    private val wardrobeHintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(210, 232, 250, 222)
+        textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.LEFT
+    }
 
     // ── API ───────────────────────────────────────────────────────────────
 
@@ -195,12 +227,14 @@ class GardenScreen(
     fun load() {
         unlockedCount = SaveManager.loadGardenProgress(context).coerceAtLeast(1)
         lifeSeeds     = SaveManager.loadLifetimeSeeds(context)
+        syncWardrobe()
         refreshStats()
     }
 
     /** Called after a run to refresh the seed count. */
     fun refresh() {
         lifeSeeds = SaveManager.loadLifetimeSeeds(context)
+        syncWardrobe()
         refreshStats()
     }
 
@@ -211,6 +245,9 @@ class GardenScreen(
             unlockAnim = (unlockAnim + deltaTime * 1.5f).coerceAtMost(1f)
             if (unlockAnim >= 1f) unlockAnim = -1f
         }
+        if (wardrobeMessageTimer > 0f) {
+            wardrobeMessageTimer = (wardrobeMessageTimer - deltaTime).coerceAtLeast(0f)
+        }
     }
 
     /**
@@ -218,8 +255,26 @@ class GardenScreen(
      * Returns true if the tap was consumed.
      */
     fun onTap(tapX: Float, tapY: Float): Boolean {
+        syncInteractiveLayout(screenW.toFloat(), screenH.toFloat())
+
         if (runButtonRect.contains(tapX, tapY)) {
             onRun?.invoke()
+            return true
+        }
+
+        wardrobeCardRects.firstOrNull { it.contains(tapX, tapY) }?.let { tappedRect ->
+            val index = wardrobeCardRects.indexOf(tappedRect)
+            val style = CostumeStyle.entries[index]
+            if (style == CostumeStyle.NONE || style in unlockedCostumes) {
+                if (CostumeManager.equip(context, style)) {
+                    activeCostume = style
+                    wardrobeMessage = "${style.displayName} equipped"
+                    wardrobeMessageTimer = 2.5f
+                }
+            } else {
+                wardrobeMessage = style.unlockLabel
+                wardrobeMessageTimer = 2.5f
+            }
             return true
         }
 
@@ -264,8 +319,10 @@ class GardenScreen(
         // Seed count
         canvas.drawText("🌱 $lifeSeeds", 28f, ch * 0.10f, seedCountPaint)
 
+        syncInteractiveLayout(cw, ch)
         drawStatsPanel(canvas, cw, ch)
         drawRunButton(canvas, cw, ch)
+        drawWardrobe(canvas, cw, ch)
 
         // Cards
         for (i in catalogue.indices) {
@@ -371,14 +428,88 @@ class GardenScreen(
         canvas.drawText(sparedTotal.toString(), statsRect.left + 18f, y + 20f, statsValuePaint)
     }
 
-    private fun drawRunButton(canvas: Canvas, cw: Float, ch: Float) {
-        runButtonRect.set(cw * 0.70f, ch * 0.14f, cw * 0.93f, ch * 0.26f)
+    private fun drawRunButton(canvas: Canvas, @Suppress("UNUSED_PARAMETER") cw: Float, @Suppress("UNUSED_PARAMETER") ch: Float) {
         val pulse = 0.9f + 0.1f * sin(elapsed * 2.8f)
         runButtonPaint.alpha = (225f * pulse).toInt().coerceIn(0, 255)
         canvas.drawRoundRect(runButtonRect, 20f, 20f, runButtonPaint)
         canvas.drawRoundRect(runButtonRect, 20f, 20f, runButtonBorderPaint)
         val labelY = runButtonRect.centerY() - (runButtonTextPaint.descent() + runButtonTextPaint.ascent()) / 2f
         canvas.drawText("RUN", runButtonRect.centerX(), labelY, runButtonTextPaint)
+    }
+
+    private fun drawWardrobe(canvas: Canvas, @Suppress("UNUSED_PARAMETER") cw: Float, @Suppress("UNUSED_PARAMETER") ch: Float) {
+        canvas.drawRoundRect(wardrobeRect, 18f, 18f, wardrobePanelPaint)
+        canvas.drawRoundRect(wardrobeRect, 18f, 18f, wardrobeBorderPaint)
+        canvas.drawText("Wardrobe", wardrobeRect.left + 20f, wardrobeRect.top + 26f, wardrobeHintPaint)
+
+        CostumeStyle.entries.forEachIndexed { index, style ->
+            val rect = wardrobeCardRects[index]
+            val unlocked = style == CostumeStyle.NONE || style in unlockedCostumes
+            val equipped = style == activeCostume
+            wardrobeCardPaint.color = when {
+                equipped -> Color.argb(235, 248, 232, 136)
+                unlocked -> Color.argb(210, 106, 164, 112)
+                else -> Color.argb(120, 58, 68, 64)
+            }
+            canvas.drawRoundRect(rect, 16f, 16f, wardrobeCardPaint)
+            canvas.drawRoundRect(rect, 16f, 16f, cardBorderPaint)
+            drawCostumeIcon(canvas, rect, style, unlocked)
+            wardrobeTextPaint.alpha = if (unlocked) 235 else 130
+            canvas.drawText(style.displayName, rect.centerX(), rect.bottom - 16f, wardrobeTextPaint)
+        }
+
+        if (wardrobeMessageTimer > 0f && wardrobeMessage.isNotBlank()) {
+            wardrobeHintPaint.alpha = ((wardrobeMessageTimer / 2.5f) * 255).toInt().coerceIn(120, 255)
+            canvas.drawText(wardrobeMessage, wardrobeRect.left + 20f, wardrobeRect.bottom - 12f, wardrobeHintPaint)
+            wardrobeHintPaint.alpha = 210
+        }
+    }
+
+    private fun drawCostumeIcon(canvas: Canvas, rect: RectF, style: CostumeStyle, unlocked: Boolean) {
+        val iconCenterY = rect.top + rect.height() * 0.42f
+        val iconCenterX = rect.centerX()
+        val alpha = if (unlocked) 255 else 110
+        val accent = when (style) {
+            CostumeStyle.NONE -> Color.rgb(220, 220, 220)
+            CostumeStyle.FLOWER_CROWN -> Color.rgb(255, 214, 228)
+            CostumeStyle.VINE_SCARF -> Color.rgb(126, 210, 120)
+            CostumeStyle.MOON_CAPE -> Color.rgb(139, 150, 232)
+            CostumeStyle.BLOOM_RIBBON -> Color.rgb(255, 195, 100)
+        }
+        wardrobeCardPaint.color = accent
+        wardrobeCardPaint.alpha = alpha
+        when (style) {
+            CostumeStyle.NONE -> canvas.drawCircle(iconCenterX, iconCenterY, rect.width() * 0.12f, wardrobeCardPaint)
+            CostumeStyle.FLOWER_CROWN -> {
+                repeat(3) { index ->
+                    canvas.drawCircle(
+                        iconCenterX + (index - 1) * rect.width() * 0.09f,
+                        iconCenterY,
+                        rect.width() * 0.07f,
+                        wardrobeCardPaint
+                    )
+                }
+            }
+            CostumeStyle.VINE_SCARF -> {
+                canvas.drawLine(iconCenterX - rect.width() * 0.10f, iconCenterY - 6f, iconCenterX + rect.width() * 0.10f, iconCenterY + 2f, wardrobeCardPaint)
+                canvas.drawLine(iconCenterX + rect.width() * 0.04f, iconCenterY, iconCenterX + rect.width() * 0.12f, iconCenterY + rect.height() * 0.12f, wardrobeCardPaint)
+            }
+            CostumeStyle.MOON_CAPE -> {
+                canvas.drawRect(
+                    iconCenterX - rect.width() * 0.12f,
+                    iconCenterY - rect.height() * 0.10f,
+                    iconCenterX + rect.width() * 0.12f,
+                    iconCenterY + rect.height() * 0.12f,
+                    wardrobeCardPaint
+                )
+            }
+            CostumeStyle.BLOOM_RIBBON -> {
+                canvas.drawCircle(iconCenterX, iconCenterY - 8f, rect.width() * 0.06f, wardrobeCardPaint)
+                canvas.drawLine(iconCenterX, iconCenterY - 4f, iconCenterX - rect.width() * 0.05f, iconCenterY + rect.height() * 0.12f, wardrobeCardPaint)
+                canvas.drawLine(iconCenterX, iconCenterY - 4f, iconCenterX + rect.width() * 0.05f, iconCenterY + rect.height() * 0.12f, wardrobeCardPaint)
+            }
+        }
+        wardrobeCardPaint.alpha = 255
     }
 
     private fun refreshStats() {
@@ -388,6 +519,30 @@ class GardenScreen(
             PersistentMemoryManager.getSparedCount(context, EntityType.CAT) +
             PersistentMemoryManager.getSparedCount(context, EntityType.FOX) +
             PersistentMemoryManager.getSparedCount(context, EntityType.WOLF)
+    }
+
+    private fun syncWardrobe() {
+        val newUnlocks = CostumeManager.refreshUnlocks(context)
+        unlockedCostumes = CostumeManager.availableCostumes(context)
+        activeCostume = CostumeManager.activeCostume(context)
+        if (newUnlocks.isNotEmpty()) {
+            wardrobeMessage = newUnlocks.joinToString(" + ") { it.displayName }
+            wardrobeMessageTimer = 3f
+        }
+    }
+
+    private fun syncInteractiveLayout(cw: Float, ch: Float) {
+        runButtonRect.set(cw * 0.70f, ch * 0.14f, cw * 0.93f, ch * 0.26f)
+        wardrobeRect.set(cw * 0.05f, ch * 0.73f, cw * 0.95f, ch * 0.87f)
+        val cardGap = wardrobeRect.width() * 0.015f
+        val cardWidth = (wardrobeRect.width() - cardGap * 5f) / 5f
+        val top = wardrobeRect.top + 34f
+        val bottom = wardrobeRect.bottom - 18f
+        CostumeStyle.entries.forEachIndexed { index, _ ->
+            val left = wardrobeRect.left + 18f + index * (cardWidth + cardGap)
+            val right = left + cardWidth
+            wardrobeCardRects[index].set(left, top, right, bottom)
+        }
     }
 
     private fun formatDistance(distanceMetres: Float): String =

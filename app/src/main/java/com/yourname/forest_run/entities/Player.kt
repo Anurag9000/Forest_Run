@@ -121,6 +121,9 @@ class Player(
     private var currentAnimation: SpriteSheet = animRun
     private val drawRect = RectF()
     private val faceManager = FaceManager()
+    private val costumeOverlay = CostumeOverlay()
+    var costumeStyle: CostumeStyle = CostumeStyle.NONE
+        private set
 
     // -----------------------------------------------------------------------
     // Squash / stretch
@@ -284,6 +287,7 @@ class Player(
         
         currentAnimation.update(deltaTime)
         faceManager.update(deltaTime)
+        costumeOverlay.update(deltaTime)
     }
 
     private fun updateStumble(deltaTime: Float) {
@@ -372,7 +376,7 @@ class Player(
         }
     }
 
-    private fun updateDucking(deltaTime: Float) {
+    private fun updateDucking(@Suppress("UNUSED_PARAMETER") deltaTime: Float) {
         // While ducking, the character stays on the ground; no vertical physics.
         y = groundY - currentHeight    // currentHeight uses DUCK_HEIGHT_FACTOR
     }
@@ -461,7 +465,12 @@ class Player(
         canvas.scale(scaleX, scaleY, cx, fy)
         drawRect.set(x, y + yOffset, x + BASE_WIDTH, y + BASE_HEIGHT + yOffset)
         currentAnimation.draw(canvas, drawRect)
+        costumeOverlay.draw(canvas, drawRect, costumeStyle, state, isInvincible)
         faceManager.draw(canvas, drawRect, state, velocityY, isInvincible)
         canvas.restore()
+    }
+
+    fun setCostume(style: CostumeStyle) {
+        costumeStyle = style
     }
 }

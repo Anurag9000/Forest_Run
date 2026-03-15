@@ -1,6 +1,7 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
+import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.GhostFrame
 import java.io.DataInputStream
@@ -23,6 +24,8 @@ object SaveManager {
     private const val KEY_LIFETIME_SEEDS = "lifetime_seeds"
     private const val KEY_BEST_DIST  = "best_distance"
     private const val KEY_LAST_KILLER = "last_killer"
+    private const val KEY_UNLOCKED_COSTUMES = "unlocked_costumes"
+    private const val KEY_ACTIVE_COSTUME = "active_costume"
     private const val GHOST_FILENAME = "ghost_run.bin"
 
     // ── High score ────────────────────────────────────────────────────────
@@ -117,6 +120,27 @@ object SaveManager {
 
     fun loadGardenProgress(context: Context): Int =
         prefs(context).getInt(KEY_GARDEN, 1)
+
+    // ── Costumes ──────────────────────────────────────────────────────────
+
+    fun saveUnlockedCostumes(context: Context, costumes: Set<CostumeStyle>) {
+        val raw = costumes.map { it.name }.toSet()
+        prefs(context).edit().putStringSet(KEY_UNLOCKED_COSTUMES, raw).apply()
+    }
+
+    fun loadUnlockedCostumes(context: Context): Set<CostumeStyle> {
+        val raw = prefs(context).getStringSet(KEY_UNLOCKED_COSTUMES, emptySet()).orEmpty()
+        return raw.mapNotNull { name -> runCatching { CostumeStyle.valueOf(name) }.getOrNull() }.toSet()
+    }
+
+    fun saveActiveCostume(context: Context, costume: CostumeStyle) {
+        prefs(context).edit().putString(KEY_ACTIVE_COSTUME, costume.name).apply()
+    }
+
+    fun loadActiveCostume(context: Context): CostumeStyle =
+        prefs(context).getString(KEY_ACTIVE_COSTUME, CostumeStyle.NONE.name)?.let { raw ->
+            runCatching { CostumeStyle.valueOf(raw) }.getOrDefault(CostumeStyle.NONE)
+        } ?: CostumeStyle.NONE
 
     // ── Persistent memory (Phase 28+) ─────────────────────────────────────
 

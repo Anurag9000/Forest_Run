@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import com.yourname.forest_run.entities.CollisionResult
+import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
 import com.yourname.forest_run.systems.FxPreset
@@ -215,6 +216,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 3: Player
         if (!::player.isInitialized) {
             player = Player(screenWidth, screenHeight, spriteManager, parallaxBackground.groundY)
+            player.setCostume(CostumeManager.activeCostume(context))
             wirePlayerToInput()
         }
 
@@ -611,6 +613,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun prepareFreshRun() {
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
+        player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
         entityManager.seedOpeningSequence()
         ghostRecorder.reset()

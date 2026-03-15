@@ -2,6 +2,7 @@ package com.yourname.forest_run.engine
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.GhostFrame
 import org.junit.Assert.assertEquals
@@ -63,5 +64,17 @@ class SaveManagerTest {
         assertEquals(1, SaveManager.loadSparedCount(context, EntityType.FOX))
         assertEquals(1, SaveManager.loadHitCount(context, EntityType.WOLF))
         assertEquals(EntityType.WOLF, SaveManager.loadLastKiller(context))
+    }
+
+    @Test
+    fun `costume unlocks and active costume persist`() {
+        SaveManager.saveUnlockedCostumes(context, setOf(CostumeStyle.FLOWER_CROWN, CostumeStyle.MOON_CAPE))
+        SaveManager.saveActiveCostume(context, CostumeStyle.MOON_CAPE)
+
+        assertEquals(
+            setOf(CostumeStyle.FLOWER_CROWN, CostumeStyle.MOON_CAPE),
+            SaveManager.loadUnlockedCostumes(context)
+        )
+        assertEquals(CostumeStyle.MOON_CAPE, SaveManager.loadActiveCostume(context))
     }
 }
