@@ -39,7 +39,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: contextual rest quotes by biome and last killer exist; expand quote pools and trigger richness.
 - PARTIAL: `PersistentMemoryManager` exists; expand it into full repeated-encounter payoff, unlock, and presentation architecture.
 - DONE: canonical post-run summary payload now exists across rest and Garden.
-- PARTIAL: costume overlays and wardrobe flow exist; expand repeated-encounter unlock depth and presentation.
+- PARTIAL: costume overlays and wardrobe flow exist, and Cat/Fox/Wolf relationship milestones can now unlock matching outfits; expand broader repeated-encounter unlock depth and presentation.
 - PARTIAL: repeat-killer deja vu lines exist in baseline form; deepen them into stronger visual and narrative payoff.
 - DONE: dedicated dialogue bubble system.
 - PARTIAL: biome-level friendship bonus baseline exists; deepen it into stronger sanctuary and route-like payoff.
@@ -60,8 +60,8 @@ This file is the strict implementation ledger for everything from the original d
 
 - DONE: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - DONE: each relationship now has first-impression, recognition, trust, and milestone states.
-- PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, encounter generosity/telegraph tuning, Garden strongest-bond presentation, bonded visitors, and sanctuary traces.
-- TODO: bind relationship stages more deeply to milestone rewards and cosmetics.
+- PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, encounter generosity/telegraph tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, and milestone keepsake rewards.
+- PARTIAL: relationship milestones now unlock named keepsakes and matching Cat/Fox/Wolf costume paths; deepen broader milestone rewards and cosmetics.
 - TODO: make repeated positive interactions produce more visible warmth and familiarity.
 - TODO: make repeated negative interactions produce stronger tension, fear, disappointment, or caution where appropriate.
 - TODO: add milestone rewards that feel relational, not merely numerical.

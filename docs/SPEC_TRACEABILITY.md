@@ -701,8 +701,9 @@ These items are not from the earliest historical repo docs. They are explicit us
 
 - `Implemented`: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - `Partial`: relationship-driven dialogue now affects pass, threat, spare, and return tone, and relationship stage now influences encounter generosity and telegraph tuning.
-- `Partial`: bonded creatures now influence Garden return moments, visible Garden presence, and sanctuary traces in baseline form.
-- `TODO`: deepen milestone presentation and broader relationship consequences.
+- `Partial`: bonded creatures now influence Garden return moments, visible Garden presence, sanctuary traces, and named milestone keepsake rewards in baseline form.
+- `Partial`: Cat, Fox, and Wolf milestone bonds can now unlock matching costume paths alongside their keepsake rewards.
+- `TODO`: deepen broader milestone presentation and relationship consequences.
 - `TODO`: make visible warmth from repeated positive interactions and visible caution or tension from repeated negative ones more pronounced in play.
 
 #### Personal Return Moments

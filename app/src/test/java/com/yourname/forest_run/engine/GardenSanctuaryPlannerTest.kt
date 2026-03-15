@@ -104,4 +104,20 @@ class GardenSanctuaryPlannerTest {
         assertTrue(state.carryHomeLine.contains("Wolf"))
         assertTrue(state.canopyShadeAlpha >= 64)
     }
+
+    @Test
+    fun `milestone bond adds keepsake trace and warmer carry-home`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 4, totalRuns = 4, gentleRuns = 4)
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertTrue(state.traces.any { it.label == "Napping Patch" })
+        assertTrue(state.carryHomeLine.contains("quiet patch") || state.carryHomeLine.contains("home"))
+        assertTrue(state.fireflyCount >= 6)
+    }
 }

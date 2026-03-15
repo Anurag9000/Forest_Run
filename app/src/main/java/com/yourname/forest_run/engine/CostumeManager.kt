@@ -8,13 +8,16 @@ object CostumeManager {
 
     private val unlockRules = listOf(
         CostumeStyle.FLOWER_CROWN to { context: Context ->
-            PersistentMemoryManager.getSparedCount(context, EntityType.CAT) >= 3
+            PersistentMemoryManager.getSparedCount(context, EntityType.CAT) >= 3 ||
+                RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.CAT)
         },
         CostumeStyle.VINE_SCARF to { context: Context ->
-            PersistentMemoryManager.getSparedCount(context, EntityType.FOX) >= 3
+            PersistentMemoryManager.getSparedCount(context, EntityType.FOX) >= 3 ||
+                RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.FOX)
         },
         CostumeStyle.MOON_CAPE to { context: Context ->
-            PersistentMemoryManager.getSparedCount(context, EntityType.WOLF) >= 2
+            PersistentMemoryManager.getSparedCount(context, EntityType.WOLF) >= 2 ||
+                RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.WOLF)
         },
         CostumeStyle.BLOOM_RIBBON to { context: Context ->
             SaveManager.loadBestDistance(context) >= 1_500f ||

@@ -3,6 +3,7 @@ package com.yourname.forest_run.engine
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.yourname.forest_run.entities.EntityType
+import com.yourname.forest_run.entities.CostumeStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -82,5 +83,18 @@ class RelationshipArcSystemTest {
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
 
         assertTrue(RelationshipArcSystem.dogBuddyChance(context) > 0.20f)
+    }
+
+    @Test
+    fun `milestone bond unlocks persistent relationship reward`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
+
+        val reward = RelationshipArcSystem.milestoneRewardFor(context, EntityType.FOX)
+
+        assertNotNull(reward)
+        assertEquals("Trail Ribbon", reward?.label)
+        assertEquals(CostumeStyle.VINE_SCARF, reward?.costumeReward)
+        assertTrue(RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.FOX))
     }
 }

@@ -29,6 +29,8 @@ object GardenSanctuaryPlanner {
         val warmBonds = bonds.filter { RelationshipArcSystem.isWarmBond(appContext, it.first) }
         val memoryPages = StoryFragmentSystem.memoryPageCount(appContext)
         val mood = moodState.currentMood
+        val milestoneRewards = RelationshipArcSystem.unlockedMilestoneTypes(appContext)
+            .mapNotNull { RelationshipArcSystem.milestoneRewardFor(appContext, it) }
         val repeatedHarmCreature = (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
             PersistentMemoryManager.getHitCount(appContext, it) >= 2
         }
@@ -38,7 +40,7 @@ object GardenSanctuaryPlanner {
             ForestMood.RECKLESS -> 1
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3 + (moodState.moodStreak / 2).coerceAtMost(2)
-        } + warmBonds.size.coerceAtMost(2) - if (repeatedHarmCreature != null) 1 else 0
+        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) - if (repeatedHarmCreature != null) 1 else 0
 
         val petals = when (mood) {
             ForestMood.GENTLE -> 3
@@ -52,7 +54,7 @@ object GardenSanctuaryPlanner {
             ForestMood.RECKLESS -> 0
             ForestMood.FEARFUL -> 1
             ForestMood.STEADY -> 1
-        } + warmBonds.size.coerceAtMost(2) / 2 + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0
+        } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0
 
         val canopyShadeAlpha = when (mood) {
             ForestMood.GENTLE -> 26
@@ -68,6 +70,23 @@ object GardenSanctuaryPlanner {
                         repeatedHarmCreature,
                         "Cautious Path",
                         Color.rgb(206, 214, 238)
+                    )
+                )
+            }
+            milestoneRewards.take(2).forEach { reward ->
+                add(
+                    SanctuaryTrace(
+                        reward.type,
+                        reward.traceLabel,
+                        when (reward.type) {
+                            EntityType.CAT -> Color.rgb(255, 230, 239)
+                            EntityType.FOX -> Color.rgb(255, 214, 152)
+                            EntityType.WOLF -> Color.rgb(202, 216, 240)
+                            EntityType.DOG -> Color.rgb(255, 236, 168)
+                            EntityType.OWL -> Color.rgb(218, 220, 255)
+                            EntityType.EAGLE -> Color.rgb(214, 232, 255)
+                            else -> Color.rgb(232, 246, 212)
+                        }
                     )
                 )
             }
@@ -104,9 +123,12 @@ object GardenSanctuaryPlanner {
         }
 
         val strongestBond = bonds.firstOrNull()?.first
+        val featuredReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val carryHomeLine = when {
             repeatedHarmCreature != null ->
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
+            featuredReward != null ->
+                featuredReward.summary
             strongestBond != null && (summary?.sparedCount ?: 0) > 0 ->
                 "${formatEntityName(strongestBond)} stayed in the garden's mood after that run."
             strongestBond != null && (summary?.bloomConversions ?: 0) >= 2 ->

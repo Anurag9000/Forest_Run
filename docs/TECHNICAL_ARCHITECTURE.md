@@ -202,12 +202,12 @@ Expected qualities:
 - Implemented: `RelationshipArcSystem` now exists as a first-class runtime and persistence layer for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - Partial: `ReturnMomentsSystem` now exists in baseline form.
 - Partial: `ReturnMomentsSystem` now also surfaces repeated-harm caution beats in Garden returns; broader authored combinations and richer visitor consequences still need expansion.
-- Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, and sanctuary traces; milestone presentation and deeper authored stage consequences still need expansion.
+- Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, and baseline milestone keepsake rewards; deeper authored stage consequences still need expansion.
 - Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
 - Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, and repeated-harm caution pages in baseline form.
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, and repeated-harm caution traces from mood, summary, and relationship state.
 - Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
-- TODO: persistence schema must still expand further for richer fragment unlock state and relationship milestone presentation.
+- TODO: persistence schema must still expand further for richer fragment unlock state and broader relationship milestone presentation.
 
 ## 13. Relationship Arc Authoring
 
@@ -225,7 +225,7 @@ Expected data per major creature family:
 ### Current Status
 
 - Implemented: formal relationship stages and baseline authoring data now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
-- Partial: encounter counts, stage persistence, stage-aware dialogue, and stage-aware encounter tuning now exist; deepen Garden presence, milestone presentation, and broader authored consequences.
+- Partial: encounter counts, stage persistence, stage-aware dialogue, stage-aware encounter tuning, and baseline milestone keepsake/costume reward hooks now exist; deepen Garden presence and broader authored consequences.
 
 ## 14. Personal Return Moments Authoring
 

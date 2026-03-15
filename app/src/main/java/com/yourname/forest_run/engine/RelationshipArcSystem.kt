@@ -1,6 +1,7 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
+import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 
 enum class RelationshipStage(val displayName: String) {
@@ -30,6 +31,14 @@ data class RelationshipEncounterTuning(
     val aggressionMultiplier: Float = 1f,
     val detectionMultiplier: Float = 1f,
     val buddyChanceBonus: Float = 0f
+)
+
+data class RelationshipMilestoneReward(
+    val type: EntityType,
+    val label: String,
+    val summary: String,
+    val traceLabel: String,
+    val costumeReward: CostumeStyle? = null
 )
 
 object RelationshipArcSystem {
@@ -70,6 +79,9 @@ object RelationshipArcSystem {
             hits = SaveManager.loadHitCount(context.applicationContext, type)
         )
         SaveManager.saveRelationshipStage(context.applicationContext, type, stage)
+        if (stage == RelationshipStage.MILESTONE) {
+            unlockMilestone(context.applicationContext, type)
+        }
         return stage
     }
 
@@ -127,6 +139,68 @@ object RelationshipArcSystem {
 
     fun isWarmBond(context: Context, type: EntityType): Boolean =
         isTracked(type) && toneFor(context.applicationContext, type) == RelationshipTone.WARM
+
+    fun hasUnlockedMilestone(context: Context, type: EntityType): Boolean =
+        type in SaveManager.loadUnlockedRelationshipMilestones(context.applicationContext)
+
+    fun unlockedMilestoneTypes(context: Context): List<EntityType> =
+        SaveManager.loadUnlockedRelationshipMilestones(context.applicationContext)
+            .sortedByDescending { affinityScore(context.applicationContext, it) }
+
+    fun milestoneRewardFor(context: Context, type: EntityType): RelationshipMilestoneReward? {
+        if (!isTracked(type) || !hasUnlockedMilestone(context.applicationContext, type)) return null
+        return when (type) {
+            EntityType.CAT -> RelationshipMilestoneReward(
+                type = type,
+                label = "Napping Patch",
+                summary = "The cat has made a quiet patch of home for both of you.",
+                traceLabel = "Napping Patch",
+                costumeReward = CostumeStyle.FLOWER_CROWN
+            )
+            EntityType.FOX -> RelationshipMilestoneReward(
+                type = type,
+                label = "Trail Ribbon",
+                summary = "The fox leaves a bright trail that now feels meant for you.",
+                traceLabel = "Trail Ribbon",
+                costumeReward = CostumeStyle.VINE_SCARF
+            )
+            EntityType.WOLF -> RelationshipMilestoneReward(
+                type = type,
+                label = "Watch Stone",
+                summary = "The wolf's silence now feels like a guard post instead of a warning.",
+                traceLabel = "Watch Stone",
+                costumeReward = CostumeStyle.MOON_CAPE
+            )
+            EntityType.DOG -> RelationshipMilestoneReward(
+                type = type,
+                label = "Welcome Bell",
+                summary = "The dog's joy has turned into something the whole garden keeps.",
+                traceLabel = "Welcome Bell"
+            )
+            EntityType.OWL -> RelationshipMilestoneReward(
+                type = type,
+                label = "Lantern Branch",
+                summary = "The owl has made the dark edge of home feel watched over.",
+                traceLabel = "Lantern Branch"
+            )
+            EntityType.EAGLE -> RelationshipMilestoneReward(
+                type = type,
+                label = "Sky Thread",
+                summary = "The eagle has left a stern but welcome line through the sky above home.",
+                traceLabel = "Sky Thread"
+            )
+            else -> null
+        }
+    }
+
+    fun featuredMilestoneReward(context: Context): RelationshipMilestoneReward? {
+        val appContext = context.applicationContext
+        val preferred = strongestRelationship(appContext)?.first
+            ?.takeIf { hasUnlockedMilestone(appContext, it) }
+            ?: unlockedMilestoneTypes(appContext).firstOrNull()
+            ?: return null
+        return milestoneRewardFor(appContext, preferred)
+    }
 
     fun encounterTuning(context: Context, type: EntityType): RelationshipEncounterTuning {
         if (!isTracked(type)) return RelationshipEncounterTuning()
@@ -317,6 +391,13 @@ object RelationshipArcSystem {
         val spared = SaveManager.loadSparedCount(appContext, type)
         val hits = SaveManager.loadHitCount(appContext, type)
         return encounters + spared * 3 - hits
+    }
+
+    private fun unlockMilestone(context: Context, type: EntityType) {
+        val unlocked = SaveManager.loadUnlockedRelationshipMilestones(context).toMutableSet()
+        if (unlocked.add(type)) {
+            SaveManager.saveUnlockedRelationshipMilestones(context, unlocked)
+        }
     }
 
     private fun toneFor(context: Context, type: EntityType): RelationshipTone {

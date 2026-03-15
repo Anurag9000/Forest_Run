@@ -117,6 +117,7 @@ class GardenScreen(
     private var returnMoment: ReturnMoment? = null
     private var returnVisitorSprite: SpriteSheet? = null
     private var strongestBondLabel = "None"
+    private var milestoneRewardLabel = "None"
     private var memoryPageCount = 0
     private var gardenReflectionLine = ""
     private var creatureThoughtLine = ""
@@ -497,7 +498,7 @@ class GardenScreen(
     }
 
     private fun drawStatsPanel(canvas: Canvas, cw: Float, ch: Float) {
-        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.44f)
+        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.48f)
         canvas.drawRoundRect(statsRect, 18f, 18f, statsPanelPaint)
         canvas.drawRoundRect(statsRect, 18f, 18f, statsBorderPaint)
 
@@ -516,6 +517,9 @@ class GardenScreen(
         y += 44f
         canvas.drawText("Strongest Bond", statsRect.left + 18f, y, statsLabelPaint)
         canvas.drawText(strongestBondLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
+        y += 44f
+        canvas.drawText("Bond Reward", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(milestoneRewardLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
         y += 44f
         canvas.drawText("Memory Pages", statsRect.left + 18f, y, statsLabelPaint)
         canvas.drawText(memoryPageCount.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
@@ -669,6 +673,7 @@ class GardenScreen(
         val strongestBond = RelationshipArcSystem.strongestRelationship(context)
         returnVisitorSprite = (returnMoment?.visitor ?: strongestBond?.first)?.let(::spriteForVisitor)
         strongestBondLabel = strongestBond?.let { "${formatEntityName(it.first)} ${it.second.displayName}" } ?: "None"
+        milestoneRewardLabel = RelationshipArcSystem.featuredMilestoneReward(context)?.label ?: "None"
         memoryPageCount = StoryFragmentSystem.memoryPageCount(context)
         gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
         weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)

@@ -5,8 +5,8 @@ enum class CostumeStyle(
     val unlockLabel: String
 ) {
     NONE("Classic", "Always available"),
-    FLOWER_CROWN("Flower Crown", "Spare 3 cats"),
-    VINE_SCARF("Vine Scarf", "Spare 3 foxes"),
-    MOON_CAPE("Moon Cape", "Spare 2 wolves"),
+    FLOWER_CROWN("Flower Crown", "Spare 3 cats or earn Cat Bond"),
+    VINE_SCARF("Vine Scarf", "Spare 3 foxes or earn Fox Bond"),
+    MOON_CAPE("Moon Cape", "Spare 2 wolves or earn Wolf Bond"),
     BLOOM_RIBBON("Bloom Ribbon", "Reach 1500 m or 120 seeds")
 }

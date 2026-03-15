@@ -56,4 +56,15 @@ class CostumeManagerTest {
         assertTrue(CostumeManager.equip(context, CostumeStyle.MOON_CAPE))
         assertEquals(CostumeStyle.MOON_CAPE, CostumeManager.activeCostume(context))
     }
+
+    @Test
+    fun `relationship milestone can unlock matching costume`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+
+        val newUnlocks = CostumeManager.refreshUnlocks(context)
+
+        assertTrue(newUnlocks.contains(CostumeStyle.FLOWER_CROWN))
+        assertTrue(CostumeManager.availableCostumes(context).contains(CostumeStyle.FLOWER_CROWN))
+    }
 }
