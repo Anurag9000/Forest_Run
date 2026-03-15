@@ -691,9 +691,9 @@ These items are not from the earliest historical repo docs. They are explicit us
 
 #### Forest Memory Layer
 
-- `TODO`: a world-tone system that remembers how the player has been moving through the forest, not just lifetime counters.
-- `TODO`: classify recent play into emotional patterns such as gentle, reckless, fearful, and steady.
-- `TODO`: let world tone affect Garden ambience, creature warmth, and rest framing.
+- `Implemented`: a world-tone system now classifies recent runs into gentle, reckless, fearful, and steady.
+- `Partial`: world tone now affects Garden palette and rest/Garden framing.
+- `TODO`: deepen ambience, creature warmth, and broader world-state response.
 
 #### Named Relationship Arcs
 
@@ -703,9 +703,9 @@ These items are not from the earliest historical repo docs. They are explicit us
 
 #### Personal Return Moments
 
-- `TODO`: first-run-of-day greetings.
-- `TODO`: long-absence reactions and “the forest noticed you were gone” moments.
-- `TODO`: comfort beats after repeated failure and milestone-sensitive Garden visits.
+- `Implemented`: first-run-of-day greetings, long-absence reactions, and rough-run comfort beats in baseline form.
+- `Partial`: milestone-sensitive Garden return moments now exist with simple visiting-creature presentation.
+- `TODO`: broaden emotional-state combinations and deepen authored coverage.
 
 #### Quiet Story Fragments
 

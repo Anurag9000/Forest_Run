@@ -198,8 +198,10 @@ Expected qualities:
 
 ### Current Status
 
-- TODO: these emotional systems do not yet exist as first-class architecture.
-- TODO: persistence schema must expand to store world tone, relationship stages, return-state history, and fragment unlock state.
+- Implemented: `ForestMoodSystem` now exists as a first-class runtime and persistence layer.
+- Partial: `ReturnMomentsSystem` now exists in baseline form.
+- TODO: add first-class relationship-arc and fragment systems.
+- TODO: persistence schema must still expand further for relationship stages and fragment unlock state.
 
 ## 13. Relationship Arc Authoring
 
@@ -234,8 +236,8 @@ Expected layers:
 
 ### Current Status
 
-- Partial: rest quotes and Garden carry-home already provide a baseline place to surface returns.
-- TODO: add dedicated return-state data and authoring hooks for greetings, absence reactions, comfort beats, and milestone visits.
+- Implemented: dedicated return-state data now exists for greetings, absence reactions, rough-run comfort beats, and milestone Garden messages.
+- TODO: deepen authoring hooks, trigger richness, and broader emotional-state coverage.
 
 ## 15. Quiet Story Fragment Authoring
 

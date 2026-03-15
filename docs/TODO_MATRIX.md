@@ -50,9 +50,8 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Forest Memory Layer
 
-- TODO: add a `ForestMoodSystem` that tracks recent run tone, not just totals.
-- TODO: classify recent play into patterns such as gentle, reckless, fearful, and steady.
-- TODO: make recent tone influence Garden ambience, creature warmth, and rest framing.
+- DONE: added a save-backed `ForestMoodSystem` with run classification into gentle, reckless, fearful, and steady.
+- PARTIAL: current tone now affects Garden palette and rest/Garden labeling; deepen ambience, creature warmth, and broader presentation response.
 - TODO: surface repeated panic or repeated harm from the same creature as emotional consequences, not only counters.
 - TODO: let repeated kindness visibly brighten the sanctuary through ambience, blooms, or trust signs.
 - TODO: ensure the player can feel that the world has formed an opinion about how they play.
@@ -68,11 +67,9 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Personal Return Moments
 
-- TODO: add first-run-of-day greeting logic.
-- TODO: add long-absence recognition so the forest can react when the player returns after being gone.
-- TODO: add comforting Garden or rest responses after several failed runs.
-- TODO: allow milestone-driven creature visits or special return moments in the Garden.
-- TODO: bind return moments to emotional states such as many deaths, many mercies, long streaks, and first major Bloom events.
+- DONE: added baseline first-run-of-day greeting logic, long-absence recognition, rough-run comfort returns, and milestone-sensitive Garden messages.
+- PARTIAL: Garden return moments can now include simple visiting creatures; deepen trigger richness and broader emotional coverage.
+- TODO: bind return moments more deeply to many mercies, longer streaks, and broader emotional-state combinations.
 - TODO: ensure return sessions feel intimate instead of mechanically identical.
 
 ### Quiet Story Fragments
@@ -126,7 +123,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- TODO: add first-class emotional systems for forest mood, relationship arcs, personal return moments, and quiet story fragments.
+- PARTIAL: first-class emotional systems now exist for forest mood and personal return moments; relationship arcs and quiet story fragments still need implementation.
 
 ## Visual And Audio TODOs
 

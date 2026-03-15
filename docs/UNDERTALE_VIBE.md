@@ -183,7 +183,9 @@ Examples:
 
 ### Current Status
 
-- TODO: these emotional expansion layers are approved target scope but not implemented.
+- Partial: forest mood and personal return moments now exist in baseline form.
+- TODO: named relationship arcs and quiet story fragments are still not implemented.
+- TODO: deepen forest mood consequences and return-moment richness beyond the current baseline.
 
 ---
 
@@ -262,7 +264,7 @@ Dream-spec supporting systems include:
 - Implemented: `FlavorTextManager`, `GhostRecorder`, `GhostPlayer`, `LeitmotifManager` in partial form.
 - Implemented: `PersistentMemoryManager`, `PacifistTracker`, `DialogueBubbleManager`, and a baseline `FaceManager`.
 - Implemented: `MercySystem` and `CostumeOverlay` baselines.
-- TODO: deepen those systems into fuller route, unlock, relationship, return-moment, and fragment-driven payoffs.
+- TODO: deepen those systems into fuller route, unlock, relationship, richer return-moment, and fragment-driven payoffs.
 
 ---
 

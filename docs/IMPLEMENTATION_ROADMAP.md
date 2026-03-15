@@ -173,4 +173,4 @@ Goal: complete, shippable, polished store-ready product.
 - TODO: verify every entity behavior on actual device
 - DONE: seeds, Bloom, mercy hearts, and garden loop are materially clearer in play
 - PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist; finish deeper cross-run payoff and richer route feel
-- TODO: add forest mood, personal return moments, relationship arcs, and quiet story fragments as explicit implementation work rather than leaving them as flavor aspirations
+- PARTIAL: forest mood and personal return moments now exist as explicit implementation work; relationship arcs and quiet story fragments still need to be built
