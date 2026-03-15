@@ -201,10 +201,10 @@ Expected qualities:
 - Implemented: `ForestMoodSystem` now exists as a first-class runtime and persistence layer.
 - Implemented: `RelationshipArcSystem` now exists as a first-class runtime and persistence layer for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - Partial: `ReturnMomentsSystem` now exists in baseline form.
-- Partial: `ReturnMomentsSystem` now also surfaces repeated-harm caution beats in Garden returns; broader authored combinations and richer visitor consequences still need expansion.
+- Partial: `ReturnMomentsSystem` now also surfaces repeated-harm caution beats, milestone-bond warmth, Bloom-heavy afterglow returns, and richer absence-sensitive Garden returns; broader authored combinations still need expansion.
 - Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, and baseline milestone keepsake rewards; deeper authored stage consequences still need expansion.
 - Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
-- Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, and repeated-harm caution pages in baseline form.
+- Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, repeated-harm caution pages, milestone-gentleness pages, and Bloom-afterglow pages in baseline form.
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, and repeated-harm caution traces from mood, summary, and relationship state.
 - Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
 - TODO: persistence schema must still expand further for richer fragment unlock state and broader relationship milestone presentation.
@@ -242,8 +242,8 @@ Expected layers:
 
 ### Current Status
 
-- Implemented: dedicated return-state data now exists for greetings, absence reactions, rough-run comfort beats, and milestone Garden messages.
-- TODO: deepen authoring hooks, trigger richness, and broader emotional-state coverage.
+- Implemented: dedicated return-state data now exists for greetings, absence reactions, rough-run comfort beats, milestone Garden messages, and stronger Bloom / gentle-bond combinations.
+- TODO: deepen authoring hooks further and broaden emotional-state coverage beyond the current milestone, Bloom, and gentle-return combinations.
 
 ## 15. Quiet Story Fragment Authoring
 
@@ -267,7 +267,8 @@ Expected outputs:
 ### Current Status
 
 - Partial: contextual rest quotes and some dialogue systems already exist.
-- TODO: formalize fragment authoring, unlock state, and short-form poetic content selection.
+- Partial: milestone-sensitive and Bloom-sensitive Garden fragment selection now exists in baseline form.
+- TODO: formalize broader fragment authoring, unlock state, and short-form poetic content selection.
 
 ## 16. Dynamic Difficulty Curve
 

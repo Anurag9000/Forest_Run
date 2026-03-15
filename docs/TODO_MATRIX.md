@@ -69,8 +69,8 @@ This file is the strict implementation ledger for everything from the original d
 ### Personal Return Moments
 
 - DONE: added baseline first-run-of-day greeting logic, long-absence recognition, rough-run comfort returns, and milestone-sensitive Garden messages.
-- PARTIAL: Garden return moments now use bonded visitors and stronger mercy/clean-play/high-score hooks; deepen trigger richness and broader emotional coverage.
-- PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, and broader emotional-state combinations; continue expanding authored combinations.
+- PARTIAL: Garden return moments now use bonded visitors and stronger mercy/clean-play/high-score hooks, including milestone-bond warmth, Bloom-linger, and stronger absence-sensitive returns.
+- PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, Bloom-heavy runs, and broader emotional-state combinations; continue expanding authored combinations.
 - TODO: ensure return sessions feel intimate instead of mechanically identical.
 
 ### Quiet Story Fragments
@@ -78,7 +78,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: short rest quotes now run through a first-class fragment-driven writing layer.
 - PARTIAL: rare Garden reflections and unlockable poetic memory pages now exist in baseline form.
 - PARTIAL: one-line creature thoughts for bonded creatures now exist in the Garden baseline.
-- PARTIAL: weather-linked thoughts and caution-oriented Garden reflections now exist in baseline Garden form; broaden authored coverage further.
+- PARTIAL: weather-linked thoughts and caution-oriented Garden reflections now exist in baseline Garden form, alongside milestone-gentleness and Bloom-afterglow pages; broaden authored coverage further.
 - TODO: deepen poetic memory pages so they reveal feeling without lore-dumping.
 - TODO: keep fragment writing brief, intimate, and suggestive rather than expository.
 - TODO: ensure mystery and emotional residue are preserved through restraint.

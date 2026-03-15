@@ -709,13 +709,13 @@ These items are not from the earliest historical repo docs. They are explicit us
 #### Personal Return Moments
 
 - `Implemented`: first-run-of-day greetings, long-absence reactions, and rough-run comfort beats in baseline form.
-- `Partial`: milestone-sensitive Garden return moments now exist with bonded visiting-creature presentation and stronger kindness/clean-play hooks.
+- `Partial`: milestone-sensitive Garden return moments now exist with bonded visiting-creature presentation, stronger kindness/clean-play hooks, richer absence-sensitive lines, and Bloom-heavy afterglow returns.
 - `TODO`: broaden emotional-state combinations and deepen authored coverage further.
 
 #### Quiet Story Fragments
 
 - `Implemented`: short rest quotes now run through a first-class fragment system.
-- `Partial`: rare Garden reflections, weather-linked Garden thoughts, bonded creature thoughts, repeated-harm caution reflections, and unlockable poetic memory pages now exist in baseline form.
+- `Partial`: rare Garden reflections, weather-linked Garden thoughts, bonded creature thoughts, repeated-harm caution reflections, milestone-gentleness reflections, Bloom-afterglow reflections, and unlockable poetic memory pages now exist in baseline form.
 - `TODO`: broaden creature thoughts and weather-linked lines beyond the current Garden-focused baseline.
 - `TODO`: preserve emotional mystery through fragment writing instead of explicit exposition.
 

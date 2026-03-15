@@ -158,6 +158,12 @@ Current baseline:
 - Personal milestones should occasionally cause a favorite creature or trusted presence to appear in the Garden.
 - Some dialogue should exist only after specific emotional states such as many deaths, many mercies, long streaks, or a first major Bloom.
 
+Current baseline:
+
+- the Garden can now answer long absences, rough streaks, stronger bonds, Bloom-heavy runs, and gentle milestone returns with distinct return moments
+- milestone bonds now produce warmer and more specific return lines instead of only generic greetings
+- broader authored combinations are still TODO
+
 #### 3.8.4 Quiet Story Fragments
 
 - The game should prefer small poetic fragments over heavy exposition.
@@ -169,7 +175,7 @@ Current baseline:
 Current baseline:
 
 - rest quotes now route through a fragment system instead of only hard-coded quote branches
-- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, and track unlocked memory pages
+- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, milestone-gentleness reflections, Bloom-afterglow reflections, and track unlocked memory pages
 - broader creature-thought coverage and richer weather-linked fragments are still TODO
 
 ### Current Status

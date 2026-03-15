@@ -43,15 +43,26 @@ object StoryFragmentSystem {
         val appContext = context.applicationContext
         val mood = summary?.forestMood ?: ForestMoodSystem.currentState(appContext).currentMood
         val strongest = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.RECOGNITION)
+        val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val text = when (mood) {
-            ForestMood.GENTLE -> if (strongest != null) {
+            ForestMood.GENTLE -> if (milestoneReward != null) {
+                "The evening wind moves like it has learned the shape of your better returns."
+            } else if (strongest != null) {
                 "The evening wind moves like it knows who has been welcomed here."
             } else {
                 "The evening wind has nothing urgent left to say."
             }
-            ForestMood.RECKLESS -> "The branches still rustle like they are catching up to your hurry."
+            ForestMood.RECKLESS -> if (milestoneReward != null) {
+                "Even the restless branches seem unwilling to break what trust has grown here."
+            } else {
+                "The branches still rustle like they are catching up to your hurry."
+            }
             ForestMood.FEARFUL -> "The air stays soft, as if the weather decided not to press its luck."
-            ForestMood.STEADY -> "The wind keeps a patient pace through the garden."
+            ForestMood.STEADY -> if (milestoneReward != null) {
+                "The wind keeps a patient pace, like it recognizes this version of you."
+            } else {
+                "The wind keeps a patient pace through the garden."
+            }
         }
         unlockMemoryPage(appContext, "page_weather_${mood.name.lowercase()}")
         return text
@@ -147,9 +158,27 @@ object StoryFragmentSystem {
 
     private fun selectGardenFragment(context: Context, summary: RunSummary?): StoryFragment? {
         val strongest = RelationshipArcSystem.strongestRelationship(context)
+        val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(context)
         val mood = ForestMoodSystem.currentState(context).currentMood
         val repeatedHarmCreature = (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(context))?.takeIf {
             PersistentMemoryManager.getHitCount(context, it) >= 2
+        }
+
+        if (milestoneReward != null && summary?.forestMood == ForestMood.GENTLE && (summary.sparedCount > 0 || summary.kindnessChain >= 5)) {
+            return StoryFragment(
+                id = "garden_milestone_gentle_${milestoneReward.type.name.lowercase()}",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = when (milestoneReward.type) {
+                    EntityType.CAT -> "The cat's quiet patch feels especially close after a gentle return."
+                    EntityType.FOX -> "The brighter trail looks almost proud of how gently you came back."
+                    EntityType.WOLF -> "The watch stone feels calmer when your courage stays soft."
+                    EntityType.DOG -> "Even the welcome bell sounds softer after a kind run."
+                    EntityType.OWL -> "The lantern branch keeps a warmer light after a gentler night."
+                    EntityType.EAGLE -> "The sky thread looks less severe when you come home with mercy."
+                    else -> "Something trusted your gentler return."
+                },
+                unlocksPageId = "page_milestone_gentle_${milestoneReward.type.name.lowercase()}"
+            )
         }
 
         if (strongest != null) {
@@ -203,6 +232,22 @@ object StoryFragmentSystem {
                     type = StoryFragmentType.GARDEN_REFLECTION,
                     text = "The leaves settle as if they trusted the way you came home.",
                     unlocksPageId = "page_gentle_aftercare"
+                )
+            }
+            if (it.cleanPasses >= 12 && it.hitsTaken == 0) {
+                return StoryFragment(
+                    id = "garden_clean_return",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = "The whole garden feels as if it noticed how calmly you made it through.",
+                    unlocksPageId = "page_clean_return"
+                )
+            }
+            if (it.bloomConversions >= 4) {
+                return StoryFragment(
+                    id = "garden_bloom_afterglow",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = "A little of Bloom is still hanging in the leaves around home.",
+                    unlocksPageId = "page_bloom_afterglow"
                 )
             }
             if (it.isNewHighScore) {

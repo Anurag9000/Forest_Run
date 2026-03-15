@@ -103,4 +103,60 @@ class StoryFragmentSystemTest {
         assertTrue(line!!.contains("nerves") || line.contains("gentle"))
         assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_caution_eagle"))
     }
+
+    @Test
+    fun `milestone gentle reflection unlocks a milestone page`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        val summary = RunSummary(
+            score = 980,
+            distanceM = 650f,
+            isNewHighScore = false,
+            highScore = 1_200,
+            mercyHearts = 3,
+            mercyMisses = 3,
+            kindnessChain = 6,
+            cleanPasses = 8,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Gentle.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("gentle", ignoreCase = true) || line.contains("patch"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_milestone_gentle_cat"))
+    }
+
+    @Test
+    fun `weather thought deepens with milestone bond`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        val summary = RunSummary(
+            score = 1_100,
+            distanceM = 760f,
+            isNewHighScore = false,
+            highScore = 1_500,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 2,
+            cleanPasses = 9,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 6,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Steady.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val weatherThought = StoryFragmentSystem.weatherThought(context, summary)
+
+        assertTrue(weatherThought.contains("recognizes") || weatherThought.contains("patient"))
+    }
 }

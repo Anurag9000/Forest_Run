@@ -6,6 +6,7 @@ import com.yourname.forest_run.entities.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,7 +79,7 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
-    fun `gentle high kindness run can return bonded visitor`() {
+    fun `gentle high kindness milestone run can return stronger bonded moment`() {
         repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
 
@@ -102,7 +103,7 @@ class ReturnMomentsSystemTest {
 
         val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 7_000L)
 
-        assertEquals("Gentle Footsteps", moment?.title)
+        assertEquals("Kept Company", moment?.title)
         assertEquals(EntityType.CAT, moment?.visitor)
     }
 
@@ -136,5 +137,64 @@ class ReturnMomentsSystemTest {
         assertEquals("Still Tender", moment?.title)
         assertEquals(EntityType.OWL, moment?.visitor)
         assertNotNull(moment?.line)
+    }
+
+    @Test
+    fun `milestone gentle run returns kept company moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
+
+        val summary = RunSummary(
+            score = 1_220,
+            distanceM = 860f,
+            isNewHighScore = false,
+            highScore = 1_500,
+            mercyHearts = 4,
+            mercyMisses = 4,
+            kindnessChain = 6,
+            cleanPasses = 9,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 8_000L)
+
+        assertEquals("Kept Company", moment?.title)
+        assertEquals(EntityType.FOX, moment?.visitor)
+        assertTrue(moment?.line?.contains("fox", ignoreCase = true) == true || moment?.line?.contains("bright") == true)
+    }
+
+    @Test
+    fun `strong bloom run returns bloom still clings moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+
+        val summary = RunSummary(
+            score = 1_420,
+            distanceM = 980f,
+            isNewHighScore = false,
+            highScore = 1_900,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 3,
+            cleanPasses = 10,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 12,
+            bloomConversions = 4,
+            lastKiller = null,
+            restQuote = "Bright.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 9_000L)
+
+        assertEquals("Bloom Still Clings", moment?.title)
+        assertEquals(EntityType.OWL, moment?.visitor)
     }
 }

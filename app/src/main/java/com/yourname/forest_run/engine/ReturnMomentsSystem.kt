@@ -44,20 +44,41 @@ object ReturnMomentsSystem {
         val alreadyGreetedToday = previous.lastGardenGreetingDay == dayId
         val bondedVisitor = RelationshipArcSystem.preferredGardenVisitor(appContext)
         val milestoneBond = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.MILESTONE)
+        val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val repeatedHarmCreature = (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
             PersistentMemoryManager.getHitCount(appContext, it) >= 2
         }
 
         val moment = when {
             previous.lastActiveAtMs > 0L && nowMs - previous.lastActiveAtMs >= LONG_ABSENCE_MS ->
-                bondedVisitor?.let {
-                    ReturnMoment("Welcome Back", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
-                } ?: ReturnMoment("Welcome Back", "The willow kept your place.", EntityType.CAT)
+                if (milestoneReward != null) {
+                    ReturnMoment(
+                        "You Were Missed",
+                        missedLine(milestoneReward.type),
+                        milestoneReward.type
+                    )
+                } else {
+                    bondedVisitor?.let {
+                        ReturnMoment("Welcome Back", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
+                    } ?: ReturnMoment("Welcome Back", "The willow kept your place.", EntityType.CAT)
+                }
             repeatedHarmCreature != null && ((summary?.hitsTaken ?: 0) > 0 || previous.roughRunStreak >= 2) ->
                 ReturnMoment(
                     "Still Tender",
                     repeatedHarmLine(repeatedHarmCreature),
                     if (RelationshipArcSystem.isTracked(repeatedHarmCreature)) repeatedHarmCreature else bondedVisitor
+                )
+            milestoneReward != null && (summary?.kindnessChain ?: 0) >= 5 && (summary?.sparedCount ?: 0) >= 1 ->
+                ReturnMoment(
+                    "Kept Company",
+                    milestoneWarmthLine(milestoneReward.type),
+                    milestoneReward.type
+                )
+            milestoneReward != null && (summary?.cleanPasses ?: 0) >= 12 && (summary?.hitsTaken ?: 0) == 0 ->
+                ReturnMoment(
+                    "Stayed With You",
+                    steadyMilestoneLine(milestoneReward.type),
+                    milestoneReward.type
                 )
             previous.roughRunStreak >= 3 ->
                 when {
@@ -65,11 +86,20 @@ object ReturnMomentsSystem {
                         ReturnMoment("Take A Breath", RelationshipArcSystem.lineFor(appContext, bondedVisitor, RelationshipArcSystem.Event.RETURN), bondedVisitor)
                     else -> ReturnMoment("Take A Breath", "Even the wind has softened for you.", EntityType.DOG)
                 }
+            (summary?.bloomConversions ?: 0) >= 4 ->
+                when (milestoneReward?.type ?: milestoneBond) {
+                    EntityType.OWL, EntityType.EAGLE -> ReturnMoment(
+                        "Bloom Still Clings",
+                        bloomLine((milestoneReward?.type ?: milestoneBond)!!),
+                        milestoneReward?.type ?: milestoneBond
+                    )
+                    else -> ReturnMoment("Bloom Still Clings", "The garden is still lit by what followed you home from Bloom.", EntityType.OWL)
+                }
             (summary?.kindnessChain ?: 0) >= 6 || (summary?.sparedCount ?: 0) >= 2 ->
                 bondedVisitor?.let {
                     ReturnMoment("Gentle Footsteps", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
                 } ?: ReturnMoment("Gentle Footsteps", "The path stayed kind long enough to remember you.", EntityType.CAT)
-            summary?.cleanPasses ?: 0 >= 10 && summary?.hitsTaken == 0 ->
+            (summary?.cleanPasses ?: 0) >= 10 && summary?.hitsTaken == 0 ->
                 bondedVisitor?.let {
                     ReturnMoment("Steady Hands", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
                 } ?: ReturnMoment("Steady Hands", "The garden feels calmer after a run with no panic in it.")
@@ -101,6 +131,42 @@ object ReturnMomentsSystem {
             )
         )
         return moment
+    }
+
+    private fun missedLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat never really gave up your patch of quiet grass."
+        EntityType.FOX -> "The fox kept the brighter trail waiting for your answer."
+        EntityType.WOLF -> "The grove held its watch as if expecting your return."
+        EntityType.DOG -> "The garden feels like it has been waiting excitedly all day."
+        EntityType.OWL -> "The dark edge stayed open, like the owl expected you back."
+        EntityType.EAGLE -> "Even the sky feels like it noticed how long you were gone."
+        else -> "Something here held your place."
+    }
+
+    private fun milestoneWarmthLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat has started treating your gentler runs like part of home."
+        EntityType.FOX -> "The fox leaves you a brighter answer when you come back kind."
+        EntityType.WOLF -> "The wolf's watch softens when you keep choosing calm."
+        EntityType.DOG -> "The dog's joy feels steadier when you come home kind."
+        EntityType.OWL -> "The owl keeps the night lighter when your steps stay gentle."
+        EntityType.EAGLE -> "Even the eagle's shadow feels less severe after a kinder run."
+        else -> "Something familiar stayed close to the kindness you carried home."
+    }
+
+    private fun steadyMilestoneLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat trusts the quiet shape you leave behind after a clean run."
+        EntityType.FOX -> "The fox seems pleased you finally made the whole trail look easy."
+        EntityType.WOLF -> "The grove remembers that you kept your calm all the way through."
+        EntityType.DOG -> "The dog treats a clean run like a celebration it can barely contain."
+        EntityType.OWL -> "The owl watches a steady return like it was the whole lesson."
+        EntityType.EAGLE -> "The eagle leaves the sky stern, but approving, after a run like that."
+        else -> "Something here stayed with the steadiness of that run."
+    }
+
+    private fun bloomLine(type: EntityType): String = when (type) {
+        EntityType.OWL -> "The owl left a little of Bloom hanging in the branches."
+        EntityType.EAGLE -> "The eagle's sky still feels charged with the Bloom you carried home."
+        else -> "Bloom left more light behind than the garden knows what to do with."
     }
 
     private fun repeatedHarmLine(type: EntityType): String = when (type) {
