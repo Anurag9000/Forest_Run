@@ -12,6 +12,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: added a deterministic acceptance suite with per-family and per-entity verification scenarios, including Bloom, ghost, and rest-loop checks.
 - DONE: strengthened Lily, Hyacinth, Eucalyptus, Vanilla Orchid, Weeping Willow, and Bamboo readability/payoff delivery.
 - DONE: strengthened Duck, TitGroup, ChickadeeGroup, Cat, Fox, Wolf, Hedgehog, and Dog readability/telegraph/payoff delivery.
+- DONE: introduced a canonical persisted `RunSummary` shared by the rest screen and Garden carry-home panel.
 
 ## Immediate Remaining Product Gaps
 
@@ -36,6 +37,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - PARTIAL: contextual rest quotes by biome and last killer exist; expand quote pools and trigger richness.
 - PARTIAL: `PersistentMemoryManager` exists; expand it into full repeated-encounter payoff, unlock, and presentation architecture.
+- DONE: canonical post-run summary payload now exists across rest and Garden.
 - PARTIAL: costume overlays and wardrobe flow exist; expand repeated-encounter unlock depth and presentation.
 - PARTIAL: repeat-killer deja vu lines exist in baseline form; deepen them into stronger visual and narrative payoff.
 - DONE: dedicated dialogue bubble system.

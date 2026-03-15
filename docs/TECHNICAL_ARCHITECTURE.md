@@ -30,6 +30,7 @@ The architecture requires:
 ### Current Status
 
 - Implemented: game loop and `GameView`.
+- Implemented: canonical `RunSummary` payload now bridges the rest screen and Garden carry-home state.
 
 ## 3. Game State Machine
 
@@ -175,7 +176,7 @@ Dream persistence includes:
 ### Current Status
 
 - Implemented: score, seeds, garden, ghost.
-- Partial: repeated-encounter memory and costumes exist in baseline form; richer payoff depth is still missing.
+- Partial: repeated-encounter memory, costumes, and persisted run-summary carry-home now exist in baseline form; richer payoff depth is still missing.
 
 ## 12. Dynamic Difficulty Curve
 
