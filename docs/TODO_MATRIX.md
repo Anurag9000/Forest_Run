@@ -13,11 +13,12 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: strengthened Lily, Hyacinth, Eucalyptus, Vanilla Orchid, Weeping Willow, and Bamboo readability/payoff delivery.
 - DONE: strengthened Duck, TitGroup, ChickadeeGroup, Cat, Fox, Wolf, Hedgehog, and Dog readability/telegraph/payoff delivery.
 - DONE: introduced a canonical persisted `RunSummary` shared by the rest screen and Garden carry-home panel.
+- DONE: strengthened Cactus, Jacaranda, Cherry Blossom, Owl, and Eagle staging/payoff delivery.
 
 ## Immediate Remaining Product Gaps
 
 - TODO: verify every entity’s unique behavior on actual device and retune any behavior that still fails to read in normal play.
-- TODO: finish the remaining weak cactus, jacaranda, cherry blossom, and final bird/animal device-proofing that still feel lighter than the dream spec.
+- TODO: finish final device-proofing for the latest cactus, jacaranda, cherry blossom, owl, eagle, and broader bird/animal passes that still need real phone validation.
 - TODO: make Bloom feel like a full world-transforming power event rather than only a stronger readable buff.
 
 ## Documentation And Canonical Spec TODOs
@@ -53,22 +54,22 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: Hyacinth brush-vs-hit readability is clearer; finish clustered rhythm identity and device validation.
 - PARTIAL: Eucalyptus whip/sway read is stronger; finish leaf-drama delivery and final threat tuning.
 - PARTIAL: Vanilla Orchid vertical window is more legible; finish final safe-thread staging and device validation.
-- TODO: Cactus stronger genre-baseline staging.
+- PARTIAL: Cactus now has stronger warning staging and repeated-killer flavor; finish device-proofing and broader memory/cosmetic payoff.
 
 ### Trees
 
 - PARTIAL: Weeping Willow curtain feel is stronger; finish scenic dominance and obscured-read pressure.
-- TODO: Jacaranda petal-curtain spectacle.
+- PARTIAL: Jacaranda now has a clearer petal-curtain read and stronger pass reward; finish full canopy spectacle and device-proofing.
 - PARTIAL: Bamboo narrow-gap readability is stronger; finish signature threat identity and device validation.
-- TODO: Cherry Blossom wind-gust modifier and petal-blind atmosphere.
+- PARTIAL: Cherry Blossom now has clearer gust staging and stronger petal-storm identity; finish full gust-pressure delivery and device-proofing.
 
 ### Birds
 
 - PARTIAL: Duck low-flight readability and duck cue clarity are materially stronger; finish on-device validation and final cue polish.
 - PARTIAL: Tit flock wave readability is materially stronger; finish device-proofing and stronger rhythm payoff.
 - PARTIAL: Chickadee erratic altitude feel is materially stronger; finish final clarity/charm tuning.
-- TODO: Owl reactive dive drama and night mood.
-- TODO: Eagle lock-on cue and threat clarity.
+- PARTIAL: Owl now has stronger alert-ring telegraphing and night-glow mood; finish device-proofing and deeper repeated-memory payoff.
+- PARTIAL: Eagle now has a clearer target zone and stronger lock-on read; finish device-proofing and stronger dramatic cue understanding.
 
 ### Animals
 

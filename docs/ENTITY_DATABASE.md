@@ -40,8 +40,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: classic runner baseline hazard.
 - Dream traits: rigid, harsh silhouette, contrast against the softer forest.
-- Current: classic static hazard exists.
-- TODO: stronger iconic readability and repeated-memory integration.
+- Current: classic static hazard now has stronger warning staging and repeated-killer flavor response.
+- TODO: finish final device-proofing and broader memory/cosmetic payoff.
 
 ## Trees
 
@@ -56,8 +56,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: purple-canopy atmosphere tree with petal drift.
 - Dream traits: visual noise, mood, overhead tension.
-- Current: obstacle exists.
-- TODO: stronger petal curtain spectacle and memorable encounter feel.
+- Current: obstacle now has a clearer petal-curtain read, stronger pass reward, and better encounter feel.
+- TODO: finish final device-proofing and fuller canopy spectacle.
 
 ### Bamboo
 
@@ -70,8 +70,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: wind-making environmental modifier.
 - Dream traits: petal blinding, gust influence, gentle beauty with danger.
-- Current: obstacle exists.
-- TODO: restore stronger wind-gust and petal-storm personality.
+- Current: obstacle now has clearer gust staging, better pass reward, and stronger petal-storm identity.
+- TODO: finish final device-proofing and full gust-pressure delivery.
 
 ## Birds
 
@@ -79,8 +79,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: night watcher that punishes reckless jumping.
 - Dream traits: sleeping perch, reactive dive, eerie glow.
-- Current: dive trigger logic and clearer telegraphing now exist.
-- TODO: stronger night mood and clearer telegraphing.
+- Current: dive trigger logic, clearer telegraphing, stronger alert ring, and stronger night-glow mood now exist.
+- TODO: finish final device-proofing and deeper repeated-memory payoff.
 
 ### Duck
 
@@ -93,8 +93,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: hunter dive threat.
 - Dream traits: screech cue, target lock, diagonal punishment.
-- Current: dive hazard and stronger lock-on telegraph now exist.
-- TODO: stronger dramatic cue and player understanding.
+- Current: dive hazard now has a stronger target-lock read, clearer target zone, and better reward payoff on a clean pass.
+- TODO: finish final device-proofing and stronger dramatic cue understanding.
 
 ### TitGroup
 

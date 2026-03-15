@@ -407,7 +407,8 @@ Vanilla Orchid:
 Cactus:
 
 - `Implemented`: classic rigid hazard.
-- `TODO`: memory/cosmetic repeat-killer integration from later personality docs.
+- `Partial`: stronger warning staging and repeat-killer flavor response now exist.
+- `TODO`: broader memory/cosmetic integration and device-proofing.
 
 #### Trees
 
@@ -418,8 +419,8 @@ Weeping Willow:
 
 Jacaranda:
 
-- `Partial`: tree presence.
-- `TODO`: strong petal-noise gameplay and full-screen petal curtain feeling.
+- `Partial`: tree presence, clearer petal curtain, and stronger pass reward now exist.
+- `TODO`: full-screen petal-canopy spectacle and device-proofing.
 
 Bamboo:
 
@@ -428,16 +429,16 @@ Bamboo:
 
 Cherry Blossom:
 
-- `Partial`: tree presence and some scenic role.
-- `TODO`: wind gust modifier and petal-blinding atmosphere.
+- `Partial`: tree presence, gust staging, and stronger petal-storm feel now exist.
+- `TODO`: full gust-pressure behavior and device-proofing.
 
 #### Birds
 
 Owl:
 
 - `Implemented`: reactive dive on jump-nearby logic.
-- `Partial`: sleeping/perched/noise-punish mood and clearer dive telegraphing now exist.
-- `TODO`: amber eye-glow atmosphere and stronger night drama.
+- `Partial`: sleeping/perched/noise-punish mood, clearer dive telegraphing, alert ring, and stronger amber eye-glow now exist.
+- `TODO`: deeper night drama payoff and device-proofing.
 
 Duck:
 
@@ -447,7 +448,8 @@ Duck:
 Eagle:
 
 - `Implemented`: dive hazard.
-- `Partial`: lock-on cue and target capture drama are materially stronger.
+- `Partial`: lock-on cue, target-zone read, and clean-pass reward payoff are materially stronger.
+- `TODO`: stronger dramatic cue understanding and device-proofing.
 
 Tit / Chickadee:
 
