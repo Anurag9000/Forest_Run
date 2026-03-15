@@ -10,6 +10,12 @@ This file is the strict implementation ledger for everything from the original d
 - TODO: make seed orbs, Bloom meter, Bloom activation, hearts, score, distance, and garden loop visually undeniable in normal play.
 - TODO: verify that each entity’s unique behavior is visible and understandable without reading the code.
 
+## Documentation And Canonical Spec TODOs
+
+- TODO: resolve all historical conflicts into one canonical product truth:
+  biome count, biome names, Bloom seed threshold, Bloom duration, input model, failure flow, and any remaining old-vs-current contradictions.
+- TODO: once resolved, update every doc and the code constants to match the canonical truth exactly.
+
 ## GDD TODOs
 
 - TODO: full authored garden atmosphere at startup.

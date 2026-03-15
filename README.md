@@ -81,6 +81,7 @@ Generated artifacts:
 - [docs/UNDERTALE_VIBE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/UNDERTALE_VIBE.md): personality, mercy, memory, charm systems
 - [docs/ENTITY_DATABASE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/ENTITY_DATABASE.md): intended behavior for every entity and current gap
 - [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md): strict list of unimplemented or insufficient dream-spec items
+- [docs/SPEC_TRACEABILITY.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/SPEC_TRACEABILITY.md): source-by-source mapping of historical specs to current status
 - [docs/TECHNICAL_ARCHITECTURE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TECHNICAL_ARCHITECTURE.md): runtime structure and architectural gaps
 - [docs/VISUAL_FX_SPEC.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/VISUAL_FX_SPEC.md): presentation and feedback target
 - [spec.md](/home/anurag-basistha/Projects/TODO/Forest_Run/spec.md): repo truth and product mandate
