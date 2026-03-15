@@ -117,6 +117,8 @@ class GardenScreen(
     private var strongestBondLabel = "None"
     private var memoryPageCount = 0
     private var gardenReflectionLine = ""
+    private var creatureThoughtLine = ""
+    private var weatherThoughtLine = ""
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -182,6 +184,12 @@ class GardenScreen(
     }
     private val reflectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(205, 228, 240, 228)
+        textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.LEFT
+    }
+    private val thoughtPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(215, 255, 240, 210)
         textSize = 12f
         typeface = pixelFont
         textAlign = Paint.Align.LEFT
@@ -552,6 +560,14 @@ class GardenScreen(
             y += 24f
             canvas.drawText(gardenReflectionLine.take(88), lastRunRect.left + 18f, y, reflectionPaint)
         }
+        if (weatherThoughtLine.isNotBlank()) {
+            y += 20f
+            canvas.drawText(weatherThoughtLine.take(90), lastRunRect.left + 18f, y, reflectionPaint)
+        }
+        if (creatureThoughtLine.isNotBlank()) {
+            y += 20f
+            canvas.drawText(creatureThoughtLine.take(90), lastRunRect.left + 18f, y, thoughtPaint)
+        }
     }
 
     private fun drawCostumeIcon(canvas: Canvas, rect: RectF, style: CostumeStyle, unlocked: Boolean) {
@@ -612,10 +628,13 @@ class GardenScreen(
         lastRunSummary = SaveManager.loadLastRunSummary(context)
         forestMoodState = ForestMoodSystem.currentState(context)
         returnMoment = ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
-        returnVisitorSprite = returnMoment?.visitor?.let(::spriteForVisitor)
-        strongestBondLabel = RelationshipArcSystem.strongestRelationshipLabel(context) ?: "None"
+        val strongestBond = RelationshipArcSystem.strongestRelationship(context)
+        returnVisitorSprite = (returnMoment?.visitor ?: strongestBond?.first)?.let(::spriteForVisitor)
+        strongestBondLabel = strongestBond?.let { "${formatEntityName(it.first)} ${it.second.displayName}" } ?: "None"
         memoryPageCount = StoryFragmentSystem.memoryPageCount(context)
         gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
+        weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)
+        creatureThoughtLine = StoryFragmentSystem.creatureThought(context, strongestBond?.first).orEmpty()
     }
 
     private fun syncWardrobe() {
@@ -630,7 +649,7 @@ class GardenScreen(
 
     private fun syncInteractiveLayout(cw: Float, ch: Float) {
         runButtonRect.set(cw * 0.70f, ch * 0.14f, cw * 0.93f, ch * 0.26f)
-        lastRunRect.set(cw * 0.62f, ch * 0.30f, cw * 0.95f, ch * 0.60f)
+        lastRunRect.set(cw * 0.62f, ch * 0.30f, cw * 0.95f, ch * 0.66f)
         wardrobeRect.set(cw * 0.05f, ch * 0.73f, cw * 0.95f, ch * 0.87f)
         val cardGap = wardrobeRect.width() * 0.015f
         val cardWidth = (wardrobeRect.width() - cardGap * 5f) / 5f

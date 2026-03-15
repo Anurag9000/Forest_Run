@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.yourname.forest_run.entities.EntityType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -53,5 +54,14 @@ class RelationshipArcSystemTest {
 
         assertTrue(label!!.startsWith("Fox"))
         assertTrue(label.contains("Trust") || label.contains("Bond"))
+    }
+
+    @Test
+    fun `preferred garden visitor requires trust or better`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+
+        assertEquals(EntityType.CAT, RelationshipArcSystem.preferredGardenVisitor(context))
+        assertNotNull(RelationshipArcSystem.creatureThought(context, EntityType.CAT))
     }
 }

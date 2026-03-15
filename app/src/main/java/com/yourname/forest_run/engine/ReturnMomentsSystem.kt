@@ -42,20 +42,45 @@ object ReturnMomentsSystem {
         val previous = SaveManager.loadReturnMomentState(appContext)
         val dayId = nowMs / DAY_MS
         val alreadyGreetedToday = previous.lastGardenGreetingDay == dayId
+        val bondedVisitor = RelationshipArcSystem.preferredGardenVisitor(appContext)
+        val milestoneBond = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.MILESTONE)
 
         val moment = when {
             previous.lastActiveAtMs > 0L && nowMs - previous.lastActiveAtMs >= LONG_ABSENCE_MS ->
-                ReturnMoment("Welcome Back", "The willow kept your place.", EntityType.CAT)
+                bondedVisitor?.let {
+                    ReturnMoment("Welcome Back", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
+                } ?: ReturnMoment("Welcome Back", "The willow kept your place.", EntityType.CAT)
             previous.roughRunStreak >= 3 ->
-                ReturnMoment("Take A Breath", "Even the wind has softened for you.", EntityType.DOG)
+                when {
+                    bondedVisitor == EntityType.DOG || bondedVisitor == EntityType.CAT ->
+                        ReturnMoment("Take A Breath", RelationshipArcSystem.lineFor(appContext, bondedVisitor, RelationshipArcSystem.Event.RETURN), bondedVisitor)
+                    else -> ReturnMoment("Take A Breath", "Even the wind has softened for you.", EntityType.DOG)
+                }
+            (summary?.kindnessChain ?: 0) >= 6 || (summary?.sparedCount ?: 0) >= 2 ->
+                bondedVisitor?.let {
+                    ReturnMoment("Gentle Footsteps", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
+                } ?: ReturnMoment("Gentle Footsteps", "The path stayed kind long enough to remember you.", EntityType.CAT)
+            summary?.cleanPasses ?: 0 >= 10 && summary?.hitsTaken == 0 ->
+                bondedVisitor?.let {
+                    ReturnMoment("Steady Hands", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
+                } ?: ReturnMoment("Steady Hands", "The garden feels calmer after a run with no panic in it.")
             summary?.isNewHighScore == true ->
-                ReturnMoment("That Run Lingers", "A fox waits near the path, still impressed.", EntityType.FOX)
+                bondedVisitor?.let {
+                    ReturnMoment("That Run Lingers", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
+                } ?: ReturnMoment("That Run Lingers", "A fox waits near the path, still impressed.", EntityType.FOX)
             (summary?.sparedCount ?: 0) > 0 ->
-                ReturnMoment("Quiet Company", "Something small and warm has stayed behind.", EntityType.CAT)
+                milestoneBond?.let {
+                    ReturnMoment("Quiet Company", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
+                } ?: ReturnMoment("Quiet Company", "Something small and warm has stayed behind.", EntityType.CAT)
             (summary?.bloomConversions ?: 0) >= 2 ->
-                ReturnMoment("Afterglow", "The night keeps a little of your Bloom.", EntityType.OWL)
+                when (milestoneBond) {
+                    EntityType.OWL, EntityType.EAGLE -> ReturnMoment("Afterglow", RelationshipArcSystem.lineFor(appContext, milestoneBond, RelationshipArcSystem.Event.RETURN), milestoneBond)
+                    else -> ReturnMoment("Afterglow", "The night keeps a little of your Bloom.", EntityType.OWL)
+                }
             !alreadyGreetedToday ->
-                ReturnMoment("Good To See You", "The garden wakes a little when you do.")
+                bondedVisitor?.let {
+                    ReturnMoment("Good To See You", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
+                } ?: ReturnMoment("Good To See You", "The garden wakes a little when you do.")
             else -> null
         }
 

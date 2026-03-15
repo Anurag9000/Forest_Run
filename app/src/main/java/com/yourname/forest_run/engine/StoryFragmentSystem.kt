@@ -31,6 +31,32 @@ object StoryFragmentSystem {
         return fragment.text
     }
 
+    fun creatureThought(context: Context, type: EntityType?): String? {
+        val tracked = type ?: return null
+        val text = RelationshipArcSystem.creatureThought(context.applicationContext, tracked) ?: return null
+        val pageId = "page_thought_${tracked.name.lowercase()}"
+        unlockMemoryPage(context.applicationContext, pageId)
+        return text
+    }
+
+    fun weatherThought(context: Context, summary: RunSummary?): String {
+        val appContext = context.applicationContext
+        val mood = summary?.forestMood ?: ForestMoodSystem.currentState(appContext).currentMood
+        val strongest = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.RECOGNITION)
+        val text = when (mood) {
+            ForestMood.GENTLE -> if (strongest != null) {
+                "The evening wind moves like it knows who has been welcomed here."
+            } else {
+                "The evening wind has nothing urgent left to say."
+            }
+            ForestMood.RECKLESS -> "The branches still rustle like they are catching up to your hurry."
+            ForestMood.FEARFUL -> "The air stays soft, as if the weather decided not to press its luck."
+            ForestMood.STEADY -> "The wind keeps a patient pace through the garden."
+        }
+        unlockMemoryPage(appContext, "page_weather_${mood.name.lowercase()}")
+        return text
+    }
+
     fun memoryPageCount(context: Context): Int =
         SaveManager.loadUnlockedMemoryPages(context.applicationContext).size
 
@@ -140,6 +166,21 @@ object StoryFragmentSystem {
                     type = StoryFragmentType.GARDEN_REFLECTION,
                     text = text,
                     unlocksPageId = "page_bond_${type.name.lowercase()}"
+                )
+            } else if (stage == RelationshipStage.TRUST) {
+                val text = when (type) {
+                    EntityType.CAT -> "A familiar pause lingers near the flowers."
+                    EntityType.FOX -> "The path looks like it expects an answer from you."
+                    EntityType.WOLF -> "The grove sounds less empty than it used to."
+                    EntityType.DOG -> "Something about the air still feels eager."
+                    EntityType.OWL -> "The dark edge feels watched over instead of watched."
+                    EntityType.EAGLE -> "The sky feels stern, but not unfriendly."
+                    else -> "Something familiar has stayed behind."
+                }
+                return StoryFragment(
+                    id = "garden_trust_${type.name.lowercase()}",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = text
                 )
             }
         }

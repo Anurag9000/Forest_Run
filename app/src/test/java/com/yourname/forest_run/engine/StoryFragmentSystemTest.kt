@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.yourname.forest_run.entities.EntityType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -59,5 +60,18 @@ class StoryFragmentSystemTest {
 
         assertTrue(line!!.contains("trusted") || line.contains("breathes"))
         assertEquals(1, StoryFragmentSystem.memoryPageCount(context))
+    }
+
+    @Test
+    fun `creature thoughts and weather thoughts are available for bonded saves`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
+
+        val creatureThought = StoryFragmentSystem.creatureThought(context, EntityType.FOX)
+        val weatherThought = StoryFragmentSystem.weatherThought(context, null)
+
+        assertNotNull(creatureThought)
+        assertTrue(creatureThought!!.contains("fox") || creatureThought.contains("path") || creatureThought.contains("answer"))
+        assertTrue(weatherThought.contains("wind") || weatherThought.contains("air") || weatherThought.contains("branches"))
     }
 }

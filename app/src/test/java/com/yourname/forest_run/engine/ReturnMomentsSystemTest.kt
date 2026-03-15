@@ -2,6 +2,7 @@ package com.yourname.forest_run.engine
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.yourname.forest_run.entities.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -74,5 +75,34 @@ class ReturnMomentsSystemTest {
 
         val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 4_000L)
         assertEquals("Take A Breath", moment?.title)
+    }
+
+    @Test
+    fun `gentle high kindness run can return bonded visitor`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+
+        val summary = RunSummary(
+            score = 1_050,
+            distanceM = 720f,
+            isNewHighScore = false,
+            highScore = 1_300,
+            mercyHearts = 4,
+            mercyMisses = 5,
+            kindnessChain = 7,
+            cleanPasses = 8,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 7_000L)
+
+        assertEquals("Gentle Footsteps", moment?.title)
+        assertEquals(EntityType.CAT, moment?.visitor)
     }
 }

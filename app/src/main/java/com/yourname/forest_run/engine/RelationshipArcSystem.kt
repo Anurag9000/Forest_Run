@@ -88,6 +88,62 @@ object RelationshipArcSystem {
         return strongest to stage
     }
 
+    fun preferredGardenVisitor(
+        context: Context,
+        minimumStage: RelationshipStage = RelationshipStage.TRUST
+    ): EntityType? {
+        val strongest = strongestRelationship(context) ?: return null
+        return strongest.first.takeIf { strongest.second.ordinal >= minimumStage.ordinal }
+    }
+
+    fun isWarmBond(context: Context, type: EntityType): Boolean =
+        isTracked(type) && toneFor(context.applicationContext, type) == RelationshipTone.WARM
+
+    fun creatureThought(context: Context, type: EntityType): String? {
+        if (!isTracked(type)) return null
+        val stage = stageFor(context, type)
+        val tone = toneFor(context, type)
+        return when (type) {
+            EntityType.CAT -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> "The cat keeps one eye on the path."
+                RelationshipStage.RECOGNITION -> "The cat pretends not to expect you."
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The cat has stopped leaving when you arrive." else "The cat waits, but not too close."
+                RelationshipStage.MILESTONE -> "The cat behaves like this was always your shared place."
+            }
+            EntityType.FOX -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> "A clever pause lingers near the path."
+                RelationshipStage.RECOGNITION -> "The fox still treats every return like a challenge."
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The fox leaves room for your answer now." else "The fox watches to see if you still remember the rhythm."
+                RelationshipStage.MILESTONE -> "The fox no longer looks surprised when you keep up."
+            }
+            EntityType.WOLF -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> "The grove still remembers the howl first."
+                RelationshipStage.RECOGNITION -> "The wolf feels nearer, but less distant than before."
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The wolf's silence feels earned." else "The wolf keeps testing whether your calm will hold."
+                RelationshipStage.MILESTONE -> "The grove rests easier when the wolf chooses not to bare its teeth."
+            }
+            EntityType.DOG -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> "The garden still echoes with a bark."
+                RelationshipStage.RECOGNITION -> "The dog seems to think every return is an invitation."
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The dog acts like you were only gone for a minute." else "The dog is ready to forgive your nerves faster than you are."
+                RelationshipStage.MILESTONE -> "The dog has fully decided you belong here."
+            }
+            EntityType.OWL -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> "The dark edge keeps a patient shape."
+                RelationshipStage.RECOGNITION -> "The owl no longer startles the garden quite as much."
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The owl watches like a witness, not a warning." else "The owl still asks the night to judge your timing."
+                RelationshipStage.MILESTONE -> "The night has made room for the owl and still feels welcoming."
+            }
+            EntityType.EAGLE -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> "The sky feels too large to fully trust."
+                RelationshipStage.RECOGNITION -> "Even at rest, the shadow crosses your thoughts."
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The sky feels less hostile when the eagle chooses distance." else "The eagle still reminds you how small a mistake can look from above."
+                RelationshipStage.MILESTONE -> "The eagle's shadow feels more like recognition than threat now."
+            }
+            else -> null
+        }
+    }
+
     fun lineFor(context: Context, type: EntityType, event: Event): String {
         val stage = stageFor(context, type)
         val tone = toneFor(context, type)
