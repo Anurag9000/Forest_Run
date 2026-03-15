@@ -129,4 +129,17 @@ class SaveManagerTest {
 
         assertEquals(state, SaveManager.loadForestMoodState(context))
     }
+
+    @Test
+    fun `return moment state persists across reloads`() {
+        val state = ReturnMomentState(
+            lastActiveAtMs = 9_876L,
+            lastGardenGreetingDay = 42L,
+            roughRunStreak = 3
+        )
+
+        SaveManager.saveReturnMomentState(context, state)
+
+        assertEquals(state, SaveManager.loadReturnMomentState(context))
+    }
 }

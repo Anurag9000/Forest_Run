@@ -237,7 +237,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 22: MainMenuScreen
         if (!::mainMenuScreen.isInitialized) {
             mainMenuScreen = MainMenuScreen(context, spriteManager, screenWidth, screenHeight)
-            mainMenuScreen.onGardenTap = { appState = AppGameState.GARDEN }
+            mainMenuScreen.onGardenTap = {
+                if (::gardenScreen.isInitialized) gardenScreen.refresh()
+                appState = AppGameState.GARDEN
+            }
         }
 
         // Phase 23: GardenScreen
@@ -377,7 +380,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 23: GARDEN state
         if (appState == AppGameState.GARDEN) {
             if (::gardenScreen.isInitialized) {
-                gardenScreen.refresh()
                 gardenScreen.update(deltaTime)
             }
             return   // No physics while in garden
@@ -496,6 +498,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         currentRunSummary = gameState.buildRunSummary(currentRestQuote, killerType)
                         currentRunSummary?.let {
                             ForestMoodSystem.recordRun(context, it)
+                            ReturnMomentsSystem.recordRunOutcome(context, it)
                             SaveManager.saveLastRunSummary(context, it)
                         }
                         ghostRecorder.reset()

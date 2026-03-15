@@ -20,6 +20,8 @@ import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.Biome
 import com.yourname.forest_run.engine.ForestMoodState
 import com.yourname.forest_run.engine.ForestMoodSystem
+import com.yourname.forest_run.engine.ReturnMoment
+import com.yourname.forest_run.engine.ReturnMomentsSystem
 import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.FxPreset
@@ -108,6 +110,8 @@ class GardenScreen(
     private var wardrobeMessageTimer = 0f
     private var lastRunSummary: RunSummary? = null
     private var forestMoodState: ForestMoodState = ForestMoodState()
+    private var returnMoment: ReturnMoment? = null
+    private var returnVisitorSprite: SpriteSheet? = null
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -164,6 +168,12 @@ class GardenScreen(
     }
     private val moodPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(232, 246, 212); textSize = 14f; typeface = pixelFont; textAlign = Paint.Align.CENTER
+    }
+    private val returnTitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(255, 233, 180); textSize = 13f; typeface = pixelFont; textAlign = Paint.Align.CENTER
+    }
+    private val returnLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(220, 240, 245, 236); textSize = 12f; typeface = pixelFont; textAlign = Paint.Align.CENTER
     }
     private val seedCountPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(160, 255, 120); textSize = 22f; typeface = pixelFont; textAlign = Paint.Align.LEFT
@@ -252,6 +262,7 @@ class GardenScreen(
     fun update(deltaTime: Float) {
         elapsed += deltaTime
         catalogueSprites.forEach { it.update(deltaTime) }
+        returnVisitorSprite?.update(deltaTime)
         if (unlockAnim >= 0f) {
             unlockAnim = (unlockAnim + deltaTime * 1.5f).coerceAtMost(1f)
             if (unlockAnim >= 1f) unlockAnim = -1f
@@ -329,6 +340,11 @@ class GardenScreen(
         titlePaint.color = forestMoodState.currentMood.accentColor
         canvas.drawText("GARDEN", cw / 2f, ch * 0.10f, titlePaint)
         canvas.drawText(forestMoodState.currentMood.gardenLine, cw / 2f, ch * 0.13f, moodPaint)
+        returnMoment?.let { moment ->
+            canvas.drawText(moment.title, cw / 2f, ch * 0.16f, returnTitlePaint)
+            canvas.drawText(moment.line, cw / 2f, ch * 0.185f, returnLinePaint)
+            drawReturnVisitor(canvas, cw, ch)
+        }
 
         // Seed count
         canvas.drawText("🌱 $lifeSeeds", 28f, ch * 0.10f, seedCountPaint)
@@ -574,6 +590,8 @@ class GardenScreen(
         friendshipTotal = Biome.entries.sumOf { PersistentMemoryManager.getBiomeFriendship(context, it) }
         lastRunSummary = SaveManager.loadLastRunSummary(context)
         forestMoodState = ForestMoodSystem.currentState(context)
+        returnMoment = ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
+        returnVisitorSprite = returnMoment?.visitor?.let(::spriteForVisitor)
     }
 
     private fun syncWardrobe() {
@@ -621,5 +639,25 @@ class GardenScreen(
             Shader.TileMode.CLAMP
         )
         groundPaint.color = mood.groundColor
+    }
+
+    private fun drawReturnVisitor(canvas: Canvas, cw: Float, ch: Float) {
+        val sprite = returnVisitorSprite ?: return
+        val height = ch * 0.11f
+        val width = SpriteSizing.widthForHeight(sprite, height, minWidth = height * 0.7f)
+        val top = ch * 0.08f
+        val left = cw * 0.76f
+        spriteRect.set(left, top, left + width, top + height)
+        sprite.draw(canvas, spriteRect)
+    }
+
+    private fun spriteForVisitor(type: EntityType): SpriteSheet = when (type) {
+        EntityType.CAT -> spriteManager.catSprite.copy()
+        EntityType.FOX -> spriteManager.foxSprite.copy()
+        EntityType.DOG -> spriteManager.dogSprite.copy()
+        EntityType.OWL -> spriteManager.owlSprite.copy()
+        EntityType.EAGLE -> spriteManager.eagleSprite.copy()
+        EntityType.WOLF -> spriteManager.wolfSprite.copy()
+        else -> spriteManager.catSprite.copy()
     }
 }

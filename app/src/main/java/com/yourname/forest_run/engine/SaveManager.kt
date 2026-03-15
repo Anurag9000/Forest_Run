@@ -48,6 +48,9 @@ object SaveManager {
     private const val KEY_FOREST_RECKLESS_RUNS = "forest_reckless_runs"
     private const val KEY_FOREST_FEARFUL_RUNS = "forest_fearful_runs"
     private const val KEY_FOREST_STEADY_RUNS = "forest_steady_runs"
+    private const val KEY_LAST_ACTIVE_AT_MS = "last_active_at_ms"
+    private const val KEY_LAST_GARDEN_GREETING_DAY = "last_garden_greeting_day"
+    private const val KEY_ROUGH_RUN_STREAK = "rough_run_streak"
     private const val GHOST_FILENAME = "ghost_run.bin"
 
     // ── High score ────────────────────────────────────────────────────────
@@ -276,6 +279,23 @@ object SaveManager {
             recklessRuns = prefs.getInt(KEY_FOREST_RECKLESS_RUNS, 0),
             fearfulRuns = prefs.getInt(KEY_FOREST_FEARFUL_RUNS, 0),
             steadyRuns = prefs.getInt(KEY_FOREST_STEADY_RUNS, 0)
+        )
+    }
+
+    fun saveReturnMomentState(context: Context, state: ReturnMomentState) {
+        prefs(context).edit()
+            .putLong(KEY_LAST_ACTIVE_AT_MS, state.lastActiveAtMs)
+            .putLong(KEY_LAST_GARDEN_GREETING_DAY, state.lastGardenGreetingDay)
+            .putInt(KEY_ROUGH_RUN_STREAK, state.roughRunStreak)
+            .apply()
+    }
+
+    fun loadReturnMomentState(context: Context): ReturnMomentState {
+        val prefs = prefs(context)
+        return ReturnMomentState(
+            lastActiveAtMs = prefs.getLong(KEY_LAST_ACTIVE_AT_MS, 0L),
+            lastGardenGreetingDay = prefs.getLong(KEY_LAST_GARDEN_GREETING_DAY, -1L),
+            roughRunStreak = prefs.getInt(KEY_ROUGH_RUN_STREAK, 0)
         )
     }
 
