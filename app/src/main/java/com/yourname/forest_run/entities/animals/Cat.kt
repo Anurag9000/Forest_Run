@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
@@ -89,14 +90,8 @@ class Cat(
             playerHasPassed = true
             // Kindness bonus: flat 500 pts + double seeds (removed broken permanent 2x multiplier)
             gameState.addBonus(points = 500, seeds = 2)
-            val encounterCount = PersistentMemoryManager.getEncounterCount(context, EntityType.CAT)
-            val sparedCount = PersistentMemoryManager.getSparedCount(context, EntityType.CAT)
             DialogueBubbleManager.spawn(
-                text = when {
-                    sparedCount >= 3 -> "Friend?"
-                    encounterCount >= 3 -> "You again?"
-                    else -> "Meow?"
-                },
+                text = RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.PASS),
                 anchorX = x + catW * 0.5f,
                 anchorY = y - 12f,
                 fillColor = Color.rgb(255, 235, 248),
@@ -117,12 +112,24 @@ class Cat(
         waving = true
         waveTimer = 2.5f
         PersistentMemoryManager.recordSpare(context, EntityType.CAT)
-        DialogueBubbleManager.spawn("See you!", x + catW * 0.5f, y - 18f, Color.rgb(255, 240, 252), Color.rgb(150, 80, 130))
+        DialogueBubbleManager.spawn(
+            RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.SPARE),
+            x + catW * 0.5f,
+            y - 18f,
+            Color.rgb(255, 240, 252),
+            Color.rgb(150, 80, 130)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) {
-            DialogueBubbleManager.spawn("Hiss!", x + catW * 0.5f, y - 14f, Color.rgb(255, 226, 226), Color.rgb(180, 60, 60))
+            DialogueBubbleManager.spawn(
+                RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.THREAT),
+                x + catW * 0.5f,
+                y - 14f,
+                Color.rgb(255, 226, 226),
+                Color.rgb(180, 60, 60)
+            )
             return CollisionResult.HIT
         }
 

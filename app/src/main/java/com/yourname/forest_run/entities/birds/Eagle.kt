@@ -7,10 +7,12 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.ui.DialogueBubbleManager
 import kotlin.math.sqrt
@@ -75,7 +77,13 @@ class Eagle(
         velX = dx / dist * diveSpeed
         velY = dy / dist * diveSpeed
         CameraSystem.shakeEagle()  // Phase 15: lock-on tremor
-        DialogueBubbleManager.spawn("Marked.", targetX, targetY - 28f, Color.rgb(255, 234, 234), Color.rgb(180, 70, 70))
+        DialogueBubbleManager.spawn(
+            RelationshipArcSystem.lineFor(context, EntityType.EAGLE, RelationshipArcSystem.Event.THREAT),
+            targetX,
+            targetY - 28f,
+            Color.rgb(255, 234, 234),
+            Color.rgb(180, 70, 70)
+        )
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
@@ -112,7 +120,7 @@ class Eagle(
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         gameState.addBonus(points = 165, seeds = 1)
         DialogueBubbleManager.spawn(
-            text = "Outran the mark.",
+            text = RelationshipArcSystem.lineFor(context, EntityType.EAGLE, RelationshipArcSystem.Event.PASS),
             anchorX = targetX,
             anchorY = targetY - 28f,
             fillColor = Color.rgb(255, 236, 236),

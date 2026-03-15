@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
@@ -120,14 +121,26 @@ class Fox(
             gameState.addBonus(points = 120, seeds = 2)
             PersistentMemoryManager.recordSpare(context, EntityType.FOX)
             gameState.recordSpare()
-            DialogueBubbleManager.spawn("Fine.", x + foxW * 0.55f, y - 16f, Color.rgb(255, 240, 220), Color.rgb(190, 110, 55))
+            DialogueBubbleManager.spawn(
+                RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.SPARE),
+                x + foxW * 0.55f,
+                y - 16f,
+                Color.rgb(255, 240, 220),
+                Color.rgb(190, 110, 55)
+            )
             return
         }
 
         if (!passRewarded && hasJumped && foxState != FoxState.SPARED) {
             passRewarded = true
             gameState.addBonus(points = 150, seeds = 1)
-            DialogueBubbleManager.spawn("Copycat.", x + foxW * 0.55f, y - 16f, Color.rgb(255, 238, 220), Color.rgb(190, 110, 55))
+            DialogueBubbleManager.spawn(
+                RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.PASS),
+                x + foxW * 0.55f,
+                y - 16f,
+                Color.rgb(255, 238, 220),
+                Color.rgb(190, 110, 55)
+            )
         }
     }
 
@@ -144,9 +157,8 @@ class Fox(
             hasJumped = true
             foxState  = FoxState.JUMPING
             foxVelY   = foxJumpForce
-            val encounterCount = PersistentMemoryManager.getEncounterCount(context, EntityType.FOX)
             DialogueBubbleManager.spawn(
-                text = if (encounterCount >= 4) "Same jump?" else "Heh.",
+                text = RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.THREAT),
                 anchorX = x + foxW * 0.55f,
                 anchorY = y - 16f,
                 fillColor = Color.rgb(255, 238, 220),

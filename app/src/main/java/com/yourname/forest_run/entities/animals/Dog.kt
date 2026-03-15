@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -218,14 +219,26 @@ class Dog(
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         if (mode == DogMode.HAZARD) {
             gameState.addBonus(points = 145, seeds = 1)
-            DialogueBubbleManager.spawn("Good hop!", x + dogW * 0.5f, y - 18f, Color.rgb(255, 246, 214), Color.rgb(170, 120, 45))
+            DialogueBubbleManager.spawn(
+                RelationshipArcSystem.lineFor(context, com.yourname.forest_run.entities.EntityType.DOG, RelationshipArcSystem.Event.PASS),
+                x + dogW * 0.5f,
+                y - 18f,
+                Color.rgb(255, 246, 214),
+                Color.rgb(170, 120, 45)
+            )
             return
         }
 
         if (!buddyRewarded) {
             buddyRewarded = true
             gameState.addBonus(points = 180, seeds = 2)
-            DialogueBubbleManager.spawn("Best friend!", x + dogW * 0.5f, y - 20f, Color.rgb(255, 248, 210), Color.rgb(170, 120, 45))
+            DialogueBubbleManager.spawn(
+                RelationshipArcSystem.lineFor(context, com.yourname.forest_run.entities.EntityType.DOG, RelationshipArcSystem.Event.SPARE),
+                x + dogW * 0.5f,
+                y - 20f,
+                Color.rgb(255, 248, 210),
+                Color.rgb(170, 120, 45)
+            )
         }
     }
 }

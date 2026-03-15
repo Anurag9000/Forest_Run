@@ -6,8 +6,10 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
@@ -122,7 +124,7 @@ class Owl(
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         gameState.addBonus(points = 150)
         DialogueBubbleManager.spawn(
-            text = if (owlState == OwlState.SLEEPING) "Silent pass." else "Too slow.",
+            text = RelationshipArcSystem.lineFor(context, EntityType.OWL, RelationshipArcSystem.Event.PASS),
             anchorX = x + birdW * 0.5f,
             anchorY = y - 18f,
             fillColor = Color.rgb(255, 244, 220),
@@ -143,7 +145,13 @@ class Owl(
             pendingTargetX = player.x
             pendingTargetY = player.y
             if (!hasWarned) {
-                DialogueBubbleManager.spawn("...hoo?", x + birdW * 0.5f, y - 14f, Color.rgb(255, 242, 220), Color.rgb(170, 120, 60))
+                DialogueBubbleManager.spawn(
+                    RelationshipArcSystem.lineFor(context, EntityType.OWL, RelationshipArcSystem.Event.THREAT),
+                    x + birdW * 0.5f,
+                    y - 14f,
+                    Color.rgb(255, 242, 220),
+                    Color.rgb(170, 120, 60)
+                )
                 hasWarned = true
             }
         }

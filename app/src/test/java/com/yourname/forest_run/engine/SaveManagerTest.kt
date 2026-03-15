@@ -142,4 +142,11 @@ class SaveManagerTest {
 
         assertEquals(state, SaveManager.loadReturnMomentState(context))
     }
+
+    @Test
+    fun `relationship stages persist across reloads`() {
+        SaveManager.saveRelationshipStage(context, EntityType.CAT, RelationshipStage.TRUST)
+
+        assertEquals(RelationshipStage.TRUST, SaveManager.loadRelationshipStage(context, EntityType.CAT))
+    }
 }

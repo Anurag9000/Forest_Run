@@ -299,6 +299,15 @@ object SaveManager {
         )
     }
 
+    fun saveRelationshipStage(context: Context, type: EntityType, stage: RelationshipStage) {
+        prefs(context).edit().putString("relationship_stage_${type.name.lowercase()}", stage.name).apply()
+    }
+
+    fun loadRelationshipStage(context: Context, type: EntityType): RelationshipStage? =
+        prefs(context).getString("relationship_stage_${type.name.lowercase()}", null)?.let { raw ->
+            runCatching { RelationshipStage.valueOf(raw) }.getOrNull()
+        }
+
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private fun prefs(context: Context) =

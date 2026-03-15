@@ -8,6 +8,7 @@ import android.graphics.RectF
 import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -79,9 +80,8 @@ class Wolf(
                 if (x < screenWidth * 0.5f && !spared) {
                     wolfState = WolfState.HOWLING
                     howlTimer = 0f
-                    val hitCount = PersistentMemoryManager.getHitCount(context, EntityType.WOLF)
                     DialogueBubbleManager.spawn(
-                        text = if (hitCount >= 1) "I remember." else "GRRR...",
+                        text = RelationshipArcSystem.lineFor(context, EntityType.WOLF, RelationshipArcSystem.Event.THREAT),
                         anchorX = x + wolfW * 0.5f,
                         anchorY = y - 20f,
                         fillColor = Color.rgb(245, 228, 232),
@@ -139,14 +139,26 @@ class Wolf(
             gameState.addBonus(points = 200, seeds = 3)
             PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
             gameState.recordSpare()
-            DialogueBubbleManager.spawn("Go on.", x + wolfW * 0.5f, y - 20f, Color.rgb(232, 236, 245), Color.rgb(110, 110, 140))
+            DialogueBubbleManager.spawn(
+                RelationshipArcSystem.lineFor(context, EntityType.WOLF, RelationshipArcSystem.Event.SPARE),
+                x + wolfW * 0.5f,
+                y - 20f,
+                Color.rgb(232, 236, 245),
+                Color.rgb(110, 110, 140)
+            )
             return
         }
 
         if (!passRewarded && wolfState == WolfState.CHARGING) {
             passRewarded = true
             gameState.addBonus(points = 180, seeds = 1)
-            DialogueBubbleManager.spawn("You made it.", x + wolfW * 0.5f, y - 20f, Color.rgb(236, 240, 255), Color.rgb(110, 110, 140))
+            DialogueBubbleManager.spawn(
+                RelationshipArcSystem.lineFor(context, EntityType.WOLF, RelationshipArcSystem.Event.PASS),
+                x + wolfW * 0.5f,
+                y - 20f,
+                Color.rgb(236, 240, 255),
+                Color.rgb(110, 110, 140)
+            )
         }
     }
 

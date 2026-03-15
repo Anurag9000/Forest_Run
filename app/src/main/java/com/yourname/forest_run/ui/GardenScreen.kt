@@ -12,6 +12,7 @@ import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.CostumeManager
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.engine.SaveManager
 import com.yourname.forest_run.engine.SpriteManager
@@ -112,6 +113,7 @@ class GardenScreen(
     private var forestMoodState: ForestMoodState = ForestMoodState()
     private var returnMoment: ReturnMoment? = null
     private var returnVisitorSprite: SpriteSheet? = null
+    private var strongestBondLabel = "None"
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -444,7 +446,7 @@ class GardenScreen(
     }
 
     private fun drawStatsPanel(canvas: Canvas, cw: Float, ch: Float) {
-        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.30f)
+        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.35f)
         canvas.drawRoundRect(statsRect, 18f, 18f, statsPanelPaint)
         canvas.drawRoundRect(statsRect, 18f, 18f, statsBorderPaint)
 
@@ -460,6 +462,9 @@ class GardenScreen(
         y += 54f
         canvas.drawText("Friend Biomes", statsRect.left + 18f, y, statsLabelPaint)
         canvas.drawText(friendshipTotal.toString(), statsRect.left + 18f, y + 20f, statsValuePaint)
+        y += 54f
+        canvas.drawText("Strongest Bond", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(strongestBondLabel, statsRect.left + 18f, y + 20f, statsValuePaint)
     }
 
     private fun drawRunButton(canvas: Canvas, @Suppress("UNUSED_PARAMETER") cw: Float, @Suppress("UNUSED_PARAMETER") ch: Float) {
@@ -592,6 +597,7 @@ class GardenScreen(
         forestMoodState = ForestMoodSystem.currentState(context)
         returnMoment = ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
         returnVisitorSprite = returnMoment?.visitor?.let(::spriteForVisitor)
+        strongestBondLabel = RelationshipArcSystem.strongestRelationshipLabel(context) ?: "None"
     }
 
     private fun syncWardrobe() {

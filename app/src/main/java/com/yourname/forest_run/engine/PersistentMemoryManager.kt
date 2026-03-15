@@ -12,18 +12,28 @@ import com.yourname.forest_run.entities.EntityType
 object PersistentMemoryManager {
 
     fun recordEncounter(context: Context, type: EntityType) {
-        SaveManager.incrementEncounterCount(context.applicationContext, type)
+        val appContext = context.applicationContext
+        SaveManager.incrementEncounterCount(appContext, type)
+        if (RelationshipArcSystem.isTracked(type)) {
+            RelationshipArcSystem.refreshStage(appContext, type)
+        }
     }
 
     fun recordSpare(context: Context, type: EntityType) {
         val appContext = context.applicationContext
         SaveManager.incrementSparedCount(appContext, type)
+        if (RelationshipArcSystem.isTracked(type)) {
+            RelationshipArcSystem.refreshStage(appContext, type)
+        }
     }
 
     fun recordHit(context: Context, type: EntityType) {
         val appContext = context.applicationContext
         SaveManager.incrementHitCount(appContext, type)
         SaveManager.saveLastKiller(appContext, type)
+        if (RelationshipArcSystem.isTracked(type)) {
+            RelationshipArcSystem.refreshStage(appContext, type)
+        }
     }
 
     fun getEncounterCount(context: Context, type: EntityType): Int =
@@ -44,4 +54,7 @@ object PersistentMemoryManager {
 
     fun getBiomeFriendship(context: Context, biome: Biome): Int =
         SaveManager.loadBiomeFriendship(context.applicationContext, biome)
+
+    fun getRelationshipStage(context: Context, type: EntityType): RelationshipStage =
+        RelationshipArcSystem.stageFor(context.applicationContext, type)
 }
