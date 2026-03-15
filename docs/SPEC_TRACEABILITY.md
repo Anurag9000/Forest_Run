@@ -436,52 +436,53 @@ Cherry Blossom:
 Owl:
 
 - `Implemented`: reactive dive on jump-nearby logic.
-- `Partial`: sleeping/perched/noise-punish mood.
-- `TODO`: amber eye-glow atmosphere.
+- `Partial`: sleeping/perched/noise-punish mood and clearer dive telegraphing now exist.
+- `TODO`: amber eye-glow atmosphere and stronger night drama.
 
 Duck:
 
-- `Implemented`: low-flying hazard.
-- `TODO`: clear telegraphed duck-only teaching role.
+- `Implemented`: low-flying hazard and clearer duck-lane teaching role.
+- `TODO`: final on-device cue polish and stronger quack payoff.
 
 Eagle:
 
 - `Implemented`: dive hazard.
-- `Partial`: lock-on cue and target capture drama.
+- `Partial`: lock-on cue and target capture drama are materially stronger.
 
 Tit / Chickadee:
 
 - `Implemented`: grouped bird classes.
-- `TODO`: full sine-wave rhythm identity for tits.
-- `TODO`: full erratic snap-altitude identity for chickadees.
+- `Partial`: stronger sine-wave rhythm identity for tits.
+- `Partial`: stronger erratic altitude identity for chickadees.
 
 #### Animals
 
 Wolf:
 
 - `Implemented`: howl and charge logic.
-- `Partial`: dramatic readability.
+- `Partial`: dramatic readability is materially stronger.
 - `TODO`: stronger mercy-based spare payoff.
 
 Cat:
 
 - `Implemented`: kindness reward and some spare-like behavior.
-- `Partial`: optional reward-hazard readability.
+- `Partial`: optional reward-hazard readability is materially stronger.
 
 Fox:
 
 - `Implemented`: mirror-jump behavior.
-- `Partial`: sly timing-game readability and spare path clarity.
+- `Partial`: sly timing-game readability and spare path clarity are materially stronger.
 
 Hedgehog:
 
 - `Implemented`: non-lethal speed debuff.
-- `TODO`: fair visibility under petal-noise conditions.
+- `Partial`: fair visibility is materially stronger.
+- `TODO`: final fairness under petal-noise and real-device conditions.
 
 Dog:
 
 - `Implemented`: bark-projectile hazard and buddy variant.
-- `Partial`: readability and memorability of both modes.
+- `Partial`: readability and memorability of both modes are materially stronger.
 
 #### Biome Affinity Map
 
@@ -497,7 +498,8 @@ Dog:
 
 #### Visual Style / Chibi / Eye States
 
-- `TODO`: separate face layer and all listed eye-state reactions.
+- `Implemented`: separate face layer baseline exists with multiple eye-state reactions.
+- `TODO`: full listed eye-state coverage and stronger expressive presentation.
 - `TODO`: max-16-color discipline and stronger retro-specific art constraints as policy.
 
 #### Rest Quotes
