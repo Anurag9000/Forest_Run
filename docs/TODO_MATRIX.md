@@ -52,7 +52,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - DONE: added a save-backed `ForestMoodSystem` with run classification into gentle, reckless, fearful, and steady.
 - PARTIAL: current tone now affects Garden palette, rest/Garden labeling, sanctuary ambience, and visible carry-home framing; deepen creature warmth and broader presentation response.
-- TODO: surface repeated panic or repeated harm from the same creature as emotional consequences, not only counters.
+- PARTIAL: repeated panic or repeated harm from the same creature now surfaces through cautious sanctuary traces, softer return moments, and Garden caution reflections; deepen broader creature warmth and world-state response.
 - PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, and trust traces; deepen the effect and tie it more directly to repeated creature-specific history.
 - TODO: ensure the player can feel that the world has formed an opinion about how they play.
 
@@ -78,7 +78,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: short rest quotes now run through a first-class fragment-driven writing layer.
 - PARTIAL: rare Garden reflections and unlockable poetic memory pages now exist in baseline form.
 - PARTIAL: one-line creature thoughts for bonded creatures now exist in the Garden baseline.
-- PARTIAL: weather-linked thoughts now exist in baseline Garden form; broaden authored coverage for Garden reflections.
+- PARTIAL: weather-linked thoughts and caution-oriented Garden reflections now exist in baseline Garden form; broaden authored coverage further.
 - TODO: deepen poetic memory pages so they reveal feeling without lore-dumping.
 - TODO: keep fragment writing brief, intimate, and suggestive rather than expository.
 - TODO: ensure mystery and emotional residue are preserved through restraint.

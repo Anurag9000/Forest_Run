@@ -70,4 +70,38 @@ class GardenSanctuaryPlannerTest {
         assertTrue(state.sanctuaryLine.contains("lowers its voice"))
         assertTrue(state.canopyShadeAlpha >= 50)
     }
+
+    @Test
+    fun `repeated harm leaves a cautious sanctuary trace`() {
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 3, totalRuns = 3, fearfulRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 420,
+            distanceM = 330f,
+            isNewHighScore = false,
+            highScore = 990,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 2,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Cautious Path", state.traces.first().label)
+        assertEquals(EntityType.WOLF, state.traces.first().type)
+        assertTrue(state.sanctuaryLine.contains("tender"))
+        assertTrue(state.carryHomeLine.contains("Wolf"))
+        assertTrue(state.canopyShadeAlpha >= 64)
+    }
 }

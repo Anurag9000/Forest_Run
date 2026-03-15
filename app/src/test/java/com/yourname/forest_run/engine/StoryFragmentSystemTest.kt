@@ -74,4 +74,33 @@ class StoryFragmentSystemTest {
         assertTrue(creatureThought!!.contains("fox") || creatureThought.contains("path") || creatureThought.contains("answer"))
         assertTrue(weatherThought.contains("wind") || weatherThought.contains("air") || weatherThought.contains("branches"))
     }
+
+    @Test
+    fun `garden reflection unlocks caution page for repeated harm`() {
+        PersistentMemoryManager.recordHit(context, EntityType.EAGLE)
+        PersistentMemoryManager.recordHit(context, EntityType.EAGLE)
+        val summary = RunSummary(
+            score = 510,
+            distanceM = 440f,
+            isNewHighScore = false,
+            highScore = 1200,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.EAGLE,
+            restQuote = "Marked.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("nerves") || line.contains("gentle"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_caution_eagle"))
+    }
 }

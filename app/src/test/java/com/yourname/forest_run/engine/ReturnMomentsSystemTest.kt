@@ -105,4 +105,36 @@ class ReturnMomentsSystemTest {
         assertEquals("Gentle Footsteps", moment?.title)
         assertEquals(EntityType.CAT, moment?.visitor)
     }
+
+    @Test
+    fun `repeated harm creates a still tender return moment`() {
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.OWL) }
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = 10_000L, lastGardenGreetingDay = -1L, roughRunStreak = 2)
+        )
+        val summary = RunSummary(
+            score = 360,
+            distanceM = 295f,
+            isNewHighScore = false,
+            highScore = 910,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.OWL,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 12_000L)
+
+        assertEquals("Still Tender", moment?.title)
+        assertEquals(EntityType.OWL, moment?.visitor)
+        assertNotNull(moment?.line)
+    }
 }

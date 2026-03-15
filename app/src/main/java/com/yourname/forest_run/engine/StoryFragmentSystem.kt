@@ -148,6 +148,9 @@ object StoryFragmentSystem {
     private fun selectGardenFragment(context: Context, summary: RunSummary?): StoryFragment? {
         val strongest = RelationshipArcSystem.strongestRelationship(context)
         val mood = ForestMoodSystem.currentState(context).currentMood
+        val repeatedHarmCreature = (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(context))?.takeIf {
+            PersistentMemoryManager.getHitCount(context, it) >= 2
+        }
 
         if (strongest != null) {
             val (type, stage) = strongest
@@ -186,6 +189,14 @@ object StoryFragmentSystem {
         }
 
         summary?.let {
+            if (repeatedHarmCreature != null && (it.hitsTaken > 0 || it.forestMood == ForestMood.FEARFUL)) {
+                return StoryFragment(
+                    id = "garden_repeated_harm_${repeatedHarmCreature.name.lowercase()}",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = "The garden is gentle about the places your nerves still remember.",
+                    unlocksPageId = "page_garden_caution_${repeatedHarmCreature.name.lowercase()}"
+                )
+            }
             if (it.forestMood == ForestMood.GENTLE && it.sparedCount > 0) {
                 return StoryFragment(
                     id = "garden_gentle_aftercare",

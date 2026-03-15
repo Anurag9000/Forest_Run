@@ -694,6 +694,7 @@ These items are not from the earliest historical repo docs. They are explicit us
 
 - `Implemented`: a world-tone system now classifies recent runs into gentle, reckless, fearful, and steady.
 - `Partial`: world tone now affects Garden palette, sanctuary ambience, and rest/Garden framing.
+- `Partial`: repeated harm from the same creature now shows up in sanctuary planning, Garden return caution moments, and Garden reflection fragments.
 - `TODO`: deepen ambience, creature warmth, and broader world-state response.
 
 #### Named Relationship Arcs
@@ -713,7 +714,7 @@ These items are not from the earliest historical repo docs. They are explicit us
 #### Quiet Story Fragments
 
 - `Implemented`: short rest quotes now run through a first-class fragment system.
-- `Partial`: rare Garden reflections, weather-linked Garden thoughts, bonded creature thoughts, and unlockable poetic memory pages now exist in baseline form.
+- `Partial`: rare Garden reflections, weather-linked Garden thoughts, bonded creature thoughts, repeated-harm caution reflections, and unlockable poetic memory pages now exist in baseline form.
 - `TODO`: broaden creature thoughts and weather-linked lines beyond the current Garden-focused baseline.
 - `TODO`: preserve emotional mystery through fragment writing instead of explicit exposition.
 

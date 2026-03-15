@@ -44,12 +44,21 @@ object ReturnMomentsSystem {
         val alreadyGreetedToday = previous.lastGardenGreetingDay == dayId
         val bondedVisitor = RelationshipArcSystem.preferredGardenVisitor(appContext)
         val milestoneBond = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.MILESTONE)
+        val repeatedHarmCreature = (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
+            PersistentMemoryManager.getHitCount(appContext, it) >= 2
+        }
 
         val moment = when {
             previous.lastActiveAtMs > 0L && nowMs - previous.lastActiveAtMs >= LONG_ABSENCE_MS ->
                 bondedVisitor?.let {
                     ReturnMoment("Welcome Back", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
                 } ?: ReturnMoment("Welcome Back", "The willow kept your place.", EntityType.CAT)
+            repeatedHarmCreature != null && ((summary?.hitsTaken ?: 0) > 0 || previous.roughRunStreak >= 2) ->
+                ReturnMoment(
+                    "Still Tender",
+                    repeatedHarmLine(repeatedHarmCreature),
+                    if (RelationshipArcSystem.isTracked(repeatedHarmCreature)) repeatedHarmCreature else bondedVisitor
+                )
             previous.roughRunStreak >= 3 ->
                 when {
                     bondedVisitor == EntityType.DOG || bondedVisitor == EntityType.CAT ->
@@ -92,5 +101,20 @@ object ReturnMomentsSystem {
             )
         )
         return moment
+    }
+
+    private fun repeatedHarmLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The garden stays careful around the place the cat keeps catching you."
+        EntityType.FOX -> "The fox still leaves you thinking about the jump you missed."
+        EntityType.WOLF -> "The grove remembers the same howl reaching you more than once."
+        EntityType.DOG -> "Even home can still hear the bark line you never quite escaped."
+        EntityType.HEDGEHOG -> "The path is trying to teach gentleness where the thorns kept winning."
+        EntityType.DUCK -> "The lane still feels low where the duck kept surprising you."
+        EntityType.TIT, EntityType.CHICKADEE -> "The air has not quite forgotten the flock that kept rushing you."
+        EntityType.OWL -> "Night has gone watchful around the place the owl keeps finding."
+        EntityType.EAGLE -> "The sky still feels marked where the eagle kept choosing you."
+        EntityType.CACTUS, EntityType.LILY_OF_VALLEY, EntityType.HYACINTH, EntityType.EUCALYPTUS,
+        EntityType.VANILLA_ORCHID, EntityType.WEEPING_WILLOW, EntityType.JACARANDA, EntityType.BAMBOO,
+        EntityType.CHERRY_BLOSSOM -> "The garden remembers which shape of forest kept brushing against your nerves."
     }
 }

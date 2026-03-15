@@ -127,6 +127,12 @@ This game should keep players returning because the forest feels personal, not b
 - Repeated kindness should produce visible trust signs, calmer ambience, and a stronger sense of sanctuary.
 - The player should feel that the forest has formed a soft opinion about them.
 
+Current baseline:
+
+- recent run tone now affects Garden ambience and carry-home framing
+- repeated harm from the same creature now surfaces as caution in sanctuary traces, Garden return moments, and Garden reflections
+- broader creature warmth and richer world-state consequence are still TODO
+
 #### 3.8.2 Named Relationship Arcs
 
 - Cat, Fox, Wolf, Dog, Owl, and Eagle should evolve beyond obstacle classes into remembered relationships.
@@ -162,7 +168,7 @@ Current baseline:
 Current baseline:
 
 - rest quotes now route through a fragment system instead of only hard-coded quote branches
-- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, and track unlocked memory pages
+- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, and track unlocked memory pages
 - broader creature-thought coverage and richer weather-linked fragments are still TODO
 
 ### Current Status

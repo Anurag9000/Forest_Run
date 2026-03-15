@@ -184,6 +184,7 @@ Examples:
 ### Current Status
 
 - Partial: forest mood and personal return moments now exist in baseline form.
+- Partial: repeated harm now leaves cautious sanctuary, return, and reflection beats in baseline form.
 - Partial: named relationship arcs now exist in baseline runtime form for Cat, Fox, Wolf, Dog, Owl, and Eagle, with persisted stages, stage-aware dialogue/payoff, and bonded Garden return hooks.
 - Partial: quiet story fragments now exist in baseline runtime form through fragment-driven rest quotes, Garden reflections, weather-linked thoughts, bonded creature thoughts, and memory-page unlocks.
 - TODO: deepen forest mood consequences, relationship-stage consequences, fragment coverage, and return-moment richness beyond the current baseline.
