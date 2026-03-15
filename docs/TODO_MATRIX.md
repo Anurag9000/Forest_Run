@@ -58,11 +58,12 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Named Relationship Arcs
 
-- TODO: formalize relationship stages for Cat, Fox, Wolf, Dog, Owl, and Eagle.
-- TODO: give each relationship a first-impression phase, recognition phase, trust phase, and milestone state.
-- TODO: bind relationship stages to dialogue, encounter reactions, spare behavior, Garden presence, and cosmetics.
-- TODO: make repeated positive interactions produce visible warmth and familiarity.
-- TODO: make repeated negative interactions produce tension, fear, disappointment, or caution where appropriate.
+- DONE: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
+- DONE: each relationship now has first-impression, recognition, trust, and milestone states.
+- PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, and Garden strongest-bond presentation.
+- TODO: bind relationship stages more deeply to encounter reactions, Garden presence, and cosmetics.
+- TODO: make repeated positive interactions produce more visible warmth and familiarity.
+- TODO: make repeated negative interactions produce stronger tension, fear, disappointment, or caution where appropriate.
 - TODO: add milestone rewards that feel relational, not merely numerical.
 
 ### Personal Return Moments
@@ -123,7 +124,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- PARTIAL: first-class emotional systems now exist for forest mood and personal return moments; relationship arcs and quiet story fragments still need implementation.
+- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, and relationship arcs; quiet story fragments still need implementation.
 
 ## Visual And Audio TODOs
 

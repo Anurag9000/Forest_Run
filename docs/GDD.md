@@ -135,6 +135,13 @@ This game should keep players returning because the forest feels personal, not b
 - Positive repetition should create warmth and familiarity.
 - Negative repetition should create caution, fear, disappointment, or tension where appropriate.
 
+Current baseline:
+
+- major-creature relationship stages now exist in runtime and persist across sessions
+- stage-aware lines now affect pass, threat, spare, and return tone for Cat, Fox, Wolf, Dog, Owl, and Eagle
+- Garden now surfaces the strongest current bond
+- deeper Garden presence, milestone rewards, and broader behavior shifts are still TODO
+
 #### 3.8.3 Personal Return Moments
 
 - The game should notice when the player comes back.

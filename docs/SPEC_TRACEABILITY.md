@@ -697,9 +697,10 @@ These items are not from the earliest historical repo docs. They are explicit us
 
 #### Named Relationship Arcs
 
-- `TODO`: formal relationship stages for Cat, Fox, Wolf, Dog, Owl, and Eagle.
-- `TODO`: relationship-driven dialogue, encounter shifts, Garden presence, and milestone presentation.
-- `TODO`: visible warmth from repeated positive interactions and visible caution or tension from repeated negative ones.
+- `Implemented`: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
+- `Partial`: relationship-driven dialogue now affects pass, threat, spare, and return tone, and Garden surfaces the strongest bond.
+- `TODO`: deepen encounter shifts, Garden presence, and milestone presentation.
+- `TODO`: make visible warmth from repeated positive interactions and visible caution or tension from repeated negative ones more pronounced in play.
 
 #### Personal Return Moments
 
