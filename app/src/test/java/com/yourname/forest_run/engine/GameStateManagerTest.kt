@@ -141,5 +141,6 @@ class GameStateManagerTest {
         assertEquals(2, summary.mercyHearts)
         assertEquals(1, summary.bloomConversions)
         assertEquals(EntityType.WOLF, summary.lastKiller)
+        assertEquals(ForestMood.GENTLE, summary.forestMood)
     }
 }

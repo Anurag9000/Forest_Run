@@ -83,6 +83,12 @@ class GameOverScreen(
         textAlign = Paint.Align.CENTER
         color     = Color.rgb(140, 220, 140)
     }
+    private val moodPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont
+        textSize = 18f
+        textAlign = Paint.Align.CENTER
+        color = Color.argb(220, 212, 230, 255)
+    }
     private val newBestPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface  = pixelFont
         textSize  = 20f
@@ -148,6 +154,8 @@ class GameOverScreen(
 
         drawWrappedCenteredText(canvas, summary.restQuote, cx, ty, panelW * 0.82f, quotePaint)
         ty += 64f
+        canvas.drawText(summary.forestMood.restLine, cx, ty, moodPaint)
+        ty += 30f
 
         // 4. Score label + value
         canvas.drawText("SCORE", cx, ty, scoreLabelPaint)

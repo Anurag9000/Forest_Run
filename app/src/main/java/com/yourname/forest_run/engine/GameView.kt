@@ -494,7 +494,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                             )
                         }
                         currentRunSummary = gameState.buildRunSummary(currentRestQuote, killerType)
-                        currentRunSummary?.let { SaveManager.saveLastRunSummary(context, it) }
+                        currentRunSummary?.let {
+                            ForestMoodSystem.recordRun(context, it)
+                            SaveManager.saveLastRunSummary(context, it)
+                        }
                         ghostRecorder.reset()
                         // Transition to DYING
                         if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)

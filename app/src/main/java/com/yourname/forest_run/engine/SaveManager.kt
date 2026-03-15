@@ -38,8 +38,16 @@ object SaveManager {
     private const val KEY_LAST_RUN_BLOOM_CONVERSIONS = "last_run_bloom_conversions"
     private const val KEY_LAST_RUN_QUOTE = "last_run_quote"
     private const val KEY_LAST_RUN_KILLER = "last_run_killer"
+    private const val KEY_LAST_RUN_FOREST_MOOD = "last_run_forest_mood"
     private const val KEY_UNLOCKED_COSTUMES = "unlocked_costumes"
     private const val KEY_ACTIVE_COSTUME = "active_costume"
+    private const val KEY_FOREST_MOOD = "forest_mood"
+    private const val KEY_FOREST_MOOD_STREAK = "forest_mood_streak"
+    private const val KEY_FOREST_TOTAL_RUNS = "forest_total_runs"
+    private const val KEY_FOREST_GENTLE_RUNS = "forest_gentle_runs"
+    private const val KEY_FOREST_RECKLESS_RUNS = "forest_reckless_runs"
+    private const val KEY_FOREST_FEARFUL_RUNS = "forest_fearful_runs"
+    private const val KEY_FOREST_STEADY_RUNS = "forest_steady_runs"
     private const val GHOST_FILENAME = "ghost_run.bin"
 
     // ── High score ────────────────────────────────────────────────────────
@@ -204,6 +212,7 @@ object SaveManager {
             .putInt(KEY_LAST_RUN_BLOOM_CONVERSIONS, summary.bloomConversions)
             .putString(KEY_LAST_RUN_QUOTE, summary.restQuote)
             .putString(KEY_LAST_RUN_KILLER, summary.lastKiller?.name)
+            .putString(KEY_LAST_RUN_FOREST_MOOD, summary.forestMood.name)
             .apply()
     }
 
@@ -228,7 +237,10 @@ object SaveManager {
             lastKiller = prefs.getString(KEY_LAST_RUN_KILLER, null)?.let { raw ->
                 runCatching { EntityType.valueOf(raw) }.getOrNull()
             },
-            restQuote = prefs.getString(KEY_LAST_RUN_QUOTE, "") ?: ""
+            restQuote = prefs.getString(KEY_LAST_RUN_QUOTE, "") ?: "",
+            forestMood = prefs.getString(KEY_LAST_RUN_FOREST_MOOD, ForestMood.STEADY.name)?.let { raw ->
+                runCatching { ForestMood.valueOf(raw) }.getOrDefault(ForestMood.STEADY)
+            } ?: ForestMood.STEADY
         )
     }
 
@@ -238,6 +250,34 @@ object SaveManager {
 
     fun loadBiomeFriendship(context: Context, biome: Biome): Int =
         prefs(context).getInt("friendship_${biome.name.lowercase()}", 0)
+
+    fun saveForestMoodState(context: Context, state: ForestMoodState) {
+        prefs(context).edit()
+            .putString(KEY_FOREST_MOOD, state.currentMood.name)
+            .putInt(KEY_FOREST_MOOD_STREAK, state.moodStreak)
+            .putInt(KEY_FOREST_TOTAL_RUNS, state.totalRuns)
+            .putInt(KEY_FOREST_GENTLE_RUNS, state.gentleRuns)
+            .putInt(KEY_FOREST_RECKLESS_RUNS, state.recklessRuns)
+            .putInt(KEY_FOREST_FEARFUL_RUNS, state.fearfulRuns)
+            .putInt(KEY_FOREST_STEADY_RUNS, state.steadyRuns)
+            .apply()
+    }
+
+    fun loadForestMoodState(context: Context): ForestMoodState {
+        val prefs = prefs(context)
+        val currentMood = prefs.getString(KEY_FOREST_MOOD, ForestMood.STEADY.name)?.let { raw ->
+            runCatching { ForestMood.valueOf(raw) }.getOrDefault(ForestMood.STEADY)
+        } ?: ForestMood.STEADY
+        return ForestMoodState(
+            currentMood = currentMood,
+            moodStreak = prefs.getInt(KEY_FOREST_MOOD_STREAK, 0),
+            totalRuns = prefs.getInt(KEY_FOREST_TOTAL_RUNS, 0),
+            gentleRuns = prefs.getInt(KEY_FOREST_GENTLE_RUNS, 0),
+            recklessRuns = prefs.getInt(KEY_FOREST_RECKLESS_RUNS, 0),
+            fearfulRuns = prefs.getInt(KEY_FOREST_FEARFUL_RUNS, 0),
+            steadyRuns = prefs.getInt(KEY_FOREST_STEADY_RUNS, 0)
+        )
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────
 

@@ -245,7 +245,18 @@ class GameStateManager(context: Context) {
             seedsCollected = seedsThisRun,
             bloomConversions = bloomConversionsThisRun,
             lastKiller = lastKiller,
-            restQuote = restQuote
+            restQuote = restQuote,
+            forestMood = ForestMoodSystem.classifyRun(
+                score = score,
+                distanceM = distanceMetres,
+                mercyHearts = mercyHearts,
+                kindnessChain = kindnessChain,
+                cleanPasses = cleanPassesThisRun,
+                sparedCount = sparedThisRun,
+                hitsTaken = hitsThisRun,
+                seedsCollected = seedsThisRun,
+                bloomConversions = bloomConversionsThisRun
+            )
         )
 
     /**

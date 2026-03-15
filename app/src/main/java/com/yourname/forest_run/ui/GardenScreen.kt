@@ -18,6 +18,8 @@ import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.Biome
+import com.yourname.forest_run.engine.ForestMoodState
+import com.yourname.forest_run.engine.ForestMoodSystem
 import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.FxPreset
@@ -105,6 +107,7 @@ class GardenScreen(
     private var wardrobeMessage = ""
     private var wardrobeMessageTimer = 0f
     private var lastRunSummary: RunSummary? = null
+    private var forestMoodState: ForestMoodState = ForestMoodState()
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -158,6 +161,9 @@ class GardenScreen(
     }
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(255, 240, 100); textSize = 28f; typeface = pixelFont; textAlign = Paint.Align.CENTER
+    }
+    private val moodPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(232, 246, 212); textSize = 14f; typeface = pixelFont; textAlign = Paint.Align.CENTER
     }
     private val seedCountPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(160, 255, 120); textSize = 22f; typeface = pixelFont; textAlign = Paint.Align.LEFT
@@ -315,11 +321,14 @@ class GardenScreen(
         val ch = screenH.toFloat()
         val groundY = ch * 0.82f
 
+        applyMoodPalette(ch)
         canvas.drawRect(0f, 0f, cw, ch, skyPaint)
         canvas.drawRect(0f, groundY, cw, ch, groundPaint)
 
         // Title
+        titlePaint.color = forestMoodState.currentMood.accentColor
         canvas.drawText("GARDEN", cw / 2f, ch * 0.10f, titlePaint)
+        canvas.drawText(forestMoodState.currentMood.gardenLine, cw / 2f, ch * 0.13f, moodPaint)
 
         // Seed count
         canvas.drawText("🌱 $lifeSeeds", 28f, ch * 0.10f, seedCountPaint)
@@ -500,6 +509,8 @@ class GardenScreen(
             y += 22f
         }
 
+        canvas.drawText("Tone: ${summary.forestMood.displayName}", lastRunRect.left + 18f, y, statsLabelPaint)
+        y += 22f
         val killerText = summary.lastKiller?.let { formatEntityName(it) } ?: "None"
         canvas.drawText("Last killer: $killerText", lastRunRect.left + 18f, y, statsLabelPaint)
         y += 22f
@@ -562,6 +573,7 @@ class GardenScreen(
             PersistentMemoryManager.getSparedCount(context, EntityType.WOLF)
         friendshipTotal = Biome.entries.sumOf { PersistentMemoryManager.getBiomeFriendship(context, it) }
         lastRunSummary = SaveManager.loadLastRunSummary(context)
+        forestMoodState = ForestMoodSystem.currentState(context)
     }
 
     private fun syncWardrobe() {
@@ -596,4 +608,18 @@ class GardenScreen(
         type.name.lowercase().split("_").joinToString(" ") { part ->
             part.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         }
+
+    private fun applyMoodPalette(ch: Float) {
+        val mood = forestMoodState.currentMood
+        skyPaint.shader = LinearGradient(
+            0f,
+            0f,
+            0f,
+            ch,
+            intArrayOf(mood.skyTopColor, mood.skyBottomColor),
+            null,
+            Shader.TileMode.CLAMP
+        )
+        groundPaint.color = mood.groundColor
+    }
 }

@@ -19,5 +19,6 @@ data class RunSummary(
     val seedsCollected: Int,
     val bloomConversions: Int,
     val lastKiller: EntityType?,
-    val restQuote: String
+    val restQuote: String,
+    val forestMood: ForestMood
 )

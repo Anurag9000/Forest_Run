@@ -104,11 +104,29 @@ class SaveManagerTest {
             seedsCollected = 11,
             bloomConversions = 3,
             lastKiller = EntityType.WOLF,
-            restQuote = "The grove asks for patience before bravery."
+            restQuote = "The grove asks for patience before bravery.",
+            forestMood = ForestMood.GENTLE
         )
 
         SaveManager.saveLastRunSummary(context, summary)
 
         assertEquals(summary, SaveManager.loadLastRunSummary(context))
+    }
+
+    @Test
+    fun `forest mood state persists across reloads`() {
+        val state = ForestMoodState(
+            currentMood = ForestMood.RECKLESS,
+            moodStreak = 2,
+            totalRuns = 5,
+            gentleRuns = 1,
+            recklessRuns = 3,
+            fearfulRuns = 0,
+            steadyRuns = 1
+        )
+
+        SaveManager.saveForestMoodState(context, state)
+
+        assertEquals(state, SaveManager.loadForestMoodState(context))
     }
 }
