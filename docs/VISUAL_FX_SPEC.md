@@ -1,22 +1,38 @@
-# Visual And Feedback Effects
+# Visual And Feedback Effects Spec
 
-## Implemented
+## Original Dream
 
-- Screen shake via `CameraSystem`
-- Particle presets for jump dust, land thud, bloom aura, death burst, mercy stars, seed collect, and more
-- HUD bloom meter and score display
-- Ambient biome tint overlay
-- Simple menu/garden scene drawing
-- Sprite-driven player and entity animation
+The intended presentation was:
 
-## Current Presentation Reality
+- lush and alive, never static
+- big readable sprites on phone
+- constant subtle life in wind, petals, leaf motion, and ambient particles
+- Bloom as a huge transformation moment
+- strong juice on jumps, landings, near misses, milestones, and soft failure
+- hand-authored biome mood, not just color tint changes
 
-- Gameplay sprites are asset-backed.
-- Several backgrounds and menu/garden visuals are still drawn procedurally with shapes, gradients, and tint bands.
-- The game is playable and buildable without requiring a full bespoke art pass.
+## Implemented Today
 
-## Audio/Haptic Feedback
+- screen shake via `CameraSystem`
+- multiple particle presets
+- HUD for score, distance, seeds, Bloom, and hearts
+- ambient tint and darkness overlays
+- menu/garden scene drawing
+- sprite-driven player and entity animation
+- audio and haptic hooks for several actions
 
-- Jump, land, hit, bloom, mercy, bark, howl, and related SFX hooks are wired
-- Music transitions across menu, run layers, bloom, and rest
-- Haptic pulses for jump, hit, mercy, and score milestones
+## Missing Or Too Weak
+
+- entity scale is not yet comfortably readable on phone
+- encounter framing is too sparse to show off the art and behaviors properly
+- backgrounds remain too procedural in places
+- Bloom does not yet feel spectacular enough relative to the dream
+- the world still lacks the full “breathing forest” density originally imagined
+
+## Immediate Visual Priorities
+
+- enlarge entity presentation and improve on-phone readability
+- tune spawn cadence so the player actually sees and feels the forest inhabitants
+- reduce ghost visual confusion
+- make seeds, Bloom, and mercy feedback impossible to miss
+- deepen biome atmosphere beyond tint shifts alone

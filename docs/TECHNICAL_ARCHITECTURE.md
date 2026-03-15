@@ -1,65 +1,103 @@
 # Technical Architecture
 
+## Purpose
+
+This document describes both the current runtime architecture and the architectural gaps that still separate the repo from the original product vision.
+
 ## Runtime Stack
 
 - `MainActivity`: fullscreen host activity
-- `GameView`: top-level `SurfaceView`
+- `GameView`: top-level `SurfaceView`, screen routing, update/draw orchestration
 - `GameThread`: render/update loop
-- `GameStateManager`: score, distance, bloom, seeds, persistence-facing run state
-- `EntityManager`: spawning, updating, collision checks, pass rewards, seed orb spawning
+- `GameStateManager`: score, distance, Bloom, seeds, hearts, persistence-facing state
+- `EntityManager`: spawning, updating, collision checks, pass events, seed orb spawning
 
 ## Major Packages
 
 ### `engine`
 
-- `GameView.kt`: owns the game lifecycle and screen state routing
-- `InputHandler.kt`: touch gesture translation
-- `GameStateManager.kt`: run-scoped mutable state
-- `BiomeManager.kt` / `Biome.kt`: biome cycle and color blending
-- `SpriteManager.kt`: sprite loading from `app/src/main/assets/sprites`
-- `SpriteSizing.kt`: shared aspect-ratio helpers so imported art is drawn at correct proportions
-- `SaveManager.kt`: shared preferences + ghost binary persistence
-- `LeitmotifManager.kt` / `SfxManager.kt` / `HapticManager.kt`: feedback systems
+- `GameView.kt`: top-level lifecycle and state routing
+- `InputHandler.kt`: touch gestures
+- `GameStateManager.kt`: run state and progression counters
+- `BiomeManager.kt` and `Biome.kt`: five-biome cycle and color blending
+- `SpriteManager.kt`: runtime sprite loading
+- `SaveManager.kt`: local persistence
+- `LeitmotifManager.kt`, `SfxManager.kt`, `HapticManager.kt`: feedback systems
 
 ### `entities`
 
-- `Player.kt`: player physics and animation state machine
-- `Entity.kt`: common entity base class
-- `EntityFactory.kt`: concrete entity creation
-- `flora/`, `trees/`, `birds/`, `animals/`: 19 gameplay entity implementations
+- `Player.kt`: movement, animation state machine, Bloom/rest integration
+- `Entity.kt`: base entity abstraction
+- `EntityFactory.kt`: concrete creation
+- `flora/`, `trees/`, `birds/`, `animals/`: 19 entity implementations
 
 ### `systems`
 
-- `ParticleManager.kt`: pooled particles and effect presets
-- `SeedOrbManager.kt`: collectible seed orb lifecycle
-- `GhostRecorder.kt` / `GhostPlayer.kt`: best-run recording and replay
+- `ParticleManager.kt`: pooled particles
+- `SeedOrbManager.kt`: collectible seed orbs
+- `GhostRecorder.kt` and `GhostPlayer.kt`: best-run replay
 
 ### `ui`
 
-- `MainMenuScreen.kt`: menu scene with two-tap run start
-- `GardenScreen.kt`: persistent unlock screen
-- `HUD.kt`: gameplay overlay
-- `GameOverScreen.kt`: restart overlay
-- `FlavorTextManager.kt`: floating text feedback
+- `MainMenuScreen.kt`: two-tap run start
+- `GardenScreen.kt`: garden unlock view
+- `HUD.kt`: score, distance, seeds, Bloom, hearts
+- `GameOverScreen.kt`: death/restart overlay
+- `FlavorTextManager.kt`: floating text
 
-## Verified Behavior Notes
+## Verified Runtime Reality
 
-- `Final_Assets (2)` is the only checked-in source asset pack; runtime sheets are regenerated from it through `scripts/import_final_assets.py`.
-- Menu and garden taps are routed using actual touch coordinates from `GameView`.
-- Menu launch and menu-to-playing transition were verified on a Vivo 1933 via instrumentation.
-- Gameplay loop advancement and jump input were verified on a Vivo 1933 via instrumentation.
-- Biome cycle checkpoints across the full five-biome sequence were verified on a Vivo 1933 via instrumentation.
-- Bloom activation/player sync was verified on a Vivo 1933 via instrumentation.
-- Collision-driven death, game-over, and restart were verified on a Vivo 1933 via instrumentation.
-- Garden navigation, unlock persistence, and return-to-menu flow were verified on a Vivo 1933 via instrumentation.
-- All 19 entity types were spawned into a live run and updated on a Vivo 1933 via instrumentation.
-- Bloom now synchronizes gameplay state with player visuals/audio on activation and expiry.
-- Entity pass rewards fire once per entity instance instead of every frame after passing.
-- Lifetime seed and high score persistence now use the same `SaveManager` store across gameplay and garden UI.
-- Opening run pacing now seeds far-ahead entities so gameplay does not begin on an empty-looking screen.
-- Wolf howl and dog bark SFX are triggered from their actual gameplay state transitions.
+- Core flow exists.
+- Biome cycling exists.
+- Bloom and seeds exist in code.
+- Garden persistence exists.
+- Ghost recording and playback exist.
+- Multiple entity-specific behavior classes exist.
 
-## Known Design Boundaries
+## Architectural Gaps To The Dream
 
-- The parallax background is still tint-driven and procedural rather than fully hand-painted layered scenery.
-- The project is single-module and fully local; there is no networking layer.
+### Readability Architecture Gap
+
+The repo lacks a dedicated tuning layer for:
+
+- entity screen scale by class
+- per-device readability tuning
+- spawn spacing tuned for visibility as well as difficulty
+- on-device presentation diagnostics
+
+Without that, dream-spec behavior can exist in code and still fail in play.
+
+### Personality Architecture Gap
+
+The dream vision wanted stronger systems than currently exist:
+
+- persistent encounter memory manager
+- costume overlay system
+- repeat-killer or deja vu system
+- richer rest-quote system
+- more robust mercy/spare orchestration beyond isolated entity logic
+
+### Presentation Architecture Gap
+
+The world is still largely procedural/tint-driven in places. The dream vision wanted:
+
+- richer hand-authored biome scenes
+- stronger dialogue bubble and character presentation
+- more obvious spectacle around Bloom and forest atmosphere
+
+### Ghost UX Gap
+
+Ghost playback exists technically, but current user feedback says its presentation can make the live runner feel visually wrong. That means the architecture needs a better player-facing policy for:
+
+- when the ghost appears
+- how visible it is
+- whether it should be disabled by default
+- how it avoids obscuring the live body
+
+## Known Immediate Product Bugs From User Feedback
+
+- Entity scale and spacing are failing mobile readability.
+- Ghost presentation is confusing enough to break trust in the run.
+- Implemented systems such as Bloom, mercy, and garden progression are not surfacing clearly enough to the player.
+
+Those are not just balance tasks. They are architecture-to-experience failures and should be treated as first-class product defects.

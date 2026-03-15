@@ -1,34 +1,48 @@
-# Repo State Spec
+# Repo State And Product Mandate
 
 ## Identity
 
 - Project type: native Android game
 - Language: Kotlin
-- UI/rendering: `SurfaceView`
+- Rendering: `SurfaceView`
 - Build system: Gradle
-- IDE target: Android Studio
+- Persistence: local only
+- Product goal: complete the original dream spec, not a reduced audit-safe subset
 
-## What Exists
+## Hard Product Mandate
 
-- One Android app module
-- No backend module
-- No web frontend
-- No Compose UI layer
-- Local persistence only
+This repo must move toward the original vision in full:
 
-## What Was Corrected In This Audit
+- all dream-spec systems are considered target scope unless explicitly abandoned later by the user
+- docs must preserve ambition and reality at the same time
+- “implemented in code” is not enough if the player cannot clearly see, feel, understand, or enjoy the mechanic on device
+- user-reported experiential failures are product-truth inputs and must be documented as gaps even if the code contains partial implementations
 
-- Menu/garden touch routing now uses real tap coordinates
-- Bloom state now updates player/audio behavior correctly
-- Entity pass rewards are one-shot instead of repeatable every frame
-- Gameplay and garden persistence now share the same save store
-- Player timing bug from double state-timer increments removed
-- Runtime sprite sheets now come only from `Final_Assets (2)` through `scripts/import_final_assets.py`
-- Entity and menu/garden draw ratios now follow imported sprite frame aspect ratios instead of legacy hardcoded assumptions
-- Placeholder example tests replaced with meaningful coverage
-- Stale root assets, obsolete competing asset archive, obsolete sprite generator, and checked-in APK removed
+## Current Baseline
 
-## Primary Validation Commands
+The repo currently has:
+
+- one Android app module
+- no backend module
+- no web frontend
+- no Compose UI layer
+- local save only
+- runtime assets sourced from `Final_Assets (2)` and imported into `app/src/main/assets/sprites/`
+
+## Important Historical Correction
+
+The March 14, 2026 audit corrected real bugs and stabilized the repo, but it also rewrote docs around verified current state. That audit was useful as a reality check, not as the final product definition. The original long-form design remains the north star.
+
+## Active Gaps From Current Play
+
+- Entities are reportedly too small and too infrequent to read comfortably on phone screens.
+- Ghost playback is reportedly confusing enough to look like a broken duplicate runner.
+- Seeds, Bloom, mercy, HUD signals, and garden progression are not surfacing clearly enough in actual play.
+- Entity uniqueness and Undertale-like charm are not landing strongly enough at runtime.
+- The game still falls short of the desired authored emotional arc:
+  menu ritual -> atmospheric run -> expressive encounters -> Bloom catharsis -> soft failure -> reflection -> garden healing -> remembered return
+
+## Validation Commands
 
 ```bash
 bash gradlew testDebugUnitTest
@@ -37,14 +51,10 @@ bash gradlew assembleDebugAndroidTest
 bash gradlew connectedDebugAndroidTest
 ```
 
-## Current Visual Asset Reality
+## Documentation Rule
 
-- `Final_Assets (2)` is the checked-in source asset pack.
-- Runtime sheets in `app/src/main/assets/sprites/` are imported from that pack.
-- Character, flora, tree, bird, animal, and VFX sheets are all generated from that source pack rather than from a second competing asset archive.
+Every document in this repo should now answer all three questions explicitly:
 
-## Current Device Verification Reality
-
-- Connected instrumentation was executed on a Vivo 1933 (Android 11).
-- Verified on hardware: launch, menu-to-run flow, gameplay loop advancement, jump input, full biome-cycle checkpoints, bloom activation sync, collision-driven game over/restart, garden unlock persistence flow, and live update coverage with all 19 entity types spawned.
-- Not yet fully hardware-verified: every individual entity behavior variant over long manual play sessions, ghost replay persistence on-device, and all audio/haptic perceptual quality.
+1. What was originally imagined?
+2. What is actually present today?
+3. What remains missing, broken, too weak, or too unclear to satisfy the original vision?

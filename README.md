@@ -1,54 +1,66 @@
 # Forest Run
 
-`Forest Run` is a native Android endless runner written in Kotlin with a custom `SurfaceView` game loop. The project targets Android Studio / Gradle Android builds and does not use Compose, React Native, Flutter, or a backend service.
+`Forest Run` is a native Android endless runner in Kotlin using a custom `SurfaceView` loop. The intended product is not a minimal score-chaser. The intended product is a handcrafted, personality-rich forest journey with cute reactive entities, a mercy system, Bloom power spikes, a chill garden meta-loop, and enough audiovisual identity to feel like a complete indie game rather than a prototype.
 
-## Current State
+## Product Direction
 
-- Native Android app package: `com.yourname.forest_run`
-- Rendering: `SurfaceView` + dedicated game thread
-- Orientation: landscape
-- Visual asset source of truth: [Final_Assets (2)](/home/anurag-basistha/Projects/TODO/Forest_Run/Final_Assets%20(2))
-- Runtime sprite sheets under `app/src/main/assets/sprites/` are generated from that pack by `scripts/import_final_assets.py`
-- Min SDK / Target SDK: 24 / 34
-- Main flow: menu -> run -> game over -> restart
-- Meta flow: menu -> garden -> back to menu
-- Build status: `compileDebugKotlin`, `testDebugUnitTest`, `assembleDebug`, and `assembleDebugAndroidTest` all pass
-- Device status: `connectedDebugAndroidTest` executed successfully on a Vivo 1933 (Android 11)
+The non-negotiable direction for this repo is:
 
-## Verified Features
+- Restore and fully implement the original dream spec from the early long-form docs.
+- Treat the original GDD, Undertale-inspired personality layer, garden progression, and polish roadmap as the target product, not as discarded aspirations.
+- Use the current implementation only as a partial baseline.
+- Close every gap between the shipped build and the originally imagined experience.
 
-- Touch controls for tap-to-jump, hold-to-extend jump, and swipe-down duck.
-- Hardware-verified menu flow on Vivo 1933: launch -> tap to stand -> tap to run -> gameplay loop advances.
-- Hardware-verified jump input on Vivo 1933 after entering gameplay.
-- Hardware-verified biome progression checkpoints across the full five-biome cycle on Vivo 1933.
-- Hardware-verified bloom activation sync on Vivo 1933.
-- Hardware-verified bloom invincibility preventing immediate death on Vivo 1933.
-- Hardware-verified collision -> game over -> restart cycle on Vivo 1933.
-- Hardware-verified garden open -> unlock -> persist -> back-to-menu flow on Vivo 1933.
-- Hardware-verified live update/draw pass with all 19 entity types spawned on Vivo 1933.
-- Player state machine with running, jump start, jump, apex, fall, landing, duck, stumble, bloom, and rest.
-- Endless spawning for 19 entity types across flora, trees, birds, and animals.
-- Five biome cycle with live color blending and biome-specific spawn pools.
-- HUD for score, distance, seeds, bloom meter, and mercy hearts.
-- Bloom system: 8 seeds activates a 6-second invincibility state with player/audio sync.
-- Seed collection and lifetime seed persistence.
-- Garden screen with persistent plant unlock progression.
-- Ghost run save/load based on best recorded distance.
-- Audio and haptics managers for jump, land, hit, mercy, bloom, and music transitions.
-- Wolf howl and dog bark SFX cues now fire from their live entity state machines.
+## Original Dream
 
-## Repo Cleanup Applied
+The original vision combined:
 
-- Removed stale checked-in APK artifact: `Forest_Run_Final.apk`
-- Removed unused root-level legacy `assets/` tree
-- Removed obsolete competing asset archive `Final_Assets`
-- Removed obsolete local sprite generator `sprite_builder.py`
-- Removed empty `.gitkeep` placeholders from populated source folders
-- Replaced placeholder example tests with real unit/Robolectric/instrumentation smoke coverage
+- a lush cottagecore endless runner with Ghibli x Stardew Valley tone
+- a ritualized start flow: sit in garden, stand, then run
+- five atmospheric biomes that feel like mood chapters
+- seeds as both in-run power progression and long-term garden currency
+- Bloom as a dramatic, audiovisual invincibility state
+- animals with individual personality, reactions, mercy logic, and spare outcomes
+- flavor text, ghost replay, memory, and Undertale-like charm
+- a restorative garden loop that gives every run long-term meaning
+
+See [docs/GDD.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/GDD.md), [docs/UNDERTALE_VIBE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/UNDERTALE_VIBE.md), and [docs/IMPLEMENTATION_ROADMAP.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/IMPLEMENTATION_ROADMAP.md).
+
+## Current Repo Reality
+
+What exists in code today:
+
+- native Android app module, package `com.yourname.forest_run`
+- `SurfaceView` render loop and landscape activity
+- two-tap menu start and separate garden screen
+- player movement with run, jump, duck, stumble, bloom, and rest states
+- 19 entity classes across flora, trees, birds, and animals
+- five-biome tint cycle with biome-specific spawn pools
+- HUD for score, distance, seeds, Bloom meter, and mercy hearts
+- seed persistence, Bloom activation, ghost save/load, and garden unlock persistence
+- audio and haptics managers
+
+What is still missing, incomplete, or user-reported as unsatisfactory:
+
+- entities read too small on phone and are spaced too far apart to appreciate visually
+- the ghost runner currently undermines readability and can create the impression of a broken double-runner presentation
+- many entity-specific personalities exist in code but are not yet delivered with enough clarity, frequency, staging, or charm to feel deliberate in play
+- the forest still lacks the full handcrafted art, dense environmental life, and layered spectacle described in the original dream
+- the full persistent memory, costume, dialogue, pacifist, and determination-quote systems are not complete
+- several dream-spec feedback loops may exist technically but are not surfacing reliably enough to a player during normal play
+
+## Immediate Product Concerns
+
+The latest user-reported playtest concerns must be treated as active product bugs, not minor polish:
+
+- entity readability and scale
+- spawn density and encounter pacing
+- ghost playback clarity and whether it should be shown by default
+- visibility and trustworthiness of seeds, Bloom meter, Bloom state, mercy hearts, and garden loop
+- whether each entity behavior actually feels unique and readable on device
+- whether the personality layer is emotionally legible during play rather than merely present in code
 
 ## Build And Test
-
-Use Android Studio or the Gradle wrapper from the repo root.
 
 ```bash
 bash gradlew testDebugUnitTest
@@ -62,21 +74,12 @@ Generated artifacts:
 - Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 - Android test APK: `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
 
-Ghost persistence note:
+## Documentation Map
 
-- Ghost save/load is covered by host-side persistence tests.
-- A connected-device ghost persistence assertion remains intentionally skipped because it is not yet giving a trustworthy hardware signal.
-
-## Project Layout
-
-```text
-app/src/main/java/com/yourname/forest_run/
-  MainActivity.kt
-  engine/      core loop, state, audio, save, camera, parallax
-  entities/    player plus flora, trees, birds, animals
-  systems/     particles, ghost replay, seed orbs
-  ui/          menu, garden, HUD, flavor text, game over
-  utils/       math and bitmap helpers
-```
-
-See the files in `docs/` for the verified architecture and feature inventory.
+- [docs/GDD.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/GDD.md): full game dream, current implementation, missing experience
+- [docs/IMPLEMENTATION_ROADMAP.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/IMPLEMENTATION_ROADMAP.md): phase-by-phase path to reach the original target
+- [docs/UNDERTALE_VIBE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/UNDERTALE_VIBE.md): personality, mercy, memory, charm systems
+- [docs/ENTITY_DATABASE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/ENTITY_DATABASE.md): intended behavior for every entity and current gap
+- [docs/TECHNICAL_ARCHITECTURE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TECHNICAL_ARCHITECTURE.md): runtime structure and architectural gaps
+- [docs/VISUAL_FX_SPEC.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/VISUAL_FX_SPEC.md): presentation and feedback target
+- [spec.md](/home/anurag-basistha/Projects/TODO/Forest_Run/spec.md): repo truth and product mandate
