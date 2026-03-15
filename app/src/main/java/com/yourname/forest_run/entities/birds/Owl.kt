@@ -2,6 +2,8 @@ package com.yourname.forest_run.entities.birds
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -9,6 +11,7 @@ import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Owl (Phase 10) — Night only.
@@ -29,12 +32,25 @@ class Owl(
     private val insetX = birdW * 0.10f
     private val insetY = birdH * 0.10f
 
-    private enum class OwlState { SLEEPING, DIVING }
+    private enum class OwlState { SLEEPING, ALERT, DIVING }
     private var owlState = OwlState.SLEEPING
     private var currentSprite = idleSprite
 
     private var velX = 0f
     private var velY = 0f
+    private var alertTimer = 0f
+    private var pendingTargetX = 0f
+    private var pendingTargetY = 0f
+    private var hasWarned = false
+    private val alertPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(180, 255, 205, 120)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
+    private val eyeGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(110, 255, 190, 90)
+        style = Paint.Style.FILL
+    }
 
     init {
         x = startX
@@ -49,6 +65,13 @@ class Owl(
             OwlState.SLEEPING -> {
                 x -= scrollSpeed * deltaTime
                 // Amber eye glow is handled by particle manager in Phase 14
+            }
+            OwlState.ALERT -> {
+                x -= scrollSpeed * deltaTime
+                alertTimer += deltaTime
+                if (alertTimer >= 0.22f) {
+                    triggerDive(pendingTargetX, pendingTargetY)
+                }
             }
             OwlState.DIVING -> {
                 x += velX * deltaTime
@@ -65,7 +88,7 @@ class Owl(
      * Triggers the dive toward the player's current position.
      */
     fun triggerDive(targetX: Float, targetY: Float) {
-        if (owlState == OwlState.SLEEPING) {
+        if (owlState == OwlState.SLEEPING || owlState == OwlState.ALERT) {
             owlState = OwlState.DIVING
             currentSprite = actionSprite
             currentSprite.reset()
@@ -80,6 +103,14 @@ class Owl(
 
     override fun draw(canvas: Canvas) {
         val drawRect = RectF(x, y, x + birdW, y + birdH)
+        if (owlState == OwlState.SLEEPING || owlState == OwlState.ALERT) {
+            canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), birdW * 0.40f, eyeGlowPaint)
+        }
+        if (owlState == OwlState.ALERT) {
+            val radius = birdW * (0.48f + alertTimer * 0.55f)
+            alertPaint.alpha = (180 * (1f - (alertTimer / 0.22f).coerceIn(0f, 1f))).toInt().coerceIn(40, 180)
+            canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), radius, alertPaint)
+        }
         currentSprite.draw(canvas, drawRect)
     }
 
@@ -91,7 +122,14 @@ class Owl(
                 com.yourname.forest_run.entities.PlayerState.JUMP_START
             ) && owlState == OwlState.SLEEPING
         ) {
-            triggerDive(player.x, player.y)
+            owlState = OwlState.ALERT
+            alertTimer = 0f
+            pendingTargetX = player.x
+            pendingTargetY = player.y
+            if (!hasWarned) {
+                DialogueBubbleManager.spawn("...hoo?", x + birdW * 0.5f, y - 14f, Color.rgb(255, 242, 220), Color.rgb(170, 120, 60))
+                hasWarned = true
+            }
         }
 
         if (owlState == OwlState.DIVING && RectF.intersects(player.hitbox, hitbox)) {
