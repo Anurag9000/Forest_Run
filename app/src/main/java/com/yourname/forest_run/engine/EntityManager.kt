@@ -68,13 +68,24 @@ class EntityManager(
      * @param gameState   The mutable game state (score, seeds, speed).
      * @param player      The active player instance.
      */
-    fun update(deltaTime: Float, gameState: GameStateManager, player: Player) {
+    fun update(
+        deltaTime: Float,
+        gameState: GameStateManager,
+        player: Player,
+        encounterDirector: EncounterDirector? = null
+    ) {
+        encounterDirector?.advance(deltaTime)?.forEach { directive ->
+            spawn(directive.type, directive.variant, screenWidth + directive.xOffset)
+        }
+
         // 1. Advance spawn timer
-        spawnTimer += deltaTime
-        val spawnInterval = DifficultyScaler.getSpawnInterval(gameState.distanceMetres)
-        if (spawnTimer >= spawnInterval) {
-            spawnTimer = 0f
-            spawnRandom(gameState.distanceMetres)
+        if (encounterDirector?.isScenarioActive != true) {
+            spawnTimer += deltaTime
+            val spawnInterval = DifficultyScaler.getSpawnInterval(gameState.distanceMetres)
+            if (spawnTimer >= spawnInterval) {
+                spawnTimer = 0f
+                spawnRandom(gameState.distanceMetres)
+            }
         }
 
         // 2. Update every active entity
@@ -157,17 +168,25 @@ class EntityManager(
         spawn(type)
     }
 
-    fun spawn(type: EntityType) {
+    fun spawn(
+        type: EntityType,
+        variant: EncounterVariant = EncounterVariant.DEFAULT,
+        startX: Float = spawnX
+    ) {
         // Check recycle pool first
-        val recycled = recyclePool[type]?.removeLastOrNull()
+        val recycled = if (variant == EncounterVariant.DEFAULT) {
+            recyclePool[type]?.removeLastOrNull()
+        } else {
+            null
+        }
         val entity = recycled ?: EntityFactory.create(
-            context, type, spawnX, screenWidth, screenHeight, spriteManager
+            context, type, startX, screenWidth, screenHeight, spriteManager, variant
         )
         PersistentMemoryManager.recordEncounter(context, type)
         // Guarantee it's active and placed at spawn X
         entity.isActive = true
         entity.hasBeenPassed = false
-        entity.x = spawnX
+        entity.x = startX
         activeEntities.add(entity)
         debugActiveEntityCount = activeEntities.size
     }
@@ -181,19 +200,11 @@ class EntityManager(
     }
 
     internal fun debugSpawnAt(type: EntityType, worldX: Float) {
-        spawnAt(type, worldX)
+        spawn(type, startX = worldX)
     }
 
     private fun spawnAt(type: EntityType, startX: Float) {
-        val recycled = recyclePool[type]?.removeLastOrNull()
-        val entity = recycled ?: EntityFactory.create(
-            context, type, startX, screenWidth, screenHeight, spriteManager
-        )
-        entity.isActive = true
-        entity.hasBeenPassed = false
-        entity.x = startX
-        activeEntities.add(entity)
-        debugActiveEntityCount = activeEntities.size
+        spawn(type, startX = startX)
     }
 
     // ── Recycling ─────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -23,6 +24,8 @@ import com.yourname.forest_run.ui.GardenScreen
 import com.yourname.forest_run.ui.HUD
 import com.yourname.forest_run.ui.MainMenuScreen
 import com.yourname.forest_run.ui.DialogueBubbleManager
+import com.yourname.forest_run.ui.DebugEncounterOverlay
+import com.yourname.forest_run.ui.DebugOverlayAction
 import com.yourname.forest_run.ui.RestQuoteManager
 
 private const val TAG = "ForestRun"
@@ -43,6 +46,8 @@ private const val TAG = "ForestRun"
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
     @Volatile
     internal var debugFrameCounter: Long = 0
+    private val debugToolsEnabled =
+        (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     // -----------------------------------------------------------------------
     // Engine
@@ -90,6 +95,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private lateinit var mainMenuScreen: MainMenuScreen
     private lateinit var gardenScreen: GardenScreen
     private var currentRestQuote: String = "The forest is waiting for a cleaner run."
+    private val encounterDirector = if (debugToolsEnabled) EncounterDirector() else null
+    private var debugEncounterOverlay: DebugEncounterOverlay? = null
 
     // Restart fade-to-black overlay
     private val restartFadePaint = Paint().apply { color = Color.BLACK }
@@ -105,6 +112,21 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     // Phase 13: Night/dusk ambient darkness overlay
     private val ambientOverlayPaint = Paint().apply { color = Color.BLACK }
+    private val debugHitboxPaint = Paint().apply {
+        color = Color.argb(210, 255, 96, 96)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val debugPlayerHitboxPaint = Paint().apply {
+        color = Color.argb(210, 110, 210, 255)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val debugLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 18f
+        typeface = Typeface.MONOSPACE
+    }
 
     // ── Phase 19: Ghost Run ───────────────────────────────────────────────
     private val ghostRecorder = GhostRecorder()
@@ -135,6 +157,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             val idx = event.actionIndex.coerceAtLeast(0)
             lastTouchX = event.getX(idx)
             lastTouchY = event.getY(idx)
+            if (debugToolsEnabled &&
+                event.actionMasked == android.view.MotionEvent.ACTION_UP &&
+                appState == AppGameState.PLAYING &&
+                runState == RunState.PLAYING
+            ) {
+                debugEncounterOverlay?.handleTap(lastTouchX, lastTouchY)?.let { action ->
+                    handleDebugOverlayAction(action)
+                    return@setOnTouchListener true
+                }
+            }
             inputHandler.onTouch(view, event)
         }
     }
@@ -211,6 +243,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 5: HUD
         if (!::hud.isInitialized) {
             hud = HUD(context, screenWidth, screenHeight)
+        }
+        if (debugToolsEnabled && debugEncounterOverlay == null) {
+            debugEncounterOverlay = DebugEncounterOverlay(screenWidth)
         }
 
         // Phase 3: Player
@@ -411,7 +446,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 12: EntityManager update (spawn, scroll, pass-detection)
         if (::entityManager.isInitialized) {
-            entityManager.update(deltaTime, gameState, player)
+            entityManager.update(deltaTime, gameState, player, encounterDirector)
 
             // Collision loop
             val collision = entityManager.checkCollisions(player, gameState)
@@ -489,8 +524,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         // Phase 19: Record ghost frame + advance ghost playback
-        if (::player.isInitialized) ghostRecorder.record(deltaTime, player)
-        ghostPlayer.update(deltaTime)
+        if (::player.isInitialized && encounterDirector?.isScenarioActive != true) {
+            ghostRecorder.record(deltaTime, player)
+        }
+        if (encounterDirector?.isScenarioActive != true) {
+            ghostPlayer.update(deltaTime)
+        }
 
         // Phase 20: Music layer transition + tempo scaling
         if (::gameState.isInitialized) {
@@ -558,10 +597,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
 
             // 4. Ghost player (behind live player, 40% opacity white-blue) — Phase 19
-            if (::spriteManager.isInitialized) ghostPlayer.draw(canvas, spriteManager, if (::player.isInitialized) player else null)
+            if (::spriteManager.isInitialized && encounterDirector?.isScenarioActive != true) {
+                ghostPlayer.draw(canvas, spriteManager, if (::player.isInitialized) player else null)
+            }
 
             // 5. Live Player
             if (::player.isInitialized) player.draw(canvas)
+
+            if (debugToolsEnabled && encounterDirector?.isScenarioActive == true) {
+                drawDebugScenarioLayer(canvas)
+            }
 
             // 5. World-space FX: flavor text + particles
             DialogueBubbleManager.draw(canvas)
@@ -589,6 +634,23 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // 8. HUD — always screen-space, never shakes
         if (::hud.isInitialized && ::gameState.isInitialized)
             hud.draw(canvas, gameState)
+
+        if (debugToolsEnabled &&
+            ::entityManager.isInitialized &&
+            ::gameState.isInitialized &&
+            debugEncounterOverlay != null &&
+            appState == AppGameState.PLAYING &&
+            runState == RunState.PLAYING
+        ) {
+            val director = encounterDirector
+            debugEncounterOverlay?.draw(
+                canvas = canvas,
+                director = director ?: return,
+                biomeLabel = entityManager.biomeManager.currentBiome.displayName,
+                activeEntityCount = entityManager.activeEntities.size,
+                bloomText = "${gameState.bloomMeter}/${gameState.bloomSeedTarget}"
+            )
+        }
 
         // 9. Game Over overlay (DYING: faint, GAME_OVER: full)
         if (runState == RunState.GAME_OVER || runState == RunState.DYING) {
@@ -618,6 +680,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun prepareFreshRun() {
+        encounterDirector?.stopScenario()
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
@@ -626,6 +689,43 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         reloadGhost()
         currentRestQuote = "The forest is waiting for a cleaner run."
         LeitmotifManager.playRunStart()
+    }
+
+    private fun prepareEncounterScenario() {
+        val director = encounterDirector ?: return
+        if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
+        player.setCostume(CostumeManager.activeCostume(context))
+        runResetManager.executeReset(gameState, entityManager, player)
+        ghostRecorder.reset()
+        currentRestQuote = "Scenario verification active."
+        director.startSelectedScenario()
+        LeitmotifManager.playRunStart()
+    }
+
+    private fun handleDebugOverlayAction(action: DebugOverlayAction) {
+        val director = encounterDirector ?: return
+        when (action) {
+            DebugOverlayAction.PREVIOUS -> director.previousScenario()
+            DebugOverlayAction.NEXT -> director.nextScenario()
+            DebugOverlayAction.TOGGLE_RUN -> {
+                if (director.isScenarioActive) {
+                    prepareFreshRun()
+                } else {
+                    prepareEncounterScenario()
+                }
+            }
+        }
+    }
+
+    private fun drawDebugScenarioLayer(canvas: Canvas) {
+        if (!::player.isInitialized || !::entityManager.isInitialized) return
+        canvas.drawRect(player.hitbox, debugPlayerHitboxPaint)
+        canvas.drawText("PLAYER", player.hitbox.left, player.hitbox.top - 8f, debugLabelPaint)
+        for (entity in entityManager.activeEntities) {
+            canvas.drawRect(entity.hitbox, debugHitboxPaint)
+            val label = entityManager.entityTypeOf(entity)?.name ?: "ENTITY"
+            canvas.drawText(label, entity.hitbox.left, entity.hitbox.top - 8f, debugLabelPaint)
+        }
     }
 
     private fun reloadGhost() {

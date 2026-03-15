@@ -109,7 +109,7 @@ Expected responsibilities:
 ### Current Status
 
 - Implemented: core manager exists.
-- Partial: pacing is materially improved; deterministic encounter verification and more authored scenario control are still needed.
+- Partial: pacing is materially improved and deterministic encounter verification now exists; deeper authored scenario coverage is still needed.
 
 ## 7. BiomeManager
 

@@ -1,6 +1,7 @@
 package com.yourname.forest_run.entities
 
 import android.content.Context
+import com.yourname.forest_run.engine.EncounterVariant
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.entities.animals.*
 import com.yourname.forest_run.entities.birds.*
@@ -20,7 +21,8 @@ object EntityFactory {
         startX: Float,
         screenWidth: Float,
         screenHeight: Float,
-        spriteManager: SpriteManager
+        spriteManager: SpriteManager,
+        variant: EncounterVariant = EncounterVariant.DEFAULT
     ): Entity {
         val groundY = screenHeight * 0.82f
 
@@ -50,7 +52,18 @@ object EntityFactory {
             EntityType.WOLF     -> Wolf(context, startX, groundY, screenWidth, spriteManager.wolfSprite.copy())
             EntityType.FOX      -> Fox(context, startX, groundY, spriteManager.foxSprite.copy())
             EntityType.HEDGEHOG -> Hedgehog(context, startX, groundY, spriteManager.hedgehogSprite.copy())
-            EntityType.DOG      -> Dog(context, startX, groundY, screenWidth, spriteManager.dogSprite.copy())
+            EntityType.DOG      -> Dog(
+                context = context,
+                startX = startX,
+                groundY = groundY,
+                screenWidth = screenWidth,
+                sprite = spriteManager.dogSprite.copy(),
+                isBuddy = when (variant) {
+                    EncounterVariant.DOG_BUDDY -> true
+                    EncounterVariant.DOG_HAZARD -> false
+                    else -> kotlin.random.Random.nextFloat() < 0.20f
+                }
+            )
         }
     }
 }
