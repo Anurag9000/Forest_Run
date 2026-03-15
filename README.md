@@ -24,7 +24,7 @@ The original vision combined:
 - flavor text, ghost replay, memory, and Undertale-like charm
 - a restorative garden loop that gives every run long-term meaning
 
-See [docs/GDD.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/GDD.md), [docs/UNDERTALE_VIBE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/UNDERTALE_VIBE.md), and [docs/IMPLEMENTATION_ROADMAP.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/IMPLEMENTATION_ROADMAP.md).
+See [docs/GDD.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/GDD.md), [docs/UNDERTALE_VIBE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/UNDERTALE_VIBE.md), [docs/IMPLEMENTATION_ROADMAP.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/IMPLEMENTATION_ROADMAP.md), and [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md).
 
 ## Current Repo Reality
 
@@ -80,6 +80,7 @@ Generated artifacts:
 - [docs/IMPLEMENTATION_ROADMAP.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/IMPLEMENTATION_ROADMAP.md): phase-by-phase path to reach the original target
 - [docs/UNDERTALE_VIBE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/UNDERTALE_VIBE.md): personality, mercy, memory, charm systems
 - [docs/ENTITY_DATABASE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/ENTITY_DATABASE.md): intended behavior for every entity and current gap
+- [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md): strict list of unimplemented or insufficient dream-spec items
 - [docs/TECHNICAL_ARCHITECTURE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TECHNICAL_ARCHITECTURE.md): runtime structure and architectural gaps
 - [docs/VISUAL_FX_SPEC.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/VISUAL_FX_SPEC.md): presentation and feedback target
 - [spec.md](/home/anurag-basistha/Projects/TODO/Forest_Run/spec.md): repo truth and product mandate

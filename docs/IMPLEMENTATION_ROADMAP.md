@@ -1,128 +1,159 @@
-# Implementation Roadmap To The Original Vision
+# Forest_Run — Restored Implementation Roadmap
 
-This roadmap restores the original phase-based ambition while also marking current status. `Done` means implemented in code at a basic level. `Partial` means present but not yet strong, readable, or complete enough to satisfy the vision. `Missing` means not truly built yet.
+This restores the original roadmap as the required implementation target. Items that are not fully done belong in TODO. The exhaustive current gap list lives in [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md).
 
-## Phase 0 To Phase 5: Core App And Baseline Loop
+## Phase Status Summary
 
-- `Done`: Android project, landscape setup, Gradle build, `SurfaceView` loop
-- `Done`: player movement, jump, hold, duck
-- `Done`: basic HUD, score, distance, seeds, Bloom meter
-- `Partial`: phone-scale readability and presentation clarity
+| Phase | Status | Notes |
+|---|---|---|
+| 0 | Done | project skeleton exists |
+| 1 | Done | game loop exists |
+| 2 | Done | input system exists |
+| 3 | Partial | player exists but dream-spec feel still needs work |
+| 4 | Partial | parallax exists, art still incomplete |
+| 5 | Partial | HUD exists, but readability and trust are not good enough |
+| 6 | Partial | player sprites exist, face overlay dream not complete |
+| 7 | Done | base entity framework exists |
+| 8 | Partial | flora classes exist, presentation and behaviors need stronger delivery |
+| 9 | Partial | tree classes exist, scenic richness incomplete |
+| 10 | Partial | bird classes exist, readability and drama need work |
+| 11 | Partial | animal classes exist, personality delivery insufficient |
+| 12 | Done | entity manager and spawner exist |
+| 13 | Partial | biome cycle exists, full mood transformation incomplete |
+| 14 | Partial | particle system exists, breathing-forest density incomplete |
+| 15 | Partial | camera effects exist |
+| 16 | Partial | flavor text exists, full quote/dialogue coverage missing |
+| 17 | Partial | mercy exists, full pacifist/friendship systems missing |
+| 18 | TODO | persistent encounter memory and costumes missing |
+| 19 | Partial | ghost exists, UX is currently confusing |
+| 20 | Partial | audio states exist, full leitmotif system incomplete |
+| 21 | Partial | haptics exist, tuning incomplete |
+| 22 | Partial | core lifecycle exists, soft authored rest loop incomplete |
+| 23 | Partial | garden exists, full sanctuary feel incomplete |
+| 24 | TODO | full bespoke background artwork not finished |
+| 25 | TODO | major polish pass still required |
+| 26 | TODO | full performance/device truth validation incomplete |
+| 27 | TODO | product not ready for final store release quality |
 
-## Phase 6: Final-feel Player Presentation
+## Original Phase Targets
 
-- `Done`: sprite-driven player animations
-- `Partial`: jump and run feel
-- `Missing`: full face/eye expression layer from the dream spec
-- `Missing`: perfect staging so the player always reads the active body cleanly
+### Phase 0 — Android Studio Project Skeleton
 
-## Phase 7 To Phase 12: Entity Foundation And Endless Run
+Goal: correct Android project structure, orientation, and full-screen setup.
 
-- `Done`: entity base classes, factory, spawn manager, collision loop
-- `Done`: 19 entity classes exist
-- `Partial`: distinct runtime behavior for many entities
-- `Missing`: enough scale, spacing, and staging to make those differences obvious in normal play
-- `Missing`: confidence that all entities feel cute, readable, and memorable on device
+### Phase 1 — Core Game Loop Engine
 
-## Phase 13: Biome Journey
+Goal: stable `SurfaceView` loop with frame-independent timing.
 
-- `Done`: five-biome cycle, color blending, biome-specific pools
-- `Partial`: mood-chapter feeling
-- `Missing`: full scenic transformation, hand-painted/parallax identity, richer transitions
+### Phase 2 — Input System
 
-## Phase 14: Particles And Environmental Life
+Goal: correct classification of tap, hold, and swipe-down.
 
-- `Done`: particle system and multiple presets
-- `Partial`: Bloom aura, mercy stars, death bursts, seed collection feedback
-- `Missing`: full “breathing forest” density with petals, fireflies, leaf life, atmospheric abundance
+### Phase 3 — Player Class & Physics
 
-## Phase 15: Camera And Feedback Juice
+Goal: variable-height jump, ducking, squash/stretch, satisfying feel.
 
-- `Done`: shake and milestone response
-- `Partial`: cinematic feel
-- `Missing`: all the dream-spec polish beats that make the run feel authored rather than serviceable
+### Phase 4 — Parallax Background System
 
-## Phase 16: Flavor Text And Reactive Personality
+Goal: four background layers with seamless looping.
 
-- `Done`: `FlavorTextManager`
-- `Partial`: some animal reactions
-- `Missing`: enough reliable trigger coverage and visual emphasis to make the system emotionally central
-- `Missing`: determination/rest quote richness from the original dream
+### Phase 5 — HUD
 
-## Phase 17: Mercy, Spare, And Pacifist Systems
+Goal: score, seeds, Bloom meter, readable pixel-font UI.
 
-- `Done`: mercy hearts exist
-- `Partial`: some mercy-linked entity behavior exists
-- `Missing`: fully legible spare events and pacifist-feeling run outcomes
-- `Missing`: biome-level friendship bonus and stronger peace-vs-chaos logic
+### Phase 6 — Sprite System & Player Sprites
 
-## Phase 18: Persistent Memory
+Goal: full player animation suite, contextual face overlay.
 
-- `Done`: persistent seeds, high score, garden progress, ghost persistence
-- `Missing`: persistent encounter memory manager
-- `Missing`: costume overlays based on repeated encounters
-- `Missing`: repeat-killer deja vu system
-- `Missing`: stronger “the forest remembers” cross-session identity
+### Phase 7 — Base Entity System & SwayComponent
 
-## Phase 19: Ghost Run
+Goal: reusable entity base and wind sway architecture.
 
-- `Done`: ghost recording and playback
-- `Partial`: concept exists
-- `Missing`: clean player-facing presentation; current user report says it actively confuses the run
-- `Missing`: wave-off, overtaken moment, and tasteful default handling
+### Phase 8 — Ground Flora
 
-## Phase 20: Leitmotif Audio System
+Goal: all five flora implemented with unique behaviors and readable hitboxes.
 
-- `Done`: music state transitions and SFX hooks
-- `Partial`: layered run audio identity
-- `Missing`: fully authored leitmotif treatment across every music state
-- `Missing`: stronger emotional scoring and more obvious biome/audio identity
+### Phase 9 — Trees
 
-## Phase 21: Haptics
+Goal: all four trees implemented as space-constraining scenic hazards.
 
-- `Done`: jump, hit, mercy, milestone, and bloom haptic hooks
-- `Partial`: perceptual tuning quality
+### Phase 10 — Birds
 
-## Phase 22: Full Session Lifecycle
+Goal: all five birds implemented with clear unique aerial logic.
 
-- `Done`: menu -> run -> game over -> restart
-- `Done`: menu -> garden -> back
-- `Partial`: soft emotional fall and reflective return
-- `Missing`: determination-style rest layer and fully authored closure after failure
+### Phase 11 — Animals
 
-## Phase 23: Garden Meta-Loop
+Goal: all five animals implemented with personality, AI, and mercy hooks.
 
-- `Done`: garden screen, unlock persistence, spend lifetime seeds
-- `Partial`: chill restorative feel
-- `Missing`: the sense of a truly growing personal sanctuary over many sessions
+### Phase 12 — EntityManager & Spawner
 
-## Phase 24: Final Art Pass
+Goal: endless spawning, pooling, difficulty ramp, collision classification.
 
-- `Partial`: imported sprites and procedural scene drawing
-- `Missing`: full bespoke background art, hand-crafted layers, scenic richness, strong visual identity across every biome
+### Phase 13 — Biome System
 
-## Phase 25: Polish Pass
+Goal: biome transitions every 500m with visual, spawn, and atmosphere changes.
 
-Top priority gaps based on current user feedback:
+### Phase 14 — Full Particle System
 
-- `Missing`: increase entity size and on-phone readability
-- `Missing`: tune spawn pacing so the forest feels populated and legible
-- `Missing`: resolve ghost duplication confusion immediately
-- `Missing`: make seeds, Bloom, hearts, and garden loop unmistakable during play
-- `Missing`: make every creature’s cute unique behavior actually read during normal play
+Goal: petals, dust, pollen, seed bursts, Bloom trails, fireflies, glow, kindness bursts.
 
-## Phase 26: Performance And Device Truth
+### Phase 15 — Camera Effects
 
-- `Partial`: host-side tests and some device verification exist
-- `Missing`: deep manual validation of every entity behavior on real phones
-- `Missing`: confidence that presentation quality holds under long sessions
+Goal: screen shake and speed-based world scale.
 
-## Phase 27: Product Completion
+### Phase 16 — Flavour Text System
 
-The project should not be considered complete until the following are true:
+Goal: event popups plus contextual rest quotes and dialogue bubbles.
 
-- the original dream spec is represented in docs and in the shipped feel of the game
-- all major systems are both implemented and player-perceivable
-- no core fantasy depends on reading code to believe it exists
-- the user can play one session on a phone and immediately feel:
-  cute forest, unique creatures, mercy, Bloom, memory, garden meaning
+### Phase 17 — Mercy & Pacifist Systems
+
+Goal: mercy hearts, spare events, friendship bonus.
+
+### Phase 18 — Persistent Memory System
+
+Goal: remembered encounters, costumes, deja vu.
+
+### Phase 19 — Ghost Run System
+
+Goal: motivational best-run ghost that feels haunting, not broken.
+
+### Phase 20 — Leitmotif Audio System
+
+Goal: music states unified by a common forest motif.
+
+### Phase 21 — HapticManager
+
+Goal: every important event has satisfying physical feedback.
+
+### Phase 22 — Full Game State System
+
+Goal: full menu -> run -> Bloom -> rest -> restart lifecycle.
+
+### Phase 23 — Garden Screen
+
+Goal: persistent meta-loop where the forest grows with the player.
+
+### Phase 24 — Real Background Artwork
+
+Goal: replace remaining procedural placeholder scenery with final art.
+
+### Phase 25 — Polish Pass
+
+Goal: every detail that turns the game from functional into memorable.
+
+### Phase 26 — Performance Audit
+
+Goal: stable 60 FPS on real hardware.
+
+### Phase 27 — Google Play Preparation
+
+Goal: complete, shippable, polished store-ready product.
+
+## Non-Negotiable TODO Priorities
+
+- TODO: fix entity size/readability on phone
+- TODO: fix spawn sparsity so encounters feel alive
+- TODO: fix ghost duplication confusion
+- TODO: verify every entity behavior on actual device
+- TODO: make seeds, Bloom, mercy hearts, and garden loop unmistakable in play
+- TODO: implement the missing persistent memory, costume, pacifist, and dialogue systems

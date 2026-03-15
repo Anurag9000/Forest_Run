@@ -1,125 +1,155 @@
-# Entity Database
+# Forest_Run — Entity Database (Restored)
 
-This document records the intended role of every entity, what is present now, and what still needs work to satisfy the original vision.
+This document restores the original entity planning detail while marking what still must be built or improved in play.
 
-## Core Rule
+## Entity Rule
 
-Every entity should be:
+No generic obstacle feeling is acceptable. Every entity should have a distinct silhouette, distinct motion, distinct gameplay role, and distinct emotional personality.
 
-- readable at phone scale
-- mechanically distinct
-- visually distinct
-- emotionally distinct
+## Ground Flora
 
-## Flora
+### Lily of the Valley
 
-- `Cactus`
-  Intended: simple readable early hazard with clean silhouette.
-  Current: static ground hazard.
-  Missing: stronger staging and readability on phone.
+- Role: tiny low hazard, ghost-flower lure, often paired with tempting seed placement.
+- Dream traits: glows at night, distracts near the player’s feet, creates tricky seed traps.
+- Current: implemented as sway hazard.
+- TODO: make its glow, lure identity, and readability obvious in real play.
 
-- `LilyOfValley`
-  Intended: elegant low hazard with special placement and night charm.
-  Current: sway hazard.
-  Missing: stronger visibility, stronger magical/night identity.
+### Hyacinth
 
-- `Hyacinth`
-  Intended: brushable plant with close-call tension.
-  Current: brush or mercy zone exists.
-  Missing: clearer player-facing distinction between brush and fatal contact.
+- Role: clustered rhythm hazard that encourages longer jumps or risky brush interactions.
+- Dream traits: grouped feel, pollen, partial-brush punishment, distinctive timing.
+- Current: brush/mercy zone exists.
+- TODO: clarify brush behavior and make the cluster identity strong on device.
 
-- `Eucalyptus`
-  Intended: taller obstacle with movement personality.
-  Current: ground obstacle.
-  Missing: stronger environmental drama and legibility.
+### Eucalyptus
 
-- `VanillaOrchid`
-  Intended: ground obstacle with visual uniqueness.
-  Current: obstacle exists.
-  Missing: enough runtime clarity to feel memorable.
+- Role: forward-leaning plant that punishes late reads.
+- Dream traits: fast whip sway, trapezoid feel, leaf drama.
+- Current: obstacle exists.
+- TODO: stronger leaning identity and readable high-threat profile.
+
+### Vanilla Orchid
+
+- Role: vertical-window obstacle with vine and overhead branch pressure.
+- Dream traits: safe window between low and high colliders.
+- Current: obstacle exists.
+- TODO: make the two-zone read obvious enough to feel special.
+
+### Cactus
+
+- Role: classic runner baseline hazard.
+- Dream traits: rigid, harsh silhouette, contrast against the softer forest.
+- Current: classic static hazard exists.
+- TODO: stronger iconic readability and repeated-memory integration.
 
 ## Trees
 
-- `WeepingWillow`
-  Intended: moody curtain-like obstacle and menu iconography.
-  Current: obstacle exists and appears in menu/garden presentation.
-  Missing: stronger scenic presence and more authored behavior.
+### Weeping Willow
 
-- `Jacaranda`
-  Intended: purple mood-shifting tree with petals and visual spectacle.
-  Current: tall scrolling obstacle.
-  Missing: richer petal atmosphere and more memorable play impact.
+- Role: curtain hazard and core visual icon of the game.
+- Dream traits: forces ducking, obscures what comes next, creates canopy mood.
+- Current: implemented obstacle and menu/garden iconography.
+- TODO: stronger curtain gameplay and scenic dominance.
 
-- `Bamboo`
-  Intended: distinctive constrained-space obstacle.
-  Current: tall obstacle.
-  Missing: stronger visual readability and special-feel encounter design.
+### Jacaranda
 
-- `CherryBlossom`
-  Intended: soft, beautiful, petal-rich tree with emotional lift.
-  Current: scrolling obstacle.
-  Missing: stronger petal identity and memorable runtime charm.
+- Role: purple-canopy atmosphere tree with petal drift.
+- Dream traits: visual noise, mood, overhead tension.
+- Current: obstacle exists.
+- TODO: stronger petal curtain spectacle and memorable encounter feel.
+
+### Bamboo
+
+- Role: vertical-barrier precision hazard.
+- Dream traits: narrow gap threading, jitter sway.
+- Current: obstacle exists.
+- TODO: stronger gap readability and signature threat identity.
+
+### Cherry Blossom
+
+- Role: wind-making environmental modifier.
+- Dream traits: petal blinding, gust influence, gentle beauty with danger.
+- Current: obstacle exists.
+- TODO: restore stronger wind-gust and petal-storm personality.
 
 ## Birds
 
-- `Duck`
-  Intended: low flyer that teaches ducking.
-  Current: low-flying hazard.
-  Missing: larger clearer profile and stronger telegraphing.
+### Owl
 
-- `TitGroup`
-  Intended: cute grouped flyer with rhythm challenge.
-  Current: flying group hazard.
-  Missing: enough size and staging to appreciate the group behavior.
+- Role: night watcher that punishes reckless jumping.
+- Dream traits: sleeping perch, reactive dive, eerie glow.
+- Current: dive trigger logic exists.
+- TODO: stronger night mood and clearer telegraphing.
 
-- `ChickadeeGroup`
-  Intended: energetic chaotic aerial personality.
-  Current: flying group hazard.
-  Missing: stronger readability and charm.
+### Duck
 
-- `Owl`
-  Intended: eerie perched bird that dives if the player jumps nearby.
-  Current: perched dive logic exists.
-  Missing: stronger night-biome mood and more obvious reactive drama.
+- Role: low flyer that teaches ducking instead of jumping.
+- Dream traits: unmistakable head-height obstruction and clear quack cue.
+- Current: low-flying hazard exists.
+- TODO: make it larger and more readable on phone.
 
-- `Eagle`
-  Intended: high-threat aerial dive with dramatic cue.
-  Current: aerial hazard.
-  Missing: stronger spectacle and clearer player perception.
+### Eagle
+
+- Role: hunter dive threat.
+- Dream traits: screech cue, target lock, diagonal punishment.
+- Current: dive hazard exists.
+- TODO: stronger dramatic cue and player understanding.
+
+### TitGroup
+
+- Role: rhythm-wave flock.
+- Dream traits: group sine motion and timing-based reads.
+- Current: group hazard exists.
+- TODO: make flock behavior visually appreciable during play.
+
+### ChickadeeGroup
+
+- Role: erratic aerial chaos.
+- Dream traits: unpredictable altitude shifts and cute panic energy.
+- Current: group hazard exists.
+- TODO: stronger charm and clarity.
 
 ## Animals
 
-- `Cat`
-  Intended: kindness bonus, flavor text, possible wave-off behavior.
-  Current: pass reward and some spare-like behavior in code.
-  Missing: enough runtime clarity for players to reliably notice the personality.
+### Wolf
 
-- `Wolf`
-  Intended: howl, tension, charge, possible disengage through mercy.
-  Current: howl/charge state machine and stumble collision exist.
-  Missing: stronger dramatic pacing and easier player recognition.
+- Role: sprinter/charger.
+- Dream traits: howl, then charge; intimidating but readable.
+- Current: howl/charge code exists.
+- TODO: make the drama impossible to miss in actual play.
 
-- `Fox`
-  Intended: mirror-jump trickster with sly flavor.
-  Current: jump-mirror behavior and mercy spare path exist.
-  Missing: stronger telegraphing and cute readability.
+### Cat
 
-- `Hedgehog`
-  Intended: tiny nuisance with non-lethal punishment.
-  Current: speed-debuff trap.
-  Missing: enough visibility to feel fair rather than invisible.
+- Role: kindness-rewarding decoy.
+- Dream traits: tiny optional reward hazard, kindness bonus, spare-like warmth.
+- Current: kindness reward logic exists.
+- TODO: make the reward and personality actually read to players.
 
-- `Dog`
-  Intended: either bark hazard or buddy-mode charm event.
-  Current: bark projectile mode and buddy variant exist in code.
-  Missing: enough staging and player-facing delight to make the buddy behavior memorable.
+### Fox
 
-## Immediate Entity Priorities
+- Role: mirror-jump trickster.
+- Dream traits: sly counter-jump, playful line delivery, mercy-based wave-off.
+- Current: mirror-jump logic exists.
+- TODO: stronger telegraphing and cuteness.
 
-Based on current player feedback, the first entity-level fixes should be:
+### Hedgehog
 
-- increase screen size of birds, plants, trees, and animals
-- reduce dead space between encounters
-- verify every unique behavior on actual phone hardware
-- ensure flavor text and mercy feedback are visible enough to be noticed
-- tune ghost presentation so it never obscures entity readability
+- Role: small friction threat that debuffs instead of killing.
+- Dream traits: fair but sneaky, visible enough to feel earned, not cheap.
+- Current: speed-debuff trap exists.
+- TODO: fix fairness through size/readability.
+
+### Dog
+
+- Role: barker and occasional running buddy.
+- Dream traits: bark projectile timing plus lovable buddy variant.
+- Current: both modes exist in code.
+- TODO: make buddy mode memorable and bark timing readable.
+
+## Mandatory Entity TODOs
+
+- TODO: enlarge entity screen presence.
+- TODO: reduce empty space between encounters.
+- TODO: verify all entity-specific behaviors on actual device.
+- TODO: ensure flavor text and mercy feedback are visible whenever personality is supposed to land.

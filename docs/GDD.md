@@ -1,185 +1,266 @@
-# Forest Run Game Design Document
+# Forest_Run — Game Design Document (Restored)
 
-## 1. Product Identity
+This document restores the original long-form GDD as the product target. Implementation truth is tracked alongside it in [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md).
 
-`Forest Run` is meant to be a high-feel 2D Android endless runner with a cottagecore forest identity, a strong personality layer, and a restorative meta-loop. The goal is not only to dodge obstacles. The goal is to make the player feel like they are running through a living, reactive forest that notices them, rewards grace, and slowly grows with them across many sessions.
+**Project Name:** Forest_Run  
+**Platform:** Android (Android Studio)  
+**Language:** Kotlin  
+**Package Name:** `com.yourname.forest_run`  
+**Screen Orientation:** Landscape / `sensorLandscape`  
+**Target FPS:** 60 FPS  
+**Vision Status:** Active target, not abandoned
 
-## 2. Original Dream Vision
+---
 
-The original dream was:
+## 1. Vision & Concept
 
-- a lush Ghibli x Stardew Valley inspired forest runner
-- a ritualized menu where the heroine sits under a willow, stands, and then starts running
-- five biomes that each feel like a different emotional chapter
-- highly readable but cute entities with unique silhouettes, reactions, and mechanics
-- seeds that matter both within the run and across the whole save
-- Bloom as a huge audiovisual payoff state
-- soft failure, reflective rest, and a garden that makes each run meaningful
-- an Undertale-like mercy and personality layer: near misses, flavor text, sparing, ghost memory, repeated encounter memory, determination-like tone
+Forest_Run is a high-fidelity, colorful 2D endless runner for Android. It is a spiritual successor to the Chrome Dino game, but reimagined as a lush, living cottagecore forest experience. The aesthetic is inspired by Studio Ghibli and Stardew Valley. Every action should have a natural physical reaction, and the forest should feel like it is breathing.
 
-## 3. Intended Full Player Journey
+### Core Design Pillars
 
-### 3.1 Cold Start
+| Pillar | Description |
+|---|---|
+| Juicy | Every input triggers satisfying visual, haptic, and audio feedback |
+| Alive | The world breathes: wind, petals, fireflies, day/night shift |
+| Readable | Each obstacle has a unique visual identity so the player learns fast |
+| Rewarding | Seeds -> Garden meta-loop gives every run long-term meaning |
+| Behavioural AI | Animals react to the player; the forest feels inhabited |
 
-- Open app into a personal garden scene.
-- See the heroine resting under a tree.
-- Hear ambient forest audio.
-- First tap stands her up.
-- Second tap begins the run.
+### Current Status
 
-### 3.2 Run Start
+- Implemented: baseline endless runner, biomes, seeds, Bloom, some entity personality, garden persistence.
+- TODO: deliver the full intended feeling on device. Current user feedback says the world is too small, too sparse, and too unclear.
 
-- Early pacing should feel readable and inviting.
-- Entities should be big enough to recognize on a phone instantly.
-- Seeds should be visible and motivating.
-- HUD should make score, distance, Bloom, seeds, and hearts obvious.
+---
 
-### 3.3 Mid-Run Journey
+## 2. Art Style & Visual Identity
 
-- Biomes shift every 500m.
-- Music, color, danger, and spawn identity evolve.
-- Animals introduce personality, not just threat.
-- Near misses create mercy hearts and flavor payoff.
-- Clean passes and kind interactions feed bonus systems.
+- Art Style: high-saturation vibrant pixel art, Ghibli x Stardew Valley.
+- Colour Palette: deep forest greens, floral pastels, earthy browns, warm gold, deep violet.
+- No static frames. All flora sways; all particles drift. The forest is never still.
 
-### 3.4 Bloom Catharsis
+### Colour Dynamics — Day/Night Cycle
 
-- Seeds fill the Bloom meter.
-- Bloom activates as a dramatic power spike.
-- Invulnerability, spectacle, audio swell, and motion clarity should all be felt immediately.
+| Phase | Distance | Canvas Tint |
+|---|---|---|
+| Morning | 0–300m | Soft Peach / Warm Pink |
+| Day | 300–700m | Clear Blue-White |
+| Golden Hour | 700–1100m | Warm Gold / Amber |
+| Twilight | 1100–1500m | Deep Orange / Red-Orange |
+| Night | 1500m+ | Deep Violet / Indigo |
 
-### 3.5 Failure And Return
+Night mode activates Lily of the Valley glow and Owl spawning. Fireflies appear once dusk begins.
 
-- A bad collision should feel like a soft fall, not a cheap hard fail.
-- The game should preserve rhythm through dying, rest, game-over, and restart.
-- The next run should feel informed by memory: better understanding, ghost replay, persistence, garden growth.
+### Current Status
 
-### 3.6 Meta-Loop
+- Implemented: biome tinting and darkness overlays, sprite import pipeline.
+- TODO: full hand-authored scenic backgrounds, stronger atmospheric density, true readable phone-scale art staging.
 
-- Lifetime seeds unlock a growing garden.
-- The garden should feel chill, rewarding, and emotionally opposite to the run.
-- The player should want “one more run” for both score and garden progress.
+---
 
-## 4. Core Run Mechanics
+## 3. Game Flow — Full Session Lifecycle
 
-### Controls
+### 3.1 Cold Start — The Garden
 
-- Tap: short jump
-- Hold: higher jump
-- Swipe down: duck or slide
+- Open app to see the woman sitting under a Weeping Willow in her personal garden.
+- No hard menu buttons.
+- Garden shows unlocked plants in the background.
+- Ambient forest audio plays.
+- First tap: woman stands up.
+- Second tap: she begins her run.
+- A rhythmic acoustic beat fades in, synced to her footstep cadence.
 
-### Progression
+### 3.2 Acceleration Phase — Early Game (0–500m)
 
-- Distance increases speed and score.
-- Spawn frequency ramps with difficulty.
-- Biomes rotate every 500m.
-- Mercy hearts accumulate from near misses.
-- Seeds build toward Bloom.
+- Biome: Home Grove.
+- Obstacles: simple early hazards.
+- Scroll speed begins gentle and readable.
+- Seeds begin spawning.
+- Music starts minimal.
 
-### Bloom
+### 3.3 State Shift — Mid Game (500m–1500m)
 
-Dream behavior:
+- Every 500m, a biome transition event fires.
+- Background and dominant colors shift.
+- Spawn pools change.
+- Speed rises.
+- Music layers deepen.
+- Foxes, Ducks, and more complex threats are introduced.
 
-- visibly obvious seeds
-- clearly readable Bloom meter
-- activation at 8 seeds
-- roughly 6 seconds of invulnerability
-- clear audio/visual transformation
-- meaningful “I am unstoppable right now” feeling
+### 3.4 Bloom State — Power-Up Phase
 
-## 5. Entity Design Principles
+- Triggered when the Bloom meter fills.
+- Full invincibility for a limited window.
+- Petal trail, audiovisual surge, world transformation.
+- Obstacles passed should convert into bonus reward.
 
-Every entity should satisfy all of the following:
+### 3.5 Chaos Peak — Late Game
 
-- readable at phone scale
-- cute and distinct in silhouette and motion
-- mechanically unique enough that a player can describe it from memory
-- emotionally flavored enough that it feels like a forest inhabitant, not filler
-- staged often enough that the player can actually perceive its personality
+- Dense overlapping threat patterns.
+- Maximum wind and atmosphere.
+- Strong milestone feedback.
+- Fully layered music.
 
-## 6. World Structure
+### 3.6 The Soft Fall — Game Over / Rest
 
-The biome cycle is:
+- On collision, the character should not feel cheaply “deleted.”
+- She stumbles, slows, and sits down tired but peaceful.
+- The forest continues gently.
+- A calm end-run summary appears.
+- The emotional flow should support returning to the garden and trying again.
 
-- Meadow
-- Orchard
-- Ancient Grove
-- Dusk Canyon
-- Night Forest
+### 3.7 Meta-Loop — The Garden
 
-Each biome should alter:
+- Seeds collected during the run are used to grow new plants.
+- The garden becomes a personalized forest over many sessions.
+- The next locked plant is always visible as motivation.
 
-- sky and ambient color
-- foliage and ground feel
-- music tone
-- spawn pool emphasis
-- danger profile
-- mood and atmosphere
+### Current Status
 
-## 7. Personality Layer
+- Implemented: two-tap menu start, run loop, game over, restart, garden unlock persistence.
+- TODO: make the whole session arc feel authored, readable, and emotionally coherent in real play.
 
-The original dream included:
+---
 
-- flavor text
-- mercy hearts
-- spare thresholds
-- determination/rest quotes
-- repeated encounter memory
-- costumes unlocked by encounter counts
-- ghost replay of best run
-- dialogue-like reactions from creatures
-- a world that feels like it notices your behavior
+## 4. Core Input System
 
-## 8. Current Implemented State
+| Input | Action |
+|---|---|
+| Single Tap | Standard jump |
+| Hold / Long Press | High jump proportional to hold duration |
+| Swipe Down | Duck / Slide |
+| Multi-touch supported | Jump and duck independently |
 
-Implemented in code today:
+Jump height is tied to touch duration. Short tap = low hop. Full hold = maximum arc.
 
-- menu scene with stand-then-run flow
-- gameplay with jump, hold, duck, collisions, score, distance
-- five-biome tint system and biome-based spawn pools
-- 19 entities with different code paths
-- seed orbs, Bloom meter, Bloom activation, ghost replay, garden persistence
-- mercy hearts and flavor text infrastructure
-- animal-specific behavior in several classes
+### Current Status
 
-## 9. Current Gap To Vision
+- Implemented: tap, hold, swipe-down.
+- TODO: validate all touch affordances on device across long sessions and eliminate any confusion caused by ghost overlap or visual clutter.
 
-The current build is still short of the dream in several important ways.
+---
 
-### Readability Gap
+## 5. Scoring System
 
-- User-reported: birds, plants, trees, and animals feel too small on phone.
-- User-reported: spacing is so wide that encounters do not feel alive or appreciable.
-- Consequence: personality and uniqueness are effectively invisible even if the code contains them.
+| Event | Score |
+|---|---|
+| Distance | +1 point per metre |
+| Seed collected | +10 points |
+| Cat Kindness Bonus | multiplier reward |
+| Close Call | score bonus + spectacle |
+| 1000-point milestone | feedback reward |
 
-### Ghost Clarity Gap
+### Nature's Grace — Close Call Multiplier
 
-- User-reported: the ghost runner reads like a broken second runner.
-- Consequence: it confuses core control readability and can make the live run feel visually wrong.
+- Narrow animal clears should trigger a vibrant border flash.
+- Score reward and spectacle should reinforce close-call mastery.
 
-### System Visibility Gap
+### Current Status
 
-- User-reported: seeds, Bloom, Bloom window, HUD values, hearts, and garden loop do not read as obvious during real play.
-- Consequence: the connective tissue of the game is hidden from the player.
+- Implemented: score, distance, milestones, mercy hearts.
+- TODO: stronger close-call payoff, more obvious score logic, and better player understanding of kindness / mercy bonuses.
 
-### Personality Gap
+---
 
-- User-reported: creatures do not yet feel cute, unique, interactive, and Undertale-like enough.
-- Consequence: the most distinctive promised layer is not landing strongly enough in runtime experience.
+## 6. Collectibles — Seeds
 
-### Atmosphere Gap
+- Seeds are vibrant glowing orbs scattered throughout the run.
+- Some are placed as tempting traps above hazards.
+- Seeds can also drop from interactions and Bloom sequences.
+- Seeds feed two systems:
+  1. In-run Bloom progression
+  2. Meta-game garden currency
 
-- The world still lacks the full density of particles, art direction, environment life, and bespoke scene craft imagined in the original vision.
+### Current Status
 
-## 10. What Must Become True
+- Implemented: seed orbs, Bloom fill, lifetime seed persistence.
+- TODO: fix player-facing visibility. Current user feedback says seeds and Bloom are not reading clearly enough in practice.
 
-To satisfy the original vision, all of the following must become true in actual play:
+---
 
-- entities are comfortably readable on a phone without squinting
-- each entity’s unique behavior is obvious within normal gameplay
-- ghost replay never harms clarity
-- seeds and Bloom are constantly legible and motivating
-- mercy hearts and flavor text visibly sell the personality layer
-- garden progression is emotionally meaningful, not hidden
-- biomes feel like mood chapters
-- the whole session arc feels authored, not accidental
+## 7. Haptic Feedback
+
+| Event | Haptic |
+|---|---|
+| Jump | Short pulse |
+| Bloom activates | Long sustained pulse |
+| Collision / game over | Long strong pulse |
+| Close Call | Double-tap pulse |
+| 1000-point milestone | Medium pulse |
+
+### Current Status
+
+- Implemented: core haptic hooks.
+- TODO: perceptual tuning on actual phones.
+
+---
+
+## 8. Save System
+
+- Local high score stored in SharedPreferences.
+- Garden progress stored locally.
+- Lifetime seeds persist.
+- No cloud sync in v1.0 target.
+
+### Current Status
+
+- Implemented: high score, lifetime seeds, garden progress, ghost save.
+- TODO: persistent memory systems beyond that, such as repeated-encounter memory and costumes.
+
+---
+
+## 9. Audio Design
+
+### Music — Adaptive / Procedural
+
+| Game State | Audio |
+|---|---|
+| Garden / Menu | Soft ambient acoustic |
+| Running Early | Simple drum beat |
+| Running Mid | Bass + flute layer |
+| Running Late | Full layered track |
+| Bloom State | Orchestral triumphant swell |
+| Rest | Calm slow outro |
+
+Dynamic tempo should scale with scroll speed.
+
+### SFX
+
+| Event | Sound |
+|---|---|
+| Seed collected | Soft ping |
+| Jump | Whoosh |
+| Landing | Soft thud + grass rustle |
+| Dog telegraph | Bark cue |
+| Eagle telegraph | Screech cue |
+| Wolf telegraph | Howl cue |
+| Bloom start | Magical chime |
+| Rest / game over | Gentle exhale / settle |
+
+### Current Status
+
+- Implemented: core music states and many SFX hooks.
+- TODO: full leitmotif treatment and stronger authored musical identity across all states.
+
+---
+
+## 10. Unlockables & Progression
+
+| Item | Cost (Seeds) | Description |
+|---|---|---|
+| Cactus | 5 | First unlock |
+| Lily of the Valley | 10 | Night glow |
+| Hyacinth | 15 | Cluster variant |
+| Eucalyptus | 20 | Tall sway |
+| Vanilla Orchid | 25 | Low hanging vine |
+| Cherry Blossom Tree | 40 | Petal particles |
+| Weeping Willow | 50 | Curtain leaves |
+| Jacaranda | 60 | Purple canopy |
+| Bamboo | 30 | Dense stalks |
+
+Animals and birds were not intended as v1.0 garden unlockables.
+
+### Current Status
+
+- Implemented: left-to-right plant card unlock flow with lifetime seeds.
+- TODO: make the garden feel like a true sanctuary and long-term reward rather than a minimal shop-like screen.
