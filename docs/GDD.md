@@ -159,6 +159,12 @@ Current baseline:
 - Weather-linked thoughts and rare Garden reflections should reveal feeling without lore-dumping.
 - Unlockable memory pages should be poetic, fragmentary, and intimate rather than encyclopedic.
 
+Current baseline:
+
+- rest quotes now route through a fragment system instead of only hard-coded quote branches
+- Garden can now surface baseline reflection fragments and track unlocked memory pages
+- creature-thought coverage and weather-linked fragments are still TODO
+
 ### Current Status
 
 - Implemented: two-tap menu start, run loop, game over, restart, garden unlock persistence.

@@ -202,8 +202,9 @@ Expected qualities:
 - Implemented: `RelationshipArcSystem` now exists as a first-class runtime and persistence layer for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - Partial: `ReturnMomentsSystem` now exists in baseline form.
 - Partial: relationship stages are now persisted and surfaced in creature dialogue plus Garden strongest-bond presentation; Garden visitation, milestone presentation, and deeper authored stage consequences still need expansion.
-- TODO: add the first-class fragment system.
-- TODO: persistence schema must still expand further for fragment unlock state and richer relationship milestone presentation.
+- Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
+- Partial: fragment coverage now drives rest quotes and Garden reflection/carry-home presentation in baseline form.
+- TODO: persistence schema must still expand further for richer fragment unlock state and relationship milestone presentation.
 
 ## 13. Relationship Arc Authoring
 

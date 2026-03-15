@@ -185,8 +185,8 @@ Examples:
 
 - Partial: forest mood and personal return moments now exist in baseline form.
 - Partial: named relationship arcs now exist in baseline runtime form for Cat, Fox, Wolf, Dog, Owl, and Eagle, with persisted stages and stage-aware dialogue/payoff.
-- TODO: quiet story fragments are still not implemented.
-- TODO: deepen forest mood consequences, relationship-stage consequences, and return-moment richness beyond the current baseline.
+- Partial: quiet story fragments now exist in baseline runtime form through fragment-driven rest quotes, Garden reflections, and memory-page unlocks.
+- TODO: deepen forest mood consequences, relationship-stage consequences, fragment coverage, and return-moment richness beyond the current baseline.
 
 ---
 

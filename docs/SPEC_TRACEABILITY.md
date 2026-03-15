@@ -710,8 +710,9 @@ These items are not from the earliest historical repo docs. They are explicit us
 
 #### Quiet Story Fragments
 
-- `TODO`: short rest quotes, creature thoughts, weather-linked lines, and rare Garden reflections.
-- `TODO`: unlockable poetic memory pages.
+- `Implemented`: short rest quotes now run through a first-class fragment system.
+- `Partial`: rare Garden reflections and unlockable poetic memory pages now exist in baseline form.
+- `TODO`: creature thoughts and weather-linked lines.
 - `TODO`: preserve emotional mystery through fragment writing instead of explicit exposition.
 
 ## Strict Documentation Conclusion

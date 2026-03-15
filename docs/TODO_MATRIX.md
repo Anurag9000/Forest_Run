@@ -75,10 +75,11 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Quiet Story Fragments
 
-- TODO: expand short rest quotes into a broader fragment-driven writing layer.
+- DONE: short rest quotes now run through a first-class fragment-driven writing layer.
+- PARTIAL: rare Garden reflections and unlockable poetic memory pages now exist in baseline form.
 - TODO: add one-line creature thoughts for key emotional moments.
-- TODO: add weather-linked thoughts and rare Garden reflections.
-- TODO: add unlockable poetic memory pages that reveal feeling without lore-dumping.
+- TODO: add weather-linked thoughts and broaden authored coverage for Garden reflections.
+- TODO: deepen poetic memory pages so they reveal feeling without lore-dumping.
 - TODO: keep fragment writing brief, intimate, and suggestive rather than expository.
 - TODO: ensure mystery and emotional residue are preserved through restraint.
 
@@ -124,7 +125,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, and relationship arcs; quiet story fragments still need implementation.
+- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments; deepen authored coverage and payoff.
 
 ## Visual And Audio TODOs
 
