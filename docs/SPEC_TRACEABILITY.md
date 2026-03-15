@@ -515,13 +515,13 @@ Dog:
 
 - `Implemented`: mercy hearts exist.
 - `Partial`: near-miss classification and some mercy-linked reactions.
-- `TODO`: dedicated `MercySystem`, exact score rewards, pink heart effects, spare thresholds, `PACIFIST` banner, friendship bonus.
+- `Implemented`: dedicated `MercySystem`, spare thresholds, and baseline friendship rewards now exist.
+- `TODO`: exact score rewards, stronger heart/effect presentation, `PACIFIST` banner, and fuller route-like payoff.
 
 #### Persistent Memory
 
-- `TODO`: encounter counters.
-- `TODO`: costume unlock overlays.
-- `TODO`: deja vu repeat-killer system.
+- `Implemented`: encounter counters and costume unlock overlays exist in baseline form.
+- `TODO`: deeper deja vu repeat-killer system and richer cross-run presentation.
 
 #### Ghost Run — Spirit Of The Best
 
