@@ -6,11 +6,13 @@ import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
@@ -35,8 +37,8 @@ class Wolf(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val wolfH = 78f
-    private val wolfW = SpriteSizing.widthForHeight(sprite, wolfH, minWidth = 68f)
+    private val wolfH = 116f
+    private val wolfW = SpriteSizing.widthForHeight(sprite, wolfH, minWidth = 92f)
     private val insetX = wolfW * 0.11f
     private val insetY = wolfH * 0.07f
 
@@ -106,6 +108,7 @@ class Wolf(
             spared    = true
             wolfState = WolfState.SPARED
             gameState.addBonus(points = 200, seeds = 3)
+            PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
             FlavorTextManager.spawn("...", x, y - 30f, Color.rgb(200, 200, 220))
         }
     }

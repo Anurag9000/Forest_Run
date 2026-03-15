@@ -21,8 +21,8 @@ class Eucalyptus(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val floraHeight = 90f
-    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 40f)
+    private val floraHeight = 134f
+    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 62f)
     private val hitInsetX   = floraWidth * 0.18f
     private val hitTopY     = floraHeight * 0.14f
     private val drawRect    = RectF()

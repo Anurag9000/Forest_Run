@@ -23,8 +23,8 @@ class Owl(
     private val actionSprite: SpriteSheet
 ) : Entity(context) {
 
-    private val birdH = 58f
-    private val birdW = SpriteSizing.widthForHeight(actionSprite, birdH, minWidth = 42f)
+    private val birdH = 90f
+    private val birdW = SpriteSizing.widthForHeight(actionSprite, birdH, minWidth = 64f)
     private val perchY = groundY * 0.2f // High-up perch
     private val insetX = birdW * 0.10f
     private val insetY = birdH * 0.10f

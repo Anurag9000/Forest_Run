@@ -28,8 +28,8 @@ class Hedgehog(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val hogH  = 34f
-    private val hogW  = SpriteSizing.widthForHeight(sprite, hogH, minWidth = 24f)
+    private val hogH  = 54f
+    private val hogW  = SpriteSizing.widthForHeight(sprite, hogH, minWidth = 40f)
     private val insetX = hogW * 0.08f
     private val insetY = hogH * 0.08f
 

@@ -6,6 +6,9 @@ import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityFactory
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.entities.animals.Dog
+import com.yourname.forest_run.entities.animals.Wolf
+import com.yourname.forest_run.entities.flora.LilyOfValley
 import com.yourname.forest_run.systems.SeedOrbManager
 import kotlin.random.Random
 
@@ -95,7 +98,7 @@ class EntityManager(
                 seedOrbManager.trySpawn(
                     centreX    = entity.hitbox.centerX(),
                     topY       = entity.hitbox.top,
-                    spawnRate  = 1.0f
+                    spawnRate  = orbSpawnRateFor(entity)
                 )
             }
         }
@@ -159,6 +162,7 @@ class EntityManager(
         val entity = recycled ?: EntityFactory.create(
             context, type, spawnX, screenWidth, screenHeight, spriteManager
         )
+        PersistentMemoryManager.recordEncounter(context, type)
         // Guarantee it's active and placed at spawn X
         entity.isActive = true
         entity.hasBeenPassed = false
@@ -169,9 +173,10 @@ class EntityManager(
 
     fun seedOpeningSequence() {
         if (activeEntities.isNotEmpty()) return
-        spawnAt(EntityType.TIT, screenWidth + 680f)
-        spawnAt(EntityType.LILY_OF_VALLEY, screenWidth + 1_080f)
-        spawnAt(EntityType.CHICKADEE, screenWidth + 1_520f)
+        spawnAt(EntityType.DUCK, screenWidth + 380f)
+        spawnAt(EntityType.LILY_OF_VALLEY, screenWidth + 700f)
+        spawnAt(EntityType.CAT, screenWidth + 980f)
+        spawnAt(EntityType.TIT, screenWidth + 1_240f)
     }
 
     internal fun debugSpawnAt(type: EntityType, worldX: Float) {
@@ -200,7 +205,7 @@ class EntityManager(
     }
 
     /** Maps an entity instance back to its type for recycling. Extensible as we add more. */
-    private fun entityTypeOf(entity: Entity): EntityType? = when (entity) {
+    fun entityTypeOf(entity: Entity): EntityType? = when (entity) {
         is com.yourname.forest_run.entities.flora.Cactus          -> EntityType.CACTUS
         is com.yourname.forest_run.entities.flora.LilyOfValley    -> EntityType.LILY_OF_VALLEY
         is com.yourname.forest_run.entities.flora.Hyacinth        -> EntityType.HYACINTH
@@ -230,5 +235,11 @@ class EntityManager(
         seedOrbManager.reset()
         spawnTimer = 0f
         debugActiveEntityCount = 0
+    }
+
+    private fun orbSpawnRateFor(entity: Entity): Float = when (entity) {
+        is LilyOfValley -> 1.35f
+        is Dog, is Wolf -> 1.20f
+        else -> 1.0f
     }
 }

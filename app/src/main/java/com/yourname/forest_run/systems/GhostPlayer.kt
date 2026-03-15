@@ -10,6 +10,7 @@ import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
+import kotlin.math.abs
 
 /**
  * Plays back a ghost recording of the personal-best run.
@@ -122,15 +123,29 @@ class GhostPlayer {
      * Draw the ghost. Call BEFORE the live player.
      * @param spriteManager Supplies the same sprite sheets used by the live player.
      */
-    fun draw(canvas: Canvas, spriteManager: SpriteManager) {
+    fun draw(canvas: Canvas, spriteManager: SpriteManager, livePlayer: Player? = null) {
         if (!isActive || frames.isEmpty()) return
 
         val frame = frames[frameIdx.coerceIn(0, frames.lastIndex)]
+        lastX = frame.x
+        lastY = frame.y
 
         // Fade out during wave
-        val alphaMulti = if (isWaving) {
+        var alphaMulti = if (isWaving) {
             (1f - (waveTimer / WAVE_DURATION)).coerceIn(0f, 1f)
         } else 1f
+
+        livePlayer?.let { player ->
+            val horizontalDistance = abs((player.x + Player.BASE_WIDTH / 2f) - (frame.x + Player.BASE_WIDTH / 2f))
+            val overlapFade = when {
+                horizontalDistance <= Player.BASE_WIDTH * 0.30f -> 0.08f
+                horizontalDistance >= Player.BASE_WIDTH * 0.90f -> 1f
+                else -> (horizontalDistance - Player.BASE_WIDTH * 0.30f) / (Player.BASE_WIDTH * 0.60f)
+            }
+            alphaMulti *= overlapFade
+        }
+        if (alphaMulti <= 0.02f) return
+
         ghostPaint.alpha = (GHOST_ALPHA * alphaMulti).toInt()
 
         val w = Player.BASE_WIDTH  * frame.scaleX
@@ -143,14 +158,8 @@ class GhostPlayer {
         canvas.save()
         canvas.scale(frame.scaleX, frame.scaleY, drawRect.centerX(), drawRect.bottom)
         spriteRect.set(frame.x, frame.y, frame.x + Player.BASE_WIDTH, frame.y + Player.BASE_HEIGHT)
-        sprite.draw(canvas, spriteRect)
+        sprite.draw(canvas, spriteRect, ghostPaint)
         canvas.restore()
-
-        // After restoring, draw the ghost paint overlay (tint)  — done via the sprite draw above
-        // The colorFilter is applied in ghostPaint which we pass to sprite below; handled in SpriteSheet.draw overload. 
-        // Since SpriteSheet.draw doesn't accept a custom Paint, we apply alpha + filter to the canvas paint via a full-rect semi-transparent overlay instead:
-        ghostPaint.alpha = (GHOST_ALPHA * alphaMulti).toInt()
-        canvas.drawRect(drawRect, ghostPaint)
     }
 
     // ── Ghost's last known world position (for GameView sparkle on finish) ──

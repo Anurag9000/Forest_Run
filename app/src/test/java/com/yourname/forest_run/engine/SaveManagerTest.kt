@@ -2,8 +2,10 @@ package com.yourname.forest_run.engine
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.GhostFrame
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -45,5 +47,21 @@ class SaveManagerTest {
 
         assertTrue(SaveManager.hasGhostRun(context))
         assertEquals(frames, reloaded)
+    }
+
+    @Test
+    fun `persistent memory counters and last killer persist`() {
+        assertNull(SaveManager.loadLastKiller(context))
+
+        SaveManager.incrementEncounterCount(context, EntityType.FOX)
+        SaveManager.incrementEncounterCount(context, EntityType.FOX)
+        SaveManager.incrementSparedCount(context, EntityType.FOX)
+        SaveManager.incrementHitCount(context, EntityType.WOLF)
+        SaveManager.saveLastKiller(context, EntityType.WOLF)
+
+        assertEquals(2, SaveManager.loadEncounterCount(context, EntityType.FOX))
+        assertEquals(1, SaveManager.loadSparedCount(context, EntityType.FOX))
+        assertEquals(1, SaveManager.loadHitCount(context, EntityType.WOLF))
+        assertEquals(EntityType.WOLF, SaveManager.loadLastKiller(context))
     }
 }

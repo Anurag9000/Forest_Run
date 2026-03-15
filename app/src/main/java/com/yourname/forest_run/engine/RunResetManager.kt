@@ -4,7 +4,7 @@ import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.FlavorTextManager
 
 /**
- * Orchestrates the DYING → GAME_OVER → RESTARTING → PLAYING transition.
+ * Orchestrates the DYING → GAME_OVER → RESTARTING transition.
  *
  * GameView owns one instance. On HIT:
  *   runResetManager.triggerDeath(gameState, player, entityManager)
@@ -18,7 +18,7 @@ class RunResetManager {
     companion object {
         /** Seconds the player sits in REST state before GameOverScreen appears. */
         const val DYING_DURATION_S  = 1.2f
-        /** Seconds of fade-out before a full reset (RESTARTING state). */
+        /** Seconds of fade-out before handing control back to the Garden. */
         const val RESTART_FADE_S    = 0.5f
     }
 
@@ -79,8 +79,8 @@ class RunResetManager {
     }
 
     /**
-     * Signal that a tap was registered on the GAME_OVER screen.
-     * Begins the RESTARTING fade sequence.
+     * Signal that a tap was registered on the rest screen.
+     * Begins the fade back to the Garden.
      */
     fun beginRestart(): RunState {
         timer = 0f
@@ -92,12 +92,7 @@ class RunResetManager {
      * Full reset of all live systems. Call once fade completes (restartFadeAlpha >= 255).
      *
      * GameView must also:
-     *  - player.reset() / place player back on ground
-     *  - entityManager.reset()
-     *  - FlavorTextManager.clear()
-     *  - ParticleManager.clear()
-     *  - CameraSystem.reset()
-     *  - gameState.resetRun()
+     * GameView decides where to route next (Garden in the canonical flow).
      */
     fun executeReset(
         gameState:     GameStateManager,

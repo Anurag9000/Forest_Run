@@ -5,10 +5,12 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
 import com.yourname.forest_run.ui.FlavorTextManager
@@ -31,8 +33,8 @@ class Fox(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val foxH = 60f
-    private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = 46f)
+    private val foxH = 92f
+    private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = 74f)
     private val insetX = foxW * 0.12f
     private val insetY = foxH * 0.09f
 
@@ -99,6 +101,7 @@ class Fox(
             spared   = true
             foxState = FoxState.SPARED
             gameState.addBonus(points = 120, seeds = 2)
+            PersistentMemoryManager.recordSpare(context, EntityType.FOX)
             FlavorTextManager.spawn("Fine.", x, y - 30f, Color.rgb(255, 200, 120))
             return
         }

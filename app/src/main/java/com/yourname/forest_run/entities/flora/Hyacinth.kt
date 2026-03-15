@@ -22,8 +22,8 @@ class Hyacinth(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val floraHeight = 78f
-    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 28f)
+    private val floraHeight = 118f
+    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 48f)
     private val hitInsetX   = floraWidth * 0.22f
     private val hitTopY     = floraHeight * 0.28f
     private val drawRect    = RectF()

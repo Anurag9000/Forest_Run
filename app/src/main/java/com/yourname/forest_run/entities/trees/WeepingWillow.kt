@@ -24,8 +24,8 @@ class WeepingWillow(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val treeHeight    = screenHeight * 0.56f
-    private val treeWidth     = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = screenHeight * 0.22f)
+    private val treeHeight    = screenHeight * 0.64f
+    private val treeWidth     = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = screenHeight * 0.26f)
     private val trunkWidth    = treeWidth * 0.18f
     private val trunkTop      = groundY - treeHeight * 0.42f
     private val curtainTop    = groundY - treeHeight * 0.78f

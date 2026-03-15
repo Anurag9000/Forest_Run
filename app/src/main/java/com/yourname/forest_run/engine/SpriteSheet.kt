@@ -97,12 +97,20 @@ class SpriteSheet(
      * Draws the current frame stretching/squashing it to exactly fit [drawRect].
      */
     fun draw(canvas: Canvas, drawRect: android.graphics.RectF) {
+        draw(canvas, drawRect, paint)
+    }
+
+    /**
+     * Draws the current frame using a caller-supplied [Paint].
+     * Useful for ghost tints and special overlays without duplicating bitmap work.
+     */
+    fun draw(canvas: Canvas, drawRect: android.graphics.RectF, drawPaint: Paint) {
         // Offset by startFrame so a shared bitmap plays only the right segment
         val absoluteFrame = startFrame + currentFrame
         val srcLeft = absoluteFrame * frameWidth
         srcRect.set(srcLeft, 0, srcLeft + frameWidth, frameHeight)
 
-        canvas.drawBitmap(bitmap, srcRect, drawRect, paint)
+        canvas.drawBitmap(bitmap, srcRect, drawRect, drawPaint)
     }
 
     /** Clones this instance (sharing the underlying Bitmap memory) so multiple entities can use it. */

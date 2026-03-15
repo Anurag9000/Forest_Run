@@ -5,8 +5,8 @@ package com.yourname.forest_run.engine
  *
  * GameView holds a [RunState] value and uses it to decide:
  *  - Whether to run physics / entity updates (only in PLAYING / BLOOM states).
- *  - Whether to draw the GameOver overlay (DYING / GAME_OVER).
- *  - When to trigger RunResetManager (on RESTARTING).
+ *  - Whether to draw the rest overlay (DYING / GAME_OVER).
+ *  - When to trigger RunResetManager's fade back to the Garden (on RESTARTING).
  */
 enum class RunState {
     /** Normal gameplay — all systems update. */
@@ -20,14 +20,14 @@ enum class RunState {
     DYING,
 
     /**
-     * Dying animation done. GameOverScreen overlay is shown.
-     * Tap anywhere to begin RESTARTING.
+     * Dying animation done. Rest summary overlay is shown.
+     * Tap anywhere to begin the fade back to the Garden.
      */
     GAME_OVER,
 
     /**
      * Tap received. Fade-out begins. After [RunResetManager.RESTART_FADE_S]
-     * all systems are reset and state returns to PLAYING.
+     * gameplay systems are reset and the app routes to the Garden.
      */
     RESTARTING
 }

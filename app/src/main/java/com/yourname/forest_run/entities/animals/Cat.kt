@@ -5,10 +5,12 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.ui.FlavorTextManager
 
@@ -32,8 +34,8 @@ class Cat(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val catH = 50f
-    private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = 44f)
+    private val catH = 82f
+    private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = 68f)
     private val insetX = catW * 0.14f
     private val insetY = catH * 0.10f
 
@@ -87,6 +89,7 @@ class Cat(
     private fun triggerSpare() {
         waving = true
         waveTimer = 2.5f
+        PersistentMemoryManager.recordSpare(context, EntityType.CAT)
         FlavorTextManager.spawn("See you!", x, y - 50f, Color.rgb(255, 220, 255))
     }
 

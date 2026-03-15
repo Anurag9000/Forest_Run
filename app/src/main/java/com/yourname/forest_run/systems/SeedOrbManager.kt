@@ -27,10 +27,10 @@ import kotlin.random.Random
 class SeedOrbManager {
 
     companion object {
-        const val MAX_ORBS        = 4
-        const val BASE_SPAWN_RATE = 0.60f    // 60% chance per passed entity
-        const val SPAWN_HEIGHT_MIN = 80f
-        const val SPAWN_HEIGHT_MAX = 150f
+        const val MAX_ORBS        = 6
+        const val BASE_SPAWN_RATE = 0.95f
+        const val SPAWN_HEIGHT_MIN = 55f
+        const val SPAWN_HEIGHT_MAX = 115f
     }
 
     private val orbs = mutableListOf<SeedOrb>()

@@ -21,6 +21,7 @@ import com.yourname.forest_run.ui.GameOverScreen
 import com.yourname.forest_run.ui.GardenScreen
 import com.yourname.forest_run.ui.HUD
 import com.yourname.forest_run.ui.MainMenuScreen
+import com.yourname.forest_run.ui.RestQuoteManager
 
 private const val TAG = "ForestRun"
 
@@ -86,6 +87,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var appState: AppGameState = AppGameState.MENU
     private lateinit var mainMenuScreen: MainMenuScreen
     private lateinit var gardenScreen: GardenScreen
+    private var currentRestQuote: String = "The forest is waiting for a cleaner run."
 
     // Restart fade-to-black overlay
     private val restartFadePaint = Paint().apply { color = Color.BLACK }
@@ -310,9 +312,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (::mainMenuScreen.isInitialized) {
                 mainMenuScreen.update(deltaTime)
                 if (mainMenuScreen.consumeStartRunRequest()) {
+                    prepareFreshRun()
                     appState = AppGameState.PLAYING
-                    if (::entityManager.isInitialized) entityManager.seedOpeningSequence()
-                    LeitmotifManager.playRunStart()
                 }
             }
             return   // No physics / entity updates while in menu
@@ -349,14 +350,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     if (::entityManager.isInitialized && ::player.isInitialized &&
                         ::gameState.isInitialized) {
                         runResetManager.executeReset(gameState, entityManager, player)
-                        entityManager.seedOpeningSequence()
-                        // Phase 19: reset recorder; reload ghost (may have just been saved)
                         ghostRecorder.reset()
-                        ghostPlayer.reset()
-                        val newFrames = SaveManager.loadGhostRun(context)
-                        if (newFrames.isNotEmpty()) ghostPlayer.load(newFrames)
-                        LeitmotifManager.playRunStart()   // Phase 20: restart music
+                        reloadGhost()
                     }
+                    if (::gardenScreen.isInitialized) gardenScreen.refresh()
+                    appState = AppGameState.GARDEN
+                    LeitmotifManager.transitionTo(LeitmotifManager.MusicState.MENU)
                     runState = RunState.PLAYING
                 }
                 return
@@ -420,6 +419,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         ) {
                             SaveManager.saveGhostRun(context, ghostRecorder.snapshot())
                             SaveManager.saveBestDistance(context, gameState.distanceMetres)
+                        }
+                        entityManager.entityTypeOf(collision.entity)?.let { killerType ->
+                            PersistentMemoryManager.recordHit(context, killerType)
+                            currentRestQuote = RestQuoteManager.quoteFor(
+                                context = context,
+                                biome = entityManager.biomeManager.currentBiome,
+                                killer = killerType
+                            )
+                        } ?: run {
+                            currentRestQuote = RestQuoteManager.quoteFor(
+                                context = context,
+                                biome = entityManager.biomeManager.currentBiome,
+                                killer = null
+                            )
                         }
                         ghostRecorder.reset()
                         // Transition to DYING
@@ -521,7 +534,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
 
             // 4. Ghost player (behind live player, 40% opacity white-blue) — Phase 19
-            if (::spriteManager.isInitialized) ghostPlayer.draw(canvas, spriteManager)
+            if (::spriteManager.isInitialized) ghostPlayer.draw(canvas, spriteManager, if (::player.isInitialized) player else null)
 
             // 5. Live Player
             if (::player.isInitialized) player.draw(canvas)
@@ -561,7 +574,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     distanceM       = gameState.distanceMetres,
                     isNewHighScore  = gameState.isNewHighScore,
                     highScore       = gameState.highScore,
-                    mercyHearts     = gameState.mercyHearts
+                    mercyHearts     = gameState.mercyHearts,
+                    seedsCollected  = gameState.seedsThisRun,
+                    restQuote       = currentRestQuote
                 )
             }
         }
@@ -570,5 +585,21 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (runState == RunState.RESTARTING) {
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), restartFadePaint)
         }
+    }
+
+    private fun prepareFreshRun() {
+        if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
+        runResetManager.executeReset(gameState, entityManager, player)
+        entityManager.seedOpeningSequence()
+        ghostRecorder.reset()
+        reloadGhost()
+        currentRestQuote = "The forest is waiting for a cleaner run."
+        LeitmotifManager.playRunStart()
+    }
+
+    private fun reloadGhost() {
+        ghostPlayer.reset()
+        val frames = SaveManager.loadGhostRun(context)
+        if (frames.isNotEmpty()) ghostPlayer.load(frames)
     }
 }

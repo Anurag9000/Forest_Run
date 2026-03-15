@@ -1,6 +1,7 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.GhostFrame
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -21,6 +22,7 @@ object SaveManager {
     private const val KEY_HIGH_SCORE = "high_score"
     private const val KEY_LIFETIME_SEEDS = "lifetime_seeds"
     private const val KEY_BEST_DIST  = "best_distance"
+    private const val KEY_LAST_KILLER = "last_killer"
     private const val GHOST_FILENAME = "ghost_run.bin"
 
     // ── High score ────────────────────────────────────────────────────────
@@ -116,10 +118,47 @@ object SaveManager {
     fun loadGardenProgress(context: Context): Int =
         prefs(context).getInt(KEY_GARDEN, 1)
 
+    // ── Persistent memory (Phase 28+) ─────────────────────────────────────
+
+    fun incrementEncounterCount(context: Context, type: EntityType) {
+        incrementInt(context, "encounter_${type.name.lowercase()}")
+    }
+
+    fun loadEncounterCount(context: Context, type: EntityType): Int =
+        prefs(context).getInt("encounter_${type.name.lowercase()}", 0)
+
+    fun incrementSparedCount(context: Context, type: EntityType) {
+        incrementInt(context, "spared_${type.name.lowercase()}")
+    }
+
+    fun loadSparedCount(context: Context, type: EntityType): Int =
+        prefs(context).getInt("spared_${type.name.lowercase()}", 0)
+
+    fun incrementHitCount(context: Context, type: EntityType) {
+        incrementInt(context, "hit_${type.name.lowercase()}")
+    }
+
+    fun loadHitCount(context: Context, type: EntityType): Int =
+        prefs(context).getInt("hit_${type.name.lowercase()}", 0)
+
+    fun saveLastKiller(context: Context, type: EntityType?) {
+        prefs(context).edit().putString(KEY_LAST_KILLER, type?.name).apply()
+    }
+
+    fun loadLastKiller(context: Context): EntityType? =
+        prefs(context).getString(KEY_LAST_KILLER, null)?.let { raw ->
+            runCatching { EntityType.valueOf(raw) }.getOrNull()
+        }
+
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private fun ghostFile(context: Context) = File(context.filesDir, GHOST_FILENAME)
+
+    private fun incrementInt(context: Context, key: String) {
+        val prefs = prefs(context)
+        prefs.edit().putInt(key, prefs.getInt(key, 0) + 1).apply()
+    }
 }

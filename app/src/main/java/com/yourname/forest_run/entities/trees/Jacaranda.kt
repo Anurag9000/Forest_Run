@@ -22,8 +22,8 @@ class Jacaranda(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val treeHeight   = screenHeight * 0.50f
-    private val treeWidth    = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = screenHeight * 0.18f)
+    private val treeHeight   = screenHeight * 0.58f
+    private val treeWidth    = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = screenHeight * 0.22f)
     private val trunkWidth   = treeWidth * 0.16f
     private val branchTop    = groundY - treeHeight * 0.72f
     private val branchBottom = groundY - treeHeight * 0.34f

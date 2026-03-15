@@ -40,18 +40,18 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     }.getOrDefault(Typeface.MONOSPACE)
 
     // ── Layout ────────────────────────────────────────────────────────────
-    private val PAD          = 24f
-    private val HUD_H        = 80f     // taller strip for mercy hearts row
-    private val SCORE_SIZE   = 28f
-    private val LABEL_SIZE   = 18f
-    private val SMALL_SIZE   = 16f
-    private val HEART_SIZE   = 22f
+    private val PAD          = 28f
+    private val HUD_H        = 112f
+    private val SCORE_SIZE   = 34f
+    private val LABEL_SIZE   = 20f
+    private val SMALL_SIZE   = 18f
+    private val HEART_SIZE   = 26f
 
     // Bloom meter
-    private val METER_LEFT    = screenWidth * 0.35f
-    private val METER_RIGHT   = screenWidth * 0.65f
-    private val METER_TOP     = 8f
-    private val METER_BOTTOM  = 48f
+    private val METER_LEFT    = screenWidth * 0.30f
+    private val METER_RIGHT   = screenWidth * 0.70f
+    private val METER_TOP     = 16f
+    private val METER_BOTTOM  = 62f
     private val SEG_GAP       = 4f
     private val SEG_COUNT     = GameConstants.BLOOM_SEED_COUNT
     private val segW          = (METER_RIGHT - METER_LEFT - SEG_GAP * (SEG_COUNT - 1)) / SEG_COUNT
@@ -147,6 +147,10 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         color = Color.rgb(200, 100, 255); textSize = LABEL_SIZE; typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val bloomCountPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(220, 210, 255, 210); textSize = SMALL_SIZE; typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
 
     // ── Update ────────────────────────────────────────────────────────────
 
@@ -186,20 +190,20 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
 
     private fun drawSeedAndHearts(canvas: Canvas, state: GameStateManager) {
         val x   = PAD
-        val cy1 = 30f   // seed icon centre Y (top row)
-        val cy2 = 62f   // hearts row Y
+        val cy1 = 40f
+        val cy2 = 88f
 
         // ── Seed icon ─────────────────────────────────────────────────────
-        canvas.drawOval(x, cy1 - 12f, x + 22f, cy1 + 12f, seedIconPaint)
-        canvas.drawLine(x + 11f, cy1 - 10f, x + 11f, cy1 + 10f, seedVeinPaint)
+        canvas.drawOval(x, cy1 - 16f, x + 30f, cy1 + 16f, seedIconPaint)
+        canvas.drawLine(x + 15f, cy1 - 13f, x + 15f, cy1 + 13f, seedVeinPaint)
 
         // Count + label
-        canvas.drawText("×${state.seedsThisRun}", x + 30f, cy1 + seedCountPaint.textSize * 0.35f, seedCountPaint)
-        canvas.drawText("seeds", x + 30f, cy1 + seedCountPaint.textSize * 0.35f + 18f, seedLabelPaint)
+        canvas.drawText("x${state.seedsThisRun}", x + 40f, cy1 + seedCountPaint.textSize * 0.35f, seedCountPaint)
+        canvas.drawText("seeds", x + 40f, cy1 + seedCountPaint.textSize * 0.35f + 20f, seedLabelPaint)
 
         // ── Mercy hearts strip ────────────────────────────────────────────
         val MAX_HEARTS   = 10
-        val heartSpacing = 22f
+        val heartSpacing = 26f
         val heartY       = cy2
         for (i in 0 until MAX_HEARTS) {
             val hx = x + i * heartSpacing
@@ -264,19 +268,26 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         }
 
         // Meter label
-        val labelText  = if (state.isBloomActive) "✦ BLOOM ✦" else "bloom"
+        val labelText  = if (state.isBloomActive) "BLOOM" else "bloom"
         val labelPaint = if (state.isBloomActive) bloomActiveLabelPaint else bloomLabelPaint
         if (state.isBloomActive) {
             bloomActiveLabelPaint.alpha =
                 (200 + (55 * sin(bloomPulse)).toInt()).coerceIn(0, 255)
         }
-        canvas.drawText(labelText, cx, METER_BOTTOM + 18f, labelPaint)
+        canvas.drawText(labelText, cx, METER_BOTTOM + 22f, labelPaint)
+
+        val statusText = if (state.isBloomActive) {
+            String.format("%.1fs active", state.bloomSecondsRemaining)
+        } else {
+            "${state.bloomMeter}/${state.bloomSeedTarget}"
+        }
+        canvas.drawText(statusText, cx, METER_BOTTOM + 42f, bloomCountPaint)
     }
 
     private fun drawScoreArea(canvas: Canvas, state: GameStateManager) {
         val rightX   = screenWidth.toFloat() - PAD
-        val distY    = 28f
-        val scoreY   = 55f
+        val distY    = 34f
+        val scoreY   = 72f
 
         // Distance top-right
         canvas.drawText(formatDistance(state.distanceMetres), rightX, distY, distPaint)
@@ -290,7 +301,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
             val pulse = 0.7f + 0.3f * sin(newBadge)
             newBadgePaint.alpha = (pulse * 255f).toInt().coerceIn(0, 255)
             val scoreW = scorePaint.measureText(scoreText)
-            canvas.drawText("✦NEW!", rightX - scoreW - 14f, scoreY, newBadgePaint)
+            canvas.drawText("NEW", rightX - scoreW - 14f, scoreY, newBadgePaint)
         }
 
         // Ghost best score (when not yet a new high score)

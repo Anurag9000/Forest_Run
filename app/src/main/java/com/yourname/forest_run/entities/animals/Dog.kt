@@ -40,8 +40,8 @@ class Dog(
     isBuddy: Boolean = Random.nextFloat() < 0.20f  // 20% chance at spawn
 ) : Entity(context) {
 
-    private val dogH = 68f
-    private val dogW = SpriteSizing.widthForHeight(sprite, dogH, minWidth = 56f)
+    private val dogH = 102f
+    private val dogW = SpriteSizing.widthForHeight(sprite, dogH, minWidth = 80f)
     private val insetX = dogW * 0.13f
     private val insetY = dogH * 0.07f
 
@@ -51,8 +51,8 @@ class Dog(
      * Travels forward at [PROJECTILE_SPEED] px/s and despawns off-screen left.
      */
     private inner class BarkProjectile(spawnX: Float, spawnY: Float) {
-        private val PROJECTILE_SPEED = 500f
-        val rect = RectF(spawnX, spawnY - 20f, spawnX + 60f, spawnY)
+        private val PROJECTILE_SPEED = 520f
+        val rect = RectF(spawnX, spawnY - 28f, spawnX + 84f, spawnY + 8f)
         var active = true
 
         fun update(deltaTime: Float, scrollSpeed: Float) {
@@ -73,7 +73,7 @@ class Dog(
     }
 
     private val barkPaint = Paint().apply {
-        color  = Color.argb(180, 255, 220, 80)
+        color  = Color.argb(200, 255, 220, 80)
         style  = Paint.Style.FILL
     }
 

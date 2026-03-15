@@ -23,8 +23,8 @@ class Duck(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val birdH = 52f
-    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 34f)
+    private val birdH = 82f
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 58f)
     // Duck flies at ~60% screen height above ground — roughly head height
     private val flyY = groundY - groundY * 0.30f
     private val insetX = birdW * 0.10f

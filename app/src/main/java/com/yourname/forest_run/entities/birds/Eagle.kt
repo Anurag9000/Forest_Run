@@ -25,8 +25,8 @@ class Eagle(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val birdH = 60f
-    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 44f)
+    private val birdH = 96f
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 70f)
     private val diveSpeed = 700f
     private val insetX = birdW * 0.10f
     private val insetY = birdH * 0.10f

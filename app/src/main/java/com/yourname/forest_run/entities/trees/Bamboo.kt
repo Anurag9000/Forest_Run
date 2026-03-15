@@ -24,8 +24,8 @@ class Bamboo(
 ) : Entity(context) {
 
     private val stalkCount        = 5
-    private val stalkWidth        = 15f
-    private val gapBetweenStalks  = 30f
+    private val stalkWidth        = 22f
+    private val gapBetweenStalks  = 40f
     private val totalWidth        = stalkCount * stalkWidth + (stalkCount - 1) * gapBetweenStalks
 
     private val topHitboxes       = Array(stalkCount) { RectF() }

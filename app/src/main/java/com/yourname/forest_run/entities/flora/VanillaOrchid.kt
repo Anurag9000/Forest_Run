@@ -23,8 +23,8 @@ class VanillaOrchid(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val floraHeight = 176f
-    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 72f)
+    private val floraHeight = 228f
+    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 96f)
 
     // Two distinct hitboxes
     private val bottomHitbox = RectF()

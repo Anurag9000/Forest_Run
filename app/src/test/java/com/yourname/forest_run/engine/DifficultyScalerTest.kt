@@ -9,8 +9,8 @@ class DifficultyScalerTest {
 
     @Test
     fun `spawn interval clamps between early and late bounds`() {
-        assertEquals(2.4f, DifficultyScaler.getSpawnInterval(0f), 0.0001f)
-        assertEquals(0.9f, DifficultyScaler.getSpawnInterval(5_000f), 0.0001f)
+        assertEquals(1.7f, DifficultyScaler.getSpawnInterval(0f), 0.0001f)
+        assertEquals(0.62f, DifficultyScaler.getSpawnInterval(5_000f), 0.0001f)
     }
 
     @Test

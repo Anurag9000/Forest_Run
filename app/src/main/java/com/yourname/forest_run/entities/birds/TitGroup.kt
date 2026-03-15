@@ -24,11 +24,11 @@ class TitGroup(
     count: Int = 4
 ) : Entity(context) {
 
-    private val birdH = 30f
-    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 26f)
-    private val spacing = 55f
+    private val birdH = 52f
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 42f)
+    private val spacing = 72f
     private val baseLine = groundY * 0.45f // horizontal flight altitude
-    private val waveAmplitude = 80f
+    private val waveAmplitude = 92f
     private val waveFrequency = 2.5f
 
     private var time = 0f

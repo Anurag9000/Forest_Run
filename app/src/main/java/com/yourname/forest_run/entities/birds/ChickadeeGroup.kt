@@ -23,9 +23,9 @@ class ChickadeeGroup(
     count: Int = 3
 ) : Entity(context) {
 
-    private val birdH = 24f
-    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 24f)
-    private val spacing = 60f
+    private val birdH = 44f
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 36f)
+    private val spacing = 74f
     private val birdCount = count.coerceIn(2, 4)
 
     // Each bird's individual altitude and timer

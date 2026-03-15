@@ -22,8 +22,8 @@ class CherryBlossom(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val treeHeight       = screenHeight * 0.48f
-    private val treeWidth        = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = screenHeight * 0.18f)
+    private val treeHeight       = screenHeight * 0.56f
+    private val treeWidth        = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = screenHeight * 0.22f)
     private val trunkWidth       = treeWidth * 0.16f
     private val branchHeightLow  = groundY - treeHeight * 0.26f
     private val branchHeightHigh = groundY - treeHeight * 0.58f

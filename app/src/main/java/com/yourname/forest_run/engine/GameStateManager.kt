@@ -78,11 +78,15 @@ class GameStateManager(context: Context) {
     var bloomMeter: Int = 0
         private set
 
-    /** True during the 5-second Bloom invincibility window. */
+    /** True during the canonical 6-second Bloom invincibility window. */
     var isBloomActive: Boolean = false
         private set
 
     private var bloomTimer: Float = 0f
+    val bloomSecondsRemaining: Float
+        get() = (GameConstants.BLOOM_DURATION_S - bloomTimer).coerceAtLeast(0f)
+    val bloomSeedTarget: Int
+        get() = GameConstants.BLOOM_SEED_COUNT
 
     // -----------------------------------------------------------------------
     // Mercy System (Phase 17 turns this into MercySystem.kt, for now lives here)

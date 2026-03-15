@@ -22,8 +22,8 @@ class Cactus(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val cactusHeight = 80f
-    private val cactusWidth  = SpriteSizing.widthForHeight(sprite, cactusHeight, minWidth = 36f)
+    private val cactusHeight = 122f
+    private val cactusWidth  = SpriteSizing.widthForHeight(sprite, cactusHeight, minWidth = 58f)
     private val insetX       = cactusWidth * 0.16f
     private val insetY       = cactusHeight * 0.10f
     private val drawRect     = RectF()

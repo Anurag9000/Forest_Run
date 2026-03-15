@@ -21,8 +21,8 @@ class LilyOfValley(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val floraHeight = 56f
-    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 34f)
+    private val floraHeight = 92f
+    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 56f)
     private val hitInsetX   = floraWidth * 0.22f
     private val hitTopY     = floraHeight * 0.45f
     private val drawRect    = RectF()

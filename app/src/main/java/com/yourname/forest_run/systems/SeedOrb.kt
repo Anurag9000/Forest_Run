@@ -26,11 +26,11 @@ class SeedOrb(
     var y: Float
 ) {
     companion object {
-        const val RADIUS       = 18f
-        const val BOB_SPEED    = 3.0f   // Hz
-        const val BOB_AMP      = 8f     // px
+        const val RADIUS       = 26f
+        const val BOB_SPEED    = 2.5f   // Hz
+        const val BOB_AMP      = 10f    // px
         const val LIFETIME_S   = 6f
-        const val HALO_MARGIN  = 8f
+        const val HALO_MARGIN  = 12f
     }
 
     var isActive        = true
@@ -87,12 +87,15 @@ class SeedOrb(
 
         // Halo (semi-transparent, slightly larger)
         haloPaint.color = col
-        haloPaint.alpha = 100
+        haloPaint.alpha = 135
         canvas.drawCircle(bobRect.centerX(), bobRect.centerY(), radius + HALO_MARGIN, haloPaint)
 
         // Core orb
         corePaint.color = col
         canvas.drawCircle(bobRect.centerX(), bobRect.centerY(), radius, corePaint)
+
+        corePaint.color = Color.argb(70, 255, 255, 240)
+        canvas.drawCircle(bobRect.centerX(), bobRect.centerY(), radius + 5f, corePaint)
 
         // Inner bright highlight
         corePaint.color = Color.argb(160, 255, 255, 255)

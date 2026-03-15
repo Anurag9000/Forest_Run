@@ -96,7 +96,7 @@ class Player(
     // -----------------------------------------------------------------------
     var isInvincible: Boolean = false
     private var bloomTimer: Float = 0f
-    private val BLOOM_DURATION_S = 5f
+    private val BLOOM_DURATION_S = GameConstants.BLOOM_DURATION_S
 
     // -----------------------------------------------------------------------
     // Hitbox

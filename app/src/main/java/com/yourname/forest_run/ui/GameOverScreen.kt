@@ -12,7 +12,7 @@ import com.yourname.forest_run.engine.AssetPaths
 import kotlin.math.sin
 
 /**
- * Full-screen Game Over overlay.
+ * Full-screen post-run rest overlay.
  *
  * Displayed during [RunState.GAME_OVER].
  * Tap-anywhere input is handled in GameView's onTouchListener;
@@ -21,12 +21,12 @@ import kotlin.math.sin
  * Layout (top → bottom, centred):
  *  1. Semi-transparent dark scrim.
  *  2. Pixel-art bordered panel (rounded rect).
- *  3. "GAME OVER" header in red-gradient PressStart2P.
- *  4. Score (large).
- *  5. Distance label.
- *  6. Best (distance) if this run set a new high score — animated "NEW!" badge.
- *  7. Mercy hearts earned this run (small heart icons in a row).
- *  8. "tap anywhere to run again" — subtle pulsing prompt.
+ *  3. "REST" header.
+ *  4. Reflective quote / killer memory.
+ *  5. Score and distance.
+ *  6. Seeds carried into the garden.
+ *  7. Mercy hearts earned this run.
+ *  8. "tap anywhere to return to garden" — subtle pulsing prompt.
  */
 class GameOverScreen(
     context: Context,
@@ -43,20 +43,26 @@ class GameOverScreen(
         color = Color.argb(180, 0, 0, 0)
     }
     private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(230, 20, 10, 30)
+        color = Color.argb(232, 16, 18, 26)
         style = Paint.Style.FILL
     }
     private val panelBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(255, 180, 80, 220)
+        color = Color.argb(255, 120, 210, 150)
         style = Paint.Style.STROKE
         strokeWidth = 4f
     }
 
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface  = pixelFont
-        textSize  = 52f
+        textSize  = 46f
         textAlign = Paint.Align.CENTER
-        color     = Color.rgb(255, 80, 80)
+        color     = Color.rgb(220, 255, 210)
+    }
+    private val quotePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont
+        textSize = 18f
+        textAlign = Paint.Align.CENTER
+        color = Color.argb(220, 220, 240, 220)
     }
     private val scoreLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface  = pixelFont
@@ -86,6 +92,12 @@ class GameOverScreen(
         textSize  = 28f
         textAlign = Paint.Align.CENTER
         color     = Color.rgb(255, 100, 100)
+    }
+    private val seedsPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont
+        textSize = 20f
+        textAlign = Paint.Align.CENTER
+        color = Color.rgb(160, 255, 120)
     }
     private val promptPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface  = pixelFont
@@ -119,7 +131,9 @@ class GameOverScreen(
         distanceM:     Float,
         isNewHighScore: Boolean,
         highScore:     Int,
-        mercyHearts:   Int
+        mercyHearts:   Int,
+        seedsCollected: Int,
+        restQuote: String
     ) {
         val w = screenWidth.toFloat()
         val h = screenHeight.toFloat()
@@ -134,8 +148,11 @@ class GameOverScreen(
         var ty = panelTop + 70f
 
         // 3. Title
-        canvas.drawText("GAME OVER", cx, ty, titlePaint)
-        ty += 65f
+        canvas.drawText("REST", cx, ty, titlePaint)
+        ty += 48f
+
+        drawWrappedCenteredText(canvas, restQuote, cx, ty, panelW * 0.82f, quotePaint)
+        ty += 64f
 
         // 4. Score label + value
         canvas.drawText("SCORE", cx, ty, scoreLabelPaint)
@@ -155,6 +172,11 @@ class GameOverScreen(
             ty += 38f
         }
 
+        if (seedsCollected > 0) {
+            canvas.drawText("+$seedsCollected seeds carried home", cx, ty, seedsPaint)
+            ty += 38f
+        }
+
         // 7. Mercy hearts row
         if (mercyHearts > 0) {
             val hearts = "♥".repeat(mercyHearts.coerceAtMost(10))
@@ -165,7 +187,7 @@ class GameOverScreen(
         // 8. Tap prompt — pulsing alpha
         val promptAlpha = ((sin(pulseTimer * 2.5f) * 0.4f + 0.6f) * 200).toInt().coerceIn(0, 255)
         promptPaint.alpha = promptAlpha
-        canvas.drawText("tap anywhere to run again", cx, ty + 20f, promptPaint)
+        canvas.drawText("tap anywhere to return to garden", cx, ty + 20f, promptPaint)
     }
 
     // ── Helper ────────────────────────────────────────────────────────────
@@ -175,5 +197,38 @@ class GameOverScreen(
         val thousands = n / 1000
         val remainder = n % 1000
         return "${thousands},${remainder.toString().padStart(3, '0')}"
+    }
+
+    private fun drawWrappedCenteredText(
+        canvas: Canvas,
+        text: String,
+        centerX: Float,
+        baselineY: Float,
+        maxWidth: Float,
+        paint: Paint
+    ) {
+        val words = text.split(" ")
+        if (words.isEmpty()) return
+
+        val lines = mutableListOf<String>()
+        val builder = StringBuilder()
+        for (word in words) {
+            val candidate = if (builder.isEmpty()) word else "${builder} $word"
+            if (paint.measureText(candidate) <= maxWidth) {
+                builder.clear()
+                builder.append(candidate)
+            } else {
+                lines += builder.toString()
+                builder.clear()
+                builder.append(word)
+            }
+        }
+        if (builder.isNotEmpty()) lines += builder.toString()
+
+        var y = baselineY
+        for (line in lines.take(2)) {
+            canvas.drawText(line, centerX, y, paint)
+            y += paint.textSize + 8f
+        }
     }
 }
