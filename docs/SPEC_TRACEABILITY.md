@@ -28,7 +28,17 @@ Status keys:
 | `docs/IMPLEMENTATION_ROADMAP.md` | `99bb40a` | 27-phase implementation plan |
 | `spec.md` | `b3d59d8` | later high-level official spec with additional product claims |
 
-## Known Historical Conflicts
+## Canonical Runtime Truth
+
+The repo now treats the following as the frozen coherent canon for implementation:
+
+- `5` runtime biomes: `MEADOW`, `ORCHARD`, `ANCIENT_GROVE`, `DUSK_CANYON`, `NIGHT_FOREST`
+- Bloom auto-activates at `8` seeds for `6` seconds
+- failure flow is `run -> rest summary -> fade -> Garden -> run`
+- tap jump, hold higher jump, swipe-down duck remains the canonical input model
+- older conflicting historical ideas are preserved only for source traceability and flavor recovery
+
+## Historical Conflicts Preserved For Traceability
 
 - `Conflict`: biome count is `5` in current code and later docs, but `6` in some historical docs and the original technical architecture / README.
 - `Conflict`: Bloom seed threshold is `10` in older GDD and setup checks, `8` in current code and current docs.
@@ -53,10 +63,10 @@ Core classes currently present:
 Missing dream-spec dedicated classes called out by historical docs:
 
 - `Implemented`: `PersistentMemoryManager`
-- `TODO`: `MercySystem` as dedicated class
+- `Implemented`: `MercySystem` as dedicated class
 - `Implemented`: `PacifistTracker`
 - `Implemented`: `DialogueBubbleManager`
-- `TODO`: `CostumeOverlay`
+- `Implemented`: `CostumeOverlay`
 - `Implemented`: `FaceManager`
 
 ## Traceability By Source

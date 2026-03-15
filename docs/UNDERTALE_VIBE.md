@@ -40,7 +40,7 @@ The goal is simple: the forest feels inhabited, remembers you, and has a sense o
 ### Current Status
 
 - Implemented: player sprite animation basics.
-- TODO: separate face/eye layer, fuller expressive presentation, stronger intentional imperfection.
+- Partial: separate face/eye layer exists; fuller expressive presentation and stronger intentional imperfection are still needed.
 
 ---
 
@@ -79,7 +79,7 @@ Examples:
 ### Current Status
 
 - Implemented: floating flavor text manager.
-- TODO: much richer trigger coverage, rest quote system, dialogue bubble staging, repeat-killer messaging.
+- Partial: rest quote system and dialogue bubble staging now exist; much richer trigger coverage and repeat-killer messaging are still needed.
 
 ---
 
@@ -106,8 +106,8 @@ Examples:
 
 ### Current Status
 
-- Implemented: mercy hearts exist, some mercy-linked entity behavior exists.
-- TODO: full mercy reward language, pacifist/friendship bonus, stronger spare system visibility.
+- Partial: mercy hearts, pacifist rewards, and friendship persistence exist.
+- TODO: full mercy reward language, stronger spare visibility, and route-like world-state payoff.
 
 ---
 
@@ -145,8 +145,8 @@ Examples:
 
 ### Current Status
 
-- Implemented: ghost persistence.
-- TODO: persistent memory manager, costumes, repeat-killer system, tasteful ghost UX that does not confuse the player.
+- Implemented: ghost persistence, persistent memory manager baseline, and costume wardrobe baseline.
+- TODO: richer repeat-killer system and final tasteful ghost UX tuning.
 
 ---
 
@@ -201,7 +201,8 @@ Examples:
 
 ### Current Status
 
-- TODO: formal dialogue bubble system.
+- Implemented: formal dialogue bubble system baseline.
+- TODO: expand bubble catalog, staging, and trigger richness.
 
 ---
 
@@ -223,7 +224,8 @@ Dream-spec supporting systems include:
 
 - Implemented: `FlavorTextManager`, `GhostRecorder`, `GhostPlayer`, `LeitmotifManager` in partial form.
 - Implemented: `PersistentMemoryManager`, `PacifistTracker`, `DialogueBubbleManager`, and a baseline `FaceManager`.
-- TODO: `MercySystem` as dedicated system and `CostumeOverlay`.
+- Implemented: `MercySystem` and `CostumeOverlay` baselines.
+- TODO: deepen those systems into fuller route, unlock, and presentation payoffs.
 
 ---
 

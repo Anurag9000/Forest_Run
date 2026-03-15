@@ -38,16 +38,28 @@ What exists in code today:
 - five-biome tint cycle with biome-specific spawn pools
 - HUD for score, distance, seeds, Bloom meter, and mercy hearts
 - seed persistence, Bloom activation, ghost save/load, and garden unlock persistence
+- dedicated mercy, pacifist, memory, face, dialogue, and costume systems
+- Garden wardrobe equip flow and rest-to-Garden death loop
+- friendship persistence and richer rest/Garden run summaries
 - audio and haptics managers
 
 What is still missing, incomplete, or user-reported as unsatisfactory:
 
-- entities read too small on phone and are spaced too far apart to appreciate visually
-- the ghost runner currently undermines readability and can create the impression of a broken double-runner presentation
+- several entity families still need stronger, clearer on-device telegraphing and charm even after the readability pass
+- the ghost runner is materially clearer now, but still needs final default-behavior tuning and scenario-based verification
 - many entity-specific personalities exist in code but are not yet delivered with enough clarity, frequency, staging, or charm to feel deliberate in play
 - the forest still lacks the full handcrafted art, dense environmental life, and layered spectacle described in the original dream
-- the full persistent memory, costume, dialogue, pacifist, and determination-quote systems are not complete
+- the persistent memory, costume, dialogue, pacifist, and determination-quote layers now exist in baseline form but are not fully deep, rich, or complete
 - several dream-spec feedback loops may exist technically but are not surfacing reliably enough to a player during normal play
+
+## Canonical Runtime Truth
+
+The repo now treats these as the frozen implementation canon:
+
+- `5` runtime biomes: `MEADOW`, `ORCHARD`, `ANCIENT_GROVE`, `DUSK_CANYON`, `NIGHT_FOREST`
+- Bloom auto-activates at `8` seeds for `6` seconds
+- failure flow is `run -> rest summary -> fade -> Garden -> run`
+- old conflicting historical variants are preserved in docs only as traceability, not as competing runtime requirements
 
 ## Immediate Product Concerns
 

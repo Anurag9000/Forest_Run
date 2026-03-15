@@ -23,13 +23,13 @@ This restores the original roadmap as the required implementation target. Items 
 | 14 | Partial | particle system exists, breathing-forest density incomplete |
 | 15 | Partial | camera effects exist |
 | 16 | Partial | flavor text exists, full quote/dialogue coverage missing |
-| 17 | Partial | mercy exists, full pacifist/friendship systems missing |
-| 18 | TODO | persistent encounter memory and costumes missing |
-| 19 | Partial | ghost exists, UX is currently confusing |
+| 17 | Partial | mercy, pacifist, and friendship systems exist; deeper route-like payoff still missing |
+| 18 | Partial | persistent encounter memory and costumes now exist in baseline form |
+| 19 | Partial | ghost exists and readability baseline is improved; final tuning and validation still needed |
 | 20 | Partial | audio states exist, full leitmotif system incomplete |
 | 21 | Partial | haptics exist, tuning incomplete |
-| 22 | Partial | core lifecycle exists, soft authored rest loop incomplete |
-| 23 | Partial | garden exists, full sanctuary feel incomplete |
+| 22 | Partial | canonical lifecycle exists, authored rest richness still incomplete |
+| 23 | Partial | garden exists as real hub with wardrobe and memory stats; full sanctuary feel incomplete |
 | 24 | TODO | full bespoke background artwork not finished |
 | 25 | TODO | major polish pass still required |
 | 26 | TODO | full performance/device truth validation incomplete |
@@ -156,4 +156,4 @@ Goal: complete, shippable, polished store-ready product.
 - DONE: ghost duplication confusion materially reduced
 - TODO: verify every entity behavior on actual device
 - DONE: seeds, Bloom, mercy hearts, and garden loop are materially clearer in play
-- PARTIAL: persistent memory, pacifist, dialogue, and facial presentation systems now exist; finish MercySystem, costumes, and deeper cross-run payoff
+- PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist; finish deeper cross-run payoff and richer route feel

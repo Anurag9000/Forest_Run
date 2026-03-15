@@ -16,7 +16,7 @@ The dream architecture includes:
 ### Current Status
 
 - Implemented: broad package structure exists.
-- TODO: several dream-spec systems still do not exist as first-class dedicated modules.
+- Partial: several dream-spec systems now exist as first-class modules, but the runtime still lacks a deterministic verification harness and fuller authored content tooling.
 
 ## 2. Engine — GameView & Game Loop
 
@@ -78,7 +78,7 @@ Expected qualities:
 ### Current Status
 
 - Implemented: most core player states and apex feel.
-- TODO: face layer, stronger authored feel, and cleaner ghost/live-player readability.
+- Partial: face layer exists, but stronger authored feel and final ghost/live-player tuning are still needed.
 
 ## 5. Entity System
 
@@ -109,7 +109,7 @@ Expected responsibilities:
 ### Current Status
 
 - Implemented: core manager exists.
-- TODO: tune pacing so the forest feels populated and readable rather than sparse.
+- Partial: pacing is materially improved; deterministic encounter verification and more authored scenario control are still needed.
 
 ## 7. BiomeManager
 
@@ -175,7 +175,7 @@ Dream persistence includes:
 ### Current Status
 
 - Implemented: score, seeds, garden, ghost.
-- TODO: repeated-encounter memory and costumes.
+- Partial: repeated-encounter memory and costumes exist in baseline form; richer payoff depth is still missing.
 
 ## 12. Dynamic Difficulty Curve
 

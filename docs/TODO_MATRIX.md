@@ -18,9 +18,8 @@ This file is the strict implementation ledger for everything from the original d
 
 ## Documentation And Canonical Spec TODOs
 
-- TODO: resolve all historical conflicts into one canonical product truth:
-  biome count, biome names, Bloom seed threshold, Bloom duration, input model, failure flow, and any remaining old-vs-current contradictions.
-- TODO: once resolved, update every doc and the code constants to match the canonical truth exactly.
+- DONE: canonical runtime truth is frozen at 5 biomes, 8-seed / 6-second auto-Bloom, and rest-to-Garden failure flow.
+- TODO: update every remaining doc section and stale comment to match the canonical truth exactly.
 
 ## GDD TODOs
 
@@ -32,10 +31,10 @@ This file is the strict implementation ledger for everything from the original d
 
 ## Personality TODOs
 
-- TODO: contextual rest quotes by biome and last killer.
+- PARTIAL: contextual rest quotes by biome and last killer exist; expand quote pools and trigger richness.
 - PARTIAL: `PersistentMemoryManager` exists; expand it into full repeated-encounter payoff, unlock, and presentation architecture.
-- TODO: costume overlays for repeated encounters.
-- TODO: repeat-killer deja vu lines and visuals.
+- PARTIAL: costume overlays and wardrobe flow exist; expand repeated-encounter unlock depth and presentation.
+- PARTIAL: repeat-killer deja vu lines exist in baseline form; deepen them into stronger visual and narrative payoff.
 - DONE: dedicated dialogue bubble system.
 - PARTIAL: biome-level friendship bonus baseline exists; deepen it into stronger sanctuary and route-like payoff.
 - PARTIAL: stronger spare events and pacifist route feel started; complete broader world-state and feedback.
@@ -77,10 +76,11 @@ This file is the strict implementation ledger for everything from the original d
 ## Architecture TODOs
 
 - TODO: dedicated readability tuning layer by entity class and device density.
-- TODO: stronger presentation architecture for ghost UX.
-- TODO: persistent encounter memory architecture.
-- TODO: costume overlay architecture.
+- PARTIAL: stronger presentation architecture for ghost UX.
+- PARTIAL: persistent encounter memory architecture exists; broaden it into richer payoff and authoring tools.
+- DONE: costume overlay architecture baseline exists.
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
+- DONE: deterministic encounter verification harness for scenario-driven entity testing.
 - TODO: deeper authored biome scene system.
 
 ## Visual And Audio TODOs
