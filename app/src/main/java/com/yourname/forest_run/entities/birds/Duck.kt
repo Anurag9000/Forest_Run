@@ -11,6 +11,7 @@ import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Duck (Phase 10)
@@ -23,14 +24,22 @@ class Duck(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val birdH = 82f
-    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 58f)
+    private val birdH = 94f
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 66f)
     // Duck flies at ~60% screen height above ground — roughly head height
     private val flyY = groundY - groundY * 0.30f
     private val insetX = birdW * 0.10f
     private val insetY = birdH * 0.10f
-
-    private val paint = Paint().apply { color = Color.rgb(200, 200, 50) }
+    private val duckLaneRect = RectF()
+    private val cuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(40, 244, 226, 108)
+        style = Paint.Style.FILL
+    }
+    private val cueStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(118, 255, 236, 134)
+        style = Paint.Style.STROKE
+        strokeWidth = 3.5f
+    }
 
     init {
         x = startX
@@ -43,13 +52,27 @@ class Duck(
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         hitbox.offsetTo(x + insetX, y + insetY)
+        duckLaneRect.set(x - 12f, y + birdH * 0.18f, x + birdW + 12f, y + birdH * 0.86f)
         sprite.update(deltaTime)
         if (x < -birdW - 20f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
+        canvas.drawRoundRect(duckLaneRect, 16f, 16f, cuePaint)
+        canvas.drawRoundRect(duckLaneRect, 16f, 16f, cueStrokePaint)
         val drawRect = RectF(x, y, x + birdW, y + birdH)
         sprite.draw(canvas, drawRect)
+    }
+
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        gameState.addBonus(points = 105)
+        DialogueBubbleManager.spawn(
+            text = "Quack!",
+            anchorX = x + birdW * 0.5f,
+            anchorY = y - 16f,
+            fillColor = Color.rgb(255, 250, 220),
+            borderColor = Color.rgb(184, 146, 62)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

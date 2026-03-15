@@ -2,6 +2,8 @@ package com.yourname.forest_run.entities.birds
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -9,6 +11,7 @@ import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.ui.DialogueBubbleManager
 import kotlin.random.Random
 
 /**
@@ -23,10 +26,14 @@ class ChickadeeGroup(
     count: Int = 3
 ) : Entity(context) {
 
-    private val birdH = 44f
-    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 36f)
+    private val birdH = 52f
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 42f)
     private val spacing = 74f
     private val birdCount = count.coerceIn(2, 4)
+    private val flutterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(64, 255, 232, 188)
+        style = Paint.Style.FILL
+    }
 
     // Each bird's individual altitude and timer
     private val altitudes = FloatArray(birdCount) { groundY * (0.3f + Random.nextFloat() * 0.4f) }
@@ -68,8 +75,20 @@ class ChickadeeGroup(
 
     override fun draw(canvas: Canvas) {
         for (rect in birdRects) {
+            canvas.drawCircle(rect.centerX(), rect.centerY(), birdW * 0.28f, flutterPaint)
             sprite.draw(canvas, rect)
         }
+    }
+
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        gameState.addBonus(points = 130)
+        DialogueBubbleManager.spawn(
+            text = "Flutter!",
+            anchorX = x + birdCount * spacing * 0.42f,
+            anchorY = altitudes.min() - 24f,
+            fillColor = Color.rgb(255, 246, 224),
+            borderColor = Color.rgb(170, 128, 84)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
