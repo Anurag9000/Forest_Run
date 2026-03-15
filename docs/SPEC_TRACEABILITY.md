@@ -685,6 +685,34 @@ These synthesize the entire historical spec set into unified workstreams.
 
 - `TODO`: product is not yet at the level promised by historical docs and user ambition.
 
+### I. Approved Emotional Expansion Addendum (2026-03-15)
+
+These items are not from the earliest historical repo docs. They are explicit user-approved expansion scope added after dream-spec restoration and should now be treated as authoritative TODO targets.
+
+#### Forest Memory Layer
+
+- `TODO`: a world-tone system that remembers how the player has been moving through the forest, not just lifetime counters.
+- `TODO`: classify recent play into emotional patterns such as gentle, reckless, fearful, and steady.
+- `TODO`: let world tone affect Garden ambience, creature warmth, and rest framing.
+
+#### Named Relationship Arcs
+
+- `TODO`: formal relationship stages for Cat, Fox, Wolf, Dog, Owl, and Eagle.
+- `TODO`: relationship-driven dialogue, encounter shifts, Garden presence, and milestone presentation.
+- `TODO`: visible warmth from repeated positive interactions and visible caution or tension from repeated negative ones.
+
+#### Sanctuary Growth With Emotional Meaning
+
+- `TODO`: Garden changes that reflect relationship and memory progress, not only seed unlocks.
+- `TODO`: keepsakes, memorial traces, creature-linked markers, and heroine-idle evolution tied to sanctuary growth.
+- `TODO`: make the sanctuary feel like autobiography and restoration.
+
+#### Emotional Failure Design
+
+- `TODO`: failure-context system based on last creature, recent streak, and run tone.
+- `TODO`: compassionate anti-tilt presentation after repeated failure.
+- `TODO`: stronger continuity between rest, recovery, and the Garden.
+
 ## Strict Documentation Conclusion
 
 This repo now contains:

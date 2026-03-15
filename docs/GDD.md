@@ -115,6 +115,41 @@ Night mode activates Lily of the Valley glow and Owl spawning. Fireflies appear 
 - The garden becomes a personalized forest over many sessions.
 - The next locked plant is always visible as motivation.
 
+### 3.8 Emotional Retention Layer
+
+This game should keep players returning because the forest feels personal, not because numbers merely go up. The world should seem to recognize tone, remember patterns, and slowly become emotionally closer to the player.
+
+#### 3.8.1 Forest Memory Layer
+
+- The world should remember how the player has been moving through it, not only totals.
+- Gentle, patient recent play should make the Garden feel calmer and more welcoming.
+- Repeated panic, repeated collisions, or repeated harm from the same creature should create emotional consequences in presentation.
+- Repeated kindness should produce visible trust signs, calmer ambience, and a stronger sense of sanctuary.
+- The player should feel that the forest has formed a soft opinion about them.
+
+#### 3.8.2 Named Relationship Arcs
+
+- Cat, Fox, Wolf, Dog, Owl, and Eagle should evolve beyond obstacle classes into remembered relationships.
+- Each major creature should have first-impression, recognition, trust, and milestone states.
+- Relationship stages should influence dialogue, encounter behavior, Garden presence, cosmetics, and post-run reflection.
+- Positive repetition should create warmth and familiarity.
+- Negative repetition should create caution, fear, disappointment, or tension where appropriate.
+
+#### 3.8.3 Sanctuary Growth With Emotional Meaning
+
+- The Garden should become autobiography, not just an unlock shelf.
+- Relationship milestones should leave keepsakes, markers, or quiet traces in the sanctuary.
+- The heroine's posture and idle behavior should evolve as the sanctuary becomes safer and more loved-in.
+- Returning to the Garden should feel like coming home to a place the player helped heal.
+
+#### 3.8.4 Emotional Failure Design
+
+- Failure should sting, but also hold the player emotionally.
+- Rest presentation should feel reflective and specific, not administrative.
+- The last creature involved should sometimes feel remembered in the aftermath.
+- Repeated failure should become more compassionate in tone, not colder.
+- The player should leave the failure loop feeling understood and invited back.
+
 ### Current Status
 
 - Implemented: two-tap menu start, run loop, game over, restart, garden unlock persistence.
@@ -206,6 +241,7 @@ Jump height is tied to touch duration. Short tap = low hop. Full hold = maximum 
 
 - Implemented: high score, lifetime seeds, garden progress, ghost save.
 - TODO: persistent memory systems beyond that, such as repeated-encounter memory and costumes.
+- TODO: expand persistence into emotional memory, creature relationship states, sanctuary traces, and failure-context carryover.
 
 ---
 
@@ -241,6 +277,7 @@ Dynamic tempo should scale with scroll speed.
 
 - Implemented: core music states and many SFX hooks.
 - TODO: full leitmotif treatment and stronger authored musical identity across all states.
+- TODO: use music and ambience to reinforce comfort, trust, grief, and return-to-sanctuary feeling.
 
 ---
 
@@ -264,3 +301,4 @@ Animals and birds were not intended as v1.0 garden unlockables.
 
 - Implemented: left-to-right plant card unlock flow with lifetime seeds.
 - TODO: make the garden feel like a true sanctuary and long-term reward rather than a minimal shop-like screen.
+- TODO: make the world emotionally remember the player through tone, relationship traces, and compassionate failure recovery.

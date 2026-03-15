@@ -178,7 +178,89 @@ Dream persistence includes:
 - Implemented: score, seeds, garden, ghost.
 - Partial: repeated-encounter memory, costumes, and persisted run-summary carry-home now exist in baseline form; richer payoff depth is still missing.
 
-## 12. Dynamic Difficulty Curve
+## 12. Emotional Memory Architecture
+
+Approved emotional expansion requires explicit systems instead of scattered one-off counters.
+
+Expected systems:
+
+- `ForestMoodSystem` to evaluate recent run tone
+- `RelationshipArcSystem` to track creature-specific familiarity and trust
+- `SanctuaryGrowthSystem` to map remembered milestones into Garden changes
+- `EmotionalFailureSystem` to drive reflective rest presentation and recovery framing
+
+Expected qualities:
+
+- canonical shared state instead of ad hoc booleans
+- deterministic milestone evaluation
+- authorable content tables for dialogue, quotes, ambience, and visual changes
+- presentation hooks shared by rest, Garden, encounters, and persistence
+
+### Current Status
+
+- TODO: these emotional systems do not yet exist as first-class architecture.
+- TODO: persistence schema must expand to store world tone, relationship stages, sanctuary markers, and failure-context history.
+
+## 13. Relationship Arc Authoring
+
+Expected data per major creature family:
+
+- first encounter
+- repeated encounter count
+- spared count
+- hit count
+- trust stage
+- last meaningful interaction
+- unlocked Garden presence or keepsake state
+- associated quote/dialogue pools
+
+### Current Status
+
+- Partial: encounter counts and some repeated-memory hooks exist.
+- TODO: formalize relationship stages and authoring data for Cat, Fox, Wolf, Dog, Owl, and Eagle first.
+
+## 14. Sanctuary Growth Authoring
+
+The Garden should be driven by structured progression data, not only a flat plant row.
+
+Expected layers:
+
+- plant unlock progression
+- trust-linked keepsakes
+- friendship markers
+- memory traces from major runs
+- posture/idle-state changes for the heroine
+- ambience state derived from sanctuary growth
+
+### Current Status
+
+- Partial: plant unlocks, wardrobe, and last-run carry-home exist.
+- TODO: add a dedicated sanctuary-growth model and rendering hooks for emotional progression.
+
+## 15. Emotional Failure Presentation
+
+Expected inputs:
+
+- last killer
+- recent failure streak
+- mercy or kindness chain
+- run tone
+- newly earned memory or relationship milestone
+
+Expected outputs:
+
+- contextual quote selection
+- heroine rest pose and face variation
+- ambient presentation changes
+- compassionate anti-tilt messaging after repeated failure
+- carry-home notes for the Garden
+
+### Current Status
+
+- Partial: contextual rest quotes and run-summary carry-home exist.
+- TODO: formalize failure-context evaluation and richer compassionate presentation logic.
+
+## 16. Dynamic Difficulty Curve
 
 Expected:
 

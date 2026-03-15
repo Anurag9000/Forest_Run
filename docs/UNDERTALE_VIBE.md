@@ -148,6 +148,42 @@ Examples:
 - Implemented: ghost persistence, persistent memory manager baseline, and costume wardrobe baseline.
 - TODO: richer repeat-killer system and final tasteful ghost UX tuning.
 
+### 4.5 Forest Memory Layer
+
+- the world should remember tone, not only counters
+- gentle recent play should make the sanctuary feel calmer and more welcoming
+- repeated panic, repeated collisions, or repeated harm from the same creature should create emotional consequences
+- repeated kindness should cause visible trust signs, calmer ambience, and more warmth in the Garden
+- the player should feel that the forest has formed a soft opinion about them
+
+### 4.6 Named Relationship Arcs
+
+- Cat should become a shy comfort presence over time
+- Fox should become a playful recurring rival-friend
+- Wolf should evolve from fear to respect
+- Dog should become loyal surprise energy
+- Owl should become eerie but familiar
+- Eagle should stay awe-filled and intimidating, but remembered
+- every major creature should have first-impression, recognition, trust, and milestone stages
+
+### 4.7 Sanctuary Growth With Emotional Meaning
+
+- the Garden should become autobiography, not just unlock UI
+- creature-linked keepsakes, markers, and quiet traces should appear over time
+- the heroine's resting and idle behavior should evolve with trust and comfort
+- sanctuary growth should reflect relationship history, not only seed spending
+
+### 4.8 Emotional Failure Design
+
+- repeated failure should trigger more compassion, not colder feedback
+- rest moments should feel specific, reflective, and held
+- the last creature involved should sometimes feel remembered in the aftermath
+- the player should return to the Garden feeling understood
+
+### Current Status
+
+- TODO: these emotional expansion layers are approved target scope but not implemented.
+
 ---
 
 ## 5. Undertale Dog — Running Buddy Mode
@@ -225,7 +261,7 @@ Dream-spec supporting systems include:
 - Implemented: `FlavorTextManager`, `GhostRecorder`, `GhostPlayer`, `LeitmotifManager` in partial form.
 - Implemented: `PersistentMemoryManager`, `PacifistTracker`, `DialogueBubbleManager`, and a baseline `FaceManager`.
 - Implemented: `MercySystem` and `CostumeOverlay` baselines.
-- TODO: deepen those systems into fuller route, unlock, and presentation payoffs.
+- TODO: deepen those systems into fuller route, unlock, relationship, sanctuary, and failure-recovery payoffs.
 
 ---
 

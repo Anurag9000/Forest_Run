@@ -133,6 +133,22 @@ Goal: full menu -> run -> Bloom -> rest -> restart lifecycle.
 
 Goal: persistent meta-loop where the forest grows with the player.
 
+### Phase 23A — Forest Memory Layer
+
+Goal: make the world remember tone, not only totals.
+
+### Phase 23B — Relationship Arcs
+
+Goal: turn major creatures into remembered relationships rather than obstacle classes.
+
+### Phase 23C — Sanctuary Growth
+
+Goal: make the Garden reflect emotional history, trust, and restoration rather than only plant unlock counts.
+
+### Phase 23D — Emotional Failure Presentation
+
+Goal: make failure reflective, compassionate, and continuous with the sanctuary loop.
+
 ### Phase 24 — Real Background Artwork
 
 Goal: replace remaining procedural placeholder scenery with final art.
@@ -157,3 +173,4 @@ Goal: complete, shippable, polished store-ready product.
 - TODO: verify every entity behavior on actual device
 - DONE: seeds, Bloom, mercy hearts, and garden loop are materially clearer in play
 - PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist; finish deeper cross-run payoff and richer route feel
+- TODO: add forest mood, relationship arcs, sanctuary growth, and emotional failure systems as explicit implementation work rather than leaving them as flavor aspirations
