@@ -84,12 +84,14 @@ class Dog(
     // Hazard
     private val barkInterval = 1.8f
     private var barkTimer    = barkInterval * 0.5f  // First bark sooner
+    private var barkCharge   = 0f
     private val projectiles  = mutableListOf<BarkProjectile>()
 
     // Buddy
     private var buddyTimer   = 3f + Random.nextFloat() * 2f
     private var buddyDialogueStep = 0
     private var buddyDialogueTimer = 0f
+    private var buddyRewarded = false
 
     private val buddyDialogue = listOf("BORF!", "Hi!!", "See ya!")
 
@@ -123,8 +125,10 @@ class Dog(
         x -= scrollSpeed * deltaTime
 
         barkTimer -= deltaTime
+        barkCharge = (1f - barkTimer / barkInterval).coerceIn(0f, 1f)
         if (barkTimer <= 0f) {
             barkTimer = barkInterval
+            barkCharge = 0f
             bark()
         }
 
@@ -137,7 +141,7 @@ class Dog(
         }
     }
 
-    private fun updateBuddy(deltaTime: Float, scrollSpeed: Float) {
+    private fun updateBuddy(deltaTime: Float, @Suppress("UNUSED_PARAMETER") scrollSpeed: Float) {
         // Buddy mode: drift gently alongside player (doesn't scroll left)
         buddyTimer -= deltaTime
 
@@ -177,6 +181,10 @@ class Dog(
     }
 
     override fun draw(canvas: Canvas) {
+        if (mode == DogMode.HAZARD) {
+            barkPaint.alpha = (120f + 100f * barkCharge).toInt().coerceIn(0, 255)
+            canvas.drawOval(x - 10f, y + dogH * 0.18f, x + dogW + 10f, y + dogH * 0.82f, barkPaint)
+        }
         val drawRect = RectF(x, y, x + dogW, y + dogH)
         sprite.draw(canvas, drawRect)
 
@@ -205,5 +213,19 @@ class Dog(
             return CollisionResult.MERCY_MISS
         }
         return CollisionResult.NONE
+    }
+
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        if (mode == DogMode.HAZARD) {
+            gameState.addBonus(points = 145, seeds = 1)
+            DialogueBubbleManager.spawn("Good hop!", x + dogW * 0.5f, y - 18f, Color.rgb(255, 246, 214), Color.rgb(170, 120, 45))
+            return
+        }
+
+        if (!buddyRewarded) {
+            buddyRewarded = true
+            gameState.addBonus(points = 180, seeds = 2)
+            DialogueBubbleManager.spawn("Best friend!", x + dogW * 0.5f, y - 20f, Color.rgb(255, 248, 210), Color.rgb(170, 120, 45))
+        }
     }
 }

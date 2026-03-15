@@ -3,6 +3,7 @@ package com.yourname.forest_run.entities.animals
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
@@ -38,6 +39,15 @@ class Cat(
     private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = 68f)
     private val insetX = catW * 0.14f
     private val insetY = catH * 0.10f
+    private val auraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(54, 255, 214, 236)
+        style = Paint.Style.FILL
+    }
+    private val auraStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(120, 255, 196, 226)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
 
     // Tracks whether the player has already passed this specific cat instance
     private var playerHasPassed = false
@@ -65,6 +75,10 @@ class Cat(
     }
 
     override fun draw(canvas: Canvas) {
+        if (!waving) {
+            canvas.drawOval(x - 10f, y + catH * 0.18f, x + catW + 10f, y + catH + 4f, auraPaint)
+            canvas.drawOval(x - 10f, y + catH * 0.18f, x + catW + 10f, y + catH + 4f, auraStrokePaint)
+        }
         val drawRect = RectF(x, y, x + catW, y + catH)
         sprite.draw(canvas, drawRect)
     }
@@ -76,8 +90,13 @@ class Cat(
             // Kindness bonus: flat 500 pts + double seeds (removed broken permanent 2x multiplier)
             gameState.addBonus(points = 500, seeds = 2)
             val encounterCount = PersistentMemoryManager.getEncounterCount(context, EntityType.CAT)
+            val sparedCount = PersistentMemoryManager.getSparedCount(context, EntityType.CAT)
             DialogueBubbleManager.spawn(
-                text = if (encounterCount >= 3) "You again?" else "Meow?",
+                text = when {
+                    sparedCount >= 3 -> "Friend?"
+                    encounterCount >= 3 -> "You again?"
+                    else -> "Meow?"
+                },
                 anchorX = x + catW * 0.5f,
                 anchorY = y - 12f,
                 fillColor = Color.rgb(255, 235, 248),

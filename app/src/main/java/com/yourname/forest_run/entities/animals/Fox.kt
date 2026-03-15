@@ -3,6 +3,7 @@ package com.yourname.forest_run.entities.animals
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
@@ -33,10 +34,20 @@ class Fox(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val foxH = 92f
-    private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = 74f)
+    private val foxH = 100f
+    private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = 82f)
     private val insetX = foxW * 0.12f
     private val insetY = foxH * 0.09f
+    private val detectionRect = RectF()
+    private val detectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(44, 255, 206, 132)
+        style = Paint.Style.FILL
+    }
+    private val detectionStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(118, 255, 184, 96)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
 
     private enum class FoxState { WALKING, JUMPING, LANDING, SPARED }
     private var foxState = FoxState.WALKING
@@ -51,6 +62,7 @@ class Fox(
     private val foxGravity   = 2200f
 
     private var spared = false
+    private var passRewarded = false
 
     init {
         x = startX
@@ -86,11 +98,16 @@ class Fox(
             }
         }
 
+        detectionRect.set(x - detectionRange, y - 12f, x + foxW + 8f, y + foxH + 6f)
         hitbox.offsetTo(x + insetX, y + insetY)
         if (x < -foxW - 50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
+        if (!spared && foxState == FoxState.WALKING) {
+            canvas.drawRoundRect(detectionRect, 20f, 20f, detectionPaint)
+            canvas.drawRoundRect(detectionRect, 20f, 20f, detectionStrokePaint)
+        }
         val drawRect = RectF(x, y, x + foxW, y + foxH)
         sprite.draw(canvas, drawRect)
     }
@@ -107,33 +124,40 @@ class Fox(
             return
         }
 
-        // Mirror jump: player is jumping and fox is in detection range
-        if (!hasJumped && !spared && foxState == FoxState.WALKING) {
-            val playerIsJumping = player.state in listOf(
-                PlayerState.JUMPING, PlayerState.JUMP_START, PlayerState.APEX
-            )
-            val inRange = (player.x + Player.BASE_WIDTH) > (x - detectionRange) &&
-                          player.x < (x + foxW)
+        if (!passRewarded && hasJumped && foxState != FoxState.SPARED) {
+            passRewarded = true
+            gameState.addBonus(points = 150, seeds = 1)
+            DialogueBubbleManager.spawn("Copycat.", x + foxW * 0.55f, y - 16f, Color.rgb(255, 238, 220), Color.rgb(190, 110, 55))
+        }
+    }
 
-            if (playerIsJumping && inRange) {
-                hasJumped = true
-                foxState  = FoxState.JUMPING
-                foxVelY   = foxJumpForce
-                val encounterCount = PersistentMemoryManager.getEncounterCount(context, EntityType.FOX)
-                DialogueBubbleManager.spawn(
-                    text = if (encounterCount >= 4) "Same jump?" else "Heh.",
-                    anchorX = x + foxW * 0.55f,
-                    anchorY = y - 16f,
-                    fillColor = Color.rgb(255, 238, 220),
-                    borderColor = Color.rgb(190, 110, 55)
-                )
-            }
+    private fun tryMirrorJump(player: Player) {
+        if (hasJumped || spared || foxState != FoxState.WALKING) return
+
+        val playerIsJumping = player.state in listOf(
+            PlayerState.JUMPING, PlayerState.JUMP_START, PlayerState.APEX
+        )
+        val inRange = (player.x + Player.BASE_WIDTH) > (x - detectionRange) &&
+            player.x < (x + foxW)
+
+        if (playerIsJumping && inRange) {
+            hasJumped = true
+            foxState  = FoxState.JUMPING
+            foxVelY   = foxJumpForce
+            val encounterCount = PersistentMemoryManager.getEncounterCount(context, EntityType.FOX)
+            DialogueBubbleManager.spawn(
+                text = if (encounterCount >= 4) "Same jump?" else "Heh.",
+                anchorX = x + foxW * 0.55f,
+                anchorY = y - 16f,
+                fillColor = Color.rgb(255, 238, 220),
+                borderColor = Color.rgb(190, 110, 55)
+            )
         }
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         // Trigger mirror jump check during every frame while player is nearby
-        performUniqueAction(player, gameState)
+        tryMirrorJump(player)
 
         if (RectF.intersects(player.hitbox, hitbox)) {
             return CollisionResult.STUMBLE

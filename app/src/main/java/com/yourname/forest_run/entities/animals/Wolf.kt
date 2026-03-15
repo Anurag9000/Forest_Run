@@ -3,6 +3,7 @@ package com.yourname.forest_run.entities.animals
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
@@ -50,6 +51,16 @@ class Wolf(
     private val howlDuration = 1.0f
 
     private var spared = false
+    private var passRewarded = false
+    private val threatPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(56, 255, 118, 118)
+        style = Paint.Style.FILL
+    }
+    private val threatStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(140, 255, 164, 164)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
 
     init {
         x = startX
@@ -86,6 +97,13 @@ class Wolf(
                 if (howlTimer >= howlDuration) {
                     wolfState  = WolfState.CHARGING
                     velocityX  = -(walkSpeed * 2f + scrollSpeed * 0.3f) // Double + partial scroll speed
+                    DialogueBubbleManager.spawn(
+                        text = "Here it comes.",
+                        anchorX = x + wolfW * 0.5f,
+                        anchorY = y - 24f,
+                        fillColor = Color.rgb(255, 232, 232),
+                        borderColor = Color.rgb(170, 70, 70)
+                    )
                 }
             }
             WolfState.CHARGING -> {
@@ -105,6 +123,10 @@ class Wolf(
     }
 
     override fun draw(canvas: Canvas) {
+        if (wolfState == WolfState.HOWLING || wolfState == WolfState.CHARGING) {
+            canvas.drawRoundRect(x - 12f, y - 8f, x + wolfW + 12f, y + wolfH + 8f, 24f, 24f, threatPaint)
+            canvas.drawRoundRect(x - 12f, y - 8f, x + wolfW + 12f, y + wolfH + 8f, 24f, 24f, threatStrokePaint)
+        }
         val drawRect = RectF(x, y, x + wolfW, y + wolfH)
         sprite.draw(canvas, drawRect)
     }
@@ -118,6 +140,13 @@ class Wolf(
             PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
             gameState.recordSpare()
             DialogueBubbleManager.spawn("Go on.", x + wolfW * 0.5f, y - 20f, Color.rgb(232, 236, 245), Color.rgb(110, 110, 140))
+            return
+        }
+
+        if (!passRewarded && wolfState == WolfState.CHARGING) {
+            passRewarded = true
+            gameState.addBonus(points = 180, seeds = 1)
+            DialogueBubbleManager.spawn("You made it.", x + wolfW * 0.5f, y - 20f, Color.rgb(236, 240, 255), Color.rgb(110, 110, 140))
         }
     }
 

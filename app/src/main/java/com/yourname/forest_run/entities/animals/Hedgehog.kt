@@ -3,6 +3,7 @@ package com.yourname.forest_run.entities.animals
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -28,10 +29,19 @@ class Hedgehog(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val hogH  = 54f
-    private val hogW  = SpriteSizing.widthForHeight(sprite, hogH, minWidth = 40f)
+    private val hogH  = 64f
+    private val hogW  = SpriteSizing.widthForHeight(sprite, hogH, minWidth = 48f)
     private val insetX = hogW * 0.08f
     private val insetY = hogH * 0.08f
+    private val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(56, 255, 220, 164)
+        style = Paint.Style.FILL
+    }
+    private val warningStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(118, 214, 160, 88)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
 
     private var hasHit = false  // Only apply debuff once per instance
 
@@ -49,8 +59,15 @@ class Hedgehog(
     }
 
     override fun draw(canvas: Canvas) {
+        canvas.drawOval(x - 8f, y + hogH * 0.15f, x + hogW + 8f, y + hogH + 4f, warningPaint)
+        canvas.drawOval(x - 8f, y + hogH * 0.15f, x + hogW + 8f, y + hogH + 4f, warningStrokePaint)
         val drawRect = RectF(x, y, x + hogW, y + hogH)
         sprite.draw(canvas, drawRect)
+    }
+
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        gameState.addBonus(points = 95)
+        DialogueBubbleManager.spawn("Careful...", x + hogW * 0.5f, y - 14f, Color.rgb(255, 246, 220), Color.rgb(160, 120, 70))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
