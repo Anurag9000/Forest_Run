@@ -1,6 +1,7 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.utils.MathUtils
 
 /**
@@ -228,6 +229,24 @@ class GameStateManager(context: Context) {
         isBloomActive = true
         bloomTimer = 0f
     }
+
+    fun buildRunSummary(restQuote: String, lastKiller: EntityType?): RunSummary =
+        RunSummary(
+            score = score,
+            distanceM = distanceMetres,
+            isNewHighScore = isNewHighScore,
+            highScore = highScore,
+            mercyHearts = mercyHearts,
+            mercyMisses = mercyMissesThisRun,
+            kindnessChain = kindnessChain,
+            cleanPasses = cleanPassesThisRun,
+            sparedCount = sparedThisRun,
+            hitsTaken = hitsThisRun,
+            seedsCollected = seedsThisRun,
+            bloomConversions = bloomConversionsThisRun,
+            lastKiller = lastKiller,
+            restQuote = restQuote
+        )
 
     /**
      * Temporarily reduce scroll speed (Hedgehog collision, Hyacinth brush).

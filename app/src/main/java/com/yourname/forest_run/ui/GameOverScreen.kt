@@ -9,6 +9,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
+import com.yourname.forest_run.engine.RunSummary
 import kotlin.math.sin
 
 /**
@@ -127,18 +128,7 @@ class GameOverScreen(
 
     fun draw(
         canvas:        Canvas,
-        score:         Int,
-        distanceM:     Float,
-        isNewHighScore: Boolean,
-        highScore:     Int,
-        mercyHearts:   Int,
-        mercyMisses:   Int,
-        kindnessChain: Int,
-        cleanPasses:   Int,
-        sparedCount:   Int,
-        hitsTaken:     Int,
-        seedsCollected: Int,
-        restQuote: String
+        summary: RunSummary
     ) {
         val w = screenWidth.toFloat()
         val h = screenHeight.toFloat()
@@ -156,51 +146,56 @@ class GameOverScreen(
         canvas.drawText("REST", cx, ty, titlePaint)
         ty += 48f
 
-        drawWrappedCenteredText(canvas, restQuote, cx, ty, panelW * 0.82f, quotePaint)
+        drawWrappedCenteredText(canvas, summary.restQuote, cx, ty, panelW * 0.82f, quotePaint)
         ty += 64f
 
         // 4. Score label + value
         canvas.drawText("SCORE", cx, ty, scoreLabelPaint)
         ty += 36f
-        canvas.drawText(formatNumber(score), cx, ty, scoreValuePaint)
+        canvas.drawText(formatNumber(summary.score), cx, ty, scoreValuePaint)
         ty += 55f
 
         // 5. Distance
-        canvas.drawText("${distanceM.toInt()} m", cx, ty, distancePaint)
+        canvas.drawText("${summary.distanceM.toInt()} m", cx, ty, distancePaint)
         ty += 40f
 
         // 6. New best badge (if applicable)
-        if (isNewHighScore) {
+        if (summary.isNewHighScore) {
             val pulse = sin(pulseTimer * 4f) * 0.2f + 0.8f
             newBestPaint.alpha = (pulse * 255f).toInt()
-            canvas.drawText("★ NEW BEST! ${formatNumber(highScore)} ★", cx, ty, newBestPaint)
+            canvas.drawText("★ NEW BEST! ${formatNumber(summary.highScore)} ★", cx, ty, newBestPaint)
             ty += 38f
         }
 
-        if (seedsCollected > 0) {
-            canvas.drawText("+$seedsCollected seeds carried home", cx, ty, seedsPaint)
+        if (summary.seedsCollected > 0) {
+            canvas.drawText("+${summary.seedsCollected} seeds carried home", cx, ty, seedsPaint)
             ty += 38f
+        }
+
+        if (summary.bloomConversions > 0) {
+            canvas.drawText("${summary.bloomConversions} Bloom conversions", cx, ty, seedsPaint)
+            ty += 32f
         }
 
         // 7. Mercy hearts row
-        if (mercyHearts > 0) {
-            val hearts = "♥".repeat(mercyHearts.coerceAtMost(10))
+        if (summary.mercyHearts > 0) {
+            val hearts = "♥".repeat(summary.mercyHearts.coerceAtMost(10))
             canvas.drawText(hearts, cx, ty, heartPaint)
             ty += 40f
         }
 
         val summaryBits = buildList {
-            if (mercyMisses > 0) add("$mercyMisses close calls")
-            if (cleanPasses > 0) add("$cleanPasses clean")
-            if (sparedCount > 0) add("$sparedCount spared")
-            if (hitsTaken > 0) add("$hitsTaken hit")
+            if (summary.mercyMisses > 0) add("${summary.mercyMisses} close calls")
+            if (summary.cleanPasses > 0) add("${summary.cleanPasses} clean")
+            if (summary.sparedCount > 0) add("${summary.sparedCount} spared")
+            if (summary.hitsTaken > 0) add("${summary.hitsTaken} hit")
         }
         if (summaryBits.isNotEmpty()) {
             canvas.drawText(summaryBits.joinToString("  •  "), cx, ty, scoreLabelPaint)
             ty += 34f
         }
-        if (kindnessChain > 0) {
-            canvas.drawText("best kindness chain $kindnessChain", cx, ty, distancePaint)
+        if (summary.kindnessChain > 0) {
+            canvas.drawText("best kindness chain ${summary.kindnessChain}", cx, ty, distancePaint)
             ty += 34f
         }
 

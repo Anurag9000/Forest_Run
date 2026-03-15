@@ -2,6 +2,7 @@ package com.yourname.forest_run.engine
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.yourname.forest_run.entities.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -118,5 +119,27 @@ class GameStateManagerTest {
         state.debugActivateBloom()
         assertTrue(state.isBloomActive)
         assertEquals(0, state.bloomMeter)
+    }
+
+    @Test
+    fun `run summary captures current run state`() {
+        val state = GameStateManager(context)
+        repeat(3) { state.collectSeed() }
+        repeat(2) { state.addMercyHeart() }
+        repeat(4) { state.recordCleanPass() }
+        state.recordSpare()
+        state.recordBloomConversion()
+
+        val summary = state.buildRunSummary(
+            restQuote = "The forest remembers.",
+            lastKiller = EntityType.WOLF
+        )
+
+        assertEquals(state.score, summary.score)
+        assertEquals(4, summary.cleanPasses)
+        assertEquals(1, summary.sparedCount)
+        assertEquals(2, summary.mercyHearts)
+        assertEquals(1, summary.bloomConversions)
+        assertEquals(EntityType.WOLF, summary.lastKiller)
     }
 }

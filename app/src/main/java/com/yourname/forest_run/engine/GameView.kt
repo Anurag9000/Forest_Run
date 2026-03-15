@@ -12,6 +12,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.CostumeStyle
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
 import com.yourname.forest_run.systems.FxPreset
@@ -95,6 +96,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private lateinit var mainMenuScreen: MainMenuScreen
     private lateinit var gardenScreen: GardenScreen
     private var currentRestQuote: String = "The forest is waiting for a cleaner run."
+    private var currentRunSummary: RunSummary? = null
     private val encounterDirector = if (debugToolsEnabled) EncounterDirector() else null
     private var debugEncounterOverlay: DebugEncounterOverlay? = null
 
@@ -476,12 +478,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                             SaveManager.saveGhostRun(context, ghostRecorder.snapshot())
                             SaveManager.saveBestDistance(context, gameState.distanceMetres)
                         }
-                        entityManager.entityTypeOf(collision.entity)?.let { killerType ->
+                        val killerType = entityManager.entityTypeOf(collision.entity)
+                        killerType?.let { resolvedKiller ->
                             PersistentMemoryManager.recordHit(context, killerType)
                             currentRestQuote = RestQuoteManager.quoteFor(
                                 context = context,
                                 biome = entityManager.biomeManager.currentBiome,
-                                killer = killerType
+                                killer = resolvedKiller
                             )
                         } ?: run {
                             currentRestQuote = RestQuoteManager.quoteFor(
@@ -490,6 +493,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                                 killer = null
                             )
                         }
+                        currentRunSummary = gameState.buildRunSummary(currentRestQuote, killerType)
+                        currentRunSummary?.let { SaveManager.saveLastRunSummary(context, it) }
                         ghostRecorder.reset()
                         // Transition to DYING
                         if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
@@ -678,18 +683,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (::gameOverScreen.isInitialized && ::gameState.isInitialized) {
                 gameOverScreen.draw(
                     canvas          = canvas,
-                    score           = gameState.score,
-                    distanceM       = gameState.distanceMetres,
-                    isNewHighScore  = gameState.isNewHighScore,
-                    highScore       = gameState.highScore,
-                    mercyHearts     = gameState.mercyHearts,
-                    mercyMisses     = gameState.mercyMissesThisRun,
-                    kindnessChain   = gameState.kindnessChain,
-                    cleanPasses     = gameState.cleanPassesThisRun,
-                    sparedCount     = gameState.sparedThisRun,
-                    hitsTaken       = gameState.hitsThisRun,
-                    seedsCollected  = gameState.seedsThisRun,
-                    restQuote       = currentRestQuote
+                    summary = currentRunSummary ?: gameState.buildRunSummary(
+                        restQuote = currentRestQuote,
+                        lastKiller = PersistentMemoryManager.getLastKiller(context)
+                    )
                 )
             }
         }
@@ -710,6 +707,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         ghostRecorder.reset()
         reloadGhost()
         currentRestQuote = "The forest is waiting for a cleaner run."
+        currentRunSummary = null
         LeitmotifManager.playRunStart()
     }
 
@@ -727,6 +725,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
         ghostRecorder.reset()
         currentRestQuote = "Scenario verification active."
+        currentRunSummary = null
         director.startSelectedScenario()
         LeitmotifManager.playRunStart()
     }

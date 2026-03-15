@@ -12,6 +12,7 @@ import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.CostumeManager
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.engine.SaveManager
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -103,6 +104,7 @@ class GardenScreen(
     private var activeCostume: CostumeStyle = CostumeStyle.NONE
     private var wardrobeMessage = ""
     private var wardrobeMessageTimer = 0f
+    private var lastRunSummary: RunSummary? = null
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -121,6 +123,7 @@ class GardenScreen(
     private val runButtonRect = RectF()
     private val statsRect = RectF()
     private val wardrobeRect = RectF()
+    private val lastRunRect = RectF()
     private val wardrobeCardRects = MutableList(CostumeStyle.entries.size) { RectF() }
 
     // ── Paints ────────────────────────────────────────────────────────────
@@ -324,6 +327,7 @@ class GardenScreen(
         syncInteractiveLayout(cw, ch)
         drawStatsPanel(canvas, cw, ch)
         drawRunButton(canvas, cw, ch)
+        drawLastRunPanel(canvas)
         drawWardrobe(canvas, cw, ch)
 
         // Cards
@@ -470,6 +474,38 @@ class GardenScreen(
         }
     }
 
+    private fun drawLastRunPanel(canvas: Canvas) {
+        val summary = lastRunSummary ?: return
+        canvas.drawRoundRect(lastRunRect, 18f, 18f, statsPanelPaint)
+        canvas.drawRoundRect(lastRunRect, 18f, 18f, statsBorderPaint)
+
+        var y = lastRunRect.top + 28f
+        canvas.drawText("Last Run", lastRunRect.left + 18f, y, wardrobeHintPaint)
+        y += 26f
+        canvas.drawText(
+            "${formatDistance(summary.distanceM)}  •  ${summary.seedsCollected} seeds",
+            lastRunRect.left + 18f,
+            y,
+            statsValuePaint
+        )
+        y += 24f
+
+        val detailBits = buildList {
+            if (summary.sparedCount > 0) add("${summary.sparedCount} spared")
+            if (summary.bloomConversions > 0) add("${summary.bloomConversions} Bloom")
+            if (summary.kindnessChain > 0) add("chain ${summary.kindnessChain}")
+        }
+        if (detailBits.isNotEmpty()) {
+            canvas.drawText(detailBits.joinToString("  •  "), lastRunRect.left + 18f, y, statsLabelPaint)
+            y += 22f
+        }
+
+        val killerText = summary.lastKiller?.let { formatEntityName(it) } ?: "None"
+        canvas.drawText("Last killer: $killerText", lastRunRect.left + 18f, y, statsLabelPaint)
+        y += 22f
+        canvas.drawText(summary.restQuote.take(92), lastRunRect.left + 18f, y, wardrobeHintPaint)
+    }
+
     private fun drawCostumeIcon(canvas: Canvas, rect: RectF, style: CostumeStyle, unlocked: Boolean) {
         val iconCenterY = rect.top + rect.height() * 0.42f
         val iconCenterX = rect.centerX()
@@ -525,6 +561,7 @@ class GardenScreen(
             PersistentMemoryManager.getSparedCount(context, EntityType.FOX) +
             PersistentMemoryManager.getSparedCount(context, EntityType.WOLF)
         friendshipTotal = Biome.entries.sumOf { PersistentMemoryManager.getBiomeFriendship(context, it) }
+        lastRunSummary = SaveManager.loadLastRunSummary(context)
     }
 
     private fun syncWardrobe() {
@@ -539,6 +576,7 @@ class GardenScreen(
 
     private fun syncInteractiveLayout(cw: Float, ch: Float) {
         runButtonRect.set(cw * 0.70f, ch * 0.14f, cw * 0.93f, ch * 0.26f)
+        lastRunRect.set(cw * 0.62f, ch * 0.30f, cw * 0.95f, ch * 0.56f)
         wardrobeRect.set(cw * 0.05f, ch * 0.73f, cw * 0.95f, ch * 0.87f)
         val cardGap = wardrobeRect.width() * 0.015f
         val cardWidth = (wardrobeRect.width() - cardGap * 5f) / 5f

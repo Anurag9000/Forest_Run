@@ -87,4 +87,28 @@ class SaveManagerTest {
         assertEquals(2, SaveManager.loadBiomeFriendship(context, Biome.MEADOW))
         assertEquals(1, SaveManager.loadBiomeFriendship(context, Biome.NIGHT_FOREST))
     }
+
+    @Test
+    fun `last run summary persists across reloads`() {
+        val summary = RunSummary(
+            score = 1280,
+            distanceM = 642.5f,
+            isNewHighScore = true,
+            highScore = 1280,
+            mercyHearts = 4,
+            mercyMisses = 4,
+            kindnessChain = 7,
+            cleanPasses = 9,
+            sparedCount = 2,
+            hitsTaken = 1,
+            seedsCollected = 11,
+            bloomConversions = 3,
+            lastKiller = EntityType.WOLF,
+            restQuote = "The grove asks for patience before bravery."
+        )
+
+        SaveManager.saveLastRunSummary(context, summary)
+
+        assertEquals(summary, SaveManager.loadLastRunSummary(context))
+    }
 }

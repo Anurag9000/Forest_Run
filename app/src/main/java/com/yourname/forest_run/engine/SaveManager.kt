@@ -24,6 +24,20 @@ object SaveManager {
     private const val KEY_LIFETIME_SEEDS = "lifetime_seeds"
     private const val KEY_BEST_DIST  = "best_distance"
     private const val KEY_LAST_KILLER = "last_killer"
+    private const val KEY_LAST_RUN_SCORE = "last_run_score"
+    private const val KEY_LAST_RUN_DISTANCE = "last_run_distance"
+    private const val KEY_LAST_RUN_NEW_HIGH = "last_run_new_high"
+    private const val KEY_LAST_RUN_HIGH_SCORE = "last_run_high_score"
+    private const val KEY_LAST_RUN_MERCY_HEARTS = "last_run_mercy_hearts"
+    private const val KEY_LAST_RUN_MERCY_MISSES = "last_run_mercy_misses"
+    private const val KEY_LAST_RUN_KINDNESS_CHAIN = "last_run_kindness_chain"
+    private const val KEY_LAST_RUN_CLEAN_PASSES = "last_run_clean_passes"
+    private const val KEY_LAST_RUN_SPARED = "last_run_spared"
+    private const val KEY_LAST_RUN_HITS = "last_run_hits"
+    private const val KEY_LAST_RUN_SEEDS = "last_run_seeds"
+    private const val KEY_LAST_RUN_BLOOM_CONVERSIONS = "last_run_bloom_conversions"
+    private const val KEY_LAST_RUN_QUOTE = "last_run_quote"
+    private const val KEY_LAST_RUN_KILLER = "last_run_killer"
     private const val KEY_UNLOCKED_COSTUMES = "unlocked_costumes"
     private const val KEY_ACTIVE_COSTUME = "active_costume"
     private const val GHOST_FILENAME = "ghost_run.bin"
@@ -173,6 +187,50 @@ object SaveManager {
         prefs(context).getString(KEY_LAST_KILLER, null)?.let { raw ->
             runCatching { EntityType.valueOf(raw) }.getOrNull()
         }
+
+    fun saveLastRunSummary(context: Context, summary: RunSummary) {
+        prefs(context).edit()
+            .putInt(KEY_LAST_RUN_SCORE, summary.score)
+            .putFloat(KEY_LAST_RUN_DISTANCE, summary.distanceM)
+            .putBoolean(KEY_LAST_RUN_NEW_HIGH, summary.isNewHighScore)
+            .putInt(KEY_LAST_RUN_HIGH_SCORE, summary.highScore)
+            .putInt(KEY_LAST_RUN_MERCY_HEARTS, summary.mercyHearts)
+            .putInt(KEY_LAST_RUN_MERCY_MISSES, summary.mercyMisses)
+            .putInt(KEY_LAST_RUN_KINDNESS_CHAIN, summary.kindnessChain)
+            .putInt(KEY_LAST_RUN_CLEAN_PASSES, summary.cleanPasses)
+            .putInt(KEY_LAST_RUN_SPARED, summary.sparedCount)
+            .putInt(KEY_LAST_RUN_HITS, summary.hitsTaken)
+            .putInt(KEY_LAST_RUN_SEEDS, summary.seedsCollected)
+            .putInt(KEY_LAST_RUN_BLOOM_CONVERSIONS, summary.bloomConversions)
+            .putString(KEY_LAST_RUN_QUOTE, summary.restQuote)
+            .putString(KEY_LAST_RUN_KILLER, summary.lastKiller?.name)
+            .apply()
+    }
+
+    fun loadLastRunSummary(context: Context): RunSummary? {
+        val prefs = prefs(context)
+        if (!prefs.contains(KEY_LAST_RUN_SCORE) || !prefs.contains(KEY_LAST_RUN_QUOTE)) {
+            return null
+        }
+        return RunSummary(
+            score = prefs.getInt(KEY_LAST_RUN_SCORE, 0),
+            distanceM = prefs.getFloat(KEY_LAST_RUN_DISTANCE, 0f),
+            isNewHighScore = prefs.getBoolean(KEY_LAST_RUN_NEW_HIGH, false),
+            highScore = prefs.getInt(KEY_LAST_RUN_HIGH_SCORE, 0),
+            mercyHearts = prefs.getInt(KEY_LAST_RUN_MERCY_HEARTS, 0),
+            mercyMisses = prefs.getInt(KEY_LAST_RUN_MERCY_MISSES, 0),
+            kindnessChain = prefs.getInt(KEY_LAST_RUN_KINDNESS_CHAIN, 0),
+            cleanPasses = prefs.getInt(KEY_LAST_RUN_CLEAN_PASSES, 0),
+            sparedCount = prefs.getInt(KEY_LAST_RUN_SPARED, 0),
+            hitsTaken = prefs.getInt(KEY_LAST_RUN_HITS, 0),
+            seedsCollected = prefs.getInt(KEY_LAST_RUN_SEEDS, 0),
+            bloomConversions = prefs.getInt(KEY_LAST_RUN_BLOOM_CONVERSIONS, 0),
+            lastKiller = prefs.getString(KEY_LAST_RUN_KILLER, null)?.let { raw ->
+                runCatching { EntityType.valueOf(raw) }.getOrNull()
+            },
+            restQuote = prefs.getString(KEY_LAST_RUN_QUOTE, "") ?: ""
+        )
+    }
 
     fun incrementBiomeFriendship(context: Context, biome: Biome) {
         incrementInt(context, "friendship_${biome.name.lowercase()}")
