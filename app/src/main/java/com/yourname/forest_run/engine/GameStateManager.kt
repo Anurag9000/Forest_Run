@@ -15,6 +15,7 @@ import com.yourname.forest_run.utils.MathUtils
 class GameStateManager(context: Context) {
     private val appContext = context.applicationContext
     private val pacifistTracker = PacifistTracker()
+    private val mercySystem = MercySystem()
 
     // -----------------------------------------------------------------------
     // Scroll & distance
@@ -94,8 +95,12 @@ class GameStateManager(context: Context) {
     // -----------------------------------------------------------------------
 
     /** Hearts earned this run by close calls. Resets on REST. */
-    var mercyHearts: Int = 0
-        private set
+    val mercyHearts: Int
+        get() = mercySystem.mercyHearts
+    val mercyMissesThisRun: Int
+        get() = mercySystem.nearMisses
+    val kindnessChain: Int
+        get() = mercySystem.kindnessChain
     val cleanPassesThisRun: Int
         get() = pacifistTracker.cleanPassesThisRun
     val sparedThisRun: Int
@@ -217,7 +222,7 @@ class GameStateManager(context: Context) {
 
     /** Increment mercy hearts (called by collision system on MERCY_MISS). */
     fun addMercyHeart() {
-        mercyHearts++
+        mercySystem.recordMercyMiss()
     }
 
     fun updatePacifistBiome(biome: Biome) {
@@ -225,14 +230,17 @@ class GameStateManager(context: Context) {
     }
 
     fun recordCleanPass() {
+        mercySystem.recordCleanPass()
         pacifistTracker.recordCleanPass()
     }
 
     fun recordSpare() {
+        mercySystem.recordSpare()
         pacifistTracker.recordSpare()
     }
 
     fun recordHit() {
+        mercySystem.recordHit()
         pacifistTracker.recordHit()
     }
 
@@ -254,7 +262,7 @@ class GameStateManager(context: Context) {
         isBloomActive         = false
         bloomTimer            = 0f
         isNewHighScore        = false
-        mercyHearts           = 0
+        mercySystem.reset()
         speedDebuffMultiplier = 1f
         speedDebuffTimer      = 0f
         lastMilestone         = 0

@@ -79,4 +79,18 @@ class GameStateManagerTest {
         val spareReward = state.consumePacifistReward()
         assertEquals("Spare bonus", spareReward?.message)
     }
+
+    @Test
+    fun `mercy system data flows through game state`() {
+        val state = GameStateManager(context)
+
+        repeat(3) { state.addMercyHeart() }
+        state.recordCleanPass()
+        state.recordSpare()
+        state.recordHit()
+
+        assertEquals(3, state.mercyHearts)
+        assertEquals(3, state.mercyMissesThisRun)
+        assertEquals(0, state.kindnessChain)
+    }
 }
