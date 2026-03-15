@@ -6,12 +6,14 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.ui.DialogueBubbleManager
 import kotlin.random.Random
@@ -41,10 +43,11 @@ class Dog(
     isBuddy: Boolean = Random.nextFloat() < 0.20f  // 20% chance at spawn
 ) : Entity(context) {
 
-    private val dogH = 102f
-    private val dogW = SpriteSizing.widthForHeight(sprite, dogH, minWidth = 80f)
-    private val insetX = dogW * 0.13f
-    private val insetY = dogH * 0.07f
+    private val readability = ReadabilityProfile.entityForGround(EntityType.DOG, groundY)
+    private val dogH = readability.heightPx
+    private val dogW = SpriteSizing.widthForHeight(sprite, dogH, minWidth = readability.minWidthPx)
+    private val insetX = dogW * readability.hitInsetXRatio
+    private val insetY = dogH * readability.hitInsetYRatio
 
     // ── Bark Projectile nested class ─────────────────────────────────────
     /**
@@ -68,7 +71,8 @@ class Dog(
 
         fun collides(player: Player): Boolean = RectF.intersects(player.hitbox, rect)
         fun nearMiss(player: Player): Boolean {
-            val m = RectF(rect.left - 12f, rect.top - 12f, rect.right + 12f, rect.bottom + 12f)
+            val mercyPad = readability.mercyPaddingPx
+            val m = RectF(rect.left - mercyPad, rect.top - mercyPad, rect.right + mercyPad, rect.bottom + mercyPad)
             return RectF.intersects(player.hitbox, m)
         }
     }
@@ -184,7 +188,8 @@ class Dog(
     override fun draw(canvas: Canvas) {
         if (mode == DogMode.HAZARD) {
             barkPaint.alpha = (120f + 100f * barkCharge).toInt().coerceIn(0, 255)
-            canvas.drawOval(x - 10f, y + dogH * 0.18f, x + dogW + 10f, y + dogH * 0.82f, barkPaint)
+            val pad = readability.stagingPaddingPx
+            canvas.drawOval(x - pad, y + dogH * 0.18f, x + dogW + pad, y + dogH * 0.82f, barkPaint)
         }
         val drawRect = RectF(x, y, x + dogW, y + dogH)
         sprite.draw(canvas, drawRect)
@@ -209,7 +214,8 @@ class Dog(
         if (RectF.intersects(player.hitbox, hitbox)) {
             return CollisionResult.HIT
         }
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             return CollisionResult.MERCY_MISS
         }
@@ -220,7 +226,7 @@ class Dog(
         if (mode == DogMode.HAZARD) {
             gameState.addBonus(points = 145, seeds = 1)
             DialogueBubbleManager.spawn(
-                RelationshipArcSystem.lineFor(context, com.yourname.forest_run.entities.EntityType.DOG, RelationshipArcSystem.Event.PASS),
+                RelationshipArcSystem.lineFor(context, EntityType.DOG, RelationshipArcSystem.Event.PASS),
                 x + dogW * 0.5f,
                 y - 18f,
                 Color.rgb(255, 246, 214),
@@ -233,7 +239,7 @@ class Dog(
             buddyRewarded = true
             gameState.addBonus(points = 180, seeds = 2)
             DialogueBubbleManager.spawn(
-                RelationshipArcSystem.lineFor(context, com.yourname.forest_run.entities.EntityType.DOG, RelationshipArcSystem.Event.SPARE),
+                RelationshipArcSystem.lineFor(context, EntityType.DOG, RelationshipArcSystem.Event.SPARE),
                 x + dogW * 0.5f,
                 y - 20f,
                 Color.rgb(255, 248, 210),

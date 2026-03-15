@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -30,18 +31,19 @@ class Eagle(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val birdH = 96f
-    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 70f)
-    private val diveSpeed = 700f
-    private val insetX = birdW * 0.10f
-    private val insetY = birdH * 0.10f
+    private val readability = ReadabilityProfile.entityForGround(EntityType.EAGLE, groundY)
+    private val birdH = readability.heightPx
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = readability.minWidthPx)
+    private val diveSpeed = readability.movementSpeedPxPerSec.coerceAtLeast(680f)
+    private val insetX = birdW * readability.hitInsetXRatio
+    private val insetY = birdH * readability.hitInsetYRatio
 
     private var velX = 0f
     private var velY = 0f
     private var targetX = screenWidth * 0.25f
     private var targetY = groundY - 50f
     private var lockTimer = 0f
-    private val lockDuration = 0.35f
+    private val lockDuration = readability.telegraphDurationSec.coerceAtLeast(0.28f)
     private var isLocked = false
     private val reticlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(220, 255, 90, 90)
@@ -130,7 +132,8 @@ class Eagle(
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }

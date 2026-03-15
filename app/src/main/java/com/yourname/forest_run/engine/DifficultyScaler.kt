@@ -10,22 +10,13 @@ import com.yourname.forest_run.entities.EntityType
  */
 object DifficultyScaler {
 
-    // ── Spawn interval ────────────────────────────────────────────────────
-    /** Max gap in seconds between entity spawns (very easy — early game). */
-    private const val SPAWN_INTERVAL_MAX = 1.7f
-    /** Min gap (hard cap to avoid entity congestion). */
-    private const val SPAWN_INTERVAL_MIN = 0.62f
-    /** Metres over which we fully ramp from max to min interval. */
-    private const val INTERVAL_RAMP_METRES = 2000f
-
     /**
      * Returns the number of seconds to wait before the next entity spawns.
-     * Shrinks linearly with distance, clamped at [SPAWN_INTERVAL_MIN].
+     * Routed through the central readability profile so pacing tweaks do not
+     * drift away from the rest of the presentation tuning.
      */
-    fun getSpawnInterval(distanceMetres: Float): Float {
-        val t = (distanceMetres / INTERVAL_RAMP_METRES).coerceIn(0f, 1f)
-        return SPAWN_INTERVAL_MAX - t * (SPAWN_INTERVAL_MAX - SPAWN_INTERVAL_MIN)
-    }
+    fun getSpawnInterval(distanceMetres: Float): Float =
+        ReadabilityProfile.spawnInterval(distanceMetres)
 
     // ── Biome-based spawn pools ───────────────────────────────────────────
 

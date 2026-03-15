@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -36,10 +37,11 @@ class Cat(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val catH = 82f
-    private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = 68f)
-    private val insetX = catW * 0.14f
-    private val insetY = catH * 0.10f
+    private val readability = ReadabilityProfile.entityForGround(EntityType.CAT, groundY)
+    private val catH = readability.heightPx
+    private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = readability.minWidthPx)
+    private val insetX = catW * readability.hitInsetXRatio
+    private val insetY = catH * readability.hitInsetYRatio
     private val auraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(54, 255, 214, 236)
         style = Paint.Style.FILL
@@ -133,7 +135,8 @@ class Cat(
             return CollisionResult.HIT
         }
 
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             if (!playerHasPassed) {
                 DialogueBubbleManager.spawn("Phew...", player.x + Player.BASE_WIDTH * 0.5f, player.y - 24f, Color.rgb(255, 245, 220), Color.rgb(180, 140, 70))

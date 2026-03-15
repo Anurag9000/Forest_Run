@@ -642,8 +642,8 @@ These synthesize the entire historical spec set into unified workstreams.
 
 ### Readability
 
-- `Partial`: many unique systems exist.
-- `TODO`: make entities large and clear enough on phone so those systems are perceivable.
+- `Implemented`: a central `ReadabilityProfile` now owns spawn pacing plus core bird/animal sizing, telegraph, and mercy-padding baselines.
+- `Partial`: many unique systems now read more clearly, but final flora/tree coverage and actual-device validation are still required.
 
 ### Bloom
 

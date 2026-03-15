@@ -118,7 +118,7 @@ This file is the strict implementation ledger for everything from the original d
 
 ## Architecture TODOs
 
-- TODO: dedicated readability tuning layer by entity class and device density.
+- PARTIAL: dedicated readability tuning layer now exists via `ReadabilityProfile`, including central spawn pacing plus core bird/animal sizing, telegraph, and mercy padding baselines; expand it to flora, trees, and final device retuning.
 - PARTIAL: stronger presentation architecture for ghost UX.
 - PARTIAL: persistent encounter memory architecture exists; broaden it into richer payoff and authoring tools.
 - DONE: costume overlay architecture baseline exists.

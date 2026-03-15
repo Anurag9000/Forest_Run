@@ -6,10 +6,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
@@ -24,12 +26,13 @@ class Duck(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val birdH = 94f
-    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 66f)
+    private val readability = ReadabilityProfile.entityForGround(EntityType.DUCK, groundY)
+    private val birdH = readability.heightPx
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = readability.minWidthPx)
     // Duck flies at ~60% screen height above ground — roughly head height
     private val flyY = groundY - groundY * 0.30f
-    private val insetX = birdW * 0.10f
-    private val insetY = birdH * 0.10f
+    private val insetX = birdW * readability.hitInsetXRatio
+    private val insetY = birdH * readability.hitInsetYRatio
     private val duckLaneRect = RectF()
     private val cuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(40, 244, 226, 108)
@@ -52,7 +55,8 @@ class Duck(
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         hitbox.offsetTo(x + insetX, y + insetY)
-        duckLaneRect.set(x - 12f, y + birdH * 0.18f, x + birdW + 12f, y + birdH * 0.86f)
+        val pad = readability.stagingPaddingPx
+        duckLaneRect.set(x - pad, y + birdH * 0.18f, x + birdW + pad, y + birdH * 0.86f)
         sprite.update(deltaTime)
         if (x < -birdW - 20f) isActive = false
     }
@@ -77,7 +81,8 @@ class Duck(
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }

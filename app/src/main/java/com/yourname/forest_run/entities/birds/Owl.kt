@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -28,11 +29,12 @@ class Owl(
     private val actionSprite: SpriteSheet
 ) : Entity(context) {
 
-    private val birdH = 90f
-    private val birdW = SpriteSizing.widthForHeight(actionSprite, birdH, minWidth = 64f)
+    private val readability = ReadabilityProfile.entityForGround(EntityType.OWL, groundY)
+    private val birdH = readability.heightPx
+    private val birdW = SpriteSizing.widthForHeight(actionSprite, birdH, minWidth = readability.minWidthPx)
     private val perchY = groundY * 0.2f // High-up perch
-    private val insetX = birdW * 0.10f
-    private val insetY = birdH * 0.10f
+    private val insetX = birdW * readability.hitInsetXRatio
+    private val insetY = birdH * readability.hitInsetYRatio
 
     private enum class OwlState { SLEEPING, ALERT, DIVING }
     private var owlState = OwlState.SLEEPING
@@ -75,7 +77,7 @@ class Owl(
             OwlState.ALERT -> {
                 x -= scrollSpeed * deltaTime
                 alertTimer += deltaTime
-                if (alertTimer >= 0.22f) {
+                if (alertTimer >= readability.telegraphDurationSec) {
                     triggerDive(pendingTargetX, pendingTargetY)
                 }
             }
@@ -98,7 +100,7 @@ class Owl(
             owlState = OwlState.DIVING
             currentSprite = actionSprite
             currentSprite.reset()
-            val diveSpeed = 600f
+            val diveSpeed = readability.movementSpeedPxPerSec.coerceAtLeast(560f)
             val dx = targetX - x
             val dy = targetY - y
             val dist = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat().coerceAtLeast(1f)
@@ -113,9 +115,9 @@ class Owl(
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), birdW * 0.48f, eyeGlowPaint)
         }
         if (owlState == OwlState.ALERT) {
-            val radius = birdW * (0.48f + alertTimer * 0.55f)
+            val radius = birdW * (0.48f + alertTimer / readability.telegraphDurationSec.coerceAtLeast(0.1f) * 0.14f)
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), radius, alertFillPaint)
-            alertPaint.alpha = (180 * (1f - (alertTimer / 0.22f).coerceIn(0f, 1f))).toInt().coerceIn(40, 180)
+            alertPaint.alpha = (180 * (1f - (alertTimer / readability.telegraphDurationSec.coerceAtLeast(0.1f)).coerceIn(0f, 1f))).toInt().coerceIn(40, 180)
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), radius, alertPaint)
         }
         currentSprite.draw(canvas, drawRect)
@@ -160,7 +162,8 @@ class Owl(
             return CollisionResult.HIT
         }
 
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (owlState == OwlState.DIVING && RectF.intersects(player.hitbox, mercy)) {
             return CollisionResult.MERCY_MISS
         }

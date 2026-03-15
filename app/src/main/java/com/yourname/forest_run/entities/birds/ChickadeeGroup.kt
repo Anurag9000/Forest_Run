@@ -6,10 +6,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.ui.DialogueBubbleManager
 import kotlin.random.Random
@@ -26,8 +28,9 @@ class ChickadeeGroup(
     count: Int = 3
 ) : Entity(context) {
 
-    private val birdH = 52f
-    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 42f)
+    private val readability = ReadabilityProfile.entityForGround(EntityType.CHICKADEE, groundY)
+    private val birdH = readability.heightPx
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = readability.minWidthPx)
     private val spacing = 74f
     private val birdCount = count.coerceIn(2, 4)
     private val flutterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -94,7 +97,8 @@ class ChickadeeGroup(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         for (rect in birdRects) {
             if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT
-            val mercy = RectF(rect.left - 12f, rect.top - 12f, rect.right + 12f, rect.bottom + 12f)
+            val mercyPad = readability.mercyPaddingPx
+            val mercy = RectF(rect.left - mercyPad, rect.top - mercyPad, rect.right + mercyPad, rect.bottom + mercyPad)
             if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         }
         return CollisionResult.NONE

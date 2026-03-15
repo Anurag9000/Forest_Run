@@ -221,8 +221,8 @@ Expected data per major creature family:
 
 ### Current Status
 
-- Partial: encounter counts and some repeated-memory hooks exist.
-- TODO: formalize relationship stages and authoring data for Cat, Fox, Wolf, Dog, Owl, and Eagle first.
+- Implemented: formal relationship stages and baseline authoring data now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
+- Partial: encounter counts, stage persistence, and stage-aware dialogue now exist; deepen Garden presence, milestone presentation, and broader authored consequences.
 
 ## 14. Personal Return Moments Authoring
 

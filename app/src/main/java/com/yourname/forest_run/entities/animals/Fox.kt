@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -35,10 +36,11 @@ class Fox(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val foxH = 100f
-    private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = 82f)
-    private val insetX = foxW * 0.12f
-    private val insetY = foxH * 0.09f
+    private val readability = ReadabilityProfile.entityForGround(EntityType.FOX, groundY)
+    private val foxH = readability.heightPx
+    private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = readability.minWidthPx)
+    private val insetX = foxW * readability.hitInsetXRatio
+    private val insetY = foxH * readability.hitInsetYRatio
     private val detectionRect = RectF()
     private val detectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(44, 255, 206, 132)
@@ -54,7 +56,7 @@ class Fox(
     private var foxState = FoxState.WALKING
 
     private val walkSpeed = 200f
-    private val detectionRange get() = foxW * 3f
+    private val detectionRange get() = foxW * readability.detectionRangeBodies
     private var hasJumped = false
 
     // Fox jump physics (mirrors player jump mini version)
@@ -99,7 +101,8 @@ class Fox(
             }
         }
 
-        detectionRect.set(x - detectionRange, y - 12f, x + foxW + 8f, y + foxH + 6f)
+        val pad = readability.stagingPaddingPx
+        detectionRect.set(x - detectionRange, y - pad, x + foxW + pad * 0.7f, y + foxH + pad * 0.5f)
         hitbox.offsetTo(x + insetX, y + insetY)
         if (x < -foxW - 50f) isActive = false
     }
@@ -174,7 +177,8 @@ class Fox(
         if (RectF.intersects(player.hitbox, hitbox)) {
             return CollisionResult.STUMBLE
         }
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             return CollisionResult.MERCY_MISS
         }

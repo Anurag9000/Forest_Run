@@ -6,10 +6,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
+import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
@@ -29,10 +31,11 @@ class Hedgehog(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val hogH  = 64f
-    private val hogW  = SpriteSizing.widthForHeight(sprite, hogH, minWidth = 48f)
-    private val insetX = hogW * 0.08f
-    private val insetY = hogH * 0.08f
+    private val readability = ReadabilityProfile.entityForGround(EntityType.HEDGEHOG, groundY)
+    private val hogH  = readability.heightPx
+    private val hogW  = SpriteSizing.widthForHeight(sprite, hogH, minWidth = readability.minWidthPx)
+    private val insetX = hogW * readability.hitInsetXRatio
+    private val insetY = hogH * readability.hitInsetYRatio
     private val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(56, 255, 220, 164)
         style = Paint.Style.FILL
@@ -85,7 +88,8 @@ class Hedgehog(
             return CollisionResult.NONE
         }
 
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             DialogueBubbleManager.spawn("Eep!", x + hogW * 0.5f, y - 14f, Color.rgb(255, 246, 220), Color.rgb(160, 120, 70))
             return CollisionResult.MERCY_MISS

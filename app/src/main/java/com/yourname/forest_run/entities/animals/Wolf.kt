@@ -8,6 +8,7 @@ import android.graphics.RectF
 import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -39,17 +40,18 @@ class Wolf(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val wolfH = 116f
-    private val wolfW = SpriteSizing.widthForHeight(sprite, wolfH, minWidth = 92f)
-    private val insetX = wolfW * 0.11f
-    private val insetY = wolfH * 0.07f
+    private val readability = ReadabilityProfile.entityForGround(EntityType.WOLF, groundY)
+    private val wolfH = readability.heightPx
+    private val wolfW = SpriteSizing.widthForHeight(sprite, wolfH, minWidth = readability.minWidthPx)
+    private val insetX = wolfW * readability.hitInsetXRatio
+    private val insetY = wolfH * readability.hitInsetYRatio
 
     private enum class WolfState { WALKING, HOWLING, CHARGING, SPARED }
     private var wolfState = WolfState.WALKING
 
     private val walkSpeed = 150f
     private var howlTimer = 0f
-    private val howlDuration = 1.0f
+    private val howlDuration = readability.telegraphDurationSec.coerceAtLeast(0.8f)
 
     private var spared = false
     private var passRewarded = false
@@ -166,7 +168,8 @@ class Wolf(
         if (RectF.intersects(player.hitbox, hitbox)) {
             return CollisionResult.STUMBLE
         }
-        val mercy = RectF(hitbox.left - 12f, hitbox.top - 12f, hitbox.right + 12f, hitbox.bottom + 12f)
+        val mercyPad = readability.mercyPaddingPx
+        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             return CollisionResult.MERCY_MISS
         }
