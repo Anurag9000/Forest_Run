@@ -2,6 +2,8 @@ package com.yourname.forest_run.entities.trees
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSheet
@@ -9,6 +11,7 @@ import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.ui.DialogueBubbleManager
 import kotlin.random.Random
 
 /**
@@ -32,6 +35,10 @@ class Bamboo(
     private val bottomHitboxes    = Array(stalkCount) { RectF() }
     private val topDrawRects      = Array(stalkCount) { RectF() }
     private val bottomDrawRects   = Array(stalkCount) { RectF() }
+    private val gapGuidePaint     = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(44, 212, 255, 210)
+        style = Paint.Style.FILL
+    }
 
     init {
         x = startX
@@ -64,6 +71,15 @@ class Bamboo(
     }
 
     override fun draw(canvas: Canvas) {
+        for (i in 0 until stalkCount - 1) {
+            val left = topHitboxes[i].right
+            val right = topHitboxes[i + 1].left
+            if (right > left) {
+                val gapTop = topHitboxes[i].bottom
+                val gapBottom = bottomHitboxes[i].top
+                canvas.drawRoundRect(left, gapTop, right, gapBottom, 14f, 14f, gapGuidePaint)
+            }
+        }
         for (i in 0 until stalkCount) {
             // Top stalk
             topDrawRects[i].set(topHitboxes[i].left, 0f, topHitboxes[i].right, topHitboxes[i].bottom)
@@ -72,6 +88,11 @@ class Bamboo(
             bottomDrawRects[i].set(bottomHitboxes[i].left, bottomHitboxes[i].top, bottomHitboxes[i].right, groundY)
             sprite.draw(canvas, bottomDrawRects[i])
         }
+    }
+
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        gameState.addBonus(points = 135)
+        DialogueBubbleManager.spawn("Thread the grove", x + totalWidth * 0.5f, groundY * 0.16f, Color.rgb(232, 255, 236), Color.rgb(88, 148, 92))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

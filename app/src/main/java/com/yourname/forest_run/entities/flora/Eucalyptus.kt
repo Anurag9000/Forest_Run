@@ -2,6 +2,8 @@ package com.yourname.forest_run.entities.flora
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -10,6 +12,7 @@ import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Eucalyptus — Phase 27: fast-whipping sway animation via SpriteSheet.
@@ -26,6 +29,11 @@ class Eucalyptus(
     private val hitInsetX   = floraWidth * 0.18f
     private val hitTopY     = floraHeight * 0.14f
     private val drawRect    = RectF()
+    private val windGuidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(110, 164, 222, 160)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
 
     init {
         x = startX
@@ -44,11 +52,23 @@ class Eucalyptus(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
+        canvas.drawLine(
+            x + floraWidth * 0.20f,
+            y + floraHeight * 0.30f,
+            x + floraWidth * 0.84f + sway * 1.8f,
+            y + floraHeight * 0.18f,
+            windGuidePaint
+        )
         drawRect.set(x, y, x + floraWidth, y + floraHeight)
         canvas.save()
         canvas.rotate(sway * 3f, x + floraWidth / 2f, y + floraHeight)
         sprite.draw(canvas, drawRect)
         canvas.restore()
+    }
+
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        gameState.addBonus(points = 120)
+        DialogueBubbleManager.spawn("Leaves whip past", x + floraWidth * 0.52f, y - 12f, Color.rgb(236, 255, 236), Color.rgb(96, 150, 108))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

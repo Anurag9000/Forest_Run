@@ -3,6 +3,7 @@ package com.yourname.forest_run.entities.flora
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -30,6 +31,15 @@ class LilyOfValley(
     private val hitInsetX   = floraWidth * 0.22f
     private val hitTopY     = floraHeight * 0.45f
     private val drawRect    = RectF()
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(70, 214, 255, 236)
+        style = Paint.Style.FILL
+    }
+    private val coreGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(130, 246, 255, 248)
+        style = Paint.Style.FILL
+    }
+    private var glowPulse = 0f
 
     init {
         x = startX
@@ -40,6 +50,7 @@ class LilyOfValley(
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
+        glowPulse += deltaTime * 3.2f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x + hitInsetX + sway, y + hitTopY)
         sprite.update(deltaTime)
@@ -48,6 +59,13 @@ class LilyOfValley(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
+        val pulse = 0.65f + 0.35f * kotlin.math.sin(glowPulse)
+        val blossomX = x + floraWidth * 0.52f
+        val blossomY = y + floraHeight * 0.28f
+        glowPaint.alpha = (60f + 45f * pulse).toInt().coerceIn(0, 255)
+        coreGlowPaint.alpha = (105f + 65f * pulse).toInt().coerceIn(0, 255)
+        canvas.drawCircle(blossomX, blossomY, floraWidth * (0.34f + 0.08f * pulse), glowPaint)
+        canvas.drawCircle(blossomX, blossomY, floraWidth * 0.18f, coreGlowPaint)
         drawRect.set(x, y, x + floraWidth, y + floraHeight)
         canvas.save()
         canvas.rotate(sway * 2f, x + floraWidth / 2f, y + floraHeight)
@@ -58,7 +76,7 @@ class LilyOfValley(
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         gameState.addBonus(points = 90)
         ParticleManager.emit(FxPreset.LILY_NIGHT_GLOW, x + floraWidth * 0.5f, y + floraHeight * 0.25f)
-        DialogueBubbleManager.spawn("Soft glow", x + floraWidth * 0.5f, y - 10f, Color.rgb(242, 255, 252), Color.rgb(110, 170, 150))
+        DialogueBubbleManager.spawn("Moonlit lure", x + floraWidth * 0.5f, y - 10f, Color.rgb(242, 255, 252), Color.rgb(110, 170, 150))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

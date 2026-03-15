@@ -2,6 +2,8 @@ package com.yourname.forest_run.entities.trees
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -10,6 +12,7 @@ import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
  * Weeping Willow — Phase 27: sprite rendered at 2× height, sway applied via canvas rotation.
@@ -33,6 +36,10 @@ class WeepingWillow(
 
     private val curtainHitbox = RectF()
     private val drawRect      = RectF()
+    private val curtainPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(48, 40, 92, 54)
+        style = Paint.Style.FILL
+    }
 
     init {
         x = startX
@@ -54,11 +61,17 @@ class WeepingWillow(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
+        canvas.drawRoundRect(curtainHitbox, 24f, 24f, curtainPaint)
         drawRect.set(x, groundY - treeHeight, x + treeWidth, groundY)
         canvas.save()
         canvas.rotate(sway * 0.5f, x + treeWidth / 2f, groundY)
         sprite.draw(canvas, drawRect)
         canvas.restore()
+    }
+
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        gameState.addBonus(points = 130)
+        DialogueBubbleManager.spawn("Duck through the hush", x + treeWidth * 0.5f, y + treeHeight * 0.08f, Color.rgb(226, 245, 226), Color.rgb(82, 122, 86))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

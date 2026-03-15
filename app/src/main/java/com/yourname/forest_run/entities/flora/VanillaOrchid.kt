@@ -3,6 +3,7 @@ package com.yourname.forest_run.entities.flora
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -36,6 +37,14 @@ class VanillaOrchid(
 
     private val bottomRect   = RectF()
     private val topRect      = RectF()
+    private val safeGapPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(44, 248, 234, 196)
+        style = Paint.Style.FILL
+    }
+    private val blossomPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(92, 255, 245, 226)
+        style = Paint.Style.FILL
+    }
 
     init {
         x = startX
@@ -58,6 +67,14 @@ class VanillaOrchid(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
+        val safeLeft = bottomHitbox.left + floraWidth * 0.08f
+        val safeRight = topHitbox.right - floraWidth * 0.08f
+        val safeTop = topHitbox.bottom
+        val safeBottom = bottomHitbox.top
+        if (safeBottom > safeTop) {
+            canvas.drawRoundRect(safeLeft, safeTop, safeRight, safeBottom, 18f, 18f, safeGapPaint)
+        }
+        canvas.drawCircle(x + floraWidth * 0.74f, y + floraHeight * 0.16f, floraWidth * 0.09f, blossomPaint)
 
         // Bottom vine segment
         bottomRect.set(x, groundY - floraHeight * 0.30f, x + floraWidth * 0.62f, groundY)
@@ -75,10 +92,10 @@ class VanillaOrchid(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 140)
+        gameState.addBonus(points = 140, seeds = 1)
         ParticleManager.emit(FxPreset.LILY_NIGHT_GLOW, x + floraWidth * 0.68f, y + floraHeight * 0.16f)
         ParticleManager.emit(FxPreset.POLLEN_BURST, x + floraWidth * 0.34f, groundY - floraHeight * 0.18f)
-        DialogueBubbleManager.spawn("A safe thread", x + floraWidth * 0.55f, y - 14f, Color.rgb(255, 246, 252), Color.rgb(170, 120, 160))
+        DialogueBubbleManager.spawn("Thread the bloom", x + floraWidth * 0.55f, y - 14f, Color.rgb(255, 246, 252), Color.rgb(170, 120, 160))
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
