@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.ReadabilityProfile
+import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -30,6 +31,8 @@ class Owl(
 ) : Entity(context) {
 
     private val readability = ReadabilityProfile.entityForGround(EntityType.OWL, groundY)
+    private val relationshipTuning: RelationshipEncounterTuning =
+        RelationshipArcSystem.encounterTuning(context, EntityType.OWL)
     private val birdH = readability.heightPx
     private val birdW = SpriteSizing.widthForHeight(actionSprite, birdH, minWidth = readability.minWidthPx)
     private val perchY = groundY * 0.2f // High-up perch
@@ -77,7 +80,7 @@ class Owl(
             OwlState.ALERT -> {
                 x -= scrollSpeed * deltaTime
                 alertTimer += deltaTime
-                if (alertTimer >= readability.telegraphDurationSec) {
+                if (alertTimer >= readability.telegraphDurationSec * relationshipTuning.telegraphMultiplier) {
                     triggerDive(pendingTargetX, pendingTargetY)
                 }
             }
@@ -100,7 +103,7 @@ class Owl(
             owlState = OwlState.DIVING
             currentSprite = actionSprite
             currentSprite.reset()
-            val diveSpeed = readability.movementSpeedPxPerSec.coerceAtLeast(560f)
+            val diveSpeed = (readability.movementSpeedPxPerSec * relationshipTuning.aggressionMultiplier).coerceAtLeast(520f)
             val dx = targetX - x
             val dy = targetY - y
             val dist = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat().coerceAtLeast(1f)
@@ -115,16 +118,17 @@ class Owl(
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), birdW * 0.48f, eyeGlowPaint)
         }
         if (owlState == OwlState.ALERT) {
-            val radius = birdW * (0.48f + alertTimer / readability.telegraphDurationSec.coerceAtLeast(0.1f) * 0.14f)
+            val alertDuration = (readability.telegraphDurationSec * relationshipTuning.telegraphMultiplier).coerceAtLeast(0.1f)
+            val radius = birdW * (0.48f + alertTimer / alertDuration * 0.14f)
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), radius, alertFillPaint)
-            alertPaint.alpha = (180 * (1f - (alertTimer / readability.telegraphDurationSec.coerceAtLeast(0.1f)).coerceIn(0f, 1f))).toInt().coerceIn(40, 180)
+            alertPaint.alpha = (180 * (1f - (alertTimer / alertDuration).coerceIn(0f, 1f))).toInt().coerceIn(40, 180)
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), radius, alertPaint)
         }
         currentSprite.draw(canvas, drawRect)
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 150)
+        gameState.addBonus(points = 150 + relationshipTuning.passBonusPoints, seeds = relationshipTuning.passBonusSeeds)
         DialogueBubbleManager.spawn(
             text = RelationshipArcSystem.lineFor(context, EntityType.OWL, RelationshipArcSystem.Event.PASS),
             anchorX = x + birdW * 0.5f,
@@ -162,7 +166,7 @@ class Owl(
             return CollisionResult.HIT
         }
 
-        val mercyPad = readability.mercyPaddingPx
+        val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
         val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (owlState == OwlState.DIVING && RectF.intersects(player.hitbox, mercy)) {
             return CollisionResult.MERCY_MISS

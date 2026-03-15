@@ -699,9 +699,9 @@ These items are not from the earliest historical repo docs. They are explicit us
 #### Named Relationship Arcs
 
 - `Implemented`: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
-- `Partial`: relationship-driven dialogue now affects pass, threat, spare, and return tone, and Garden surfaces the strongest bond.
+- `Partial`: relationship-driven dialogue now affects pass, threat, spare, and return tone, and relationship stage now influences encounter generosity and telegraph tuning.
 - `Partial`: bonded creatures now influence Garden return moments, visible Garden presence, and sanctuary traces in baseline form.
-- `TODO`: deepen encounter shifts, milestone presentation, and broader relationship consequences.
+- `TODO`: deepen milestone presentation and broader relationship consequences.
 - `TODO`: make visible warmth from repeated positive interactions and visible caution or tension from repeated negative ones more pronounced in play.
 
 #### Personal Return Moments

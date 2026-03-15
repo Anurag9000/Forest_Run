@@ -22,6 +22,16 @@ private enum class RelationshipTone {
     CAUTIOUS
 }
 
+data class RelationshipEncounterTuning(
+    val passBonusPoints: Int = 0,
+    val passBonusSeeds: Int = 0,
+    val mercyPaddingBonusPx: Float = 0f,
+    val telegraphMultiplier: Float = 1f,
+    val aggressionMultiplier: Float = 1f,
+    val detectionMultiplier: Float = 1f,
+    val buddyChanceBonus: Float = 0f
+)
+
 object RelationshipArcSystem {
 
     private val trackedTypes = setOf(
@@ -117,6 +127,119 @@ object RelationshipArcSystem {
 
     fun isWarmBond(context: Context, type: EntityType): Boolean =
         isTracked(type) && toneFor(context.applicationContext, type) == RelationshipTone.WARM
+
+    fun encounterTuning(context: Context, type: EntityType): RelationshipEncounterTuning {
+        if (!isTracked(type)) return RelationshipEncounterTuning()
+        val appContext = context.applicationContext
+        val stage = stageFor(appContext, type)
+        val tone = toneFor(appContext, type)
+        return when (type) {
+            EntityType.CAT -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> RelationshipEncounterTuning()
+                RelationshipStage.RECOGNITION -> RelationshipEncounterTuning(passBonusPoints = 20)
+                RelationshipStage.TRUST -> RelationshipEncounterTuning(
+                    passBonusPoints = 40,
+                    passBonusSeeds = if (tone == RelationshipTone.WARM) 1 else 0,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 2f else 0f
+                )
+                RelationshipStage.MILESTONE -> RelationshipEncounterTuning(
+                    passBonusPoints = 70,
+                    passBonusSeeds = if (tone == RelationshipTone.WARM) 1 else 0,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 4f else 1f
+                )
+            }
+            EntityType.FOX -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> RelationshipEncounterTuning()
+                RelationshipStage.RECOGNITION -> RelationshipEncounterTuning(passBonusPoints = 20, detectionMultiplier = 1.06f)
+                RelationshipStage.TRUST -> RelationshipEncounterTuning(
+                    passBonusPoints = 40,
+                    passBonusSeeds = if (tone == RelationshipTone.WARM) 1 else 0,
+                    detectionMultiplier = if (tone == RelationshipTone.WARM) 1.16f else 1.10f,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 2f else 0f
+                )
+                RelationshipStage.MILESTONE -> RelationshipEncounterTuning(
+                    passBonusPoints = 60,
+                    passBonusSeeds = 1,
+                    detectionMultiplier = if (tone == RelationshipTone.WARM) 1.24f else 1.14f,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 4f else 1f
+                )
+            }
+            EntityType.WOLF -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> RelationshipEncounterTuning()
+                RelationshipStage.RECOGNITION -> RelationshipEncounterTuning(passBonusPoints = 25, telegraphMultiplier = 1.06f)
+                RelationshipStage.TRUST -> RelationshipEncounterTuning(
+                    passBonusPoints = 45,
+                    passBonusSeeds = if (tone == RelationshipTone.WARM) 1 else 0,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 2f else 0f,
+                    telegraphMultiplier = if (tone == RelationshipTone.WARM) 1.18f else 1.10f,
+                    aggressionMultiplier = if (tone == RelationshipTone.CAUTIOUS) 1.03f else 0.95f
+                )
+                RelationshipStage.MILESTONE -> RelationshipEncounterTuning(
+                    passBonusPoints = 70,
+                    passBonusSeeds = 1,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 4f else 1f,
+                    telegraphMultiplier = if (tone == RelationshipTone.WARM) 1.28f else 1.16f,
+                    aggressionMultiplier = if (tone == RelationshipTone.CAUTIOUS) 1.02f else 0.88f
+                )
+            }
+            EntityType.DOG -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> RelationshipEncounterTuning()
+                RelationshipStage.RECOGNITION -> RelationshipEncounterTuning(passBonusPoints = 20, buddyChanceBonus = 0.05f)
+                RelationshipStage.TRUST -> RelationshipEncounterTuning(
+                    passBonusPoints = 35,
+                    passBonusSeeds = if (tone == RelationshipTone.WARM) 1 else 0,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 2f else 0f,
+                    buddyChanceBonus = if (tone == RelationshipTone.WARM) 0.14f else 0.09f
+                )
+                RelationshipStage.MILESTONE -> RelationshipEncounterTuning(
+                    passBonusPoints = 55,
+                    passBonusSeeds = 1,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 4f else 1f,
+                    buddyChanceBonus = if (tone == RelationshipTone.WARM) 0.24f else 0.14f
+                )
+            }
+            EntityType.OWL -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> RelationshipEncounterTuning()
+                RelationshipStage.RECOGNITION -> RelationshipEncounterTuning(passBonusPoints = 20, telegraphMultiplier = 1.06f)
+                RelationshipStage.TRUST -> RelationshipEncounterTuning(
+                    passBonusPoints = 35,
+                    passBonusSeeds = if (tone == RelationshipTone.WARM) 1 else 0,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 2f else 0f,
+                    telegraphMultiplier = if (tone == RelationshipTone.WARM) 1.18f else 1.10f,
+                    aggressionMultiplier = if (tone == RelationshipTone.CAUTIOUS) 1.02f else 0.95f
+                )
+                RelationshipStage.MILESTONE -> RelationshipEncounterTuning(
+                    passBonusPoints = 55,
+                    passBonusSeeds = 1,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 4f else 1f,
+                    telegraphMultiplier = if (tone == RelationshipTone.WARM) 1.28f else 1.14f,
+                    aggressionMultiplier = if (tone == RelationshipTone.CAUTIOUS) 1.02f else 0.88f
+                )
+            }
+            EntityType.EAGLE -> when (stage) {
+                RelationshipStage.FIRST_IMPRESSION -> RelationshipEncounterTuning()
+                RelationshipStage.RECOGNITION -> RelationshipEncounterTuning(passBonusPoints = 20, telegraphMultiplier = 1.06f)
+                RelationshipStage.TRUST -> RelationshipEncounterTuning(
+                    passBonusPoints = 35,
+                    passBonusSeeds = if (tone == RelationshipTone.WARM) 1 else 0,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 2f else 0f,
+                    telegraphMultiplier = if (tone == RelationshipTone.WARM) 1.18f else 1.10f,
+                    aggressionMultiplier = if (tone == RelationshipTone.CAUTIOUS) 1.02f else 0.95f
+                )
+                RelationshipStage.MILESTONE -> RelationshipEncounterTuning(
+                    passBonusPoints = 60,
+                    passBonusSeeds = 1,
+                    mercyPaddingBonusPx = if (tone == RelationshipTone.WARM) 4f else 1f,
+                    telegraphMultiplier = if (tone == RelationshipTone.WARM) 1.28f else 1.14f,
+                    aggressionMultiplier = if (tone == RelationshipTone.CAUTIOUS) 1.02f else 0.88f
+                )
+            }
+            else -> RelationshipEncounterTuning()
+        }
+    }
+
+    fun dogBuddyChance(context: Context): Float =
+        (0.20f + encounterTuning(context.applicationContext, EntityType.DOG).buddyChanceBonus).coerceIn(0.20f, 0.55f)
 
     fun creatureThought(context: Context, type: EntityType): String? {
         if (!isTracked(type)) return null

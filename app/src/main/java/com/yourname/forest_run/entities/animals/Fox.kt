@@ -8,6 +8,7 @@ import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
+import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -37,6 +38,8 @@ class Fox(
 ) : Entity(context) {
 
     private val readability = ReadabilityProfile.entityForGround(EntityType.FOX, groundY)
+    private val relationshipTuning: RelationshipEncounterTuning =
+        RelationshipArcSystem.encounterTuning(context, EntityType.FOX)
     private val foxH = readability.heightPx
     private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = readability.minWidthPx)
     private val insetX = foxW * readability.hitInsetXRatio
@@ -56,7 +59,7 @@ class Fox(
     private var foxState = FoxState.WALKING
 
     private val walkSpeed = 200f
-    private val detectionRange get() = foxW * readability.detectionRangeBodies
+    private val detectionRange get() = foxW * readability.detectionRangeBodies * relationshipTuning.detectionMultiplier
     private var hasJumped = false
 
     // Fox jump physics (mirrors player jump mini version)
@@ -121,7 +124,10 @@ class Fox(
         if (!spared && gameState.mercyHearts >= 5) {
             spared   = true
             foxState = FoxState.SPARED
-            gameState.addBonus(points = 120, seeds = 2)
+            gameState.addBonus(
+                points = 120 + relationshipTuning.passBonusPoints,
+                seeds = 2 + relationshipTuning.passBonusSeeds
+            )
             PersistentMemoryManager.recordSpare(context, EntityType.FOX)
             gameState.recordSpare()
             DialogueBubbleManager.spawn(
@@ -136,7 +142,10 @@ class Fox(
 
         if (!passRewarded && hasJumped && foxState != FoxState.SPARED) {
             passRewarded = true
-            gameState.addBonus(points = 150, seeds = 1)
+            gameState.addBonus(
+                points = 150 + relationshipTuning.passBonusPoints,
+                seeds = 1 + relationshipTuning.passBonusSeeds
+            )
             DialogueBubbleManager.spawn(
                 RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.PASS),
                 x + foxW * 0.55f,
@@ -177,7 +186,7 @@ class Fox(
         if (RectF.intersects(player.hitbox, hitbox)) {
             return CollisionResult.STUMBLE
         }
-        val mercyPad = readability.mercyPaddingPx
+        val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
         val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             return CollisionResult.MERCY_MISS

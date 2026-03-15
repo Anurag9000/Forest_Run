@@ -9,6 +9,7 @@ import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
+import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -41,6 +42,8 @@ class Wolf(
 ) : Entity(context) {
 
     private val readability = ReadabilityProfile.entityForGround(EntityType.WOLF, groundY)
+    private val relationshipTuning: RelationshipEncounterTuning =
+        RelationshipArcSystem.encounterTuning(context, EntityType.WOLF)
     private val wolfH = readability.heightPx
     private val wolfW = SpriteSizing.widthForHeight(sprite, wolfH, minWidth = readability.minWidthPx)
     private val insetX = wolfW * readability.hitInsetXRatio
@@ -51,7 +54,7 @@ class Wolf(
 
     private val walkSpeed = 150f
     private var howlTimer = 0f
-    private val howlDuration = readability.telegraphDurationSec.coerceAtLeast(0.8f)
+    private val howlDuration = (readability.telegraphDurationSec * relationshipTuning.telegraphMultiplier).coerceAtLeast(0.8f)
 
     private var spared = false
     private var passRewarded = false
@@ -98,7 +101,7 @@ class Wolf(
                 howlTimer += deltaTime
                 if (howlTimer >= howlDuration) {
                     wolfState  = WolfState.CHARGING
-                    velocityX  = -(walkSpeed * 2f + scrollSpeed * 0.3f) // Double + partial scroll speed
+                    velocityX  = -(walkSpeed * 2f + scrollSpeed * 0.3f) * relationshipTuning.aggressionMultiplier
                     DialogueBubbleManager.spawn(
                         text = "Here it comes.",
                         anchorX = x + wolfW * 0.5f,
@@ -138,7 +141,10 @@ class Wolf(
         if (!spared && gameState.mercyHearts >= 8) {
             spared    = true
             wolfState = WolfState.SPARED
-            gameState.addBonus(points = 200, seeds = 3)
+            gameState.addBonus(
+                points = 200 + relationshipTuning.passBonusPoints,
+                seeds = 3 + relationshipTuning.passBonusSeeds
+            )
             PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
             gameState.recordSpare()
             DialogueBubbleManager.spawn(
@@ -153,7 +159,10 @@ class Wolf(
 
         if (!passRewarded && wolfState == WolfState.CHARGING) {
             passRewarded = true
-            gameState.addBonus(points = 180, seeds = 1)
+            gameState.addBonus(
+                points = 180 + relationshipTuning.passBonusPoints,
+                seeds = 1 + relationshipTuning.passBonusSeeds
+            )
             DialogueBubbleManager.spawn(
                 RelationshipArcSystem.lineFor(context, EntityType.WOLF, RelationshipArcSystem.Event.PASS),
                 x + wolfW * 0.5f,
@@ -168,7 +177,7 @@ class Wolf(
         if (RectF.intersects(player.hitbox, hitbox)) {
             return CollisionResult.STUMBLE
         }
-        val mercyPad = readability.mercyPaddingPx
+        val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
         val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             return CollisionResult.MERCY_MISS

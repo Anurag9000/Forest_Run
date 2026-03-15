@@ -8,6 +8,7 @@ import android.graphics.RectF
 import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.ReadabilityProfile
+import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -32,9 +33,11 @@ class Eagle(
 ) : Entity(context) {
 
     private val readability = ReadabilityProfile.entityForGround(EntityType.EAGLE, groundY)
+    private val relationshipTuning: RelationshipEncounterTuning =
+        RelationshipArcSystem.encounterTuning(context, EntityType.EAGLE)
     private val birdH = readability.heightPx
     private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = readability.minWidthPx)
-    private val diveSpeed = readability.movementSpeedPxPerSec.coerceAtLeast(680f)
+    private val diveSpeed = (readability.movementSpeedPxPerSec * relationshipTuning.aggressionMultiplier).coerceAtLeast(640f)
     private val insetX = birdW * readability.hitInsetXRatio
     private val insetY = birdH * readability.hitInsetYRatio
 
@@ -43,7 +46,7 @@ class Eagle(
     private var targetX = screenWidth * 0.25f
     private var targetY = groundY - 50f
     private var lockTimer = 0f
-    private val lockDuration = readability.telegraphDurationSec.coerceAtLeast(0.28f)
+    private val lockDuration = (readability.telegraphDurationSec * relationshipTuning.telegraphMultiplier).coerceAtLeast(0.28f)
     private var isLocked = false
     private val reticlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(220, 255, 90, 90)
@@ -120,7 +123,10 @@ class Eagle(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 165, seeds = 1)
+        gameState.addBonus(
+            points = 165 + relationshipTuning.passBonusPoints,
+            seeds = 1 + relationshipTuning.passBonusSeeds
+        )
         DialogueBubbleManager.spawn(
             text = RelationshipArcSystem.lineFor(context, EntityType.EAGLE, RelationshipArcSystem.Event.PASS),
             anchorX = targetX,
@@ -132,7 +138,7 @@ class Eagle(
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
-        val mercyPad = readability.mercyPaddingPx
+        val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
         val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE

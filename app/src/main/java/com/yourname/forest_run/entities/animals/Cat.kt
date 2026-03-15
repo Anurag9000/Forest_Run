@@ -8,6 +8,7 @@ import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
+import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -38,6 +39,8 @@ class Cat(
 ) : Entity(context) {
 
     private val readability = ReadabilityProfile.entityForGround(EntityType.CAT, groundY)
+    private val relationshipTuning: RelationshipEncounterTuning =
+        RelationshipArcSystem.encounterTuning(context, EntityType.CAT)
     private val catH = readability.heightPx
     private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = readability.minWidthPx)
     private val insetX = catW * readability.hitInsetXRatio
@@ -91,7 +94,10 @@ class Cat(
         if (!playerHasPassed) {
             playerHasPassed = true
             // Kindness bonus: flat 500 pts + double seeds (removed broken permanent 2x multiplier)
-            gameState.addBonus(points = 500, seeds = 2)
+            gameState.addBonus(
+                points = 500 + relationshipTuning.passBonusPoints,
+                seeds = 2 + relationshipTuning.passBonusSeeds
+            )
             DialogueBubbleManager.spawn(
                 text = RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.PASS),
                 anchorX = x + catW * 0.5f,
@@ -135,7 +141,7 @@ class Cat(
             return CollisionResult.HIT
         }
 
-        val mercyPad = readability.mercyPaddingPx
+        val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
         val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             if (!playerHasPassed) {

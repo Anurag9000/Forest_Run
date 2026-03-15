@@ -60,8 +60,8 @@ This file is the strict implementation ledger for everything from the original d
 
 - DONE: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - DONE: each relationship now has first-impression, recognition, trust, and milestone states.
-- PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, Garden strongest-bond presentation, bonded visitors, and sanctuary traces.
-- TODO: bind relationship stages more deeply to encounter reactions, milestone rewards, and cosmetics.
+- PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, encounter generosity/telegraph tuning, Garden strongest-bond presentation, bonded visitors, and sanctuary traces.
+- TODO: bind relationship stages more deeply to milestone rewards and cosmetics.
 - TODO: make repeated positive interactions produce more visible warmth and familiarity.
 - TODO: make repeated negative interactions produce stronger tension, fear, disappointment, or caution where appropriate.
 - TODO: add milestone rewards that feel relational, not merely numerical.

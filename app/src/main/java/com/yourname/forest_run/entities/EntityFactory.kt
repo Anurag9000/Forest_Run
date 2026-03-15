@@ -61,7 +61,7 @@ object EntityFactory {
                 isBuddy = when (variant) {
                     EncounterVariant.DOG_BUDDY -> true
                     EncounterVariant.DOG_HAZARD -> false
-                    else -> kotlin.random.Random.nextFloat() < 0.20f
+                    else -> kotlin.random.Random.nextFloat() < com.yourname.forest_run.engine.RelationshipArcSystem.dogBuddyChance(context)
                 }
             )
         }

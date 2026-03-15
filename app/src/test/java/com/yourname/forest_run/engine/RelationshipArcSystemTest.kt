@@ -64,4 +64,23 @@ class RelationshipArcSystemTest {
         assertEquals(EntityType.CAT, RelationshipArcSystem.preferredGardenVisitor(context))
         assertNotNull(RelationshipArcSystem.creatureThought(context, EntityType.CAT))
     }
+
+    @Test
+    fun `warm trust bond increases encounter generosity`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+
+        val tuning = RelationshipArcSystem.encounterTuning(context, EntityType.CAT)
+
+        assertTrue(tuning.passBonusPoints > 0)
+        assertTrue(tuning.mercyPaddingBonusPx > 0f)
+    }
+
+    @Test
+    fun `dog bond can raise buddy encounter chance`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+
+        assertTrue(RelationshipArcSystem.dogBuddyChance(context) > 0.20f)
+    }
 }

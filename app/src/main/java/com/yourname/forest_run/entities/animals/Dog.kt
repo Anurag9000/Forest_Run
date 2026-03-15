@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.ReadabilityProfile
+import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -44,6 +45,8 @@ class Dog(
 ) : Entity(context) {
 
     private val readability = ReadabilityProfile.entityForGround(EntityType.DOG, groundY)
+    private val relationshipTuning: RelationshipEncounterTuning =
+        RelationshipArcSystem.encounterTuning(context, EntityType.DOG)
     private val dogH = readability.heightPx
     private val dogW = SpriteSizing.widthForHeight(sprite, dogH, minWidth = readability.minWidthPx)
     private val insetX = dogW * readability.hitInsetXRatio
@@ -71,7 +74,7 @@ class Dog(
 
         fun collides(player: Player): Boolean = RectF.intersects(player.hitbox, rect)
         fun nearMiss(player: Player): Boolean {
-            val mercyPad = readability.mercyPaddingPx
+            val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
             val m = RectF(rect.left - mercyPad, rect.top - mercyPad, rect.right + mercyPad, rect.bottom + mercyPad)
             return RectF.intersects(player.hitbox, m)
         }
@@ -214,7 +217,7 @@ class Dog(
         if (RectF.intersects(player.hitbox, hitbox)) {
             return CollisionResult.HIT
         }
-        val mercyPad = readability.mercyPaddingPx
+        val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
         val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) {
             return CollisionResult.MERCY_MISS
@@ -224,7 +227,10 @@ class Dog(
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         if (mode == DogMode.HAZARD) {
-            gameState.addBonus(points = 145, seeds = 1)
+            gameState.addBonus(
+                points = 145 + relationshipTuning.passBonusPoints,
+                seeds = 1 + relationshipTuning.passBonusSeeds
+            )
             DialogueBubbleManager.spawn(
                 RelationshipArcSystem.lineFor(context, EntityType.DOG, RelationshipArcSystem.Event.PASS),
                 x + dogW * 0.5f,
@@ -237,7 +243,10 @@ class Dog(
 
         if (!buddyRewarded) {
             buddyRewarded = true
-            gameState.addBonus(points = 180, seeds = 2)
+            gameState.addBonus(
+                points = 180 + relationshipTuning.passBonusPoints,
+                seeds = 2 + relationshipTuning.passBonusSeeds
+            )
             DialogueBubbleManager.spawn(
                 RelationshipArcSystem.lineFor(context, EntityType.DOG, RelationshipArcSystem.Event.SPARE),
                 x + dogW * 0.5f,
