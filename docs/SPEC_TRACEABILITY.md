@@ -701,17 +701,17 @@ These items are not from the earliest historical repo docs. They are explicit us
 - `TODO`: relationship-driven dialogue, encounter shifts, Garden presence, and milestone presentation.
 - `TODO`: visible warmth from repeated positive interactions and visible caution or tension from repeated negative ones.
 
-#### Sanctuary Growth With Emotional Meaning
+#### Personal Return Moments
 
-- `TODO`: Garden changes that reflect relationship and memory progress, not only seed unlocks.
-- `TODO`: keepsakes, memorial traces, creature-linked markers, and heroine-idle evolution tied to sanctuary growth.
-- `TODO`: make the sanctuary feel like autobiography and restoration.
+- `TODO`: first-run-of-day greetings.
+- `TODO`: long-absence reactions and “the forest noticed you were gone” moments.
+- `TODO`: comfort beats after repeated failure and milestone-sensitive Garden visits.
 
-#### Emotional Failure Design
+#### Quiet Story Fragments
 
-- `TODO`: failure-context system based on last creature, recent streak, and run tone.
-- `TODO`: compassionate anti-tilt presentation after repeated failure.
-- `TODO`: stronger continuity between rest, recovery, and the Garden.
+- `TODO`: short rest quotes, creature thoughts, weather-linked lines, and rare Garden reflections.
+- `TODO`: unlockable poetic memory pages.
+- `TODO`: preserve emotional mystery through fragment writing instead of explicit exposition.
 
 ## Strict Documentation Conclusion
 

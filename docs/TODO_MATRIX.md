@@ -66,23 +66,23 @@ This file is the strict implementation ledger for everything from the original d
 - TODO: make repeated negative interactions produce tension, fear, disappointment, or caution where appropriate.
 - TODO: add milestone rewards that feel relational, not merely numerical.
 
-### Sanctuary Growth With Emotional Meaning
+### Personal Return Moments
 
-- TODO: make the Garden reflect relationship and memory progress, not only plant purchases.
-- TODO: add keepsakes, memorial traces, creature-linked markers, or other quiet signs of history.
-- TODO: make the heroine's idle and posture behavior evolve as sanctuary safety and trust deepen.
-- TODO: make returning to the Garden feel like coming home to a restored place.
-- TODO: integrate last-run carry-home into visible sanctuary changes rather than keeping it purely textual.
-- TODO: preserve low-friction flow while still making the Garden feel emotionally lived in.
+- TODO: add first-run-of-day greeting logic.
+- TODO: add long-absence recognition so the forest can react when the player returns after being gone.
+- TODO: add comforting Garden or rest responses after several failed runs.
+- TODO: allow milestone-driven creature visits or special return moments in the Garden.
+- TODO: bind return moments to emotional states such as many deaths, many mercies, long streaks, and first major Bloom events.
+- TODO: ensure return sessions feel intimate instead of mechanically identical.
 
-### Emotional Failure Design
+### Quiet Story Fragments
 
-- TODO: make rest presentation responsive to failure context, recent streak, and last creature involved.
-- TODO: make repeated failure more compassionate in tone instead of colder or more mechanical.
-- TODO: add richer recovery presentation through pose, quote, ambience, and carry-home framing.
-- TODO: make the last creature involved sometimes seem remembered or emotionally present in the aftermath.
-- TODO: ensure failure leaves the player feeling understood and invited back, not merely reset.
-- TODO: connect failure recovery to the Garden so the post-run loop feels emotionally continuous.
+- TODO: expand short rest quotes into a broader fragment-driven writing layer.
+- TODO: add one-line creature thoughts for key emotional moments.
+- TODO: add weather-linked thoughts and rare Garden reflections.
+- TODO: add unlockable poetic memory pages that reveal feeling without lore-dumping.
+- TODO: keep fragment writing brief, intimate, and suggestive rather than expository.
+- TODO: ensure mystery and emotional residue are preserved through restraint.
 
 ## Entity TODOs
 
@@ -126,7 +126,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- TODO: add first-class emotional systems for forest mood, relationship arcs, sanctuary growth, and failure-context presentation.
+- TODO: add first-class emotional systems for forest mood, relationship arcs, personal return moments, and quiet story fragments.
 
 ## Visual And Audio TODOs
 

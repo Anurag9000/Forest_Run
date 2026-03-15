@@ -186,8 +186,8 @@ Expected systems:
 
 - `ForestMoodSystem` to evaluate recent run tone
 - `RelationshipArcSystem` to track creature-specific familiarity and trust
-- `SanctuaryGrowthSystem` to map remembered milestones into Garden changes
-- `EmotionalFailureSystem` to drive reflective rest presentation and recovery framing
+- `ReturnMomentsSystem` to detect re-entry, absence, failure streaks, and milestone-sensitive greetings
+- `StoryFragmentSystem` to author and select short poetic fragments for rest, Garden, weather, and creature thought moments
 
 Expected qualities:
 
@@ -199,7 +199,7 @@ Expected qualities:
 ### Current Status
 
 - TODO: these emotional systems do not yet exist as first-class architecture.
-- TODO: persistence schema must expand to store world tone, relationship stages, sanctuary markers, and failure-context history.
+- TODO: persistence schema must expand to store world tone, relationship stages, return-state history, and fragment unlock state.
 
 ## 13. Relationship Arc Authoring
 
@@ -219,46 +219,47 @@ Expected data per major creature family:
 - Partial: encounter counts and some repeated-memory hooks exist.
 - TODO: formalize relationship stages and authoring data for Cat, Fox, Wolf, Dog, Owl, and Eagle first.
 
-## 14. Sanctuary Growth Authoring
+## 14. Personal Return Moments Authoring
 
-The Garden should be driven by structured progression data, not only a flat plant row.
+The game should support intimate return-sensitive moments instead of treating every session start the same.
 
 Expected layers:
 
-- plant unlock progression
-- trust-linked keepsakes
-- friendship markers
-- memory traces from major runs
-- posture/idle-state changes for the heroine
-- ambience state derived from sanctuary growth
+- first run of day detection
+- long absence detection
+- failure streak detection
+- milestone-driven Garden greetings
+- creature visit triggers
+- emotional-state-sensitive dialogue hooks
 
 ### Current Status
 
-- Partial: plant unlocks, wardrobe, and last-run carry-home exist.
-- TODO: add a dedicated sanctuary-growth model and rendering hooks for emotional progression.
+- Partial: rest quotes and Garden carry-home already provide a baseline place to surface returns.
+- TODO: add dedicated return-state data and authoring hooks for greetings, absence reactions, comfort beats, and milestone visits.
 
-## 15. Emotional Failure Presentation
+## 15. Quiet Story Fragment Authoring
 
 Expected inputs:
 
 - last killer
-- recent failure streak
-- mercy or kindness chain
+- recent emotional state
 - run tone
-- newly earned memory or relationship milestone
+- weather or biome context
+- relationship stage
+- unlocked fragment state
 
 Expected outputs:
 
 - contextual quote selection
-- heroine rest pose and face variation
-- ambient presentation changes
-- compassionate anti-tilt messaging after repeated failure
-- carry-home notes for the Garden
+- creature thought fragments
+- weather-linked lines
+- rare Garden reflections
+- unlockable memory pages
 
 ### Current Status
 
-- Partial: contextual rest quotes and run-summary carry-home exist.
-- TODO: formalize failure-context evaluation and richer compassionate presentation logic.
+- Partial: contextual rest quotes and some dialogue systems already exist.
+- TODO: formalize fragment authoring, unlock state, and short-form poetic content selection.
 
 ## 16. Dynamic Difficulty Curve
 

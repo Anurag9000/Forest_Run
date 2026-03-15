@@ -141,13 +141,13 @@ Goal: make the world remember tone, not only totals.
 
 Goal: turn major creatures into remembered relationships rather than obstacle classes.
 
-### Phase 23C — Sanctuary Growth
+### Phase 23C — Personal Return Moments
 
-Goal: make the Garden reflect emotional history, trust, and restoration rather than only plant unlock counts.
+Goal: make the game notice when the player returns, struggles, or reaches personal milestones.
 
-### Phase 23D — Emotional Failure Presentation
+### Phase 23D — Quiet Story Fragments
 
-Goal: make failure reflective, compassionate, and continuous with the sanctuary loop.
+Goal: tell more through poetic fragments, creature thoughts, and rare reflections without overexplaining.
 
 ### Phase 24 — Real Background Artwork
 
@@ -173,4 +173,4 @@ Goal: complete, shippable, polished store-ready product.
 - TODO: verify every entity behavior on actual device
 - DONE: seeds, Bloom, mercy hearts, and garden loop are materially clearer in play
 - PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist; finish deeper cross-run payoff and richer route feel
-- TODO: add forest mood, relationship arcs, sanctuary growth, and emotional failure systems as explicit implementation work rather than leaving them as flavor aspirations
+- TODO: add forest mood, personal return moments, relationship arcs, and quiet story fragments as explicit implementation work rather than leaving them as flavor aspirations

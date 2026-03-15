@@ -166,19 +166,20 @@ Examples:
 - Eagle should stay awe-filled and intimidating, but remembered
 - every major creature should have first-impression, recognition, trust, and milestone stages
 
-### 4.7 Sanctuary Growth With Emotional Meaning
+### 4.7 Personal Return Moments
 
-- the Garden should become autobiography, not just unlock UI
-- creature-linked keepsakes, markers, and quiet traces should appear over time
-- the heroine's resting and idle behavior should evolve with trust and comfort
-- sanctuary growth should reflect relationship history, not only seed spending
+- the game should notice when the player returns
+- the first run of the day should be able to greet the player specially
+- a long absence should be answerable with a line or mood shift that implies the forest noticed
+- several failures in a row should be able to trigger comfort instead of flat repetition
+- a personal milestone should sometimes cause a favorite creature to appear or react in the Garden
 
-### 4.8 Emotional Failure Design
+### 4.8 Quiet Story Fragments
 
-- repeated failure should trigger more compassion, not colder feedback
-- rest moments should feel specific, reflective, and held
-- the last creature involved should sometimes feel remembered in the aftermath
-- the player should return to the Garden feeling understood
+- use short rest quotes instead of exposition
+- add one-line creature thoughts and weather-linked reflections
+- use rare Garden reflections and unlockable poetic memory pages
+- preserve mystery by saying less, not more
 
 ### Current Status
 
@@ -261,7 +262,7 @@ Dream-spec supporting systems include:
 - Implemented: `FlavorTextManager`, `GhostRecorder`, `GhostPlayer`, `LeitmotifManager` in partial form.
 - Implemented: `PersistentMemoryManager`, `PacifistTracker`, `DialogueBubbleManager`, and a baseline `FaceManager`.
 - Implemented: `MercySystem` and `CostumeOverlay` baselines.
-- TODO: deepen those systems into fuller route, unlock, relationship, sanctuary, and failure-recovery payoffs.
+- TODO: deepen those systems into fuller route, unlock, relationship, return-moment, and fragment-driven payoffs.
 
 ---
 

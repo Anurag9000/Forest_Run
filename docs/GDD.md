@@ -135,20 +135,22 @@ This game should keep players returning because the forest feels personal, not b
 - Positive repetition should create warmth and familiarity.
 - Negative repetition should create caution, fear, disappointment, or tension where appropriate.
 
-#### 3.8.3 Sanctuary Growth With Emotional Meaning
+#### 3.8.3 Personal Return Moments
 
-- The Garden should become autobiography, not just an unlock shelf.
-- Relationship milestones should leave keepsakes, markers, or quiet traces in the sanctuary.
-- The heroine's posture and idle behavior should evolve as the sanctuary becomes safer and more loved-in.
-- Returning to the Garden should feel like coming home to a place the player helped heal.
+- The game should notice when the player comes back.
+- The first run of the day should be able to greet the player in a special way.
+- After several failed runs, the Garden should sometimes respond with comfort.
+- After a long absence, the forest should react like it noticed the player was gone.
+- Personal milestones should occasionally cause a favorite creature or trusted presence to appear in the Garden.
+- Some dialogue should exist only after specific emotional states such as many deaths, many mercies, long streaks, or a first major Bloom.
 
-#### 3.8.4 Emotional Failure Design
+#### 3.8.4 Quiet Story Fragments
 
-- Failure should sting, but also hold the player emotionally.
-- Rest presentation should feel reflective and specific, not administrative.
-- The last creature involved should sometimes feel remembered in the aftermath.
-- Repeated failure should become more compassionate in tone, not colder.
-- The player should leave the failure loop feeling understood and invited back.
+- The game should prefer small poetic fragments over heavy exposition.
+- Rest quotes should stay short and emotionally suggestive.
+- Creature thoughts should appear in small one-line moments.
+- Weather-linked thoughts and rare Garden reflections should reveal feeling without lore-dumping.
+- Unlockable memory pages should be poetic, fragmentary, and intimate rather than encyclopedic.
 
 ### Current Status
 
@@ -301,4 +303,4 @@ Animals and birds were not intended as v1.0 garden unlockables.
 
 - Implemented: left-to-right plant card unlock flow with lifetime seeds.
 - TODO: make the garden feel like a true sanctuary and long-term reward rather than a minimal shop-like screen.
-- TODO: make the world emotionally remember the player through tone, relationship traces, and compassionate failure recovery.
+- TODO: make the world emotionally remember the player through tone, return moments, relationship traces, and quiet poetic fragments.
