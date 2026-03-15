@@ -12,29 +12,29 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: tiny low hazard, ghost-flower lure, often paired with tempting seed placement.
 - Dream traits: glows at night, distracts near the player’s feet, creates tricky seed traps.
-- Current: implemented as sway hazard.
-- TODO: make its glow, lure identity, and readability obvious in real play.
+- Current: glow/readability pass now exists with stronger visual identity and payoff.
+- TODO: finish stronger seed-trap staging and final on-device tuning.
 
 ### Hyacinth
 
 - Role: clustered rhythm hazard that encourages longer jumps or risky brush interactions.
 - Dream traits: grouped feel, pollen, partial-brush punishment, distinctive timing.
-- Current: brush/mercy zone exists.
-- TODO: clarify brush behavior and make the cluster identity strong on device.
+- Current: brush/mercy zone and clearer visual brush read now exist.
+- TODO: make the clustered rhythm identity stronger on device.
 
 ### Eucalyptus
 
 - Role: forward-leaning plant that punishes late reads.
 - Dream traits: fast whip sway, trapezoid feel, leaf drama.
-- Current: obstacle exists.
-- TODO: stronger leaning identity and readable high-threat profile.
+- Current: stronger leaning/readability pass now exists.
+- TODO: finish leaf drama and final high-threat tuning.
 
 ### Vanilla Orchid
 
 - Role: vertical-window obstacle with vine and overhead branch pressure.
 - Dream traits: safe window between low and high colliders.
-- Current: obstacle exists.
-- TODO: make the two-zone read obvious enough to feel special.
+- Current: safe-window readability pass now exists.
+- TODO: finish final staging so the two-zone read feels unmistakable in live play.
 
 ### Cactus
 
@@ -49,8 +49,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: curtain hazard and core visual icon of the game.
 - Dream traits: forces ducking, obscures what comes next, creates canopy mood.
-- Current: implemented obstacle and menu/garden iconography.
-- TODO: stronger curtain gameplay and scenic dominance.
+- Current: implemented obstacle, iconography, and stronger curtain-read pass.
+- TODO: finish obscured-read pressure and scenic dominance.
 
 ### Jacaranda
 
@@ -63,8 +63,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: vertical-barrier precision hazard.
 - Dream traits: narrow gap threading, jitter sway.
-- Current: obstacle exists.
-- TODO: stronger gap readability and signature threat identity.
+- Current: stronger gap-readability pass now exists.
+- TODO: finish signature threat identity and final device validation.
 
 ### Cherry Blossom
 
@@ -149,7 +149,7 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 ## Mandatory Entity TODOs
 
-- TODO: enlarge entity screen presence.
-- TODO: reduce empty space between encounters.
+- DONE: enlarge entity screen presence materially.
+- DONE: reduce empty space between encounters materially.
 - TODO: verify all entity-specific behaviors on actual device.
 - TODO: ensure flavor text and mercy feedback are visible whenever personality is supposed to land.

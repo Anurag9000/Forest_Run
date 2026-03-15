@@ -9,11 +9,13 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: fixed the ghost playback presentation so it no longer reads like a broken duplicate body.
 - DONE: made seeds, Bloom meter, Bloom activation, hearts, score, distance, and the Garden hub much more visible in normal play.
 - DONE: added readable dialogue bubbles, pacifist rewards, face-state presentation, and clearer owl/eagle telegraphs.
+- DONE: added a deterministic acceptance suite with per-family and per-entity verification scenarios, including Bloom, ghost, and rest-loop checks.
+- DONE: strengthened Lily, Hyacinth, Eucalyptus, Vanilla Orchid, Weeping Willow, and Bamboo readability/payoff delivery.
 
 ## Immediate Remaining Product Gaps
 
 - TODO: verify every entity’s unique behavior on actual device and retune any behavior that still fails to read in normal play.
-- TODO: finish the remaining weak flora/tree/bird interactions that still feel lighter than the dream spec.
+- TODO: finish the remaining weak cactus, jacaranda, cherry blossom, bird, and animal interactions that still feel lighter than the dream spec.
 - TODO: make Bloom feel like a full world-transforming power event rather than only a stronger readable buff.
 
 ## Documentation And Canonical Spec TODOs
@@ -44,17 +46,17 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Flora
 
-- TODO: Lily of the Valley stronger night glow identity and seed-lure clarity.
-- TODO: Hyacinth clearer brush-vs-hit readability.
-- TODO: Eucalyptus stronger whip/sway and leaf drama.
-- TODO: Vanilla Orchid tighter vertical-window design.
+- PARTIAL: Lily of the Valley glow identity and lure readability are materially stronger; finish device-tuning and stronger seed-trap staging.
+- PARTIAL: Hyacinth brush-vs-hit readability is clearer; finish clustered rhythm identity and device validation.
+- PARTIAL: Eucalyptus whip/sway read is stronger; finish leaf-drama delivery and final threat tuning.
+- PARTIAL: Vanilla Orchid vertical window is more legible; finish final safe-thread staging and device validation.
 - TODO: Cactus stronger genre-baseline staging.
 
 ### Trees
 
-- TODO: Weeping Willow curtain feel and obscured-read gameplay.
+- PARTIAL: Weeping Willow curtain feel is stronger; finish scenic dominance and obscured-read pressure.
 - TODO: Jacaranda petal-curtain spectacle.
-- TODO: Bamboo narrow-gap readability.
+- PARTIAL: Bamboo narrow-gap readability is stronger; finish signature threat identity and device validation.
 - TODO: Cherry Blossom wind-gust modifier and petal-blind atmosphere.
 
 ### Birds
@@ -80,7 +82,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: persistent encounter memory architecture exists; broaden it into richer payoff and authoring tools.
 - DONE: costume overlay architecture baseline exists.
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
-- DONE: deterministic encounter verification harness for scenario-driven entity testing.
+- DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
 
 ## Visual And Audio TODOs
