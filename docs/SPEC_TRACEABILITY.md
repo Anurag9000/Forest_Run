@@ -122,10 +122,10 @@ Missing dream-spec dedicated classes called out by historical docs:
 #### Bloom State
 
 - `Conflict`: 10 seeds / 5s / configurable activation in older GDD vs 8 seeds / 6s / auto activation in current code.
-- `Implemented`: Bloom meter, activation, invincibility window.
-- `Partial`: glow and aura.
+- `Implemented`: Bloom meter, activation, invincibility window, and stronger activation spectacle.
+- `Partial`: glow, aura, and player-following Bloom effects.
 - `TODO`: speed doubling during Bloom as originally specified.
-- `TODO`: passed obstacles converting into bonus seeds in the full intended sense.
+- `Partial`: passed obstacles now convert into stronger reward bursts and environmental reactions, but not yet the full intended “world transforms around you” version.
 - `TODO`: psychedelic hyper-saturation and flowers blooming open along the path.
 - `Partial`: music transition into Bloom.
 
@@ -371,12 +371,13 @@ Background assets:
 
 #### Environmental Bloom Reaction
 
-- `TODO`: nearby flowers blooming open as the runner passes.
+- `Partial`: nearby flora/tree reactions now exist on Bloom conversions.
+- `TODO`: nearby flowers blooming open as the runner passes in the full intended sense.
 
 #### Spirit Of The Forest Bloom Visuals
 
-- `Partial`: aura and Bloom feedback.
-- `TODO`: stronger world transformation, obstacle dissolves, UI pulse ring, full power-fantasy spectacle.
+- `Partial`: aura, activation burst, HUD conversion feedback, and stronger screen treatment now exist.
+- `TODO`: stronger world transformation, obstacle dissolves, UI pulse ring, and full power-fantasy spectacle.
 
 ### E. Entity Database (`947e4e1:docs/ENTITY_DATABASE.md`)
 
@@ -646,9 +647,9 @@ These synthesize the entire historical spec set into unified workstreams.
 
 ### Bloom
 
-- `Implemented`: meter and activation.
+- `Implemented`: meter, activation, and stronger spectacle baseline.
 - `Conflict`: 8 vs 10 seeds, 5s vs 6s, exact effect bundle.
-- `TODO`: choose final Bloom design intentionally and document the resolved canonical spec.
+- `TODO`: continue tightening the full final Bloom presentation and document the resolved canonical spec everywhere.
 
 ### Biomes
 

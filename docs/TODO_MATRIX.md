@@ -19,7 +19,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - TODO: verify every entity’s unique behavior on actual device and retune any behavior that still fails to read in normal play.
 - TODO: finish final device-proofing for the latest cactus, jacaranda, cherry blossom, owl, eagle, and broader bird/animal passes that still need real phone validation.
-- TODO: make Bloom feel like a full world-transforming power event rather than only a stronger readable buff.
+- PARTIAL: Bloom now has a stronger activation burst, player-following effects, HUD conversion feedback, and environmental reactions; finish the full world-transforming power-event feel.
 
 ## Documentation And Canonical Spec TODOs
 

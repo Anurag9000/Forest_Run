@@ -113,7 +113,8 @@ Dream expectation:
 
 ### Current Status
 
-- TODO: fuller environmental Bloom reaction system.
+- Partial: environmental Bloom reactions now exist on Bloom conversions for flora and trees.
+- TODO: broaden those reactions into fuller world-space transformation and nearby-flower response.
 
 ## 8. Spirit Of The Forest — Bloom State Visuals
 
@@ -128,5 +129,6 @@ During Bloom, the dream presentation includes:
 
 ### Current Status
 
-- Implemented: Bloom state, Bloom meter, aura effects.
-- TODO: make Bloom feel spectacular, obvious, and unforgettable in actual play.
+- Implemented: Bloom state, Bloom meter, aura effects, activation burst, and stronger full-screen treatment.
+- Partial: player-following Bloom trail and stronger conversion feedback now exist in runtime.
+- TODO: make Bloom feel fully spectacular, obvious, and unforgettable in actual play.

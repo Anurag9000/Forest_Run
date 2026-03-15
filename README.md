@@ -42,6 +42,7 @@ What exists in code today:
 - Garden wardrobe equip flow and rest-to-Garden death loop
 - friendship persistence and richer rest/Garden run summaries
 - forest mood persistence, relationship arcs, richer Garden return moments, and fragment-driven emotional writing
+- stronger Bloom activation spectacle, player-following Bloom effects, and environmental conversion reactions
 - audio and haptics managers
 
 What is still missing, incomplete, or user-reported as unsatisfactory:
@@ -70,7 +71,7 @@ The latest user-reported playtest concerns must be treated as active product bug
 - entity readability and scale
 - spawn density and encounter pacing
 - ghost playback clarity and whether it should be shown by default
-- visibility and trustworthiness of seeds, Bloom meter, Bloom state, mercy hearts, and garden loop
+- final phone-proof trustworthiness of Bloom state, mercy hearts, and the garden loop
 - whether each entity behavior actually feels unique and readable on device
 - whether the personality layer is emotionally legible during play rather than merely present in code
 
