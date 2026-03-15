@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -23,8 +24,8 @@ class TitGroup(
     count: Int = 4
 ) : Entity(context) {
 
-    private val birdW = 36f
-    private val birdH = 28f
+    private val birdH = 30f
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 26f)
     private val spacing = 55f
     private val baseLine = groundY * 0.45f // horizontal flight altitude
     private val waveAmplitude = 80f

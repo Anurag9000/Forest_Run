@@ -84,6 +84,7 @@ class Player(
     // -----------------------------------------------------------------------
     // State machine
     // -----------------------------------------------------------------------
+    @Volatile
     var state: PlayerState = PlayerState.RUNNING
         private set
 
@@ -451,12 +452,8 @@ class Player(
         val cx = x + BASE_WIDTH  / 2f   // horizontal centre
         val fy = y + BASE_HEIGHT         // feet Y (squash/stretch pivot)
 
-        // Y-Offsetting logic: "The Passing Position (Frame 12 and 36): Body rises slightly (+8px) compared to contact."
-        var yOffset = 0f
-        if ((state == PlayerState.RUNNING || state == PlayerState.BLOOM) && 
-            (currentAnimation.currentFrame == 11 || currentAnimation.currentFrame == 35)) {
-             yOffset = -8f // Up is negative Y in Android Canvas
-        }
+        // The imported real atlas already contains its own vertical body motion.
+        val yOffset = 0f
 
         canvas.save()
         canvas.scale(scaleX, scaleY, cx, fy)

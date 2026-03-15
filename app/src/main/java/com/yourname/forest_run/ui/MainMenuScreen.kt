@@ -9,6 +9,9 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
+import com.yourname.forest_run.engine.SpriteManager
+import com.yourname.forest_run.engine.SpriteSizing
+import com.yourname.forest_run.engine.SpriteSheet
 import kotlin.math.sin
 
 /**
@@ -21,13 +24,11 @@ import kotlin.math.sin
  *            squash/stretch transition on the idle rect).
  *   TAP2  — Run starts (GameView transitions to PLAYING).
  *
- * Currently drawn with primitive shapes (no sprites) so the game is fully
- * playable while background artwork (Phase 24) is being added.
- *
  * The main forest colour palette used here matches the Spring Orchard biome.
  */
 class MainMenuScreen(
     private val context: Context,
+    private val spriteManager: SpriteManager,
     private val screenW: Int,
     private val screenH: Int
 ) {
@@ -36,9 +37,12 @@ class MainMenuScreen(
     var phase: Phase = Phase.IDLE
         private set
 
-    /** Returns true the first frame the player should begin running. */
-    var shouldStartRun: Boolean = false
-        private set
+    /** Latched when the menu requests a run start; consumed by GameView. */
+    private var startRunRequested: Boolean = false
+
+    /** Returns true until [consumeStartRunRequest] is called. */
+    val shouldStartRun: Boolean
+        get() = startRunRequested
 
     /** Called when the user taps the Garden button in IDLE phase. */
     var onGardenTap: (() -> Unit)? = null
@@ -69,15 +73,23 @@ class MainMenuScreen(
     // Ground
     private val groundPaint = Paint().apply { color = Color.rgb(90, 170, 80) }
 
-    // Willow trunk
-    private val trunkPaint  = Paint().apply { color = Color.rgb(100, 70, 40) }
-
-    // Willow foliage
-    private val foliagePaint = Paint().apply { color = Color.argb(200, 60, 140, 50) }
-
-    // Character body rect
-    private val charPaint = Paint().apply { color = Color.rgb(230, 180, 130) }
-    private val charRect  = RectF()
+    private val willowSprite: SpriteSheet = spriteManager.willowSprite.copy().apply {
+        framesPerSec = 4f
+    }
+    private val birdSprite: SpriteSheet = spriteManager.chickadeeFlying.copy().apply {
+        framesPerSec = 8f
+    }
+    private val idlePlayerSprite: SpriteSheet = spriteManager.playerDuck.copy().apply {
+        framesPerSec = 0f
+        setFrame(3)
+    }
+    private val standPlayerSprite: SpriteSheet = spriteManager.playerStandUp.copy()
+    private val readyPlayerSprite: SpriteSheet = spriteManager.playerRun.copy().apply {
+        framesPerSec = 10f
+    }
+    private val treeRect = RectF()
+    private val charRect = RectF()
+    private val birdRect = RectF()
 
     // Prompt text
     private val promptPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -105,22 +117,30 @@ class MainMenuScreen(
         when (phase) {
             Phase.IDLE         -> { phase = Phase.STANDING_UP; standTimer = 0f }
             Phase.STANDING_UP  -> { /* wait for animation */ }
-            Phase.READY        -> { shouldStartRun = true }
+            Phase.READY        -> { startRunRequested = true }
         }
     }
 
     fun update(deltaTime: Float) {
         elapsedT += deltaTime
+        willowSprite.update(deltaTime)
+        birdSprite.update(deltaTime)
 
         if (phase == Phase.STANDING_UP) {
             standTimer += deltaTime
-            if (standTimer >= STAND_DURATION) {
+            standPlayerSprite.update(deltaTime)
+            if (standTimer >= STAND_DURATION || standPlayerSprite.isFinished) {
                 phase = Phase.READY
             }
         }
+        if (phase == Phase.READY) readyPlayerSprite.update(deltaTime)
+    }
 
-        // Reset trigger after one frame
-        if (shouldStartRun) shouldStartRun = false
+    /** Consume a pending run-start request so it only fires once. */
+    fun consumeStartRunRequest(): Boolean {
+        if (!startRunRequested) return false
+        startRunRequested = false
+        return true
     }
 
     fun draw(canvas: Canvas) {
@@ -133,10 +153,8 @@ class MainMenuScreen(
         // Ground
         canvas.drawRect(0f, groundY, cw, ch, groundPaint)
 
-        // Weeping Willow — left-centre of screen
+        drawAmbientBird(canvas, cw, ch)
         drawWillow(canvas, cw * 0.35f, groundY)
-
-        // Character
         drawCharacter(canvas, cw * 0.62f, groundY)
 
         // Title
@@ -160,28 +178,27 @@ class MainMenuScreen(
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private fun drawWillow(canvas: Canvas, cx: Float, groundY: Float) {
-        val trunkH = 160f
-        val trunkW  = 28f
-        canvas.drawRect(cx - trunkW / 2f, groundY - trunkH, cx + trunkW / 2f, groundY, trunkPaint)
-        // Canopy (ellipse)
-        val sway = sin(elapsedT * 0.7f) * 18f
-        canvas.drawOval(
-            cx - 120f + sway, groundY - trunkH - 100f,
-            cx + 120f + sway, groundY - trunkH + 80f,
-            foliagePaint
-        )
-        // Trailing strands
-        val strandPaint = Paint().apply { color = Color.argb(160, 50, 120, 40); strokeWidth = 3f; style = Paint.Style.STROKE }
-        for (i in -3..3) {
-            val sx = cx + i * 32f + sway * 0.5f
-            canvas.drawLine(sx, groundY - trunkH + 20f, sx + sway * 0.3f, groundY, strandPaint)
-        }
+        val sway = sin(elapsedT * 0.7f) * 14f
+        val treeH = screenH * 0.46f
+        val treeW = SpriteSizing.widthForHeight(willowSprite, treeH, minWidth = treeH * 0.55f)
+        treeRect.set(cx - treeW / 2f + sway, groundY - treeH, cx + treeW / 2f + sway, groundY)
+        willowSprite.draw(canvas, treeRect)
+    }
+
+    private fun drawAmbientBird(canvas: Canvas, cw: Float, ch: Float) {
+        val flap = sin(elapsedT * 1.8f)
+        val birdX = cw * 0.24f + sin(elapsedT * 0.45f) * cw * 0.08f
+        val birdY = ch * 0.18f + flap * ch * 0.02f
+        val birdH = 88f
+        val birdW = SpriteSizing.widthForHeight(birdSprite, birdH, minWidth = birdH * 0.7f)
+        birdRect.set(birdX - birdW / 2f, birdY - birdH / 2f, birdX + birdW / 2f, birdY + birdH / 2f)
+        birdSprite.draw(canvas, birdRect)
     }
 
     private fun drawCharacter(canvas: Canvas, x: Float, groundY: Float) {
         val t     = (standTimer / STAND_DURATION).coerceIn(0f, 1f)
-        val baseH = 92f
-        val baseW = 44f
+        val baseH = 200f
+        val baseW = SpriteSizing.widthForHeight(readyPlayerSprite, baseH, minWidth = baseH * 0.65f)
 
         val scaleY = when (phase) {
             Phase.IDLE         -> 0.65f   // sitting
@@ -196,11 +213,11 @@ class MainMenuScreen(
         val h = baseH * scaleY
         val w = baseW * scaleX
         charRect.set(x - w / 2f, groundY - h, x + w / 2f, groundY)
-        canvas.drawRoundRect(charRect, 12f, 12f, charPaint)
-
-        // Simple dot eyes
-        val eyePaint = Paint().apply { color = Color.rgb(60, 30, 10) }
-        canvas.drawCircle(charRect.centerX() - 8f, charRect.top + h * 0.28f, 4f, eyePaint)
-        canvas.drawCircle(charRect.centerX() + 8f, charRect.top + h * 0.28f, 4f, eyePaint)
+        val sprite = when (phase) {
+            Phase.IDLE -> idlePlayerSprite
+            Phase.STANDING_UP -> standPlayerSprite
+            Phase.READY -> readyPlayerSprite
+        }
+        sprite.draw(canvas, charRect)
     }
 }

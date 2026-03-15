@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SfxManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -33,8 +35,10 @@ class Wolf(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val wolfW = 90f
-    private val wolfH = 70f
+    private val wolfH = 78f
+    private val wolfW = SpriteSizing.widthForHeight(sprite, wolfH, minWidth = 68f)
+    private val insetX = wolfW * 0.11f
+    private val insetY = wolfH * 0.07f
 
     private enum class WolfState { WALKING, HOWLING, CHARGING, SPARED }
     private var wolfState = WolfState.WALKING
@@ -49,7 +53,7 @@ class Wolf(
         x = startX
         y = groundY - wolfH
         velocityX = -walkSpeed
-        hitbox.set(x + 10f, y + 5f, x + wolfW - 10f, y + wolfH)
+        hitbox.set(x + insetX, y + insetY, x + wolfW - insetX, y + wolfH)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
@@ -64,7 +68,7 @@ class Wolf(
                     howlTimer = 0f
                     FlavorTextManager.spawn("GRRR...", x, y - 30f, Color.rgb(200, 60, 60))
                     CameraSystem.shakeWolfHowl()   // Phase 15 shake
-                    // Phase 20: play howl SFX
+                    SfxManager.playHowl()
                 }
             }
             WolfState.HOWLING -> {
@@ -87,7 +91,7 @@ class Wolf(
             }
         }
 
-        hitbox.offsetTo(x + 10f, y + 5f)
+        hitbox.offsetTo(x + insetX, y + insetY)
         if (x < -wolfW - 50f) isActive = false
     }
 

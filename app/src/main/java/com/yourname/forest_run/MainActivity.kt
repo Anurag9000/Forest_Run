@@ -25,11 +25,11 @@ class MainActivity : AppCompatActivity() {
         // Keep screen on while the app is in the foreground
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // Full-screen: hide status bar and navigation bar
-        hideSystemUI()
-
         gameView = GameView(this)
         setContentView(gameView)
+
+        // WindowInsetsController can be null during very early activity creation on some OEM builds.
+        gameView.post { hideSystemUI() }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -61,7 +61,8 @@ class MainActivity : AppCompatActivity() {
     private fun hideSystemUI() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // API 30+ – WindowInsetsController (preferred)
-            window.insetsController?.let { controller ->
+            val controller = window.decorView.windowInsetsController ?: return
+            controller.let {
                 controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
                 controller.systemBarsBehavior =
                     WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE

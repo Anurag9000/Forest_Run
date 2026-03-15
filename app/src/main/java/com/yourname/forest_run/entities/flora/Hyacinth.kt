@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
@@ -21,8 +22,10 @@ class Hyacinth(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val floraWidth  = 52f
-    private val floraHeight = 64f
+    private val floraHeight = 78f
+    private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = 28f)
+    private val hitInsetX   = floraWidth * 0.22f
+    private val hitTopY     = floraHeight * 0.28f
     private val drawRect    = RectF()
     private val brushBox    = RectF()
 
@@ -30,13 +33,13 @@ class Hyacinth(
         x = startX
         y = groundY - floraHeight
         swayComponent = SwayComponent(speed = 1.0f, intensity = 7f)
-        hitbox.set(x + 14f, y + 20f, x + 38f, y + floraHeight)
+        hitbox.set(x + hitInsetX, y + hitTopY, x + floraWidth - hitInsetX, y + floraHeight)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + 14f + sway, y + 20f)
+        hitbox.offsetTo(x + hitInsetX + sway, y + hitTopY)
         brushBox.set(hitbox.left - 10f, hitbox.top - 16f, hitbox.right + 10f, hitbox.bottom)
         sprite.update(deltaTime)
         if (x < -floraWidth - 20f) isActive = false

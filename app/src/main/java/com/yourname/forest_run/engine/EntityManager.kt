@@ -28,6 +28,8 @@ class EntityManager(
     /** Injected from GameView — updated every frame before EntityManager.update() is called. */
     val biomeManager: BiomeManager = BiomeManager()
 ) {
+    @Volatile
+    internal var debugActiveEntityCount: Int = 0
 
     /** Seed orb spawner — public so GameView can call draw() with bloomFraction. */
     val seedOrbManager = SeedOrbManager()
@@ -100,6 +102,7 @@ class EntityManager(
 
         // Update orbs (collection check + scroll)
         seedOrbManager.update(deltaTime, gameState, player)
+        debugActiveEntityCount = activeEntities.size
     }
 
     /**
@@ -161,6 +164,30 @@ class EntityManager(
         entity.hasBeenPassed = false
         entity.x = spawnX
         activeEntities.add(entity)
+        debugActiveEntityCount = activeEntities.size
+    }
+
+    fun seedOpeningSequence() {
+        if (activeEntities.isNotEmpty()) return
+        spawnAt(EntityType.TIT, screenWidth + 680f)
+        spawnAt(EntityType.LILY_OF_VALLEY, screenWidth + 1_080f)
+        spawnAt(EntityType.CHICKADEE, screenWidth + 1_520f)
+    }
+
+    internal fun debugSpawnAt(type: EntityType, worldX: Float) {
+        spawnAt(type, worldX)
+    }
+
+    private fun spawnAt(type: EntityType, startX: Float) {
+        val recycled = recyclePool[type]?.removeLastOrNull()
+        val entity = recycled ?: EntityFactory.create(
+            context, type, startX, screenWidth, screenHeight, spriteManager
+        )
+        entity.isActive = true
+        entity.hasBeenPassed = false
+        entity.x = startX
+        activeEntities.add(entity)
+        debugActiveEntityCount = activeEntities.size
     }
 
     // ── Recycling ─────────────────────────────────────────────────────────
@@ -202,5 +229,6 @@ class EntityManager(
         recyclePool.clear()
         seedOrbManager.reset()
         spawnTimer = 0f
+        debugActiveEntityCount = 0
     }
 }

@@ -3,6 +3,7 @@ package com.yourname.forest_run.ui
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.yourname.forest_run.engine.SaveManager
+import com.yourname.forest_run.engine.SpriteManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -14,10 +15,12 @@ import org.robolectric.RobolectricTestRunner
 class GardenScreenTest {
 
     private lateinit var context: Context
+    private lateinit var spriteManager: SpriteManager
 
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        spriteManager = SpriteManager(context)
         context.getSharedPreferences("forest_run_prefs", Context.MODE_PRIVATE)
             .edit()
             .clear()
@@ -28,7 +31,7 @@ class GardenScreenTest {
     fun `unlocking next plant spends seeds and persists progress`() {
         SaveManager.saveLifetimeSeeds(context, 50)
         SaveManager.saveGardenProgress(context, 1)
-        val screen = GardenScreen(context, 1_920, 1_080)
+        val screen = GardenScreen(context, spriteManager, 1_920, 1_080)
         screen.load()
 
         val cardWidth = 1_920 / 10.5f

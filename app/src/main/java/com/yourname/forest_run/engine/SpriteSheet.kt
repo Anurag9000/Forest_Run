@@ -42,6 +42,9 @@ class SpriteSheet(
     /** Height of a single frame in pixels (same as bitmap height). */
     val frameHeight: Int = bitmap.height
 
+    /** Width / height ratio of a single frame. */
+    val aspectRatio: Float = frameWidth.toFloat() / frameHeight.coerceAtLeast(1)
+
     /** The currently displayed frame index (0..frameCount-1). */
     var currentFrame: Int = 0
         private set

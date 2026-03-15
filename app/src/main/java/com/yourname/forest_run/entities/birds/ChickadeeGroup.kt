@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -22,8 +23,8 @@ class ChickadeeGroup(
     count: Int = 3
 ) : Entity(context) {
 
-    private val birdW = 32f
     private val birdH = 24f
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 24f)
     private val spacing = 60f
     private val birdCount = count.coerceIn(2, 4)
 

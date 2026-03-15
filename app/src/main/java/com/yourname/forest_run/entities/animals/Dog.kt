@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SfxManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -38,8 +40,10 @@ class Dog(
     isBuddy: Boolean = Random.nextFloat() < 0.20f  // 20% chance at spawn
 ) : Entity(context) {
 
-    private val dogW = 75f
-    private val dogH = 65f
+    private val dogH = 68f
+    private val dogW = SpriteSizing.widthForHeight(sprite, dogH, minWidth = 56f)
+    private val insetX = dogW * 0.13f
+    private val insetY = dogH * 0.07f
 
     // ── Bark Projectile nested class ─────────────────────────────────────
     /**
@@ -98,7 +102,7 @@ class Dog(
             x = screenWidth * 0.25f + 160f
         }
 
-        hitbox.set(x + 10f, y + 5f, x + dogW - 10f, y + dogH)
+        hitbox.set(x + insetX, y + insetY, x + dogW - insetX, y + dogH)
         // Phase 20: schedule bark SFX 1 s before dog reaches screen edge
     }
 
@@ -111,7 +115,7 @@ class Dog(
             DogMode.BUDDY_DASH -> updateBuddyDash(deltaTime, scrollSpeed)
         }
 
-        hitbox.offsetTo(x + 10f, y + 5f)
+        hitbox.offsetTo(x + insetX, y + insetY)
         if (x < -dogW - 50f) isActive = false
     }
 
@@ -141,6 +145,7 @@ class Dog(
         buddyDialogueTimer -= deltaTime
         if (buddyDialogueTimer <= 0f && buddyDialogueStep < buddyDialogue.size - 1) {
             FlavorTextManager.spawn(buddyDialogue[buddyDialogueStep], x, y - 35f, Color.rgb(255, 240, 100))
+            SfxManager.playBark()
             buddyDialogueStep++
             buddyDialogueTimer = (buddyTimer / buddyDialogue.size).coerceAtLeast(0.8f)
         }
@@ -162,7 +167,7 @@ class Dog(
         // Spawn projectile from dog's mouth position (left edge of dog = toward player)
         FlavorTextManager.spawn("BORF!", x, y - 30f, Color.rgb(255, 220, 80))
         projectiles.add(BarkProjectile(x, y + dogH * 0.4f))
-        // Phase 20: play bark SFX
+        SfxManager.playBark()
     }
 
     override fun draw(canvas: Canvas) {

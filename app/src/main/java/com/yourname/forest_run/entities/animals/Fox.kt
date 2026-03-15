@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -30,8 +31,10 @@ class Fox(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val foxW = 65f
-    private val foxH = 55f
+    private val foxH = 60f
+    private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = 46f)
+    private val insetX = foxW * 0.12f
+    private val insetY = foxH * 0.09f
 
     private enum class FoxState { WALKING, JUMPING, LANDING, SPARED }
     private var foxState = FoxState.WALKING
@@ -51,7 +54,7 @@ class Fox(
         x = startX
         y = groundY - foxH
         velocityX = -walkSpeed
-        hitbox.set(x + 8f, y + 5f, x + foxW - 8f, y + foxH)
+        hitbox.set(x + insetX, y + insetY, x + foxW - insetX, y + foxH)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
@@ -81,7 +84,7 @@ class Fox(
             }
         }
 
-        hitbox.offsetTo(x + 8f, y + 5f)
+        hitbox.offsetTo(x + insetX, y + insetY)
         if (x < -foxW - 50f) isActive = false
     }
 

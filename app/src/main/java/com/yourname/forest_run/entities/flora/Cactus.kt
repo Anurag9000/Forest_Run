@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
@@ -21,21 +22,23 @@ class Cactus(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val cactusWidth  = 48f
     private val cactusHeight = 80f
+    private val cactusWidth  = SpriteSizing.widthForHeight(sprite, cactusHeight, minWidth = 36f)
+    private val insetX       = cactusWidth * 0.16f
+    private val insetY       = cactusHeight * 0.10f
     private val drawRect     = RectF()
 
     init {
         x = startX
         y = groundY - cactusHeight
         swayComponent = SwayComponent(speed = 1.0f, intensity = 4f)
-        hitbox.set(x + 8f, y + 8f, x + cactusWidth - 8f, y + cactusHeight)
+        hitbox.set(x + insetX, y + insetY, x + cactusWidth - insetX, y + cactusHeight)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + 8f + sway, y + 8f)
+        hitbox.offsetTo(x + insetX + sway, y + insetY)
         sprite.update(deltaTime)
         if (x < -cactusWidth - 20f) isActive = false
     }

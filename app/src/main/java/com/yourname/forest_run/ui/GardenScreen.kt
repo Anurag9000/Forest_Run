@@ -11,6 +11,9 @@ import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.SaveManager
+import com.yourname.forest_run.engine.SpriteManager
+import com.yourname.forest_run.engine.SpriteSizing
+import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
 import kotlin.math.sin
@@ -34,6 +37,7 @@ import kotlin.math.sin
  */
 class GardenScreen(
     private val context: Context,
+    private val spriteManager: SpriteManager,
     private val screenW: Int,
     private val screenH: Int
 ) {
@@ -56,6 +60,17 @@ class GardenScreen(
         GardenPlant("Jacaranda",  60, Color.rgb(160, 100, 240), "🌲"),
         GardenPlant("Bamboo",     75, Color.rgb(120, 200,  80), "🎋"),
         GardenPlant("Cherry",    100, Color.rgb(255, 150, 180), "🌸")
+    )
+    private val catalogueSprites: List<SpriteSheet> = listOf(
+        spriteManager.lilySprite.copy(),
+        spriteManager.cactusSprite.copy(),
+        spriteManager.hyacinthSprite.copy(),
+        spriteManager.eucalyptusSprite.copy(),
+        spriteManager.orchidSprite.copy(),
+        spriteManager.willowSprite.copy(),
+        spriteManager.jacarandaSprite.copy(),
+        spriteManager.bambooSprite.copy(),
+        spriteManager.cherryBlossomSprite.copy()
     )
 
     // ── State ─────────────────────────────────────────────────────────────
@@ -88,6 +103,7 @@ class GardenScreen(
     private val ROW_START_X = (screenW - (catalogue.size * (CARD_W + CARD_GAP) - CARD_GAP)) / 2f
     private val ROW_Y       = screenH * 0.20f
     private val cardRect    = RectF()
+    private val spriteRect  = RectF()
 
     // ── Paints ────────────────────────────────────────────────────────────
 
@@ -144,6 +160,7 @@ class GardenScreen(
 
     fun update(deltaTime: Float) {
         elapsed += deltaTime
+        catalogueSprites.forEach { it.update(deltaTime) }
         if (unlockAnim >= 0f) {
             unlockAnim = (unlockAnim + deltaTime * 1.5f).coerceAtMost(1f)
             if (unlockAnim >= 1f) unlockAnim = -1f
@@ -231,10 +248,27 @@ class GardenScreen(
             }
             canvas.drawRoundRect(cardRect, 12f, 12f, cardBorderPaint)
 
-            // Emoji
-            val emojiFade = if (isUnlocked) 255 else if (isNext) 160 else 60
-            emojiPaint.alpha = emojiFade
-            canvas.drawText(catalogue[i].emoji, cardRect.centerX(), cardRect.centerY() - 10f, emojiPaint)
+            if (isUnlocked || isNext) {
+                val spriteTop = cardRect.top + CARD_H * 0.10f
+                val spriteBottom = cardRect.top + CARD_H * 0.66f
+                val spriteHeight = spriteBottom - spriteTop
+                val spriteWidth = SpriteSizing.widthForHeight(
+                    catalogueSprites[i],
+                    spriteHeight,
+                    minWidth = spriteHeight * if (i >= 5) 0.45f else 0.35f
+                )
+                spriteRect.set(
+                    cardRect.centerX() - spriteWidth / 2f,
+                    spriteTop,
+                    cardRect.centerX() + spriteWidth / 2f,
+                    spriteBottom
+                )
+                catalogueSprites[i].draw(canvas, spriteRect)
+            } else {
+                val emojiFade = 60
+                emojiPaint.alpha = emojiFade
+                canvas.drawText(catalogue[i].emoji, cardRect.centerX(), cardRect.centerY() - 10f, emojiPaint)
+            }
 
             // Name / cost
             when {

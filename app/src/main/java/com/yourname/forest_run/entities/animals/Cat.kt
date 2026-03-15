@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -31,8 +32,10 @@ class Cat(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val catW = 55f
     private val catH = 50f
+    private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = 44f)
+    private val insetX = catW * 0.14f
+    private val insetY = catH * 0.10f
 
     // Tracks whether the player has already passed this specific cat instance
     private var playerHasPassed = false
@@ -42,7 +45,7 @@ class Cat(
     init {
         x = startX
         y = groundY - catH
-        hitbox.set(x + 8f, y + 5f, x + catW - 8f, y + catH)
+        hitbox.set(x + insetX, y + insetY, x + catW - insetX, y + catH)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
@@ -54,7 +57,7 @@ class Cat(
             waveTimer -= deltaTime
             if (waveTimer <= 0f || x > x + 200f) isActive = false
         }
-        hitbox.offsetTo(x + 8f, y + 5f)
+        hitbox.offsetTo(x + insetX, y + insetY)
         sprite.update(deltaTime)
         if (x < -catW - 20f) isActive = false
     }

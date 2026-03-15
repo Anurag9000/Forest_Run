@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
@@ -19,41 +20,43 @@ class WeepingWillow(
     context: Context,
     startX: Float,
     private val screenHeight: Float,
-    groundY: Float,
+    private val groundY: Float,
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val treeWidth     = 200f
-    private val trunkWidth    = 40f
-    private val curtainHeight = screenHeight * 0.45f
+    private val treeHeight    = screenHeight * 0.56f
+    private val treeWidth     = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = screenHeight * 0.22f)
+    private val trunkWidth    = treeWidth * 0.18f
+    private val trunkTop      = groundY - treeHeight * 0.42f
+    private val curtainTop    = groundY - treeHeight * 0.78f
+    private val curtainBottom = groundY - treeHeight * 0.16f
 
     private val curtainHitbox = RectF()
     private val drawRect      = RectF()
 
     init {
         x = startX
-        y = 0f
+        y = groundY - treeHeight
         swayComponent = SwayComponent(speed = 0.5f, intensity = 20f)
-        hitbox.set(x + treeWidth / 2f - trunkWidth / 2f, groundY - screenHeight * 0.8f,
+        hitbox.set(x + treeWidth / 2f - trunkWidth / 2f, trunkTop,
                    x + treeWidth / 2f + trunkWidth / 2f, groundY)
-        curtainHitbox.set(x, 0f, x + treeWidth, curtainHeight)
+        curtainHitbox.set(x + treeWidth * 0.08f, curtainTop, x + treeWidth * 0.92f, curtainBottom)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + treeWidth / 2f - trunkWidth / 2f, hitbox.top)
-        curtainHitbox.set(x + sway, 0f, x + treeWidth + sway, curtainHeight)
+        hitbox.offsetTo(x + treeWidth / 2f - trunkWidth / 2f, trunkTop)
+        curtainHitbox.set(x + treeWidth * 0.08f + sway, curtainTop, x + treeWidth * 0.92f + sway, curtainBottom)
         sprite.update(deltaTime)
         if (x < -treeWidth - 50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
-        // Full-height tree drawn from top of screen
-        drawRect.set(x, 0f, x + treeWidth, screenHeight * 0.85f)
+        drawRect.set(x, groundY - treeHeight, x + treeWidth, groundY)
         canvas.save()
-        canvas.rotate(sway * 0.5f, x + treeWidth / 2f, screenHeight * 0.85f)
+        canvas.rotate(sway * 0.5f, x + treeWidth / 2f, groundY)
         sprite.draw(canvas, drawRect)
         canvas.restore()
     }

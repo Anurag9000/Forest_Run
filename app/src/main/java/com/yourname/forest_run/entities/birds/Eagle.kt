@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.RectF
 import com.yourname.forest_run.engine.CameraSystem
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -24,9 +25,11 @@ class Eagle(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val birdW = 80f
-    private val birdH = 55f
+    private val birdH = 60f
+    private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = 44f)
     private val diveSpeed = 700f
+    private val insetX = birdW * 0.10f
+    private val insetY = birdH * 0.10f
 
     private var velX = 0f
     private var velY = 0f
@@ -35,7 +38,7 @@ class Eagle(
         // Spawn off-screen top at a random horizontal position
         x = startX
         y = -birdH - 20f
-        hitbox.set(x + 8f, y + 8f, x + birdW - 8f, y + birdH - 8f)
+        hitbox.set(x + insetX, y + insetY, x + birdW - insetX, y + birdH - insetY)
 
         // Auto-lock onto the player's typical horizontal running line
         lockOnTarget(screenWidth * 0.25f, groundY - 50f)
@@ -58,7 +61,7 @@ class Eagle(
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x += velX * deltaTime
         y += velY * deltaTime
-        hitbox.offsetTo(x + 8f, y + 8f)
+        hitbox.offsetTo(x + insetX, y + insetY)
         sprite.update(deltaTime)
         // Despawn when completely off screen (using +150f to allow time for the diagonal dive)
         if (y > groundY + birdH || x < -birdW - 50f || x > screenWidth + 150f) isActive = false

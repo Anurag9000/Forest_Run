@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -22,9 +23,11 @@ class Owl(
     private val actionSprite: SpriteSheet
 ) : Entity(context) {
 
-    private val birdW = 50f
-    private val birdH = 60f
+    private val birdH = 58f
+    private val birdW = SpriteSizing.widthForHeight(actionSprite, birdH, minWidth = 42f)
     private val perchY = groundY * 0.2f // High-up perch
+    private val insetX = birdW * 0.10f
+    private val insetY = birdH * 0.10f
 
     private enum class OwlState { SLEEPING, DIVING }
     private var owlState = OwlState.SLEEPING
@@ -36,7 +39,7 @@ class Owl(
     init {
         x = startX
         y = perchY
-        hitbox.set(x + 5f, y + 5f, x + birdW - 5f, y + birdH - 5f)
+        hitbox.set(x + insetX, y + insetY, x + birdW - insetX, y + birdH - insetY)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
@@ -53,7 +56,7 @@ class Owl(
             }
         }
 
-        hitbox.offsetTo(x + 5f, y + 5f)
+        hitbox.offsetTo(x + insetX, y + insetY)
         if (x < -birdW - 50f || y > groundY + birdH) isActive = false
     }
 

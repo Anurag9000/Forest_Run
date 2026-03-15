@@ -38,6 +38,8 @@ private const val TAG = "ForestRun"
  *  - Phase 12: [EntityManager] spawner + collision loop live
  */
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+    @Volatile
+    internal var debugFrameCounter: Long = 0
 
     // -----------------------------------------------------------------------
     // Engine
@@ -74,11 +76,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private lateinit var gameOverScreen: GameOverScreen
 
     // ── Run State (Phase 17) ──────────────────────────────────────────────
+    @Volatile
     private var runState: RunState = RunState.PLAYING
     private val runResetManager    = RunResetManager()
 
     // ── App Game State (Phase 22) ─────────────────────────────────────────
     /** Top-level lifecycle state — MENU, GARDEN, PLAYING, BLOOM, REST. */
+    @Volatile
     private var appState: AppGameState = AppGameState.MENU
     private lateinit var mainMenuScreen: MainMenuScreen
     private lateinit var gardenScreen: GardenScreen
@@ -184,13 +188,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 22: MainMenuScreen
         if (!::mainMenuScreen.isInitialized) {
-            mainMenuScreen = MainMenuScreen(context, screenWidth, screenHeight)
+            mainMenuScreen = MainMenuScreen(context, spriteManager, screenWidth, screenHeight)
             mainMenuScreen.onGardenTap = { appState = AppGameState.GARDEN }
         }
 
         // Phase 23: GardenScreen
         if (!::gardenScreen.isInitialized) {
-            gardenScreen = GardenScreen(context, screenWidth, screenHeight)
+            gardenScreen = GardenScreen(context, spriteManager, screenWidth, screenHeight)
             gardenScreen.onBack = { appState = AppGameState.MENU }
             gardenScreen.load()
         }
@@ -230,7 +234,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Re-create thread (Java threads can't be restarted after stop)
         gameThread = GameThread(holder, this)
         // Thread starts when surfaceCreated fires again (or immediately if surface exists)
-        if (holder.surface.isValid) {
+        if (holder.surface?.isValid == true) {
             gameThread.isRunning = true
             gameThread.start()
         }
@@ -292,6 +296,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
 
     fun update(deltaTime: Float) {
+        debugFrameCounter++
         // Phase 15: Advance camera shake
         CameraSystem.update(deltaTime)
 
@@ -304,8 +309,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (appState == AppGameState.MENU) {
             if (::mainMenuScreen.isInitialized) {
                 mainMenuScreen.update(deltaTime)
-                if (mainMenuScreen.shouldStartRun) {
+                if (mainMenuScreen.consumeStartRunRequest()) {
                     appState = AppGameState.PLAYING
+                    if (::entityManager.isInitialized) entityManager.seedOpeningSequence()
                     LeitmotifManager.playRunStart()
                 }
             }
@@ -343,6 +349,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     if (::entityManager.isInitialized && ::player.isInitialized &&
                         ::gameState.isInitialized) {
                         runResetManager.executeReset(gameState, entityManager, player)
+                        entityManager.seedOpeningSequence()
                         // Phase 19: reset recorder; reload ghost (may have just been saved)
                         ghostRecorder.reset()
                         ghostPlayer.reset()
@@ -358,7 +365,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         // Phase 5: update game state (scroll speed lives here now)
-        val bloomWasActive = gameState.isBloomActive
         gameState.update(deltaTime)
 
         // Phase 4: update parallax with state's scroll speed
@@ -383,11 +389,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         if (!::player.isInitialized) return
 
-        if (!bloomWasActive && gameState.isBloomActive) {
+        if (gameState.isBloomActive && !player.isInvincible) {
             player.activateBloom()
             LeitmotifManager.playBloom()
             SfxManager.playBloomActivate()
-        } else if (bloomWasActive && !gameState.isBloomActive) {
+        } else if (!gameState.isBloomActive && player.isInvincible) {
             player.deactivateBloom()
             LeitmotifManager.endBloom(gameState.distanceMetres)
         }

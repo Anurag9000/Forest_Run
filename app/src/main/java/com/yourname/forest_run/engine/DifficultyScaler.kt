@@ -12,9 +12,9 @@ object DifficultyScaler {
 
     // ── Spawn interval ────────────────────────────────────────────────────
     /** Max gap in seconds between entity spawns (very easy — early game). */
-    private const val SPAWN_INTERVAL_MAX = 3.5f
+    private const val SPAWN_INTERVAL_MAX = 2.4f
     /** Min gap (hard cap to avoid entity congestion). */
-    private const val SPAWN_INTERVAL_MIN = 1.1f
+    private const val SPAWN_INTERVAL_MIN = 0.9f
     /** Metres over which we fully ramp from max to min interval. */
     private const val INTERVAL_RAMP_METRES = 2000f
 

@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -27,20 +28,22 @@ class Hedgehog(
     private val sprite: SpriteSheet
 ) : Entity(context) {
 
-    private val hogW  = 35f
-    private val hogH  = 28f  // Very low to the ground
+    private val hogH  = 34f
+    private val hogW  = SpriteSizing.widthForHeight(sprite, hogH, minWidth = 24f)
+    private val insetX = hogW * 0.08f
+    private val insetY = hogH * 0.08f
 
     private var hasHit = false  // Only apply debuff once per instance
 
     init {
         x = startX
         y = groundY - hogH
-        hitbox.set(x + 2f, y + 2f, x + hogW - 2f, y + hogH)
+        hitbox.set(x + insetX, y + insetY, x + hogW - insetX, y + hogH)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= (scrollSpeed * 1.15f) * deltaTime  // Slightly faster than scroll speed (sneaky!)
-        hitbox.offsetTo(x + 2f, y + 2f)
+        hitbox.offsetTo(x + insetX, y + insetY)
         sprite.update(deltaTime)
         if (x < -hogW - 20f) isActive = false
     }

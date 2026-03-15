@@ -2,9 +2,11 @@ package com.yourname.forest_run.engine
 
 import android.content.Context
 import android.content.res.AssetManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import com.yourname.forest_run.utils.BitmapHelper
+import kotlin.math.abs
 
 /**
  * Loads, creates, and caches all SpriteSheets in the game.
@@ -20,11 +22,11 @@ import com.yourname.forest_run.utils.BitmapHelper
 class SpriteManager(private val context: Context) {
 
     companion object {
-        private const val PLAYER_RUN_FRAMES = 8
+        private const val PLAYER_RUN_FRAMES = 48
         private const val PLAYER_JUMP_STRIP_FRAMES = 48
-        private const val PLAYER_DUCK_FRAMES = 8
+        private const val PLAYER_DUCK_FRAMES = 48
         private const val PLAYER_HIT_FRAMES = 12
-        private const val PLAYER_DEATH_FRAMES = 24
+        private const val PLAYER_DEATH_FRAMES = 12
     }
 
     private val assets: AssetManager = context.assets
@@ -38,6 +40,7 @@ class SpriteManager(private val context: Context) {
     val playerApex: SpriteSheet
     val playerFalling: SpriteSheet
     val playerLanding: SpriteSheet
+    val playerStandUp: SpriteSheet
     val playerDuck: SpriteSheet
     val playerHit: SpriteSheet
     val playerDeath: SpriteSheet
@@ -100,6 +103,7 @@ class SpriteManager(private val context: Context) {
         playerApex      = SpriteSheet(jumpBmp, frameCount = 4,  framesPerSec = 8f,  isLooping = true,  startFrame = 14, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
         playerFalling   = SpriteSheet(jumpBmp, frameCount = 6,  framesPerSec = 12f, isLooping = true,  startFrame = 18, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
         playerLanding   = SpriteSheet(jumpBmp, frameCount = 4,  framesPerSec = 25f, isLooping = false, startFrame = 24, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
+        playerStandUp   = SpriteSheet(jumpBmp, frameCount = 18, framesPerSec = 12f, isLooping = false, totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES)
 
         val duckBmp = loadOrFallback(AssetPaths.Char.DUCK,
             Color.rgb(80, 220, 180), frameW, frameH, PLAYER_DUCK_FRAMES)
@@ -144,7 +148,7 @@ class SpriteManager(private val context: Context) {
 
         // ---- Animals -------------------------------------------------------
         catSprite      = loadEntity(AssetPaths.Animals.CAT, Color.rgb(220,190,160), 4)
-        wolfSprite     = loadEntity(AssetPaths.Animals.WOLF, Color.rgb(100,100,120), 4)
+        wolfSprite     = loadEntity(AssetPaths.Animals.WOLF, Color.rgb(100,100,120), 8)
         foxSprite      = loadEntity(AssetPaths.Animals.FOX, Color.rgb(220,120,60), 4)
         hedgehogSprite = loadEntity(AssetPaths.Animals.HEDGEHOG, Color.rgb(120,100,80), 4)
         dogSprite      = loadEntity(AssetPaths.Animals.DOG, Color.rgb(200,170,130), 4)
@@ -162,11 +166,79 @@ class SpriteManager(private val context: Context) {
         return try {
             assets.open(assetPath).use { stream ->
                 BitmapFactory.decodeStream(stream)
+                    ?.let { sanitizeBitmap(it, assetPath) }
                     ?: BitmapHelper.buildPlaceholderStrip(frameW, frameH, frames, fallbackColour)
             }
         } catch (e: Exception) {
             BitmapHelper.buildPlaceholderStrip(frameW, frameH, frames, fallbackColour)
         }
+    }
+
+    /**
+     * Some checked-in bird sheets still contain opaque source-sheet backgrounds.
+     * Strip edge-connected light-grey backgrounds so gameplay renders the sprite only.
+     */
+    private fun sanitizeBitmap(bitmap: Bitmap, assetPath: String): Bitmap {
+        if (!assetPath.startsWith("sprites/birds/")) return bitmap
+        if (bitmap.config == Bitmap.Config.HARDWARE) return bitmap.copy(Bitmap.Config.ARGB_8888, false)
+
+        val working = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val width = working.width
+        val height = working.height
+        val pixels = IntArray(width * height)
+        working.getPixels(pixels, 0, width, 0, 0, width, height)
+        val frameCount = 4
+        if (width % frameCount != 0) return working
+        val frameWidth = width / frameCount
+
+        fun clearFrameBackground(frameIndex: Int) {
+            val frameLeft = frameIndex * frameWidth
+            val frameRight = frameLeft + frameWidth
+            val seedColor = pixels[frameLeft]
+            if (Color.alpha(seedColor) < 250) return
+
+            fun withinTolerance(color: Int): Boolean {
+                if (Color.alpha(color) < 250) return false
+                return abs(Color.red(color) - Color.red(seedColor)) <= 140 &&
+                    abs(Color.green(color) - Color.green(seedColor)) <= 140 &&
+                    abs(Color.blue(color) - Color.blue(seedColor)) <= 140
+            }
+
+            val queue = IntArray(frameWidth * height)
+            var head = 0
+            var tail = 0
+
+            fun enqueue(x: Int, y: Int) {
+                if (x !in frameLeft until frameRight || y !in 0 until height) return
+                val index = y * width + x
+                if (!withinTolerance(pixels[index])) return
+                pixels[index] = Color.TRANSPARENT
+                queue[tail++] = index
+            }
+
+            for (x in frameLeft until frameRight) {
+                enqueue(x, 0)
+                enqueue(x, height - 1)
+            }
+            for (y in 0 until height) {
+                enqueue(frameLeft, y)
+                enqueue(frameRight - 1, y)
+            }
+
+            while (head < tail) {
+                val index = queue[head++]
+                val x = index % width
+                val y = index / width
+                enqueue(x - 1, y)
+                enqueue(x + 1, y)
+                enqueue(x, y - 1)
+                enqueue(x, y + 1)
+            }
+        }
+
+        repeat(frameCount, ::clearFrameBackground)
+        working.setPixels(pixels, 0, width, 0, 0, width, height)
+        return working
     }
 
     /** Loads a 4-frame entity sprite (64×64 frames) with fallback. */
