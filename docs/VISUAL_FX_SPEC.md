@@ -1,38 +1,132 @@
-# Visual And Feedback Effects Spec
+# Forest_Run — Visual & FX Specification (Restored)
 
-## Original Dream
+This restores the original visual and feedback ambition as an active target.
 
-The intended presentation was:
+## 1. Parallax Scrolling System
 
-- lush and alive, never static
-- big readable sprites on phone
-- constant subtle life in wind, petals, leaf motion, and ambient particles
-- Bloom as a huge transformation moment
-- strong juice on jumps, landings, near misses, milestones, and soft failure
-- hand-authored biome mood, not just color tint changes
+The dream world uses four layers:
 
-## Implemented Today
+| Layer | Name | Speed | Contents |
+|---|---|---|---|
+| 1 | Far Background | 10% | mountains, sky, clouds |
+| 2 | Mid-ground | 30% | distant trees, hills |
+| 3 | Main Play Area | 100% | obstacles, ground, flora, animals |
+| 4 | Foreground | 150% | close-up leaves/grass |
 
-- screen shake via `CameraSystem`
-- multiple particle presets
-- HUD for score, distance, seeds, Bloom, and hearts
-- ambient tint and darkness overlays
-- menu/garden scene drawing
-- sprite-driven player and entity animation
-- audio and haptic hooks for several actions
+### Current Status
 
-## Missing Or Too Weak
+- Implemented: parallax background in procedural/tint-driven form.
+- TODO: full bespoke background art and stronger sense of depth.
 
-- entity scale is not yet comfortably readable on phone
-- encounter framing is too sparse to show off the art and behaviors properly
-- backgrounds remain too procedural in places
-- Bloom does not yet feel spectacular enough relative to the dream
-- the world still lacks the full “breathing forest” density originally imagined
+## 2. Wind System — SwayComponent
 
-## Immediate Visual Priorities
+All plants and trees should feel wind-affected. Wind should vary by biome and progression.
 
-- enlarge entity presentation and improve on-phone readability
-- tune spawn cadence so the player actually sees and feels the forest inhabitants
-- reduce ghost visual confusion
-- make seeds, Bloom, and mercy feedback impossible to miss
-- deepen biome atmosphere beyond tint shifts alone
+Dream traits:
+
+- sine-wave sway
+- unique per-entity speed/intensity
+- rising wind over distance
+- temporary wind spikes from environmental interactions
+
+### Current Status
+
+- Implemented: sway component exists.
+- TODO: fuller world-level wind drama and stronger scenic payoff.
+
+## 3. Character Animation — Squash & Stretch
+
+Dream traits:
+
+- launch squash
+- jump stretch
+- landing squash
+- duck compression
+- secondary hair/clothing motion
+- fast readable 48-frame-feeling run cycle
+
+### Current Status
+
+- Implemented: core squash/stretch states.
+- TODO: full expressive secondary motion and richer presentation.
+
+## 4. Particle Systems
+
+Dream particle families include:
+
+- petal drift
+- dust/pollen kicks
+- running pollen trail
+- seed orb bursts
+- Bloom trail
+- fireflies
+- Lily glow wisps
+- kindness bonus particles
+- bark shockwaves
+
+### Current Status
+
+- Implemented: multiple particle presets including Bloom, death, mercy, seed, and movement effects.
+- TODO: full living-forest density and stronger scenic saturation.
+
+## 5. Dynamic Lighting — Day/Night Canvas Filter
+
+Dream lighting phases:
+
+- Morning
+- Day
+- Golden Hour
+- Twilight
+- Night
+
+Expected:
+
+- smooth transitions
+- sky shifts
+- glow interactions
+- fireflies and night-specific ambience
+
+### Current Status
+
+- Implemented: biome tinting and darkness overlay.
+- TODO: richer authored lighting mood and stronger visual identity per phase.
+
+## 6. Camera Effects
+
+Dream effects:
+
+- collision shake
+- milestone shake
+- subtle background scale/zoom logic at speed
+
+### Current Status
+
+- Implemented: shake and feedback.
+- TODO: complete cinematic polish.
+
+## 7. Environmental Interactions — Bloom Reaction
+
+Dream expectation:
+
+- nearby flowers bloom as the runner passes
+- the world reacts to the player’s energy and path
+
+### Current Status
+
+- TODO: fuller environmental Bloom reaction system.
+
+## 8. Spirit Of The Forest — Bloom State Visuals
+
+During Bloom, the dream presentation includes:
+
+- glowing heroine
+- petal trail
+- more saturated world
+- obstacles dissolving or transforming into reward
+- floor flowers opening
+- UI pulse and power fantasy clarity
+
+### Current Status
+
+- Implemented: Bloom state, Bloom meter, aura effects.
+- TODO: make Bloom feel spectacular, obvious, and unforgettable in actual play.

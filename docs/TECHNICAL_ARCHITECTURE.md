@@ -1,103 +1,191 @@
-# Technical Architecture
+# Forest_Run — Technical Architecture (Restored)
 
-## Purpose
+This restores the original technical architecture intent while keeping current implementation gaps explicit.
 
-This document describes both the current runtime architecture and the architectural gaps that still separate the repo from the original product vision.
+## 1. Project Structure
 
-## Runtime Stack
+The dream architecture includes:
 
-- `MainActivity`: fullscreen host activity
-- `GameView`: top-level `SurfaceView`, screen routing, update/draw orchestration
-- `GameThread`: render/update loop
-- `GameStateManager`: score, distance, Bloom, seeds, hearts, persistence-facing state
-- `EntityManager`: spawning, updating, collision checks, pass events, seed orb spawning
+- `MainActivity`
+- `engine/` core loop and state
+- `entities/` for player, flora, trees, birds, animals
+- `systems/` for spawning, biomes, particles, audio, haptics, memory, mercy, ghosting
+- `ui/` for HUD, game over, garden, dialogue bubbles
+- `utils/` for math, sprite helpers, save helpers
 
-## Major Packages
+### Current Status
 
-### `engine`
+- Implemented: broad package structure exists.
+- TODO: several dream-spec systems still do not exist as first-class dedicated modules.
 
-- `GameView.kt`: top-level lifecycle and state routing
-- `InputHandler.kt`: touch gestures
-- `GameStateManager.kt`: run state and progression counters
-- `BiomeManager.kt` and `Biome.kt`: five-biome cycle and color blending
-- `SpriteManager.kt`: runtime sprite loading
-- `SaveManager.kt`: local persistence
-- `LeitmotifManager.kt`, `SfxManager.kt`, `HapticManager.kt`: feedback systems
+## 2. Engine — GameView & Game Loop
 
-### `entities`
+The architecture requires:
 
-- `Player.kt`: movement, animation state machine, Bloom/rest integration
-- `Entity.kt`: base entity abstraction
-- `EntityFactory.kt`: concrete creation
-- `flora/`, `trees/`, `birds/`, `animals/`: 19 entity implementations
+- `SurfaceView`
+- dedicated game thread
+- frame-independent `deltaTime`
+- centralized update/draw orchestration
 
-### `systems`
+### Current Status
 
-- `ParticleManager.kt`: pooled particles
-- `SeedOrbManager.kt`: collectible seed orbs
-- `GhostRecorder.kt` and `GhostPlayer.kt`: best-run replay
+- Implemented: game loop and `GameView`.
 
-### `ui`
+## 3. Game State Machine
 
-- `MainMenuScreen.kt`: two-tap run start
-- `GardenScreen.kt`: garden unlock view
-- `HUD.kt`: score, distance, seeds, Bloom, hearts
-- `GameOverScreen.kt`: death/restart overlay
-- `FlavorTextManager.kt`: floating text
+Dream states:
 
-## Verified Runtime Reality
+- `MENU`
+- `PLAYING`
+- `BLOOM_STATE`
+- `REST`
 
-- Core flow exists.
-- Biome cycling exists.
-- Bloom and seeds exist in code.
-- Garden persistence exists.
-- Ghost recording and playback exist.
-- Multiple entity-specific behavior classes exist.
+Expected transitions:
 
-## Architectural Gaps To The Dream
+- menu to run
+- run to Bloom
+- Bloom back to run
+- run to rest
+- rest back into retry flow
 
-### Readability Architecture Gap
+### Current Status
 
-The repo lacks a dedicated tuning layer for:
+- Implemented: menu, playing, Bloom, rest/game-over, restart routing.
+- TODO: more fully authored emotional transitions and softer rest presentation.
 
-- entity screen scale by class
-- per-device readability tuning
-- spawn spacing tuned for visibility as well as difficulty
-- on-device presentation diagnostics
+## 4. Player State Machine
 
-Without that, dream-spec behavior can exist in code and still fail in play.
+Dream player states include:
 
-### Personality Architecture Gap
+- running
+- jump start
+- jumping
+- apex
+- falling
+- landing
+- ducking
+- Bloom
+- rest
 
-The dream vision wanted stronger systems than currently exist:
+Expected qualities:
 
-- persistent encounter memory manager
-- costume overlay system
-- repeat-killer or deja vu system
-- richer rest-quote system
-- more robust mercy/spare orchestration beyond isolated entity logic
+- variable jump
+- Mario-abort mechanic
+- apex hover
+- velocity-synced run animation
+- squash/stretch
 
-### Presentation Architecture Gap
+### Current Status
 
-The world is still largely procedural/tint-driven in places. The dream vision wanted:
+- Implemented: most core player states and apex feel.
+- TODO: face layer, stronger authored feel, and cleaner ghost/live-player readability.
 
-- richer hand-authored biome scenes
-- stronger dialogue bubble and character presentation
-- more obvious spectacle around Bloom and forest atmosphere
+## 5. Entity System
 
-### Ghost UX Gap
+The dream architecture expects:
 
-Ghost playback exists technically, but current user feedback says its presentation can make the live runner feel visually wrong. That means the architecture needs a better player-facing policy for:
+- a base `Entity`
+- subclass-specific behavior
+- sway component
+- particle attachments where needed
+- no generic-feeling obstacle pipeline
 
-- when the ghost appears
-- how visible it is
-- whether it should be disabled by default
-- how it avoids obscuring the live body
+### Current Status
 
-## Known Immediate Product Bugs From User Feedback
+- Implemented: entity base and concrete classes.
+- TODO: ensure architecture supports device-tuned readability and stronger runtime personality delivery.
 
-- Entity scale and spacing are failing mobile readability.
-- Ghost presentation is confusing enough to break trust in the run.
-- Implemented systems such as Bloom, mercy, and garden progression are not surfacing clearly enough to the player.
+## 6. EntityManager & Spawner
 
-Those are not just balance tasks. They are architecture-to-experience failures and should be treated as first-class product defects.
+Expected responsibilities:
+
+- active entity list
+- spawn timing
+- biome-aware pools
+- despawn logic
+- collision classification
+- pooling/recycling
+
+### Current Status
+
+- Implemented: core manager exists.
+- TODO: tune pacing so the forest feels populated and readable rather than sparse.
+
+## 7. BiomeManager
+
+Dream responsibilities:
+
+- biome lookup by distance
+- biome-specific pools
+- transition orchestration
+- atmosphere changes with world progression
+
+### Current Status
+
+- Implemented: five-biome cycle and blending.
+- TODO: full scenic transformation and richer ambient system.
+
+## 8. Input Handler
+
+Expected:
+
+- robust touch handling
+- tap, hold, swipe-down
+- responsive player control
+
+### Current Status
+
+- Implemented.
+
+## 9. Sprite Sheet / Asset Helpers
+
+Expected:
+
+- sprite slicing
+- asset loading
+- predictable animation plumbing
+
+### Current Status
+
+- Implemented in practical form.
+
+## 10. Haptic Manager
+
+Expected:
+
+- short pulse
+- long pulse
+- double tap
+- medium pulse
+
+### Current Status
+
+- Implemented.
+- TODO: final tactile tuning on real hardware.
+
+## 11. Save / Persistence
+
+Dream persistence includes:
+
+- high score
+- lifetime seeds
+- garden progress
+- richer memory systems
+
+### Current Status
+
+- Implemented: score, seeds, garden, ghost.
+- TODO: repeated-encounter memory and costumes.
+
+## 12. Dynamic Difficulty Curve
+
+Expected:
+
+- speed increase
+- spawn interval pressure
+- biome escalation
+
+### Current Status
+
+- Implemented: base scaling.
+- TODO: tune against readability and delight, not just raw challenge.
