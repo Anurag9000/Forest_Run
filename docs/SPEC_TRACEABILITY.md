@@ -699,20 +699,21 @@ These items are not from the earliest historical repo docs. They are explicit us
 
 - `Implemented`: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - `Partial`: relationship-driven dialogue now affects pass, threat, spare, and return tone, and Garden surfaces the strongest bond.
-- `TODO`: deepen encounter shifts, Garden presence, and milestone presentation.
+- `Partial`: bonded creatures now influence Garden return moments and visible Garden presence in baseline form.
+- `TODO`: deepen encounter shifts, milestone presentation, and broader relationship consequences.
 - `TODO`: make visible warmth from repeated positive interactions and visible caution or tension from repeated negative ones more pronounced in play.
 
 #### Personal Return Moments
 
 - `Implemented`: first-run-of-day greetings, long-absence reactions, and rough-run comfort beats in baseline form.
-- `Partial`: milestone-sensitive Garden return moments now exist with simple visiting-creature presentation.
-- `TODO`: broaden emotional-state combinations and deepen authored coverage.
+- `Partial`: milestone-sensitive Garden return moments now exist with bonded visiting-creature presentation and stronger kindness/clean-play hooks.
+- `TODO`: broaden emotional-state combinations and deepen authored coverage further.
 
 #### Quiet Story Fragments
 
 - `Implemented`: short rest quotes now run through a first-class fragment system.
-- `Partial`: rare Garden reflections and unlockable poetic memory pages now exist in baseline form.
-- `TODO`: creature thoughts and weather-linked lines.
+- `Partial`: rare Garden reflections, weather-linked Garden thoughts, bonded creature thoughts, and unlockable poetic memory pages now exist in baseline form.
+- `TODO`: broaden creature thoughts and weather-linked lines beyond the current Garden-focused baseline.
 - `TODO`: preserve emotional mystery through fragment writing instead of explicit exposition.
 
 ## Strict Documentation Conclusion

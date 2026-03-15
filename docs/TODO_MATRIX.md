@@ -69,16 +69,16 @@ This file is the strict implementation ledger for everything from the original d
 ### Personal Return Moments
 
 - DONE: added baseline first-run-of-day greeting logic, long-absence recognition, rough-run comfort returns, and milestone-sensitive Garden messages.
-- PARTIAL: Garden return moments can now include simple visiting creatures; deepen trigger richness and broader emotional coverage.
-- TODO: bind return moments more deeply to many mercies, longer streaks, and broader emotional-state combinations.
+- PARTIAL: Garden return moments now use bonded visitors and stronger mercy/clean-play/high-score hooks; deepen trigger richness and broader emotional coverage.
+- PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, and broader emotional-state combinations; continue expanding authored combinations.
 - TODO: ensure return sessions feel intimate instead of mechanically identical.
 
 ### Quiet Story Fragments
 
 - DONE: short rest quotes now run through a first-class fragment-driven writing layer.
 - PARTIAL: rare Garden reflections and unlockable poetic memory pages now exist in baseline form.
-- TODO: add one-line creature thoughts for key emotional moments.
-- TODO: add weather-linked thoughts and broaden authored coverage for Garden reflections.
+- PARTIAL: one-line creature thoughts for bonded creatures now exist in the Garden baseline.
+- PARTIAL: weather-linked thoughts now exist in baseline Garden form; broaden authored coverage for Garden reflections.
 - TODO: deepen poetic memory pages so they reveal feeling without lore-dumping.
 - TODO: keep fragment writing brief, intimate, and suggestive rather than expository.
 - TODO: ensure mystery and emotional residue are preserved through restraint.
@@ -125,7 +125,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments; deepen authored coverage and payoff.
+- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments; deepen authored coverage, stronger Garden consequences, and richer payoff.
 
 ## Visual And Audio TODOs
 

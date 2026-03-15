@@ -162,8 +162,8 @@ Current baseline:
 Current baseline:
 
 - rest quotes now route through a fragment system instead of only hard-coded quote branches
-- Garden can now surface baseline reflection fragments and track unlocked memory pages
-- creature-thought coverage and weather-linked fragments are still TODO
+- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, and track unlocked memory pages
+- broader creature-thought coverage and richer weather-linked fragments are still TODO
 
 ### Current Status
 

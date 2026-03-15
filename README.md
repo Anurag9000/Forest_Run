@@ -41,7 +41,7 @@ What exists in code today:
 - dedicated mercy, pacifist, memory, face, dialogue, and costume systems
 - Garden wardrobe equip flow and rest-to-Garden death loop
 - friendship persistence and richer rest/Garden run summaries
-- forest mood persistence and baseline Garden return moments
+- forest mood persistence, relationship arcs, richer Garden return moments, and fragment-driven emotional writing
 - audio and haptics managers
 
 What is still missing, incomplete, or user-reported as unsatisfactory:
@@ -51,7 +51,7 @@ What is still missing, incomplete, or user-reported as unsatisfactory:
 - many entity-specific personalities exist in code but are not yet delivered with enough clarity, frequency, staging, or charm to feel deliberate in play
 - the forest still lacks the full handcrafted art, dense environmental life, and layered spectacle described in the original dream
 - the persistent memory, costume, dialogue, pacifist, and determination-quote layers now exist in baseline form but are not fully deep, rich, or complete
-- forest mood, Garden return moments, major-creature relationship arcs, and baseline quiet fragments now exist, but deeper authored emotional payoff is still missing
+- forest mood, relationship arcs, richer Garden return moments, and quiet fragments now exist in baseline form, but deeper authored emotional payoff is still missing
 - several dream-spec feedback loops may exist technically but are not surfacing reliably enough to a player during normal play
 
 ## Canonical Runtime Truth
