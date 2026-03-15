@@ -93,4 +93,17 @@ class GameStateManagerTest {
         assertEquals(3, state.mercyMissesThisRun)
         assertEquals(0, state.kindnessChain)
     }
+
+    @Test
+    fun `bloom conversion grants reward during active bloom`() {
+        val state = GameStateManager(context)
+        repeat(GameConstants.BLOOM_SEED_COUNT) { state.collectSeed() }
+
+        state.recordBloomConversion()
+
+        assertTrue(state.isBloomActive)
+        assertEquals(1, state.bloomConversionsThisRun)
+        assertEquals(GameConstants.BLOOM_SEED_COUNT + 1, state.seedsThisRun)
+        assertTrue(state.score >= 140)
+    }
 }

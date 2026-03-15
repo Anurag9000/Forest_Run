@@ -89,6 +89,8 @@ class GameStateManager(context: Context) {
         get() = (GameConstants.BLOOM_DURATION_S - bloomTimer).coerceAtLeast(0f)
     val bloomSeedTarget: Int
         get() = GameConstants.BLOOM_SEED_COUNT
+    var bloomConversionsThisRun: Int = 0
+        private set
 
     // -----------------------------------------------------------------------
     // Mercy System (Phase 17 turns this into MercySystem.kt, for now lives here)
@@ -210,6 +212,11 @@ class GameStateManager(context: Context) {
         }
     }
 
+    fun recordBloomConversion() {
+        bloomConversionsThisRun++
+        addBonus(points = 140, seeds = 1)
+    }
+
     /**
      * Temporarily reduce scroll speed (Hedgehog collision, Hyacinth brush).
      * @param multiplier e.g. 0.5f = half speed.
@@ -261,6 +268,7 @@ class GameStateManager(context: Context) {
         bloomMeter            = 0
         isBloomActive         = false
         bloomTimer            = 0f
+        bloomConversionsThisRun = 0
         isNewHighScore        = false
         mercySystem.reset()
         speedDebuffMultiplier = 1f

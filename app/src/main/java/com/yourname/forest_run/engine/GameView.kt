@@ -112,6 +112,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     // Phase 13: Night/dusk ambient darkness overlay
     private val ambientOverlayPaint = Paint().apply { color = Color.BLACK }
+    private var bloomScreenPulse = 0f
+    private val bloomScreenPaint = Paint().apply {
+        color = Color.argb(0, 255, 204, 96)
+    }
+    private val bloomFramePaint = Paint().apply {
+        color = Color.argb(0, 255, 232, 170)
+        style = Paint.Style.STROKE
+        strokeWidth = 14f
+    }
     private val debugHitboxPaint = Paint().apply {
         color = Color.argb(210, 255, 96, 96)
         style = Paint.Style.STROKE
@@ -349,6 +358,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         inputHandler.tick(deltaTime)
 
         if (!::gameState.isInitialized) return
+        bloomScreenPulse = if (gameState.isBloomActive) bloomScreenPulse + deltaTime * 4.8f else 0f
 
         // Phase 22: MENU state — update menu screen, gate physics
         if (appState == AppGameState.MENU) {
@@ -629,6 +639,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 ambientOverlayPaint.alpha = ambient
                 canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), ambientOverlayPaint)
             }
+        }
+
+        if (::gameState.isInitialized && gameState.isBloomActive) {
+            val pulse = 0.55f + 0.45f * kotlin.math.sin(bloomScreenPulse)
+            bloomScreenPaint.alpha = (55f + 45f * pulse).toInt().coerceIn(0, 255)
+            bloomFramePaint.alpha = (120f + 70f * pulse).toInt().coerceIn(0, 255)
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomScreenPaint)
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomFramePaint)
         }
 
         // 8. HUD — always screen-space, never shakes

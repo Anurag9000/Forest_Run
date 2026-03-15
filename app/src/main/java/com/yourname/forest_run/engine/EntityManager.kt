@@ -9,6 +9,8 @@ import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.animals.Dog
 import com.yourname.forest_run.entities.animals.Wolf
 import com.yourname.forest_run.entities.flora.LilyOfValley
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.systems.SeedOrbManager
 import kotlin.random.Random
 
@@ -106,6 +108,11 @@ class EntityManager(
                 entity.hasBeenPassed = true
                 entity.performUniqueAction(player, gameState)
                 gameState.recordCleanPass()
+                if (gameState.isBloomActive) {
+                    gameState.recordBloomConversion()
+                    ParticleManager.emit(FxPreset.BLOOM_CONVERT, entity.hitbox.centerX(), entity.hitbox.centerY())
+                    entity.isActive = false
+                }
                 // Trigger seed orb spawn above the entity (60% base chance)
                 seedOrbManager.trySpawn(
                     centreX    = entity.hitbox.centerX(),

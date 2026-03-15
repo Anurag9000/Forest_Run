@@ -281,6 +281,22 @@ enum class FxPreset {
         )
     },
 
+    /** Burst when Bloom converts a passed encounter into reward. */
+    BLOOM_CONVERT {
+        override fun build(x: Float, y: Float) = ParticleEmitter(
+            x = x, y = y,
+            isBurst = true, count = 16,
+            angleMin = 0f, angleMax = 360f,
+            speedMin = 90f, speedMax = 260f,
+            startColor = Color.argb(255, 255, 210, 110),
+            endColor   = Color.TRANSPARENT,
+            startSize = 11f, endSize = 0f,
+            gravity = -30f, drag = 0.90f,
+            lifetimeMin = 0.25f, lifetimeMax = 0.65f,
+            spawnRadiusX = 18f, spawnRadiusY = 18f
+        )
+    },
+
     // ── Animal FX ─────────────────────────────────────────────────────────
 
     /** Wolf charge dust trail. Continuous — register on CHARGING transition. */
