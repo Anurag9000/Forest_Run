@@ -46,6 +46,10 @@ class Eagle(
         style = Paint.Style.STROKE
         strokeWidth = 4f
     }
+    private val reticleFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(42, 255, 110, 110)
+        style = Paint.Style.FILL
+    }
 
     init {
         // Spawn off-screen top at a random horizontal position
@@ -93,6 +97,7 @@ class Eagle(
     override fun draw(canvas: Canvas) {
         if (!isLocked) {
             val radius = 22f + lockTimer * 34f
+            canvas.drawCircle(targetX, targetY, radius, reticleFillPaint)
             reticlePaint.alpha = (220 * (1f - (lockTimer / lockDuration).coerceIn(0f, 1f))).toInt().coerceIn(60, 220)
             canvas.drawCircle(targetX, targetY, radius, reticlePaint)
             canvas.drawLine(targetX - radius - 8f, targetY, targetX - radius + 6f, targetY, reticlePaint)
@@ -102,6 +107,17 @@ class Eagle(
         }
         val drawRect = RectF(x, y, x + birdW, y + birdH)
         sprite.draw(canvas, drawRect)
+    }
+
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        gameState.addBonus(points = 165, seeds = 1)
+        DialogueBubbleManager.spawn(
+            text = "Outran the mark.",
+            anchorX = targetX,
+            anchorY = targetY - 28f,
+            fillColor = Color.rgb(255, 236, 236),
+            borderColor = Color.rgb(180, 70, 70)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

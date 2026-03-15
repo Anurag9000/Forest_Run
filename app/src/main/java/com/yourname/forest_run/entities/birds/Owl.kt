@@ -47,8 +47,12 @@ class Owl(
         style = Paint.Style.STROKE
         strokeWidth = 4f
     }
+    private val alertFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(42, 255, 184, 82)
+        style = Paint.Style.FILL
+    }
     private val eyeGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(110, 255, 190, 90)
+        color = Color.argb(132, 255, 184, 72)
         style = Paint.Style.FILL
     }
 
@@ -104,14 +108,26 @@ class Owl(
     override fun draw(canvas: Canvas) {
         val drawRect = RectF(x, y, x + birdW, y + birdH)
         if (owlState == OwlState.SLEEPING || owlState == OwlState.ALERT) {
-            canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), birdW * 0.40f, eyeGlowPaint)
+            canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), birdW * 0.48f, eyeGlowPaint)
         }
         if (owlState == OwlState.ALERT) {
             val radius = birdW * (0.48f + alertTimer * 0.55f)
+            canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), radius, alertFillPaint)
             alertPaint.alpha = (180 * (1f - (alertTimer / 0.22f).coerceIn(0f, 1f))).toInt().coerceIn(40, 180)
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), radius, alertPaint)
         }
         currentSprite.draw(canvas, drawRect)
+    }
+
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        gameState.addBonus(points = 150)
+        DialogueBubbleManager.spawn(
+            text = if (owlState == OwlState.SLEEPING) "Silent pass." else "Too slow.",
+            anchorX = x + birdW * 0.5f,
+            anchorY = y - 18f,
+            fillColor = Color.rgb(255, 244, 220),
+            borderColor = Color.rgb(176, 126, 70)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

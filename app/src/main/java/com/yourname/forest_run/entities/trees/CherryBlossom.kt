@@ -3,6 +3,7 @@ package com.yourname.forest_run.entities.trees
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -34,6 +35,15 @@ class CherryBlossom(
     private val trunkTop         = groundY - treeHeight * 0.34f
     private val branchHitbox    = RectF()
     private val drawRect        = RectF()
+    private val gustPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(46, 255, 222, 236)
+        style = Paint.Style.FILL
+    }
+    private val gustStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(112, 238, 164, 194)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
 
     init {
         x = startX
@@ -55,6 +65,8 @@ class CherryBlossom(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
+        canvas.drawRoundRect(branchHitbox.left - 16f, branchHitbox.top - 8f, branchHitbox.right + 16f, branchHitbox.bottom + 8f, 24f, 24f, gustPaint)
+        canvas.drawRoundRect(branchHitbox.left - 16f, branchHitbox.top - 8f, branchHitbox.right + 16f, branchHitbox.bottom + 8f, 24f, 24f, gustStrokePaint)
         drawRect.set(x, groundY - treeHeight, x + treeWidth, groundY)
         canvas.save()
         canvas.rotate(sway * 0.6f, x + treeWidth / 2f, groundY)
@@ -63,9 +75,10 @@ class CherryBlossom(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 120, seeds = 1)
+        gameState.addBonus(points = 140, seeds = 1)
         ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.24f, branchHeightHigh)
         ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.78f, branchHeightHigh + 18f)
+        ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.52f, branchHeightHigh - 10f)
         ParticleManager.emit(FxPreset.POLLEN_BURST, x + treeWidth * 0.5f, branchHeightLow)
         DialogueBubbleManager.spawn("Blossom gust", x + treeWidth * 0.5f, y - 14f, Color.rgb(255, 238, 244), Color.rgb(190, 120, 150))
     }
