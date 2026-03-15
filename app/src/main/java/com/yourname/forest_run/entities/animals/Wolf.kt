@@ -116,6 +116,7 @@ class Wolf(
             wolfState = WolfState.SPARED
             gameState.addBonus(points = 200, seeds = 3)
             PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
+            gameState.recordSpare()
             DialogueBubbleManager.spawn("Go on.", x + wolfW * 0.5f, y - 20f, Color.rgb(232, 236, 245), Color.rgb(110, 110, 140))
         }
     }

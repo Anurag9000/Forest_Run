@@ -102,6 +102,7 @@ class Fox(
             foxState = FoxState.SPARED
             gameState.addBonus(points = 120, seeds = 2)
             PersistentMemoryManager.recordSpare(context, EntityType.FOX)
+            gameState.recordSpare()
             DialogueBubbleManager.spawn("Fine.", x + foxW * 0.55f, y - 16f, Color.rgb(255, 240, 220), Color.rgb(190, 110, 55))
             return
         }

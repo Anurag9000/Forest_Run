@@ -89,6 +89,7 @@ class Cat(
             // For now, use a simple run-level mercy heart check
             if (gameState.mercyHearts >= 5 && !waving) {
                 triggerSpare()
+                gameState.recordSpare()
             }
         }
     }

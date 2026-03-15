@@ -59,4 +59,24 @@ class GameStateManagerTest {
         assertFalse(state.isBloomActive)
         assertFalse(state.consumeMilestone())
     }
+
+    @Test
+    fun `pacifist rewards flow through game state`() {
+        val state = GameStateManager(context)
+
+        repeat(5) { state.recordCleanPass() }
+        val streakReward = state.consumePacifistReward()
+        assertEquals("Kindness streak +", streakReward?.message)
+
+        state.updatePacifistBiome(Biome.MEADOW)
+        repeat(3) { state.recordCleanPass() }
+        state.updatePacifistBiome(Biome.ORCHARD)
+        val biomeReward = state.consumePacifistReward()
+        assertEquals("Meadow befriended", biomeReward?.message)
+
+        state.recordSpare()
+        state.recordSpare()
+        val spareReward = state.consumePacifistReward()
+        assertEquals("Spare bonus", spareReward?.message)
+    }
 }

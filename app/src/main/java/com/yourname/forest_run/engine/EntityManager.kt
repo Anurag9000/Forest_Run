@@ -94,6 +94,7 @@ class EntityManager(
             if (!entity.hasBeenPassed && entity.hitbox.right < playerPassX) {
                 entity.hasBeenPassed = true
                 entity.performUniqueAction(player, gameState)
+                gameState.recordCleanPass()
                 // Trigger seed orb spawn above the entity (60% base chance)
                 seedOrbManager.trySpawn(
                     centreX    = entity.hitbox.centerX(),

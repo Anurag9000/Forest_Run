@@ -14,6 +14,7 @@ import com.yourname.forest_run.utils.MathUtils
  */
 class GameStateManager(context: Context) {
     private val appContext = context.applicationContext
+    private val pacifistTracker = PacifistTracker()
 
     // -----------------------------------------------------------------------
     // Scroll & distance
@@ -95,6 +96,12 @@ class GameStateManager(context: Context) {
     /** Hearts earned this run by close calls. Resets on REST. */
     var mercyHearts: Int = 0
         private set
+    val cleanPassesThisRun: Int
+        get() = pacifistTracker.cleanPassesThisRun
+    val sparedThisRun: Int
+        get() = pacifistTracker.sparedThisRun
+    val hitsThisRun: Int
+        get() = pacifistTracker.hitsThisRun
 
     // -----------------------------------------------------------------------
     // Speed Debuff (applied by Hedgehog / Hyacinth brush)
@@ -213,6 +220,24 @@ class GameStateManager(context: Context) {
         mercyHearts++
     }
 
+    fun updatePacifistBiome(biome: Biome) {
+        pacifistTracker.updateBiome(biome)
+    }
+
+    fun recordCleanPass() {
+        pacifistTracker.recordCleanPass()
+    }
+
+    fun recordSpare() {
+        pacifistTracker.recordSpare()
+    }
+
+    fun recordHit() {
+        pacifistTracker.recordHit()
+    }
+
+    fun consumePacifistReward(): PacifistReward? = pacifistTracker.consumeReward()
+
     // -----------------------------------------------------------------------
     // Run lifecycle
     // -----------------------------------------------------------------------
@@ -234,6 +259,7 @@ class GameStateManager(context: Context) {
         speedDebuffTimer      = 0f
         lastMilestone         = 0
         milestoneReady        = false
+        pacifistTracker.reset()
     }
 
     /** Persist high score and lifetime seeds to SharedPreferences. */

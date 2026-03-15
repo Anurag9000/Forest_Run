@@ -384,6 +384,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 13: BiomeManager update (colours, entity pool)
         if (::entityManager.isInitialized) {
             entityManager.biomeManager.update(gameState.distanceMetres)
+            gameState.updatePacifistBiome(entityManager.biomeManager.currentBiome)
             if (::parallaxBackground.isInitialized) {
                 val bm = entityManager.biomeManager
                 parallaxBackground.applyBiomeColours(
@@ -415,6 +416,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (collision != null) {
                 when (collision.result) {
                     CollisionResult.HIT -> {
+                        gameState.recordHit()
                         player.triggerRest()  // emits HIT_BURST particles
                         CameraSystem.shakeHit()
                         SfxManager.playHit()          // Phase 20
@@ -447,6 +449,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         runState = RunState.DYING
                     }
                     CollisionResult.STUMBLE -> {
+                        gameState.recordHit()
                         // User Prompt "accompanied by a screen-flash of the forest's dominant color"
                         player.triggerStumble()
                         mercyFlashTimer = mercyFlashDuration
@@ -491,6 +494,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (::gameState.isInitialized) {
             LeitmotifManager.updateDistance(gameState.distanceMetres)
             LeitmotifManager.updateTempo(gameState.scrollSpeed)
+            gameState.consumePacifistReward()?.let { reward ->
+                gameState.addBonus(points = reward.points, seeds = reward.seeds)
+                DialogueBubbleManager.spawn(
+                    text = reward.message,
+                    anchorX = player.x + Player.BASE_WIDTH * 0.5f,
+                    anchorY = player.y - 28f,
+                    fillColor = Color.rgb(236, 255, 220),
+                    borderColor = Color.rgb(90, 150, 70)
+                )
+            }
 
             // Phase 21: 1000-point milestone haptic + camera nudge
             if (gameState.consumeMilestone()) {
