@@ -103,6 +103,18 @@ object ReturnMomentsSystem {
                     kindnessLine(repeatedKindnessCreature),
                     if (RelationshipArcSystem.isTracked(repeatedKindnessCreature)) repeatedKindnessCreature else bondedVisitor
                 )
+            summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL ->
+                ReturnMoment(
+                    "Peace Kept",
+                    peacefulRouteLine(milestoneReward?.type ?: bondedVisitor),
+                    milestoneReward?.type ?: bondedVisitor ?: EntityType.CAT
+                )
+            summary?.pacifistRouteTier == PacifistRouteTier.MERCIFUL && summary.hitsTaken == 0 ->
+                ReturnMoment(
+                    "Mercy Stayed",
+                    mercifulRouteLine(bondedVisitor),
+                    bondedVisitor ?: EntityType.CAT
+                )
             previous.roughRunStreak >= 3 ->
                 when {
                     bondedVisitor == EntityType.DOG || bondedVisitor == EntityType.CAT ->
@@ -222,5 +234,25 @@ object ReturnMomentsSystem {
         EntityType.CACTUS, EntityType.LILY_OF_VALLEY, EntityType.HYACINTH, EntityType.EUCALYPTUS,
         EntityType.VANILLA_ORCHID, EntityType.WEEPING_WILLOW, EntityType.JACARANDA, EntityType.BAMBOO,
         EntityType.CHERRY_BLOSSOM -> "The forest seems to notice when your gentleness starts lasting longer than a single run."
+    }
+
+    private fun peacefulRouteLine(type: EntityType?): String = when (type) {
+        EntityType.CAT -> "The cat kept the whole garden quieter after how peacefully you crossed the path."
+        EntityType.FOX -> "Even the fox's trail looks gentler after a run that stayed peaceful."
+        EntityType.WOLF -> "The grove sounds almost restful after a run that never needed to bare its teeth."
+        EntityType.DOG -> "The dog's joy somehow managed to come home quietly with you."
+        EntityType.OWL -> "The owl left the night calm instead of severe after that run."
+        EntityType.EAGLE -> "Even the sky looks less stern after a run that carried so much peace."
+        else -> "The whole garden keeps the hush of the run you carried home peacefully."
+    }
+
+    private fun mercifulRouteLine(type: EntityType?): String = when (type) {
+        EntityType.CAT -> "The cat seems to trust the quiet shape mercy left behind."
+        EntityType.FOX -> "The fox leaves more room in the trail after a merciful return."
+        EntityType.WOLF -> "The grove remembers when calm held longer than fear."
+        EntityType.DOG -> "The dog's welcome sounds softer when the run comes home full of mercy."
+        EntityType.OWL -> "The owl lets the dark edge feel lighter after a merciful run."
+        EntityType.EAGLE -> "The sky feels less punishing when mercy keeps making it home."
+        else -> "Mercy stayed in the garden longer than the run itself."
     }
 }

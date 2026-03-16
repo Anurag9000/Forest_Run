@@ -39,6 +39,7 @@ object SaveManager {
     private const val KEY_LAST_RUN_QUOTE = "last_run_quote"
     private const val KEY_LAST_RUN_KILLER = "last_run_killer"
     private const val KEY_LAST_RUN_FOREST_MOOD = "last_run_forest_mood"
+    private const val KEY_LAST_RUN_PACIFIST_ROUTE = "last_run_pacifist_route"
     private const val KEY_UNLOCKED_COSTUMES = "unlocked_costumes"
     private const val KEY_ACTIVE_COSTUME = "active_costume"
     private const val KEY_FOREST_MOOD = "forest_mood"
@@ -240,6 +241,7 @@ object SaveManager {
             .putString(KEY_LAST_RUN_QUOTE, summary.restQuote)
             .putString(KEY_LAST_RUN_KILLER, summary.lastKiller?.name)
             .putString(KEY_LAST_RUN_FOREST_MOOD, summary.forestMood.name)
+            .putString(KEY_LAST_RUN_PACIFIST_ROUTE, summary.pacifistRouteTier.name)
             .apply()
     }
 
@@ -267,7 +269,10 @@ object SaveManager {
             restQuote = prefs.getString(KEY_LAST_RUN_QUOTE, "") ?: "",
             forestMood = prefs.getString(KEY_LAST_RUN_FOREST_MOOD, ForestMood.STEADY.name)?.let { raw ->
                 runCatching { ForestMood.valueOf(raw) }.getOrDefault(ForestMood.STEADY)
-            } ?: ForestMood.STEADY
+            } ?: ForestMood.STEADY,
+            pacifistRouteTier = prefs.getString(KEY_LAST_RUN_PACIFIST_ROUTE, PacifistRouteTier.NONE.name)?.let { raw ->
+                runCatching { PacifistRouteTier.valueOf(raw) }.getOrDefault(PacifistRouteTier.NONE)
+            } ?: PacifistRouteTier.NONE
         )
     }
 

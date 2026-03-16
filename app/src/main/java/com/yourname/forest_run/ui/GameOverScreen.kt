@@ -174,6 +174,10 @@ class GameOverScreen(
         ty += 58f
         canvas.drawText(summary.forestMood.restLine, cx, ty, moodPaint)
         ty += 30f
+        if (summary.pacifistRouteTier != com.yourname.forest_run.engine.PacifistRouteTier.NONE) {
+            canvas.drawText("Route: ${summary.pacifistRouteTier.displayName}", cx, ty, moodPaint)
+            ty += 28f
+        }
 
         // 4. Score label + value
         canvas.drawText("SCORE", cx, ty, scoreLabelPaint)

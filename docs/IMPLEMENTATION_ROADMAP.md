@@ -23,7 +23,7 @@ This restores the original roadmap as the required implementation target. Items 
 | 14 | Partial | particle system exists, breathing-forest density incomplete |
 | 15 | Partial | camera effects exist |
 | 16 | Partial | flavor text exists, full quote/dialogue coverage missing |
-| 17 | Partial | mercy, pacifist, and friendship systems exist; deeper route-like payoff still missing |
+| 17 | Partial | mercy, pacifist, and friendship systems exist, and run-level `Kind` / `Merciful` / `Peaceful` payoff now carries into rest and Garden; deeper world-state consequence still missing |
 | 18 | Partial | persistent encounter memory and costumes now exist in baseline form |
 | 19 | Partial | ghost exists, now delays reveal and suppresses after impacts for clearer live play, and still needs final tuning and validation |
 | 20 | Partial | audio states exist, full leitmotif system incomplete |
@@ -173,6 +173,6 @@ Goal: complete, shippable, polished store-ready product.
 - DONE: formal device acceptance checklist now exists and mirrors deterministic scenario names
 - TODO: verify every entity behavior on actual device
 - DONE: seeds, Bloom, mercy hearts, and garden loop are materially clearer in play
-- PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist, including baseline relationship keepsake rewards plus save-backed kindness/tender streak carry-over; finish deeper cross-run payoff and richer route feel
+- PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist, including baseline relationship keepsake rewards, save-backed kindness/tender streak carry-over, and explicit pacifist route tiers; finish deeper cross-run payoff and richer route feel
 - PARTIAL: forest mood, personal return moments, major-creature relationship arcs, and quiet story fragments now exist as explicit implementation work, including repeated-harm caution beats, repeated-kindness warmth beats, milestone-sensitive warmth, Bloom-afterglow baseline, and tracked live encounter cue swaps; deeper authored payoff still needs to be built
 - PARTIAL: startup, rest, and Garden now share a baseline authored session-arc copy layer; finish full sanctuary-grade atmosphere and recovery flow

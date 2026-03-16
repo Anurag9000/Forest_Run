@@ -37,27 +37,36 @@ object GardenSanctuaryPlanner {
             }
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
         val kindnessStreak = repeatedKindnessCreature?.let { PersistentMemoryManager.getKindnessStreak(appContext, it) } ?: 0
+        val routeTier = summary?.pacifistRouteTier ?: PacifistRouteTier.NONE
 
         val fireflies = when (mood) {
             ForestMood.GENTLE -> 4 + moodState.moodStreak.coerceAtMost(4)
             ForestMood.RECKLESS -> 1
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3 + (moodState.moodStreak / 2).coerceAtMost(2)
-        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) + (kindnessStreak / 2).coerceAtMost(2) - if (repeatedHarmCreature != null) 1 else 0
+        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) + (kindnessStreak / 2).coerceAtMost(2) - if (repeatedHarmCreature != null) 1 else 0 +
+            when (routeTier) {
+                PacifistRouteTier.NONE -> 0
+                PacifistRouteTier.KIND -> 1
+                PacifistRouteTier.MERCIFUL -> 2
+                PacifistRouteTier.PEACEFUL -> 3
+            }
 
         val petals = when (mood) {
             ForestMood.GENTLE -> 3
             ForestMood.RECKLESS -> 5
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3
-        } + if ((summary?.sparedCount ?: 0) > 0) 1 else 0 + if (repeatedKindnessCreature != null) 1 else 0
+        } + if ((summary?.sparedCount ?: 0) > 0) 1 else 0 + if (repeatedKindnessCreature != null) 1 else 0 +
+            if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 1 else 0
 
         val bloomPatches = when (mood) {
             ForestMood.GENTLE -> 2
             ForestMood.RECKLESS -> 0
             ForestMood.FEARFUL -> 1
             ForestMood.STEADY -> 1
-        } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0 + (kindnessStreak / 3).coerceAtMost(1)
+        } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0 + (kindnessStreak / 3).coerceAtMost(1) +
+            if (routeTier == PacifistRouteTier.PEACEFUL) 1 else 0
 
         val canopyShadeAlpha = when (mood) {
             ForestMood.GENTLE -> 26
@@ -121,7 +130,9 @@ object GardenSanctuaryPlanner {
             } else {
                 "The sanctuary lowers its voice until your breathing does too."
             }
-            ForestMood.GENTLE -> if (warmBonds.isNotEmpty()) {
+            ForestMood.GENTLE -> if (routeTier == PacifistRouteTier.PEACEFUL) {
+                "The sanctuary has started keeping the whole shape of your peaceful runs."
+            } else if (warmBonds.isNotEmpty()) {
                 "The sanctuary opens faster when you keep coming home gently."
             } else if (repeatedKindnessCreature != null) {
                 "The sanctuary has started trusting the gentler habits you keep repeating."
@@ -145,6 +156,10 @@ object GardenSanctuaryPlanner {
                 featuredReward.summary
             repeatedKindnessCreature != null && kindnessStreak >= 2 ->
                 "${formatEntityName(repeatedKindnessCreature)} has started leaving trust behind instead of only memory."
+            routeTier == PacifistRouteTier.PEACEFUL ->
+                "The garden kept the quiet of that peaceful run instead of letting it disappear."
+            routeTier == PacifistRouteTier.MERCIFUL ->
+                "Mercy stayed in the garden long enough to change how it holds itself tonight."
             strongestBond != null && (summary?.sparedCount ?: 0) > 0 ->
                 "${formatEntityName(strongestBond)} stayed in the garden's mood after that run."
             strongestBond != null && (summary?.bloomConversions ?: 0) >= 2 ->

@@ -114,6 +114,8 @@ class GameStateManager(context: Context) {
         get() = pacifistTracker.sparedThisRun
     val hitsThisRun: Int
         get() = pacifistTracker.hitsThisRun
+    val pacifistRouteTier: PacifistRouteTier
+        get() = pacifistTracker.currentRouteTier(mercyHearts, kindnessChain)
 
     // -----------------------------------------------------------------------
     // Speed Debuff (applied by Hedgehog / Hyacinth brush)
@@ -260,7 +262,8 @@ class GameStateManager(context: Context) {
                 hitsTaken = hitsThisRun,
                 seedsCollected = seedsThisRun,
                 bloomConversions = bloomConversionsThisRun
-            )
+            ),
+            pacifistRouteTier = pacifistRouteTier
         )
 
     /**
@@ -276,6 +279,7 @@ class GameStateManager(context: Context) {
     /** Increment mercy hearts (called by collision system on MERCY_MISS). */
     fun addMercyHeart() {
         mercySystem.recordMercyMiss()
+        pacifistTracker.updateRouteReward(mercyHearts, kindnessChain)
     }
 
     fun updatePacifistBiome(biome: Biome) {
@@ -285,16 +289,19 @@ class GameStateManager(context: Context) {
     fun recordCleanPass() {
         mercySystem.recordCleanPass()
         pacifistTracker.recordCleanPass()
+        pacifistTracker.updateRouteReward(mercyHearts, kindnessChain)
     }
 
     fun recordSpare() {
         mercySystem.recordSpare()
         pacifistTracker.recordSpare()
+        pacifistTracker.updateRouteReward(mercyHearts, kindnessChain)
     }
 
     fun recordHit() {
         mercySystem.recordHit()
         pacifistTracker.recordHit()
+        pacifistTracker.updateRouteReward(mercyHearts, kindnessChain)
     }
 
     fun consumePacifistReward(): PacifistReward? = pacifistTracker.consumeReward()

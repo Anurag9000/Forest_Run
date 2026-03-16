@@ -140,6 +140,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 #### Soft Fall / Rest State
 
 - `Partial`: current runtime restores the return-to-Garden loop, and rest now includes authored recovery/carry-home copy plus a non-mutating preview of the likely Garden return tone; the full calm reflective sit-down framing is still weaker than the original dream spec.
+- `Partial`: mercy-oriented runs now also surface explicit route tiers in the carry-home layer, but the full restorative authored recovery is still incomplete.
 - `Partial`: rest-like player state exists.
 - `Partial`: short death-to-overlay pacing exists.
 - `TODO`: true calm reflective end-run summary with seeds, combo/streak, contextual quote, and more restorative emotional framing.
@@ -163,6 +164,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 - `Implemented`: seed collection affects progression.
 - `Partial`: kindness bonus exists for Cat.
 - `Partial`: close call / mercy effects exist.
+- `Partial`: mercy-oriented play now also classifies explicit run-level route tiers for carry-home presentation.
 - `TODO`: exact old scoring numbers and multiplier model if still desired.
 - `TODO`: slow-mo sparkle effect on perfect dodge.
 

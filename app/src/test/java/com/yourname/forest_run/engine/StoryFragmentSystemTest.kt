@@ -187,4 +187,32 @@ class StoryFragmentSystemTest {
         assertTrue(line!!.contains("gentler habits") || line.contains("trusting"))
         assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_warm_cat"))
     }
+
+    @Test
+    fun `peaceful route unlocks a route reflection page`() {
+        val summary = RunSummary(
+            score = 1_260,
+            distanceM = 820f,
+            isNewHighScore = false,
+            highScore = 1_500,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 8,
+            cleanPasses = 10,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 9,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("peace") || line.contains("listening"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_route_peaceful"))
+    }
 }

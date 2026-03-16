@@ -226,6 +226,33 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `peaceful route creates a dedicated return moment`() {
+        val summary = RunSummary(
+            score = 1_540,
+            distanceM = 940f,
+            isNewHighScore = false,
+            highScore = 2_000,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 8,
+            cleanPasses = 11,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 12,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 12_000L)
+
+        assertEquals("Peace Kept", moment?.title)
+        assertTrue(moment?.line?.contains("peace", ignoreCase = true) == true || moment?.line?.contains("quiet", ignoreCase = true) == true)
+    }
+
+    @Test
     fun `preview garden moment does not mutate saved return state`() {
         val before = ReturnMomentState(lastActiveAtMs = 123L, lastGardenGreetingDay = 4L, roughRunStreak = 1)
         SaveManager.saveReturnMomentState(context, before)

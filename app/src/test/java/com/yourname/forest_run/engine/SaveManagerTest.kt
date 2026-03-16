@@ -121,7 +121,8 @@ class SaveManagerTest {
             bloomConversions = 3,
             lastKiller = EntityType.WOLF,
             restQuote = "The grove asks for patience before bravery.",
-            forestMood = ForestMood.GENTLE
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
         )
 
         SaveManager.saveLastRunSummary(context, summary)

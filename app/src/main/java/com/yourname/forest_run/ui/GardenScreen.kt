@@ -595,6 +595,10 @@ class GardenScreen(
 
         canvas.drawText("Tone: ${summary.forestMood.displayName}", lastRunRect.left + 18f, y, statsLabelPaint)
         y += 22f
+        if (summary.pacifistRouteTier != com.yourname.forest_run.engine.PacifistRouteTier.NONE) {
+            canvas.drawText("Route: ${summary.pacifistRouteTier.displayName}", lastRunRect.left + 18f, y, statsLabelPaint)
+            y += 22f
+        }
         val killerText = summary.lastKiller?.let { formatEntityName(it) } ?: "None"
         canvas.drawText("Last killer: $killerText", lastRunRect.left + 18f, y, statsLabelPaint)
         y += 22f
@@ -693,9 +697,9 @@ class GardenScreen(
         activeCostume = CostumeManager.activeCostume(context)
         if (newUnlocks.isNotEmpty()) {
             wardrobeMessage = if (newUnlocks.size == 1) {
-                newUnlocks.first().unlockLabel
+                newUnlocks.first().line
             } else {
-                newUnlocks.joinToString(" + ") { it.displayName }
+                newUnlocks.joinToString("  •  ") { it.style.displayName }
             }
             wardrobeMessageTimer = 3f
         }

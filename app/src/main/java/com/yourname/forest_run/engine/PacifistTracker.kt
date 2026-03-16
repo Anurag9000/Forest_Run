@@ -4,7 +4,8 @@ data class PacifistReward(
     val message: String,
     val points: Int,
     val seeds: Int,
-    val friendBiome: Biome? = null
+    val friendBiome: Biome? = null,
+    val routeTier: PacifistRouteTier? = null
 )
 
 /**
@@ -24,6 +25,7 @@ class PacifistTracker {
     private var sparedThisBiome: Int = 0
     private var wasHitThisBiome: Boolean = false
     private var pendingReward: PacifistReward? = null
+    private var highestRewardedRouteTier: PacifistRouteTier = PacifistRouteTier.NONE
 
     fun reset() {
         cleanPassesThisRun = 0
@@ -34,6 +36,7 @@ class PacifistTracker {
         sparedThisBiome = 0
         wasHitThisBiome = false
         pendingReward = null
+        highestRewardedRouteTier = PacifistRouteTier.NONE
     }
 
     fun updateBiome(biome: Biome) {
@@ -47,10 +50,11 @@ class PacifistTracker {
                 val biomeName = currentBiome!!.name.lowercase().replace('_', ' ')
                     .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
                 pendingReward = PacifistReward(
-                    message = "$biomeName befriended",
-                    points = 350,
+                    message = "$biomeName at peace",
+                    points = 380,
                     seeds = 2,
-                    friendBiome = currentBiome
+                    friendBiome = currentBiome,
+                    routeTier = currentRouteTier(0, 0)
                 )
             }
 
@@ -66,7 +70,7 @@ class PacifistTracker {
         cleanPassesThisBiome++
         if (cleanPassesThisRun % 5 == 0) {
             pendingReward = PacifistReward(
-                message = "Kindness streak +",
+                message = "Kindness carries",
                 points = 150,
                 seeds = 1
             )
@@ -78,8 +82,8 @@ class PacifistTracker {
         sparedThisBiome++
         if (sparedThisRun % 2 == 0) {
             pendingReward = PacifistReward(
-                message = "Spare bonus",
-                points = 220,
+                message = "Mercy kept",
+                points = 240,
                 seeds = 1
             )
         }
@@ -90,6 +94,62 @@ class PacifistTracker {
         wasHitThisBiome = true
     }
 
+    fun updateRouteReward(mercyHearts: Int, kindnessChain: Int) {
+        val tier = currentRouteTier(mercyHearts, kindnessChain)
+        if (tier == PacifistRouteTier.NONE || tier.ordinal <= highestRewardedRouteTier.ordinal || pendingReward != null) {
+            return
+        }
+        highestRewardedRouteTier = tier
+        pendingReward = when (tier) {
+            PacifistRouteTier.KIND -> PacifistReward(
+                message = "Mercy noticed",
+                points = 180,
+                seeds = 1,
+                routeTier = tier
+            )
+            PacifistRouteTier.MERCIFUL -> PacifistReward(
+                message = "Merciful route",
+                points = 320,
+                seeds = 2,
+                routeTier = tier
+            )
+            PacifistRouteTier.PEACEFUL -> PacifistReward(
+                message = "Forest at peace",
+                points = 520,
+                seeds = 3,
+                routeTier = tier
+            )
+            PacifistRouteTier.NONE -> null
+        }
+    }
+
+    fun currentRouteTier(mercyHearts: Int, kindnessChain: Int): PacifistRouteTier =
+        routeTierFor(
+            mercyHearts = mercyHearts,
+            kindnessChain = kindnessChain,
+            cleanPasses = cleanPassesThisRun,
+            sparedCount = sparedThisRun,
+            hitsTaken = hitsThisRun
+        )
+
     fun consumeReward(): PacifistReward? =
         pendingReward.also { pendingReward = null }
+
+    companion object {
+        fun routeTierFor(
+            mercyHearts: Int,
+            kindnessChain: Int,
+            cleanPasses: Int,
+            sparedCount: Int,
+            hitsTaken: Int
+        ): PacifistRouteTier = when {
+            hitsTaken == 0 && mercyHearts >= 5 && sparedCount >= 2 && cleanPasses >= 10 ->
+                PacifistRouteTier.PEACEFUL
+            hitsTaken == 0 && (sparedCount >= 2 || (mercyHearts >= 3 && kindnessChain >= 7 && cleanPasses >= 6)) ->
+                PacifistRouteTier.MERCIFUL
+            hitsTaken <= 1 && (mercyHearts >= 2 || sparedCount >= 1 || (kindnessChain >= 4 && cleanPasses >= 4)) ->
+                PacifistRouteTier.KIND
+            else -> PacifistRouteTier.NONE
+        }
+    }
 }

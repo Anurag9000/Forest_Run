@@ -211,6 +211,24 @@ object StoryFragmentSystem {
             )
         }
 
+        if (summary != null && summary.hitsTaken == 0 && summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL) {
+            return StoryFragment(
+                id = "garden_route_peaceful",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = "The whole garden seems to be listening to the peace you brought back with you.",
+                unlocksPageId = "page_route_peaceful"
+            )
+        }
+
+        if (summary != null && summary.hitsTaken == 0 && summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL) {
+            return StoryFragment(
+                id = "garden_route_merciful",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = "Mercy left the path feeling less guarded than it did before the run began.",
+                unlocksPageId = "page_route_merciful"
+            )
+        }
+
         if (strongest != null) {
             val (type, stage) = strongest
             if (stage == RelationshipStage.MILESTONE) {

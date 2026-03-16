@@ -205,7 +205,7 @@ Expected qualities:
 - Implemented: `ReturnMomentsSystem` now also exposes a non-mutating preview path so rest and startup flow can foreshadow Garden return beats without consuming return-state persistence.
 - Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, baseline milestone keepsake rewards, and tracked live encounter cue swaps for Cat/Fox/Wolf/Dog; deeper authored stage consequences still need expansion.
 - Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
-- Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, repeated-harm caution pages, repeated-kindness warmth pages, milestone-gentleness pages, and Bloom-afterglow pages in baseline form.
+- Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, repeated-harm caution pages, repeated-kindness warmth pages, milestone-gentleness pages, Bloom-afterglow pages, and baseline peaceful-route reflections.
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, repeated-harm caution traces, and repeated-kindness trust traces from mood, summary, and relationship state.
 - Implemented: `SessionArcComposer` now centralizes authored startup, Garden-arrival, and rest carry-home copy so the macro loop uses shared emotional state instead of disconnected screen-local strings.
 - Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
@@ -213,7 +213,7 @@ Expected qualities:
 - Implemented: `TreeEncounterFlavor` now centralizes authored tree payoff text so curtain/canopy/gap/gust feedback stays consistent instead of scattering across tree classes.
 - Implemented: `BirdEncounterFlavor` now centralizes authored warning/pass text for the non-relationship bird family instead of leaving bird payoff as scattered fallback strings.
 - Implemented: `AnimalEncounterFlavor` now centralizes non-relationship animal fairness/payoff text where relationship logic is not the right source of truth.
-- Partial: persistence schema now also carries kindness/tender streak state for cross-run emotional payoff.
+- Partial: persistence schema now also carries kindness/tender streak state plus last-run pacifist route tier for cross-run emotional payoff.
 - TODO: expand persistence further for richer fragment unlock state and broader relationship milestone presentation.
 
 ## 13. Relationship Arc Authoring
@@ -249,7 +249,7 @@ Expected layers:
 
 ### Current Status
 
-- Implemented: dedicated return-state data now exists for greetings, absence reactions, rough-run comfort beats, milestone Garden messages, and stronger Bloom / gentle-bond combinations.
+- Implemented: dedicated return-state data now exists for greetings, absence reactions, rough-run comfort beats, milestone Garden messages, stronger Bloom / gentle-bond combinations, and peaceful/merciful route return beats.
 - Partial: rest flow can now preview return-state tone before the Garden transition without mutating saved greeting state.
 - TODO: deepen authoring hooks further and broaden emotional-state coverage beyond the current milestone, Bloom, gentle-return, and baseline preview combinations.
 
@@ -288,8 +288,22 @@ Expected outputs:
 ### Current Status
 
 - Partial: contextual rest quotes and some dialogue systems already exist.
-- Partial: milestone-sensitive and Bloom-sensitive Garden fragment selection now exists in baseline form.
+- Partial: milestone-sensitive, Bloom-sensitive, and route-sensitive Garden fragment selection now exists in baseline form.
 - TODO: formalize broader fragment authoring, unlock state, and short-form poetic content selection.
+
+## 15B. Mercy Route Presentation
+
+Expected qualities:
+
+- mercy-oriented runs should have an explicit route feel, not only counters
+- route tone should travel through run rewards, rest, Garden, and persistence
+- peaceful runs should read differently from merely gentle runs
+
+### Current Status
+
+- Implemented: `PacifistTracker` now classifies `Kind`, `Merciful`, and `Peaceful` route tiers from live run behavior.
+- Partial: route tiers now flow through `RunSummary`, Garden/rest presentation, return moments, sanctuary carry-home, and fragment unlocks in baseline form.
+- TODO: deepen route consequences further into broader world-state and production presentation.
 
 ## 15A. Session Arc Composition
 

@@ -25,6 +25,10 @@ object SessionArcComposer {
 
         val atmosphereLine = when {
             summary == null -> "The willow has kept the first path quiet for you."
+            summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL ->
+                "The garden is still holding the hush of the last peaceful run."
+            summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL ->
+                "Mercy left the path quieter than usual."
             summary.forestMood == ForestMood.FEARFUL || summary.hitsTaken >= 2 ->
                 "Home keeps its voice low until the roughness leaves your hands."
             summary.forestMood == ForestMood.GENTLE && summary.sparedCount > 0 ->
@@ -44,6 +48,8 @@ object SessionArcComposer {
 
         val idleSupportLine = when {
             summary == null -> "the willow kept your place"
+            summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
+                "the garden still sounds softer after that run"
             summary.forestMood == ForestMood.FEARFUL -> "the path can wait for steadier hands"
             summary.forestMood == ForestMood.GENTLE -> "the garden remembers the softer version of that run"
             summary.bloomConversions >= 2 -> "there is still light left in the branches"
@@ -57,6 +63,7 @@ object SessionArcComposer {
 
         val readySupportLine = when {
             summary == null -> "the first steps are enough"
+            summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL -> "carry the quiet you earned back into the path"
             summary.forestMood == ForestMood.GENTLE -> "carry the gentler pace with you"
             summary.forestMood == ForestMood.FEARFUL -> "nothing is asking for speed first"
             summary.bloomConversions >= 2 -> "the path still remembers Bloom"
@@ -78,6 +85,8 @@ object SessionArcComposer {
         val previewMoment = ReturnMomentsSystem.previewGardenMoment(appContext, summary)
 
         val subtitle = when {
+            summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
+                summary.pacifistRouteTier.restLine
             summary.hitsTaken == 0 && summary.cleanPasses >= 8 ->
                 "The run comes down gently."
             summary.forestMood == ForestMood.FEARFUL ->
@@ -127,9 +136,17 @@ object SessionArcComposer {
         }
         return when (summary.forestMood) {
             ForestMood.FEARFUL -> "Nothing here is asking you to hurry back out."
-            ForestMood.GENTLE -> "The gentler shape of that run is still resting here."
+            ForestMood.GENTLE -> if (summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) {
+                summary.pacifistRouteTier.gardenLine
+            } else {
+                "The gentler shape of that run is still resting here."
+            }
             ForestMood.RECKLESS -> "Even stirred-up air can settle once it reaches home."
-            ForestMood.STEADY -> "The garden kept the calmer part of that run."
+            ForestMood.STEADY -> if (summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) {
+                summary.pacifistRouteTier.gardenLine
+            } else {
+                "The garden kept the calmer part of that run."
+            }
         }
     }
 }

@@ -167,6 +167,7 @@ Current baseline:
 - the Garden can now answer long absences, rough streaks, stronger bonds, Bloom-heavy runs, repeated kindness, and gentle milestone returns with distinct return moments
 - milestone bonds now produce warmer and more specific return lines instead of only generic greetings
 - rest can now preview the likely homeward tone before the Garden transition without consuming the saved return beat
+- peaceful and merciful runs can now surface distinct homeward return beats instead of only borrowing generic gentle-return lines
 - broader authored combinations are still TODO
 
 #### 3.8.4 Quiet Story Fragments
@@ -180,13 +181,14 @@ Current baseline:
 Current baseline:
 
 - rest quotes now route through a fragment system instead of only hard-coded quote branches
-- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, repeated-kindness warmth reflections, milestone-gentleness reflections, Bloom-afterglow reflections, and track unlocked memory pages
+- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, repeated-kindness warmth reflections, milestone-gentleness reflections, Bloom-afterglow reflections, peaceful-route reflections, and track unlocked memory pages
 - broader creature-thought coverage and richer weather-linked fragments are still TODO
 
 ### Current Status
 
 - Implemented: two-tap menu start, run loop, game over, restart, garden unlock persistence.
 - Partial: menu startup and rest recovery now share authored copy derived from the same saved emotional state, so the session begins and ends with clearer continuity.
+- Partial: mercy-oriented runs now also travel home as explicit route tiers instead of only appearing as near-miss or spare counters.
 - Partial: the remaining animal-family ordinary-play payoffs are stronger, with clearer low-threat fairness and more visible bond reward feedback.
 - TODO: make the whole session arc feel authored, readable, and emotionally coherent in real play.
 

@@ -67,18 +67,18 @@ class GameStateManagerTest {
 
         repeat(5) { state.recordCleanPass() }
         val streakReward = state.consumePacifistReward()
-        assertEquals("Kindness streak +", streakReward?.message)
+        assertEquals("Kindness carries", streakReward?.message)
 
         state.updatePacifistBiome(Biome.MEADOW)
         repeat(3) { state.recordCleanPass() }
         state.updatePacifistBiome(Biome.ORCHARD)
         val biomeReward = state.consumePacifistReward()
-        assertEquals("Meadow befriended", biomeReward?.message)
+        assertEquals("Meadow at peace", biomeReward?.message)
 
         state.recordSpare()
         state.recordSpare()
         val spareReward = state.consumePacifistReward()
-        assertEquals("Spare bonus", spareReward?.message)
+        assertEquals("Mercy kept", spareReward?.message)
     }
 
     @Test
@@ -158,5 +158,6 @@ class GameStateManagerTest {
         assertEquals(1, summary.bloomConversions)
         assertEquals(EntityType.WOLF, summary.lastKiller)
         assertEquals(ForestMood.GENTLE, summary.forestMood)
+        assertEquals(PacifistRouteTier.KIND, summary.pacifistRouteTier)
     }
 }

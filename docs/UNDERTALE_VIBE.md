@@ -109,7 +109,7 @@ Examples:
 
 ### Current Status
 
-- Partial: mercy hearts, pacifist rewards, and friendship persistence exist.
+- Partial: mercy hearts, pacifist rewards, and friendship persistence exist, and the run can now resolve into explicit `Kind`, `Merciful`, and `Peaceful` route tiers that carry into rest and Garden.
 - TODO: full mercy reward language, stronger spare visibility, and route-like world-state payoff.
 
 ---
@@ -151,6 +151,7 @@ Examples:
 - Implemented: ghost persistence, persistent memory manager baseline, and costume wardrobe baseline.
 - Partial: ghost readability now delays reveal at run start and suppresses after impacts so it stops crowding the live runner during recovery.
 - Partial: startup and rest now reuse shared carry-home session copy so the forest feels more aware between screens instead of only inside the Garden hub.
+- Partial: wardrobe unlock surfacing is now more relationship-aware instead of generic when new bond outfits arrive.
 - TODO: richer repeat-killer system and final tasteful ghost UX tuning.
 
 ### 4.5 Forest Memory Layer

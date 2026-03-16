@@ -20,5 +20,6 @@ data class RunSummary(
     val bloomConversions: Int,
     val lastKiller: EntityType?,
     val restQuote: String,
-    val forestMood: ForestMood
+    val forestMood: ForestMood,
+    val pacifistRouteTier: PacifistRouteTier = PacifistRouteTier.NONE
 )

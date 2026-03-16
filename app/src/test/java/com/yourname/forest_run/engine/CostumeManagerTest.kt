@@ -43,9 +43,10 @@ class CostumeManagerTest {
                 CostumeStyle.MOON_CAPE,
                 CostumeStyle.BLOOM_RIBBON
             ),
-            newUnlocks
+            newUnlocks.map { it.style }
         )
         assertTrue(available.containsAll(CostumeStyle.entries))
+        assertTrue(newUnlocks.first().line.isNotBlank())
     }
 
     @Test
@@ -64,7 +65,7 @@ class CostumeManagerTest {
 
         val newUnlocks = CostumeManager.refreshUnlocks(context)
 
-        assertTrue(newUnlocks.contains(CostumeStyle.FLOWER_CROWN))
+        assertTrue(newUnlocks.any { it.style == CostumeStyle.FLOWER_CROWN })
         assertTrue(CostumeManager.availableCostumes(context).contains(CostumeStyle.FLOWER_CROWN))
     }
 }
