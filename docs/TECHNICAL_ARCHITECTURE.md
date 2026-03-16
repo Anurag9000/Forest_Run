@@ -51,7 +51,7 @@ Expected transitions:
 
 ### Current Status
 
-- Implemented: garden/menu, playing, Bloom, rest summary, and fade-back-to-Garden routing.
+- Implemented: garden/menu, playing, Bloom, rest summary, and fade-back-to-Garden routing, with a stronger Bloom world-state presentation layer.
 - TODO: more fully authored emotional transitions and softer rest presentation.
 
 ## 4. Player State Machine

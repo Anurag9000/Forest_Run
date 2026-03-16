@@ -62,6 +62,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     private val segRect    = RectF()
     private val glowRect   = RectF()
     private val partRect   = RectF()
+    private val bloomPanelRect = RectF()
 
     // ── Animated fill ─────────────────────────────────────────────────────
     /** Smoothly-lerped fill level (0..SEG_COUNT). Drives segment rendering. */
@@ -151,6 +152,15 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         color = Color.argb(220, 210, 255, 210); textSize = SMALL_SIZE; typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val bloomPanelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(0, 120, 52, 18)
+        style = Paint.Style.FILL
+    }
+    private val bloomPanelBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(0, 255, 214, 136)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
 
     // ── Update ────────────────────────────────────────────────────────────
 
@@ -215,6 +225,15 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     private fun drawBloomMeter(canvas: Canvas, state: GameStateManager) {
         val cx = (METER_LEFT + METER_RIGHT) / 2f
 
+        if (state.isBloomActive) {
+            val pulse = 0.6f + 0.4f * sin(bloomPulse)
+            bloomPanelRect.set(METER_LEFT - 18f, METER_TOP - 10f, METER_RIGHT + 18f, METER_BOTTOM + 54f)
+            bloomPanelPaint.alpha = (55f + 45f * pulse).toInt().coerceIn(0, 160)
+            bloomPanelBorderPaint.alpha = (140f + 90f * pulse).toInt().coerceIn(0, 255)
+            canvas.drawRoundRect(bloomPanelRect, 14f, 14f, bloomPanelPaint)
+            canvas.drawRoundRect(bloomPanelRect, 14f, 14f, bloomPanelBorderPaint)
+        }
+
         // Draw segments
         for (i in 0 until SEG_COUNT) {
             val left  = METER_LEFT + i * (segW + SEG_GAP)
@@ -277,7 +296,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         canvas.drawText(labelText, cx, METER_BOTTOM + 22f, labelPaint)
 
         val statusText = if (state.isBloomActive) {
-            String.format("%.1fs  •  %d converts", state.bloomSecondsRemaining, state.bloomConversionsThisRun)
+            String.format("%.1fs  •  %d converts  •  world open", state.bloomSecondsRemaining, state.bloomConversionsThisRun)
         } else {
             "${state.bloomMeter}/${state.bloomSeedTarget}"
         }

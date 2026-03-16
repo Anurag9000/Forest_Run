@@ -241,9 +241,9 @@ Jump height is tied to touch duration. Short tap = low hop. Full hold = maximum 
 
 ### Current Status
 
-- Implemented: seed orbs, Bloom fill, lifetime seed persistence.
+- Implemented: seed orbs, Bloom fill, lifetime seed persistence, and stronger Bloom world-shift feedback.
 - Implemented: several flora now stage tempting seed and timing reads more explicitly in ordinary play.
-- TODO: fix player-facing visibility. Current user feedback says seeds and Bloom are not reading clearly enough in practice.
+- PARTIAL: player-facing Bloom readability is materially stronger through HUD/presentation updates; final proof still depends on real-device validation.
 
 ---
 

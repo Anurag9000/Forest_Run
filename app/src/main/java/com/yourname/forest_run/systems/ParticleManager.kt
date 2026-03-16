@@ -313,6 +313,24 @@ enum class FxPreset {
         )
     },
 
+    /** Large world-space burst to make Bloom feel like a scene change, not only a player buff. */
+    BLOOM_WORLD_BURST {
+        override fun build(x: Float, y: Float) = ParticleEmitter(
+            x = x, y = y,
+            isBurst = true, count = 34,
+            angleMin = 0f, angleMax = 360f,
+            speedMin = 80f, speedMax = 320f,
+            startColor = Color.argb(255, 255, 236, 170),
+            endColor = Color.TRANSPARENT,
+            startSize = 16f, endSize = 1f,
+            isCircle = false,
+            spinRateMin = 45f, spinRateMax = 220f,
+            gravity = -25f, drag = 0.92f,
+            lifetimeMin = 0.40f, lifetimeMax = 0.95f,
+            spawnRadiusX = 72f, spawnRadiusY = 52f
+        )
+    },
+
     /** Trailing petals that follow the player during Bloom. */
     BLOOM_TRAIL {
         override fun build(x: Float, y: Float) = ParticleEmitter(

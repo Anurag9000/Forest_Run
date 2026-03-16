@@ -88,8 +88,12 @@ class GameStateManager(context: Context) {
     private var bloomTimer: Float = 0f
     val bloomSecondsRemaining: Float
         get() = (GameConstants.BLOOM_DURATION_S - bloomTimer).coerceAtLeast(0f)
+    val bloomTimeFractionRemaining: Float
+        get() = if (!isBloomActive) 0f else bloomSecondsRemaining / GameConstants.BLOOM_DURATION_S
     val bloomSeedTarget: Int
         get() = GameConstants.BLOOM_SEED_COUNT
+    val bloomMeterFraction: Float
+        get() = bloomMeter / GameConstants.BLOOM_SEED_COUNT.toFloat()
     var bloomConversionsThisRun: Int = 0
         private set
 

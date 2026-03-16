@@ -122,6 +122,22 @@ class GameStateManagerTest {
     }
 
     @Test
+    fun `bloom fractions reflect both meter build and active window`() {
+        val state = GameStateManager(context)
+
+        repeat(GameConstants.BLOOM_SEED_COUNT / 2) { state.collectSeed() }
+        assertEquals(0.5f, state.bloomMeterFraction, 0.001f)
+        assertEquals(0f, state.bloomTimeFractionRemaining, 0.001f)
+
+        repeat(GameConstants.BLOOM_SEED_COUNT / 2) { state.collectSeed() }
+        assertTrue(state.isBloomActive)
+        assertEquals(1f, state.bloomTimeFractionRemaining, 0.001f)
+
+        state.update(GameConstants.BLOOM_DURATION_S / 2f)
+        assertTrue(state.bloomTimeFractionRemaining in 0.45f..0.55f)
+    }
+
+    @Test
     fun `run summary captures current run state`() {
         val state = GameStateManager(context)
         repeat(3) { state.collectSeed() }

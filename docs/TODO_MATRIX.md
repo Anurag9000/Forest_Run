@@ -19,7 +19,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - TODO: verify every entity’s unique behavior on actual device and retune any behavior that still fails to read in normal play.
 - TODO: finish final device-proofing for the latest cactus, jacaranda, cherry blossom, owl, eagle, and broader bird/animal passes that still need real phone validation.
-- PARTIAL: Bloom now has a stronger activation burst, player-following effects, HUD conversion feedback, and environmental reactions; finish the full world-transforming power-event feel.
+- PARTIAL: Bloom now has a stronger activation burst, player-following effects, world-tint transformation, conversion world bursts, stronger HUD paneling, and a distinct surge haptic; finish real-device proofing and the last authored power-event polish.
 
 ## Documentation And Canonical Spec TODOs
 
@@ -31,7 +31,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - TODO: full authored garden atmosphere at startup.
 - TODO: stronger early-game readability and onboarding.
-- TODO: full Bloom spectacle, including stronger transformation feel.
+- PARTIAL: Bloom spectacle now includes a full-screen/world shift, stronger conversion spectacle, and stronger active-state HUD framing; finish final authored polish and device validation.
 - TODO: softer authored failure presentation with richer reflection.
 - PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, and visible bond traces; finish the full restorative scene and startup atmosphere.
 
@@ -133,7 +133,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - TODO: full bespoke parallax/background artwork.
 - TODO: denser petals, fireflies, leaf drift, and living-forest ambience.
-- TODO: stronger Bloom audiovisual transformation.
+- PARTIAL: Bloom audiovisual transformation is materially stronger through the new world shift, screen treatment, and surge haptic; finish final music/SFX polish and on-device tuning.
 - TODO: complete forest leitmotif treatment across all music states.
 - TODO: final polish pass for haptics, SFX timing, and visual juice.
 

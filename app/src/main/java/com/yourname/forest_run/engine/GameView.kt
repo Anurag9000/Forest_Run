@@ -119,10 +119,18 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val bloomScreenPaint = Paint().apply {
         color = Color.argb(0, 255, 204, 96)
     }
+    private val bloomGlowPaint = Paint().apply {
+        color = Color.argb(0, 255, 228, 170)
+    }
     private val bloomFramePaint = Paint().apply {
         color = Color.argb(0, 255, 232, 170)
         style = Paint.Style.STROKE
         strokeWidth = 14f
+    }
+    private val bloomInnerFramePaint = Paint().apply {
+        color = Color.argb(0, 255, 246, 214)
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
     }
     private val bloomFlashPaint = Paint().apply {
         color = Color.argb(0, 255, 245, 220)
@@ -431,9 +439,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 5: update game state (scroll speed lives here now)
         gameState.update(deltaTime)
 
-        // Phase 4: update parallax with state's scroll speed
-        if (::parallaxBackground.isInitialized)
+        if (::parallaxBackground.isInitialized) {
+            parallaxBackground.setBloomState(
+                isActive = gameState.isBloomActive,
+                activationLevel = bloomActivationFlash / 0.32f
+            )
             parallaxBackground.update(deltaTime, gameState.scrollSpeed)
+        }
 
         // Phase 5: update HUD
         if (::hud.isInitialized) hud.update(deltaTime, gameState)
@@ -458,10 +470,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             player.activateBloom()
             LeitmotifManager.playBloom()
             SfxManager.playBloomActivate()
-            HapticManager.longPulse()
+            HapticManager.bloomSurge()
             CameraSystem.shakeBloom()
             bloomActivationFlash = 0.32f
             ParticleManager.emit(FxPreset.BLOOM_ACTIVATE, player.x + Player.BASE_WIDTH / 2f, player.y + Player.BASE_HEIGHT / 2f)
+            ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, player.x + Player.BASE_WIDTH / 2f, player.y + Player.BASE_HEIGHT * 0.35f)
         } else if (!gameState.isBloomActive && player.isInvincible) {
             player.deactivateBloom()
             LeitmotifManager.endBloom(gameState.distanceMetres)
@@ -619,7 +632,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 entityManager.draw(canvas)
                 // 3b. Seed orbs — drawn above entities, below player
                 val bloomFrac = if (::gameState.isInitialized)
-                    gameState.bloomMeter / GameConstants.BLOOM_SEED_COUNT.toFloat()
+                    gameState.bloomMeterFraction
                 else 0f
                 entityManager.drawOrbs(canvas, bloomFrac)
             }
@@ -661,10 +674,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         if (::gameState.isInitialized && gameState.isBloomActive) {
             val pulse = 0.55f + 0.45f * kotlin.math.sin(bloomScreenPulse)
-            bloomScreenPaint.alpha = (70f + 60f * pulse).toInt().coerceIn(0, 255)
-            bloomFramePaint.alpha = (150f + 80f * pulse).toInt().coerceIn(0, 255)
+            bloomScreenPaint.alpha = (78f + 72f * pulse).toInt().coerceIn(0, 255)
+            bloomGlowPaint.alpha = (32f + 52f * pulse).toInt().coerceIn(0, 255)
+            bloomFramePaint.alpha = (160f + 82f * pulse).toInt().coerceIn(0, 255)
+            bloomInnerFramePaint.alpha = (120f + 92f * pulse).toInt().coerceIn(0, 255)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomScreenPaint)
+            canvas.drawRect(14f, 14f, width.toFloat() - 14f, height.toFloat() - 14f, bloomGlowPaint)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomFramePaint)
+            canvas.drawRect(22f, 22f, width.toFloat() - 22f, height.toFloat() - 22f, bloomInnerFramePaint)
         }
         if (bloomActivationFlash > 0f) {
             val flashAlpha = ((bloomActivationFlash / 0.32f) * 170f).toInt().coerceIn(0, 170)

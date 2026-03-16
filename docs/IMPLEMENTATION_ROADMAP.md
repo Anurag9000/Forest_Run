@@ -11,7 +11,7 @@ This restores the original roadmap as the required implementation target. Items 
 | 2 | Done | input system exists |
 | 3 | Partial | player exists but dream-spec feel still needs work |
 | 4 | Partial | parallax exists, art still incomplete |
-| 5 | Partial | HUD exists and readability is materially improved, but final Bloom/power-state clarity still needs work |
+| 5 | Partial | HUD exists, readability is materially improved, and Bloom power-state clarity is much stronger; final device-proof polish still needs work |
 | 6 | Partial | player sprites exist, face overlay dream not complete |
 | 7 | Done | base entity framework exists |
 | 8 | Partial | flora classes exist and now have stronger lure, rhythm, gust, and safe-thread staging, but final device tuning and cactus memory payoff still need work |

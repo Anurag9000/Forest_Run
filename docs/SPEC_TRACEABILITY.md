@@ -122,12 +122,12 @@ Missing dream-spec dedicated classes called out by historical docs:
 #### Bloom State
 
 - `Conflict`: 10 seeds / 5s / configurable activation in older GDD vs 8 seeds / 6s / auto activation in current code.
-- `Implemented`: Bloom meter, activation, invincibility window, and stronger activation spectacle.
-- `Partial`: glow, aura, and player-following Bloom effects.
+- `Implemented`: Bloom meter, activation, invincibility window, stronger activation spectacle, and stronger screen/world treatment.
+- `Partial`: glow, aura, player-following Bloom effects, and the broader transformed-world feel.
 - `TODO`: speed doubling during Bloom as originally specified.
-- `Partial`: passed obstacles now convert into stronger reward bursts and environmental reactions, but not yet the full intended “world transforms around you” version.
-- `TODO`: psychedelic hyper-saturation and flowers blooming open along the path.
-- `Partial`: music transition into Bloom.
+- `Partial`: passed obstacles now convert into stronger reward bursts, world bursts, and environmental reactions, but still need final device-proof spectacle.
+- `TODO`: nearby flowers blooming open continuously along the path if still required beyond the current conversion-triggered reactions.
+- `Partial`: music transition into Bloom; stronger final authored audio identity still remains.
 
 #### Chaos Peak — Late Game
 
@@ -372,13 +372,13 @@ Background assets:
 
 #### Environmental Bloom Reaction
 
-- `Partial`: nearby flora/tree reactions now exist on Bloom conversions.
-- `TODO`: nearby flowers blooming open as the runner passes in the full intended sense.
+- `Partial`: nearby flora/tree reactions now exist on Bloom conversions, now backed by stronger world-burst feedback.
+- `TODO`: nearby flowers blooming open as the runner passes in the full intended continuous sense.
 
 #### Spirit Of The Forest Bloom Visuals
 
-- `Partial`: aura, activation burst, HUD conversion feedback, and stronger screen treatment now exist.
-- `TODO`: stronger world transformation, obstacle dissolves, UI pulse ring, and full power-fantasy spectacle.
+- `Implemented`: aura, activation burst, world-tint transformation, HUD pulse paneling, stronger screen treatment, and larger Bloom conversion spectacle now exist.
+- `TODO`: final obstacle-dissolve polish, phone-proof tuning, and any remaining top-end power-fantasy treatment.
 
 #### Ghost Readability
 
@@ -653,9 +653,9 @@ These synthesize the entire historical spec set into unified workstreams.
 
 ### Bloom
 
-- `Implemented`: meter, activation, and stronger spectacle baseline.
+- `Implemented`: meter, activation, stronger world-transform baseline, and stronger conversion spectacle.
 - `Conflict`: 8 vs 10 seeds, 5s vs 6s, exact effect bundle.
-- `TODO`: continue tightening the full final Bloom presentation and document the resolved canonical spec everywhere.
+- `TODO`: continue tightening the last Bloom presentation polish on device and keep the resolved canonical spec synchronized everywhere.
 
 ### Biomes
 

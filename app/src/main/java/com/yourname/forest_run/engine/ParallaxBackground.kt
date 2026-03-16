@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import kotlin.math.sin
 
 /**
  * Manages 4 parallax layers that together create the illusion of a deep,
@@ -74,11 +75,29 @@ class ParallaxBackground(
         style = Paint.Style.FILL
     }
     private val floorRect = RectF()
+    private val skyRect = RectF()
+    private val bloomHorizonRect = RectF()
 
     // -----------------------------------------------------------------------
     // Accent paints for layer blending
     // -----------------------------------------------------------------------
     private val layerPaint = Paint()
+    private val bloomSkyPaint = Paint().apply { color = Color.argb(0, 255, 208, 120) }
+    private val bloomHorizonPaint = Paint().apply { color = Color.argb(0, 255, 170, 120) }
+    private val bloomFloorPaint = Paint().apply { color = Color.argb(0, 170, 255, 145) }
+    private val bloomOrbPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(0, 255, 238, 188)
+        style = Paint.Style.FILL
+    }
+    private val bloomRayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(0, 255, 228, 162)
+        style = Paint.Style.STROKE
+        strokeWidth = 10f
+    }
+    private var bloomTarget = 0f
+    private var bloomLevel = 0f
+    private var bloomPulse = 0f
+    private var bloomActivationLevel = 0f
 
     init {
         groundY = screenHeight * 0.82f
@@ -90,6 +109,8 @@ class ParallaxBackground(
 
         // Position the floor rect
         floorRect.set(0f, groundY, screenWidth.toFloat(), screenHeight.toFloat())
+        skyRect.set(0f, 0f, screenWidth.toFloat(), groundY)
+        bloomHorizonRect.set(0f, groundY - screenHeight * 0.18f, screenWidth.toFloat(), groundY + screenHeight * 0.05f)
     }
 
     // -----------------------------------------------------------------------
@@ -98,6 +119,11 @@ class ParallaxBackground(
 
     fun update(deltaTime: Float, gameScrollSpeed: Float) {
         for (layer in layers) layer.update(deltaTime, gameScrollSpeed)
+        val blendSpeed = if (bloomTarget > bloomLevel) 4.5f else 2.8f
+        bloomLevel += (bloomTarget - bloomLevel) * (blendSpeed * deltaTime).coerceAtMost(1f)
+        if (bloomLevel > 0.01f || bloomActivationLevel > 0.01f) {
+            bloomPulse += deltaTime * 3.4f
+        }
     }
 
     fun draw(canvas: Canvas) {
@@ -106,6 +132,7 @@ class ParallaxBackground(
 
         // Draw the floor band on top of layer 2/3 (solid, not scrolled)
         canvas.drawRect(floorRect, floorPaint)
+        drawBloomTransformation(canvas)
     }
 
     /**
@@ -137,12 +164,49 @@ class ParallaxBackground(
         foliageOverlay   = foliage
     }
 
+    fun setBloomState(isActive: Boolean, activationLevel: Float) {
+        bloomTarget = if (isActive) 1f else 0f
+        bloomActivationLevel = activationLevel.coerceIn(0f, 1f)
+    }
+
     /** Tint values set by [applyBiomeColours], applied during draw(). */
     private var skyOverlayTop:    Int = Color.TRANSPARENT
     private var skyOverlayBottom: Int = Color.TRANSPARENT
     private var foliageOverlay:   Int = Color.TRANSPARENT
 
     private val skyOverlayPaint = Paint().apply { alpha = 120 }
+
+    private fun drawBloomTransformation(canvas: Canvas) {
+        val bloomStrength = bloomLevel.coerceIn(0f, 1f)
+        val activationBoost = bloomActivationLevel.coerceIn(0f, 1f)
+        if (bloomStrength <= 0.01f && activationBoost <= 0.01f) return
+
+        val pulse = 0.62f + 0.38f * sin(bloomPulse)
+        val worldStrength = (bloomStrength * (0.82f + 0.18f * pulse) + activationBoost * 0.45f).coerceIn(0f, 1f)
+
+        bloomSkyPaint.alpha = (40f + 70f * worldStrength).toInt().coerceIn(0, 180)
+        bloomHorizonPaint.alpha = (55f + 90f * worldStrength).toInt().coerceIn(0, 210)
+        bloomFloorPaint.alpha = (35f + 85f * worldStrength).toInt().coerceIn(0, 190)
+        bloomOrbPaint.alpha = (55f + 120f * worldStrength).toInt().coerceIn(0, 220)
+        bloomRayPaint.alpha = (25f + 80f * worldStrength).toInt().coerceIn(0, 180)
+
+        canvas.drawRect(skyRect, bloomSkyPaint)
+        canvas.drawRect(bloomHorizonRect, bloomHorizonPaint)
+        canvas.drawRect(floorRect, bloomFloorPaint)
+
+        val orbY = groundY - screenHeight * 0.20f
+        val orbRadius = screenHeight * (0.06f + 0.02f * pulse)
+        canvas.drawCircle(screenWidth * 0.18f, orbY, orbRadius, bloomOrbPaint)
+        canvas.drawCircle(screenWidth * 0.52f, orbY - screenHeight * 0.05f, orbRadius * 0.78f, bloomOrbPaint)
+        canvas.drawCircle(screenWidth * 0.82f, orbY + screenHeight * 0.03f, orbRadius * 0.92f, bloomOrbPaint)
+
+        val rayTop = groundY - screenHeight * 0.34f
+        val rayBottom = groundY + screenHeight * 0.02f
+        canvas.drawLine(screenWidth * 0.16f, rayTop, screenWidth * 0.10f, rayBottom, bloomRayPaint)
+        canvas.drawLine(screenWidth * 0.38f, rayTop - 30f, screenWidth * 0.33f, rayBottom, bloomRayPaint)
+        canvas.drawLine(screenWidth * 0.62f, rayTop - 20f, screenWidth * 0.68f, rayBottom, bloomRayPaint)
+        canvas.drawLine(screenWidth * 0.84f, rayTop, screenWidth * 0.90f, rayBottom, bloomRayPaint)
+    }
 
     // ── Phase 24: Rich bitmap builder ─────────────────────────────────────
 

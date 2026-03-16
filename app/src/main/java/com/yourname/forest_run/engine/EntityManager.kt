@@ -179,20 +179,27 @@ class EntityManager(
     private fun emitBloomEnvironmentReaction(entity: Entity) {
         val x = entity.hitbox.centerX()
         val y = entity.hitbox.centerY()
+        ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, x, y)
         when (entity) {
             is LilyOfValley, is Hyacinth, is VanillaOrchid -> {
                 ParticleManager.emit(FxPreset.POLLEN_BURST, x, y)
                 ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 18f)
+                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y - 24f)
             }
             is Eucalyptus, is WeepingWillow, is Jacaranda, is CherryBlossom, is Bamboo -> {
                 ParticleManager.emit(FxPreset.PETAL_DRIFT, x, y - 24f)
                 ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
+                ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 22f)
             }
             is Cactus -> {
                 ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
                 ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 10f)
+                ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, x, y - 20f)
             }
-            else -> ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
+            else -> {
+                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
+                ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 12f)
+            }
         }
     }
 

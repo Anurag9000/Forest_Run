@@ -55,6 +55,21 @@ object HapticManager {
     /** 100ms — 1000-point milestone */
     fun mediumPulse() = pulse(100)
 
+    /** Bloom activation surge with a stronger rising feel than a flat long pulse. */
+    fun bloomSurge() {
+        val vib = vibrator ?: return
+        if (!vib.hasVibrator()) return
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val timings = longArrayOf(0, 40, 25, 70, 35, 140)
+            val amplitudes = intArrayOf(0, 140, 0, 200, 0, 255)
+            vib.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+        } else {
+            @Suppress("DEPRECATION")
+            vib.vibrate(240)
+        }
+    }
+
     /**
      * Double-tap pattern — [0, 30, 50, 30] ms — Close Call / MERCY_MISS.
      * timings array (API 26): [wait, vibrate, wait, vibrate] — all in ms.

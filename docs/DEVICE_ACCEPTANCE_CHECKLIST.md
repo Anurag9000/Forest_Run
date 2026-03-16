@@ -14,7 +14,7 @@ This is the runtime truth checklist for real-phone verification. A feature is no
 | Scenario | Device Acceptance |
 |---|---|
 | `OPENING_READABILITY` | Opening 20–30 seconds teach duck, jump, and spacing without confusion. |
-| `BLOOM_SHOWCASE` | A first-time player can tell Bloom activated, the world changed, and rewards transformed. |
+| `BLOOM_SHOWCASE` | A first-time player can tell Bloom activated, the world changed, the HUD entered a power state, and rewards transformed. |
 | `GHOST_READABILITY` | Ghost never reads like a broken duplicate and never obscures the live runner. |
 | `REST_LOOP` | Run failure, rest summary, fade, and Garden return feel continuous and readable. |
 

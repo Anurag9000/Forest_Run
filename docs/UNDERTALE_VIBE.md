@@ -82,6 +82,7 @@ Examples:
 
 - Implemented: floating flavor text manager.
 - Partial: rest quote system and dialogue bubble staging now exist, and tracked Cat/Fox/Wolf/Dog encounter beats now swap history-aware lines in ordinary play; much richer trigger coverage and repeat-killer messaging are still needed.
+- Partial: Bloom now reads more like a celebratory power beat through stronger world transformation and conversion spectacle, but still needs real-device proofing to confirm it lands instantly.
 
 ---
 
@@ -226,6 +227,7 @@ The forest leitmotif should appear in all music states in different arrangements
 ### Current Status
 
 - Implemented: music state transitions.
+- Partial: Bloom now has a stronger visual/haptic identity in runtime, while the full leitmotif treatment still remains open.
 - TODO: full leitmotif system and stronger authored score.
 
 ---
