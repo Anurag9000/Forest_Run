@@ -78,6 +78,7 @@ object StoryFragmentSystem {
         val hitCount = killer?.let { PersistentMemoryManager.getHitCount(context, it) } ?: 0
         val repeatedKiller = killer != null && hitCount >= 2
         val relationshipStage = killer?.let { RelationshipArcSystem.stageFor(context, it) }
+        val warmCreature = PersistentMemoryManager.featuredWarmCreature(context)
 
         if (killer != null && repeatedKiller) {
             val text = when (killer) {
@@ -142,6 +143,24 @@ object StoryFragmentSystem {
             )
         }
 
+        if (warmCreature != null) {
+            val text = when (warmCreature) {
+                EntityType.CAT -> "The cat is beginning to expect your softer timing."
+                EntityType.FOX -> "The fox seems to remember when you answer with calm."
+                EntityType.WOLF -> "The grove keeps the version of you that did not flinch."
+                EntityType.DOG -> "The dog seems to think your gentler runs are worth celebrating."
+                EntityType.OWL -> "Even the owl leaves the night feeling less severe after mercy."
+                EntityType.EAGLE -> "The sky feels less punishing when you keep choosing restraint."
+                else -> "The forest noticed that your gentleness lasted longer this time."
+            }
+            return StoryFragment(
+                id = "rest_warm_${warmCreature.name.lowercase()}",
+                type = StoryFragmentType.REST,
+                text = text,
+                unlocksPageId = "page_warm_${warmCreature.name.lowercase()}"
+            )
+        }
+
         val biomeText = when (biome) {
             Biome.MEADOW -> "The meadow is gentle only if you stay gentle with it."
             Biome.ORCHARD -> "The orchard rewards rhythm more than speed."
@@ -160,9 +179,11 @@ object StoryFragmentSystem {
         val strongest = RelationshipArcSystem.strongestRelationship(context)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(context)
         val mood = ForestMoodSystem.currentState(context).currentMood
-        val repeatedHarmCreature = (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(context))?.takeIf {
-            PersistentMemoryManager.getHitCount(context, it) >= 2
-        }
+        val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(context)
+            ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(context))?.takeIf {
+                PersistentMemoryManager.getHitCount(context, it) >= 2
+            }
+        val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(context)
 
         if (milestoneReward != null && summary?.forestMood == ForestMood.GENTLE && (summary.sparedCount > 0 || summary.kindnessChain >= 5)) {
             return StoryFragment(
@@ -178,6 +199,15 @@ object StoryFragmentSystem {
                     else -> "Something trusted your gentler return."
                 },
                 unlocksPageId = "page_milestone_gentle_${milestoneReward.type.name.lowercase()}"
+            )
+        }
+
+        if (summary != null && repeatedKindnessCreature != null && (summary.sparedCount > 0 || summary.kindnessChain >= 4)) {
+            return StoryFragment(
+                id = "garden_repeated_kindness_${repeatedKindnessCreature.name.lowercase()}",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = "The garden has started trusting your gentler habits as something dependable.",
+                unlocksPageId = "page_garden_warm_${repeatedKindnessCreature.name.lowercase()}"
             )
         }
 
@@ -261,7 +291,11 @@ object StoryFragmentSystem {
         }
 
         val text = when (mood) {
-            ForestMood.GENTLE -> "The garden breathes a little easier tonight."
+            ForestMood.GENTLE -> if (repeatedKindnessCreature != null) {
+                "The garden breathes like it has started trusting your softer returns."
+            } else {
+                "The garden breathes a little easier tonight."
+            }
             ForestMood.RECKLESS -> "Even the flowers look like they heard you arrive too fast."
             ForestMood.FEARFUL -> "The garden keeps its voice low until you are ready again."
             ForestMood.STEADY -> "Home feels ordinary in the best possible way."

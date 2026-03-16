@@ -445,9 +445,11 @@ object RelationshipArcSystem {
         val appContext = context.applicationContext
         val spared = SaveManager.loadSparedCount(appContext, type)
         val hits = SaveManager.loadHitCount(appContext, type)
+        val kindnessStreak = SaveManager.loadKindnessStreak(appContext, type)
+        val tenderStreak = SaveManager.loadTenderStreak(appContext, type)
         return when {
-            spared > hits && spared >= 1 -> RelationshipTone.WARM
-            hits > spared && hits >= 2 -> RelationshipTone.CAUTIOUS
+            kindnessStreak >= 2 || (spared > hits && spared >= 1) -> RelationshipTone.WARM
+            tenderStreak >= 2 || (hits > spared && hits >= 2) -> RelationshipTone.CAUTIOUS
             else -> RelationshipTone.NEUTRAL
         }
     }

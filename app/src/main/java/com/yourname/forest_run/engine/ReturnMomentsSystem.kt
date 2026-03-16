@@ -45,9 +45,11 @@ object ReturnMomentsSystem {
         val bondedVisitor = RelationshipArcSystem.preferredGardenVisitor(appContext)
         val milestoneBond = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.MILESTONE)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
-        val repeatedHarmCreature = (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
-            PersistentMemoryManager.getHitCount(appContext, it) >= 2
-        }
+        val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
+            ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
+                PersistentMemoryManager.getHitCount(appContext, it) >= 2
+            }
+        val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
 
         val moment = when {
             previous.lastActiveAtMs > 0L && nowMs - previous.lastActiveAtMs >= LONG_ABSENCE_MS ->
@@ -79,6 +81,13 @@ object ReturnMomentsSystem {
                     "Stayed With You",
                     steadyMilestoneLine(milestoneReward.type),
                     milestoneReward.type
+                )
+            repeatedKindnessCreature != null &&
+                ((summary?.sparedCount ?: 0) > 0 || (summary?.kindnessChain ?: 0) >= 4) ->
+                ReturnMoment(
+                    "Stayed Gentle",
+                    kindnessLine(repeatedKindnessCreature),
+                    if (RelationshipArcSystem.isTracked(repeatedKindnessCreature)) repeatedKindnessCreature else bondedVisitor
                 )
             previous.roughRunStreak >= 3 ->
                 when {
@@ -182,5 +191,20 @@ object ReturnMomentsSystem {
         EntityType.CACTUS, EntityType.LILY_OF_VALLEY, EntityType.HYACINTH, EntityType.EUCALYPTUS,
         EntityType.VANILLA_ORCHID, EntityType.WEEPING_WILLOW, EntityType.JACARANDA, EntityType.BAMBOO,
         EntityType.CHERRY_BLOSSOM -> "The garden remembers which shape of forest kept brushing against your nerves."
+    }
+
+    private fun kindnessLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat keeps showing up like your gentleness finally made sense to it."
+        EntityType.FOX -> "The fox leaves space in the trail now, as if kindness taught it your rhythm."
+        EntityType.WOLF -> "The grove feels calmer where the wolf keeps deciding not to press harder."
+        EntityType.DOG -> "The dog's joy has started sounding like recognition instead of interruption."
+        EntityType.OWL -> "The owl lets the night feel more welcoming when you keep returning gently."
+        EntityType.EAGLE -> "Even the eagle's shadow feels less severe when your runs keep ending in mercy."
+        EntityType.HEDGEHOG -> "The path seems grateful that you stopped meeting every thorn with haste."
+        EntityType.DUCK -> "The duck's lane feels more like a lesson remembered than a surprise waiting."
+        EntityType.TIT, EntityType.CHICKADEE -> "The air feels friendlier when you stop treating every flutter like a threat."
+        EntityType.CACTUS, EntityType.LILY_OF_VALLEY, EntityType.HYACINTH, EntityType.EUCALYPTUS,
+        EntityType.VANILLA_ORCHID, EntityType.WEEPING_WILLOW, EntityType.JACARANDA, EntityType.BAMBOO,
+        EntityType.CHERRY_BLOSSOM -> "The forest seems to notice when your gentleness starts lasting longer than a single run."
     }
 }

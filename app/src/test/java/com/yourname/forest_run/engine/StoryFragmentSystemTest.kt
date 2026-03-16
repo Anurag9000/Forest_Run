@@ -159,4 +159,32 @@ class StoryFragmentSystemTest {
 
         assertTrue(weatherThought.contains("recognizes") || weatherThought.contains("patient"))
     }
+
+    @Test
+    fun `repeated kindness unlocks a warmer garden reflection page`() {
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        val summary = RunSummary(
+            score = 840,
+            distanceM = 610f,
+            isNewHighScore = false,
+            highScore = 1_300,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 4,
+            cleanPasses = 7,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 6,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("gentler habits") || line.contains("trusting"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_warm_cat"))
+    }
 }

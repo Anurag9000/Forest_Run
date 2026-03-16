@@ -120,4 +120,35 @@ class GardenSanctuaryPlannerTest {
         assertTrue(state.carryHomeLine.contains("quiet patch") || state.carryHomeLine.contains("home"))
         assertTrue(state.fireflyCount >= 6)
     }
+
+    @Test
+    fun `repeated kindness leaves a trust path and warmer carry-home`() {
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 2, totalRuns = 2, gentleRuns = 2)
+        )
+        val summary = RunSummary(
+            score = 760,
+            distanceM = 590f,
+            isNewHighScore = false,
+            highScore = 1_100,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 4,
+            cleanPasses = 6,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 5,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertTrue(state.traces.any { it.label == "Trust Path" && it.type == EntityType.FOX })
+        assertTrue(state.carryHomeLine.contains("Fox") || state.carryHomeLine.contains("trust"))
+    }
 }

@@ -686,7 +686,11 @@ class GardenScreen(
         unlockedCostumes = CostumeManager.availableCostumes(context)
         activeCostume = CostumeManager.activeCostume(context)
         if (newUnlocks.isNotEmpty()) {
-            wardrobeMessage = newUnlocks.joinToString(" + ") { it.displayName }
+            wardrobeMessage = if (newUnlocks.size == 1) {
+                newUnlocks.first().unlockLabel
+            } else {
+                newUnlocks.joinToString(" + ") { it.displayName }
+            }
             wardrobeMessageTimer = 3f
         }
     }

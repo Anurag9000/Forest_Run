@@ -67,6 +67,22 @@ class SaveManagerTest {
     }
 
     @Test
+    fun `kindness and tender streaks persist across reloads`() {
+        SaveManager.incrementKindnessStreak(context, EntityType.CAT)
+        SaveManager.incrementKindnessStreak(context, EntityType.CAT)
+        SaveManager.incrementTenderStreak(context, EntityType.WOLF)
+
+        assertEquals(2, SaveManager.loadKindnessStreak(context, EntityType.CAT))
+        assertEquals(1, SaveManager.loadTenderStreak(context, EntityType.WOLF))
+
+        SaveManager.resetKindnessStreak(context, EntityType.CAT)
+        SaveManager.resetTenderStreak(context, EntityType.WOLF)
+
+        assertEquals(0, SaveManager.loadKindnessStreak(context, EntityType.CAT))
+        assertEquals(0, SaveManager.loadTenderStreak(context, EntityType.WOLF))
+    }
+
+    @Test
     fun `costume unlocks and active costume persist`() {
         SaveManager.saveUnlockedCostumes(context, setOf(CostumeStyle.FLOWER_CROWN, CostumeStyle.MOON_CAPE))
         SaveManager.saveActiveCostume(context, CostumeStyle.MOON_CAPE)

@@ -197,4 +197,31 @@ class ReturnMomentsSystemTest {
         assertEquals("Bloom Still Clings", moment?.title)
         assertEquals(EntityType.OWL, moment?.visitor)
     }
+
+    @Test
+    fun `repeated kindness creates stayed gentle return moment`() {
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        val summary = RunSummary(
+            score = 920,
+            distanceM = 700f,
+            isNewHighScore = false,
+            highScore = 1_400,
+            mercyHearts = 3,
+            mercyMisses = 3,
+            kindnessChain = 5,
+            cleanPasses = 8,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 7,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Gentle.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 10_000L)
+
+        assertEquals("Stayed Gentle", moment?.title)
+        assertEquals(EntityType.DOG, moment?.visitor)
+    }
 }

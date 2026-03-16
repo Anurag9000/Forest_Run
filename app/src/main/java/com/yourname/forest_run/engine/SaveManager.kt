@@ -192,6 +192,28 @@ object SaveManager {
     fun loadHitCount(context: Context, type: EntityType): Int =
         prefs(context).getInt("hit_${type.name.lowercase()}", 0)
 
+    fun incrementKindnessStreak(context: Context, type: EntityType) {
+        incrementInt(context, "kindness_streak_${type.name.lowercase()}")
+    }
+
+    fun resetKindnessStreak(context: Context, type: EntityType) {
+        prefs(context).edit().putInt("kindness_streak_${type.name.lowercase()}", 0).apply()
+    }
+
+    fun loadKindnessStreak(context: Context, type: EntityType): Int =
+        prefs(context).getInt("kindness_streak_${type.name.lowercase()}", 0)
+
+    fun incrementTenderStreak(context: Context, type: EntityType) {
+        incrementInt(context, "tender_streak_${type.name.lowercase()}")
+    }
+
+    fun resetTenderStreak(context: Context, type: EntityType) {
+        prefs(context).edit().putInt("tender_streak_${type.name.lowercase()}", 0).apply()
+    }
+
+    fun loadTenderStreak(context: Context, type: EntityType): Int =
+        prefs(context).getInt("tender_streak_${type.name.lowercase()}", 0)
+
     fun saveLastKiller(context: Context, type: EntityType?) {
         prefs(context).edit().putString(KEY_LAST_KILLER, type?.name).apply()
     }

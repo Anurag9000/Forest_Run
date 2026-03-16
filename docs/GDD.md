@@ -132,7 +132,8 @@ This game should keep players returning because the forest feels personal, not b
 Current baseline:
 
 - recent run tone now affects Garden ambience and carry-home framing
-- repeated harm from the same creature now surfaces as caution in sanctuary traces, Garden return moments, and Garden reflections
+- repeated harm from the same creature now surfaces as caution in sanctuary traces, Garden return moments, Garden reflections, and tender memory streaks
+- repeated kindness now surfaces through trust-path traces, warmer carry-home lines, rest fragments, and dedicated gentle-return beats
 - broader creature warmth and richer world-state consequence are still TODO
 
 #### 3.8.2 Named Relationship Arcs
@@ -163,7 +164,7 @@ Current baseline:
 
 Current baseline:
 
-- the Garden can now answer long absences, rough streaks, stronger bonds, Bloom-heavy runs, and gentle milestone returns with distinct return moments
+- the Garden can now answer long absences, rough streaks, stronger bonds, Bloom-heavy runs, repeated kindness, and gentle milestone returns with distinct return moments
 - milestone bonds now produce warmer and more specific return lines instead of only generic greetings
 - broader authored combinations are still TODO
 
@@ -178,7 +179,7 @@ Current baseline:
 Current baseline:
 
 - rest quotes now route through a fragment system instead of only hard-coded quote branches
-- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, milestone-gentleness reflections, Bloom-afterglow reflections, and track unlocked memory pages
+- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, repeated-kindness warmth reflections, milestone-gentleness reflections, Bloom-afterglow reflections, and track unlocked memory pages
 - broader creature-thought coverage and richer weather-linked fragments are still TODO
 
 ### Current Status

@@ -31,30 +31,33 @@ object GardenSanctuaryPlanner {
         val mood = moodState.currentMood
         val milestoneRewards = RelationshipArcSystem.unlockedMilestoneTypes(appContext)
             .mapNotNull { RelationshipArcSystem.milestoneRewardFor(appContext, it) }
-        val repeatedHarmCreature = (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
-            PersistentMemoryManager.getHitCount(appContext, it) >= 2
-        }
+        val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
+            ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
+                PersistentMemoryManager.getHitCount(appContext, it) >= 2
+            }
+        val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
+        val kindnessStreak = repeatedKindnessCreature?.let { PersistentMemoryManager.getKindnessStreak(appContext, it) } ?: 0
 
         val fireflies = when (mood) {
             ForestMood.GENTLE -> 4 + moodState.moodStreak.coerceAtMost(4)
             ForestMood.RECKLESS -> 1
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3 + (moodState.moodStreak / 2).coerceAtMost(2)
-        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) - if (repeatedHarmCreature != null) 1 else 0
+        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) + (kindnessStreak / 2).coerceAtMost(2) - if (repeatedHarmCreature != null) 1 else 0
 
         val petals = when (mood) {
             ForestMood.GENTLE -> 3
             ForestMood.RECKLESS -> 5
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3
-        } + if ((summary?.sparedCount ?: 0) > 0) 1 else 0
+        } + if ((summary?.sparedCount ?: 0) > 0) 1 else 0 + if (repeatedKindnessCreature != null) 1 else 0
 
         val bloomPatches = when (mood) {
             ForestMood.GENTLE -> 2
             ForestMood.RECKLESS -> 0
             ForestMood.FEARFUL -> 1
             ForestMood.STEADY -> 1
-        } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0
+        } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0 + (kindnessStreak / 3).coerceAtMost(1)
 
         val canopyShadeAlpha = when (mood) {
             ForestMood.GENTLE -> 26
@@ -70,6 +73,15 @@ object GardenSanctuaryPlanner {
                         repeatedHarmCreature,
                         "Cautious Path",
                         Color.rgb(206, 214, 238)
+                    )
+                )
+            }
+            if (repeatedKindnessCreature != null && milestoneRewards.none { it.type == repeatedKindnessCreature }) {
+                add(
+                    SanctuaryTrace(
+                        repeatedKindnessCreature,
+                        "Trust Path",
+                        Color.rgb(238, 248, 202)
                     )
                 )
             }
@@ -111,6 +123,8 @@ object GardenSanctuaryPlanner {
             }
             ForestMood.GENTLE -> if (warmBonds.isNotEmpty()) {
                 "The sanctuary opens faster when you keep coming home gently."
+            } else if (repeatedKindnessCreature != null) {
+                "The sanctuary has started trusting the gentler habits you keep repeating."
             } else {
                 "The sanctuary keeps the softer shape of your footsteps."
             }
@@ -129,6 +143,8 @@ object GardenSanctuaryPlanner {
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
             featuredReward != null ->
                 featuredReward.summary
+            repeatedKindnessCreature != null && kindnessStreak >= 2 ->
+                "${formatEntityName(repeatedKindnessCreature)} has started leaving trust behind instead of only memory."
             strongestBond != null && (summary?.sparedCount ?: 0) > 0 ->
                 "${formatEntityName(strongestBond)} stayed in the garden's mood after that run."
             strongestBond != null && (summary?.bloomConversions ?: 0) >= 2 ->
