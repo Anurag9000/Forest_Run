@@ -124,7 +124,8 @@ Dream responsibilities:
 ### Current Status
 
 - Implemented: five-biome cycle and blending.
-- TODO: full scenic transformation and richer ambient system.
+- Partial: biome tinting now also drives stronger parallax wash, canopy shade, mist, drifting ambient life, and subtle speed/Bloom world-scale response.
+- TODO: full scenic transformation and bespoke background art.
 
 ## 8. Input Handler
 

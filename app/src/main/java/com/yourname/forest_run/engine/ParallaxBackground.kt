@@ -3,9 +3,60 @@ package com.yourname.forest_run.engine
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Shader
+import kotlin.math.cos
 import kotlin.math.sin
+
+internal data class ParallaxAtmosphereProfile(
+    val worldScale: Float,
+    val driftScale: Float,
+    val leafCount: Int,
+    val petalCount: Int,
+    val fireflyCount: Int,
+    val ribbonCount: Int,
+    val windRibbonAlpha: Int,
+    val mistBandAlpha: Int,
+    val canopyShadowAlpha: Int,
+    val horizonGlowAlpha: Int,
+    val biomeSkyAlpha: Int,
+    val foliageWashAlpha: Int,
+    val nightFactor: Float
+)
+
+internal fun buildParallaxAtmosphereProfile(
+    scrollSpeed: Float,
+    bloomStrength: Float,
+    skyTop: Int,
+    skyBottom: Int
+): ParallaxAtmosphereProfile {
+    val speedRatio = (scrollSpeed / GameConstants.BASE_SCROLL_SPEED).coerceIn(0.7f, 2.1f)
+    val skyBrightness = (
+        Color.red(skyTop) + Color.green(skyTop) + Color.blue(skyTop) +
+            Color.red(skyBottom) + Color.green(skyBottom) + Color.blue(skyBottom)
+        ) / 6f
+    val nightFactor = (1f - skyBrightness / 255f).coerceIn(0f, 1f)
+    val bloom = bloomStrength.coerceIn(0f, 1f)
+    val speedLift = (speedRatio - 1f).coerceAtLeast(0f)
+
+    return ParallaxAtmosphereProfile(
+        worldScale = (1f + speedLift * 0.012f + bloom * 0.026f + nightFactor * 0.008f).coerceAtMost(1.065f),
+        driftScale = (1f + speedLift * 0.28f + bloom * 0.18f + nightFactor * 0.10f).coerceAtMost(1.65f),
+        leafCount = (5 + speedLift * 6f + bloom * 4f).toInt().coerceAtLeast(4),
+        petalCount = (3 + bloom * 7f + nightFactor * 2f).toInt().coerceAtLeast(2),
+        fireflyCount = (nightFactor * 8f + bloom * 4f).toInt().coerceAtLeast(if (nightFactor > 0.45f) 3 else 0),
+        ribbonCount = (3 + speedLift * 2f + bloom * 1.5f).toInt().coerceIn(3, 6),
+        windRibbonAlpha = (18f + speedLift * 34f + bloom * 24f).toInt().coerceIn(0, 110),
+        mistBandAlpha = (16f + nightFactor * 38f + bloom * 20f).toInt().coerceIn(0, 120),
+        canopyShadowAlpha = (22f + nightFactor * 48f + speedLift * 12f).toInt().coerceIn(0, 120),
+        horizonGlowAlpha = (36f + bloom * 92f + speedLift * 22f).toInt().coerceIn(0, 180),
+        biomeSkyAlpha = (28f + nightFactor * 42f).toInt().coerceIn(0, 120),
+        foliageWashAlpha = (20f + nightFactor * 35f + bloom * 18f).toInt().coerceIn(0, 96),
+        nightFactor = nightFactor
+    )
+}
 
 /**
  * Manages 4 parallax layers that together create the illusion of a deep,
@@ -98,6 +149,8 @@ class ParallaxBackground(
     private var bloomLevel = 0f
     private var bloomPulse = 0f
     private var bloomActivationLevel = 0f
+    private var ambienceTime = 0f
+    private var currentScrollSpeed = GameConstants.BASE_SCROLL_SPEED
 
     init {
         groundY = screenHeight * 0.82f
@@ -118,6 +171,8 @@ class ParallaxBackground(
     // -----------------------------------------------------------------------
 
     fun update(deltaTime: Float, gameScrollSpeed: Float) {
+        ambienceTime += deltaTime
+        currentScrollSpeed = gameScrollSpeed
         for (layer in layers) layer.update(deltaTime, gameScrollSpeed)
         val blendSpeed = if (bloomTarget > bloomLevel) 4.5f else 2.8f
         bloomLevel += (bloomTarget - bloomLevel) * (blendSpeed * deltaTime).coerceAtMost(1f)
@@ -127,11 +182,23 @@ class ParallaxBackground(
     }
 
     fun draw(canvas: Canvas) {
+        val atmosphere = buildParallaxAtmosphereProfile(
+            scrollSpeed = currentScrollSpeed,
+            bloomStrength = bloomLevel,
+            skyTop = skyOverlayTop.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0],
+            skyBottom = skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+        )
+
         // Draw back → front
+        canvas.save()
+        canvas.scale(atmosphere.worldScale, atmosphere.worldScale, screenWidth * 0.5f, groundY * 0.55f)
         for (layer in layers) layer.draw(canvas)
 
         // Draw the floor band on top of layer 2/3 (solid, not scrolled)
         canvas.drawRect(floorRect, floorPaint)
+        canvas.restore()
+        drawBiomeOverlays(canvas, atmosphere)
+        drawAmbientLife(canvas, atmosphere)
         drawBloomTransformation(canvas)
     }
 
@@ -175,6 +242,175 @@ class ParallaxBackground(
     private var foliageOverlay:   Int = Color.TRANSPARENT
 
     private val skyOverlayPaint = Paint().apply { alpha = 120 }
+    private val foliageWashPaint = Paint().apply { style = Paint.Style.FILL }
+    private val windRibbonPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 6f
+    }
+    private val mistBandPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val canopyShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val leafPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val petalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val fireflyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+
+    private fun drawBiomeOverlays(canvas: Canvas, atmosphere: ParallaxAtmosphereProfile) {
+        val top = skyOverlayTop.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+        val bottom = skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+        skyOverlayPaint.shader = LinearGradient(
+            0f,
+            0f,
+            0f,
+            groundY,
+            intArrayOf(
+                Color.argb(atmosphere.biomeSkyAlpha, Color.red(top), Color.green(top), Color.blue(top)),
+                Color.argb((atmosphere.biomeSkyAlpha * 1.35f).toInt().coerceAtMost(180), Color.red(bottom), Color.green(bottom), Color.blue(bottom))
+            ),
+            null,
+            Shader.TileMode.CLAMP
+        )
+        canvas.drawRect(skyRect, skyOverlayPaint)
+
+        val foliage = foliageOverlay.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[1]
+        foliageWashPaint.color = Color.argb(
+            atmosphere.foliageWashAlpha,
+            Color.red(foliage),
+            Color.green(foliage),
+            Color.blue(foliage)
+        )
+        canvas.drawRect(0f, groundY - screenHeight * 0.28f, screenWidth.toFloat(), groundY + screenHeight * 0.02f, foliageWashPaint)
+
+        canopyShadowPaint.shader = LinearGradient(
+            0f,
+            groundY - screenHeight * 0.42f,
+            0f,
+            groundY,
+            intArrayOf(
+                Color.argb((atmosphere.canopyShadowAlpha * 0.55f).toInt().coerceIn(0, 100), 8, 14, 10),
+                Color.argb(atmosphere.canopyShadowAlpha, 16, 28, 18),
+                Color.argb(0, 16, 28, 18)
+            ),
+            null,
+            Shader.TileMode.CLAMP
+        )
+        canvas.drawRect(0f, groundY - screenHeight * 0.42f, screenWidth.toFloat(), groundY, canopyShadowPaint)
+    }
+
+    private fun drawAmbientLife(canvas: Canvas, atmosphere: ParallaxAtmosphereProfile) {
+        val foliage = foliageOverlay.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[1]
+        val skyBottom = skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+        val ribbonY = groundY - screenHeight * 0.22f
+        repeat(atmosphere.ribbonCount) { index ->
+            windRibbonPaint.color = Color.argb(
+                (atmosphere.windRibbonAlpha * (0.65f + index * 0.12f)).toInt().coerceIn(0, 140),
+                (210 + Color.red(skyBottom) * 0.10f).toInt().coerceAtMost(255),
+                (225 + Color.green(skyBottom) * 0.08f).toInt().coerceAtMost(255),
+                (214 + Color.blue(skyBottom) * 0.06f).toInt().coerceAtMost(255)
+            )
+            val startX =
+                screenWidth * (0.06f + index * 0.15f) +
+                    sin(ambienceTime * (0.7f + index * 0.18f)) * 20f * atmosphere.driftScale
+            val endX = startX + screenWidth * (0.18f + index * 0.015f)
+            val y = ribbonY + index * screenHeight * 0.036f +
+                cos(ambienceTime * (0.9f + index * 0.22f)) * 14f * atmosphere.driftScale
+            canvas.drawLine(startX, y, endX, y - 10f * atmosphere.driftScale, windRibbonPaint)
+        }
+
+        repeat(atmosphere.leafCount) { index ->
+            val laneSpeed = 18f + index * 2.7f + (currentScrollSpeed / GameConstants.BASE_SCROLL_SPEED) * 8f * atmosphere.driftScale
+            val drift = (ambienceTime * laneSpeed + index * 37f) % (screenWidth + 80f)
+            val x = screenWidth - drift
+            val y = groundY - screenHeight * (0.10f + (index % 5) * 0.045f) +
+                sin(ambienceTime * 1.1f + index) * 12f * atmosphere.driftScale
+            val size = 8f + (index % 3) * 2.5f
+            leafPaint.color = Color.argb(
+                (64f + atmosphere.nightFactor * 24f + bloomLevel * 18f).toInt().coerceIn(0, 150),
+                ((Color.red(foliage) * 0.70f) + 72f).toInt().coerceIn(0, 255),
+                ((Color.green(foliage) * 0.82f) + 56f).toInt().coerceIn(0, 255),
+                ((Color.blue(foliage) * 0.55f) + 48f + bloomLevel * 20f).toInt().coerceIn(0, 255)
+            )
+            canvas.drawOval(x, y, x + size * 1.6f, y + size, leafPaint)
+        }
+
+        repeat(atmosphere.petalCount) { index ->
+            val drift = (ambienceTime * (13f + index * 1.9f) * atmosphere.driftScale + index * 54f) % (screenWidth + 60f)
+            val x = screenWidth - drift
+            val y = groundY - screenHeight * (0.16f + (index % 4) * 0.05f) +
+                cos(ambienceTime * 1.4f + index * 0.7f) * 9f * atmosphere.driftScale
+            petalPaint.color = Color.argb(
+                (74f + bloomLevel * 34f + atmosphere.nightFactor * 10f).toInt().coerceIn(0, 150),
+                255,
+                (206f + bloomLevel * 20f).toInt().coerceAtMost(255),
+                (226f + bloomLevel * 18f).toInt().coerceAtMost(255)
+            )
+            canvas.drawOval(x, y, x + 10f, y + 6f, petalPaint)
+        }
+
+        if (atmosphere.horizonGlowAlpha > 0) {
+            val glowPaint = Paint().apply {
+                shader = LinearGradient(
+                    0f,
+                    groundY - screenHeight * 0.14f,
+                    0f,
+                    groundY + screenHeight * 0.02f,
+                    intArrayOf(
+                        Color.argb(0, 255, 214, 146),
+                        Color.argb(atmosphere.horizonGlowAlpha, 255, 206, 132)
+                    ),
+                    null,
+                    Shader.TileMode.CLAMP
+                )
+            }
+            canvas.drawRect(0f, groundY - screenHeight * 0.14f, screenWidth.toFloat(), groundY + screenHeight * 0.02f, glowPaint)
+        }
+
+        repeat(2) { index ->
+            mistBandPaint.shader = LinearGradient(
+                0f,
+                groundY - screenHeight * (0.14f - index * 0.03f),
+                0f,
+                groundY + screenHeight * (0.02f + index * 0.01f),
+                intArrayOf(
+                    Color.argb(0, 255, 255, 255),
+                    Color.argb(
+                        (atmosphere.mistBandAlpha * (1f - index * 0.18f)).toInt().coerceIn(0, 110),
+                        (220 + Color.red(skyBottom) * 0.10f).toInt().coerceAtMost(255),
+                        (224 + Color.green(skyBottom) * 0.08f).toInt().coerceAtMost(255),
+                        (218 + Color.blue(skyBottom) * 0.08f).toInt().coerceAtMost(255)
+                    ),
+                    Color.argb(0, 255, 255, 255)
+                ),
+                floatArrayOf(0f, 0.55f, 1f),
+                Shader.TileMode.CLAMP
+            )
+            val offset = sin(ambienceTime * (0.45f + index * 0.15f)) * 22f * atmosphere.driftScale
+            canvas.drawRect(
+                offset - 40f,
+                groundY - screenHeight * (0.13f - index * 0.03f),
+                screenWidth + 40f + offset,
+                groundY + screenHeight * (0.01f + index * 0.02f),
+                mistBandPaint
+            )
+        }
+
+        repeat(atmosphere.fireflyCount) { index ->
+            val x = screenWidth * (0.10f + ((index * 0.11f) % 0.76f)) + sin(ambienceTime * (1.0f + index * 0.06f) + index) * 16f
+            val y = screenHeight * (0.18f + (index % 5) * 0.06f) + cos(ambienceTime * 1.5f + index * 0.8f) * 10f
+            fireflyPaint.color = Color.argb(
+                (90f + atmosphere.nightFactor * 70f + bloomLevel * 18f).toInt().coerceIn(0, 210),
+                248,
+                244,
+                (162f + bloomLevel * 20f).toInt().coerceAtMost(255)
+            )
+            canvas.drawCircle(x, y, 3.8f + (index % 2), fireflyPaint)
+            fireflyPaint.color = Color.argb(
+                (42f + atmosphere.nightFactor * 30f + bloomLevel * 10f).toInt().coerceIn(0, 120),
+                248,
+                244,
+                (170f + bloomLevel * 14f).toInt().coerceAtMost(255)
+            )
+            canvas.drawCircle(x, y, 8.5f + (index % 3), fireflyPaint)
+        }
+    }
 
     private fun drawBloomTransformation(canvas: Canvas) {
         val bloomStrength = bloomLevel.coerceIn(0f, 1f)

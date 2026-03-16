@@ -7,6 +7,11 @@ import android.os.Build
 import android.annotation.SuppressLint
 import android.util.Log
 
+internal data class LeitmotifPlaybackProfile(
+    val tempo: Float,
+    val targetVolume: Float
+)
+
 /**
  * Leitmotif Audio Manager — Phase 20.
  *
@@ -20,8 +25,8 @@ import android.util.Log
  *
  * Features:
  *  - Smooth crossfade between any two tracks over [CROSS_FADE_MS] ms.
- *  - Tempo scaling: playback speed scales linearly with scroll speed.
- *    Formula: speed = 1.0 + (scrollSpeed - BASE) / BASE * 0.8, clamped 1.0..1.8
+ *  - State-shaped playback profiles: each state resolves to a target volume and tempo.
+ *    Run layers scale with scroll speed, Bloom peaks hardest, and menu/rest remain softer.
  *  - Graceful degradation: if an audio file is missing, that state plays silence.
  *
  * All MediaPlayer instances are created lazily and released on destroy().
@@ -51,6 +56,8 @@ object LeitmotifManager {
 
     // ── Tempo ─────────────────────────────────────────────────────────────
     private var currentSpeed: Float = 1f
+    private var currentScrollSpeed: Float = GameConstants.BASE_SCROLL_SPEED
+    private var currentTargetVolume: Float = 0.48f
 
     // ── Context (application context, no leak) ───────────────────────────
     private var ctx: Context? = null
@@ -77,7 +84,8 @@ object LeitmotifManager {
     /** Transition to a new music state with a crossfade. */
     fun transitionTo(newState: MusicState) {
         if (newState == currentState) return
-        previousState = currentState
+        val oldState = currentState
+        previousState = oldState
         currentState  = newState
 
         val appCtx = ctx ?: return
@@ -102,13 +110,22 @@ object LeitmotifManager {
             null
         } ?: return
 
-        applyTempoToPlayer(newPlayer, currentSpeed)
+        val oldProfile = buildLeitmotifPlaybackProfile(oldState, currentScrollSpeed)
+        val newProfile = buildLeitmotifPlaybackProfile(newState, currentScrollSpeed)
+        currentSpeed = newProfile.tempo
+        currentTargetVolume = newProfile.targetVolume
+        applyTempoToPlayer(newPlayer, newProfile.tempo)
 
         val oldPlayer = activePlayer
         fadingPlayer  = oldPlayer
         activePlayer  = newPlayer
 
-        crossFade(oldPlayer, newPlayer)
+        crossFade(
+            from = oldPlayer,
+            to = newPlayer,
+            fromVolume = oldProfile.targetVolume,
+            toVolume = newProfile.targetVolume
+        )
     }
 
     /**
@@ -130,11 +147,22 @@ object LeitmotifManager {
      * Called every few frames — MediaPlayer.PlaybackParams is cheap to update.
      */
     fun updateTempo(scrollSpeed: Float) {
-        val base     = GameConstants.BASE_SCROLL_SPEED.toDouble()
-        val speed    = (1.0 + (scrollSpeed - base) / base * 0.8).coerceIn(1.0, 1.8).toFloat()
-        if (speed == currentSpeed) return
-        currentSpeed = speed
-        activePlayer?.let { applyTempoToPlayer(it, speed) }
+        currentScrollSpeed = scrollSpeed
+        val profile = buildLeitmotifPlaybackProfile(currentState, scrollSpeed)
+        if (profile.tempo == currentSpeed && profile.targetVolume == currentTargetVolume) return
+        currentSpeed = profile.tempo
+        currentTargetVolume = profile.targetVolume
+        activePlayer?.let {
+            applyTempoToPlayer(it, profile.tempo)
+            if (fadeThread == null) {
+                setPlayerVolume(it, profile.targetVolume)
+            }
+        }
+        fadingPlayer?.let { fading ->
+            val fadeState = previousState ?: return@let
+            val fadeProfile = buildLeitmotifPlaybackProfile(fadeState, scrollSpeed)
+            applyTempoToPlayer(fading, fadeProfile.tempo)
+        }
     }
 
     /** Transition to REST music. Call on HIT / run death. */
@@ -175,21 +203,31 @@ object LeitmotifManager {
         activePlayer?.release(); activePlayer = null
         fadingPlayer?.release(); fadingPlayer = null
         ctx = null
+        currentScrollSpeed = GameConstants.BASE_SCROLL_SPEED
+        currentTargetVolume = 0.48f
+        currentSpeed = 1f
+        previousState = null
+        currentState = MusicState.MENU
     }
 
     // ── Internals ─────────────────────────────────────────────────────────
 
-    private fun crossFade(from: MediaPlayer?, to: MediaPlayer) {
+    private fun crossFade(
+        from: MediaPlayer?,
+        to: MediaPlayer,
+        fromVolume: Float,
+        toVolume: Float
+    ) {
         stopFade()
-        fadeThread = Thread {
+        val thread = Thread {
             try {
                 for (step in 0..FADE_STEPS) {
                     val t      = step.toFloat() / FADE_STEPS
-                    val volIn  = t
-                    val volOut = 1f - t
+                    val volIn  = toVolume * t
+                    val volOut = fromVolume * (1f - t)
                     try {
-                        to.setVolume(volIn, volIn)
-                        from?.setVolume(volOut, volOut)
+                        setPlayerVolume(to, volIn)
+                        from?.let { setPlayerVolume(it, volOut) }
                     } catch (_: IllegalStateException) { break }
                     Thread.sleep(FADE_STEP_MS)
                 }
@@ -201,12 +239,19 @@ object LeitmotifManager {
                 from?.release()
             } catch (_: Exception) {}
             if (fadingPlayer === from) fadingPlayer = null
-        }.also { it.isDaemon = true; it.start() }
+            if (fadeThread === Thread.currentThread()) fadeThread = null
+        }
+        fadeThread = thread.also { it.isDaemon = true; it.start() }
     }
 
     private fun stopFade() {
         fadeThread?.interrupt()
         fadeThread = null
+    }
+
+    private fun setPlayerVolume(player: MediaPlayer, volume: Float) {
+        val clamped = volume.coerceIn(0f, 1f)
+        player.setVolume(clamped, clamped)
     }
 
     @Suppress("DEPRECATION")
@@ -217,5 +262,42 @@ object LeitmotifManager {
                 player.playbackParams = params
             } catch (_: Exception) { /* unsupported — ignore */ }
         }
+    }
+}
+
+internal fun buildLeitmotifPlaybackProfile(
+    state: LeitmotifManager.MusicState,
+    scrollSpeed: Float
+): LeitmotifPlaybackProfile {
+    val base = GameConstants.BASE_SCROLL_SPEED
+    val speedRatio = (scrollSpeed / base).coerceIn(0.75f, 2.0f)
+    val speedLift = (speedRatio - 1f).coerceAtLeast(0f)
+    val runTempo = (1f + ((scrollSpeed - base) / base) * 0.8f).coerceIn(1f, 1.8f)
+
+    return when (state) {
+        LeitmotifManager.MusicState.MENU -> LeitmotifPlaybackProfile(
+            tempo = 0.94f,
+            targetVolume = 0.48f
+        )
+        LeitmotifManager.MusicState.REST -> LeitmotifPlaybackProfile(
+            tempo = 0.92f,
+            targetVolume = 0.44f
+        )
+        LeitmotifManager.MusicState.PLAYING_1 -> LeitmotifPlaybackProfile(
+            tempo = runTempo,
+            targetVolume = (0.66f + speedLift * 0.05f).coerceIn(0.55f, 0.78f)
+        )
+        LeitmotifManager.MusicState.PLAYING_2 -> LeitmotifPlaybackProfile(
+            tempo = (runTempo + 0.04f).coerceAtMost(1.8f),
+            targetVolume = (0.78f + speedLift * 0.06f).coerceIn(0.68f, 0.90f)
+        )
+        LeitmotifManager.MusicState.PLAYING_3 -> LeitmotifPlaybackProfile(
+            tempo = (runTempo + 0.08f).coerceAtMost(1.8f),
+            targetVolume = (0.90f + speedLift * 0.06f).coerceIn(0.82f, 0.98f)
+        )
+        LeitmotifManager.MusicState.BLOOM -> LeitmotifPlaybackProfile(
+            tempo = maxOf(1.12f, (runTempo + 0.10f).coerceAtMost(1.8f)),
+            targetVolume = 1f
+        )
     }
 }

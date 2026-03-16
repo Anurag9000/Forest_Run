@@ -19,7 +19,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - TODO: verify every entity’s unique behavior on actual device and retune any behavior that still fails to read in normal play.
 - TODO: finish final device-proofing for the latest cactus, jacaranda, cherry blossom, owl, eagle, and broader bird/animal passes that still need real phone validation.
-- PARTIAL: Bloom now has a stronger activation burst, player-following effects, world-tint transformation, conversion world bursts, stronger HUD paneling, and a distinct surge haptic; finish real-device proofing and the last authored power-event polish.
+- PARTIAL: Bloom now has a stronger activation burst, player-following effects, world-tint transformation, conversion world bursts, stronger HUD paneling, a distinct surge haptic, and stronger parallax-world ambience during the power state; finish real-device proofing and the last authored power-event polish.
 
 ## Documentation And Canonical Spec TODOs
 
@@ -132,11 +132,11 @@ This file is the strict implementation ledger for everything from the original d
 
 ## Visual And Audio TODOs
 
-- TODO: full bespoke parallax/background artwork.
-- TODO: denser petals, fireflies, leaf drift, and living-forest ambience.
-- PARTIAL: Bloom audiovisual transformation is materially stronger through the new world shift, screen treatment, and surge haptic; finish final music/SFX polish and on-device tuning.
+- PARTIAL: parallax/background rendering now includes biome wash, canopy shade, mist bands, stronger wind ribbons, drifting leaves/petals/fireflies, and subtle speed/Bloom world-scale response; full bespoke background artwork is still missing.
+- PARTIAL: living-forest ambience density is materially stronger procedurally; finish bespoke scenic art, deeper ambient variety, and device-proof perceptual tuning.
+- PARTIAL: Bloom audiovisual transformation is materially stronger through the new world shift, screen treatment, surge haptic, and stronger parallax ambience; finish final music/SFX polish and on-device tuning.
 - PARTIAL: sanctuary presentation now includes mist bands, lantern glows, arrival badges, and stronger homeward lighting across menu/rest/Garden; finish bespoke scenic art and final device/perceptual tuning.
-- TODO: complete forest leitmotif treatment across all music states.
+- PARTIAL: `LeitmotifManager` now resolves state-shaped tempo/volume profiles across menu, run layers, Bloom, and rest; full leitmotif composition treatment across all states is still missing.
 - TODO: final polish pass for haptics, SFX timing, and visual juice.
 
 ## Release TODOs

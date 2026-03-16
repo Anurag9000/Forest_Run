@@ -342,7 +342,8 @@ Background assets:
 
 - `Implemented`: parallax background system.
 - `Partial`: four distinct layers in dream-spec scenic richness.
-- `TODO`: full bespoke art, blurred foreground identity, and far-background zoom feel.
+- `Partial`: biome wash, canopy shade, mist bands, drifting leaves/petals/fireflies, horizon glow, and subtle speed/Bloom world-scale response now exist in the runtime parallax layer.
+- `TODO`: full bespoke art, blurred foreground identity, and final phone-proof scenic tuning.
 
 #### Wind System
 
@@ -549,7 +550,7 @@ Dog:
 
 #### Leitmotif System
 
-- `Partial`: music state transitions and tempo scaling.
+- `Partial`: music state transitions now also resolve through explicit state-shaped tempo/volume profiles for menu, run layers, Bloom, and rest.
 - `TODO`: exact E-G-A-C-B leitmotif treatment in all states.
 
 #### Dialogue Bubbles

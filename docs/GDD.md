@@ -56,7 +56,8 @@ Night mode activates Lily of the Valley glow and Owl spawning. Fireflies appear 
 ### Current Status
 
 - Implemented: biome tinting and darkness overlays, sprite import pipeline.
-- TODO: full hand-authored scenic backgrounds, stronger atmospheric density, and true readable phone-scale art staging beyond the current sanctuary/menu/rest ambience pass.
+- Partial: run-time parallax now carries stronger biome wash, canopy shade, mist, drifting leaves/petals/fireflies, and subtle speed/Bloom scale response in addition to the sanctuary/menu/rest ambience pass.
+- TODO: full hand-authored scenic backgrounds, stronger atmospheric density, and true readable phone-scale art staging on actual phones.
 
 ---
 
@@ -315,6 +316,7 @@ Dynamic tempo should scale with scroll speed.
 ### Current Status
 
 - Implemented: core music states and many SFX hooks.
+- Partial: music states now also resolve through explicit state-shaped tempo/volume profiles so menu/rest stay softer, late run grows fuller, and Bloom peaks harder.
 - TODO: full leitmotif treatment and stronger authored musical identity across all states.
 - TODO: use music and ambience to reinforce comfort, trust, grief, and return-to-sanctuary feeling.
 

@@ -15,7 +15,7 @@ The dream world uses four layers:
 
 ### Current Status
 
-- Implemented: parallax background in procedural/tint-driven form.
+- Partial: parallax background now layers biome wash, canopy shade, mist bands, drifting leaves/petals/fireflies, stronger wind ribbons, horizon glow, and subtle speed/Bloom world-scale response on top of the procedural base.
 - Partial: menu, rest, and Garden now use sanctuary-derived mist, lantern glow, ground-light bloom, and homecoming badge presentation to make the loop feel less flat.
 - TODO: full bespoke background art and stronger sense of depth.
 
@@ -33,6 +33,7 @@ Dream traits:
 ### Current Status
 
 - Implemented: sway component exists.
+- Partial: world-level wind ribbons now read more strongly through the parallax layer.
 - TODO: fuller world-level wind drama and stronger scenic payoff.
 
 ## 3. Character Animation — Squash & Stretch
@@ -68,6 +69,7 @@ Dream particle families include:
 ### Current Status
 
 - Implemented: multiple particle presets including Bloom, death, mercy, seed, and movement effects.
+- Partial: the parallax layer now contributes drifting petals, leaves, fireflies, and mist so the world feels less empty even outside discrete emitters.
 - TODO: full living-forest density and stronger scenic saturation.
 
 ## 5. Dynamic Lighting — Day/Night Canvas Filter
@@ -90,6 +92,7 @@ Expected:
 ### Current Status
 
 - Implemented: biome tinting and darkness overlay.
+- Partial: runtime now adds stronger horizon glow, canopy shade, and night-sensitive firefly density to the background layer.
 - TODO: richer authored lighting mood and stronger visual identity per phase.
 
 ## 6. Camera Effects
@@ -103,6 +106,7 @@ Dream effects:
 ### Current Status
 
 - Implemented: shake and feedback.
+- Partial: subtle background scale/zoom logic at speed and during Bloom now exists in the parallax layer.
 - TODO: complete cinematic polish.
 
 ## 7. Environmental Interactions — Bloom Reaction
@@ -131,5 +135,5 @@ During Bloom, the dream presentation includes:
 ### Current Status
 
 - Implemented: Bloom state, Bloom meter, aura effects, activation burst, stronger full-screen treatment, broader world tinting, and stronger HUD power framing.
-- Partial: player-following Bloom trail, stronger conversion feedback, and transformed-world presentation now exist in runtime.
+- Partial: player-following Bloom trail, stronger conversion feedback, transformed-world presentation, and stronger parallax-world ambience now exist in runtime.
 - TODO: make Bloom feel fully spectacular, obvious, and unforgettable on actual phone hardware.

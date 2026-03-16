@@ -230,6 +230,7 @@ The forest leitmotif should appear in all music states in different arrangements
 ### Current Status
 
 - Implemented: music state transitions.
+- Partial: leitmotif playback now has clearer emotional staging through softer menu/rest levels, fuller late-run intensity, and a harder Bloom peak, while the full compositional motif treatment still remains open.
 - Partial: Bloom now has a stronger visual/haptic identity in runtime, while the full leitmotif treatment still remains open.
 - TODO: full leitmotif system and stronger authored score.
 

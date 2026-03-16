@@ -10,7 +10,7 @@ This restores the original roadmap as the required implementation target. Items 
 | 1 | Done | game loop exists |
 | 2 | Done | input system exists |
 | 3 | Partial | player exists but dream-spec feel still needs work |
-| 4 | Partial | parallax exists, art still incomplete |
+| 4 | Partial | parallax exists with stronger mist, wind, ambient life, and speed/Bloom scale response, but art is still incomplete |
 | 5 | Partial | HUD exists, readability is materially improved, and Bloom power-state clarity is much stronger; final device-proof polish still needs work |
 | 6 | Partial | player sprites exist, face overlay dream not complete |
 | 7 | Done | base entity framework exists |
@@ -26,7 +26,7 @@ This restores the original roadmap as the required implementation target. Items 
 | 17 | Partial | mercy, pacifist, and friendship systems exist, and run-level `Kind` / `Merciful` / `Peaceful` payoff now carries into rest and Garden; deeper world-state consequence still missing |
 | 18 | Partial | persistent encounter memory and costumes now exist in baseline form |
 | 19 | Partial | ghost exists, now delays reveal and suppresses after impacts for clearer live play, and still needs final tuning and validation |
-| 20 | Partial | audio states exist, full leitmotif system incomplete |
+| 20 | Partial | audio states now use explicit state-shaped tempo/volume profiles, but the full leitmotif system is incomplete |
 | 21 | Partial | haptics exist, tuning incomplete |
 | 22 | Partial | canonical lifecycle, run-summary carryover, stronger rest carry-home preview, and sanctuary-derived recovery/homecoming framing now exist; full authored recovery richness still incomplete |
 | 23 | Partial | garden exists as real hub with wardrobe, memory stats, last-run carry-home, mood ambience, bond traces, arrival badges, and stronger sanctuary lighting/atmosphere; full sanctuary feel still incomplete |
@@ -176,3 +176,4 @@ Goal: complete, shippable, polished store-ready product.
 - PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist, including baseline relationship keepsake rewards, save-backed kindness/tender streak carry-over, repeat-killer escalation, and explicit pacifist route tiers; finish deeper cross-run payoff and richer route feel
 - PARTIAL: forest mood, personal return moments, major-creature relationship arcs, and quiet story fragments now exist as explicit implementation work, including repeated-harm caution beats, repeated-kindness warmth beats, repeat-killer `Same Shadow` beats, milestone-sensitive warmth, Bloom-afterglow baseline, and tracked live encounter cue swaps; deeper authored payoff still needs to be built
 - PARTIAL: startup, rest, and Garden now share a baseline authored session-arc copy layer plus sanctuary-derived arrival badges and atmosphere cues; finish full sanctuary-grade atmosphere and recovery flow
+- PARTIAL: parallax ambience and leitmotif playback shaping are materially stronger; finish bespoke art, authored score, and real-device perceptual tuning
