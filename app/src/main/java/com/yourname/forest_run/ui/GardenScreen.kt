@@ -17,6 +17,7 @@ import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.engine.SaveManager
+import com.yourname.forest_run.engine.SessionArcComposer
 import com.yourname.forest_run.engine.StoryFragmentSystem
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -123,6 +124,7 @@ class GardenScreen(
     private var creatureThoughtLine = ""
     private var weatherThoughtLine = ""
     private var sanctuaryState = GardenSanctuaryState()
+    private var arrivalLine = ""
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -392,11 +394,14 @@ class GardenScreen(
         canvas.drawText(forestMoodState.currentMood.gardenLine, cw / 2f, ch * 0.13f, moodPaint)
         returnMoment?.let { moment ->
             canvas.drawText(moment.title, cw / 2f, ch * 0.16f, returnTitlePaint)
-            canvas.drawText(moment.line, cw / 2f, ch * 0.185f, returnLinePaint)
+            drawWrappedCenteredText(canvas, moment.line, cw / 2f, ch * 0.182f, cw * 0.60f, returnLinePaint)
             drawReturnVisitor(canvas, cw, ch)
         }
+        if (returnMoment == null && arrivalLine.isNotBlank()) {
+            drawWrappedCenteredText(canvas, arrivalLine, cw / 2f, ch * 0.166f, cw * 0.62f, returnLinePaint)
+        }
         if (sanctuaryState.sanctuaryLine.isNotBlank()) {
-            canvas.drawText(sanctuaryState.sanctuaryLine, cw / 2f, ch * 0.212f, sanctuaryLinePaint)
+            drawWrappedCenteredText(canvas, sanctuaryState.sanctuaryLine, cw / 2f, ch * 0.212f, cw * 0.64f, sanctuaryLinePaint)
         }
         drawSanctuaryTraces(canvas, cw, ch)
 
@@ -679,6 +684,7 @@ class GardenScreen(
         weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)
         creatureThoughtLine = StoryFragmentSystem.creatureThought(context, strongestBond?.first).orEmpty()
         sanctuaryState = GardenSanctuaryPlanner.build(context, lastRunSummary)
+        arrivalLine = SessionArcComposer.gardenArrivalLine(lastRunSummary, returnMoment, sanctuaryState)
     }
 
     private fun syncWardrobe() {
@@ -804,5 +810,38 @@ class GardenScreen(
         EntityType.EAGLE -> spriteManager.eagleSprite.copy()
         EntityType.WOLF -> spriteManager.wolfSprite.copy()
         else -> spriteManager.catSprite.copy()
+    }
+
+    private fun drawWrappedCenteredText(
+        canvas: Canvas,
+        text: String,
+        centerX: Float,
+        baselineY: Float,
+        maxWidth: Float,
+        paint: Paint
+    ) {
+        val words = text.split(" ")
+        if (words.isEmpty()) return
+
+        val lines = mutableListOf<String>()
+        val builder = StringBuilder()
+        for (word in words) {
+            val candidate = if (builder.isEmpty()) word else "${builder} $word"
+            if (paint.measureText(candidate) <= maxWidth) {
+                builder.clear()
+                builder.append(candidate)
+            } else {
+                lines += builder.toString()
+                builder.clear()
+                builder.append(word)
+            }
+        }
+        if (builder.isNotEmpty()) lines += builder.toString()
+
+        var y = baselineY
+        for (line in lines.take(2)) {
+            canvas.drawText(line, centerX, y, paint)
+            y += paint.textSize + 6f
+        }
     }
 }

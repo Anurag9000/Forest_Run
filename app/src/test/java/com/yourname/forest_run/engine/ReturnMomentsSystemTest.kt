@@ -224,4 +224,15 @@ class ReturnMomentsSystemTest {
         assertEquals("Stayed Gentle", moment?.title)
         assertEquals(EntityType.DOG, moment?.visitor)
     }
+
+    @Test
+    fun `preview garden moment does not mutate saved return state`() {
+        val before = ReturnMomentState(lastActiveAtMs = 123L, lastGardenGreetingDay = 4L, roughRunStreak = 1)
+        SaveManager.saveReturnMomentState(context, before)
+
+        val preview = ReturnMomentsSystem.previewGardenMoment(context, null, nowMs = 8L * 24L * 60L * 60L * 1_000L)
+
+        assertEquals("Welcome Back", preview?.title)
+        assertEquals(before, SaveManager.loadReturnMomentState(context))
+    }
 }

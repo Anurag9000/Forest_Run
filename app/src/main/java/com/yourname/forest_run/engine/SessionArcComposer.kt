@@ -1,0 +1,135 @@
+package com.yourname.forest_run.engine
+
+import android.content.Context
+
+data class MenuSceneCopy(
+    val atmosphereLine: String,
+    val idlePrompt: String,
+    val idleSupportLine: String,
+    val readyPrompt: String,
+    val readySupportLine: String
+)
+
+data class RestSceneCopy(
+    val subtitle: String,
+    val carryHomeLine: String,
+    val promptLine: String
+)
+
+object SessionArcComposer {
+
+    fun menuCopy(context: Context): MenuSceneCopy {
+        val appContext = context.applicationContext
+        val summary = SaveManager.loadLastRunSummary(appContext)
+        val sanctuary = GardenSanctuaryPlanner.build(appContext, summary)
+
+        val atmosphereLine = when {
+            summary == null -> "The willow has kept the first path quiet for you."
+            summary.forestMood == ForestMood.FEARFUL || summary.hitsTaken >= 2 ->
+                "Home keeps its voice low until the roughness leaves your hands."
+            summary.forestMood == ForestMood.GENTLE && summary.sparedCount > 0 ->
+                "The garden still holds the gentler shape of your last return."
+            summary.bloomConversions >= 3 ->
+                "A little of Bloom is still hanging in the branches."
+            sanctuary.carryHomeLine.isNotBlank() ->
+                sanctuary.carryHomeLine
+            else ->
+                "The path remembers enough to feel familiar, not crowded."
+        }
+
+        val idlePrompt = when {
+            summary?.forestMood == ForestMood.FEARFUL -> "tap when you're ready"
+            else -> "tap to rise"
+        }
+
+        val idleSupportLine = when {
+            summary == null -> "the willow kept your place"
+            summary.forestMood == ForestMood.FEARFUL -> "the path can wait for steadier hands"
+            summary.forestMood == ForestMood.GENTLE -> "the garden remembers the softer version of that run"
+            summary.bloomConversions >= 2 -> "there is still light left in the branches"
+            else -> "home kept that run without asking anything more from it"
+        }
+
+        val readyPrompt = when {
+            summary?.forestMood == ForestMood.FEARFUL -> "tap to begin softly"
+            else -> "tap to run"
+        }
+
+        val readySupportLine = when {
+            summary == null -> "the first steps are enough"
+            summary.forestMood == ForestMood.GENTLE -> "carry the gentler pace with you"
+            summary.forestMood == ForestMood.FEARFUL -> "nothing is asking for speed first"
+            summary.bloomConversions >= 2 -> "the path still remembers Bloom"
+            else -> "the forest is ready for another answer"
+        }
+
+        return MenuSceneCopy(
+            atmosphereLine = atmosphereLine,
+            idlePrompt = idlePrompt,
+            idleSupportLine = idleSupportLine,
+            readyPrompt = readyPrompt,
+            readySupportLine = readySupportLine
+        )
+    }
+
+    fun restCopy(context: Context, summary: RunSummary): RestSceneCopy {
+        val appContext = context.applicationContext
+        val sanctuary = GardenSanctuaryPlanner.build(appContext, summary)
+        val previewMoment = ReturnMomentsSystem.previewGardenMoment(appContext, summary)
+
+        val subtitle = when {
+            summary.hitsTaken == 0 && summary.cleanPasses >= 8 ->
+                "The run comes down gently."
+            summary.forestMood == ForestMood.FEARFUL ->
+                "Nothing is asking you to recover too quickly."
+            summary.forestMood == ForestMood.GENTLE ->
+                "The forest lets the softer parts of the run return first."
+            summary.forestMood == ForestMood.RECKLESS ->
+                "Even hurried runs are allowed to come down softly."
+            else ->
+                "The path is already making room for another calm start."
+        }
+
+        val carryHomeLine = previewMoment?.line?.ifBlank { null }
+            ?: sanctuary.carryHomeLine.ifBlank {
+                when (summary.forestMood) {
+                    ForestMood.FEARFUL -> "Home is still making a quieter place for this run."
+                    ForestMood.GENTLE -> "The gentler parts of the run are already finding their way home."
+                    ForestMood.RECKLESS -> "Even a stirred-up run is allowed to settle into home."
+                    ForestMood.STEADY -> "Home keeps a little of the steadier shape that run left behind."
+                }
+            }
+
+        val promptLine = if (previewMoment != null) {
+            "tap to return home"
+        } else {
+            "tap to carry this home"
+        }
+
+        return RestSceneCopy(
+            subtitle = subtitle,
+            carryHomeLine = carryHomeLine,
+            promptLine = promptLine
+        )
+    }
+
+    fun gardenArrivalLine(
+        summary: RunSummary?,
+        returnMoment: ReturnMoment?,
+        sanctuaryState: GardenSanctuaryState
+    ): String {
+        if (returnMoment != null) return ""
+        if (sanctuaryState.carryHomeLine.isNotBlank()) {
+            return sanctuaryState.carryHomeLine
+        }
+        if (summary == null) {
+            return "The garden kept a quiet place open for you."
+        }
+        return when (summary.forestMood) {
+            ForestMood.FEARFUL -> "Nothing here is asking you to hurry back out."
+            ForestMood.GENTLE -> "The gentler shape of that run is still resting here."
+            ForestMood.RECKLESS -> "Even stirred-up air can settle once it reaches home."
+            ForestMood.STEADY -> "The garden kept the calmer part of that run."
+        }
+    }
+}

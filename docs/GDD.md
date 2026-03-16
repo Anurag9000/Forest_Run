@@ -166,6 +166,7 @@ Current baseline:
 
 - the Garden can now answer long absences, rough streaks, stronger bonds, Bloom-heavy runs, repeated kindness, and gentle milestone returns with distinct return moments
 - milestone bonds now produce warmer and more specific return lines instead of only generic greetings
+- rest can now preview the likely homeward tone before the Garden transition without consuming the saved return beat
 - broader authored combinations are still TODO
 
 #### 3.8.4 Quiet Story Fragments
@@ -185,6 +186,7 @@ Current baseline:
 ### Current Status
 
 - Implemented: two-tap menu start, run loop, game over, restart, garden unlock persistence.
+- Partial: menu startup and rest recovery now share authored copy derived from the same saved emotional state, so the session begins and ends with clearer continuity.
 - Partial: the remaining animal-family ordinary-play payoffs are stronger, with clearer low-threat fairness and more visible bond reward feedback.
 - TODO: make the whole session arc feel authored, readable, and emotionally coherent in real play.
 

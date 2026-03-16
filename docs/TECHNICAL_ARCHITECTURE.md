@@ -202,10 +202,12 @@ Expected qualities:
 - Implemented: `RelationshipArcSystem` now exists as a first-class runtime and persistence layer for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - Partial: `ReturnMomentsSystem` now exists in baseline form.
 - Partial: `ReturnMomentsSystem` now also surfaces repeated-harm caution beats, repeated-kindness `Stayed Gentle` returns, milestone-bond warmth, Bloom-heavy afterglow returns, and richer absence-sensitive Garden returns; broader authored combinations still need expansion.
+- Implemented: `ReturnMomentsSystem` now also exposes a non-mutating preview path so rest and startup flow can foreshadow Garden return beats without consuming return-state persistence.
 - Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, baseline milestone keepsake rewards, and tracked live encounter cue swaps for Cat/Fox/Wolf/Dog; deeper authored stage consequences still need expansion.
 - Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
 - Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, repeated-harm caution pages, repeated-kindness warmth pages, milestone-gentleness pages, and Bloom-afterglow pages in baseline form.
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, repeated-harm caution traces, and repeated-kindness trust traces from mood, summary, and relationship state.
+- Implemented: `SessionArcComposer` now centralizes authored startup, Garden-arrival, and rest carry-home copy so the macro loop uses shared emotional state instead of disconnected screen-local strings.
 - Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
 - Implemented: `FloraEncounterFlavor` now centralizes authored flora payoff text so lure/rhythm/window feedback stops living as scattered fallback strings.
 - Implemented: `TreeEncounterFlavor` now centralizes authored tree payoff text so curtain/canopy/gap/gust feedback stays consistent instead of scattering across tree classes.
@@ -248,7 +250,8 @@ Expected layers:
 ### Current Status
 
 - Implemented: dedicated return-state data now exists for greetings, absence reactions, rough-run comfort beats, milestone Garden messages, and stronger Bloom / gentle-bond combinations.
-- TODO: deepen authoring hooks further and broaden emotional-state coverage beyond the current milestone, Bloom, and gentle-return combinations.
+- Partial: rest flow can now preview return-state tone before the Garden transition without mutating saved greeting state.
+- TODO: deepen authoring hooks further and broaden emotional-state coverage beyond the current milestone, Bloom, gentle-return, and baseline preview combinations.
 
 ## 14A. Ghost Readability Policy
 
@@ -287,6 +290,20 @@ Expected outputs:
 - Partial: contextual rest quotes and some dialogue systems already exist.
 - Partial: milestone-sensitive and Bloom-sensitive Garden fragment selection now exists in baseline form.
 - TODO: formalize broader fragment authoring, unlock state, and short-form poetic content selection.
+
+## 15A. Session Arc Composition
+
+Expected qualities:
+
+- startup, rest, and Garden return should feel like one authored loop
+- menu copy should reflect the last carried-home emotional state
+- rest should preview what kind of homeward reception the player is returning to
+- Garden should preserve continuity even when no special return beat fires
+
+### Current Status
+
+- Implemented: `SessionArcComposer` now derives menu atmosphere, rest recovery copy, carry-home wording, and fallback Garden arrival lines from the same saved emotional state.
+- TODO: expand authored variety further and finish device-proofing the macro flow.
 
 ## 16. Dynamic Difficulty Curve
 

@@ -9,6 +9,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
+import com.yourname.forest_run.engine.SessionArcComposer
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -53,6 +54,7 @@ class MainMenuScreen(
 
     // Pulse / ambient
     private var elapsedT = 0f
+    private var sceneCopy = SessionArcComposer.menuCopy(context)
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -104,6 +106,18 @@ class MainMenuScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val atmospherePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(220, 235, 247, 230)
+        textSize = 14f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
+    private val supportPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(205, 220, 234, 214)
+        textSize = 13f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
 
     // ── API ───────────────────────────────────────────────────────────────
 
@@ -136,6 +150,10 @@ class MainMenuScreen(
         if (phase == Phase.READY) readyPlayerSprite.update(deltaTime)
     }
 
+    fun refreshCopy() {
+        sceneCopy = SessionArcComposer.menuCopy(context)
+    }
+
     /** Consume a pending run-start request so it only fires once. */
     fun consumeStartRunRequest(): Boolean {
         if (!startRunRequested) return false
@@ -159,6 +177,7 @@ class MainMenuScreen(
 
         // Title
         canvas.drawText("FOREST RUN", cw / 2f, ch * 0.10f + titlePaint.textSize, titlePaint)
+        drawWrappedCenteredText(canvas, sceneCopy.atmosphereLine, cw / 2f, ch * 0.17f, cw * 0.70f, atmospherePaint)
 
         // Prompt
         val promptAlpha = when (phase) {
@@ -168,11 +187,17 @@ class MainMenuScreen(
         }
         promptPaint.alpha = promptAlpha.toInt().coerceIn(0, 255)
         val promptText = when (phase) {
-            Phase.IDLE        -> "tap to stand"
-            Phase.STANDING_UP -> "..."
-            Phase.READY       -> "tap to run!"
+            Phase.IDLE        -> sceneCopy.idlePrompt
+            Phase.STANDING_UP -> "listening..."
+            Phase.READY       -> sceneCopy.readyPrompt
         }
-        canvas.drawText(promptText, cw / 2f, ch * 0.92f, promptPaint)
+        val supportText = when (phase) {
+            Phase.IDLE -> sceneCopy.idleSupportLine
+            Phase.STANDING_UP -> "the garden is letting the run return by degrees"
+            Phase.READY -> sceneCopy.readySupportLine
+        }
+        canvas.drawText(promptText, cw / 2f, ch * 0.90f, promptPaint)
+        drawWrappedCenteredText(canvas, supportText, cw / 2f, ch * 0.935f, cw * 0.72f, supportPaint)
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
@@ -219,5 +244,38 @@ class MainMenuScreen(
             Phase.READY -> readyPlayerSprite
         }
         sprite.draw(canvas, charRect)
+    }
+
+    private fun drawWrappedCenteredText(
+        canvas: Canvas,
+        text: String,
+        centerX: Float,
+        baselineY: Float,
+        maxWidth: Float,
+        paint: Paint
+    ) {
+        val words = text.split(" ")
+        if (words.isEmpty()) return
+
+        val lines = mutableListOf<String>()
+        val builder = StringBuilder()
+        for (word in words) {
+            val candidate = if (builder.isEmpty()) word else "${builder} $word"
+            if (paint.measureText(candidate) <= maxWidth) {
+                builder.clear()
+                builder.append(candidate)
+            } else {
+                lines += builder.toString()
+                builder.clear()
+                builder.append(word)
+            }
+        }
+        if (builder.isNotEmpty()) lines += builder.toString()
+
+        var y = baselineY
+        for (line in lines.take(2)) {
+            canvas.drawText(line, centerX, y, paint)
+            y += paint.textSize + 6f
+        }
     }
 }

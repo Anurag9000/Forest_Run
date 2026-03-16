@@ -29,11 +29,11 @@ This file is the strict implementation ledger for everything from the original d
 
 ## GDD TODOs
 
-- TODO: full authored garden atmosphere at startup.
+- PARTIAL: startup now uses shared session-arc copy so the menu and Garden carry the last run forward more intentionally; finish full authored garden atmosphere and launch staging.
 - TODO: stronger early-game readability and onboarding.
 - PARTIAL: Bloom spectacle now includes a full-screen/world shift, stronger conversion spectacle, and stronger active-state HUD framing; finish final authored polish and device validation.
-- TODO: softer authored failure presentation with richer reflection.
-- PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, and visible bond traces; finish the full restorative scene and startup atmosphere.
+- PARTIAL: rest now has a softer authored recovery subtitle, carry-home preview, and homeward prompt; finish the full restorative failure scene and richer reflection range.
+- PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, visible bond traces, and a stronger arrival line when no special return beat is active; finish the full restorative scene and startup atmosphere.
 
 ## Personality TODOs
 
@@ -73,6 +73,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: added baseline first-run-of-day greeting logic, long-absence recognition, rough-run comfort returns, and milestone-sensitive Garden messages.
 - PARTIAL: Garden return moments now use bonded visitors and stronger mercy/clean-play/high-score hooks, including milestone-bond warmth, Bloom-linger, and stronger absence-sensitive returns.
 - PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, Bloom-heavy runs, repeated tenderness, and repeated kindness streaks; continue expanding authored combinations.
+- DONE: rest flow can now preview the likely Garden return beat without mutating save state, so return continuity can be written before the actual hub transition.
 - TODO: ensure return sessions feel intimate instead of mechanically identical.
 
 ### Quiet Story Fragments
@@ -127,7 +128,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments, now with explicit kindness/tender streak carry-over; deepen authored coverage, stronger Garden consequences, and richer payoff.
+- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments, now with explicit kindness/tender streak carry-over plus shared session-arc composition for menu/rest/Garden continuity; deepen authored coverage, stronger Garden consequences, and richer payoff.
 
 ## Visual And Audio TODOs
 

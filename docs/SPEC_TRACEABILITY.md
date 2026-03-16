@@ -100,7 +100,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 #### Cold Start — Garden Main Menu
 
 - `Implemented`: seated/resting menu scene and two-tap stand/run flow.
-- `Partial`: ambient garden tone.
+- `Partial`: ambient garden tone and startup atmosphere now reflect the carried-home emotional state through shared session-arc copy.
 - `TODO`: full “no hard menu buttons, unlocked plants in background” authored richness.
 - `TODO`: stronger footstep-synced musical launch feel.
 
@@ -139,7 +139,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 
 #### Soft Fall / Rest State
 
-- `Partial`: current runtime restores the return-to-Garden loop, but the full calm reflective sit-down framing and authored emotional recovery are still weaker than the original dream spec.
+- `Partial`: current runtime restores the return-to-Garden loop, and rest now includes authored recovery/carry-home copy plus a non-mutating preview of the likely Garden return tone; the full calm reflective sit-down framing is still weaker than the original dream spec.
 - `Partial`: rest-like player state exists.
 - `Partial`: short death-to-overlay pacing exists.
 - `TODO`: true calm reflective end-run summary with seeds, combo/streak, contextual quote, and more restorative emotional framing.

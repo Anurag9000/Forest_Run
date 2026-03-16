@@ -37,8 +37,22 @@ object ReturnMomentsSystem {
         context: Context,
         summary: RunSummary?,
         nowMs: Long = System.currentTimeMillis()
+    ): ReturnMoment? =
+        buildGardenMoment(context.applicationContext, summary, nowMs, persist = true)
+
+    fun previewGardenMoment(
+        context: Context,
+        summary: RunSummary?,
+        nowMs: Long = System.currentTimeMillis()
+    ): ReturnMoment? =
+        buildGardenMoment(context.applicationContext, summary, nowMs, persist = false)
+
+    private fun buildGardenMoment(
+        appContext: Context,
+        summary: RunSummary?,
+        nowMs: Long,
+        persist: Boolean
     ): ReturnMoment? {
-        val appContext = context.applicationContext
         val previous = SaveManager.loadReturnMomentState(appContext)
         val dayId = nowMs / DAY_MS
         val alreadyGreetedToday = previous.lastGardenGreetingDay == dayId
@@ -132,13 +146,15 @@ object ReturnMomentsSystem {
             else -> null
         }
 
-        SaveManager.saveReturnMomentState(
-            appContext,
-            previous.copy(
-                lastActiveAtMs = nowMs,
-                lastGardenGreetingDay = dayId
+        if (persist) {
+            SaveManager.saveReturnMomentState(
+                appContext,
+                previous.copy(
+                    lastActiveAtMs = nowMs,
+                    lastGardenGreetingDay = dayId
+                )
             )
-        )
+        }
         return moment
     }
 

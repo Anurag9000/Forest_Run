@@ -10,6 +10,7 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.RunSummary
+import com.yourname.forest_run.engine.SessionArcComposer
 import kotlin.math.sin
 
 /**
@@ -34,6 +35,7 @@ class GameOverScreen(
     private val screenWidth: Int,
     private val screenHeight: Int
 ) {
+    private val appContext = context.applicationContext
     // ── Fonts ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
         Typeface.createFromAsset(context.assets, AssetPaths.PIXEL_FONT)
@@ -64,6 +66,12 @@ class GameOverScreen(
         textSize = 18f
         textAlign = Paint.Align.CENTER
         color = Color.argb(220, 220, 240, 220)
+    }
+    private val subtitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont
+        textSize = 16f
+        textAlign = Paint.Align.CENTER
+        color = Color.argb(220, 232, 246, 228)
     }
     private val scoreLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface  = pixelFont
@@ -112,6 +120,12 @@ class GameOverScreen(
         textAlign = Paint.Align.CENTER
         color     = Color.argb(200, 200, 180, 255)
     }
+    private val carryHomePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont
+        textSize = 15f
+        textAlign = Paint.Align.CENTER
+        color = Color.argb(220, 236, 244, 226)
+    }
 
     // ── Pulse timer ───────────────────────────────────────────────────────
     private var pulseTimer = 0f
@@ -136,6 +150,7 @@ class GameOverScreen(
         canvas:        Canvas,
         summary: RunSummary
     ) {
+        val sceneCopy = SessionArcComposer.restCopy(appContext, summary)
         val w = screenWidth.toFloat()
         val h = screenHeight.toFloat()
 
@@ -150,10 +165,13 @@ class GameOverScreen(
 
         // 3. Title
         canvas.drawText("REST", cx, ty, titlePaint)
-        ty += 48f
+        ty += 34f
+
+        drawWrappedCenteredText(canvas, sceneCopy.subtitle, cx, ty, panelW * 0.80f, subtitlePaint)
+        ty += 42f
 
         drawWrappedCenteredText(canvas, summary.restQuote, cx, ty, panelW * 0.82f, quotePaint)
-        ty += 64f
+        ty += 58f
         canvas.drawText(summary.forestMood.restLine, cx, ty, moodPaint)
         ty += 30f
 
@@ -207,10 +225,13 @@ class GameOverScreen(
             ty += 34f
         }
 
+        drawWrappedCenteredText(canvas, sceneCopy.carryHomeLine, cx, ty, panelW * 0.82f, carryHomePaint)
+        ty += 42f
+
         // 8. Tap prompt — pulsing alpha
         val promptAlpha = ((sin(pulseTimer * 2.5f) * 0.4f + 0.6f) * 200).toInt().coerceIn(0, 255)
         promptPaint.alpha = promptAlpha
-        canvas.drawText("tap anywhere to return to garden", cx, ty + 20f, promptPaint)
+        canvas.drawText(sceneCopy.promptLine, cx, ty + 20f, promptPaint)
     }
 
     // ── Helper ────────────────────────────────────────────────────────────
