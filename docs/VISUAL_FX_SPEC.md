@@ -16,6 +16,7 @@ The dream world uses four layers:
 ### Current Status
 
 - Implemented: parallax background in procedural/tint-driven form.
+- Partial: menu, rest, and Garden now use sanctuary-derived mist, lantern glow, ground-light bloom, and homecoming badge presentation to make the loop feel less flat.
 - TODO: full bespoke background art and stronger sense of depth.
 
 ## 2. Wind System — SwayComponent

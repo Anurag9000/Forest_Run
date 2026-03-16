@@ -9,6 +9,8 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
+import com.yourname.forest_run.engine.GardenSanctuaryPlanner
+import com.yourname.forest_run.engine.GardenSanctuaryState
 import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.engine.SessionArcComposer
 import kotlin.math.sin
@@ -53,6 +55,24 @@ class GameOverScreen(
         color = Color.argb(255, 120, 210, 150)
         style = Paint.Style.STROKE
         strokeWidth = 4f
+    }
+    private val ambiencePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(216, 244, 236, 172)
+        style = Paint.Style.FILL
+    }
+    private val badgeBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(190, 242, 246, 230)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val badgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont
+        textSize = 13f
+        textAlign = Paint.Align.CENTER
+        color = Color.rgb(44, 50, 24)
     }
 
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -151,11 +171,13 @@ class GameOverScreen(
         summary: RunSummary
     ) {
         val sceneCopy = SessionArcComposer.restCopy(appContext, summary)
+        val sanctuaryState = GardenSanctuaryPlanner.build(appContext, summary)
         val w = screenWidth.toFloat()
         val h = screenHeight.toFloat()
 
         // 1. Scrim
         canvas.drawRect(0f, 0f, w, h, scrimPaint)
+        drawRecoveryAtmosphere(canvas, w, h, sanctuaryState)
 
         // 2. Panel
         canvas.drawRoundRect(panelRect, 24f, 24f, panelPaint)
@@ -169,6 +191,16 @@ class GameOverScreen(
 
         drawWrappedCenteredText(canvas, sceneCopy.subtitle, cx, ty, panelW * 0.80f, subtitlePaint)
         ty += 42f
+
+        if (sanctuaryState.arrivalBadge.isNotBlank()) {
+            val badgeWidth = panelW * 0.34f
+            val badgeRect = RectF(cx - badgeWidth / 2f, ty - 16f, cx + badgeWidth / 2f, ty + 10f)
+            canvas.drawRoundRect(badgeRect, 16f, 16f, badgePaint)
+            canvas.drawRoundRect(badgeRect, 16f, 16f, badgeBorderPaint)
+            val labelY = badgeRect.centerY() - (badgeTextPaint.descent() + badgeTextPaint.ascent()) / 2f
+            canvas.drawText(sanctuaryState.arrivalBadge, cx, labelY, badgeTextPaint)
+            ty += 28f
+        }
 
         drawWrappedCenteredText(canvas, summary.restQuote, cx, ty, panelW * 0.82f, quotePaint)
         ty += 58f
@@ -236,6 +268,36 @@ class GameOverScreen(
         val promptAlpha = ((sin(pulseTimer * 2.5f) * 0.4f + 0.6f) * 200).toInt().coerceIn(0, 255)
         promptPaint.alpha = promptAlpha
         canvas.drawText(sceneCopy.promptLine, cx, ty + 20f, promptPaint)
+    }
+
+    private fun drawRecoveryAtmosphere(
+        canvas: Canvas,
+        w: Float,
+        h: Float,
+        sanctuaryState: GardenSanctuaryState
+    ) {
+        ambiencePaint.color = Color.argb(sanctuaryState.canopyShadeAlpha.coerceAtMost(84), 20, 28, 34)
+        canvas.drawRect(0f, 0f, w, h * 0.34f, ambiencePaint)
+
+        repeat(sanctuaryState.mistBandCount.coerceAtMost(3)) { index ->
+            ambiencePaint.color = Color.argb(24 + index * 10, 228, 240, 236)
+            val top = h * (0.26f + index * 0.06f)
+            canvas.drawOval(-30f, top, w + 30f, top + h * 0.08f, ambiencePaint)
+        }
+
+        if (sanctuaryState.groundGlowAlpha > 0) {
+            ambiencePaint.color = Color.argb(sanctuaryState.groundGlowAlpha.coerceAtMost(96), 236, 240, 178)
+            canvas.drawOval(w * 0.16f, h * 0.70f, w * 0.84f, h * 0.92f, ambiencePaint)
+        }
+
+        repeat(sanctuaryState.lanternGlowCount.coerceAtMost(4)) { index ->
+            val x = w * (0.24f + index * 0.16f)
+            val y = h * (0.20f + (index % 2) * 0.05f)
+            ambiencePaint.color = Color.argb(58, 255, 236, 170)
+            canvas.drawCircle(x, y, 14f, ambiencePaint)
+            ambiencePaint.color = Color.argb(118, 255, 242, 192)
+            canvas.drawCircle(x, y, 5f, ambiencePaint)
+        }
     }
 
     // ── Helper ────────────────────────────────────────────────────────────

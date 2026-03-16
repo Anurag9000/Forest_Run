@@ -206,6 +206,21 @@ class GardenScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val arrivalBadgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(220, 246, 239, 176)
+        style = Paint.Style.FILL
+    }
+    private val arrivalBadgeBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(190, 244, 248, 232)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val arrivalBadgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(42, 52, 26)
+        textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
     private val canopyShadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
@@ -403,6 +418,7 @@ class GardenScreen(
         if (sanctuaryState.sanctuaryLine.isNotBlank()) {
             drawWrappedCenteredText(canvas, sanctuaryState.sanctuaryLine, cw / 2f, ch * 0.212f, cw * 0.64f, sanctuaryLinePaint)
         }
+        drawArrivalBadge(canvas, cw, ch)
         drawSanctuaryTraces(canvas, cw, ch)
 
         // Seed count
@@ -756,6 +772,12 @@ class GardenScreen(
         canopyShadePaint.color = Color.argb(sanctuaryState.canopyShadeAlpha, 24, 44, 38)
         canvas.drawRect(0f, 0f, cw, ch * 0.34f, canopyShadePaint)
 
+        repeat(sanctuaryState.mistBandCount) { index ->
+            ambiencePaint.color = Color.argb(28 + index * 10, 236, 248, 236)
+            val top = ch * (0.18f + index * 0.055f)
+            canvas.drawOval(-40f, top, cw + 40f, top + ch * 0.075f, ambiencePaint)
+        }
+
         repeat(sanctuaryState.fireflyCount) { index ->
             val drift = sin(elapsed * (1.2f + index * 0.08f) + index) * 14f
             val x = cw * (0.10f + ((index * 0.13f) % 0.76f)) + drift
@@ -774,6 +796,15 @@ class GardenScreen(
             canvas.drawOval(x, y, x + 12f, y + 7f, ambiencePaint)
         }
 
+        repeat(sanctuaryState.lanternGlowCount.coerceAtMost(5)) { index ->
+            val x = cw * (0.16f + index * 0.16f)
+            val y = groundY - ch * (0.08f + (index % 2) * 0.035f)
+            ambiencePaint.color = Color.argb(64, 255, 234, 170)
+            canvas.drawCircle(x, y, 18f, ambiencePaint)
+            ambiencePaint.color = Color.argb(126, 255, 242, 192)
+            canvas.drawCircle(x, y, 6f, ambiencePaint)
+        }
+
         repeat(sanctuaryState.bloomPatchCount) { index ->
             val x = cw * (0.18f + index * 0.19f)
             val y = groundY + ch * 0.06f + sin(elapsed * 0.8f + index) * 5f
@@ -782,6 +813,17 @@ class GardenScreen(
             ambiencePaint.color = Color.argb(112, 255, 240, 186)
             canvas.drawCircle(x - 8f, y + 4f, 7f, ambiencePaint)
             canvas.drawCircle(x + 10f, y - 2f, 6f, ambiencePaint)
+        }
+
+        if (sanctuaryState.groundGlowAlpha > 0) {
+            ambiencePaint.color = Color.argb(sanctuaryState.groundGlowAlpha, 240, 246, 186)
+            canvas.drawOval(
+                cw * 0.18f,
+                groundY - ch * 0.03f,
+                cw * 0.82f,
+                groundY + ch * 0.11f,
+                ambiencePaint
+            )
         }
     }
 
@@ -792,7 +834,7 @@ class GardenScreen(
         val gap = cw * 0.012f
         val totalWidth = sanctuaryState.traces.size * chipWidth + (sanctuaryState.traces.size - 1) * gap
         var left = (cw - totalWidth) / 2f
-        val top = ch * 0.225f
+        val top = if (sanctuaryState.arrivalBadge.isNotBlank()) ch * 0.268f else ch * 0.225f
 
         sanctuaryState.traces.forEach { trace ->
             val rect = RectF(left, top, left + chipWidth, top + chipHeight)
@@ -804,6 +846,17 @@ class GardenScreen(
             canvas.drawText(trace.label, rect.centerX(), labelY, traceChipTextPaint)
             left += chipWidth + gap
         }
+    }
+
+    private fun drawArrivalBadge(canvas: Canvas, cw: Float, ch: Float) {
+        if (sanctuaryState.arrivalBadge.isBlank()) return
+        val width = cw * 0.22f
+        val height = ch * 0.048f
+        val rect = RectF(cw / 2f - width / 2f, ch * 0.234f, cw / 2f + width / 2f, ch * 0.234f + height)
+        canvas.drawRoundRect(rect, 18f, 18f, arrivalBadgePaint)
+        canvas.drawRoundRect(rect, 18f, 18f, arrivalBadgeBorderPaint)
+        val labelY = rect.centerY() - (arrivalBadgeTextPaint.descent() + arrivalBadgeTextPaint.ascent()) / 2f
+        canvas.drawText(sanctuaryState.arrivalBadge, rect.centerX(), labelY, arrivalBadgeTextPaint)
     }
 
     private fun spriteForVisitor(type: EntityType): SpriteSheet = when (type) {

@@ -13,9 +13,13 @@ data class SanctuaryTrace(
 data class GardenSanctuaryState(
     val sanctuaryLine: String = "",
     val carryHomeLine: String = "",
+    val arrivalBadge: String = "",
     val fireflyCount: Int = 0,
     val petalCount: Int = 0,
     val bloomPatchCount: Int = 0,
+    val mistBandCount: Int = 0,
+    val lanternGlowCount: Int = 0,
+    val groundGlowAlpha: Int = 0,
     val canopyShadeAlpha: Int = 0,
     val traces: List<SanctuaryTrace> = emptyList()
 )
@@ -31,6 +35,7 @@ object GardenSanctuaryPlanner {
         val mood = moodState.currentMood
         val milestoneRewards = RelationshipArcSystem.unlockedMilestoneTypes(appContext)
             .mapNotNull { RelationshipArcSystem.milestoneRewardFor(appContext, it) }
+        val featuredReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
             ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
                 PersistentMemoryManager.getHitCount(appContext, it) >= 2
@@ -67,6 +72,32 @@ object GardenSanctuaryPlanner {
             ForestMood.STEADY -> 1
         } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0 + (kindnessStreak / 3).coerceAtMost(1) +
             if (routeTier == PacifistRouteTier.PEACEFUL) 1 else 0
+
+        val mistBands = when (mood) {
+            ForestMood.GENTLE -> 1
+            ForestMood.RECKLESS -> 0
+            ForestMood.FEARFUL -> 3
+            ForestMood.STEADY -> 2
+        } + if (repeatedHarmCreature != null) 1 else 0
+
+        val lanternGlows = warmBonds.size.coerceAtMost(3) +
+            milestoneRewards.size.coerceAtMost(2) +
+            when (routeTier) {
+                PacifistRouteTier.NONE -> 0
+                PacifistRouteTier.KIND -> 1
+                PacifistRouteTier.MERCIFUL -> 2
+                PacifistRouteTier.PEACEFUL -> 3
+            } +
+            if (repeatedKindnessCreature != null && kindnessStreak >= 2) 1 else 0
+
+        val groundGlowAlpha = when (mood) {
+            ForestMood.GENTLE -> 92
+            ForestMood.RECKLESS -> 36
+            ForestMood.FEARFUL -> 54
+            ForestMood.STEADY -> 68
+        } + if ((summary?.bloomConversions ?: 0) >= 2) 12 else 0 +
+            if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 16 else 0 +
+            if (repeatedKindnessCreature != null) 10 else 0
 
         val canopyShadeAlpha = when (mood) {
             ForestMood.GENTLE -> 26
@@ -124,6 +155,19 @@ object GardenSanctuaryPlanner {
             }
         }
 
+        val arrivalBadge = when {
+            repeatedHarmCreature != null -> "Tender Return"
+            routeTier == PacifistRouteTier.PEACEFUL -> "Peace Kept"
+            routeTier == PacifistRouteTier.MERCIFUL -> "Mercy Stayed"
+            featuredReward != null -> featuredReward.label
+            repeatedKindnessCreature != null && kindnessStreak >= 2 -> "Trust Kept"
+            warmBonds.isNotEmpty() -> "Known Footsteps"
+            mood == ForestMood.FEARFUL -> "Soft Landing"
+            mood == ForestMood.GENTLE -> "Quiet Home"
+            mood == ForestMood.RECKLESS -> "Settling Air"
+            else -> "Homecoming"
+        }
+
         val sanctuaryLine = when (mood) {
             ForestMood.FEARFUL -> if (repeatedHarmCreature != null) {
                 "The sanctuary keeps extra quiet around what still feels tender."
@@ -148,7 +192,6 @@ object GardenSanctuaryPlanner {
         }
 
         val strongestBond = bonds.firstOrNull()?.first
-        val featuredReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val carryHomeLine = when {
             repeatedHarmCreature != null ->
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
@@ -175,9 +218,13 @@ object GardenSanctuaryPlanner {
         return GardenSanctuaryState(
             sanctuaryLine = sanctuaryLine,
             carryHomeLine = carryHomeLine,
+            arrivalBadge = arrivalBadge,
             fireflyCount = fireflies,
             petalCount = petals,
             bloomPatchCount = bloomPatches,
+            mistBandCount = mistBands,
+            lanternGlowCount = lanternGlows,
+            groundGlowAlpha = groundGlowAlpha.coerceAtMost(180),
             canopyShadeAlpha = canopyShadeAlpha,
             traces = traces
         )

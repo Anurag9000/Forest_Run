@@ -29,11 +29,11 @@ This file is the strict implementation ledger for everything from the original d
 
 ## GDD TODOs
 
-- PARTIAL: startup now uses shared session-arc copy so the menu and Garden carry the last run forward more intentionally; finish full authored garden atmosphere and launch staging.
+- PARTIAL: startup now uses shared session-arc copy plus sanctuary-derived atmosphere, arrival badges, and carry-home ambience so the menu already feels connected to the last return; finish final launch staging and real-device proof.
 - TODO: stronger early-game readability and onboarding.
 - PARTIAL: Bloom spectacle now includes a full-screen/world shift, stronger conversion spectacle, and stronger active-state HUD framing; finish final authored polish and device validation.
-- PARTIAL: rest now has a softer authored recovery subtitle, carry-home preview, and homeward prompt; finish the full restorative failure scene and richer reflection range.
-- PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, visible bond traces, and a stronger arrival line when no special return beat is active; finish the full restorative scene and startup atmosphere.
+- PARTIAL: rest now has a softer authored recovery subtitle, carry-home preview, sanctuary badge, and recovery ambience; finish the full restorative failure scene and richer reflection range.
+- PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, visible bond traces, arrival badges, mist/lantern/ground-glow atmosphere, and a stronger arrival line when no special return beat is active; finish the full restorative scene and startup atmosphere.
 
 ## Personality TODOs
 
@@ -53,9 +53,9 @@ This file is the strict implementation ledger for everything from the original d
 ### Forest Memory Layer
 
 - DONE: added a save-backed `ForestMoodSystem` with run classification into gentle, reckless, fearful, and steady.
-- PARTIAL: current tone now affects Garden palette, rest/Garden labeling, sanctuary ambience, and visible carry-home framing; deepen creature warmth and broader presentation response.
+- PARTIAL: current tone now affects Garden palette, menu/rest/Garden labeling, sanctuary ambience, visible carry-home framing, and sanctuary arrival-badge presentation; deepen creature warmth and broader presentation response.
 - PARTIAL: repeated panic or repeated harm from the same creature now surfaces through cautious sanctuary traces, softer return moments, Garden caution reflections, and save-backed tender streaks; deepen broader creature warmth and world-state response.
-- PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, trust traces, warmer rest fragments, and dedicated `Stayed Gentle` returns; deepen the effect and tie it more directly to repeated creature-specific history.
+- PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, trust traces, warmer rest fragments, dedicated `Stayed Gentle` returns, and stronger lantern/ground-glow atmosphere; deepen the effect and tie it more directly to repeated creature-specific history.
 - TODO: ensure the player can feel that the world has formed an opinion about how they play.
 
 ### Named Relationship Arcs
@@ -128,13 +128,14 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments, now with explicit kindness/tender streak carry-over, save-backed pacifist route tiers, and shared session-arc composition for menu/rest/Garden continuity; deepen authored coverage, stronger Garden consequences, and richer payoff.
+- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments, now with explicit kindness/tender streak carry-over, save-backed pacifist route tiers, shared session-arc composition, and sanctuary-derived menu/rest/Garden atmosphere; deepen authored coverage, stronger Garden consequences, and richer payoff.
 
 ## Visual And Audio TODOs
 
 - TODO: full bespoke parallax/background artwork.
 - TODO: denser petals, fireflies, leaf drift, and living-forest ambience.
 - PARTIAL: Bloom audiovisual transformation is materially stronger through the new world shift, screen treatment, and surge haptic; finish final music/SFX polish and on-device tuning.
+- PARTIAL: sanctuary presentation now includes mist bands, lantern glows, arrival badges, and stronger homeward lighting across menu/rest/Garden; finish bespoke scenic art and final device/perceptual tuning.
 - TODO: complete forest leitmotif treatment across all music states.
 - TODO: final polish pass for haptics, SFX timing, and visual juice.
 

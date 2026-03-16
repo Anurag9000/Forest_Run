@@ -56,7 +56,7 @@ Night mode activates Lily of the Valley glow and Owl spawning. Fireflies appear 
 ### Current Status
 
 - Implemented: biome tinting and darkness overlays, sprite import pipeline.
-- TODO: full hand-authored scenic backgrounds, stronger atmospheric density, true readable phone-scale art staging.
+- TODO: full hand-authored scenic backgrounds, stronger atmospheric density, and true readable phone-scale art staging beyond the current sanctuary/menu/rest ambience pass.
 
 ---
 
@@ -134,7 +134,7 @@ Current baseline:
 - recent run tone now affects Garden ambience and carry-home framing
 - repeated harm from the same creature now surfaces as caution in sanctuary traces, Garden return moments, Garden reflections, and tender memory streaks
 - repeated kindness now surfaces through trust-path traces, warmer carry-home lines, rest fragments, and dedicated gentle-return beats
-- broader creature warmth and richer world-state consequence are still TODO
+- broader creature warmth and richer world-state consequence are still TODO, even though sanctuary/homecoming atmosphere is now materially stronger
 
 #### 3.8.2 Named Relationship Arcs
 
@@ -168,7 +168,7 @@ Current baseline:
 - milestone bonds now produce warmer and more specific return lines instead of only generic greetings
 - rest can now preview the likely homeward tone before the Garden transition without consuming the saved return beat
 - peaceful and merciful runs can now surface distinct homeward return beats instead of only borrowing generic gentle-return lines
-- broader authored combinations are still TODO
+- broader authored combinations are still TODO, even though startup/rest/Garden continuity now shares stronger carry-home and homecoming atmosphere
 
 #### 3.8.4 Quiet Story Fragments
 
@@ -190,7 +190,7 @@ Current baseline:
 - Partial: menu startup and rest recovery now share authored copy derived from the same saved emotional state, so the session begins and ends with clearer continuity.
 - Partial: mercy-oriented runs now also travel home as explicit route tiers instead of only appearing as near-miss or spare counters.
 - Partial: the remaining animal-family ordinary-play payoffs are stronger, with clearer low-threat fairness and more visible bond reward feedback.
-- TODO: make the whole session arc feel authored, readable, and emotionally coherent in real play.
+- PARTIAL: the session arc now shares startup/rest/Garden copy and sanctuary-derived homecoming atmosphere; finish the full authored pacing, launch feel, and restorative coherence in real play.
 
 ---
 
@@ -339,5 +339,5 @@ Animals and birds were not intended as v1.0 garden unlockables.
 ### Current Status
 
 - Implemented: left-to-right plant card unlock flow with lifetime seeds.
-- TODO: make the garden feel like a true sanctuary and long-term reward rather than a minimal shop-like screen.
+- PARTIAL: the garden now feels more sanctuary-like through visible traces, mood ambience, homecoming badges, mist, lantern glow, and stronger carry-home lighting; finish the full long-term restorative scene.
 - TODO: make the world emotionally remember the player through tone, return moments, relationship traces, and quiet poetic fragments.

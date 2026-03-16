@@ -54,6 +54,8 @@ class GardenSanctuaryPlannerTest {
 
         assertTrue(state.fireflyCount >= 6)
         assertTrue(state.bloomPatchCount >= 2)
+        assertTrue(state.lanternGlowCount >= 1)
+        assertTrue(state.groundGlowAlpha >= 90)
         assertTrue(state.traces.any { it.type == EntityType.CAT })
     }
 
@@ -100,9 +102,11 @@ class GardenSanctuaryPlannerTest {
 
         assertEquals("Cautious Path", state.traces.first().label)
         assertEquals(EntityType.WOLF, state.traces.first().type)
+        assertEquals("Tender Return", state.arrivalBadge)
         assertTrue(state.sanctuaryLine.contains("tender"))
         assertTrue(state.carryHomeLine.contains("Wolf"))
         assertTrue(state.canopyShadeAlpha >= 64)
+        assertTrue(state.mistBandCount >= 3)
     }
 
     @Test
@@ -149,6 +153,39 @@ class GardenSanctuaryPlannerTest {
         val state = GardenSanctuaryPlanner.build(context, summary)
 
         assertTrue(state.traces.any { it.label == "Trust Path" && it.type == EntityType.FOX })
+        assertEquals("Trust Kept", state.arrivalBadge)
         assertTrue(state.carryHomeLine.contains("Fox") || state.carryHomeLine.contains("trust"))
+    }
+
+    @Test
+    fun `peaceful route marks the sanctuary as peace kept`() {
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 1_020,
+            distanceM = 740f,
+            isNewHighScore = false,
+            highScore = 1_400,
+            mercyHearts = 4,
+            mercyMisses = 4,
+            kindnessChain = 5,
+            cleanPasses = 9,
+            sparedCount = 3,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Peace Kept", state.arrivalBadge)
+        assertTrue(state.lanternGlowCount >= 3)
+        assertTrue(state.groundGlowAlpha >= 100)
     }
 }

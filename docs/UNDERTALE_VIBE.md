@@ -150,7 +150,7 @@ Examples:
 
 - Implemented: ghost persistence, persistent memory manager baseline, and costume wardrobe baseline.
 - Partial: ghost readability now delays reveal at run start and suppresses after impacts so it stops crowding the live runner during recovery.
-- Partial: startup and rest now reuse shared carry-home session copy so the forest feels more aware between screens instead of only inside the Garden hub.
+- Partial: startup and rest now reuse shared carry-home session copy plus sanctuary-derived badges and ambience so the forest feels more aware between screens instead of only inside the Garden hub.
 - Partial: wardrobe unlock surfacing is now more relationship-aware instead of generic when new bond outfits arrive.
 - TODO: richer repeat-killer system and final tasteful ghost UX tuning.
 
@@ -191,7 +191,7 @@ Examples:
 
 - Partial: forest mood and personal return moments now exist in baseline form.
 - Partial: repeated harm now leaves cautious sanctuary, return, and reflection beats in baseline form, with save-backed tender streak carry-over.
-- Partial: repeated kindness now leaves trust-path traces, warmer carry-home lines, rest fragments, and dedicated gentle-return beats in baseline form.
+- Partial: repeated kindness now leaves trust-path traces, warmer carry-home lines, rest fragments, dedicated gentle-return beats, and stronger lantern/ground-glow sanctuary warmth in baseline form.
 - Partial: named relationship arcs now exist in baseline runtime form for Cat, Fox, Wolf, Dog, Owl, and Eagle, with persisted stages, stage-aware dialogue/payoff, bonded Garden return hooks, and milestone keepsake rewards.
 - Partial: quiet story fragments now exist in baseline runtime form through fragment-driven rest quotes, Garden reflections, weather-linked thoughts, bonded creature thoughts, milestone-gentleness / Bloom-afterglow reflections, and memory-page unlocks.
 - TODO: deepen forest mood consequences, relationship-stage consequences, fragment coverage, costume payoff, and return-moment richness beyond the current baseline.

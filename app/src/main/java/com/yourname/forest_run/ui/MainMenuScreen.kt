@@ -9,6 +9,9 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
+import com.yourname.forest_run.engine.GardenSanctuaryPlanner
+import com.yourname.forest_run.engine.GardenSanctuaryState
+import com.yourname.forest_run.engine.SaveManager
 import com.yourname.forest_run.engine.SessionArcComposer
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
@@ -55,6 +58,7 @@ class MainMenuScreen(
     // Pulse / ambient
     private var elapsedT = 0f
     private var sceneCopy = SessionArcComposer.menuCopy(context)
+    private var sanctuaryState = GardenSanctuaryState()
 
     // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
@@ -118,6 +122,31 @@ class MainMenuScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val canopyShadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val ambiencePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(212, 246, 239, 180)
+        style = Paint.Style.FILL
+    }
+    private val badgeBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(190, 246, 245, 228)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val badgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(52, 60, 26)
+        textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
+
+    init {
+        refreshCopy()
+    }
 
     // ── API ───────────────────────────────────────────────────────────────
 
@@ -152,6 +181,8 @@ class MainMenuScreen(
 
     fun refreshCopy() {
         sceneCopy = SessionArcComposer.menuCopy(context)
+        val summary = SaveManager.loadLastRunSummary(context.applicationContext)
+        sanctuaryState = GardenSanctuaryPlanner.build(context, summary)
     }
 
     /** Consume a pending run-start request so it only fires once. */
@@ -170,6 +201,7 @@ class MainMenuScreen(
         canvas.drawRect(0f, 0f, cw, ch, skyPaint)
         // Ground
         canvas.drawRect(0f, groundY, cw, ch, groundPaint)
+        drawMenuSanctuaryAtmosphere(canvas, cw, ch, groundY)
 
         drawAmbientBird(canvas, cw, ch)
         drawWillow(canvas, cw * 0.35f, groundY)
@@ -178,6 +210,7 @@ class MainMenuScreen(
         // Title
         canvas.drawText("FOREST RUN", cw / 2f, ch * 0.10f + titlePaint.textSize, titlePaint)
         drawWrappedCenteredText(canvas, sceneCopy.atmosphereLine, cw / 2f, ch * 0.17f, cw * 0.70f, atmospherePaint)
+        drawArrivalBadge(canvas, cw, ch)
 
         // Prompt
         val promptAlpha = when (phase) {
@@ -218,6 +251,58 @@ class MainMenuScreen(
         val birdW = SpriteSizing.widthForHeight(birdSprite, birdH, minWidth = birdH * 0.7f)
         birdRect.set(birdX - birdW / 2f, birdY - birdH / 2f, birdX + birdW / 2f, birdY + birdH / 2f)
         birdSprite.draw(canvas, birdRect)
+    }
+
+    private fun drawMenuSanctuaryAtmosphere(canvas: Canvas, cw: Float, ch: Float, groundY: Float) {
+        canopyShadePaint.color = Color.argb(sanctuaryState.canopyShadeAlpha.coerceAtMost(72), 26, 42, 34)
+        canvas.drawRect(0f, 0f, cw, ch * 0.34f, canopyShadePaint)
+
+        repeat(sanctuaryState.mistBandCount) { index ->
+            ambiencePaint.color = Color.argb(32 + index * 10, 232, 246, 236)
+            val top = ch * (0.19f + index * 0.055f)
+            canvas.drawOval(-40f, top, cw + 40f, top + ch * 0.08f, ambiencePaint)
+        }
+
+        repeat(sanctuaryState.fireflyCount.coerceAtMost(6)) { index ->
+            val drift = sin(elapsedT * (1.1f + index * 0.08f) + index * 0.6f) * 11f
+            val x = cw * (0.14f + (index * 0.14f)) + drift
+            val y = ch * (0.14f + (index % 3) * 0.05f)
+            ambiencePaint.color = Color.argb(136, 252, 246, 182)
+            canvas.drawCircle(x, y, 3.5f + (index % 2), ambiencePaint)
+            ambiencePaint.color = Color.argb(64, 252, 246, 182)
+            canvas.drawCircle(x, y, 8f + (index % 3), ambiencePaint)
+        }
+
+        repeat(sanctuaryState.lanternGlowCount.coerceAtMost(4)) { index ->
+            val x = cw * (0.18f + index * 0.18f)
+            val y = groundY - ch * (0.07f + (index % 2) * 0.03f)
+            ambiencePaint.color = Color.argb(70, 255, 235, 168)
+            canvas.drawCircle(x, y, 16f, ambiencePaint)
+            ambiencePaint.color = Color.argb(128, 255, 240, 188)
+            canvas.drawCircle(x, y, 6f, ambiencePaint)
+        }
+
+        if (sanctuaryState.groundGlowAlpha > 0) {
+            ambiencePaint.color = Color.argb(sanctuaryState.groundGlowAlpha.coerceAtMost(120), 240, 246, 184)
+            canvas.drawOval(
+                cw * 0.24f,
+                groundY - ch * 0.05f,
+                cw * 0.76f,
+                groundY + ch * 0.08f,
+                ambiencePaint
+            )
+        }
+    }
+
+    private fun drawArrivalBadge(canvas: Canvas, cw: Float, ch: Float) {
+        if (sanctuaryState.arrivalBadge.isBlank()) return
+        val width = cw * 0.22f
+        val height = ch * 0.05f
+        val rect = RectF(cw / 2f - width / 2f, ch * 0.205f, cw / 2f + width / 2f, ch * 0.205f + height)
+        canvas.drawRoundRect(rect, 18f, 18f, badgePaint)
+        canvas.drawRoundRect(rect, 18f, 18f, badgeBorderPaint)
+        val labelY = rect.centerY() - (badgeTextPaint.descent() + badgeTextPaint.ascent()) / 2f
+        canvas.drawText(sanctuaryState.arrivalBadge, rect.centerX(), labelY, badgeTextPaint)
     }
 
     private fun drawCharacter(canvas: Canvas, x: Float, groundY: Float) {
