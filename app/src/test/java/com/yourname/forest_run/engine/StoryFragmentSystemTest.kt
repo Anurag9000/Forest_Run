@@ -217,6 +217,37 @@ class StoryFragmentSystemTest {
     }
 
     @Test
+    fun `repeat friend unlocks dedicated rest and garden pages`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        PersistentMemoryManager.recordSpare(context, EntityType.DOG)
+        val restQuote = StoryFragmentSystem.restQuote(context, Biome.ORCHARD, null)
+        val summary = RunSummary(
+            score = 1_040,
+            distanceM = 780f,
+            isNewHighScore = false,
+            highScore = 1_460,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 5,
+            cleanPasses = 9,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 7,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Gladly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertTrue(restQuote.contains("dog", ignoreCase = true) || restQuote.contains("happiness", ignoreCase = true))
+        assertTrue(line!!.contains("welcoming") || line.contains("expected"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_repeat_friend_dog"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_repeat_friend_garden_dog"))
+    }
+
+    @Test
     fun `peaceful route unlocks a route reflection page`() {
         val summary = RunSummary(
             score = 1_260,

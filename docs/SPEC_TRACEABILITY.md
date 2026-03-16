@@ -704,7 +704,7 @@ These items are not from the earliest historical repo docs. They are explicit us
 - `Implemented`: a world-tone system now classifies recent runs into gentle, reckless, fearful, and steady.
 - `Partial`: world tone now affects Garden palette, sanctuary ambience, and rest/Garden framing.
 - `Partial`: repeated harm from the same creature now shows up in sanctuary planning, `Same Shadow` return/reflection beats, Garden caution moments, Garden reflection fragments, and save-backed tender streak state.
-- `Partial`: repeated kindness now also shows up through trust-path sanctuary traces, warmer rest/Garden fragments, and `Stayed Gentle` return moments, while route-aware fragments now cover kind as well as merciful/peaceful runs.
+- `Partial`: repeated kindness now also shows up through trust-path sanctuary traces, repeat-friend `Shared Path` traces, warmer rest/Garden fragments, and `Stayed Gentle` / `Kept Finding You` return moments, while route-aware fragments now cover kind as well as merciful/peaceful runs.
 - `TODO`: deepen ambience, creature warmth, and broader world-state response.
 
 #### Named Relationship Arcs
@@ -719,13 +719,13 @@ These items are not from the earliest historical repo docs. They are explicit us
 #### Personal Return Moments
 
 - `Implemented`: first-run-of-day greetings, long-absence reactions, and rough-run comfort beats in baseline form.
-- `Partial`: milestone-sensitive Garden return moments now exist with bonded visiting-creature presentation, stronger kindness/clean-play hooks, explicit repeated-kindness returns, richer absence-sensitive lines, and Bloom-heavy afterglow returns.
+- `Partial`: milestone-sensitive Garden return moments now exist with bonded visiting-creature presentation, stronger kindness/clean-play hooks, explicit repeated-kindness and repeat-friend returns, richer absence-sensitive lines, and Bloom-heavy afterglow returns.
 - `TODO`: broaden emotional-state combinations and deepen authored coverage further.
 
 #### Quiet Story Fragments
 
 - `Implemented`: short rest quotes now run through a first-class fragment system.
-- `Partial`: rare Garden reflections, weather-linked Garden thoughts, bonded creature thoughts, repeated-harm caution reflections, repeated-kindness warmth reflections, milestone-gentleness reflections, Bloom-afterglow reflections, and unlockable poetic memory pages now exist in baseline form.
+- `Partial`: rare Garden reflections, weather-linked Garden thoughts, bonded creature thoughts, repeated-harm caution reflections, repeated-kindness warmth reflections, repeat-friend familiarity reflections, milestone-gentleness reflections, Bloom-afterglow reflections, and unlockable poetic memory pages now exist in baseline form.
 - `TODO`: broaden creature thoughts and weather-linked lines beyond the current Garden-focused baseline.
 - `TODO`: preserve emotional mystery through fragment writing instead of explicit exposition.
 

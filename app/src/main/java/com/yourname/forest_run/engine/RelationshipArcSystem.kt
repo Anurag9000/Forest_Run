@@ -129,6 +129,26 @@ object RelationshipArcSystem {
         return strongest.first.takeIf { strongest.second.ordinal >= minimumStage.ordinal }
     }
 
+    fun featuredRepeatFriend(
+        context: Context,
+        minimumStage: RelationshipStage = RelationshipStage.TRUST
+    ): EntityType? {
+        val appContext = context.applicationContext
+        return relationshipsAtOrAbove(appContext, minimumStage)
+            .filter { (type, _) ->
+                isWarmBond(appContext, type) &&
+                    SaveManager.loadSparedCount(appContext, type) >= 1
+            }
+            .maxWithOrNull(
+                compareBy<Pair<EntityType, RelationshipStage>>(
+                    { SaveManager.loadKindnessStreak(appContext, it.first) },
+                    { it.second.ordinal },
+                    { affinityScore(appContext, it.first) }
+                )
+            )
+            ?.first
+    }
+
     fun relationshipsAtOrAbove(
         context: Context,
         minimumStage: RelationshipStage = RelationshipStage.TRUST
@@ -368,6 +388,68 @@ object RelationshipArcSystem {
                 RelationshipStage.MILESTONE -> "The eagle's shadow feels more like recognition than threat now."
             }
             else -> null
+        }
+    }
+
+    fun repeatFriendLine(context: Context, type: EntityType): String {
+        val stage = stageFor(context.applicationContext, type)
+        val tone = toneFor(context.applicationContext, type)
+        return when (type) {
+            EntityType.CAT -> when (stage) {
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) {
+                    "The cat has started treating your returns like part of its routine."
+                } else {
+                    "The cat no longer acts like your return is a surprise."
+                }
+                RelationshipStage.MILESTONE -> "The cat moves like the two of you already agreed this is shared ground."
+                else -> "The cat has started meeting your softer timing halfway."
+            }
+            EntityType.FOX -> when (stage) {
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) {
+                    "The fox has stopped pretending your rhythm is only a challenge."
+                } else {
+                    "The fox is beginning to expect your answer instead of only testing it."
+                }
+                RelationshipStage.MILESTONE -> "The fox now treats your returns like a game both of you already know."
+                else -> "The fox keeps leaving room for your answer now."
+            }
+            EntityType.WOLF -> when (stage) {
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) {
+                    "The wolf's respect has started to feel less borrowed and more shared."
+                } else {
+                    "The wolf no longer sounds surprised when your calm holds."
+                }
+                RelationshipStage.MILESTONE -> "The grove carries the wolf's respect like something you earned together."
+                else -> "The wolf has started recognizing your steadier courage."
+            }
+            EntityType.DOG -> when (stage) {
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) {
+                    "The dog greets you like this joy has already become a habit."
+                } else {
+                    "The dog keeps acting like your return was always going to happen."
+                }
+                RelationshipStage.MILESTONE -> "The dog's excitement now feels less like a surprise and more like belonging."
+                else -> "The dog has started keeping your return in mind."
+            }
+            EntityType.OWL -> when (stage) {
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) {
+                    "The owl has started watching like a witness that already knows you."
+                } else {
+                    "The owl keeps the night open for you a little longer now."
+                }
+                RelationshipStage.MILESTONE -> "The owl has made the dark edge feel like a place you both remember."
+                else -> "The owl has started letting familiarity into the night."
+            }
+            EntityType.EAGLE -> when (stage) {
+                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) {
+                    "The eagle has started leaving more sky between you and fear."
+                } else {
+                    "The eagle no longer turns every return into a warning."
+                }
+                RelationshipStage.MILESTONE -> "Even the eagle's shadow now feels more like recognition than judgment."
+                else -> "The eagle has started recognizing your return before your fear does."
+            }
+            else -> lineFor(context, type, Event.RETURN)
         }
     }
 

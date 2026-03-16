@@ -254,6 +254,35 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `repeat friend creates a kept finding you return moment`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        PersistentMemoryManager.recordSpare(context, EntityType.DOG)
+        val summary = RunSummary(
+            score = 1_020,
+            distanceM = 760f,
+            isNewHighScore = false,
+            highScore = 1_450,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 5,
+            cleanPasses = 9,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 7,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Gladly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 11_000L)
+
+        assertEquals("Kept Finding You", moment?.title)
+        assertEquals(EntityType.DOG, moment?.visitor)
+        assertTrue(moment?.line?.contains("dog", ignoreCase = true) == true || moment?.line?.contains("habit", ignoreCase = true) == true)
+    }
+
+    @Test
     fun `peaceful route creates a dedicated return moment`() {
         val summary = RunSummary(
             score = 1_540,

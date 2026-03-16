@@ -41,7 +41,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: `PersistentMemoryManager` now also tracks save-backed kindness and tender streaks so repeated mercy or repeated hurt can surface in return moments, fragments, and sanctuary carry-home; expand it further into full repeated-encounter payoff and unlock architecture.
 - DONE: canonical post-run summary payload now exists across rest and Garden.
 - PARTIAL: costume overlays and wardrobe flow exist, Cat/Fox/Wolf relationship milestones can now unlock matching outfits, and Garden now surfaces relationship-aware unlock messaging instead of generic wardrobe notices; expand broader repeated-encounter unlock depth and presentation.
-- PARTIAL: repeat-killer deja vu lines now exist in rest, Garden reflections, sanctuary badges, and stronger `Same Shadow` return/carry-home beats; deepen them into stronger visual and narrative payoff.
+- PARTIAL: repeat-killer deja vu lines now exist in rest, Garden reflections, sanctuary badges, and stronger `Same Shadow` return/carry-home beats; deepen them further into stronger visual and narrative payoff.
 - DONE: dedicated dialogue bubble system.
 - PARTIAL: biome-level friendship bonus baseline now escalates into save-visible pacifist route tiers and stronger route-like rest/Garden payoff; deepen it into broader sanctuary and world-state consequence.
 - PARTIAL: encounter-level history now surfaces through tracked Cat/Fox/Wolf/Dog cues instead of fallback one-liners; expand the same depth across more creatures and normal-run payoff.
@@ -55,7 +55,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: added a save-backed `ForestMoodSystem` with run classification into gentle, reckless, fearful, and steady.
 - PARTIAL: current tone now affects Garden palette, menu/rest/Garden labeling, sanctuary ambience, visible carry-home framing, and sanctuary arrival-badge presentation; deepen creature warmth and broader presentation response.
 - PARTIAL: repeated panic or repeated harm from the same creature now surfaces through cautious sanctuary traces, softer return moments, stronger `Same Shadow` repeat-killer beats, Garden caution reflections, and save-backed tender streaks; deepen broader creature warmth and world-state response.
-- PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, trust traces, warmer rest fragments, dedicated `Stayed Gentle` returns, and stronger lantern/ground-glow atmosphere; deepen the effect and tie it more directly to repeated creature-specific history.
+- PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, trust traces, repeat-friend `Shared Path` traces, warmer rest fragments, dedicated `Stayed Gentle` / `Kept Finding You` returns, and stronger lantern/ground-glow atmosphere; deepen the effect and tie it more directly to repeated creature-specific history.
 - TODO: ensure the player can feel that the world has formed an opinion about how they play.
 
 ### Named Relationship Arcs
@@ -64,7 +64,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: each relationship now has first-impression, recognition, trust, and milestone states.
 - PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, encounter generosity/telegraph tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, and milestone keepsake rewards.
 - PARTIAL: relationship milestones now unlock named keepsakes and matching Cat/Fox/Wolf costume paths; deepen broader milestone rewards and cosmetics.
-- TODO: make repeated positive interactions produce more visible warmth and familiarity.
+- PARTIAL: repeated positive interactions now also surface through repeat-friend familiarity beats, `Familiar Return` badges, and creature-specific warmth lines; deepen live encounter and Garden payoff further.
 - TODO: make repeated negative interactions produce stronger tension, fear, disappointment, or caution where appropriate.
 - TODO: add milestone rewards that feel relational, not merely numerical.
 
@@ -72,7 +72,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - DONE: added baseline first-run-of-day greeting logic, long-absence recognition, rough-run comfort returns, and milestone-sensitive Garden messages.
 - PARTIAL: Garden return moments now use bonded visitors and stronger mercy/clean-play/high-score hooks, including milestone-bond warmth, Bloom-linger, and stronger absence-sensitive returns.
-- PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, Bloom-heavy runs, repeated tenderness, repeated kindness streaks, repeat-killer patterns, and explicit kind/merciful/peaceful route states; continue expanding authored combinations.
+- PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, Bloom-heavy runs, repeated tenderness, repeated kindness streaks, repeat-friend familiarity, repeat-killer patterns, and explicit kind/merciful/peaceful route states; continue expanding authored combinations.
 - DONE: rest flow can now preview the likely Garden return beat without mutating save state, so return continuity can be written before the actual hub transition.
 - TODO: ensure return sessions feel intimate instead of mechanically identical.
 
@@ -81,7 +81,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: short rest quotes now run through a first-class fragment-driven writing layer.
 - PARTIAL: rare Garden reflections and unlockable poetic memory pages now exist in baseline form.
 - PARTIAL: one-line creature thoughts for bonded creatures now exist in the Garden baseline.
-- PARTIAL: weather-linked thoughts and caution-oriented Garden reflections now exist in baseline Garden form, alongside milestone-gentleness, repeated-kindness, repeat-killer `Same Shadow`, Bloom-afterglow, and kind/peaceful-route pages; broaden authored coverage further.
+- PARTIAL: weather-linked thoughts and caution-oriented Garden reflections now exist in baseline Garden form, alongside milestone-gentleness, repeated-kindness, repeat-friend familiarity, repeat-killer `Same Shadow`, Bloom-afterglow, and kind/peaceful-route pages; broaden authored coverage further.
 - TODO: deepen poetic memory pages so they reveal feeling without lore-dumping.
 - TODO: keep fragment writing brief, intimate, and suggestive rather than expository.
 - TODO: ensure mystery and emotional residue are preserved through restraint.
@@ -128,7 +128,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments, now with explicit kindness/tender streak carry-over, save-backed pacifist route tiers, repeat-killer escalation beats, shared session-arc composition, and sanctuary-derived menu/rest/Garden atmosphere; deepen authored coverage, stronger Garden consequences, and richer payoff.
+- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments, now with explicit kindness/tender streak carry-over, repeat-friend familiarity, save-backed pacifist route tiers, repeat-killer escalation beats, shared session-arc composition, and sanctuary-derived menu/rest/Garden atmosphere; deepen authored coverage, stronger Garden consequences, and richer payoff.
 
 ## Visual And Audio TODOs
 

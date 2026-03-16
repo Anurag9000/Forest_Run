@@ -106,4 +106,34 @@ class SessionArcComposerTest {
 
         assertTrue(line.isNotBlank())
     }
+
+    @Test
+    fun `menu copy carries repeat friend warmth forward`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        PersistentMemoryManager.recordSpare(context, EntityType.DOG)
+        SaveManager.saveLastRunSummary(
+            context,
+            RunSummary(
+                score = 1_010,
+                distanceM = 770f,
+                isNewHighScore = false,
+                highScore = 1_420,
+                mercyHearts = 2,
+                mercyMisses = 2,
+                kindnessChain = 5,
+                cleanPasses = 9,
+                sparedCount = 1,
+                hitsTaken = 0,
+                seedsCollected = 7,
+                bloomConversions = 0,
+                lastKiller = null,
+                restQuote = "Gladly.",
+                forestMood = ForestMood.GENTLE
+            )
+        )
+
+        val copy = SessionArcComposer.menuCopy(context)
+
+        assertTrue(copy.atmosphereLine.contains("Dog", ignoreCase = true) || copy.atmosphereLine.contains("familiar", ignoreCase = true))
+    }
 }

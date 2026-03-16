@@ -43,12 +43,15 @@ object StoryFragmentSystem {
         val appContext = context.applicationContext
         val mood = summary?.forestMood ?: ForestMoodSystem.currentState(appContext).currentMood
         val strongest = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.RECOGNITION)
+        val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
         val text = when (mood) {
             ForestMood.GENTLE -> if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL) {
                 "The evening wind sounds like it is trying not to disturb the peace you carried home."
+            } else if (repeatFriend != null) {
+                "The evening wind sounds like it has started expecting the same familiar kindness to return."
             } else if (summary?.pacifistRouteTier == PacifistRouteTier.KIND) {
                 "The evening wind keeps the kinder edges of the run from disappearing too quickly."
             } else if (milestoneReward != null) {
@@ -70,7 +73,9 @@ object StoryFragmentSystem {
             } else {
                 "The air stays soft, as if the weather decided not to press its luck."
             }
-            ForestMood.STEADY -> if (repeatedKindnessCreature != null && summary?.pacifistRouteTier == PacifistRouteTier.KIND) {
+            ForestMood.STEADY -> if (repeatFriend != null) {
+                "The wind keeps a steady pace, like it recognizes a familiar bond walking back in."
+            } else if (repeatedKindnessCreature != null && summary?.pacifistRouteTier == PacifistRouteTier.KIND) {
                 "The wind keeps a patient pace, like it noticed kindness becoming a habit."
             } else if (milestoneReward != null) {
                 "The wind keeps a patient pace, like it recognizes this version of you."
@@ -92,6 +97,7 @@ object StoryFragmentSystem {
         val hitCount = killer?.let { PersistentMemoryManager.getHitCount(context, it) } ?: 0
         val repeatedKiller = killer != null && hitCount >= 2
         val relationshipStage = killer?.let { RelationshipArcSystem.stageFor(context, it) }
+        val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(context)
         val warmCreature = PersistentMemoryManager.featuredWarmCreature(context)
 
         if (killer != null && repeatedKiller) {
@@ -157,6 +163,23 @@ object StoryFragmentSystem {
             )
         }
 
+        if (repeatFriend != null) {
+            return StoryFragment(
+                id = "rest_repeat_friend_${repeatFriend.name.lowercase()}",
+                type = StoryFragmentType.REST,
+                text = when (repeatFriend) {
+                    EntityType.CAT -> "The cat is beginning to treat your return like part of the evening."
+                    EntityType.FOX -> "The fox no longer makes your gentler timing feel accidental."
+                    EntityType.WOLF -> "The grove has started trusting the calmer version of your courage."
+                    EntityType.DOG -> "The dog seems certain this happiness belongs to your return now."
+                    EntityType.OWL -> "The owl has started leaving more familiarity than warning in the dark."
+                    EntityType.EAGLE -> "Even the eagle's shadow feels less severe when it keeps meeting the same calm."
+                    else -> "Something in the forest has started expecting your gentler return."
+                },
+                unlocksPageId = "page_repeat_friend_${repeatFriend.name.lowercase()}"
+            )
+        }
+
         if (warmCreature != null) {
             val text = when (warmCreature) {
                 EntityType.CAT -> "The cat is beginning to expect your softer timing."
@@ -192,6 +215,7 @@ object StoryFragmentSystem {
     private fun selectGardenFragment(context: Context, summary: RunSummary?): StoryFragment? {
         val strongest = RelationshipArcSystem.strongestRelationship(context)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(context)
+        val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(context)
         val mood = ForestMoodSystem.currentState(context).currentMood
         val repeatedKiller = PersistentMemoryManager.featuredRepeatKiller(context)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(context)
@@ -214,6 +238,23 @@ object StoryFragmentSystem {
                     else -> "Something trusted your gentler return."
                 },
                 unlocksPageId = "page_milestone_gentle_${milestoneReward.type.name.lowercase()}"
+            )
+        }
+
+        if (summary != null && repeatFriend != null && summary.hitsTaken == 0 && summary.cleanPasses >= 8) {
+            return StoryFragment(
+                id = "garden_repeat_friend_${repeatFriend.name.lowercase()}",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = when (repeatFriend) {
+                    EntityType.CAT -> "The garden has started treating the cat's quiet return as part of yours."
+                    EntityType.FOX -> "The brighter part of the path behaves like it remembers both of you now."
+                    EntityType.WOLF -> "The grove keeps the wolf's respect near the same places your calm returns to."
+                    EntityType.DOG -> "The garden sounds more welcoming when the dog's joy feels expected instead of sudden."
+                    EntityType.OWL -> "The dark edge feels like a familiar witness instead of a warning now."
+                    EntityType.EAGLE -> "Even the sky seems to expect recognition instead of fear from that shadow now."
+                    else -> "The garden has started keeping a familiar shape around your better returns."
+                },
+                unlocksPageId = "page_repeat_friend_garden_${repeatFriend.name.lowercase()}"
             )
         }
 
@@ -341,7 +382,9 @@ object StoryFragmentSystem {
         }
 
         val text = when (mood) {
-            ForestMood.GENTLE -> if (repeatedKindnessCreature != null) {
+            ForestMood.GENTLE -> if (repeatFriend != null) {
+                "The garden breathes like it has started expecting the same familiar kindness to come back."
+            } else if (repeatedKindnessCreature != null) {
                 "The garden breathes like it has started trusting your softer returns."
             } else {
                 "The garden breathes a little easier tonight."

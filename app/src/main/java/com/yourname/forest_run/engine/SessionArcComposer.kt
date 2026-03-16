@@ -22,6 +22,7 @@ object SessionArcComposer {
         val appContext = context.applicationContext
         val summary = SaveManager.loadLastRunSummary(appContext)
         val sanctuary = GardenSanctuaryPlanner.build(appContext, summary)
+        val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
 
         val atmosphereLine = when {
             summary == null -> "The willow has kept the first path quiet for you."
@@ -31,6 +32,8 @@ object SessionArcComposer {
                 "Mercy left the path quieter than usual."
             summary.forestMood == ForestMood.FEARFUL || summary.hitsTaken >= 2 ->
                 "Home keeps its voice low until the roughness leaves your hands."
+            repeatFriend != null ->
+                sanctuary.carryHomeLine.ifBlank { RelationshipArcSystem.repeatFriendLine(appContext, repeatFriend) }
             summary.forestMood == ForestMood.GENTLE && summary.sparedCount > 0 ->
                 "The garden still holds the gentler shape of your last return."
             summary.bloomConversions >= 3 ->
@@ -50,6 +53,7 @@ object SessionArcComposer {
             summary == null -> "the willow kept your place"
             summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
                 "the garden still sounds softer after that run"
+            repeatFriend != null -> "someone familiar is already part of the way home sounds"
             summary.forestMood == ForestMood.FEARFUL -> "the path can wait for steadier hands"
             summary.forestMood == ForestMood.GENTLE -> "the garden remembers the softer version of that run"
             summary.bloomConversions >= 2 -> "there is still light left in the branches"
@@ -64,6 +68,7 @@ object SessionArcComposer {
         val readySupportLine = when {
             summary == null -> "the first steps are enough"
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL -> "carry the quiet you earned back into the path"
+            repeatFriend != null -> "carry that familiar warmth back into the path"
             summary.forestMood == ForestMood.GENTLE -> "carry the gentler pace with you"
             summary.forestMood == ForestMood.FEARFUL -> "nothing is asking for speed first"
             summary.bloomConversions >= 2 -> "the path still remembers Bloom"

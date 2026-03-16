@@ -154,4 +154,18 @@ class RelationshipArcSystemTest {
         assertTrue(owlAlert.contains("prey", ignoreCase = true) || owlAlert.contains("timing", ignoreCase = true))
         assertTrue(eagleLock.contains("marked", ignoreCase = true))
     }
+
+    @Test
+    fun `repeat friend chooses the warmest trusted bond`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        PersistentMemoryManager.recordSpare(context, EntityType.DOG)
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        PersistentMemoryManager.recordSpare(context, EntityType.CAT)
+
+        val featured = RelationshipArcSystem.featuredRepeatFriend(context)
+        val line = RelationshipArcSystem.repeatFriendLine(context, EntityType.DOG)
+
+        assertEquals(EntityType.DOG, featured)
+        assertTrue(line.contains("habit", ignoreCase = true) || line.contains("belong", ignoreCase = true))
+    }
 }

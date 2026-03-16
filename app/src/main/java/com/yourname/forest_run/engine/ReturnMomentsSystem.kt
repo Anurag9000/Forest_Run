@@ -59,6 +59,7 @@ object ReturnMomentsSystem {
         val bondedVisitor = RelationshipArcSystem.preferredGardenVisitor(appContext)
         val milestoneBond = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.MILESTONE)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
+        val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
         val repeatedKiller = PersistentMemoryManager.featuredRepeatKiller(appContext)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
             ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
@@ -105,13 +106,6 @@ object ReturnMomentsSystem {
                     steadyMilestoneLine(milestoneReward.type),
                     milestoneReward.type
                 )
-            repeatedKindnessCreature != null &&
-                ((summary?.sparedCount ?: 0) > 0 || (summary?.kindnessChain ?: 0) >= 4) ->
-                ReturnMoment(
-                    "Stayed Gentle",
-                    kindnessLine(repeatedKindnessCreature),
-                    if (RelationshipArcSystem.isTracked(repeatedKindnessCreature)) repeatedKindnessCreature else bondedVisitor
-                )
             summary != null &&
                 summary.pacifistRouteTier == PacifistRouteTier.KIND &&
                 (summary.sparedCount > 0 || summary.kindnessChain >= 4) ->
@@ -147,6 +141,20 @@ object ReturnMomentsSystem {
                     )
                     else -> ReturnMoment("Bloom Still Clings", "The garden is still lit by what followed you home from Bloom.", EntityType.OWL)
                 }
+            repeatFriend != null && (summary?.hitsTaken ?: 0) == 0 &&
+                ((summary?.cleanPasses ?: 0) >= 8 || (summary?.sparedCount ?: 0) > 0) ->
+                ReturnMoment(
+                    "Kept Finding You",
+                    RelationshipArcSystem.repeatFriendLine(appContext, repeatFriend),
+                    repeatFriend
+                )
+            repeatedKindnessCreature != null &&
+                ((summary?.sparedCount ?: 0) > 0 || (summary?.kindnessChain ?: 0) >= 4) ->
+                ReturnMoment(
+                    "Stayed Gentle",
+                    kindnessLine(repeatedKindnessCreature),
+                    if (RelationshipArcSystem.isTracked(repeatedKindnessCreature)) repeatedKindnessCreature else bondedVisitor
+                )
             (summary?.kindnessChain ?: 0) >= 6 || (summary?.sparedCount ?: 0) >= 2 ->
                 bondedVisitor?.let {
                     ReturnMoment("Gentle Footsteps", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)

@@ -189,6 +189,39 @@ class GardenSanctuaryPlannerTest {
     }
 
     @Test
+    fun `repeat friend leaves shared path and familiar return badge`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        PersistentMemoryManager.recordSpare(context, EntityType.DOG)
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 1_060,
+            distanceM = 810f,
+            isNewHighScore = false,
+            highScore = 1_500,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 5,
+            cleanPasses = 9,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Gladly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Familiar Return", state.arrivalBadge)
+        assertTrue(state.traces.any { it.label == "Shared Path" && it.type == EntityType.DOG })
+        assertTrue(state.carryHomeLine.contains("Dog") || state.carryHomeLine.contains("familiar"))
+    }
+
+    @Test
     fun `peaceful route marks the sanctuary as peace kept`() {
         SaveManager.saveForestMoodState(
             context,

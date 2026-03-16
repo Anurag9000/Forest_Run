@@ -31,6 +31,7 @@ object GardenSanctuaryPlanner {
         val moodState = ForestMoodSystem.currentState(appContext)
         val bonds = RelationshipArcSystem.relationshipsAtOrAbove(appContext, RelationshipStage.TRUST)
         val warmBonds = bonds.filter { RelationshipArcSystem.isWarmBond(appContext, it.first) }
+        val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
         val memoryPages = StoryFragmentSystem.memoryPageCount(appContext)
         val mood = moodState.currentMood
         val milestoneRewards = RelationshipArcSystem.unlockedMilestoneTypes(appContext)
@@ -50,7 +51,7 @@ object GardenSanctuaryPlanner {
             ForestMood.RECKLESS -> 1
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3 + (moodState.moodStreak / 2).coerceAtMost(2)
-        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) + (kindnessStreak / 2).coerceAtMost(2) - if (repeatedHarmCreature != null) 1 else 0 +
+        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) + (kindnessStreak / 2).coerceAtMost(2) + if (repeatFriend != null) 1 else 0 - if (repeatedHarmCreature != null) 1 else 0 +
             when (routeTier) {
                 PacifistRouteTier.NONE -> 0
                 PacifistRouteTier.KIND -> 1
@@ -83,6 +84,7 @@ object GardenSanctuaryPlanner {
 
         val lanternGlows = warmBonds.size.coerceAtMost(3) +
             milestoneRewards.size.coerceAtMost(2) +
+            if (repeatFriend != null) 1 else 0 +
             when (routeTier) {
                 PacifistRouteTier.NONE -> 0
                 PacifistRouteTier.KIND -> 1
@@ -117,12 +119,24 @@ object GardenSanctuaryPlanner {
                     )
                 )
             }
-            if (repeatedKindnessCreature != null && milestoneRewards.none { it.type == repeatedKindnessCreature }) {
+            if (repeatedKindnessCreature != null &&
+                repeatedKindnessCreature != repeatFriend &&
+                milestoneRewards.none { it.type == repeatedKindnessCreature }
+            ) {
                 add(
                     SanctuaryTrace(
                         repeatedKindnessCreature,
                         "Trust Path",
                         Color.rgb(238, 248, 202)
+                    )
+                )
+            }
+            if (repeatFriend != null && milestoneRewards.none { it.type == repeatFriend }) {
+                add(
+                    SanctuaryTrace(
+                        repeatFriend,
+                        "Shared Path",
+                        Color.rgb(248, 236, 198)
                     )
                 )
             }
@@ -163,6 +177,7 @@ object GardenSanctuaryPlanner {
             routeTier == PacifistRouteTier.MERCIFUL -> "Mercy Stayed"
             routeTier == PacifistRouteTier.KIND -> "Kindness Stayed"
             featuredReward != null -> featuredReward.label
+            repeatFriend != null -> "Familiar Return"
             repeatedKindnessCreature != null && kindnessStreak >= 2 -> "Trust Kept"
             warmBonds.isNotEmpty() -> "Known Footsteps"
             mood == ForestMood.FEARFUL -> "Soft Landing"
@@ -179,6 +194,8 @@ object GardenSanctuaryPlanner {
             }
             ForestMood.GENTLE -> if (routeTier == PacifistRouteTier.PEACEFUL) {
                 "The sanctuary has started keeping the whole shape of your peaceful runs."
+            } else if (repeatFriend != null) {
+                "The sanctuary has started behaving like some bonds expect your return, not just welcome it."
             } else if (warmBonds.isNotEmpty()) {
                 "The sanctuary opens faster when you keep coming home gently."
             } else if (repeatedKindnessCreature != null) {
@@ -202,6 +219,8 @@ object GardenSanctuaryPlanner {
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
             featuredReward != null ->
                 featuredReward.summary
+            repeatFriend != null ->
+                "${formatEntityName(repeatFriend)} has started to feel less like a visit and more like a familiar part of home."
             repeatedKindnessCreature != null && kindnessStreak >= 2 ->
                 "${formatEntityName(repeatedKindnessCreature)} has started leaving trust behind instead of only memory."
             routeTier == PacifistRouteTier.KIND ->
