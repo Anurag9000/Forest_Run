@@ -245,7 +245,8 @@ Examples:
 ### Current Status
 
 - Implemented: formal dialogue bubble system baseline.
-- TODO: expand bubble catalog, staging, and trigger richness.
+- Partial: bird-family warning/payoff bubbles are now more authored in ordinary play instead of relying on generic fallback lines.
+- TODO: expand the rest of the bubble catalog, staging, and trigger richness.
 
 ---
 

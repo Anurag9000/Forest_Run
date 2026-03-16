@@ -72,6 +72,8 @@ object RelationshipArcSystem {
         MERCY,
         FOX_LANDING,
         WOLF_CHARGE,
+        OWL_ALERT,
+        EAGLE_LOCK,
         DOG_GREETING,
         DOG_MIDDLE,
         DOG_FAREWELL
@@ -376,6 +378,8 @@ object RelationshipArcSystem {
             EntityType.CAT -> catCueLine(stage, tone, cue)
             EntityType.FOX -> foxCueLine(stage, tone, cue)
             EntityType.WOLF -> wolfCueLine(stage, tone, cue)
+            EntityType.OWL -> owlCueLine(stage, tone, cue)
+            EntityType.EAGLE -> eagleCueLine(stage, tone, cue)
             EntityType.DOG -> dogCueLine(stage, tone, cue)
             else -> lineFor(context, type, Event.THREAT)
         }
@@ -581,6 +585,28 @@ object RelationshipArcSystem {
             else -> "Bye!!"
         }
         else -> dogLine(stage, tone, Event.PASS)
+    }
+
+    private fun owlCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
+        EncounterCue.OWL_ALERT -> when {
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "I know your timing."
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Not prey."
+            tone == RelationshipTone.CAUTIOUS -> "...again?"
+            stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Still jumping?"
+            else -> "...hoo?"
+        }
+        else -> owlLine(stage, tone, Event.THREAT)
+    }
+
+    private fun eagleCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
+        EncounterCue.EAGLE_LOCK -> when {
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Hold the mark."
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Stay true."
+            tone == RelationshipTone.CAUTIOUS -> "Marked again."
+            stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Still marked."
+            else -> "Marked."
+        }
+        else -> eagleLine(stage, tone, Event.THREAT)
     }
 
     private fun owlLine(stage: RelationshipStage, tone: RelationshipTone, event: Event): String = when (event) {

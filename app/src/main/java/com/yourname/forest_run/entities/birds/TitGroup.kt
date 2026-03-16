@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.yourname.forest_run.engine.BirdEncounterFlavor
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
@@ -41,9 +42,14 @@ class TitGroup(
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
+    private val crestPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(88, 232, 246, 255)
+        style = Paint.Style.FILL
+    }
 
     private var time = 0f
     private val birdCount = count.coerceIn(3, 5)
+    private var warned = false
 
     // Individual rects for collision — all birds share the same wave
     private val birdRects = Array(birdCount) { i ->
@@ -81,14 +87,15 @@ class TitGroup(
             canvas.drawLine(first.centerX(), first.centerY(), second.centerX(), second.centerY(), wavePaint)
         }
         for (rect in birdRects) {
+            canvas.drawCircle(rect.centerX(), rect.centerY(), birdW * 0.18f, crestPaint)
             sprite.draw(canvas, rect)
         }
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 120)
+        gameState.addBonus(points = 120 + (birdCount - 3) * 10)
         DialogueBubbleManager.spawn(
-            text = "In sync",
+            text = BirdEncounterFlavor.titPass(birdCount),
             anchorX = x + birdCount * spacing * 0.45f,
             anchorY = baseLine - waveAmplitude - 18f,
             fillColor = Color.rgb(230, 244, 255),
@@ -97,6 +104,21 @@ class TitGroup(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+        val approachLeft = birdRects.first().left - readability.stagingPaddingPx * 6f
+        val approachRight = birdRects.last().right + readability.stagingPaddingPx
+        if (!warned &&
+            player.hitbox.right >= approachLeft &&
+            player.hitbox.left <= approachRight
+        ) {
+            warned = true
+            DialogueBubbleManager.spawn(
+                BirdEncounterFlavor.titWarning(birdCount),
+                x + birdCount * spacing * 0.45f,
+                baseLine - waveAmplitude - 18f,
+                Color.rgb(232, 246, 255),
+                Color.rgb(88, 138, 196)
+            )
+        }
         for (rect in birdRects) {
             if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT
             val mercyPad = readability.mercyPaddingPx

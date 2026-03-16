@@ -132,4 +132,26 @@ class RelationshipArcSystemTest {
         assertTrue(dialogue.first().isNotBlank())
         assertTrue(durationBonus > 0f)
     }
+
+    @Test
+    fun `owl and eagle cues reflect relationship history`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        repeat(2) { PersistentMemoryManager.recordEncounter(context, EntityType.EAGLE) }
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.EAGLE) }
+
+        val owlAlert = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.OWL,
+            RelationshipArcSystem.EncounterCue.OWL_ALERT
+        )
+        val eagleLock = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.EAGLE,
+            RelationshipArcSystem.EncounterCue.EAGLE_LOCK
+        )
+
+        assertTrue(owlAlert.contains("prey", ignoreCase = true) || owlAlert.contains("timing", ignoreCase = true))
+        assertTrue(eagleLock.contains("marked", ignoreCase = true))
+    }
 }

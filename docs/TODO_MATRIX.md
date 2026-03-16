@@ -103,11 +103,11 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Birds
 
-- PARTIAL: Duck low-flight readability and duck cue clarity are materially stronger; finish on-device validation and final cue polish.
-- PARTIAL: Tit flock wave readability is materially stronger; finish device-proofing and stronger rhythm payoff.
-- PARTIAL: Chickadee erratic altitude feel is materially stronger; finish final clarity/charm tuning.
-- PARTIAL: Owl now has stronger alert-ring telegraphing and night-glow mood; finish device-proofing and deeper repeated-memory payoff.
-- PARTIAL: Eagle now has a clearer target zone and stronger lock-on read; finish device-proofing and stronger dramatic cue understanding.
+- PARTIAL: Duck now has a stronger low-flight lane pulse, explicit down cue, and cleaner duck-through payoff; finish on-device validation and final cue polish.
+- PARTIAL: Tit flocks now warn and reward around their shared rhythm-wave instead of only existing as moving hitboxes; finish device-proofing and stronger rhythm payoff.
+- PARTIAL: Chickadee groups now surface their jitter path and flutter-spread payoff more clearly; finish final clarity/charm tuning.
+- PARTIAL: Owl now has stronger alert-ring telegraphing, night-glow mood, and relationship-aware alert cueing; finish device-proofing and deeper repeated-memory payoff.
+- PARTIAL: Eagle now has a clearer target zone, stronger lock-on read, and relationship-aware mark cueing; finish device-proofing and stronger dramatic cue understanding.
 
 ### Animals
 

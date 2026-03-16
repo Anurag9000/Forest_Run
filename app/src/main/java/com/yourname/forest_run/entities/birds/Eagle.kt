@@ -83,7 +83,7 @@ class Eagle(
         velY = dy / dist * diveSpeed
         CameraSystem.shakeEagle()  // Phase 15: lock-on tremor
         DialogueBubbleManager.spawn(
-            RelationshipArcSystem.lineFor(context, EntityType.EAGLE, RelationshipArcSystem.Event.THREAT),
+            RelationshipArcSystem.encounterCueLine(context, EntityType.EAGLE, RelationshipArcSystem.EncounterCue.EAGLE_LOCK),
             targetX,
             targetY - 28f,
             Color.rgb(255, 234, 234),

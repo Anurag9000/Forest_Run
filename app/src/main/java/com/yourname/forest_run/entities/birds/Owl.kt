@@ -152,7 +152,7 @@ class Owl(
             pendingTargetY = player.y
             if (!hasWarned) {
                 DialogueBubbleManager.spawn(
-                    RelationshipArcSystem.lineFor(context, EntityType.OWL, RelationshipArcSystem.Event.THREAT),
+                    RelationshipArcSystem.encounterCueLine(context, EntityType.OWL, RelationshipArcSystem.EncounterCue.OWL_ALERT),
                     x + birdW * 0.5f,
                     y - 14f,
                     Color.rgb(255, 242, 220),

@@ -207,6 +207,7 @@ Expected qualities:
 - Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, repeated-harm caution pages, milestone-gentleness pages, and Bloom-afterglow pages in baseline form.
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, and repeated-harm caution traces from mood, summary, and relationship state.
 - Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
+- Implemented: `BirdEncounterFlavor` now centralizes authored warning/pass text for the non-relationship bird family instead of leaving bird payoff as scattered fallback strings.
 - TODO: persistence schema must still expand further for richer fragment unlock state and broader relationship milestone presentation.
 
 ## 13. Relationship Arc Authoring

@@ -444,25 +444,25 @@ Cherry Blossom:
 Owl:
 
 - `Implemented`: reactive dive on jump-nearby logic.
-- `Partial`: sleeping/perched/noise-punish mood, clearer dive telegraphing, alert ring, and stronger amber eye-glow now exist.
+- `Partial`: sleeping/perched/noise-punish mood, clearer dive telegraphing, alert ring, stronger amber eye-glow, and relationship-aware alert cueing now exist.
 - `TODO`: deeper night drama payoff and device-proofing.
 
 Duck:
 
-- `Implemented`: low-flying hazard and clearer duck-lane teaching role.
+- `Implemented`: low-flying hazard, clearer duck-lane teaching role, and explicit down-warning / duck-through payoff.
 - `TODO`: final on-device cue polish and stronger quack payoff.
 
 Eagle:
 
 - `Implemented`: dive hazard.
-- `Partial`: lock-on cue, target-zone read, and clean-pass reward payoff are materially stronger.
+- `Partial`: lock-on cue, target-zone read, relationship-aware mark cueing, and clean-pass reward payoff are materially stronger.
 - `TODO`: stronger dramatic cue understanding and device-proofing.
 
 Tit / Chickadee:
 
 - `Implemented`: grouped bird classes.
-- `Partial`: stronger sine-wave rhythm identity for tits.
-- `Partial`: stronger erratic altitude identity for chickadees.
+- `Partial`: stronger sine-wave rhythm identity and clearer warning/payoff staging for tits.
+- `Partial`: stronger erratic altitude identity and flutter-path staging for chickadees.
 
 #### Animals
 

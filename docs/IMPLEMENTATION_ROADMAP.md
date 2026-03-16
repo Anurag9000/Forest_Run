@@ -16,7 +16,7 @@ This restores the original roadmap as the required implementation target. Items 
 | 7 | Done | base entity framework exists |
 | 8 | Partial | flora classes exist and a readability/payoff pass has started; cactus and final device tuning still need work |
 | 9 | Partial | tree classes exist and willow/bamboo are stronger; jacaranda/cherry and final scenic richness still need work |
-| 10 | Partial | bird classes exist, readability and drama need work |
+| 10 | Partial | bird classes exist, and ordinary-play warning/payoff staging is stronger, but final readability and device validation still need work |
 | 11 | Partial | animal classes exist, personality delivery insufficient |
 | 12 | Done | entity manager and spawner exist |
 | 13 | Partial | biome cycle exists, full mood transformation incomplete |

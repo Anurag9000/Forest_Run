@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.yourname.forest_run.engine.BirdEncounterFlavor
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
@@ -37,12 +38,18 @@ class ChickadeeGroup(
         color = Color.argb(64, 255, 232, 188)
         style = Paint.Style.FILL
     }
+    private val flutterTrailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(96, 255, 242, 214)
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+    }
 
     // Each bird's individual altitude and timer
     private val altitudes = FloatArray(birdCount) { groundY * (0.3f + Random.nextFloat() * 0.4f) }
     private val targetAltitudes = FloatArray(birdCount) { groundY * (0.3f + Random.nextFloat() * 0.4f) }
     private val altitudeTimers = FloatArray(birdCount) { Random.nextFloat() * 1.3f }
     private val altitudeIntervals = FloatArray(birdCount) { 0.7f + Random.nextFloat() * 0.6f }
+    private var warned = false
 
     private val birdRects = Array(birdCount) { i ->
         val bx = startX + i * spacing
@@ -77,16 +84,18 @@ class ChickadeeGroup(
     }
 
     override fun draw(canvas: Canvas) {
-        for (rect in birdRects) {
+        for (i in birdRects.indices) {
+            val rect = birdRects[i]
+            canvas.drawLine(rect.centerX(), rect.centerY(), rect.centerX(), targetAltitudes[i], flutterTrailPaint)
             canvas.drawCircle(rect.centerX(), rect.centerY(), birdW * 0.28f, flutterPaint)
             sprite.draw(canvas, rect)
         }
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 130)
+        gameState.addBonus(points = 130 + flutterSpread().toInt().coerceAtMost(40) / 10)
         DialogueBubbleManager.spawn(
-            text = "Flutter!",
+            text = BirdEncounterFlavor.chickadeePass(flutterSpread()),
             anchorX = x + birdCount * spacing * 0.42f,
             anchorY = altitudes.min() - 24f,
             fillColor = Color.rgb(255, 246, 224),
@@ -95,6 +104,21 @@ class ChickadeeGroup(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+        val approachLeft = birdRects.first().left - readability.stagingPaddingPx * 6f
+        val approachRight = birdRects.last().right + readability.stagingPaddingPx
+        if (!warned &&
+            player.hitbox.right >= approachLeft &&
+            player.hitbox.left <= approachRight
+        ) {
+            warned = true
+            DialogueBubbleManager.spawn(
+                BirdEncounterFlavor.chickadeeWarning(flutterSpread()),
+                x + birdCount * spacing * 0.42f,
+                altitudes.min() - 24f,
+                Color.rgb(255, 246, 224),
+                Color.rgb(170, 128, 84)
+            )
+        }
         for (rect in birdRects) {
             if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT
             val mercyPad = readability.mercyPaddingPx
@@ -103,4 +127,6 @@ class ChickadeeGroup(
         }
         return CollisionResult.NONE
     }
+
+    private fun flutterSpread(): Float = altitudes.max() - altitudes.min()
 }

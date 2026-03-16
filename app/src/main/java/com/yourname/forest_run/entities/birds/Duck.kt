@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.yourname.forest_run.engine.BirdEncounterFlavor
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
@@ -13,6 +14,7 @@ import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.entities.PlayerState
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
@@ -43,6 +45,9 @@ class Duck(
         style = Paint.Style.STROKE
         strokeWidth = 3.5f
     }
+    private var cuePulse = 0f
+    private var warned = false
+    private var stayedLow = false
 
     init {
         x = startX
@@ -54,6 +59,7 @@ class Duck(
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
+        cuePulse += deltaTime * 5.2f
         hitbox.offsetTo(x + insetX, y + insetY)
         val pad = readability.stagingPaddingPx
         duckLaneRect.set(x - pad, y + birdH * 0.18f, x + birdW + pad, y + birdH * 0.86f)
@@ -62,6 +68,9 @@ class Duck(
     }
 
     override fun draw(canvas: Canvas) {
+        val pulse = 0.55f + 0.45f * kotlin.math.sin(cuePulse)
+        cuePaint.alpha = (26f + 34f * pulse).toInt().coerceIn(0, 255)
+        cueStrokePaint.alpha = (86f + 64f * pulse).toInt().coerceIn(0, 255)
         canvas.drawRoundRect(duckLaneRect, 16f, 16f, cuePaint)
         canvas.drawRoundRect(duckLaneRect, 16f, 16f, cueStrokePaint)
         val drawRect = RectF(x, y, x + birdW, y + birdH)
@@ -69,9 +78,12 @@ class Duck(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 105)
+        gameState.addBonus(
+            points = if (stayedLow) 125 else 105,
+            seeds = if (stayedLow) 1 else 0
+        )
         DialogueBubbleManager.spawn(
-            text = "Quack!",
+            text = BirdEncounterFlavor.duckPass(stayedLow),
             anchorX = x + birdW * 0.5f,
             anchorY = y - 16f,
             fillColor = Color.rgb(255, 250, 220),
@@ -80,6 +92,25 @@ class Duck(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+        val approach = RectF(
+            hitbox.left - readability.stagingPaddingPx * 5f,
+            hitbox.top - readability.stagingPaddingPx,
+            hitbox.right + readability.stagingPaddingPx,
+            hitbox.bottom + readability.stagingPaddingPx
+        )
+        if (!warned && RectF.intersects(player.hitbox, approach)) {
+            warned = true
+            DialogueBubbleManager.spawn(
+                BirdEncounterFlavor.duckWarning(),
+                x + birdW * 0.5f,
+                y - 18f,
+                Color.rgb(255, 249, 224),
+                Color.rgb(184, 146, 62)
+            )
+        }
+        if (player.state == PlayerState.DUCKING && player.hitbox.right >= hitbox.left && player.hitbox.left <= hitbox.right) {
+            stayedLow = true
+        }
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
         val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)

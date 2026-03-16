@@ -79,35 +79,35 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: night watcher that punishes reckless jumping.
 - Dream traits: sleeping perch, reactive dive, eerie glow.
-- Current: dive trigger logic, clearer telegraphing, stronger alert ring, and stronger night-glow mood now exist.
+- Current: dive trigger logic, clearer telegraphing, stronger alert ring, stronger night-glow mood, and relationship-aware alert cueing now exist.
 - TODO: finish final device-proofing and deeper repeated-memory payoff.
 
 ### Duck
 
 - Role: low flyer that teaches ducking instead of jumping.
 - Dream traits: unmistakable head-height obstruction and clear quack cue.
-- Current: larger readable hazard and duck-lane cue now exist.
+- Current: larger readable hazard, pulsing duck-lane cue, explicit down warning, and cleaner duck-through payoff now exist.
 - TODO: finish final on-device tuning and clearer quack/event payoff.
 
 ### Eagle
 
 - Role: hunter dive threat.
 - Dream traits: screech cue, target lock, diagonal punishment.
-- Current: dive hazard now has a stronger target-lock read, clearer target zone, and better reward payoff on a clean pass.
+- Current: dive hazard now has a stronger target-lock read, clearer target zone, relationship-aware mark cueing, and better reward payoff on a clean pass.
 - TODO: finish final device-proofing and stronger dramatic cue understanding.
 
 ### TitGroup
 
 - Role: rhythm-wave flock.
 - Dream traits: group sine motion and timing-based reads.
-- Current: wave readability and clean-pass payoff are stronger.
+- Current: wave readability, rhythm warning, crest read, and clean-pass payoff are stronger.
 - TODO: finish device-proofing and stronger rhythm identity.
 
 ### ChickadeeGroup
 
 - Role: erratic aerial chaos.
 - Dream traits: unpredictable altitude shifts and cute panic energy.
-- Current: erratic altitude and clean-pass payoff are clearer.
+- Current: erratic altitude, flutter-trail read, warning cue, and clean-pass payoff are clearer.
 - TODO: finish final charm and clarity tuning on device.
 
 ## Animals
