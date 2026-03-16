@@ -12,35 +12,35 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: tiny low hazard, ghost-flower lure, often paired with tempting seed placement.
 - Dream traits: glows at night, distracts near the player’s feet, creates tricky seed traps.
-- Current: glow/readability pass now exists with stronger visual identity and payoff.
-- TODO: finish stronger seed-trap staging and final on-device tuning.
+- Current: glow/readability pass now exists with stronger visual identity, explicit lure-to-trap staging, and a clearer reward beat.
+- TODO: finish final on-device tuning and trap readability validation.
 
 ### Hyacinth
 
 - Role: clustered rhythm hazard that encourages longer jumps or risky brush interactions.
 - Dream traits: grouped feel, pollen, partial-brush punishment, distinctive timing.
-- Current: brush/mercy zone and clearer visual brush read now exist.
-- TODO: make the clustered rhythm identity stronger on device.
+- Current: brush/mercy zone, clustered pulse read, and stronger reward text now exist.
+- TODO: finish on-device rhythm tuning.
 
 ### Eucalyptus
 
 - Role: forward-leaning plant that punishes late reads.
 - Dream traits: fast whip sway, trapezoid feel, leaf drama.
-- Current: stronger leaning/readability pass now exists.
-- TODO: finish leaf drama and final high-threat tuning.
+- Current: stronger leaning/readability pass now exists with layered gust guides and clearer pass feedback.
+- TODO: finish final high-threat tuning on device.
 
 ### Vanilla Orchid
 
 - Role: vertical-window obstacle with vine and overhead branch pressure.
 - Dream traits: safe window between low and high colliders.
-- Current: safe-window readability pass now exists.
-- TODO: finish final staging so the two-zone read feels unmistakable in live play.
+- Current: safe-window readability pass now exists with explicit top/bottom hazard staging and a clearer safe thread.
+- TODO: finish final live-play validation on device.
 
 ### Cactus
 
 - Role: classic runner baseline hazard.
 - Dream traits: rigid, harsh silhouette, contrast against the softer forest.
-- Current: classic static hazard now has stronger warning staging and repeated-killer flavor response.
+- Current: classic static hazard now has stronger warning staging, history-aware payoff text, and clearer reward feedback.
 - TODO: finish final device-proofing and broader memory/cosmetic payoff.
 
 ## Trees

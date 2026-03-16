@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.yourname.forest_run.engine.FloraEncounterFlavor
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
@@ -15,6 +16,8 @@ import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
@@ -43,6 +46,7 @@ class Cactus(
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
+    private var warningPulse = 0f
 
     init {
         x = startX
@@ -53,6 +57,7 @@ class Cactus(
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
+        warningPulse += deltaTime * 2.8f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x + insetX + sway, y + insetY)
         sprite.update(deltaTime)
@@ -62,6 +67,9 @@ class Cactus(
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
         val pad = readability.stagingPaddingPx
+        val pulse = 0.68f + 0.32f * kotlin.math.sin(warningPulse)
+        warningPaint.alpha = (34f + 30f * pulse).toInt().coerceIn(0, 255)
+        warningStrokePaint.alpha = (92f + 54f * pulse).toInt().coerceIn(0, 255)
         canvas.drawRoundRect(x - pad, y + cactusHeight * 0.12f, x + cactusWidth + pad, y + cactusHeight + 4f, 16f, 16f, warningPaint)
         canvas.drawRoundRect(x - pad, y + cactusHeight * 0.12f, x + cactusWidth + pad, y + cactusHeight + 4f, 16f, 16f, warningStrokePaint)
         drawRect.set(x, y, x + cactusWidth, y + cactusHeight)
@@ -73,9 +81,11 @@ class Cactus(
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         gameState.addBonus(points = 95)
+        val encounters = PersistentMemoryManager.getEncounterCount(context, EntityType.CACTUS)
         val hitCount = PersistentMemoryManager.getHitCount(context, EntityType.CACTUS)
+        ParticleManager.emit(FxPreset.SEED_COLLECT, x + cactusWidth * 0.5f, y + cactusHeight * 0.42f)
         DialogueBubbleManager.spawn(
-            text = if (hitCount >= 2) "Not this time." else "Sharp read.",
+            text = FloraEncounterFlavor.cactusPass(encounters, hitCount),
             anchorX = x + cactusWidth * 0.5f,
             anchorY = y - 14f,
             fillColor = Color.rgb(255, 244, 220),

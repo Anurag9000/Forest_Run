@@ -89,11 +89,11 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Flora
 
-- PARTIAL: Lily of the Valley glow identity and lure readability are materially stronger; finish device-tuning and stronger seed-trap staging.
-- PARTIAL: Hyacinth brush-vs-hit readability is clearer; finish clustered rhythm identity and device validation.
-- PARTIAL: Eucalyptus whip/sway read is stronger; finish leaf-drama delivery and final threat tuning.
-- PARTIAL: Vanilla Orchid vertical window is more legible; finish final safe-thread staging and device validation.
-- PARTIAL: Cactus now has stronger warning staging and repeated-killer flavor; finish device-proofing and broader memory/cosmetic payoff.
+- PARTIAL: Lily of the Valley now stages its lure and lower seed-trap more explicitly through glow, stem-guidance, and pass reward; finish device-tuning and final trap readability.
+- PARTIAL: Hyacinth now reads more like a single clustered rhythm unit with pulse rings and stronger payoff; finish device validation and final rhythm feel.
+- PARTIAL: Eucalyptus now sells the whipping leaf path more clearly with layered gust guides and stronger pass reward; finish final threat tuning on device.
+- PARTIAL: Vanilla Orchid now stages its two hazard zones and safe thread much more explicitly; finish device validation and final live-play clarity.
+- PARTIAL: Cactus now has stronger warning staging, history-aware payoff text, and a clearer reward beat; finish device-proofing and broader memory/cosmetic payoff.
 
 ### Trees
 

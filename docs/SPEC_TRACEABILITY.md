@@ -392,29 +392,29 @@ Background assets:
 Lily of the Valley:
 
 - `Implemented`: low hazard and sway.
-- `Partial`: night glow in spirit.
-- `TODO`: strong lure/distraction role and above-it seed-trap identity.
+- `Partial`: night glow, lure line, and lower seed-trap staging now read more clearly in runtime.
+- `TODO`: final device-proofing of the lure/trap read.
 
 Hyacinth:
 
 - `Implemented`: brush / mercy zone logic.
-- `TODO`: explicit group-of-three as one logical timing unit.
-- `TODO`: stronger long-jump rhythm identity and pollen personality.
+- `Partial`: clustered pulse staging now makes the encounter read more like one timing unit.
+- `TODO`: stronger long-jump rhythm identity and device-proofing.
 
 Eucalyptus:
 
-- `Partial`: obstacle and sway.
-- `TODO`: trapezoid-feeling hitbox and strong leaner identity.
+- `Partial`: obstacle, sway, and layered gust guides now exist.
+- `TODO`: final strong-leaner / high-threat tuning on device.
 
 Vanilla Orchid:
 
-- `Partial`: obstacle exists.
-- `TODO`: true two-collider low+high window and visual clarity.
+- `Partial`: two colliders, explicit top/bottom hazard staging, and a clearer safe thread now exist.
+- `TODO`: final live-play clarity and device-proofing.
 
 Cactus:
 
 - `Implemented`: classic rigid hazard.
-- `Partial`: stronger warning staging and repeat-killer flavor response now exist.
+- `Partial`: stronger warning staging, history-aware payoff text, and clearer reward feedback now exist.
 - `TODO`: broader memory/cosmetic integration and device-proofing.
 
 #### Trees

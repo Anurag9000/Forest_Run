@@ -5,7 +5,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.yourname.forest_run.engine.FloraEncounterFlavor
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -42,7 +44,21 @@ class LilyOfValley(
         color = Color.argb(130, 246, 255, 248)
         style = Paint.Style.FILL
     }
+    private val lureStemPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(110, 206, 255, 238)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
+    private val seedTrapPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(52, 248, 244, 188)
+        style = Paint.Style.FILL
+    }
+    private val seedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(210, 255, 244, 176)
+        style = Paint.Style.FILL
+    }
     private var glowPulse = 0f
+    private var trapPulse = 0f
 
     init {
         x = startX
@@ -54,6 +70,7 @@ class LilyOfValley(
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         glowPulse += deltaTime * 3.2f
+        trapPulse += deltaTime * 2.4f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x + hitInsetX + sway, y + hitTopY)
         sprite.update(deltaTime)
@@ -65,8 +82,28 @@ class LilyOfValley(
         val pulse = 0.65f + 0.35f * kotlin.math.sin(glowPulse)
         val blossomX = x + floraWidth * 0.52f
         val blossomY = y + floraHeight * 0.28f
+        val trapGlow = 0.7f + 0.3f * kotlin.math.sin(trapPulse)
         glowPaint.alpha = (60f + 45f * pulse).toInt().coerceIn(0, 255)
         coreGlowPaint.alpha = (105f + 65f * pulse).toInt().coerceIn(0, 255)
+        lureStemPaint.alpha = (90f + 40f * pulse).toInt().coerceIn(0, 255)
+        seedTrapPaint.alpha = (42f + 28f * trapGlow).toInt().coerceIn(0, 255)
+        canvas.drawLine(blossomX, blossomY, x + floraWidth * 0.5f, y + floraHeight * 0.82f, lureStemPaint)
+        canvas.drawRoundRect(
+            x + floraWidth * 0.14f,
+            y + floraHeight * 0.48f,
+            x + floraWidth * 0.88f,
+            y + floraHeight * 0.92f,
+            16f,
+            16f,
+            seedTrapPaint
+        )
+        repeat(3) { index ->
+            val step = index / 2f
+            val seedY = blossomY + floraHeight * (0.16f + step * 0.14f)
+            val seedRadius = floraWidth * (0.038f + 0.006f * index)
+            seedPaint.alpha = (160f + 30f * pulse - index * 18f).toInt().coerceIn(0, 255)
+            canvas.drawCircle(blossomX + sway * 0.2f, seedY, seedRadius, seedPaint)
+        }
         canvas.drawCircle(blossomX, blossomY, floraWidth * (0.34f + 0.08f * pulse), glowPaint)
         canvas.drawCircle(blossomX, blossomY, floraWidth * 0.18f, coreGlowPaint)
         drawRect.set(x, y, x + floraWidth, y + floraHeight)
@@ -77,9 +114,18 @@ class LilyOfValley(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 90)
+        val encounters = PersistentMemoryManager.getEncounterCount(context, EntityType.LILY_OF_VALLEY)
+        val repeatHits = PersistentMemoryManager.getHitCount(context, EntityType.LILY_OF_VALLEY)
+        gameState.addBonus(points = 100, seeds = 1)
         ParticleManager.emit(FxPreset.LILY_NIGHT_GLOW, x + floraWidth * 0.5f, y + floraHeight * 0.25f)
-        DialogueBubbleManager.spawn("Moonlit lure", x + floraWidth * 0.5f, y - 10f, Color.rgb(242, 255, 252), Color.rgb(110, 170, 150))
+        ParticleManager.emit(FxPreset.SEED_COLLECT, x + floraWidth * 0.5f, y + floraHeight * 0.58f)
+        DialogueBubbleManager.spawn(
+            FloraEncounterFlavor.lilyPass(encounters, repeatHits),
+            x + floraWidth * 0.5f,
+            y - 10f,
+            Color.rgb(242, 255, 252),
+            Color.rgb(110, 170, 150)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

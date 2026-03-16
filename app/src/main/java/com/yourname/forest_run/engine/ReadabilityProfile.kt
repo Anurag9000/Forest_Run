@@ -43,11 +43,11 @@ object ReadabilityProfile {
     private const val INTERVAL_RAMP_METRES = 2000f
 
     private val templates = mapOf(
-        EntityType.CACTUS to EntityReadabilityTemplate(134f, 68f, 0.16f, 0.10f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
-        EntityType.LILY_OF_VALLEY to EntityReadabilityTemplate(94f, 58f, 0.22f, 0.16f, mercyPaddingPx = 13f, stagingPaddingPx = 10f),
-        EntityType.HYACINTH to EntityReadabilityTemplate(120f, 50f, 0.22f, 0.28f, mercyPaddingPx = 13f, stagingPaddingPx = 10f),
-        EntityType.EUCALYPTUS to EntityReadabilityTemplate(136f, 64f, 0.18f, 0.14f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
-        EntityType.VANILLA_ORCHID to EntityReadabilityTemplate(232f, 100f, 0.18f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
+        EntityType.CACTUS to EntityReadabilityTemplate(138f, 72f, 0.16f, 0.10f, mercyPaddingPx = 13f, stagingPaddingPx = 14f),
+        EntityType.LILY_OF_VALLEY to EntityReadabilityTemplate(98f, 62f, 0.22f, 0.16f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
+        EntityType.HYACINTH to EntityReadabilityTemplate(124f, 54f, 0.22f, 0.28f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
+        EntityType.EUCALYPTUS to EntityReadabilityTemplate(140f, 68f, 0.18f, 0.14f, mercyPaddingPx = 13f, stagingPaddingPx = 14f),
+        EntityType.VANILLA_ORCHID to EntityReadabilityTemplate(236f, 106f, 0.18f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 14f),
         EntityType.WEEPING_WILLOW to EntityReadabilityTemplate(692f, 282f, 0.18f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
         EntityType.JACARANDA to EntityReadabilityTemplate(626f, 238f, 0.16f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
         EntityType.BAMBOO to EntityReadabilityTemplate(0f, 0f, 0f, 0f, mercyPaddingPx = 10f, stagingPaddingPx = 14f, secondaryWidthPx = 22f, secondarySpacingPx = 40f),

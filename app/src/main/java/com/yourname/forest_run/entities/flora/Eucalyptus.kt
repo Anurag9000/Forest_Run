@@ -5,7 +5,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.yourname.forest_run.engine.FloraEncounterFlavor
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -14,6 +16,8 @@ import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
@@ -37,6 +41,12 @@ class Eucalyptus(
         style = Paint.Style.STROKE
         strokeWidth = 4f
     }
+    private val leafDriftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(82, 198, 242, 190)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private var gustPulse = 0f
 
     init {
         x = startX
@@ -47,6 +57,7 @@ class Eucalyptus(
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
+        gustPulse += deltaTime * 3.5f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x + hitInsetX + sway, y + hitTopY)
         sprite.update(deltaTime)
@@ -55,13 +66,16 @@ class Eucalyptus(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
-        canvas.drawLine(
-            x + floraWidth * 0.20f,
-            y + floraHeight * 0.30f,
-            x + floraWidth * 0.84f + sway * 1.8f,
-            y + floraHeight * 0.18f,
-            windGuidePaint
-        )
+        repeat(3) { index ->
+            val phase = gustPulse + index * 0.9f
+            val pulse = 0.65f + 0.35f * kotlin.math.sin(phase)
+            val startY = y + floraHeight * (0.22f + index * 0.14f)
+            val endY = startY - floraHeight * (0.09f + 0.03f * pulse)
+            val endX = x + floraWidth * (0.82f + index * 0.03f) + sway * (1.6f + index * 0.35f)
+            val paint = if (index == 0) windGuidePaint else leafDriftPaint
+            paint.alpha = (88f + 72f * pulse - index * 10f).toInt().coerceIn(0, 255)
+            canvas.drawLine(x + floraWidth * 0.18f, startY, endX, endY, paint)
+        }
         drawRect.set(x, y, x + floraWidth, y + floraHeight)
         canvas.save()
         canvas.rotate(sway * 3f, x + floraWidth / 2f, y + floraHeight)
@@ -70,8 +84,16 @@ class Eucalyptus(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 120)
-        DialogueBubbleManager.spawn("Leaves whip past", x + floraWidth * 0.52f, y - 12f, Color.rgb(236, 255, 236), Color.rgb(96, 150, 108))
+        val repeatHits = PersistentMemoryManager.getHitCount(context, EntityType.EUCALYPTUS)
+        gameState.addBonus(points = 120, seeds = 1)
+        ParticleManager.emit(FxPreset.PETAL_DRIFT, x + floraWidth * 0.62f, y + floraHeight * 0.26f)
+        DialogueBubbleManager.spawn(
+            FloraEncounterFlavor.eucalyptusPass(repeatHits),
+            x + floraWidth * 0.52f,
+            y - 12f,
+            Color.rgb(236, 255, 236),
+            Color.rgb(96, 150, 108)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

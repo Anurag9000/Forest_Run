@@ -35,6 +35,7 @@ The goal is simple: the forest feels inhabited, remembers you, and has a sense o
 - max 16 simultaneous colours per entity
 - strong high-contrast night scenes
 - Lily glow should dominate the night scene locally
+- Flora reads should feel authored, not generic: lure, rhythm, wind, and thread-the-gap should each be obvious before impact
 - use dithering instead of smooth gradients within sprites
 
 ### Current Status

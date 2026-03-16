@@ -207,6 +207,7 @@ Expected qualities:
 - Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, repeated-harm caution pages, milestone-gentleness pages, and Bloom-afterglow pages in baseline form.
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, and repeated-harm caution traces from mood, summary, and relationship state.
 - Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
+- Implemented: `FloraEncounterFlavor` now centralizes authored flora payoff text so lure/rhythm/window feedback stops living as scattered fallback strings.
 - Implemented: `BirdEncounterFlavor` now centralizes authored warning/pass text for the non-relationship bird family instead of leaving bird payoff as scattered fallback strings.
 - Implemented: `AnimalEncounterFlavor` now centralizes non-relationship animal fairness/payoff text where relationship logic is not the right source of truth.
 - TODO: persistence schema must still expand further for richer fragment unlock state and broader relationship milestone presentation.

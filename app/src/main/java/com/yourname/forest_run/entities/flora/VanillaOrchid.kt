@@ -5,7 +5,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.yourname.forest_run.engine.FloraEncounterFlavor
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -44,6 +46,15 @@ class VanillaOrchid(
         color = Color.argb(44, 248, 234, 196)
         style = Paint.Style.FILL
     }
+    private val safeGapStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(132, 255, 244, 190)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val hazardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(34, 228, 160, 194)
+        style = Paint.Style.FILL
+    }
     private val blossomPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(92, 255, 245, 226)
         style = Paint.Style.FILL
@@ -75,8 +86,11 @@ class VanillaOrchid(
         val safeRight = topHitbox.right - safeInset
         val safeTop = topHitbox.bottom
         val safeBottom = bottomHitbox.top
+        canvas.drawRoundRect(bottomHitbox, 14f, 14f, hazardPaint)
+        canvas.drawRoundRect(topHitbox, 14f, 14f, hazardPaint)
         if (safeBottom > safeTop) {
             canvas.drawRoundRect(safeLeft, safeTop, safeRight, safeBottom, 18f, 18f, safeGapPaint)
+            canvas.drawRoundRect(safeLeft, safeTop, safeRight, safeBottom, 18f, 18f, safeGapStrokePaint)
         }
         canvas.drawCircle(x + floraWidth * 0.74f, y + floraHeight * 0.16f, floraWidth * 0.09f, blossomPaint)
 
@@ -96,10 +110,18 @@ class VanillaOrchid(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 140, seeds = 1)
+        val encounters = PersistentMemoryManager.getEncounterCount(context, EntityType.VANILLA_ORCHID)
+        val repeatHits = PersistentMemoryManager.getHitCount(context, EntityType.VANILLA_ORCHID)
+        gameState.addBonus(points = 150, seeds = 1)
         ParticleManager.emit(FxPreset.LILY_NIGHT_GLOW, x + floraWidth * 0.68f, y + floraHeight * 0.16f)
         ParticleManager.emit(FxPreset.POLLEN_BURST, x + floraWidth * 0.34f, groundY - floraHeight * 0.18f)
-        DialogueBubbleManager.spawn("Thread the bloom", x + floraWidth * 0.55f, y - 14f, Color.rgb(255, 246, 252), Color.rgb(170, 120, 160))
+        DialogueBubbleManager.spawn(
+            FloraEncounterFlavor.orchidPass(encounters, repeatHits),
+            x + floraWidth * 0.55f,
+            y - 14f,
+            Color.rgb(255, 246, 252),
+            Color.rgb(170, 120, 160)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
