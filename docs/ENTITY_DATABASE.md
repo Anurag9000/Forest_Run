@@ -49,29 +49,29 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: curtain hazard and core visual icon of the game.
 - Dream traits: forces ducking, obscures what comes next, creates canopy mood.
-- Current: implemented obstacle, iconography, and stronger curtain-read pass.
-- TODO: finish obscured-read pressure and scenic dominance.
+- Current: implemented obstacle, iconography, stronger curtain-read pass, and clearer shadow-zone lane staging now exist.
+- TODO: finish scenic dominance and final device-proofing.
 
 ### Jacaranda
 
 - Role: purple-canopy atmosphere tree with petal drift.
 - Dream traits: visual noise, mood, overhead tension.
-- Current: obstacle now has a clearer petal-curtain read, stronger pass reward, and better encounter feel.
-- TODO: finish final device-proofing and fuller canopy spectacle.
+- Current: obstacle now has a clearer petal-curtain read, fuller canopy halo staging, stronger pass reward, and better encounter feel.
+- TODO: finish final device-proofing and last canopy-spectacle tuning.
 
 ### Bamboo
 
 - Role: vertical-barrier precision hazard.
 - Dream traits: narrow gap threading, jitter sway.
-- Current: stronger gap-readability pass now exists.
+- Current: stronger gap-readability pass now exists with clearer lane guidance and payoff.
 - TODO: finish signature threat identity and final device validation.
 
 ### Cherry Blossom
 
 - Role: wind-making environmental modifier.
 - Dream traits: petal blinding, gust influence, gentle beauty with danger.
-- Current: obstacle now has clearer gust staging, better pass reward, and stronger petal-storm identity.
-- TODO: finish final device-proofing and full gust-pressure delivery.
+- Current: obstacle now has clearer gust staging, layered gust trails, better pass reward, and stronger petal-storm identity.
+- TODO: finish final device-proofing and last gust-pressure tuning.
 
 ## Birds
 

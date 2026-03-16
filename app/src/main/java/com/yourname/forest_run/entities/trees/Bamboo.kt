@@ -6,13 +6,17 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
+import com.yourname.forest_run.engine.TreeEncounterFlavor
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.DialogueBubbleManager
 import kotlin.random.Random
 
@@ -42,6 +46,12 @@ class Bamboo(
         color = Color.argb(44, 212, 255, 210)
         style = Paint.Style.FILL
     }
+    private val gapGuideStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(126, 178, 236, 184)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private var guidePulse = 0f
 
     init {
         x = startX
@@ -60,6 +70,7 @@ class Bamboo(
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
+        guidePulse += deltaTime * 3f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x, 0f)
         for (i in 0 until stalkCount) {
@@ -74,6 +85,9 @@ class Bamboo(
     }
 
     override fun draw(canvas: Canvas) {
+        val pulse = 0.6f + 0.4f * kotlin.math.sin(guidePulse)
+        gapGuidePaint.alpha = (28f + 26f * pulse).toInt().coerceIn(0, 255)
+        gapGuideStrokePaint.alpha = (88f + 36f * pulse).toInt().coerceIn(0, 255)
         for (i in 0 until stalkCount - 1) {
             val left = topHitboxes[i].right
             val right = topHitboxes[i + 1].left
@@ -82,6 +96,7 @@ class Bamboo(
                 val gapBottom = bottomHitboxes[i].top
                 val radius = readability.stagingPaddingPx
                 canvas.drawRoundRect(left, gapTop, right, gapBottom, radius, radius, gapGuidePaint)
+                canvas.drawRoundRect(left, gapTop, right, gapBottom, radius, radius, gapGuideStrokePaint)
             }
         }
         for (i in 0 until stalkCount) {
@@ -95,8 +110,17 @@ class Bamboo(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 135)
-        DialogueBubbleManager.spawn("Thread the grove", x + totalWidth * 0.5f, groundY * 0.16f, Color.rgb(232, 255, 236), Color.rgb(88, 148, 92))
+        val encounters = PersistentMemoryManager.getEncounterCount(context, EntityType.BAMBOO)
+        val repeatHits = PersistentMemoryManager.getHitCount(context, EntityType.BAMBOO)
+        gameState.addBonus(points = 145, seeds = 1)
+        ParticleManager.emit(FxPreset.SEED_COLLECT, x + totalWidth * 0.5f, groundY * 0.28f)
+        DialogueBubbleManager.spawn(
+            TreeEncounterFlavor.bambooPass(encounters, repeatHits),
+            x + totalWidth * 0.5f,
+            groundY * 0.16f,
+            Color.rgb(232, 255, 236),
+            Color.rgb(88, 148, 92)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

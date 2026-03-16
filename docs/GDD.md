@@ -30,6 +30,7 @@ Forest_Run is a high-fidelity, colorful 2D endless runner for Android. It is a s
 
 - Implemented: baseline endless runner, biomes, seeds, Bloom, some entity personality, garden persistence.
 - Partial: bird-family ordinary-play warnings and payoffs are now materially more explicit instead of relying on generic pass text alone.
+- Partial: tree-family ordinary-play staging is now materially stronger, with clearer curtain, canopy, precision-gap, and gust reads.
 - TODO: deliver the full intended feeling on device. Current user feedback says the world is too small, too sparse, and too unclear.
 
 ---

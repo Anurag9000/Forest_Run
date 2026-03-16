@@ -15,7 +15,7 @@ This restores the original roadmap as the required implementation target. Items 
 | 6 | Partial | player sprites exist, face overlay dream not complete |
 | 7 | Done | base entity framework exists |
 | 8 | Partial | flora classes exist and now have stronger lure, rhythm, gust, and safe-thread staging, but final device tuning and cactus memory payoff still need work |
-| 9 | Partial | tree classes exist and willow/bamboo are stronger; jacaranda/cherry and final scenic richness still need work |
+| 9 | Partial | tree classes exist and now have stronger curtain, canopy, precision-gap, and gust staging, but final scenic richness and device tuning still need work |
 | 10 | Partial | bird classes exist, and ordinary-play warning/payoff staging is stronger, but final readability and device validation still need work |
 | 11 | Partial | animal classes exist, personality delivery insufficient |
 | 12 | Done | entity manager and spawner exist |

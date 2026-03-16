@@ -97,10 +97,10 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Trees
 
-- PARTIAL: Weeping Willow curtain feel is stronger; finish scenic dominance and obscured-read pressure.
-- PARTIAL: Jacaranda now has a clearer petal-curtain read and stronger pass reward; finish full canopy spectacle and device-proofing.
-- PARTIAL: Bamboo narrow-gap readability is stronger; finish signature threat identity and device validation.
-- PARTIAL: Cherry Blossom now has clearer gust staging and stronger petal-storm identity; finish full gust-pressure delivery and device-proofing.
+- PARTIAL: Weeping Willow now stages a stronger curtain lane and shadow-zone pressure; finish scenic dominance and device-proofing.
+- PARTIAL: Jacaranda now stages a fuller canopy halo and stronger petal-curtain reward; finish device-proofing and final spectacle tuning.
+- PARTIAL: Bamboo now stages its precision gaps more explicitly with stronger lane guidance and payoff; finish device validation and signature threat identity.
+- PARTIAL: Cherry Blossom now sells gust pressure more clearly with layered trails and stronger pass reward; finish device-proofing and final storm feel.
 
 ### Birds
 

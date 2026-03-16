@@ -6,10 +6,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
+import com.yourname.forest_run.engine.TreeEncounterFlavor
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
@@ -47,6 +49,11 @@ class Jacaranda(
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
+    private val canopyHaloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(42, 226, 188, 255)
+        style = Paint.Style.FILL
+    }
+    private var canopyPulse = 0f
 
     init {
         x = startX
@@ -59,6 +66,7 @@ class Jacaranda(
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
+        canopyPulse += deltaTime * 2.6f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x + treeWidth / 2f - trunkWidth / 2f, trunkTop)
         branchHitbox.set(x + treeWidth * 0.08f + sway, branchTop, x + treeWidth * 0.92f + sway, branchBottom)
@@ -68,8 +76,24 @@ class Jacaranda(
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
+        val pulse = 0.66f + 0.34f * kotlin.math.sin(canopyPulse)
+        canopyHaloPaint.alpha = (24f + 26f * pulse).toInt().coerceIn(0, 255)
+        petalCurtainPaint.alpha = (42f + 24f * pulse).toInt().coerceIn(0, 255)
+        petalStrokePaint.alpha = (88f + 44f * pulse).toInt().coerceIn(0, 255)
+        canvas.drawOval(
+            branchHitbox.left - readability.stagingPaddingPx * 1.4f,
+            branchTop - treeHeight * 0.1f,
+            branchHitbox.right + readability.stagingPaddingPx * 1.4f,
+            branchBottom + treeHeight * 0.08f,
+            canopyHaloPaint
+        )
         canvas.drawRoundRect(branchHitbox, 28f, 28f, petalCurtainPaint)
         canvas.drawRoundRect(branchHitbox, 28f, 28f, petalStrokePaint)
+        repeat(4) { index ->
+            val driftX = branchHitbox.left + branchHitbox.width() * (0.18f + index * 0.2f)
+            val driftY = branchTop + branchHitbox.height() * (0.12f + index * 0.16f)
+            canvas.drawCircle(driftX + sway * 0.15f, driftY, treeWidth * (0.018f + index * 0.006f), petalStrokePaint)
+        }
         drawRect.set(x, groundY - treeHeight, x + treeWidth, groundY)
         canvas.save()
         canvas.rotate(sway * 0.8f, x + treeWidth / 2f, groundY)
@@ -78,11 +102,20 @@ class Jacaranda(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 125, seeds = 1)
+        val encounters = PersistentMemoryManager.getEncounterCount(context, EntityType.JACARANDA)
+        val repeatHits = PersistentMemoryManager.getHitCount(context, EntityType.JACARANDA)
+        gameState.addBonus(points = 145, seeds = 1)
         ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.30f, branchTop)
         ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.72f, branchTop + 12f)
         ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.50f, branchTop - 12f)
-        DialogueBubbleManager.spawn("Petal hush", x + treeWidth * 0.5f, y - 16f, Color.rgb(244, 234, 255), Color.rgb(130, 100, 170))
+        ParticleManager.emit(FxPreset.SEED_COLLECT, x + treeWidth * 0.5f, branchBottom + treeHeight * 0.04f)
+        DialogueBubbleManager.spawn(
+            TreeEncounterFlavor.jacarandaPass(encounters, repeatHits),
+            x + treeWidth * 0.5f,
+            y - 16f,
+            Color.rgb(244, 234, 255),
+            Color.rgb(130, 100, 170)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

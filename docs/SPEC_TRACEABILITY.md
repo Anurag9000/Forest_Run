@@ -421,23 +421,23 @@ Cactus:
 
 Weeping Willow:
 
-- `Partial`: presence and hazard role.
-- `TODO`: obscuring-curtain gameplay and shadow-zone effect.
+- `Partial`: presence, hazard role, and stronger curtain-lane / shadow-zone staging now exist.
+- `TODO`: final scenic dominance and device-proofing.
 
 Jacaranda:
 
-- `Partial`: tree presence, clearer petal curtain, and stronger pass reward now exist.
-- `TODO`: full-screen petal-canopy spectacle and device-proofing.
+- `Partial`: tree presence, clearer petal curtain, fuller canopy halo, and stronger pass reward now exist.
+- `TODO`: final canopy spectacle tuning and device-proofing.
 
 Bamboo:
 
-- `Partial`: obstacle presence.
-- `TODO`: full gap-threading precision gameplay.
+- `Partial`: obstacle presence, clearer gap-threading guidance, and stronger precision payoff now exist.
+- `TODO`: final device-proofing of the precision read.
 
 Cherry Blossom:
 
-- `Partial`: tree presence, gust staging, and stronger petal-storm feel now exist.
-- `TODO`: full gust-pressure behavior and device-proofing.
+- `Partial`: tree presence, layered gust staging, and stronger petal-storm feel now exist.
+- `TODO`: final gust-pressure tuning and device-proofing.
 
 #### Birds
 

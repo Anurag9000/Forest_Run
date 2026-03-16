@@ -36,6 +36,7 @@ The goal is simple: the forest feels inhabited, remembers you, and has a sense o
 - strong high-contrast night scenes
 - Lily glow should dominate the night scene locally
 - Flora reads should feel authored, not generic: lure, rhythm, wind, and thread-the-gap should each be obvious before impact
+- Tree reads should feel scenic and dangerous at once: curtain, canopy, precision gap, and gust should each be felt before collision
 - use dithering instead of smooth gradients within sprites
 
 ### Current Status

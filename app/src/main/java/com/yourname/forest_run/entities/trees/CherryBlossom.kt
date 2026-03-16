@@ -6,10 +6,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.engine.SwayComponent
+import com.yourname.forest_run.engine.TreeEncounterFlavor
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
@@ -47,6 +49,12 @@ class CherryBlossom(
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
+    private val gustTrailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(88, 255, 206, 224)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
+    private var gustPulse = 0f
 
     init {
         x = startX
@@ -59,6 +67,7 @@ class CherryBlossom(
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
+        gustPulse += deltaTime * 2.7f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x + treeWidth / 2f - trunkWidth / 2f, trunkTop)
         branchHitbox.set(x + treeWidth * 0.08f + sway, branchHeightHigh, x + treeWidth * 0.92f + sway, branchHeightLow)
@@ -69,8 +78,22 @@ class CherryBlossom(
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
         val pad = readability.stagingPaddingPx
+        val pulse = 0.64f + 0.36f * kotlin.math.sin(gustPulse)
+        gustPaint.alpha = (36f + 24f * pulse).toInt().coerceIn(0, 255)
+        gustStrokePaint.alpha = (90f + 42f * pulse).toInt().coerceIn(0, 255)
+        gustTrailPaint.alpha = (72f + 40f * pulse).toInt().coerceIn(0, 255)
         canvas.drawRoundRect(branchHitbox.left - pad, branchHitbox.top - pad * 0.5f, branchHitbox.right + pad, branchHitbox.bottom + pad * 0.5f, 24f, 24f, gustPaint)
         canvas.drawRoundRect(branchHitbox.left - pad, branchHitbox.top - pad * 0.5f, branchHitbox.right + pad, branchHitbox.bottom + pad * 0.5f, 24f, 24f, gustStrokePaint)
+        repeat(3) { index ->
+            val yOffset = branchHitbox.top + branchHitbox.height() * (0.22f + index * 0.24f)
+            canvas.drawLine(
+                branchHitbox.left - pad * (1.1f + index * 0.2f),
+                yOffset,
+                branchHitbox.right + pad * (0.8f + index * 0.1f),
+                yOffset - treeHeight * (0.05f + index * 0.015f),
+                gustTrailPaint
+            )
+        }
         drawRect.set(x, groundY - treeHeight, x + treeWidth, groundY)
         canvas.save()
         canvas.rotate(sway * 0.6f, x + treeWidth / 2f, groundY)
@@ -79,12 +102,21 @@ class CherryBlossom(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 140, seeds = 1)
+        val encounters = PersistentMemoryManager.getEncounterCount(context, EntityType.CHERRY_BLOSSOM)
+        val repeatHits = PersistentMemoryManager.getHitCount(context, EntityType.CHERRY_BLOSSOM)
+        gameState.addBonus(points = 150, seeds = 1)
         ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.24f, branchHeightHigh)
         ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.78f, branchHeightHigh + 18f)
         ParticleManager.emit(FxPreset.PETAL_DRIFT, x + treeWidth * 0.52f, branchHeightHigh - 10f)
         ParticleManager.emit(FxPreset.POLLEN_BURST, x + treeWidth * 0.5f, branchHeightLow)
-        DialogueBubbleManager.spawn("Blossom gust", x + treeWidth * 0.5f, y - 14f, Color.rgb(255, 238, 244), Color.rgb(190, 120, 150))
+        ParticleManager.emit(FxPreset.SEED_COLLECT, x + treeWidth * 0.5f, branchHeightLow + treeHeight * 0.04f)
+        DialogueBubbleManager.spawn(
+            TreeEncounterFlavor.cherryPass(encounters, repeatHits),
+            x + treeWidth * 0.5f,
+            y - 14f,
+            Color.rgb(255, 238, 244),
+            Color.rgb(190, 120, 150)
+        )
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
