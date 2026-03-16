@@ -116,40 +116,41 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: sprinter/charger.
 - Dream traits: howl, then charge; intimidating but readable.
-- Current: howl/charge code, stronger threat presentation, and relationship-aware charge cueing now exist.
+- Current: howl/charge code, stronger threat presentation, relationship-aware charge cueing, and more visible spare reward feedback now exist.
 - TODO: finish device-proofing and deepen the spare payoff.
 
 ### Cat
 
 - Role: kindness-rewarding decoy.
 - Dream traits: tiny optional reward hazard, kindness bonus, spare-like warmth.
-- Current: kindness reward logic, stronger reward presentation, and relationship-aware near-miss cueing now exist.
+- Current: kindness reward logic, stronger reward presentation, relationship-aware near-miss cueing, and visible warm-bond pass/spare reward feedback now exist.
 - TODO: deepen repeated-friend payoff and device-proof the feel.
 
 ### Fox
 
 - Role: mirror-jump trickster.
 - Dream traits: sly counter-jump, playful line delivery, mercy-based wave-off.
-- Current: mirror-jump logic, stronger detection/clean-pass presentation, and history-aware landing payoff now exist.
+- Current: mirror-jump logic, stronger detection/clean-pass presentation, history-aware landing payoff, and visible warm-memory pass feedback now exist.
 - TODO: finish final telegraph charm and repeated-memory payoff.
 
 ### Hedgehog
 
 - Role: small friction threat that debuffs instead of killing.
 - Dream traits: fair but sneaky, visible enough to feel earned, not cheap.
-- Current: speed-debuff trap and stronger readability/fairness pass now exist.
+- Current: speed-debuff trap, clearer warning-stage messaging, and stronger debuff feedback now exist.
 - TODO: finish final size/timing validation on device.
 
 ### Dog
 
 - Role: barker and occasional running buddy.
 - Dream traits: bark projectile timing plus lovable buddy variant.
-- Current: both modes exist, are materially clearer in play, and now use relationship-aware buddy dialogue with longer bonded buddy runs.
+- Current: both modes exist, are materially clearer in play, use relationship-aware buddy dialogue with longer bonded buddy runs, and now celebrate bonded buddy exits more visibly.
 - TODO: make buddy mode truly memorable and finish bark timing validation on device.
 
 ## Mandatory Entity TODOs
 
 - DONE: enlarge entity screen presence materially.
 - DONE: reduce empty space between encounters materially.
+- DONE: formal device acceptance checklist now mirrors deterministic scenario coverage in [docs/DEVICE_ACCEPTANCE_CHECKLIST.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/DEVICE_ACCEPTANCE_CHECKLIST.md).
 - TODO: verify all entity-specific behaviors on actual device.
 - TODO: ensure flavor text and mercy feedback are visible whenever personality is supposed to land.

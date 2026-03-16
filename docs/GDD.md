@@ -183,6 +183,7 @@ Current baseline:
 ### Current Status
 
 - Implemented: two-tap menu start, run loop, game over, restart, garden unlock persistence.
+- Partial: the remaining animal-family ordinary-play payoffs are stronger, with clearer low-threat fairness and more visible bond reward feedback.
 - TODO: make the whole session arc feel authored, readable, and emotionally coherent in real play.
 
 ---

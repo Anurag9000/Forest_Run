@@ -44,6 +44,7 @@ class Wolf(
     private val readability = ReadabilityProfile.entityForGround(EntityType.WOLF, groundY)
     private val relationshipTuning: RelationshipEncounterTuning =
         RelationshipArcSystem.encounterTuning(context, EntityType.WOLF)
+    private val warmBond = RelationshipArcSystem.isWarmBond(context, EntityType.WOLF)
     private val wolfH = readability.heightPx
     private val wolfW = SpriteSizing.widthForHeight(sprite, wolfH, minWidth = readability.minWidthPx)
     private val insetX = wolfW * readability.hitInsetXRatio
@@ -146,11 +147,13 @@ class Wolf(
             spared    = true
             wolfState = WolfState.SPARED
             gameState.addBonus(
-                points = 200 + relationshipTuning.passBonusPoints,
-                seeds = 3 + relationshipTuning.passBonusSeeds
+                points = 220 + relationshipTuning.passBonusPoints,
+                seeds = 3 + relationshipTuning.passBonusSeeds + if (warmBond) 1 else 0
             )
             PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
             gameState.recordSpare()
+            ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.5f, y + wolfH * 0.40f)
+            ParticleManager.emit(FxPreset.SEED_COLLECT, x + wolfW * 0.5f, y + wolfH * 0.20f)
             DialogueBubbleManager.spawn(
                 RelationshipArcSystem.lineFor(context, EntityType.WOLF, RelationshipArcSystem.Event.SPARE),
                 x + wolfW * 0.5f,

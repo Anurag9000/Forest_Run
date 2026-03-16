@@ -485,13 +485,13 @@ Fox:
 Hedgehog:
 
 - `Implemented`: non-lethal speed debuff.
-- `Partial`: fair visibility is materially stronger.
+- `Partial`: fair visibility, warning-stage messaging, and debuff feedback are materially stronger.
 - `TODO`: final fairness under petal-noise and real-device conditions.
 
 Dog:
 
 - `Implemented`: bark-projectile hazard and buddy variant.
-- `Partial`: readability and memorability of both modes are materially stronger, with relationship-aware buddy dialogue and longer bonded buddy runs.
+- `Partial`: readability and memorability of both modes are materially stronger, with relationship-aware buddy dialogue, longer bonded buddy runs, and more visible celebratory buddy exits.
 
 #### Biome Affinity Map
 

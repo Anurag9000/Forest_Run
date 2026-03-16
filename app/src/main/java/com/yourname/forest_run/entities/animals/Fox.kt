@@ -17,6 +17,8 @@ import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
@@ -40,6 +42,7 @@ class Fox(
     private val readability = ReadabilityProfile.entityForGround(EntityType.FOX, groundY)
     private val relationshipTuning: RelationshipEncounterTuning =
         RelationshipArcSystem.encounterTuning(context, EntityType.FOX)
+    private val warmBond = RelationshipArcSystem.isWarmBond(context, EntityType.FOX)
     private val foxH = readability.heightPx
     private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = readability.minWidthPx)
     private val insetX = foxW * readability.hitInsetXRatio
@@ -99,6 +102,9 @@ class Fox(
                         Color.rgb(255, 236, 214),
                         Color.rgb(190, 110, 55)
                     )
+                    if (warmBond) {
+                        ParticleManager.emit(FxPreset.SEED_COLLECT, x + foxW * 0.55f, y + foxH * 0.28f)
+                    }
                 }
             }
             FoxState.LANDING -> {
@@ -152,6 +158,9 @@ class Fox(
                 points = 150 + relationshipTuning.passBonusPoints,
                 seeds = 1 + relationshipTuning.passBonusSeeds
             )
+            if (warmBond) {
+                ParticleManager.emit(FxPreset.MERCY_STARS, x + foxW * 0.55f, y + foxH * 0.4f)
+            }
             DialogueBubbleManager.spawn(
                 RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.PASS),
                 x + foxW * 0.55f,

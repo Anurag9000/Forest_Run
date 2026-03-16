@@ -170,6 +170,7 @@ Goal: complete, shippable, polished store-ready product.
 - DONE: entity size/readability on phone materially improved
 - DONE: spawn sparsity materially reduced
 - DONE: ghost duplication confusion materially reduced
+- DONE: formal device acceptance checklist now exists and mirrors deterministic scenario names
 - TODO: verify every entity behavior on actual device
 - DONE: seeds, Bloom, mercy hearts, and garden loop are materially clearer in play
 - PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist, including baseline relationship keepsake rewards; finish deeper cross-run payoff and richer route feel

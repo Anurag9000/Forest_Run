@@ -16,6 +16,8 @@ import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
 /**
@@ -41,6 +43,7 @@ class Cat(
     private val readability = ReadabilityProfile.entityForGround(EntityType.CAT, groundY)
     private val relationshipTuning: RelationshipEncounterTuning =
         RelationshipArcSystem.encounterTuning(context, EntityType.CAT)
+    private val warmBond = RelationshipArcSystem.isWarmBond(context, EntityType.CAT)
     private val catH = readability.heightPx
     private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = readability.minWidthPx)
     private val insetX = catW * readability.hitInsetXRatio
@@ -98,6 +101,9 @@ class Cat(
                 points = 500 + relationshipTuning.passBonusPoints,
                 seeds = 2 + relationshipTuning.passBonusSeeds
             )
+            if (warmBond) {
+                ParticleManager.emit(FxPreset.SEED_COLLECT, x + catW * 0.5f, y + catH * 0.32f)
+            }
             DialogueBubbleManager.spawn(
                 text = RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.PASS),
                 anchorX = x + catW * 0.5f,
@@ -120,6 +126,7 @@ class Cat(
         waving = true
         waveTimer = 2.5f
         PersistentMemoryManager.recordSpare(context, EntityType.CAT)
+        ParticleManager.emit(FxPreset.MERCY_STARS, x + catW * 0.5f, y + catH * 0.38f)
         DialogueBubbleManager.spawn(
             RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.SPARE),
             x + catW * 0.5f,

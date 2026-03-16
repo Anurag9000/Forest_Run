@@ -24,6 +24,7 @@ This file is the strict implementation ledger for everything from the original d
 ## Documentation And Canonical Spec TODOs
 
 - DONE: canonical runtime truth is frozen at 5 biomes, 8-seed / 6-second auto-Bloom, and rest-to-Garden failure flow.
+- DONE: formal device acceptance checklist now exists and mirrors deterministic scenario names.
 - TODO: update every remaining doc section and stale comment to match the canonical truth exactly.
 
 ## GDD TODOs
@@ -111,11 +112,11 @@ This file is the strict implementation ledger for everything from the original d
 
 ### Animals
 
-- PARTIAL: Cat kindness bonus is much more obvious; finish repeated-friend payoff and device validation.
-- PARTIAL: Fox mirror jump reads more clearly; finish final telegraph charm and repeated-memory payoff.
-- PARTIAL: Wolf howl/charge drama is materially stronger; finish device-proofing and stronger spare payoff.
-- PARTIAL: Hedgehog visibility/fairness is materially stronger; finish final tuning on phone.
-- PARTIAL: Dog bark projectile and buddy mode are clearer; finish memorable buddy payoff and device validation.
+- PARTIAL: Cat kindness bonus is much more obvious and warm-bond passes/spares now leave visible reward feedback; finish repeated-friend payoff and device validation.
+- PARTIAL: Fox mirror jump reads more clearly and warm-memory landings/passes now leave visible payoff; finish final telegraph charm and repeated-memory payoff.
+- PARTIAL: Wolf howl/charge drama is materially stronger and spare payoff is now more visibly rewarding; finish device-proofing and final spare feel tuning.
+- PARTIAL: Hedgehog fairness is materially stronger with warning-stage messaging and clearer debuff feedback; finish final tuning on phone.
+- PARTIAL: Dog bark projectile and buddy mode are clearer, and bonded buddy runs now feel more celebratory; finish memorable buddy payoff and device validation.
 
 ## Architecture TODOs
 
@@ -138,6 +139,7 @@ This file is the strict implementation ledger for everything from the original d
 
 ## Release TODOs
 
+- DONE: device acceptance checklist doc now mirrors deterministic scenario names.
 - TODO: full manual device verification for all entity behaviors.
 - TODO: performance audit on low-end, mid-range, and high-refresh phones.
 - TODO: final store-ready art, screenshots, and release pass once gameplay vision is truly met.

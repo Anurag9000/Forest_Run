@@ -202,7 +202,7 @@ Examples:
 ### Current Status
 
 - Implemented: buddy variant exists in code.
-- Partial: bonded Dog runs now keep company longer and speak with relationship-aware buddy lines instead of one static script.
+- Partial: bonded Dog runs now keep company longer, speak with relationship-aware buddy lines, and leave more visible celebratory payoff on departure.
 - TODO: make it obvious and delightful enough that players actually notice and remember it.
 
 ---

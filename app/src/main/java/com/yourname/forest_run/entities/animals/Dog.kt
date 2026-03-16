@@ -9,6 +9,7 @@ import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.RelationshipArcSystem
+import com.yourname.forest_run.engine.RelationshipStage
 import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
@@ -16,6 +17,8 @@ import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
+import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.DialogueBubbleManager
 import kotlin.random.Random
 
@@ -48,6 +51,8 @@ class Dog(
     private val relationshipTuning: RelationshipEncounterTuning =
         RelationshipArcSystem.encounterTuning(context, EntityType.DOG)
     private val buddyDurationBonusSec = RelationshipArcSystem.dogBuddyDurationBonusSec(context)
+    private val relationshipStage = RelationshipArcSystem.stageFor(context, EntityType.DOG)
+    private val warmBond = RelationshipArcSystem.isWarmBond(context, EntityType.DOG)
     private val dogH = readability.heightPx
     private val dogW = SpriteSizing.widthForHeight(sprite, dogH, minWidth = readability.minWidthPx)
     private val insetX = dogW * readability.hitInsetXRatio
@@ -165,6 +170,7 @@ class Dog(
                 Color.rgb(170, 120, 45)
             )
             SfxManager.playBark()
+            ParticleManager.emit(FxPreset.MERCY_STARS, x + dogW * 0.5f, y + dogH * 0.45f)
             buddyDialogueStep++
             buddyDialogueTimer = (buddyTimer / buddyDialogue.size).coerceAtLeast(0.8f)
         }
@@ -178,6 +184,10 @@ class Dog(
                 Color.rgb(255, 248, 210),
                 Color.rgb(170, 120, 45)
             )
+            if (relationshipStage.ordinal >= RelationshipStage.TRUST.ordinal) {
+                ParticleManager.emit(FxPreset.SEED_COLLECT, x + dogW * 0.5f, y + dogH * 0.36f)
+                ParticleManager.emit(FxPreset.MERCY_STARS, x + dogW * 0.5f, y + dogH * 0.52f)
+            }
             mode = DogMode.BUDDY_DASH
         }
     }
@@ -252,8 +262,10 @@ class Dog(
             buddyRewarded = true
             gameState.addBonus(
                 points = 180 + relationshipTuning.passBonusPoints,
-                seeds = 2 + relationshipTuning.passBonusSeeds
+                seeds = 2 + relationshipTuning.passBonusSeeds + if (warmBond) 1 else 0
             )
+            ParticleManager.emit(FxPreset.SEED_COLLECT, x + dogW * 0.5f, y + dogH * 0.3f)
+            ParticleManager.emit(FxPreset.MERCY_STARS, x + dogW * 0.5f, y + dogH * 0.48f)
             DialogueBubbleManager.spawn(
                 RelationshipArcSystem.lineFor(context, EntityType.DOG, RelationshipArcSystem.Event.SPARE),
                 x + dogW * 0.5f,
