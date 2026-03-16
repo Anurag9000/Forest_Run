@@ -44,21 +44,35 @@ object StoryFragmentSystem {
         val mood = summary?.forestMood ?: ForestMoodSystem.currentState(appContext).currentMood
         val strongest = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.RECOGNITION)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
+        val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
+        val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
         val text = when (mood) {
-            ForestMood.GENTLE -> if (milestoneReward != null) {
+            ForestMood.GENTLE -> if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL) {
+                "The evening wind sounds like it is trying not to disturb the peace you carried home."
+            } else if (summary?.pacifistRouteTier == PacifistRouteTier.KIND) {
+                "The evening wind keeps the kinder edges of the run from disappearing too quickly."
+            } else if (milestoneReward != null) {
                 "The evening wind moves like it has learned the shape of your better returns."
             } else if (strongest != null) {
                 "The evening wind moves like it knows who has been welcomed here."
             } else {
                 "The evening wind has nothing urgent left to say."
             }
-            ForestMood.RECKLESS -> if (milestoneReward != null) {
+            ForestMood.RECKLESS -> if (repeatedHarmCreature != null) {
+                "Even the restless branches seem to know which fear keeps coming back with you."
+            } else if (milestoneReward != null) {
                 "Even the restless branches seem unwilling to break what trust has grown here."
             } else {
                 "The branches still rustle like they are catching up to your hurry."
             }
-            ForestMood.FEARFUL -> "The air stays soft, as if the weather decided not to press its luck."
-            ForestMood.STEADY -> if (milestoneReward != null) {
+            ForestMood.FEARFUL -> if (repeatedHarmCreature != null) {
+                "The air stays careful, as if it knows which shadow still follows you home."
+            } else {
+                "The air stays soft, as if the weather decided not to press its luck."
+            }
+            ForestMood.STEADY -> if (repeatedKindnessCreature != null && summary?.pacifistRouteTier == PacifistRouteTier.KIND) {
+                "The wind keeps a patient pace, like it noticed kindness becoming a habit."
+            } else if (milestoneReward != null) {
                 "The wind keeps a patient pace, like it recognizes this version of you."
             } else {
                 "The wind keeps a patient pace through the garden."
@@ -179,6 +193,7 @@ object StoryFragmentSystem {
         val strongest = RelationshipArcSystem.strongestRelationship(context)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(context)
         val mood = ForestMoodSystem.currentState(context).currentMood
+        val repeatedKiller = PersistentMemoryManager.featuredRepeatKiller(context)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(context)
             ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(context))?.takeIf {
                 PersistentMemoryManager.getHitCount(context, it) >= 2
@@ -208,6 +223,15 @@ object StoryFragmentSystem {
                 type = StoryFragmentType.GARDEN_REFLECTION,
                 text = "The garden has started trusting your gentler habits as something dependable.",
                 unlocksPageId = "page_garden_warm_${repeatedKindnessCreature.name.lowercase()}"
+            )
+        }
+
+        if (summary != null && summary.pacifistRouteTier == PacifistRouteTier.KIND && (summary.sparedCount > 0 || summary.kindnessChain >= 4)) {
+            return StoryFragment(
+                id = "garden_route_kind",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = "The garden kept the kindness of that run close instead of treating it like a small accident.",
+                unlocksPageId = "page_route_kind"
             )
         }
 
@@ -266,6 +290,14 @@ object StoryFragmentSystem {
         }
 
         summary?.let {
+            if (repeatedKiller != null && repeatedKiller == repeatedHarmCreature && it.hitsTaken > 0) {
+                return StoryFragment(
+                    id = "garden_same_shadow_${repeatedKiller.name.lowercase()}",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = "The garden has started recognizing the same shadow before you even name it.",
+                    unlocksPageId = "page_same_shadow_${repeatedKiller.name.lowercase()}"
+                )
+            }
             if (repeatedHarmCreature != null && (it.hitsTaken > 0 || it.forestMood == ForestMood.FEARFUL)) {
                 return StoryFragment(
                     id = "garden_repeated_harm_${repeatedHarmCreature.name.lowercase()}",

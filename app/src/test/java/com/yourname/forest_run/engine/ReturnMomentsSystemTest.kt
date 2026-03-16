@@ -140,6 +140,34 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `repeat killer history escalates into same shadow return moment`() {
+        repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        val summary = RunSummary(
+            score = 280,
+            distanceM = 240f,
+            isNewHighScore = false,
+            highScore = 900,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 13_000L)
+
+        assertEquals("Same Shadow", moment?.title)
+        assertEquals(EntityType.WOLF, moment?.visitor)
+        assertTrue(moment?.line?.contains("howl", ignoreCase = true) == true || moment?.line?.contains("same", ignoreCase = true) == true)
+    }
+
+    @Test
     fun `milestone gentle run returns kept company moment`() {
         repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
         repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
@@ -250,6 +278,33 @@ class ReturnMomentsSystemTest {
 
         assertEquals("Peace Kept", moment?.title)
         assertTrue(moment?.line?.contains("peace", ignoreCase = true) == true || moment?.line?.contains("quiet", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun `kind route creates a dedicated return moment`() {
+        val summary = RunSummary(
+            score = 1_040,
+            distanceM = 760f,
+            isNewHighScore = false,
+            highScore = 1_700,
+            mercyHearts = 3,
+            mercyMisses = 3,
+            kindnessChain = 5,
+            cleanPasses = 8,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 7,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Kindly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.KIND
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 14_000L)
+
+        assertEquals("Kindness Stayed", moment?.title)
+        assertTrue(moment?.line?.contains("kind", ignoreCase = true) == true || moment?.line?.contains("home", ignoreCase = true) == true)
     }
 
     @Test

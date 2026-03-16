@@ -110,6 +110,37 @@ class GardenSanctuaryPlannerTest {
     }
 
     @Test
+    fun `repeat killer history upgrades sanctuary badge to same shadow`() {
+        repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.OWL) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 4, totalRuns = 4, fearfulRuns = 4)
+        )
+        val summary = RunSummary(
+            score = 300,
+            distanceM = 250f,
+            isNewHighScore = false,
+            highScore = 900,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.OWL,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Same Shadow", state.arrivalBadge)
+        assertTrue(state.carryHomeLine.contains("shape") || state.carryHomeLine.contains("trouble"))
+    }
+
+    @Test
     fun `milestone bond adds keepsake trace and warmer carry-home`() {
         repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
         repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }

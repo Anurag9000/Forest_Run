@@ -95,4 +95,18 @@ object PersistentMemoryManager {
             .filter { (_, streak, tensionMargin) -> streak >= minimumStreak || tensionMargin >= 2 }
             .maxWithOrNull(compareBy<Triple<EntityType, Int, Int>> { it.second }.thenBy { it.third })
             ?.first
+
+    fun featuredRepeatKiller(context: Context, minimumHits: Int = 3): EntityType? =
+        EntityType.entries
+            .asSequence()
+            .map { type ->
+                Triple(
+                    type,
+                    getHitCount(context, type),
+                    getTenderStreak(context, type) + (getHitCount(context, type) - getSparedCount(context, type))
+                )
+            }
+            .filter { (_, hits, _) -> hits >= minimumHits }
+            .maxWithOrNull(compareBy<Triple<EntityType, Int, Int>> { it.second }.thenBy { it.third })
+            ?.first
 }

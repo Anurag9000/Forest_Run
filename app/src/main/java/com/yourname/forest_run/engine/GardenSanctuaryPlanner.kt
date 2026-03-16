@@ -36,6 +36,7 @@ object GardenSanctuaryPlanner {
         val milestoneRewards = RelationshipArcSystem.unlockedMilestoneTypes(appContext)
             .mapNotNull { RelationshipArcSystem.milestoneRewardFor(appContext, it) }
         val featuredReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
+        val repeatedKillerCreature = PersistentMemoryManager.featuredRepeatKiller(appContext)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
             ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
                 PersistentMemoryManager.getHitCount(appContext, it) >= 2
@@ -156,9 +157,11 @@ object GardenSanctuaryPlanner {
         }
 
         val arrivalBadge = when {
+            repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature -> "Same Shadow"
             repeatedHarmCreature != null -> "Tender Return"
             routeTier == PacifistRouteTier.PEACEFUL -> "Peace Kept"
             routeTier == PacifistRouteTier.MERCIFUL -> "Mercy Stayed"
+            routeTier == PacifistRouteTier.KIND -> "Kindness Stayed"
             featuredReward != null -> featuredReward.label
             repeatedKindnessCreature != null && kindnessStreak >= 2 -> "Trust Kept"
             warmBonds.isNotEmpty() -> "Known Footsteps"
@@ -193,12 +196,16 @@ object GardenSanctuaryPlanner {
 
         val strongestBond = bonds.firstOrNull()?.first
         val carryHomeLine = when {
+            repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature ->
+                "${formatEntityName(repeatedKillerCreature)} has started to feel like the shape your trouble keeps taking."
             repeatedHarmCreature != null ->
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
             featuredReward != null ->
                 featuredReward.summary
             repeatedKindnessCreature != null && kindnessStreak >= 2 ->
                 "${formatEntityName(repeatedKindnessCreature)} has started leaving trust behind instead of only memory."
+            routeTier == PacifistRouteTier.KIND ->
+                "The garden kept the kinder shape of that run instead of letting it vanish immediately."
             routeTier == PacifistRouteTier.PEACEFUL ->
                 "The garden kept the quiet of that peaceful run instead of letting it disappear."
             routeTier == PacifistRouteTier.MERCIFUL ->

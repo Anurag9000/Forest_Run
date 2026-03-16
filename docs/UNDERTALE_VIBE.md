@@ -190,8 +190,8 @@ Examples:
 ### Current Status
 
 - Partial: forest mood and personal return moments now exist in baseline form.
-- Partial: repeated harm now leaves cautious sanctuary, return, and reflection beats in baseline form, with save-backed tender streak carry-over.
-- Partial: repeated kindness now leaves trust-path traces, warmer carry-home lines, rest fragments, dedicated gentle-return beats, and stronger lantern/ground-glow sanctuary warmth in baseline form.
+- Partial: repeated harm now leaves cautious sanctuary, return, reflection, and stronger `Same Shadow` repeat-killer beats in baseline form, with save-backed tender streak carry-over.
+- Partial: repeated kindness now leaves trust-path traces, warmer carry-home lines, rest fragments, dedicated gentle-return beats, stronger lantern/ground-glow sanctuary warmth, and baseline kind-route reflections in baseline form.
 - Partial: named relationship arcs now exist in baseline runtime form for Cat, Fox, Wolf, Dog, Owl, and Eagle, with persisted stages, stage-aware dialogue/payoff, bonded Garden return hooks, and milestone keepsake rewards.
 - Partial: quiet story fragments now exist in baseline runtime form through fragment-driven rest quotes, Garden reflections, weather-linked thoughts, bonded creature thoughts, milestone-gentleness / Bloom-afterglow reflections, and memory-page unlocks.
 - TODO: deepen forest mood consequences, relationship-stage consequences, fragment coverage, costume payoff, and return-moment richness beyond the current baseline.

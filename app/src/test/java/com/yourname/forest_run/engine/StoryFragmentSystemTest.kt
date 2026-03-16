@@ -105,6 +105,34 @@ class StoryFragmentSystemTest {
     }
 
     @Test
+    fun `repeat killer reflection unlocks same shadow page`() {
+        repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        val summary = RunSummary(
+            score = 430,
+            distanceM = 300f,
+            isNewHighScore = false,
+            highScore = 1_050,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("shadow") || line.contains("recognizing"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_same_shadow_wolf"))
+    }
+
+    @Test
     fun `milestone gentle reflection unlocks a milestone page`() {
         repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
         repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
@@ -214,5 +242,33 @@ class StoryFragmentSystemTest {
         assertNotNull(line)
         assertTrue(line!!.contains("peace") || line.contains("listening"))
         assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_route_peaceful"))
+    }
+
+    @Test
+    fun `kind route unlocks a route reflection page`() {
+        val summary = RunSummary(
+            score = 990,
+            distanceM = 690f,
+            isNewHighScore = false,
+            highScore = 1_400,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 4,
+            cleanPasses = 7,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 6,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Kindly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.KIND
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("kind") || line.contains("garden kept"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_route_kind"))
     }
 }

@@ -59,6 +59,7 @@ object ReturnMomentsSystem {
         val bondedVisitor = RelationshipArcSystem.preferredGardenVisitor(appContext)
         val milestoneBond = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.MILESTONE)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
+        val repeatedKiller = PersistentMemoryManager.featuredRepeatKiller(appContext)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
             ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
                 PersistentMemoryManager.getHitCount(appContext, it) >= 2
@@ -78,6 +79,14 @@ object ReturnMomentsSystem {
                         ReturnMoment("Welcome Back", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
                     } ?: ReturnMoment("Welcome Back", "The willow kept your place.", EntityType.CAT)
                 }
+            repeatedKiller != null && repeatedKiller == repeatedHarmCreature &&
+                (summary?.hitsTaken ?: 0) > 0 &&
+                PersistentMemoryManager.getHitCount(appContext, repeatedKiller) >= 3 ->
+                ReturnMoment(
+                    "Same Shadow",
+                    repeatedKillerLine(repeatedKiller),
+                    if (RelationshipArcSystem.isTracked(repeatedKiller)) repeatedKiller else bondedVisitor
+                )
             repeatedHarmCreature != null && ((summary?.hitsTaken ?: 0) > 0 || previous.roughRunStreak >= 2) ->
                 ReturnMoment(
                     "Still Tender",
@@ -102,6 +111,14 @@ object ReturnMomentsSystem {
                     "Stayed Gentle",
                     kindnessLine(repeatedKindnessCreature),
                     if (RelationshipArcSystem.isTracked(repeatedKindnessCreature)) repeatedKindnessCreature else bondedVisitor
+                )
+            summary != null &&
+                summary.pacifistRouteTier == PacifistRouteTier.KIND &&
+                (summary.sparedCount > 0 || summary.kindnessChain >= 4) ->
+                ReturnMoment(
+                    "Kindness Stayed",
+                    kindRouteLine(repeatedKindnessCreature ?: bondedVisitor),
+                    repeatedKindnessCreature ?: bondedVisitor ?: EntityType.CAT
                 )
             summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL ->
                 ReturnMoment(
@@ -234,6 +251,31 @@ object ReturnMomentsSystem {
         EntityType.CACTUS, EntityType.LILY_OF_VALLEY, EntityType.HYACINTH, EntityType.EUCALYPTUS,
         EntityType.VANILLA_ORCHID, EntityType.WEEPING_WILLOW, EntityType.JACARANDA, EntityType.BAMBOO,
         EntityType.CHERRY_BLOSSOM -> "The forest seems to notice when your gentleness starts lasting longer than a single run."
+    }
+
+    private fun repeatedKillerLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat has started to feel like the same lesson arriving in the same place."
+        EntityType.FOX -> "The fox keeps finding the same hesitation in you and turning it into a pattern."
+        EntityType.WOLF -> "The grove knows the shape of that same howl reaching you again."
+        EntityType.DOG -> "The same bark-line keeps coming home with you, even after the run ends."
+        EntityType.HEDGEHOG -> "The thorns have started to feel less like accidents and more like a habit the path remembers."
+        EntityType.DUCK -> "The duck keeps returning to the same low surprise your body still has not forgiven."
+        EntityType.TIT, EntityType.CHICKADEE -> "The air keeps circling back to the same place your timing gives way."
+        EntityType.OWL -> "The owl has started to feel like the same shadow finding you twice."
+        EntityType.EAGLE -> "The eagle's mark has started to feel like a memory, not a single mistake."
+        EntityType.CACTUS, EntityType.LILY_OF_VALLEY, EntityType.HYACINTH, EntityType.EUCALYPTUS,
+        EntityType.VANILLA_ORCHID, EntityType.WEEPING_WILLOW, EntityType.JACARANDA, EntityType.BAMBOO,
+        EntityType.CHERRY_BLOSSOM -> "The forest keeps returning to the same shape of trouble until you answer it differently."
+    }
+
+    private fun kindRouteLine(type: EntityType?): String = when (type) {
+        EntityType.CAT -> "The cat treated your kinder return like something it had been waiting to believe."
+        EntityType.FOX -> "The fox left you a brighter trail after a run that stayed kind."
+        EntityType.WOLF -> "The grove kept the gentler courage of that run instead of the fear."
+        EntityType.DOG -> "The dog's welcome sounds like it noticed the kindness before the score did."
+        EntityType.OWL -> "Even the owl lets the dark edge rest a little after a kinder run."
+        EntityType.EAGLE -> "The sky kept more softness than severity after that return."
+        else -> "Kindness stayed in the garden long enough to count as part of home."
     }
 
     private fun peacefulRouteLine(type: EntityType?): String = when (type) {

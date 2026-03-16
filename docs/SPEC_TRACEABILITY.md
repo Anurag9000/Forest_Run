@@ -139,7 +139,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 
 #### Soft Fall / Rest State
 
-- `Partial`: current runtime restores the return-to-Garden loop, and rest now includes authored recovery/carry-home copy, sanctuary-derived recovery atmosphere, and a non-mutating preview of the likely Garden return tone; the full calm reflective sit-down framing is still weaker than the original dream spec.
+- `Partial`: current runtime restores the return-to-Garden loop, and rest now includes authored recovery/carry-home copy, sanctuary-derived recovery atmosphere, repeat-killer and route-sensitive homecoming beats, and a non-mutating preview of the likely Garden return tone; the full calm reflective sit-down framing is still weaker than the original dream spec.
 - `Partial`: mercy-oriented runs now also surface explicit route tiers in the carry-home layer, but the full restorative authored recovery is still incomplete.
 - `Partial`: rest-like player state exists.
 - `Partial`: short death-to-overlay pacing exists.
@@ -651,7 +651,7 @@ These synthesize the entire historical spec set into unified workstreams.
 ### Readability
 
 - `Implemented`: a central `ReadabilityProfile` now owns spawn pacing plus flora, tree, bird, and animal sizing/staging/mercy-padding baselines.
-- `Partial`: many unique systems now read more clearly, but actual-device validation and final retuning are still required.
+- `Partial`: many unique systems now read more clearly, and repeated-history / route carry-home is richer, but actual-device validation and final retuning are still required.
 
 ### Bloom
 
@@ -702,8 +702,8 @@ These items are not from the earliest historical repo docs. They are explicit us
 
 - `Implemented`: a world-tone system now classifies recent runs into gentle, reckless, fearful, and steady.
 - `Partial`: world tone now affects Garden palette, sanctuary ambience, and rest/Garden framing.
-- `Partial`: repeated harm from the same creature now shows up in sanctuary planning, Garden return caution moments, Garden reflection fragments, and save-backed tender streak state.
-- `Partial`: repeated kindness now also shows up through trust-path sanctuary traces, warmer rest/Garden fragments, and `Stayed Gentle` return moments.
+- `Partial`: repeated harm from the same creature now shows up in sanctuary planning, `Same Shadow` return/reflection beats, Garden caution moments, Garden reflection fragments, and save-backed tender streak state.
+- `Partial`: repeated kindness now also shows up through trust-path sanctuary traces, warmer rest/Garden fragments, and `Stayed Gentle` return moments, while route-aware fragments now cover kind as well as merciful/peaceful runs.
 - `TODO`: deepen ambience, creature warmth, and broader world-state response.
 
 #### Named Relationship Arcs

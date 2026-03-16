@@ -132,7 +132,7 @@ This game should keep players returning because the forest feels personal, not b
 Current baseline:
 
 - recent run tone now affects Garden ambience and carry-home framing
-- repeated harm from the same creature now surfaces as caution in sanctuary traces, Garden return moments, Garden reflections, and tender memory streaks
+- repeated harm from the same creature now surfaces as caution in sanctuary traces, `Same Shadow` repeat-killer beats, Garden return moments, Garden reflections, and tender memory streaks
 - repeated kindness now surfaces through trust-path traces, warmer carry-home lines, rest fragments, and dedicated gentle-return beats
 - broader creature warmth and richer world-state consequence are still TODO, even though sanctuary/homecoming atmosphere is now materially stronger
 
@@ -164,7 +164,7 @@ Current baseline:
 
 Current baseline:
 
-- the Garden can now answer long absences, rough streaks, stronger bonds, Bloom-heavy runs, repeated kindness, and gentle milestone returns with distinct return moments
+- the Garden can now answer long absences, rough streaks, stronger bonds, Bloom-heavy runs, repeated kindness, repeat-killer history, kind/merciful/peaceful routes, and gentle milestone returns with distinct return moments
 - milestone bonds now produce warmer and more specific return lines instead of only generic greetings
 - rest can now preview the likely homeward tone before the Garden transition without consuming the saved return beat
 - peaceful and merciful runs can now surface distinct homeward return beats instead of only borrowing generic gentle-return lines
@@ -181,7 +181,7 @@ Current baseline:
 Current baseline:
 
 - rest quotes now route through a fragment system instead of only hard-coded quote branches
-- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, repeated-kindness warmth reflections, milestone-gentleness reflections, Bloom-afterglow reflections, peaceful-route reflections, and track unlocked memory pages
+- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, repeated-kindness warmth reflections, repeat-killer `Same Shadow` reflections, milestone-gentleness reflections, Bloom-afterglow reflections, kind/peaceful-route reflections, and track unlocked memory pages
 - broader creature-thought coverage and richer weather-linked fragments are still TODO
 
 ### Current Status
