@@ -2,6 +2,8 @@
 
 This restores the original setup guide as part of the live dream spec. Missing technical setup work belongs in [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md).
 
+Exact historical asset filenames, frame counts, and raw file inventories are kept here for traceability only unless they remain product-desirable. Current setup truth is driven by the working Android project and the canonical runtime docs.
+
 ## 1. Package & Project Setup
 
 | Setting | Value |

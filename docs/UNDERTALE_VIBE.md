@@ -2,6 +2,8 @@
 
 This document restores the original personality design target. Completion status and missing work are tracked in [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md).
 
+Current runtime canon resolves older conflicts. Historical exact motif notes, quote inventories, and bubble catalogs are inspiration unless they are still product-desirable and explicitly kept active in TODO.
+
 The goal is simple: the forest feels inhabited, remembers you, and has a sense of humour.
 
 > "The Eucalyptus fills you with determination."

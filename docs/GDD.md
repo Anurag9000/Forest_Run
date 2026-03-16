@@ -2,6 +2,8 @@
 
 This document restores the original long-form GDD as the product target. Implementation truth is tracked alongside it in [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md).
 
+When this restored source document conflicts with current canon, current canon wins: `5` biomes, `8` seeds / `6s` Bloom, gesture-anywhere jump/hold/duck input, and `run -> rest -> Garden` flow. Older exact variants remain useful for mood and reference, not as active blockers.
+
 **Project Name:** Forest_Run  
 **Platform:** Android (Android Studio)  
 **Language:** Kotlin  

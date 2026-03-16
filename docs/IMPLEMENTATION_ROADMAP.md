@@ -2,6 +2,8 @@
 
 This restores the original roadmap as the required implementation target. Items that are not fully done belong in TODO. The exhaustive current gap list lives in [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md).
 
+Historical exact variants and file inventories remain traceability-only unless they are still product-desirable. The roadmap should drive real product completion, not reopen resolved canon such as `5` biomes, `8`-seed / `6s` Bloom, gesture-anywhere input, or exact old asset naming.
+
 ## Phase Status Summary
 
 | Phase | Status | Notes |

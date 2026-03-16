@@ -2,6 +2,8 @@
 
 This restores the original technical architecture intent while keeping current implementation gaps explicit.
 
+Canonical runtime truth wins when historical architecture notes disagree. Older six-biome variants, split-input notes, exact save-shape expectations, and exact package-placement expectations are preserved for traceability, not as active implementation blockers.
+
 ## 1. Project Structure
 
 The dream architecture includes:
@@ -177,7 +179,7 @@ Dream persistence includes:
 ### Current Status
 
 - Implemented: score, seeds, garden, ghost.
-- Partial: repeated-encounter memory, costumes, and persisted run-summary carry-home now exist in baseline form; richer payoff depth is still missing.
+- Partial: repeated-encounter memory, costumes, persisted run-summary carry-home, relationship milestones, return-state data, fragment unlocks, and pacifist route tier carry-over now exist in baseline form; richer payoff depth is still missing.
 
 ## 12. Emotional Memory Architecture
 
@@ -303,7 +305,7 @@ Expected qualities:
 ### Current Status
 
 - Implemented: `PacifistTracker` now classifies `Kind`, `Merciful`, and `Peaceful` route tiers from live run behavior.
-- Partial: route tiers now flow through `RunSummary`, Garden/rest presentation, return moments, sanctuary carry-home, and fragment unlocks in baseline form.
+- Partial: route tiers now flow through `RunSummary`, Garden/rest presentation, return moments, sanctuary carry-home, fragment unlocks, and startup/homecoming tone in baseline form.
 - TODO: deepen route consequences further into broader world-state and production presentation.
 
 ## 15A. Session Arc Composition

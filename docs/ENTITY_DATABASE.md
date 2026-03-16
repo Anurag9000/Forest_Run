@@ -2,6 +2,8 @@
 
 This document restores the original entity planning detail while marking what still must be built or improved in play.
 
+Historical biome-affinity variants and exact old asset-sheet expectations remain traceability-only unless they still improve the shipped game. Runtime entity closure now means ordinary-play readability, personality delivery, and real-device proof.
+
 ## Entity Rule
 
 No generic obstacle feeling is acceptable. Every entity should have a distinct silhouette, distinct motion, distinct gameplay role, and distinct emotional personality.

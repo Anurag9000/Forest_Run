@@ -25,7 +25,8 @@ This file is the strict implementation ledger for everything from the original d
 
 - DONE: canonical runtime truth is frozen at 5 biomes, 8-seed / 6-second auto-Bloom, and rest-to-Garden failure flow.
 - DONE: formal device acceptance checklist now exists and mirrors deterministic scenario names.
-- TODO: update every remaining doc section and stale comment to match the canonical truth exactly.
+- DONE: historical exactness debt is now canonically resolved as traceability-only by default for old Bloom variants, six-biome variants, side-split input, and exact historical asset/file-name parity.
+- TODO: keep touched docs and stale comments synchronized with canonical runtime truth and active product gaps only.
 
 ## GDD TODOs
 

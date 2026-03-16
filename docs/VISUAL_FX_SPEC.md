@@ -2,6 +2,8 @@
 
 This restores the original visual and feedback ambition as an active target.
 
+Historical exact phase tables, shader-like transitions, and asset-by-asset scenic inventories are reference material unless they are still needed to make the shipped game stronger. Active visual work now centers on bespoke scenic art, device-readable ambience, and final perceptual polish.
+
 ## 1. Parallax Scrolling System
 
 The dream world uses four layers:

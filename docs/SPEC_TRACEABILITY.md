@@ -14,6 +14,7 @@ Status keys:
 - `Partial`: present in some form but weaker, incomplete, unclear in play, or materially divergent
 - `TODO`: not truly implemented yet
 - `Conflict`: historical specs disagree with each other or with current code and need final product-direction resolution
+- `Canonized / Not Required`: preserved for source traceability, but intentionally not an active product blocker under current runtime canon
 
 ## Source Inventory
 
@@ -47,7 +48,16 @@ The repo now treats the following as the frozen coherent canon for implementatio
 - `Conflict`: older spec says jump on one side of screen and duck on the other, while current game uses tap / hold / swipe gestures anywhere.
 - `Conflict`: older spec claims codebase is finalized and production-ready, but the actual repo and user feedback clearly contradict that.
 
-These conflicts must be resolved intentionally during implementation, not by accident.
+These conflicts are preserved intentionally for traceability. Current runtime canon resolves them by default unless a future product decision explicitly reopens one.
+
+## Canonical Resolution Policy
+
+The repo now resolves historical conflicts this way by default:
+
+- current runtime canon wins over older conflicting variants
+- exact historical filenames, frame counts, score tables, and save-shape expectations are traceability-only unless they materially improve the shipped game
+- broader product-desirable goals stay active: device readability, emotional payoff depth, sanctuary feel, bespoke scenic art, authored score, and release hardening
+- old variants are not reopened silently through documentation drift
 
 ## Current Code Anchor Inventory
 
@@ -93,7 +103,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 
 - `Conflict`: original phase table is distance-based morning/day/golden hour/twilight/night, while current repo uses five biome chapters with ambient tint blending.
 - `Partial`: darkness and tint transitions exist.
-- `TODO`: explicit day-phase system as originally specified if still desired after conflict resolution.
+- `Canonized / Not Required`: explicit day-phase runtime restoration is not an active blocker under the current five-biome canon.
 - `Partial`: owl/night-specific behavior exists.
 - `TODO`: firefly ambience at the full intended density.
 
@@ -124,9 +134,9 @@ Missing dream-spec dedicated classes called out by historical docs:
 - `Conflict`: 10 seeds / 5s / configurable activation in older GDD vs 8 seeds / 6s / auto activation in current code.
 - `Implemented`: Bloom meter, activation, invincibility window, stronger activation spectacle, and stronger screen/world treatment.
 - `Partial`: glow, aura, player-following Bloom effects, and the broader transformed-world feel.
-- `TODO`: speed doubling during Bloom as originally specified.
+- `Canonized / Not Required`: speed doubling during Bloom is not part of the current runtime canon.
 - `Partial`: passed obstacles now convert into stronger reward bursts, world bursts, and environmental reactions, but still need final device-proof spectacle.
-- `TODO`: nearby flowers blooming open continuously along the path if still required beyond the current conversion-triggered reactions.
+- `Canonized / Not Required`: the exact continuous old flower-opening behavior is not required so long as Bloom keeps a strong nearby-world reaction.
 - `Partial`: music transition into Bloom; stronger final authored audio identity still remains.
 
 #### Chaos Peak — Late Game
@@ -183,7 +193,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 
 - `Implemented`: local high score.
 - `Implemented`: garden progress and lifetime seeds.
-- `TODO`: JSON-rich garden save as originally described if current storage shape differs.
+- `Canonized / Not Required`: a JSON-rich save rewrite is not required if current persistence supports shipped product needs.
 - `Implemented`: no cloud sync.
 
 #### Audio Design
@@ -214,36 +224,36 @@ Missing dream-spec dedicated classes called out by historical docs:
 Player asset family:
 
 - `Partial`: run / jump / duck / land / rest / Bloom sprite families exist in imported assets.
-- `TODO`: exact historical filenames and frame counts preserved line-for-line.
+- `Canonized / Not Required`: exact historical filenames and frame counts are not active product blockers.
 
 Ground flora asset family:
 
 - `Partial`: cactus, lily, hyacinth, eucalyptus, vanilla assets exist in practical form.
-- `TODO`: explicit separate glow overlays and every exact asset naming expectation.
+- `Canonized / Not Required`: exact overlay and naming parity is not required if runtime readability and mood land.
 
 Tree asset family:
 
 - `Partial`: willow, jacaranda, bamboo, cherry blossom assets exist.
-- `TODO`: exact background/branch segmentation from old asset plan.
+- `Canonized / Not Required`: exact historical segmentation is not required.
 
 Bird asset family:
 
 - `Partial`: owl, duck, eagle, tit, chickadee assets exist.
-- `TODO`: exact idle/dive/specific frame-set coverage from old setup guide.
+- `Canonized / Not Required`: exact historical frame-set parity is not required.
 
 Animal asset family:
 
 - `Partial`: wolf, cat, fox, hedgehog, dog assets exist.
-- `TODO`: exact walk/run/howl/trot/jump/curl/bark sheet coverage.
+- `Canonized / Not Required`: exact historical sheet coverage is not required.
 
 Particles & FX assets:
 
 - `Partial`: jump dust, seed, sparkles, etc. exist in part.
-- `TODO`: full original particle asset list including all specific names.
+- `Canonized / Not Required`: exact historical particle asset naming is not required.
 
 UI assets:
 
-- `TODO`: explicit custom Bloom meter background/fill art and seed icon set as originally named.
+- `Canonized / Not Required`: exact historical UI asset naming is not required; stronger bespoke HUD art remains product-desirable.
 
 Background assets:
 
@@ -252,7 +262,7 @@ Background assets:
 #### Audio File Inventory
 
 - `Partial`: several music and SFX files exist in `res/raw`.
-- `TODO`: exact historical file inventory and naming set.
+- `Canonized / Not Required`: exact historical file inventory and naming set are not blockers.
 
 #### Theme & Styles
 
@@ -265,12 +275,13 @@ Background assets:
 #### Performance Checklist
 
 - `Partial`: delta-time movement, reuse of core objects, some pooling.
-- `TODO`: complete validation of every old checklist item and keep them as explicit regression checks.
+- `Partial`: modern deterministic suite and device checklist now cover the active runtime truth.
+- `TODO`: finish real-device validation and performance hardening against the modern checklist.
 
 #### Debugging Physics Checklist
 
 - `Partial`: many of the listed mechanics exist.
-- `TODO`: preserve the entire old checklist as a manual QA suite and verify each item on hardware.
+- `Canonized / Not Required`: the entire historical checklist does not need to survive line-for-line as long as modern deterministic and device gates cover the shipped game.
 
 ### C. Technical Architecture (`947e4e1:docs/TECHNICAL_ARCHITECTURE.md`)
 
@@ -366,7 +377,7 @@ Background assets:
 #### Dynamic Lighting
 
 - `Partial`: tint and darkness overlays.
-- `TODO`: exact phase table and smooth hardware-shader-like transitions if still desired.
+- `Canonized / Not Required`: exact historical phase-table restoration and shader-like transitions are not active blockers.
 
 #### Camera Effects
 
@@ -376,7 +387,7 @@ Background assets:
 #### Environmental Bloom Reaction
 
 - `Partial`: nearby flora/tree reactions now exist on Bloom conversions, now backed by stronger world-burst feedback.
-- `TODO`: nearby flowers blooming open as the runner passes in the full intended continuous sense.
+- `Canonized / Not Required`: exact continuous pass-by flower opening is not required if the broader Bloom-world reaction lands.
 
 #### Spirit Of The Forest Bloom Visuals
 
@@ -499,7 +510,8 @@ Dog:
 #### Biome Affinity Map
 
 - `Conflict`: historical six-biome affinity map vs current five-biome cycle.
-- `TODO`: final reconciled biome-to-entity affinity map.
+- `Partial`: current runtime uses the five-biome cycle consistently.
+- `TODO`: keep entity affinity docs aligned to the current five-biome runtime instead of restoring the old six-biome map.
 
 #### Entity Class Architecture Note
 
@@ -516,9 +528,8 @@ Dog:
 
 #### Rest Quotes
 
-- `TODO`: universal determination-like quotes.
-- `TODO`: biome-specific quote pools.
-- `TODO`: killer-specific quote pools.
+- `Partial`: quote delivery and fragment-driven selection exist.
+- `TODO`: broaden universal, biome-specific, and killer-specific quote pools where they still improve the shipped game.
 
 #### In-Run Flavour Text
 
@@ -530,7 +541,8 @@ Dog:
 - `Implemented`: mercy hearts exist.
 - `Partial`: near-miss classification and some mercy-linked reactions.
 - `Implemented`: dedicated `MercySystem`, spare thresholds, and baseline friendship rewards now exist.
-- `TODO`: exact score rewards, stronger heart/effect presentation, `PACIFIST` banner, and fuller route-like payoff.
+- `Canonized / Not Required`: exact historical score rewards and a mandatory `PACIFIST` banner are not required.
+- `TODO`: stronger heart/effect presentation and fuller route-like payoff.
 
 #### Persistent Memory
 
@@ -551,20 +563,22 @@ Dog:
 #### Leitmotif System
 
 - `Partial`: music state transitions now also resolve through explicit state-shaped tempo/volume profiles for menu, run layers, Bloom, and rest.
-- `TODO`: exact E-G-A-C-B leitmotif treatment in all states.
+- `Canonized / Not Required`: exact historical note-for-note motif treatment is not required.
+- `TODO`: fuller authored leitmotif coverage and stronger state identity.
 
 #### Dialogue Bubbles
 
-- `TODO`: dedicated bubble system and full animal-trigger line table.
+- `Implemented`: dedicated dialogue bubble system exists.
+- `TODO`: broaden trigger coverage and line tables.
 
 #### New Kotlin Systems Summary
 
 - `Implemented`: `FlavorTextManager`, `GhostRecorder`, `GhostPlayer`, `LeitmotifManager` in practical forms.
-- `TODO`: `PersistentMemoryManager`
-- `TODO`: `MercySystem`
-- `TODO`: `PacifistTracker`
-- `TODO`: `DialogueBubble`
-- `TODO`: `CostumeOverlay`
+- `Implemented`: `PersistentMemoryManager`
+- `Implemented`: `MercySystem`
+- `Implemented`: `PacifistTracker`
+- `Implemented`: `DialogueBubbleManager`
+- `Implemented`: `CostumeOverlay`
 
 #### Design Mantras
 
@@ -658,18 +672,20 @@ These synthesize the entire historical spec set into unified workstreams.
 
 - `Implemented`: meter, activation, stronger world-transform baseline, and stronger conversion spectacle.
 - `Conflict`: 8 vs 10 seeds, 5s vs 6s, exact effect bundle.
-- `TODO`: continue tightening the last Bloom presentation polish on device and keep the resolved canonical spec synchronized everywhere.
+- `Implemented`: runtime canon is resolved to `8` seeds and `6s`.
+- `TODO`: continue tightening the last Bloom presentation polish on device and keep docs synchronized to the resolved canon.
 
 ### Biomes
 
 - `Implemented`: biome progression exists.
 - `Conflict`: five vs six biomes and naming variants.
-- `TODO`: choose one canonical biome set and bring all docs and code into alignment.
+- `Implemented`: runtime canon is resolved to the current five-biome set.
+- `TODO`: keep docs and entity-affinity notes synchronized to that resolved canon.
 
 ### Personality / Mercy / Memory
 
 - `Partial`: early foundation exists.
-- `TODO`: full mercy, friendship, persistent memory, costumes, quote pools, dialogue bubbles, route-like charm.
+- `TODO`: deepen mercy, friendship, persistent memory, costumes, quote pools, dialogue bubble coverage, and route-like charm.
 
 ### Ghost
 
@@ -739,4 +755,5 @@ This repo now contains:
 
 What still remains as documentation work:
 
-- `TODO`: finalize canonical resolutions for historical conflicts and update every doc to a single non-conflicting product truth once those calls are made.
+- `DONE`: canonical resolution policy is now explicit: current runtime truth wins, while exact historical variants remain traceability-only unless re-promoted.
+- `TODO`: keep every touched doc synchronized with the resolved canon and active product gaps.

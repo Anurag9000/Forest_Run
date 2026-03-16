@@ -6,10 +6,10 @@
 
 The non-negotiable direction for this repo is:
 
-- Restore and fully implement the original dream spec from the early long-form docs.
+- Restore and fully implement the product-desirable parts of the original dream spec from the early long-form docs.
 - Treat the original GDD, Undertale-inspired personality layer, garden progression, and polish roadmap as the target product, not as discarded aspirations.
-- Use the current implementation only as a partial baseline.
-- Close every gap between the shipped build and the originally imagined experience.
+- Use the current implementation as the canonical runtime baseline where older docs conflict with each other.
+- Close every gap between the shipped build and the intended experience without reopening historical variants that the repo has already canonically resolved.
 
 ## Original Dream
 
@@ -62,7 +62,26 @@ The repo now treats these as the frozen implementation canon:
 - `5` runtime biomes: `MEADOW`, `ORCHARD`, `ANCIENT_GROVE`, `DUSK_CANYON`, `NIGHT_FOREST`
 - Bloom auto-activates at `8` seeds for `6` seconds
 - failure flow is `run -> rest summary -> fade -> Garden -> run`
+- tap jump, hold higher jump, and swipe-down duck are the canonical input model
 - old conflicting historical variants are preserved in docs only as traceability, not as competing runtime requirements
+
+## Canonical Resolution Policy
+
+Historical docs still matter, but not every exact old detail is an active blocker.
+
+- Active product work:
+  - real-device readability and delight
+  - emotional systems depth
+  - authored session arc and sanctuary feel
+  - bespoke scenic art, ambience, audio, and haptics
+  - release hardening
+- Traceability-only historical exactness unless explicitly re-promoted:
+  - `10`-seed / `5s` Bloom variants
+  - six-biome or day-phase runtime variants
+  - side-of-screen split input
+  - exact historical asset filenames and frame counts
+  - exact historical score tables
+  - exact old save-file shape
 
 ## Immediate Product Concerns
 
