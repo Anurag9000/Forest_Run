@@ -46,7 +46,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: dedicated dialogue bubble system.
 - PARTIAL: biome-level friendship bonus baseline now escalates into save-visible pacifist route tiers and stronger route-like rest/Garden payoff; deepen it into broader sanctuary and world-state consequence.
 - PARTIAL: encounter-level history now surfaces through tracked Cat/Fox/Wolf/Dog cues instead of fallback one-liners; expand the same depth across more creatures and normal-run payoff.
-- PARTIAL: stronger spare events and pacifist route feel now include explicit `Kind` / `Merciful` / `Peaceful` run tiers, route-aware return moments, route-aware Garden reflections, route-specific memory pages, and stronger in-run reward messages; complete broader world-state and feedback.
+- PARTIAL: stronger spare events and pacifist route feel now include explicit `Kind` / `Merciful` / `Peaceful` run tiers, route-aware return moments, route-aware Garden reflections, route-specific memory pages, stronger mercy-miss and route-reward presentation, and clearer rest/Garden route language; complete broader world-state and feedback.
 - DONE: face/eye state system baseline for the heroine.
 
 ## Emotional Attachment Expansion TODOs

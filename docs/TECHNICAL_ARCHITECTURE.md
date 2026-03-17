@@ -305,7 +305,7 @@ Expected qualities:
 ### Current Status
 
 - Implemented: `PacifistTracker` now classifies `Kind`, `Merciful`, and `Peaceful` route tiers from live run behavior.
-- Partial: route tiers now flow through `RunSummary`, Garden/rest presentation, return moments, sanctuary carry-home, fragment unlocks, and startup/homecoming tone in baseline form.
+- Partial: route tiers now flow through `RunSummary`, Garden/rest presentation, return moments, sanctuary carry-home, fragment unlocks, startup/homecoming tone, and stronger in-run mercy/reward language in baseline form.
 - TODO: deepen route consequences further into broader world-state and production presentation.
 
 ## 15A. Session Arc Composition

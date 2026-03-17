@@ -13,6 +13,7 @@ import com.yourname.forest_run.engine.CostumeManager
 import com.yourname.forest_run.engine.GardenSanctuaryPlanner
 import com.yourname.forest_run.engine.GardenSanctuaryState
 import com.yourname.forest_run.engine.GameConstants
+import com.yourname.forest_run.engine.PacifistPresentation
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.RunSummary
@@ -613,6 +614,13 @@ class GardenScreen(
         y += 22f
         if (summary.pacifistRouteTier != com.yourname.forest_run.engine.PacifistRouteTier.NONE) {
             canvas.drawText("Route: ${summary.pacifistRouteTier.displayName}", lastRunRect.left + 18f, y, statsLabelPaint)
+            y += 22f
+            canvas.drawText(
+                PacifistPresentation.routeAfterglowLine(summary.pacifistRouteTier).take(92),
+                lastRunRect.left + 18f,
+                y,
+                reflectionPaint
+            )
             y += 22f
         }
         val killerText = summary.lastKiller?.let { formatEntityName(it) } ?: "None"

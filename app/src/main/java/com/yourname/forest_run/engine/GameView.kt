@@ -553,6 +553,26 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         mercyFlashPaint.color = Color.argb(200, 60, 240, 80) // reset green
                         SfxManager.playMercyMiss()    // Phase 20
                         HapticManager.doubleTap()     // Phase 21 — close call buzz
+                        val mercyCue = PacifistPresentation.mercyMissCue(
+                            mercyHearts = gameState.mercyHearts,
+                            kindnessChain = gameState.kindnessChain,
+                            routeTier = gameState.pacifistRouteTier
+                        )
+                        DialogueBubbleManager.spawn(
+                            text = mercyCue.bubbleText,
+                            anchorX = player.x + Player.BASE_WIDTH * 0.5f,
+                            anchorY = player.y - 24f,
+                            fillColor = mercyCue.fillColor,
+                            borderColor = mercyCue.borderColor
+                        )
+                        FlavorTextManager.spawn(
+                            text = mercyCue.flavorText,
+                            x = player.x + Player.BASE_WIDTH * 0.22f,
+                            y = player.y - 12f,
+                            colour = mercyCue.flavorColor,
+                            lifetime = 1.15f,
+                            size = mercyCue.flavorSize
+                        )
                         // Stars burst at player centre
                         ParticleManager.emit(FxPreset.MERCY_STARS,
                             player.x + Player.BASE_WIDTH / 2f,
@@ -582,12 +602,26 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             gameState.consumePacifistReward()?.let { reward ->
                 gameState.addBonus(points = reward.points, seeds = reward.seeds)
                 reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }
+                val rewardCue = PacifistPresentation.rewardCue(reward)
+                ParticleManager.emit(
+                    FxPreset.MERCY_STARS,
+                    player.x + Player.BASE_WIDTH * 0.5f,
+                    player.y + Player.BASE_HEIGHT * 0.42f
+                )
                 DialogueBubbleManager.spawn(
-                    text = reward.message,
+                    text = rewardCue.bubbleText,
                     anchorX = player.x + Player.BASE_WIDTH * 0.5f,
                     anchorY = player.y - 28f,
-                    fillColor = Color.rgb(236, 255, 220),
-                    borderColor = Color.rgb(90, 150, 70)
+                    fillColor = rewardCue.fillColor,
+                    borderColor = rewardCue.borderColor
+                )
+                FlavorTextManager.spawn(
+                    text = rewardCue.flavorText,
+                    x = player.x + Player.BASE_WIDTH * 0.18f,
+                    y = player.y - 6f,
+                    colour = rewardCue.flavorColor,
+                    lifetime = 1.2f,
+                    size = rewardCue.flavorSize
                 )
             }
 

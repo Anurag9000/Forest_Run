@@ -542,6 +542,7 @@ Dog:
 - `Partial`: near-miss classification and some mercy-linked reactions.
 - `Implemented`: dedicated `MercySystem`, spare thresholds, and baseline friendship rewards now exist.
 - `Canonized / Not Required`: exact historical score rewards and a mandatory `PACIFIST` banner are not required.
+- `Partial`: in-run mercy-miss text and route-reward messaging are materially clearer through first-class route presentation instead of generic reward strings alone.
 - `TODO`: stronger heart/effect presentation and fuller route-like payoff.
 
 #### Persistent Memory
@@ -685,7 +686,7 @@ These synthesize the entire historical spec set into unified workstreams.
 ### Personality / Mercy / Memory
 
 - `Partial`: early foundation exists.
-- `TODO`: deepen mercy, friendship, persistent memory, costumes, quote pools, dialogue bubble coverage, and route-like charm.
+- `TODO`: deepen mercy, friendship, persistent memory, costumes, quote pools, dialogue bubble coverage, and route-like charm beyond the stronger current in-run route presentation baseline.
 
 ### Ghost
 

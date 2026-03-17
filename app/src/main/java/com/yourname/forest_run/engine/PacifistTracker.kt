@@ -1,6 +1,7 @@
 package com.yourname.forest_run.engine
 
 data class PacifistReward(
+    val kind: PacifistRewardKind,
     val message: String,
     val points: Int,
     val seeds: Int,
@@ -50,6 +51,7 @@ class PacifistTracker {
                 val biomeName = currentBiome!!.name.lowercase().replace('_', ' ')
                     .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
                 pendingReward = PacifistReward(
+                    kind = PacifistRewardKind.BIOME_FRIENDSHIP,
                     message = "$biomeName at peace",
                     points = 380,
                     seeds = 2,
@@ -70,6 +72,7 @@ class PacifistTracker {
         cleanPassesThisBiome++
         if (cleanPassesThisRun % 5 == 0) {
             pendingReward = PacifistReward(
+                kind = PacifistRewardKind.CLEAN_STREAK,
                 message = "Kindness carries",
                 points = 150,
                 seeds = 1
@@ -82,6 +85,7 @@ class PacifistTracker {
         sparedThisBiome++
         if (sparedThisRun % 2 == 0) {
             pendingReward = PacifistReward(
+                kind = PacifistRewardKind.SPARE_STREAK,
                 message = "Mercy kept",
                 points = 240,
                 seeds = 1
@@ -102,18 +106,21 @@ class PacifistTracker {
         highestRewardedRouteTier = tier
         pendingReward = when (tier) {
             PacifistRouteTier.KIND -> PacifistReward(
+                kind = PacifistRewardKind.ROUTE_KIND,
                 message = "Mercy noticed",
                 points = 180,
                 seeds = 1,
                 routeTier = tier
             )
             PacifistRouteTier.MERCIFUL -> PacifistReward(
+                kind = PacifistRewardKind.ROUTE_MERCIFUL,
                 message = "Merciful route",
                 points = 320,
                 seeds = 2,
                 routeTier = tier
             )
             PacifistRouteTier.PEACEFUL -> PacifistReward(
+                kind = PacifistRewardKind.ROUTE_PEACEFUL,
                 message = "Forest at peace",
                 points = 520,
                 seeds = 3,

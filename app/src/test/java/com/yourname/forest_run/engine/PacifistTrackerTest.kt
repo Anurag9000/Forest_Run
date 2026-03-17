@@ -21,6 +21,7 @@ class PacifistTrackerTest {
 
         requireNotNull(reward)
         assertEquals(Biome.MEADOW, reward.friendBiome)
+        assertEquals(PacifistRewardKind.BIOME_FRIENDSHIP, reward.kind)
         assertEquals("Meadow at peace", reward.message)
     }
 
@@ -46,6 +47,7 @@ class PacifistTrackerTest {
 
         requireNotNull(kindReward)
         assertEquals(PacifistRouteTier.KIND, kindReward.routeTier)
+        assertEquals(PacifistRewardKind.ROUTE_KIND, kindReward.kind)
 
         tracker.recordSpare()
         repeat(2) { tracker.recordCleanPass() }
@@ -56,6 +58,7 @@ class PacifistTrackerTest {
 
         requireNotNull(mercifulReward)
         assertEquals(PacifistRouteTier.MERCIFUL, mercifulReward.routeTier)
+        assertEquals(PacifistRewardKind.ROUTE_MERCIFUL, mercifulReward.kind)
         assertTrue(mercifulReward.points > kindReward.points)
     }
 }

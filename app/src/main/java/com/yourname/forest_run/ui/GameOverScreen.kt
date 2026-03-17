@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.GardenSanctuaryPlanner
 import com.yourname.forest_run.engine.GardenSanctuaryState
+import com.yourname.forest_run.engine.PacifistPresentation
 import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.engine.SessionArcComposer
 import kotlin.math.sin
@@ -209,6 +210,15 @@ class GameOverScreen(
         if (summary.pacifistRouteTier != com.yourname.forest_run.engine.PacifistRouteTier.NONE) {
             canvas.drawText("Route: ${summary.pacifistRouteTier.displayName}", cx, ty, moodPaint)
             ty += 28f
+            drawWrappedCenteredText(
+                canvas,
+                PacifistPresentation.routeAfterglowLine(summary.pacifistRouteTier),
+                cx,
+                ty,
+                panelW * 0.80f,
+                carryHomePaint
+            )
+            ty += 34f
         }
 
         // 4. Score label + value
