@@ -38,7 +38,7 @@ This file is the strict implementation ledger for everything from the original d
 
 ## Personality TODOs
 
-- PARTIAL: contextual rest quotes by biome and last killer exist; expand quote pools and trigger richness.
+- PARTIAL: contextual rest quotes now react to biome, killer, route tier, clean returns, peaceful Bloom afterglow, merciful familiarity, and stronger bond/repeat-friend state; expand quote pools and trigger richness further.
 - PARTIAL: `PersistentMemoryManager` now also tracks save-backed kindness and tender streaks so repeated mercy or repeated hurt can surface in return moments, fragments, and sanctuary carry-home; expand it further into full repeated-encounter payoff and unlock architecture.
 - DONE: canonical post-run summary payload now exists across rest and Garden.
 - PARTIAL: costume overlays and wardrobe flow exist, Cat/Fox/Wolf relationship milestones can now unlock matching outfits, and Garden now surfaces relationship-aware unlock messaging instead of generic wardrobe notices; expand broader repeated-encounter unlock depth and presentation.
@@ -73,7 +73,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - DONE: added baseline first-run-of-day greeting logic, long-absence recognition, rough-run comfort returns, and milestone-sensitive Garden messages.
 - PARTIAL: Garden return moments now use bonded visitors and stronger mercy/clean-play/high-score hooks, including milestone-bond warmth, Bloom-linger, and stronger absence-sensitive returns.
-- PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, Bloom-heavy runs, repeated tenderness, repeated kindness streaks, repeat-friend familiarity, repeat-killer patterns, and explicit kind/merciful/peaceful route states; continue expanding authored combinations.
+- PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, Bloom-heavy runs, repeated tenderness, repeated kindness streaks, repeat-friend familiarity, long-absence familiarity, repeat-killer patterns, and explicit kind/merciful/peaceful route states; continue expanding authored combinations.
 - DONE: rest flow can now preview the likely Garden return beat without mutating save state, so return continuity can be written before the actual hub transition.
 - TODO: ensure return sessions feel intimate instead of mechanically identical.
 
@@ -82,7 +82,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: short rest quotes now run through a first-class fragment-driven writing layer.
 - PARTIAL: rare Garden reflections and unlockable poetic memory pages now exist in baseline form.
 - PARTIAL: one-line creature thoughts for bonded creatures now exist in the Garden baseline.
-- PARTIAL: weather-linked thoughts and caution-oriented Garden reflections now exist in baseline Garden form, alongside milestone-gentleness, repeated-kindness, repeat-friend familiarity, repeat-killer `Same Shadow`, Bloom-afterglow, and kind/peaceful-route pages; broaden authored coverage further.
+- PARTIAL: weather-linked thoughts and caution-oriented Garden reflections now exist in stronger Garden form, alongside milestone-gentleness, repeated-kindness clean-return pages, repeat-friend familiarity, merciful familiarity, repeat-killer `Same Shadow`, peaceful-Bloom pages, Bloom-afterglow, and kind/peaceful-route pages; broaden authored coverage further.
 - TODO: deepen poetic memory pages so they reveal feeling without lore-dumping.
 - TODO: keep fragment writing brief, intimate, and suggestive rather than expository.
 - TODO: ensure mystery and emotional residue are preserved through restraint.

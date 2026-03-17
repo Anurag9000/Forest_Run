@@ -184,7 +184,7 @@ Current baseline:
 Current baseline:
 
 - rest quotes now route through a fragment system instead of only hard-coded quote branches
-- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, repeated-kindness warmth reflections, repeat-friend familiarity reflections, repeat-killer `Same Shadow` reflections, milestone-gentleness reflections, Bloom-afterglow reflections, kind/peaceful-route reflections, and track unlocked memory pages
+- Garden can now surface baseline reflection fragments, weather-linked thoughts, bonded creature thoughts, repeated-harm caution reflections, repeated-kindness warmth reflections, repeated-kindness clean-return reflections, repeat-friend familiarity reflections, merciful familiarity reflections, repeat-killer `Same Shadow` reflections, milestone-gentleness reflections, peaceful-Bloom reflections, Bloom-afterglow reflections, kind/peaceful-route reflections, and track unlocked memory pages
 - broader creature-thought coverage and richer weather-linked fragments are still TODO
 
 ### Current Status

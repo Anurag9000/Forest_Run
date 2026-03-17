@@ -29,8 +29,25 @@ class StoryFragmentSystemTest {
     fun `rest fragments unlock memory pages for repeat killers`() {
         PersistentMemoryManager.recordHit(context, EntityType.WOLF)
         PersistentMemoryManager.recordHit(context, EntityType.WOLF)
+        val summary = RunSummary(
+            score = 420,
+            distanceM = 300f,
+            isNewHighScore = false,
+            highScore = 900,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "",
+            forestMood = ForestMood.FEARFUL
+        )
 
-        val quote = StoryFragmentSystem.restQuote(context, Biome.DUSK_CANYON, EntityType.WOLF)
+        val quote = StoryFragmentSystem.restQuote(context, summary, Biome.DUSK_CANYON, EntityType.WOLF)
 
         assertTrue(quote.contains("howl") || quote.contains("pattern"))
         assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_repeat_wolf"))
@@ -220,7 +237,6 @@ class StoryFragmentSystemTest {
     fun `repeat friend unlocks dedicated rest and garden pages`() {
         repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
         PersistentMemoryManager.recordSpare(context, EntityType.DOG)
-        val restQuote = StoryFragmentSystem.restQuote(context, Biome.ORCHARD, null)
         val summary = RunSummary(
             score = 1_040,
             distanceM = 780f,
@@ -238,6 +254,7 @@ class StoryFragmentSystemTest {
             restQuote = "Gladly.",
             forestMood = ForestMood.GENTLE
         )
+        val restQuote = StoryFragmentSystem.restQuote(context, summary, Biome.ORCHARD, null)
 
         val line = StoryFragmentSystem.gardenReflection(context, summary)
 
@@ -301,5 +318,62 @@ class StoryFragmentSystemTest {
         assertNotNull(line)
         assertTrue(line!!.contains("kind") || line.contains("garden kept"))
         assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_route_kind"))
+    }
+
+    @Test
+    fun `peaceful bloom rest quote unlocks dedicated rest page`() {
+        val summary = RunSummary(
+            score = 1_420,
+            distanceM = 960f,
+            isNewHighScore = false,
+            highScore = 1_700,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 8,
+            cleanPasses = 11,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 3,
+            lastKiller = null,
+            restQuote = "",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val line = StoryFragmentSystem.restQuote(context, summary, Biome.NIGHT_FOREST, null)
+
+        assertTrue(line.contains("Bloom") || line.contains("quiet"))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_rest_route_peaceful"))
+    }
+
+    @Test
+    fun `merciful repeat friend garden reflection unlocks dedicated page`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
+        PersistentMemoryManager.recordSpare(context, EntityType.FOX)
+        val summary = RunSummary(
+            score = 1_120,
+            distanceM = 810f,
+            isNewHighScore = false,
+            highScore = 1_500,
+            mercyHearts = 4,
+            mercyMisses = 4,
+            kindnessChain = 6,
+            cleanPasses = 8,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("Fox", ignoreCase = true) || line.contains("mercy", ignoreCase = true))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_route_merciful_friend_fox"))
     }
 }

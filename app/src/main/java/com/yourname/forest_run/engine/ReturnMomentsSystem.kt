@@ -69,7 +69,13 @@ object ReturnMomentsSystem {
 
         val moment = when {
             previous.lastActiveAtMs > 0L && nowMs - previous.lastActiveAtMs >= LONG_ABSENCE_MS ->
-                if (milestoneReward != null) {
+                if (repeatFriend != null) {
+                    ReturnMoment(
+                        "Still Here",
+                        longAbsenceRepeatFriendLine(appContext, repeatFriend),
+                        repeatFriend
+                    )
+                } else if (milestoneReward != null) {
                     ReturnMoment(
                         "You Were Missed",
                         missedLine(milestoneReward.type),
@@ -93,6 +99,15 @@ object ReturnMomentsSystem {
                     "Still Tender",
                     repeatedHarmLine(repeatedHarmCreature),
                     if (RelationshipArcSystem.isTracked(repeatedHarmCreature)) repeatedHarmCreature else bondedVisitor
+                )
+            summary != null &&
+                summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL &&
+                summary.hitsTaken == 0 &&
+                summary.bloomConversions >= 2 ->
+                ReturnMoment(
+                    "Peace Held",
+                    peacefulBloomLine(milestoneReward?.type ?: bondedVisitor),
+                    milestoneReward?.type ?: bondedVisitor ?: EntityType.OWL
                 )
             milestoneReward != null && (summary?.kindnessChain ?: 0) >= 5 && (summary?.sparedCount ?: 0) >= 1 ->
                 ReturnMoment(
@@ -120,6 +135,16 @@ object ReturnMomentsSystem {
                     peacefulRouteLine(milestoneReward?.type ?: bondedVisitor),
                     milestoneReward?.type ?: bondedVisitor ?: EntityType.CAT
                 )
+            summary != null &&
+                summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL &&
+                summary.hitsTaken == 0 &&
+                summary.sparedCount > 0 &&
+                repeatFriend != null ->
+                ReturnMoment(
+                    "Mercy Was Noticed",
+                    mercifulFriendLine(repeatFriend),
+                    repeatFriend
+                )
             summary?.pacifistRouteTier == PacifistRouteTier.MERCIFUL && summary.hitsTaken == 0 ->
                 ReturnMoment(
                     "Mercy Stayed",
@@ -141,6 +166,12 @@ object ReturnMomentsSystem {
                     )
                     else -> ReturnMoment("Bloom Still Clings", "The garden is still lit by what followed you home from Bloom.", EntityType.OWL)
                 }
+            repeatFriend != null && (summary?.hitsTaken ?: 0) == 0 && (summary?.cleanPasses ?: 0) >= 12 ->
+                ReturnMoment(
+                    "Easy Company",
+                    cleanFriendLine(appContext, repeatFriend),
+                    repeatFriend
+                )
             repeatFriend != null && (summary?.hitsTaken ?: 0) == 0 &&
                 ((summary?.cleanPasses ?: 0) >= 8 || (summary?.sparedCount ?: 0) > 0) ->
                 ReturnMoment(
@@ -203,6 +234,16 @@ object ReturnMomentsSystem {
         EntityType.OWL -> "The dark edge stayed open, like the owl expected you back."
         EntityType.EAGLE -> "Even the sky feels like it noticed how long you were gone."
         else -> "Something here held your place."
+    }
+
+    private fun longAbsenceRepeatFriendLine(context: Context, type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat behaved like your quiet patch had only been borrowed, not lost."
+        EntityType.FOX -> "The fox left the brighter trail waiting like it trusted you to answer eventually."
+        EntityType.WOLF -> "The grove kept its steadier courage in place until you came back for it."
+        EntityType.DOG -> "The dog's welcome feels like excitement that refused to go stale."
+        EntityType.OWL -> "The owl kept the dark edge open like it knew absence was not the end of the pattern."
+        EntityType.EAGLE -> "Even the sky feels like it kept recognizing your place in it."
+        else -> RelationshipArcSystem.lineFor(context, type, RelationshipArcSystem.Event.RETURN)
     }
 
     private fun milestoneWarmthLine(type: EntityType): String = when (type) {
@@ -296,6 +337,16 @@ object ReturnMomentsSystem {
         else -> "The whole garden keeps the hush of the run you carried home peacefully."
     }
 
+    private fun peacefulBloomLine(type: EntityType?): String = when (type) {
+        EntityType.CAT -> "The cat kept even Bloom from feeling loud after a run that peaceful."
+        EntityType.FOX -> "Even Bloom came home looking more graceful than wild after that run."
+        EntityType.WOLF -> "The grove held Bloom and peace together without letting either of them break."
+        EntityType.DOG -> "The dog's joy somehow made room for Bloom without breaking the hush."
+        EntityType.OWL -> "The owl left the branches glowing softly instead of severely after that peaceful Bloom."
+        EntityType.EAGLE -> "Even the charged sky looked calm after a peaceful Bloom return."
+        else -> "Bloom stayed bright without breaking the hush you carried home."
+    }
+
     private fun mercifulRouteLine(type: EntityType?): String = when (type) {
         EntityType.CAT -> "The cat seems to trust the quiet shape mercy left behind."
         EntityType.FOX -> "The fox leaves more room in the trail after a merciful return."
@@ -304,5 +355,25 @@ object ReturnMomentsSystem {
         EntityType.OWL -> "The owl lets the dark edge feel lighter after a merciful run."
         EntityType.EAGLE -> "The sky feels less punishing when mercy keeps making it home."
         else -> "Mercy stayed in the garden longer than the run itself."
+    }
+
+    private fun mercifulFriendLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat treated that merciful return like proof your softer timing was real."
+        EntityType.FOX -> "The fox looked less interested in testing you than in seeing if mercy would last."
+        EntityType.WOLF -> "The grove remembered that you chose mercy and answered with less edge."
+        EntityType.DOG -> "The dog's welcome sounds like it noticed mercy before anything else."
+        EntityType.OWL -> "The owl kept the night open a little longer after a merciful return."
+        EntityType.EAGLE -> "Even the eagle's shadow feels less severe when mercy keeps making it home."
+        else -> "Something familiar noticed the mercy before the rest of the garden did."
+    }
+
+    private fun cleanFriendLine(context: Context, type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat made your clean return feel like the evening had settled exactly where it meant to."
+        EntityType.FOX -> "The fox seemed almost pleased that your timing stayed graceful all the way through."
+        EntityType.WOLF -> "The grove carried your calm back in beside the wolf's respect."
+        EntityType.DOG -> "The dog's joy feels even brighter when the whole run stayed clean."
+        EntityType.OWL -> "The owl watched that clean return like it had finally become familiar."
+        EntityType.EAGLE -> "Even the eagle's sky seemed to admit that your calm held the whole way."
+        else -> RelationshipArcSystem.repeatFriendLine(context, type)
     }
 }

@@ -51,6 +51,23 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `long absence with repeat friend uses still here moment`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        PersistentMemoryManager.recordSpare(context, EntityType.DOG)
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = 1L, lastGardenGreetingDay = -1L, roughRunStreak = 0)
+        )
+
+        val nowMs = 3 * 24L * 60L * 60L * 1_000L
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, null, nowMs)
+
+        assertNotNull(moment)
+        assertEquals("Still Here", moment?.title)
+        assertEquals(EntityType.DOG, moment?.visitor)
+    }
+
+    @Test
     fun `rough run streak creates comfort return moment`() {
         val summary = RunSummary(
             score = 220,
@@ -251,6 +268,64 @@ class ReturnMomentsSystemTest {
 
         assertEquals("Stayed Gentle", moment?.title)
         assertEquals(EntityType.DOG, moment?.visitor)
+    }
+
+    @Test
+    fun `peaceful bloom run returns peace held moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        val summary = RunSummary(
+            score = 1_460,
+            distanceM = 1_020f,
+            isNewHighScore = false,
+            highScore = 1_920,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 8,
+            cleanPasses = 11,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 11,
+            bloomConversions = 3,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 10_500L)
+
+        assertEquals("Peace Held", moment?.title)
+        assertEquals(EntityType.OWL, moment?.visitor)
+    }
+
+    @Test
+    fun `merciful repeat friend run returns mercy was noticed moment`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
+        PersistentMemoryManager.recordSpare(context, EntityType.FOX)
+        val summary = RunSummary(
+            score = 1_080,
+            distanceM = 820f,
+            isNewHighScore = false,
+            highScore = 1_500,
+            mercyHearts = 4,
+            mercyMisses = 4,
+            kindnessChain = 6,
+            cleanPasses = 8,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 10_750L)
+
+        assertEquals("Mercy Was Noticed", moment?.title)
+        assertEquals(EntityType.FOX, moment?.visitor)
     }
 
     @Test

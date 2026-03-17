@@ -26,8 +26,12 @@ object SessionArcComposer {
 
         val atmosphereLine = when {
             summary == null -> "The willow has kept the first path quiet for you."
+            summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL && summary.bloomConversions >= 2 ->
+                "Bloom left the branches bright, but the garden is still carrying the hush of that peaceful run."
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL ->
                 "The garden is still holding the hush of the last peaceful run."
+            summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL && repeatFriend != null ->
+                "Something familiar is still answering your last merciful return more softly."
             summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL ->
                 "Mercy left the path quieter than usual."
             summary.forestMood == ForestMood.FEARFUL || summary.hitsTaken >= 2 ->
@@ -90,6 +94,8 @@ object SessionArcComposer {
         val previewMoment = ReturnMomentsSystem.previewGardenMoment(appContext, summary)
 
         val subtitle = when {
+            summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL && summary.bloomConversions >= 2 ->
+                "Bloom came down softly with you."
             summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
                 summary.pacifistRouteTier.restLine
             summary.hitsTaken == 0 && summary.cleanPasses >= 8 ->
@@ -107,8 +113,12 @@ object SessionArcComposer {
         val carryHomeLine = previewMoment?.line?.ifBlank { null }
             ?: sanctuary.carryHomeLine.ifBlank {
                 when (summary.forestMood) {
+                    ForestMood.GENTLE -> if (summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL && summary.sparedCount > 0) {
+                        "Mercy is already changing the way home sounds."
+                    } else {
+                        "The gentler parts of the run are already finding their way home."
+                    }
                     ForestMood.FEARFUL -> "Home is still making a quieter place for this run."
-                    ForestMood.GENTLE -> "The gentler parts of the run are already finding their way home."
                     ForestMood.RECKLESS -> "Even a stirred-up run is allowed to settle into home."
                     ForestMood.STEADY -> "Home keeps a little of the steadier shape that run left behind."
                 }

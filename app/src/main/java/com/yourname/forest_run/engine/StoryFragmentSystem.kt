@@ -18,8 +18,8 @@ data class StoryFragment(
 
 object StoryFragmentSystem {
 
-    fun restQuote(context: Context, biome: Biome, killer: EntityType?): String {
-        val fragment = selectRestFragment(context.applicationContext, biome, killer)
+    fun restQuote(context: Context, summary: RunSummary, biome: Biome, killer: EntityType?): String {
+        val fragment = selectRestFragment(context.applicationContext, summary, biome, killer)
         fragment.unlocksPageId?.let { unlockMemoryPage(context.applicationContext, it) }
         return fragment.text
     }
@@ -48,8 +48,12 @@ object StoryFragmentSystem {
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
         val text = when (mood) {
-            ForestMood.GENTLE -> if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL) {
+            ForestMood.GENTLE -> if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL && (summary.bloomConversions >= 2 || summary.cleanPasses >= 10)) {
+                "The evening wind sounds like it is carrying both Bloom and peace carefully around the garden."
+            } else if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL) {
                 "The evening wind sounds like it is trying not to disturb the peace you carried home."
+            } else if (summary?.pacifistRouteTier == PacifistRouteTier.MERCIFUL && repeatFriend != null) {
+                "The evening wind sounds like mercy taught something familiar to wait for you more softly."
             } else if (repeatFriend != null) {
                 "The evening wind sounds like it has started expecting the same familiar kindness to return."
             } else if (summary?.pacifistRouteTier == PacifistRouteTier.KIND) {
@@ -61,19 +65,25 @@ object StoryFragmentSystem {
             } else {
                 "The evening wind has nothing urgent left to say."
             }
-            ForestMood.RECKLESS -> if (repeatedHarmCreature != null) {
+            ForestMood.RECKLESS -> if (summary?.lastKiller != null && repeatedHarmCreature == summary.lastKiller) {
+                "Even the restless branches seem to know you are still carrying the exact same sharp mistake."
+            } else if (repeatedHarmCreature != null) {
                 "Even the restless branches seem to know which fear keeps coming back with you."
             } else if (milestoneReward != null) {
                 "Even the restless branches seem unwilling to break what trust has grown here."
             } else {
                 "The branches still rustle like they are catching up to your hurry."
             }
-            ForestMood.FEARFUL -> if (repeatedHarmCreature != null) {
+            ForestMood.FEARFUL -> if (repeatFriend != null) {
+                "The air stays careful, but not empty, as if something familiar decided to keep you company through it."
+            } else if (repeatedHarmCreature != null) {
                 "The air stays careful, as if it knows which shadow still follows you home."
             } else {
                 "The air stays soft, as if the weather decided not to press its luck."
             }
-            ForestMood.STEADY -> if (repeatFriend != null) {
+            ForestMood.STEADY -> if ((summary?.cleanPasses ?: 0) >= 12 && repeatFriend != null) {
+                "The wind keeps a patient pace, like it recognized both your calm and the familiar company inside it."
+            } else if (repeatFriend != null) {
                 "The wind keeps a steady pace, like it recognizes a familiar bond walking back in."
             } else if (repeatedKindnessCreature != null && summary?.pacifistRouteTier == PacifistRouteTier.KIND) {
                 "The wind keeps a patient pace, like it noticed kindness becoming a habit."
@@ -93,12 +103,69 @@ object StoryFragmentSystem {
     fun unlockedMemoryPages(context: Context): Set<String> =
         SaveManager.loadUnlockedMemoryPages(context.applicationContext)
 
-    private fun selectRestFragment(context: Context, biome: Biome, killer: EntityType?): StoryFragment {
+    private fun selectRestFragment(
+        context: Context,
+        summary: RunSummary,
+        biome: Biome,
+        killer: EntityType?
+    ): StoryFragment {
         val hitCount = killer?.let { PersistentMemoryManager.getHitCount(context, it) } ?: 0
         val repeatedKiller = killer != null && hitCount >= 2
         val relationshipStage = killer?.let { RelationshipArcSystem.stageFor(context, it) }
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(context)
         val warmCreature = PersistentMemoryManager.featuredWarmCreature(context)
+        val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(context)
+
+        if (summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL && summary.hitsTaken == 0) {
+            val text = when {
+                summary.bloomConversions >= 2 ->
+                    "Even Bloom came down quietly, like the run never wanted to stop being kind."
+                repeatFriend != null ->
+                    "Peace followed you home so completely that even something familiar seemed calmer around it."
+                else ->
+                    "The run was quiet enough that rest feels like a continuation, not an interruption."
+            }
+            return StoryFragment(
+                id = "rest_route_peaceful",
+                type = StoryFragmentType.REST,
+                text = text,
+                unlocksPageId = "page_rest_route_peaceful"
+            )
+        }
+
+        if (summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL && summary.sparedCount > 0) {
+            val text = when {
+                repeatFriend != null ->
+                    "${formatEntityName(repeatFriend)} is starting to feel the difference between mercy and hesitation."
+                milestoneReward != null ->
+                    "${milestoneReward.label} feels a little closer after a run that kept choosing mercy."
+                else ->
+                    "Mercy stayed with the run long enough to change the shape of rest."
+            }
+            return StoryFragment(
+                id = "rest_route_merciful",
+                type = StoryFragmentType.REST,
+                text = text,
+                unlocksPageId = "page_rest_route_merciful"
+            )
+        }
+
+        if (summary.cleanPasses >= 12 && summary.hitsTaken == 0) {
+            val text = when {
+                repeatFriend != null ->
+                    "The whole run stayed so steady it felt like ${formatEntityName(repeatFriend)} was part of the rhythm."
+                milestoneReward != null ->
+                    "A clean run leaves ${milestoneReward.label} feeling less like a reward and more like home."
+                else ->
+                    "The run stayed calm long enough to make rest feel earned instead of borrowed."
+            }
+            return StoryFragment(
+                id = "rest_clean_return",
+                type = StoryFragmentType.REST,
+                text = text,
+                unlocksPageId = "page_rest_clean_return"
+            )
+        }
 
         if (killer != null && repeatedKiller) {
             val text = when (killer) {
@@ -199,11 +266,31 @@ object StoryFragmentSystem {
         }
 
         val biomeText = when (biome) {
-            Biome.MEADOW -> "The meadow is gentle only if you stay gentle with it."
-            Biome.ORCHARD -> "The orchard rewards rhythm more than speed."
-            Biome.ANCIENT_GROVE -> "The grove asks for patience before bravery."
-            Biome.DUSK_CANYON -> "Dusk shortens every decision."
-            Biome.NIGHT_FOREST -> "Night keeps the score, but it also keeps the memory."
+            Biome.MEADOW -> if (summary.pacifistRouteTier == PacifistRouteTier.KIND) {
+                "The meadow keeps the kinder edges of a run longer than the score does."
+            } else {
+                "The meadow is gentle only if you stay gentle with it."
+            }
+            Biome.ORCHARD -> if (summary.cleanPasses >= 8) {
+                "The orchard rewards rhythm enough that a clean run still sounds musical here."
+            } else {
+                "The orchard rewards rhythm more than speed."
+            }
+            Biome.ANCIENT_GROVE -> if (summary.lastKiller == EntityType.WOLF) {
+                "The grove asks for patience before bravery, especially when the howl already knows you."
+            } else {
+                "The grove asks for patience before bravery."
+            }
+            Biome.DUSK_CANYON -> if (summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL) {
+                "Dusk shortened every decision, and you still left room for mercy."
+            } else {
+                "Dusk shortens every decision."
+            }
+            Biome.NIGHT_FOREST -> if (summary.bloomConversions >= 2) {
+                "Night keeps the memory of Bloom longer than it admits."
+            } else {
+                "Night keeps the score, but it also keeps the memory."
+            }
         }
         return StoryFragment(
             id = "rest_biome_${biome.name.lowercase()}",
@@ -241,6 +328,19 @@ object StoryFragmentSystem {
             )
         }
 
+        if (summary != null &&
+            summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL &&
+            repeatFriend != null &&
+            summary.sparedCount > 0
+        ) {
+            return StoryFragment(
+                id = "garden_route_merciful_friend_${repeatFriend.name.lowercase()}",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = "${formatEntityName(repeatFriend)} feels closer to home when mercy is the thing you keep bringing back.",
+                unlocksPageId = "page_route_merciful_friend_${repeatFriend.name.lowercase()}"
+            )
+        }
+
         if (summary != null && repeatFriend != null && summary.hitsTaken == 0 && summary.cleanPasses >= 8) {
             return StoryFragment(
                 id = "garden_repeat_friend_${repeatFriend.name.lowercase()}",
@@ -255,6 +355,15 @@ object StoryFragmentSystem {
                     else -> "The garden has started keeping a familiar shape around your better returns."
                 },
                 unlocksPageId = "page_repeat_friend_garden_${repeatFriend.name.lowercase()}"
+            )
+        }
+
+        if (summary != null && repeatedKindnessCreature != null && summary.cleanPasses >= 10 && summary.hitsTaken == 0) {
+            return StoryFragment(
+                id = "garden_repeated_kindness_clean_${repeatedKindnessCreature.name.lowercase()}",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = "${formatEntityName(repeatedKindnessCreature)} is starting to feel less like a lucky exception and more like part of the calmer path you keep bringing home.",
+                unlocksPageId = "page_garden_warm_clean_${repeatedKindnessCreature.name.lowercase()}"
             )
         }
 
@@ -277,6 +386,14 @@ object StoryFragmentSystem {
         }
 
         if (summary != null && summary.hitsTaken == 0 && summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL) {
+            if (summary.bloomConversions >= 2 && milestoneReward != null) {
+                return StoryFragment(
+                    id = "garden_route_peaceful_bloom_${milestoneReward.type.name.lowercase()}",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = "${milestoneReward.label} seems to be holding both the peace of the run and the last of Bloom in the same light.",
+                    unlocksPageId = "page_route_peaceful_bloom_${milestoneReward.type.name.lowercase()}"
+                )
+            }
             return StoryFragment(
                 id = "garden_route_peaceful",
                 type = StoryFragmentType.GARDEN_REFLECTION,
@@ -399,6 +516,11 @@ object StoryFragmentSystem {
             text = text
         )
     }
+
+    private fun formatEntityName(type: EntityType): String =
+        type.name.lowercase().split("_").joinToString(" ") { part ->
+            part.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        }
 
     private fun unlockMemoryPage(context: Context, pageId: String) {
         val unlocked = SaveManager.loadUnlockedMemoryPages(context).toMutableSet()

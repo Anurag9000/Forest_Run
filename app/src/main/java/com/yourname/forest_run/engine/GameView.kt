@@ -509,21 +509,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                             SaveManager.saveBestDistance(context, gameState.distanceMetres)
                         }
                         val killerType = entityManager.entityTypeOf(collision.entity)
-                        killerType?.let { resolvedKiller ->
-                            PersistentMemoryManager.recordHit(context, killerType)
-                            currentRestQuote = RestQuoteManager.quoteFor(
-                                context = context,
-                                biome = entityManager.biomeManager.currentBiome,
-                                killer = resolvedKiller
-                            )
-                        } ?: run {
-                            currentRestQuote = RestQuoteManager.quoteFor(
-                                context = context,
-                                biome = entityManager.biomeManager.currentBiome,
-                                killer = null
-                            )
-                        }
-                        currentRunSummary = gameState.buildRunSummary(currentRestQuote, killerType)
+                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        val summaryPreview = gameState.buildRunSummary(lastKiller = killerType)
+                        currentRestQuote = RestQuoteManager.quoteFor(
+                            context = context,
+                            summary = summaryPreview,
+                            biome = entityManager.biomeManager.currentBiome,
+                            killer = killerType
+                        )
+                        currentRunSummary = summaryPreview.copy(restQuote = currentRestQuote)
                         currentRunSummary?.let {
                             ForestMoodSystem.recordRun(context, it)
                             ReturnMomentsSystem.recordRunOutcome(context, it)
@@ -756,8 +750,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 gameOverScreen.draw(
                     canvas          = canvas,
                     summary = currentRunSummary ?: gameState.buildRunSummary(
-                        restQuote = currentRestQuote,
-                        lastKiller = PersistentMemoryManager.getLastKiller(context)
+                        lastKiller = PersistentMemoryManager.getLastKiller(context),
+                        restQuote = currentRestQuote
                     )
                 )
             }

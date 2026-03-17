@@ -136,4 +136,33 @@ class SessionArcComposerTest {
 
         assertTrue(copy.atmosphereLine.contains("Dog", ignoreCase = true) || copy.atmosphereLine.contains("familiar", ignoreCase = true))
     }
+
+    @Test
+    fun `menu and rest copy acknowledge peaceful bloom afterglow`() {
+        val summary = RunSummary(
+            score = 1_420,
+            distanceM = 980f,
+            isNewHighScore = false,
+            highScore = 1_880,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 8,
+            cleanPasses = 11,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 3,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+        SaveManager.saveLastRunSummary(context, summary)
+
+        val menuCopy = SessionArcComposer.menuCopy(context)
+        val restCopy = SessionArcComposer.restCopy(context, summary)
+
+        assertTrue(menuCopy.atmosphereLine.contains("Bloom") || menuCopy.atmosphereLine.contains("hush"))
+        assertTrue(restCopy.subtitle.contains("Bloom") || restCopy.carryHomeLine.contains("Bloom"))
+    }
 }

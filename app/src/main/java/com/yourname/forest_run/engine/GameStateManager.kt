@@ -236,7 +236,7 @@ class GameStateManager(context: Context) {
         bloomTimer = 0f
     }
 
-    fun buildRunSummary(restQuote: String, lastKiller: EntityType?): RunSummary =
+    fun buildRunSummary(lastKiller: EntityType?, restQuote: String = ""): RunSummary =
         RunSummary(
             score = score,
             distanceM = distanceMetres,
