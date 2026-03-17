@@ -149,6 +149,23 @@ object RelationshipArcSystem {
             ?.first
     }
 
+    fun featuredStrainedBond(
+        context: Context,
+        minimumStage: RelationshipStage = RelationshipStage.RECOGNITION
+    ): EntityType? {
+        val appContext = context.applicationContext
+        return relationshipsAtOrAbove(appContext, minimumStage)
+            .filter { (type, _) -> isStrainedBond(appContext, type) }
+            .maxWithOrNull(
+                compareBy<Pair<EntityType, RelationshipStage>>(
+                    { SaveManager.loadTenderStreak(appContext, it.first) },
+                    { SaveManager.loadHitCount(appContext, it.first) },
+                    { it.second.ordinal }
+                )
+            )
+            ?.first
+    }
+
     fun relationshipsAtOrAbove(
         context: Context,
         minimumStage: RelationshipStage = RelationshipStage.TRUST
@@ -170,6 +187,11 @@ object RelationshipArcSystem {
 
     fun isWarmBond(context: Context, type: EntityType): Boolean =
         isTracked(type) && toneFor(context.applicationContext, type) == RelationshipTone.WARM
+
+    fun isStrainedBond(context: Context, type: EntityType): Boolean =
+        isTracked(type) &&
+            toneFor(context.applicationContext, type) == RelationshipTone.CAUTIOUS &&
+            stageFor(context.applicationContext, type).ordinal >= RelationshipStage.RECOGNITION.ordinal
 
     fun hasUnlockedMilestone(context: Context, type: EntityType): Boolean =
         type in SaveManager.loadUnlockedRelationshipMilestones(context.applicationContext)
@@ -357,38 +379,86 @@ object RelationshipArcSystem {
             EntityType.CAT -> when (stage) {
                 RelationshipStage.FIRST_IMPRESSION -> "The cat keeps one eye on the path."
                 RelationshipStage.RECOGNITION -> "The cat pretends not to expect you."
-                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The cat has stopped leaving when you arrive." else "The cat waits, but not too close."
-                RelationshipStage.MILESTONE -> "The cat behaves like this was always your shared place."
+                RelationshipStage.TRUST -> when (tone) {
+                    RelationshipTone.WARM -> "The cat has stopped leaving when you arrive."
+                    RelationshipTone.CAUTIOUS -> "The cat waits, but with the distance your rushed returns taught it."
+                    RelationshipTone.NEUTRAL -> "The cat waits, but not too close."
+                }
+                RelationshipStage.MILESTONE -> if (tone == RelationshipTone.CAUTIOUS) {
+                    "The cat behaves like the place is shared, but your nerves still owe it patience."
+                } else {
+                    "The cat behaves like this was always your shared place."
+                }
             }
             EntityType.FOX -> when (stage) {
                 RelationshipStage.FIRST_IMPRESSION -> "A clever pause lingers near the path."
                 RelationshipStage.RECOGNITION -> "The fox still treats every return like a challenge."
-                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The fox leaves room for your answer now." else "The fox watches to see if you still remember the rhythm."
-                RelationshipStage.MILESTONE -> "The fox no longer looks surprised when you keep up."
+                RelationshipStage.TRUST -> when (tone) {
+                    RelationshipTone.WARM -> "The fox leaves room for your answer now."
+                    RelationshipTone.CAUTIOUS -> "The fox watches for the same flinch before it watches for your answer."
+                    RelationshipTone.NEUTRAL -> "The fox watches to see if you still remember the rhythm."
+                }
+                RelationshipStage.MILESTONE -> if (tone == RelationshipTone.CAUTIOUS) {
+                    "The fox no longer looks surprised when you return, only careful."
+                } else {
+                    "The fox no longer looks surprised when you keep up."
+                }
             }
             EntityType.WOLF -> when (stage) {
                 RelationshipStage.FIRST_IMPRESSION -> "The grove still remembers the howl first."
                 RelationshipStage.RECOGNITION -> "The wolf feels nearer, but less distant than before."
-                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The wolf's silence feels earned." else "The wolf keeps testing whether your calm will hold."
-                RelationshipStage.MILESTONE -> "The grove rests easier when the wolf chooses not to bare its teeth."
+                RelationshipStage.TRUST -> when (tone) {
+                    RelationshipTone.WARM -> "The wolf's silence feels earned."
+                    RelationshipTone.CAUTIOUS -> "The wolf keeps testing whether your calm will break where it always does."
+                    RelationshipTone.NEUTRAL -> "The wolf keeps testing whether your calm will hold."
+                }
+                RelationshipStage.MILESTONE -> if (tone == RelationshipTone.CAUTIOUS) {
+                    "The grove remembers the respect, but not without remembering the fear too."
+                } else {
+                    "The grove rests easier when the wolf chooses not to bare its teeth."
+                }
             }
             EntityType.DOG -> when (stage) {
                 RelationshipStage.FIRST_IMPRESSION -> "The garden still echoes with a bark."
                 RelationshipStage.RECOGNITION -> "The dog seems to think every return is an invitation."
-                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The dog acts like you were only gone for a minute." else "The dog is ready to forgive your nerves faster than you are."
-                RelationshipStage.MILESTONE -> "The dog has fully decided you belong here."
+                RelationshipStage.TRUST -> when (tone) {
+                    RelationshipTone.WARM -> "The dog acts like you were only gone for a minute."
+                    RelationshipTone.CAUTIOUS -> "The dog is still glad, but it braces for your nerves before you do."
+                    RelationshipTone.NEUTRAL -> "The dog is ready to forgive your nerves faster than you are."
+                }
+                RelationshipStage.MILESTONE -> if (tone == RelationshipTone.CAUTIOUS) {
+                    "The dog still thinks you belong here, and still worries you might forget it mid-run."
+                } else {
+                    "The dog has fully decided you belong here."
+                }
             }
             EntityType.OWL -> when (stage) {
                 RelationshipStage.FIRST_IMPRESSION -> "The dark edge keeps a patient shape."
                 RelationshipStage.RECOGNITION -> "The owl no longer startles the garden quite as much."
-                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The owl watches like a witness, not a warning." else "The owl still asks the night to judge your timing."
-                RelationshipStage.MILESTONE -> "The night has made room for the owl and still feels welcoming."
+                RelationshipStage.TRUST -> when (tone) {
+                    RelationshipTone.WARM -> "The owl watches like a witness, not a warning."
+                    RelationshipTone.CAUTIOUS -> "The owl still asks the night to remember the same jump."
+                    RelationshipTone.NEUTRAL -> "The owl still asks the night to judge your timing."
+                }
+                RelationshipStage.MILESTONE -> if (tone == RelationshipTone.CAUTIOUS) {
+                    "The night has made room for the owl, but it still keeps a careful eye on you."
+                } else {
+                    "The night has made room for the owl and still feels welcoming."
+                }
             }
             EntityType.EAGLE -> when (stage) {
                 RelationshipStage.FIRST_IMPRESSION -> "The sky feels too large to fully trust."
                 RelationshipStage.RECOGNITION -> "Even at rest, the shadow crosses your thoughts."
-                RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "The sky feels less hostile when the eagle chooses distance." else "The eagle still reminds you how small a mistake can look from above."
-                RelationshipStage.MILESTONE -> "The eagle's shadow feels more like recognition than threat now."
+                RelationshipStage.TRUST -> when (tone) {
+                    RelationshipTone.WARM -> "The sky feels less hostile when the eagle chooses distance."
+                    RelationshipTone.CAUTIOUS -> "The eagle still reminds you exactly where fear keeps answering first."
+                    RelationshipTone.NEUTRAL -> "The eagle still reminds you how small a mistake can look from above."
+                }
+                RelationshipStage.MILESTONE -> if (tone == RelationshipTone.CAUTIOUS) {
+                    "The eagle's shadow feels like recognition, but not yet forgiveness."
+                } else {
+                    "The eagle's shadow feels more like recognition than threat now."
+                }
             }
             else -> null
         }
@@ -453,6 +523,44 @@ object RelationshipArcSystem {
                 else -> "The eagle has started recognizing your return before your fear does."
             }
             else -> lineFor(context, type, Event.RETURN)
+        }
+    }
+
+    fun strainedBondLine(context: Context, type: EntityType): String {
+        val appContext = context.applicationContext
+        val stage = stageFor(appContext, type)
+        return when (type) {
+            EntityType.CAT -> when (stage) {
+                RelationshipStage.MILESTONE -> "The cat still keeps your place, but not without remembering how abruptly you keep reaching for it."
+                RelationshipStage.TRUST -> "The cat stays nearby, but with the kind of distance you taught it."
+                else -> "The cat has started expecting your nerves before your kindness."
+            }
+            EntityType.FOX -> when (stage) {
+                RelationshipStage.MILESTONE -> "The fox still answers you, but with the sharper kind of patience that follows repeated flinching."
+                RelationshipStage.TRUST -> "The fox has started watching for the same hesitation before it watches for you."
+                else -> "The fox keeps testing the place where your timing keeps giving way."
+            }
+            EntityType.WOLF -> when (stage) {
+                RelationshipStage.MILESTONE -> "The wolf still knows you, but now it measures whether your calm will fail in the same old place."
+                RelationshipStage.TRUST -> "The wolf's respect has gone careful, like it remembers exactly where you keep breaking."
+                else -> "The wolf has started treating your fear like something it already recognizes."
+            }
+            EntityType.DOG -> when (stage) {
+                RelationshipStage.MILESTONE -> "The dog still comes close, but even that joy has started bracing for the same hurt."
+                RelationshipStage.TRUST -> "The dog forgives quickly, but not quickly enough to forget the bark-line you keep missing."
+                else -> "The dog's excitement has started carrying a little caution in it."
+            }
+            EntityType.OWL -> when (stage) {
+                RelationshipStage.MILESTONE -> "The owl still keeps the dark edge for you, but the night has started sounding more watchful than welcoming."
+                RelationshipStage.TRUST -> "The owl has started meeting you with caution instead of only recognition."
+                else -> "The owl has started expecting the same mistake before it expects your return."
+            }
+            EntityType.EAGLE -> when (stage) {
+                RelationshipStage.MILESTONE -> "The eagle still recognizes you, but the sky now holds that recognition like a warning."
+                RelationshipStage.TRUST -> "The eagle's shadow has started feeling like a test you keep failing in the same place."
+                else -> "The eagle has started expecting your fear before your steadiness."
+            }
+            else -> lineFor(appContext, type, Event.RETURN)
         }
     }
 
@@ -556,7 +664,7 @@ object RelationshipArcSystem {
             RelationshipStage.TRUST -> "I'll stay."
             else -> "Friend?"
         }
-        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "Too sudden." else "Hiss!"
+        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "Too sudden again." else "Hiss!"
         Event.RETURN -> when (stage) {
             RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "A cat has already claimed this place."
             else -> "A cat watches from the path."
@@ -575,7 +683,7 @@ object RelationshipArcSystem {
             RelationshipStage.TRUST -> "Fine. Go on."
             else -> "Fine."
         }
-        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "Not so quick." else "Next time..."
+        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "Same hesitation." else "Next time..."
         Event.RETURN -> when (stage) {
             RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "A fox lingers like it expected you."
             else -> "Something clever moved through the garden."
@@ -594,7 +702,7 @@ object RelationshipArcSystem {
             RelationshipStage.TRUST -> "Go on."
             else -> "Not today."
         }
-        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "I remember." else "GRRR..."
+        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "I remember where you break." else "GRRR..."
         Event.RETURN -> when (stage) {
             RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "The grove feels watched, not threatened."
             else -> "A distant howl still belongs to the path."
@@ -609,7 +717,7 @@ object RelationshipArcSystem {
             RelationshipStage.MILESTONE -> "Best friend!"
         }
         Event.SPARE -> "Best friend!"
-        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "BORF!" else "Hi!!"
+        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "Easy. Not that line again." else "Hi!!"
         Event.RETURN -> when (stage) {
             RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "The garden still feels wagged awake."
             else -> "A bark seems closer than before."
@@ -620,7 +728,7 @@ object RelationshipArcSystem {
         EncounterCue.MERCY -> when {
             stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Easy. I know you."
             stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Close, friend."
-            tone == RelationshipTone.CAUTIOUS -> "Still nervous?"
+            tone == RelationshipTone.CAUTIOUS -> "Too sudden again?"
             stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Softly."
             else -> "Close one."
         }
@@ -631,7 +739,7 @@ object RelationshipArcSystem {
         EncounterCue.FOX_LANDING -> when {
             stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Knew you'd stay with me."
             stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "You remembered."
-            tone == RelationshipTone.CAUTIOUS -> "Still flinching?"
+            tone == RelationshipTone.CAUTIOUS -> "Still flinching at the same step?"
             stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Caught that."
             else -> "Next time..."
         }
@@ -642,7 +750,7 @@ object RelationshipArcSystem {
         EncounterCue.WOLF_CHARGE -> when {
             stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Hold steady."
             stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Stand your ground."
-            tone == RelationshipTone.CAUTIOUS -> "I remember this."
+            tone == RelationshipTone.CAUTIOUS -> "I remember where you break."
             stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Keep your feet."
             else -> "Here it comes."
         }
@@ -653,7 +761,7 @@ object RelationshipArcSystem {
         EncounterCue.DOG_GREETING -> when {
             stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "You came back!"
             stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Run with me!"
-            tone == RelationshipTone.CAUTIOUS -> "Easy!!"
+            tone == RelationshipTone.CAUTIOUS -> "Easy. Not that line."
             stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Hi again!"
             else -> "BORF!"
         }
@@ -678,7 +786,7 @@ object RelationshipArcSystem {
         EncounterCue.OWL_ALERT -> when {
             stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "I know your timing."
             stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Not prey."
-            tone == RelationshipTone.CAUTIOUS -> "...again?"
+            tone == RelationshipTone.CAUTIOUS -> "The night remembers."
             stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Still jumping?"
             else -> "...hoo?"
         }
@@ -689,7 +797,7 @@ object RelationshipArcSystem {
         EncounterCue.EAGLE_LOCK -> when {
             stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Hold the mark."
             stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Stay true."
-            tone == RelationshipTone.CAUTIOUS -> "Marked again."
+            tone == RelationshipTone.CAUTIOUS -> "Marked where you waver."
             stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Still marked."
             else -> "Marked."
         }
@@ -704,7 +812,7 @@ object RelationshipArcSystem {
             RelationshipStage.MILESTONE -> "The night knows you."
         }
         Event.SPARE -> "The branch stays yours."
-        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "...again?" else "...hoo?"
+        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "The night remembers." else "...hoo?"
         Event.RETURN -> when (stage) {
             RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "Night holds a familiar pair of eyes."
             else -> "Something patient watches the dark edge."
@@ -719,7 +827,7 @@ object RelationshipArcSystem {
             RelationshipStage.MILESTONE -> "You know the shadow."
         }
         Event.SPARE -> "The sky lets you pass."
-        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "Marked again." else "Marked."
+        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "Marked where you waver." else "Marked."
         Event.RETURN -> when (stage) {
             RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "The sky feels vast, but no longer empty."
             else -> "A shadow crossed the garden earlier."

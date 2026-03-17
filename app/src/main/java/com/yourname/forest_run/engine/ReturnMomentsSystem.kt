@@ -60,6 +60,7 @@ object ReturnMomentsSystem {
         val milestoneBond = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.MILESTONE)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
+        val strainedBond = RelationshipArcSystem.featuredStrainedBond(appContext)
         val repeatedKiller = PersistentMemoryManager.featuredRepeatKiller(appContext)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
             ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
@@ -93,6 +94,14 @@ object ReturnMomentsSystem {
                     "Same Shadow",
                     repeatedKillerLine(repeatedKiller),
                     if (RelationshipArcSystem.isTracked(repeatedKiller)) repeatedKiller else bondedVisitor
+                )
+            strainedBond != null &&
+                (summary?.hitsTaken ?: 0) > 0 &&
+                (summary?.lastKiller == strainedBond || previous.roughRunStreak >= 1) ->
+                ReturnMoment(
+                    "Held At A Distance",
+                    RelationshipArcSystem.strainedBondLine(appContext, strainedBond),
+                    strainedBond
                 )
             repeatedHarmCreature != null && ((summary?.hitsTaken ?: 0) > 0 || previous.roughRunStreak >= 2) ->
                 ReturnMoment(

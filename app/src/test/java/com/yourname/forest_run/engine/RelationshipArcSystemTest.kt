@@ -182,4 +182,18 @@ class RelationshipArcSystemTest {
         assertEquals(EntityType.DOG, featured)
         assertTrue(line.contains("habit", ignoreCase = true) || line.contains("belong", ignoreCase = true))
     }
+
+    @Test
+    fun `strained bond chooses cautious trusted creature and surfaces sharper line`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+
+        val featured = RelationshipArcSystem.featuredStrainedBond(context)
+        val line = RelationshipArcSystem.strainedBondLine(context, EntityType.WOLF)
+
+        assertEquals(EntityType.WOLF, featured)
+        assertTrue(line.contains("careful", ignoreCase = true) || line.contains("break", ignoreCase = true))
+        assertTrue(RelationshipArcSystem.isStrainedBond(context, EntityType.WOLF))
+    }
 }

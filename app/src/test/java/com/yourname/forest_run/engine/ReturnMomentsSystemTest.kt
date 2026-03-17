@@ -157,6 +157,40 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `strained tracked bond creates held at a distance return moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = 10_000L, lastGardenGreetingDay = -1L, roughRunStreak = 1)
+        )
+        val summary = RunSummary(
+            score = 390,
+            distanceM = 310f,
+            isNewHighScore = false,
+            highScore = 950,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 12_500L)
+
+        assertEquals("Held At A Distance", moment?.title)
+        assertEquals(EntityType.WOLF, moment?.visitor)
+        assertTrue(moment?.line?.contains("careful", ignoreCase = true) == true || moment?.line?.contains("break", ignoreCase = true) == true)
+    }
+
+    @Test
     fun `repeat killer history escalates into same shadow return moment`() {
         repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
         val summary = RunSummary(

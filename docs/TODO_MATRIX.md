@@ -55,7 +55,7 @@ This file is the strict implementation ledger for everything from the original d
 
 - DONE: added a save-backed `ForestMoodSystem` with run classification into gentle, reckless, fearful, and steady.
 - PARTIAL: current tone now affects Garden palette, menu/rest/Garden labeling, sanctuary ambience, visible carry-home framing, and sanctuary arrival-badge presentation; deepen creature warmth and broader presentation response.
-- PARTIAL: repeated panic or repeated harm from the same creature now surfaces through cautious sanctuary traces, softer return moments, stronger `Same Shadow` repeat-killer beats, Garden caution reflections, and save-backed tender streaks; deepen broader creature warmth and world-state response.
+- PARTIAL: repeated panic or repeated harm from the same creature now surfaces through cautious sanctuary traces, strained-bond `Held At A Distance` returns, stronger `Same Shadow` repeat-killer beats, Garden caution/strained reflections, and save-backed tender streaks; deepen broader creature warmth and world-state response.
 - PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, trust traces, repeat-friend `Shared Path` traces, warmer rest fragments, dedicated `Stayed Gentle` / `Kept Finding You` returns, and stronger lantern/ground-glow atmosphere; deepen the effect and tie it more directly to repeated creature-specific history.
 - TODO: ensure the player can feel that the world has formed an opinion about how they play.
 
@@ -66,7 +66,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, encounter generosity/telegraph tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, and milestone keepsake rewards.
 - PARTIAL: relationship milestones now unlock named keepsakes and matching Cat/Fox/Wolf/Dog/Owl/Eagle costume paths; deepen broader milestone presentation and remaining non-costume rewards.
 - PARTIAL: repeated positive interactions now also surface through repeat-friend familiarity beats, `Familiar Return` badges, and creature-specific warmth lines; deepen live encounter and Garden payoff further.
-- TODO: make repeated negative interactions produce stronger tension, fear, disappointment, or caution where appropriate.
+- PARTIAL: repeated negative interactions now surface stronger caution/tension through strained-bond live cue swaps, return beats, sanctuary traces, and fragment writing; deepen disappointment/fear coverage and broader in-run consequence further.
 - TODO: add milestone rewards that feel relational, not merely numerical.
 
 ### Personal Return Moments

@@ -110,6 +110,41 @@ class GardenSanctuaryPlannerTest {
     }
 
     @Test
+    fun `strained bond upgrades sanctuary into a watchful distance state`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 3, totalRuns = 3, fearfulRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 410,
+            distanceM = 320f,
+            isNewHighScore = false,
+            highScore = 980,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Held At A Distance", state.arrivalBadge)
+        assertTrue(state.traces.any { it.type == EntityType.WOLF && it.label == "Watchful Distance" })
+        assertTrue(state.sanctuaryLine.contains("watchful"))
+        assertTrue(state.carryHomeLine.contains("careful", ignoreCase = true) || state.carryHomeLine.contains("break", ignoreCase = true))
+    }
+
+    @Test
     fun `repeat killer history upgrades sanctuary badge to same shadow`() {
         repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.OWL) }
         SaveManager.saveForestMoodState(

@@ -44,6 +44,7 @@ object StoryFragmentSystem {
         val mood = summary?.forestMood ?: ForestMoodSystem.currentState(appContext).currentMood
         val strongest = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.RECOGNITION)
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
+        val strainedBond = RelationshipArcSystem.featuredStrainedBond(appContext, RelationshipStage.TRUST)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
@@ -65,7 +66,9 @@ object StoryFragmentSystem {
             } else {
                 "The evening wind has nothing urgent left to say."
             }
-            ForestMood.RECKLESS -> if (summary?.lastKiller != null && repeatedHarmCreature == summary.lastKiller) {
+            ForestMood.RECKLESS -> if (strainedBond != null) {
+                "Even the restless branches sound careful around ${formatEntityName(strainedBond)}, like trust there has started holding itself back."
+            } else if (summary?.lastKiller != null && repeatedHarmCreature == summary.lastKiller) {
                 "Even the restless branches seem to know you are still carrying the exact same sharp mistake."
             } else if (repeatedHarmCreature != null) {
                 "Even the restless branches seem to know which fear keeps coming back with you."
@@ -74,7 +77,9 @@ object StoryFragmentSystem {
             } else {
                 "The branches still rustle like they are catching up to your hurry."
             }
-            ForestMood.FEARFUL -> if (repeatFriend != null) {
+            ForestMood.FEARFUL -> if (strainedBond != null) {
+                "The air stays careful around ${formatEntityName(strainedBond)}, as if even familiarity learned to leave you more room."
+            } else if (repeatFriend != null) {
                 "The air stays careful, but not empty, as if something familiar decided to keep you company through it."
             } else if (repeatedHarmCreature != null) {
                 "The air stays careful, as if it knows which shadow still follows you home."
@@ -112,6 +117,7 @@ object StoryFragmentSystem {
         val hitCount = killer?.let { PersistentMemoryManager.getHitCount(context, it) } ?: 0
         val repeatedKiller = killer != null && hitCount >= 2
         val relationshipStage = killer?.let { RelationshipArcSystem.stageFor(context, it) }
+        val strainedKiller = killer?.takeIf { RelationshipArcSystem.isStrainedBond(context, it) }
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(context)
         val warmCreature = PersistentMemoryManager.featuredWarmCreature(context)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(context)
@@ -187,6 +193,15 @@ object StoryFragmentSystem {
                 type = StoryFragmentType.REST,
                 text = text,
                 unlocksPageId = "page_repeat_${killer.name.lowercase()}"
+            )
+        }
+
+        if (strainedKiller != null && relationshipStage != null && relationshipStage.ordinal >= RelationshipStage.TRUST.ordinal) {
+            return StoryFragment(
+                id = "rest_strained_${strainedKiller.name.lowercase()}",
+                type = StoryFragmentType.REST,
+                text = RelationshipArcSystem.strainedBondLine(context, strainedKiller),
+                unlocksPageId = "page_rest_strained_${strainedKiller.name.lowercase()}"
             )
         }
 
@@ -303,6 +318,7 @@ object StoryFragmentSystem {
         val strongest = RelationshipArcSystem.strongestRelationship(context)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(context)
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(context)
+        val strainedBond = RelationshipArcSystem.featuredStrainedBond(context, RelationshipStage.TRUST)
         val mood = ForestMoodSystem.currentState(context).currentMood
         val repeatedKiller = PersistentMemoryManager.featuredRepeatKiller(context)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(context)
@@ -355,6 +371,15 @@ object StoryFragmentSystem {
                     else -> "The garden has started keeping a familiar shape around your better returns."
                 },
                 unlocksPageId = "page_repeat_friend_garden_${repeatFriend.name.lowercase()}"
+            )
+        }
+
+        if (summary != null && strainedBond != null && (summary.hitsTaken > 0 || summary.forestMood == ForestMood.FEARFUL)) {
+            return StoryFragment(
+                id = "garden_strained_${strainedBond.name.lowercase()}",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = RelationshipArcSystem.strainedBondLine(context, strainedBond),
+                unlocksPageId = "page_garden_strained_${strainedBond.name.lowercase()}"
             )
         }
 

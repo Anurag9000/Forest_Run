@@ -122,6 +122,36 @@ class StoryFragmentSystemTest {
     }
 
     @Test
+    fun `strained bond reflection unlocks a dedicated caution page`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.OWL) }
+        val summary = RunSummary(
+            score = 470,
+            distanceM = 340f,
+            isNewHighScore = false,
+            highScore = 1_050,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.OWL,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("watchful", ignoreCase = true) || line.contains("same mistake", ignoreCase = true))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_strained_owl"))
+    }
+
+    @Test
     fun `repeat killer reflection unlocks same shadow page`() {
         repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
         val summary = RunSummary(

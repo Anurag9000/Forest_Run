@@ -135,7 +135,7 @@ This game should keep players returning because the forest feels personal, not b
 Current baseline:
 
 - recent run tone now affects Garden ambience and carry-home framing
-- repeated harm from the same creature now surfaces as caution in sanctuary traces, `Same Shadow` repeat-killer beats, Garden return moments, Garden reflections, and tender memory streaks
+- repeated harm from the same creature now surfaces as caution in sanctuary traces, strained-bond `Held At A Distance` beats, `Same Shadow` repeat-killer beats, Garden return moments, Garden reflections, and tender memory streaks
 - repeated kindness now surfaces through trust-path traces, repeat-friend `Shared Path` traces, warmer carry-home lines, rest fragments, and dedicated gentle-return beats
 - broader creature warmth and richer world-state consequence are still TODO, even though sanctuary/homecoming atmosphere is now materially stronger
 
@@ -151,6 +151,7 @@ Current baseline:
 
 - major-creature relationship stages now exist in runtime and persist across sessions
 - stage-aware lines now affect pass, threat, spare, and return tone for Cat, Fox, Wolf, Dog, Owl, and Eagle
+- cautious relationship history now also sharpens live warning text and can leave a visibly strained bond instead of only generic caution
 - ordinary encounter beats now also swap Cat near-miss, Fox landing, Wolf charge, and Dog buddy dialogue based on relationship history instead of generic fallback cues
 - Garden now surfaces the strongest current bond and a baseline bond reward
 - milestone bonds now leave named keepsake traces in the sanctuary, with matching costume paths for Cat, Fox, Wolf, Dog, Owl, and Eagle

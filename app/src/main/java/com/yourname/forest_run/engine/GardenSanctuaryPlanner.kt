@@ -33,6 +33,7 @@ object GardenSanctuaryPlanner {
         val bonds = RelationshipArcSystem.relationshipsAtOrAbove(appContext, RelationshipStage.TRUST)
         val warmBonds = bonds.filter { RelationshipArcSystem.isWarmBond(appContext, it.first) }
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
+        val strainedBond = RelationshipArcSystem.featuredStrainedBond(appContext, RelationshipStage.TRUST)
         val memoryPages = StoryFragmentSystem.memoryPageCount(appContext)
         val mood = moodState.currentMood
         val milestoneRewards = RelationshipArcSystem.unlockedMilestoneTypes(appContext)
@@ -116,7 +117,15 @@ object GardenSanctuaryPlanner {
         } + if (memoryPages >= 4) 6 else 0 + if (repeatedHarmCreature != null) 10 else 0
 
         val traces = buildList {
-            if (repeatedHarmCreature != null) {
+            if (strainedBond != null) {
+                add(
+                    SanctuaryTrace(
+                        strainedBond,
+                        "Watchful Distance",
+                        Color.rgb(214, 210, 236)
+                    )
+                )
+            } else if (repeatedHarmCreature != null) {
                 add(
                     SanctuaryTrace(
                         repeatedHarmCreature,
@@ -178,6 +187,7 @@ object GardenSanctuaryPlanner {
 
         val arrivalBadge = when {
             repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature -> "Same Shadow"
+            strainedBond != null -> "Held At A Distance"
             repeatedHarmCreature != null -> "Tender Return"
             routeTier == PacifistRouteTier.PEACEFUL -> "Peace Kept"
             routeTier == PacifistRouteTier.MERCIFUL -> "Mercy Stayed"
@@ -194,7 +204,11 @@ object GardenSanctuaryPlanner {
 
         val sanctuaryLine = when (mood) {
             ForestMood.FEARFUL -> if (repeatedHarmCreature != null) {
-                "The sanctuary keeps extra quiet around what still feels tender."
+                if (strainedBond != null) {
+                    "The sanctuary keeps extra quiet around the bond that has gone watchful."
+                } else {
+                    "The sanctuary keeps extra quiet around what still feels tender."
+                }
             } else {
                 "The sanctuary lowers its voice until your breathing does too."
             }
@@ -221,6 +235,8 @@ object GardenSanctuaryPlanner {
         val carryHomeLine = when {
             repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature ->
                 "${formatEntityName(repeatedKillerCreature)} has started to feel like the shape your trouble keeps taking."
+            strainedBond != null ->
+                RelationshipArcSystem.strainedBondLine(appContext, strainedBond)
             repeatedHarmCreature != null ->
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
             featuredReward != null ->
