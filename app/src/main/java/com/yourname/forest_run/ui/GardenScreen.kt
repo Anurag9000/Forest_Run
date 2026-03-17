@@ -120,6 +120,7 @@ class GardenScreen(
     private var returnVisitorSprite: SpriteSheet? = null
     private var strongestBondLabel = "None"
     private var milestoneRewardLabel = "None"
+    private var milestoneRewardSummary = ""
     private var memoryPageCount = 0
     private var gardenReflectionLine = ""
     private var creatureThoughtLine = ""
@@ -542,7 +543,12 @@ class GardenScreen(
         y += 44f
         canvas.drawText("Bond Reward", statsRect.left + 18f, y, statsLabelPaint)
         canvas.drawText(milestoneRewardLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
-        y += 44f
+        if (milestoneRewardSummary.isNotBlank()) {
+            canvas.drawText(milestoneRewardSummary.take(28), statsRect.left + 18f, y + 36f, statsLabelPaint)
+            y += 58f
+        } else {
+            y += 44f
+        }
         canvas.drawText("Memory Pages", statsRect.left + 18f, y, statsLabelPaint)
         canvas.drawText(memoryPageCount.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
     }
@@ -654,6 +660,9 @@ class GardenScreen(
             CostumeStyle.FLOWER_CROWN -> Color.rgb(255, 214, 228)
             CostumeStyle.VINE_SCARF -> Color.rgb(126, 210, 120)
             CostumeStyle.MOON_CAPE -> Color.rgb(139, 150, 232)
+            CostumeStyle.BELL_CHARM -> Color.rgb(248, 210, 102)
+            CostumeStyle.LANTERN_PIN -> Color.rgb(255, 226, 156)
+            CostumeStyle.SKY_SASH -> Color.rgb(150, 198, 255)
             CostumeStyle.BLOOM_RIBBON -> Color.rgb(255, 195, 100)
         }
         wardrobeCardPaint.color = accent
@@ -683,6 +692,36 @@ class GardenScreen(
                     wardrobeCardPaint
                 )
             }
+            CostumeStyle.BELL_CHARM -> {
+                canvas.drawCircle(iconCenterX, iconCenterY + 4f, rect.width() * 0.07f, wardrobeCardPaint)
+                canvas.drawLine(
+                    iconCenterX - rect.width() * 0.10f,
+                    iconCenterY - 10f,
+                    iconCenterX + rect.width() * 0.10f,
+                    iconCenterY - 10f,
+                    wardrobeCardPaint
+                )
+            }
+            CostumeStyle.LANTERN_PIN -> {
+                canvas.drawRect(
+                    iconCenterX - rect.width() * 0.05f,
+                    iconCenterY - rect.height() * 0.08f,
+                    iconCenterX + rect.width() * 0.05f,
+                    iconCenterY + rect.height() * 0.04f,
+                    wardrobeCardPaint
+                )
+                canvas.drawLine(iconCenterX, iconCenterY - rect.height() * 0.14f, iconCenterX, iconCenterY - rect.height() * 0.08f, wardrobeCardPaint)
+            }
+            CostumeStyle.SKY_SASH -> {
+                canvas.drawLine(
+                    iconCenterX - rect.width() * 0.12f,
+                    iconCenterY - rect.height() * 0.10f,
+                    iconCenterX + rect.width() * 0.12f,
+                    iconCenterY + rect.height() * 0.12f,
+                    wardrobeCardPaint
+                )
+                canvas.drawCircle(iconCenterX - rect.width() * 0.05f, iconCenterY - rect.height() * 0.05f, rect.width() * 0.04f, wardrobeCardPaint)
+            }
             CostumeStyle.BLOOM_RIBBON -> {
                 canvas.drawCircle(iconCenterX, iconCenterY - 8f, rect.width() * 0.06f, wardrobeCardPaint)
                 canvas.drawLine(iconCenterX, iconCenterY - 4f, iconCenterX - rect.width() * 0.05f, iconCenterY + rect.height() * 0.12f, wardrobeCardPaint)
@@ -706,7 +745,11 @@ class GardenScreen(
         val strongestBond = RelationshipArcSystem.strongestRelationship(context)
         returnVisitorSprite = (returnMoment?.visitor ?: strongestBond?.first)?.let(::spriteForVisitor)
         strongestBondLabel = strongestBond?.let { "${formatEntityName(it.first)} ${it.second.displayName}" } ?: "None"
-        milestoneRewardLabel = RelationshipArcSystem.featuredMilestoneReward(context)?.label ?: "None"
+        val reward = RelationshipArcSystem.featuredMilestoneReward(context)
+        milestoneRewardLabel = reward?.let {
+            it.costumeReward?.let { costume -> "${it.label} / ${costume.displayName}" } ?: it.label
+        } ?: "None"
+        milestoneRewardSummary = reward?.summary.orEmpty()
         memoryPageCount = StoryFragmentSystem.memoryPageCount(context)
         gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
         weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)
@@ -732,15 +775,23 @@ class GardenScreen(
     private fun syncInteractiveLayout(cw: Float, ch: Float) {
         runButtonRect.set(cw * 0.70f, ch * 0.14f, cw * 0.93f, ch * 0.26f)
         lastRunRect.set(cw * 0.62f, ch * 0.30f, cw * 0.95f, ch * 0.66f)
-        wardrobeRect.set(cw * 0.05f, ch * 0.73f, cw * 0.95f, ch * 0.87f)
-        val cardGap = wardrobeRect.width() * 0.015f
-        val cardWidth = (wardrobeRect.width() - cardGap * 5f) / 5f
-        val top = wardrobeRect.top + 34f
-        val bottom = wardrobeRect.bottom - 18f
+        wardrobeRect.set(cw * 0.05f, ch * 0.68f, cw * 0.95f, ch * 0.89f)
+        val columns = 4
+        val cardGapX = wardrobeRect.width() * 0.015f
+        val rows = ((CostumeStyle.entries.size + columns - 1) / columns).coerceAtLeast(1)
+        val innerLeft = wardrobeRect.left + 18f
+        val innerRight = wardrobeRect.right - 18f
+        val innerTop = wardrobeRect.top + 34f
+        val innerBottom = wardrobeRect.bottom - 22f
+        val cardWidth = (innerRight - innerLeft - cardGapX * (columns - 1)) / columns
+        val cardGapY = wardrobeRect.height() * 0.06f
+        val cardHeight = (innerBottom - innerTop - cardGapY * (rows - 1)) / rows
         CostumeStyle.entries.forEachIndexed { index, _ ->
-            val left = wardrobeRect.left + 18f + index * (cardWidth + cardGap)
-            val right = left + cardWidth
-            wardrobeCardRects[index].set(left, top, right, bottom)
+            val row = index / columns
+            val column = index % columns
+            val left = innerLeft + column * (cardWidth + cardGapX)
+            val top = innerTop + row * (cardHeight + cardGapY)
+            wardrobeCardRects[index].set(left, top, left + cardWidth, top + cardHeight)
         }
     }
 

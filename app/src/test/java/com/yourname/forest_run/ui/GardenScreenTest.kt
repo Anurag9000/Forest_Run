@@ -58,12 +58,21 @@ class GardenScreenTest {
         screen.load()
 
         val wardrobeLeft = 1_920 * 0.05f
-        val wardrobeTop = 1_080 * 0.73f
+        val wardrobeTop = 1_080 * 0.68f
         val wardrobeWidth = 1_920 * 0.90f
-        val gap = wardrobeWidth * 0.015f
-        val cardWidth = (wardrobeWidth - gap * 5f) / 5f
-        val tapX = wardrobeLeft + 18f + cardWidth + gap + cardWidth / 2f
-        val tapY = wardrobeTop + 34f + (1_080 * 0.14f - 52f) * 0.5f
+        val wardrobeHeight = 1_080 * 0.21f
+        val columns = 4
+        val gapX = wardrobeWidth * 0.015f
+        val innerLeft = wardrobeLeft + 18f
+        val innerRight = wardrobeLeft + wardrobeWidth - 18f
+        val innerTop = wardrobeTop + 34f
+        val innerBottom = wardrobeTop + wardrobeHeight - 22f
+        val cardWidth = (innerRight - innerLeft - gapX * (columns - 1)) / columns
+        val rows = 2
+        val gapY = wardrobeHeight * 0.06f
+        val cardHeight = (innerBottom - innerTop - gapY * (rows - 1)) / rows
+        val tapX = innerLeft + cardWidth + gapX + cardWidth / 2f
+        val tapY = innerTop + cardHeight / 2f
 
         assertTrue(screen.onTap(tapX, tapY))
         assertEquals(CostumeStyle.FLOWER_CROWN, SaveManager.loadActiveCostume(context))

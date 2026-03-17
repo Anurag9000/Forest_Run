@@ -31,6 +31,12 @@ class CostumeManagerTest {
         repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
         repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.EAGLE) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.EAGLE) }
         SaveManager.saveBestDistance(context, 1_650f)
 
         val newUnlocks = CostumeManager.refreshUnlocks(context)
@@ -41,6 +47,9 @@ class CostumeManagerTest {
                 CostumeStyle.FLOWER_CROWN,
                 CostumeStyle.VINE_SCARF,
                 CostumeStyle.MOON_CAPE,
+                CostumeStyle.BELL_CHARM,
+                CostumeStyle.LANTERN_PIN,
+                CostumeStyle.SKY_SASH,
                 CostumeStyle.BLOOM_RIBBON
             ),
             newUnlocks.map { it.style }
@@ -67,5 +76,21 @@ class CostumeManagerTest {
 
         assertTrue(newUnlocks.any { it.style == CostumeStyle.FLOWER_CROWN })
         assertTrue(CostumeManager.availableCostumes(context).contains(CostumeStyle.FLOWER_CROWN))
+    }
+
+    @Test
+    fun `dog owl and eagle milestones unlock their wardrobe rewards`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.EAGLE) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.EAGLE) }
+
+        val newUnlocks = CostumeManager.refreshUnlocks(context)
+
+        assertTrue(newUnlocks.any { it.style == CostumeStyle.BELL_CHARM })
+        assertTrue(newUnlocks.any { it.style == CostumeStyle.LANTERN_PIN })
+        assertTrue(newUnlocks.any { it.style == CostumeStyle.SKY_SASH })
     }
 }

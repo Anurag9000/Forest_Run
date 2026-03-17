@@ -53,6 +53,9 @@ class CostumeOverlay {
             CostumeStyle.FLOWER_CROWN -> drawFlowerCrown(canvas, bodyRect, isInvincible)
             CostumeStyle.VINE_SCARF -> drawVineScarf(canvas, bodyRect, state, isInvincible)
             CostumeStyle.MOON_CAPE -> drawMoonCape(canvas, bodyRect, state, isInvincible)
+            CostumeStyle.BELL_CHARM -> drawBellCharm(canvas, bodyRect, isInvincible)
+            CostumeStyle.LANTERN_PIN -> drawLanternPin(canvas, bodyRect, isInvincible)
+            CostumeStyle.SKY_SASH -> drawSkySash(canvas, bodyRect, state, isInvincible)
             CostumeStyle.BLOOM_RIBBON -> drawBloomRibbon(canvas, bodyRect, isInvincible)
         }
     }
@@ -174,6 +177,69 @@ class CostumeOverlay {
             sideX + bodyRect.width() * 0.05f,
             topY + bodyRect.height() * 0.17f,
             ribbonPaint
+        )
+    }
+
+    private fun drawBellCharm(canvas: Canvas, bodyRect: RectF, isInvincible: Boolean) {
+        ribbonPaint.color = if (isInvincible) Color.rgb(255, 250, 220) else Color.rgb(172, 108, 42)
+        accentPaint.color = if (isInvincible) Color.rgb(255, 248, 180) else Color.rgb(255, 216, 104)
+        val collarY = bodyRect.top + bodyRect.height() * 0.40f
+        canvas.drawArc(
+            bodyRect.centerX() - bodyRect.width() * 0.17f,
+            collarY - bodyRect.height() * 0.05f,
+            bodyRect.centerX() + bodyRect.width() * 0.17f,
+            collarY + bodyRect.height() * 0.05f,
+            180f,
+            180f,
+            false,
+            ribbonPaint
+        )
+        canvas.drawCircle(
+            bodyRect.centerX(),
+            collarY + bodyRect.height() * 0.11f,
+            bodyRect.width() * 0.07f,
+            accentPaint
+        )
+    }
+
+    private fun drawLanternPin(canvas: Canvas, bodyRect: RectF, isInvincible: Boolean) {
+        val pinX = bodyRect.centerX() - bodyRect.width() * 0.16f
+        val pinY = bodyRect.top + bodyRect.height() * 0.36f
+        accentPaint.color = if (isInvincible) Color.rgb(255, 252, 232) else Color.rgb(255, 233, 168)
+        ribbonPaint.color = if (isInvincible) Color.rgb(232, 244, 255) else Color.rgb(134, 146, 212)
+        canvas.drawRect(
+            pinX - bodyRect.width() * 0.05f,
+            pinY - bodyRect.height() * 0.04f,
+            pinX + bodyRect.width() * 0.05f,
+            pinY + bodyRect.height() * 0.06f,
+            accentPaint
+        )
+        canvas.drawLine(
+            pinX,
+            pinY - bodyRect.height() * 0.10f,
+            pinX,
+            pinY - bodyRect.height() * 0.03f,
+            ribbonPaint
+        )
+    }
+
+    private fun drawSkySash(canvas: Canvas, bodyRect: RectF, state: PlayerState, isInvincible: Boolean) {
+        ribbonPaint.color = if (isInvincible) Color.rgb(242, 250, 255) else Color.rgb(150, 196, 255)
+        accentPaint.color = if (isInvincible) Color.rgb(255, 246, 210) else Color.rgb(232, 236, 255)
+        val topY = bodyRect.top + bodyRect.height() * 0.28f
+        val bottomY = bodyRect.bottom - bodyRect.height() * if (state == PlayerState.DUCKING) 0.18f else 0.06f
+        canvas.drawLine(
+            bodyRect.centerX() - bodyRect.width() * 0.14f,
+            topY,
+            bodyRect.centerX() + bodyRect.width() * 0.16f,
+            bottomY,
+            ribbonPaint
+        )
+        canvas.drawCircle(
+            bodyRect.centerX() - bodyRect.width() * 0.08f,
+            topY + bodyRect.height() * 0.03f,
+            bodyRect.width() * 0.05f,
+            accentPaint
         )
     }
 }

@@ -14,6 +14,7 @@ data class GardenSanctuaryState(
     val sanctuaryLine: String = "",
     val carryHomeLine: String = "",
     val arrivalBadge: String = "",
+    val featuredRewardLine: String = "",
     val fireflyCount: Int = 0,
     val petalCount: Int = 0,
     val bloomPatchCount: Int = 0,
@@ -45,6 +46,11 @@ object GardenSanctuaryPlanner {
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
         val kindnessStreak = repeatedKindnessCreature?.let { PersistentMemoryManager.getKindnessStreak(appContext, it) } ?: 0
         val routeTier = summary?.pacifistRouteTier ?: PacifistRouteTier.NONE
+        val featuredRewardLine = featuredReward?.let { reward ->
+            reward.costumeReward?.let { costume ->
+                "${reward.summary} ${costume.displayName} is waiting in the wardrobe."
+            } ?: reward.summary
+        }.orEmpty()
 
         val fireflies = when (mood) {
             ForestMood.GENTLE -> 4 + moodState.moodStreak.coerceAtMost(4)
@@ -218,7 +224,7 @@ object GardenSanctuaryPlanner {
             repeatedHarmCreature != null ->
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
             featuredReward != null ->
-                featuredReward.summary
+                featuredRewardLine
             repeatFriend != null ->
                 "${formatEntityName(repeatFriend)} has started to feel less like a visit and more like a familiar part of home."
             repeatedKindnessCreature != null && kindnessStreak >= 2 ->
@@ -245,6 +251,7 @@ object GardenSanctuaryPlanner {
             sanctuaryLine = sanctuaryLine,
             carryHomeLine = carryHomeLine,
             arrivalBadge = arrivalBadge,
+            featuredRewardLine = featuredRewardLine,
             fireflyCount = fireflies,
             petalCount = petals,
             bloomPatchCount = bloomPatches,

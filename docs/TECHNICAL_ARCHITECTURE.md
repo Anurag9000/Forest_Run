@@ -179,7 +179,7 @@ Dream persistence includes:
 ### Current Status
 
 - Implemented: score, seeds, garden, ghost.
-- Partial: repeated-encounter memory, costumes, persisted run-summary carry-home, relationship milestones, return-state data, fragment unlocks, and pacifist route tier carry-over now exist in baseline form; richer payoff depth is still missing.
+- Partial: repeated-encounter memory, costumes, persisted run-summary carry-home, relationship milestones, return-state data, fragment unlocks, and pacifist route tier carry-over now exist in stronger form, now including milestone-earned Dog/Owl/Eagle wardrobe rewards and sanctuary reward/cosmetic carry-home surfacing; richer payoff depth is still missing.
 
 ## 12. Emotional Memory Architecture
 
@@ -235,7 +235,7 @@ Expected data per major creature family:
 ### Current Status
 
 - Implemented: formal relationship stages and baseline authoring data now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
-- Partial: encounter counts, stage persistence, stage-aware dialogue, stage-aware encounter tuning, history-aware live encounter cues, and baseline milestone keepsake/costume reward hooks now exist; deepen Garden presence and broader authored consequences.
+- Partial: encounter counts, stage persistence, stage-aware dialogue, stage-aware encounter tuning, history-aware live encounter cues, and broader milestone keepsake/costume reward hooks now exist across all tracked creatures; deepen Garden presence and broader authored consequences.
 
 ## 14. Personal Return Moments Authoring
 

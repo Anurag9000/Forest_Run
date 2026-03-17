@@ -41,7 +41,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: contextual rest quotes now react to biome, killer, route tier, clean returns, peaceful Bloom afterglow, merciful familiarity, and stronger bond/repeat-friend state; expand quote pools and trigger richness further.
 - PARTIAL: `PersistentMemoryManager` now also tracks save-backed kindness and tender streaks so repeated mercy or repeated hurt can surface in return moments, fragments, and sanctuary carry-home; expand it further into full repeated-encounter payoff and unlock architecture.
 - DONE: canonical post-run summary payload now exists across rest and Garden.
-- PARTIAL: costume overlays and wardrobe flow exist, Cat/Fox/Wolf relationship milestones can now unlock matching outfits, and Garden now surfaces relationship-aware unlock messaging instead of generic wardrobe notices; expand broader repeated-encounter unlock depth and presentation.
+- PARTIAL: costume overlays and wardrobe flow now include milestone-earned Cat/Fox/Wolf/Dog/Owl/Eagle wardrobe rewards, and Garden now surfaces relationship-aware unlock messaging plus featured reward/cosmetic pairing instead of generic wardrobe notices; expand broader repeated-encounter unlock depth and presentation further.
 - PARTIAL: repeat-killer deja vu lines now exist in rest, Garden reflections, sanctuary badges, and stronger `Same Shadow` return/carry-home beats; deepen them further into stronger visual and narrative payoff.
 - DONE: dedicated dialogue bubble system.
 - PARTIAL: biome-level friendship bonus baseline now escalates into save-visible pacifist route tiers and stronger route-like rest/Garden payoff; deepen it into broader sanctuary and world-state consequence.
@@ -64,7 +64,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - DONE: each relationship now has first-impression, recognition, trust, and milestone states.
 - PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, encounter generosity/telegraph tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, and milestone keepsake rewards.
-- PARTIAL: relationship milestones now unlock named keepsakes and matching Cat/Fox/Wolf costume paths; deepen broader milestone rewards and cosmetics.
+- PARTIAL: relationship milestones now unlock named keepsakes and matching Cat/Fox/Wolf/Dog/Owl/Eagle costume paths; deepen broader milestone presentation and remaining non-costume rewards.
 - PARTIAL: repeated positive interactions now also surface through repeat-friend familiarity beats, `Familiar Return` badges, and creature-specific warmth lines; deepen live encounter and Garden payoff further.
 - TODO: make repeated negative interactions produce stronger tension, fear, disappointment, or caution where appropriate.
 - TODO: add milestone rewards that feel relational, not merely numerical.
@@ -129,7 +129,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, and quiet story fragments, now with explicit kindness/tender streak carry-over, repeat-friend familiarity, save-backed pacifist route tiers, repeat-killer escalation beats, shared session-arc composition, and sanctuary-derived menu/rest/Garden atmosphere; deepen authored coverage, stronger Garden consequences, and richer payoff.
+- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, quiet story fragments, shared session-arc composition, and sanctuary-derived menu/rest/Garden atmosphere, now with explicit kindness/tender streak carry-over, repeat-friend familiarity, save-backed pacifist route tiers, repeat-killer escalation beats, and milestone reward/cosmetic carry-home surfacing; deepen authored coverage, stronger Garden consequences, and richer payoff.
 
 ## Visual And Audio TODOs
 

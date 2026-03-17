@@ -154,7 +154,7 @@ Examples:
 - Implemented: ghost persistence, persistent memory manager baseline, and costume wardrobe baseline.
 - Partial: ghost readability now delays reveal at run start and suppresses after impacts so it stops crowding the live runner during recovery.
 - Partial: startup and rest now reuse shared carry-home session copy plus sanctuary-derived badges and ambience so the forest feels more aware between screens instead of only inside the Garden hub.
-- Partial: wardrobe unlock surfacing is now more relationship-aware instead of generic when new bond outfits arrive.
+- Partial: wardrobe unlock surfacing is now more relationship-aware instead of generic when new bond outfits arrive, and tracked Dog/Owl/Eagle bonds now also resolve into matching milestone wardrobe rewards.
 - TODO: richer repeat-killer system and final tasteful ghost UX tuning.
 
 ### 4.5 Forest Memory Layer
@@ -197,7 +197,7 @@ Examples:
 - Partial: repeated kindness now leaves trust-path traces, repeat-friend `Shared Path` traces, warmer carry-home lines, rest fragments, dedicated gentle-return beats, stronger lantern/ground-glow sanctuary warmth, and baseline kind-route reflections in baseline form.
 - Partial: named relationship arcs now exist in baseline runtime form for Cat, Fox, Wolf, Dog, Owl, and Eagle, with persisted stages, stage-aware dialogue/payoff, bonded Garden return hooks, and milestone keepsake rewards.
 - Partial: quiet story fragments now exist in stronger runtime form through fragment-driven rest quotes that can now react to the whole run, Garden reflections, weather-linked thoughts, bonded creature thoughts, repeat-friend familiarity fragments, merciful familiarity fragments, peaceful-Bloom hush fragments, milestone-gentleness / Bloom-afterglow reflections, and memory-page unlocks.
-- TODO: deepen forest mood consequences, relationship-stage consequences, fragment coverage, costume payoff, and return-moment richness beyond the current baseline.
+- TODO: deepen forest mood consequences, relationship-stage consequences, fragment coverage, remaining costume payoff depth, and return-moment richness beyond the current baseline.
 
 ---
 

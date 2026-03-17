@@ -206,19 +206,22 @@ object RelationshipArcSystem {
                 type = type,
                 label = "Welcome Bell",
                 summary = "The dog's joy has turned into something the whole garden keeps.",
-                traceLabel = "Welcome Bell"
+                traceLabel = "Welcome Bell",
+                costumeReward = CostumeStyle.BELL_CHARM
             )
             EntityType.OWL -> RelationshipMilestoneReward(
                 type = type,
                 label = "Lantern Branch",
                 summary = "The owl has made the dark edge of home feel watched over.",
-                traceLabel = "Lantern Branch"
+                traceLabel = "Lantern Branch",
+                costumeReward = CostumeStyle.LANTERN_PIN
             )
             EntityType.EAGLE -> RelationshipMilestoneReward(
                 type = type,
                 label = "Sky Thread",
                 summary = "The eagle has left a stern but welcome line through the sky above home.",
-                traceLabel = "Sky Thread"
+                traceLabel = "Sky Thread",
+                costumeReward = CostumeStyle.SKY_SASH
             )
             else -> null
         }

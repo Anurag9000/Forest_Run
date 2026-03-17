@@ -24,6 +24,15 @@ object CostumeManager {
             PersistentMemoryManager.getSparedCount(context, EntityType.WOLF) >= 2 ||
                 RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.WOLF)
         },
+        CostumeStyle.BELL_CHARM to { context: Context ->
+            RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.DOG)
+        },
+        CostumeStyle.LANTERN_PIN to { context: Context ->
+            RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.OWL)
+        },
+        CostumeStyle.SKY_SASH to { context: Context ->
+            RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.EAGLE)
+        },
         CostumeStyle.BLOOM_RIBBON to { context: Context ->
             SaveManager.loadBestDistance(context) >= 1_500f ||
                 SaveManager.loadLifetimeSeeds(context) >= 120
@@ -66,6 +75,9 @@ object CostumeManager {
         } else {
             "The moon cape keeps the calmer courage you earned from the wolf."
         }
+        CostumeStyle.BELL_CHARM -> "The dog's welcome now comes with something bright enough to carry back into the run."
+        CostumeStyle.LANTERN_PIN -> "The owl left a steadier light behind than the dark edge used to allow."
+        CostumeStyle.SKY_SASH -> "The eagle's line through the sky finally feels like something you can wear without fear."
         CostumeStyle.BLOOM_RIBBON -> "Bloom left enough light behind to wear home."
         CostumeStyle.NONE -> "Always available"
     }

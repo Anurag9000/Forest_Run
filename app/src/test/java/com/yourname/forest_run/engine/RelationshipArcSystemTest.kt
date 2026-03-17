@@ -99,6 +99,20 @@ class RelationshipArcSystemTest {
     }
 
     @Test
+    fun `dog owl and eagle milestone bonds unlock matching cosmetics`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.EAGLE) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.EAGLE) }
+
+        assertEquals(CostumeStyle.BELL_CHARM, RelationshipArcSystem.milestoneRewardFor(context, EntityType.DOG)?.costumeReward)
+        assertEquals(CostumeStyle.LANTERN_PIN, RelationshipArcSystem.milestoneRewardFor(context, EntityType.OWL)?.costumeReward)
+        assertEquals(CostumeStyle.SKY_SASH, RelationshipArcSystem.milestoneRewardFor(context, EntityType.EAGLE)?.costumeReward)
+    }
+
+    @Test
     fun `encounter cue lines deepen with warm or cautious history`() {
         repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }

@@ -153,7 +153,7 @@ Current baseline:
 - stage-aware lines now affect pass, threat, spare, and return tone for Cat, Fox, Wolf, Dog, Owl, and Eagle
 - ordinary encounter beats now also swap Cat near-miss, Fox landing, Wolf charge, and Dog buddy dialogue based on relationship history instead of generic fallback cues
 - Garden now surfaces the strongest current bond and a baseline bond reward
-- milestone bonds now leave named keepsake traces in the sanctuary, with matching costume paths for Cat, Fox, and Wolf
+- milestone bonds now leave named keepsake traces in the sanctuary, with matching costume paths for Cat, Fox, Wolf, Dog, Owl, and Eagle
 - deeper Garden presence and broader behavior shifts are still TODO
 
 #### 3.8.3 Personal Return Moments

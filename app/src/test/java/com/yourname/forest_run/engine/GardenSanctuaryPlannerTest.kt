@@ -157,6 +157,21 @@ class GardenSanctuaryPlannerTest {
     }
 
     @Test
+    fun `featured milestone reward can surface matching wardrobe payoff`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 4, totalRuns = 4, gentleRuns = 4)
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertTrue(state.featuredRewardLine.contains("Bell Charm") || state.carryHomeLine.contains("Bell Charm"))
+        assertTrue(state.traces.any { it.label == "Welcome Bell" })
+    }
+
+    @Test
     fun `repeated kindness leaves a trust path and warmer carry-home`() {
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
         SaveManager.saveForestMoodState(
