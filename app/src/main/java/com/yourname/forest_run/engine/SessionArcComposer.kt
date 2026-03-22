@@ -26,6 +26,9 @@ object SessionArcComposer {
 
         val atmosphereLine = when {
             summary == null -> "The willow has kept the first path quiet for you."
+            sanctuary.featuredPeaceLine.isNotBlank() &&
+                summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
+                sanctuary.featuredPeaceLine
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL && summary.bloomConversions >= 2 ->
                 "Bloom left the branches bright, but the garden is still carrying the hush of that peaceful run."
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL ->
@@ -57,6 +60,7 @@ object SessionArcComposer {
 
         val idleSupportLine = when {
             summary == null -> "the willow kept your place"
+            sanctuary.featuredPeaceLabel.isNotBlank() -> "${sanctuary.featuredPeaceLabel.lowercase()} is still showing at home"
             summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
                 "the garden still sounds softer after that run"
             sanctuary.featuredPresenceLabel.isNotBlank() ->
@@ -75,6 +79,7 @@ object SessionArcComposer {
 
         val readySupportLine = when {
             summary == null -> "the first steps are enough"
+            sanctuary.featuredPeaceLabel.isNotBlank() -> "carry that calmer sign back into the path"
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL -> "carry the quiet you earned back into the path"
             sanctuary.featuredPresenceLabel.isNotBlank() -> "carry that familiar homeward sign back into the path"
             repeatFriend != null -> "carry that familiar warmth back into the path"
@@ -117,6 +122,9 @@ object SessionArcComposer {
 
         val carryHomeLine = previewMoment?.line?.ifBlank { null }
             ?: sanctuary.carryHomeLine.ifBlank {
+                if (sanctuary.featuredPeaceLine.isNotBlank()) {
+                    sanctuary.featuredPeaceLine
+                } else
                 if (sanctuary.featuredPresenceLine.isNotBlank()) {
                     sanctuary.featuredPresenceLine
                 } else {
@@ -154,6 +162,9 @@ object SessionArcComposer {
         if (returnMoment != null) return ""
         if (sanctuaryState.carryHomeLine.isNotBlank()) {
             return sanctuaryState.carryHomeLine
+        }
+        if (sanctuaryState.featuredPeaceLine.isNotBlank()) {
+            return sanctuaryState.featuredPeaceLine
         }
         if (sanctuaryState.featuredPresenceLine.isNotBlank()) {
             return sanctuaryState.featuredPresenceLine

@@ -244,6 +244,41 @@ class GardenSanctuaryPlannerTest {
     }
 
     @Test
+    fun `peaceful biome friendship surfaces named world-state signs`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.MEADOW) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 1_320,
+            distanceM = 940f,
+            isNewHighScore = false,
+            highScore = 1_620,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 7,
+            cleanPasses = 11,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 2,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals(Biome.MEADOW, state.featuredPeaceBiome)
+        assertTrue(state.featuredPeaceLabel.contains("Meadow"))
+        assertTrue(state.featuredPeaceLine.contains("Meadow"))
+        assertEquals("Peace Carried", state.arrivalBadge)
+        assertTrue(state.carryHomeLine.contains("Meadow"))
+    }
+
+    @Test
     fun `repeat friend leaves shared path and familiar return badge`() {
         repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
         PersistentMemoryManager.recordSpare(context, EntityType.DOG)

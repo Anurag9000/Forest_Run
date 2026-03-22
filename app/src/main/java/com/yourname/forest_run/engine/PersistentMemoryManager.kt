@@ -11,6 +11,11 @@ import com.yourname.forest_run.entities.EntityType
  */
 object PersistentMemoryManager {
 
+    data class BiomeFriendshipMark(
+        val biome: Biome,
+        val friendshipCount: Int
+    )
+
     fun recordEncounter(context: Context, type: EntityType) {
         val appContext = context.applicationContext
         SaveManager.incrementEncounterCount(appContext, type)
@@ -64,6 +69,18 @@ object PersistentMemoryManager {
 
     fun getBiomeFriendship(context: Context, biome: Biome): Int =
         SaveManager.loadBiomeFriendship(context.applicationContext, biome)
+
+    fun peacefulBiomes(context: Context, minimumFriendship: Int = 1): List<BiomeFriendshipMark> =
+        Biome.entries
+            .map { biome -> BiomeFriendshipMark(biome, getBiomeFriendship(context, biome)) }
+            .filter { it.friendshipCount >= minimumFriendship }
+            .sortedWith(
+                compareByDescending<BiomeFriendshipMark> { it.friendshipCount }
+                    .thenBy { Biome.entries.indexOf(it.biome) }
+            )
+
+    fun featuredPeaceBiome(context: Context, minimumFriendship: Int = 1): BiomeFriendshipMark? =
+        peacefulBiomes(context, minimumFriendship).firstOrNull()
 
     fun getRelationshipStage(context: Context, type: EntityType): RelationshipStage =
         RelationshipArcSystem.stageFor(context.applicationContext, type)

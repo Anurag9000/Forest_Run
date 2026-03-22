@@ -61,6 +61,7 @@ object ReturnMomentsSystem {
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
         val strainedBond = RelationshipArcSystem.featuredStrainedBond(appContext)
+        val peacefulBiome = PersistentMemoryManager.featuredPeaceBiome(appContext)
         val repeatedKiller = PersistentMemoryManager.featuredRepeatKiller(appContext)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
             ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
@@ -115,7 +116,7 @@ object ReturnMomentsSystem {
                 summary.bloomConversions >= 2 ->
                 ReturnMoment(
                     "Peace Held",
-                    peacefulBloomLine(milestoneReward?.type ?: bondedVisitor),
+                    peacefulBloomLine(peacefulBiome?.biome, milestoneReward?.type ?: bondedVisitor),
                     milestoneReward?.type ?: bondedVisitor ?: EntityType.OWL
                 )
             milestoneReward != null && (summary?.kindnessChain ?: 0) >= 5 && (summary?.sparedCount ?: 0) >= 1 ->
@@ -135,13 +136,13 @@ object ReturnMomentsSystem {
                 (summary.sparedCount > 0 || summary.kindnessChain >= 4) ->
                 ReturnMoment(
                     "Kindness Stayed",
-                    kindRouteLine(repeatedKindnessCreature ?: bondedVisitor),
+                    kindRouteLine(peacefulBiome?.biome, repeatedKindnessCreature ?: bondedVisitor),
                     repeatedKindnessCreature ?: bondedVisitor ?: EntityType.CAT
                 )
             summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL ->
                 ReturnMoment(
                     "Peace Kept",
-                    peacefulRouteLine(milestoneReward?.type ?: bondedVisitor),
+                    peacefulRouteLine(peacefulBiome?.biome, milestoneReward?.type ?: bondedVisitor),
                     milestoneReward?.type ?: bondedVisitor ?: EntityType.CAT
                 )
             summary != null &&
@@ -157,7 +158,7 @@ object ReturnMomentsSystem {
             summary?.pacifistRouteTier == PacifistRouteTier.MERCIFUL && summary.hitsTaken == 0 ->
                 ReturnMoment(
                     "Mercy Stayed",
-                    mercifulRouteLine(bondedVisitor),
+                    mercifulRouteLine(peacefulBiome?.biome, bondedVisitor),
                     bondedVisitor ?: EntityType.CAT
                 )
             previous.roughRunStreak >= 3 ->
@@ -326,43 +327,47 @@ object ReturnMomentsSystem {
         EntityType.CHERRY_BLOSSOM -> "The forest keeps returning to the same shape of trouble until you answer it differently."
     }
 
-    private fun kindRouteLine(type: EntityType?): String = when (type) {
-        EntityType.CAT -> "The cat treated your kinder return like something it had been waiting to believe."
-        EntityType.FOX -> "The fox left you a brighter trail after a run that stayed kind."
-        EntityType.WOLF -> "The grove kept the gentler courage of that run instead of the fear."
-        EntityType.DOG -> "The dog's welcome sounds like it noticed the kindness before the score did."
-        EntityType.OWL -> "Even the owl lets the dark edge rest a little after a kinder run."
-        EntityType.EAGLE -> "The sky kept more softness than severity after that return."
+    private fun kindRouteLine(biome: Biome?, type: EntityType?): String = when {
+        biome != null -> "${biome.displayName} kept the kinder shape of your return close instead of letting it fade."
+        type == EntityType.CAT -> "The cat treated your kinder return like something it had been waiting to believe."
+        type == EntityType.FOX -> "The fox left you a brighter trail after a run that stayed kind."
+        type == EntityType.WOLF -> "The grove kept the gentler courage of that run instead of the fear."
+        type == EntityType.DOG -> "The dog's welcome sounds like it noticed the kindness before the score did."
+        type == EntityType.OWL -> "Even the owl lets the dark edge rest a little after a kinder run."
+        type == EntityType.EAGLE -> "The sky kept more softness than severity after that return."
         else -> "Kindness stayed in the garden long enough to count as part of home."
     }
 
-    private fun peacefulRouteLine(type: EntityType?): String = when (type) {
-        EntityType.CAT -> "The cat kept the whole garden quieter after how peacefully you crossed the path."
-        EntityType.FOX -> "Even the fox's trail looks gentler after a run that stayed peaceful."
-        EntityType.WOLF -> "The grove sounds almost restful after a run that never needed to bare its teeth."
-        EntityType.DOG -> "The dog's joy somehow managed to come home quietly with you."
-        EntityType.OWL -> "The owl left the night calm instead of severe after that run."
-        EntityType.EAGLE -> "Even the sky looks less stern after a run that carried so much peace."
+    private fun peacefulRouteLine(biome: Biome?, type: EntityType?): String = when {
+        biome != null -> "${biome.displayName} still feels at peace with the way you crossed it."
+        type == EntityType.CAT -> "The cat kept the whole garden quieter after how peacefully you crossed the path."
+        type == EntityType.FOX -> "Even the fox's trail looks gentler after a run that stayed peaceful."
+        type == EntityType.WOLF -> "The grove sounds almost restful after a run that never needed to bare its teeth."
+        type == EntityType.DOG -> "The dog's joy somehow managed to come home quietly with you."
+        type == EntityType.OWL -> "The owl left the night calm instead of severe after that run."
+        type == EntityType.EAGLE -> "Even the sky looks less stern after a run that carried so much peace."
         else -> "The whole garden keeps the hush of the run you carried home peacefully."
     }
 
-    private fun peacefulBloomLine(type: EntityType?): String = when (type) {
-        EntityType.CAT -> "The cat kept even Bloom from feeling loud after a run that peaceful."
-        EntityType.FOX -> "Even Bloom came home looking more graceful than wild after that run."
-        EntityType.WOLF -> "The grove held Bloom and peace together without letting either of them break."
-        EntityType.DOG -> "The dog's joy somehow made room for Bloom without breaking the hush."
-        EntityType.OWL -> "The owl left the branches glowing softly instead of severely after that peaceful Bloom."
-        EntityType.EAGLE -> "Even the charged sky looked calm after a peaceful Bloom return."
+    private fun peacefulBloomLine(biome: Biome?, type: EntityType?): String = when {
+        biome != null -> "${biome.displayName} held both Bloom and peace without letting either of them turn harsh."
+        type == EntityType.CAT -> "The cat kept even Bloom from feeling loud after a run that peaceful."
+        type == EntityType.FOX -> "Even Bloom came home looking more graceful than wild after that run."
+        type == EntityType.WOLF -> "The grove held Bloom and peace together without letting either of them break."
+        type == EntityType.DOG -> "The dog's joy somehow made room for Bloom without breaking the hush."
+        type == EntityType.OWL -> "The owl left the branches glowing softly instead of severely after that peaceful Bloom."
+        type == EntityType.EAGLE -> "Even the charged sky looked calm after a peaceful Bloom return."
         else -> "Bloom stayed bright without breaking the hush you carried home."
     }
 
-    private fun mercifulRouteLine(type: EntityType?): String = when (type) {
-        EntityType.CAT -> "The cat seems to trust the quiet shape mercy left behind."
-        EntityType.FOX -> "The fox leaves more room in the trail after a merciful return."
-        EntityType.WOLF -> "The grove remembers when calm held longer than fear."
-        EntityType.DOG -> "The dog's welcome sounds softer when the run comes home full of mercy."
-        EntityType.OWL -> "The owl lets the dark edge feel lighter after a merciful run."
-        EntityType.EAGLE -> "The sky feels less punishing when mercy keeps making it home."
+    private fun mercifulRouteLine(biome: Biome?, type: EntityType?): String = when {
+        biome != null -> "${biome.displayName} feels less guarded now that mercy keeps finding it."
+        type == EntityType.CAT -> "The cat seems to trust the quiet shape mercy left behind."
+        type == EntityType.FOX -> "The fox leaves more room in the trail after a merciful return."
+        type == EntityType.WOLF -> "The grove remembers when calm held longer than fear."
+        type == EntityType.DOG -> "The dog's welcome sounds softer when the run comes home full of mercy."
+        type == EntityType.OWL -> "The owl lets the dark edge feel lighter after a merciful run."
+        type == EntityType.EAGLE -> "The sky feels less punishing when mercy keeps making it home."
         else -> "Mercy stayed in the garden longer than the run itself."
     }
 

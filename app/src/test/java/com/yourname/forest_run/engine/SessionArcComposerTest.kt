@@ -195,4 +195,34 @@ class SessionArcComposerTest {
         assertTrue(menuCopy.atmosphereLine.contains("night", ignoreCase = true) || menuCopy.atmosphereLine.contains("dark edge", ignoreCase = true))
         assertTrue(restCopy.carryHomeLine.contains("night", ignoreCase = true) || restCopy.carryHomeLine.contains("dark edge", ignoreCase = true))
     }
+
+    @Test
+    fun `menu and rest copy can name a peaceful biome world-state sign`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.ORCHARD) }
+        val summary = RunSummary(
+            score = 1_360,
+            distanceM = 920f,
+            isNewHighScore = false,
+            highScore = 1_700,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 8,
+            cleanPasses = 12,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 2,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+        SaveManager.saveLastRunSummary(context, summary)
+
+        val menuCopy = SessionArcComposer.menuCopy(context)
+        val restCopy = SessionArcComposer.restCopy(context, summary)
+
+        assertTrue(menuCopy.atmosphereLine.contains("Orchard", ignoreCase = true))
+        assertTrue(restCopy.carryHomeLine.contains("Orchard", ignoreCase = true))
+    }
 }

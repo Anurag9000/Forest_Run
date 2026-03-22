@@ -111,9 +111,9 @@ Examples:
 
 ### Current Status
 
-- Partial: mercy hearts, pacifist rewards, and friendship persistence exist, and the run can now resolve into explicit `Kind`, `Merciful`, and `Peaceful` route tiers that carry into rest and Garden.
+- Partial: mercy hearts, pacifist rewards, and friendship persistence exist, and the run can now resolve into explicit `Kind`, `Merciful`, and `Peaceful` route tiers that carry into rest and Garden, with named peaceful-biome payoff instead of only generic route wording.
 - Partial: mercy misses and route rewards now also speak more clearly in-run instead of relying on generic reward strings alone.
-- TODO: full mercy reward language, stronger spare visibility, and route-like world-state payoff.
+- TODO: full mercy reward language, stronger spare visibility, and deeper route-like world-state payoff beyond the new named peaceful-biome signs.
 
 ---
 

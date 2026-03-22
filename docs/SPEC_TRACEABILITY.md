@@ -543,8 +543,8 @@ Dog:
 - `Partial`: near-miss classification and some mercy-linked reactions.
 - `Implemented`: dedicated `MercySystem`, spare thresholds, and baseline friendship rewards now exist.
 - `Canonized / Not Required`: exact historical score rewards and a mandatory `PACIFIST` banner are not required.
-- `Partial`: in-run mercy-miss text and route-reward messaging are materially clearer through first-class route presentation instead of generic reward strings alone.
-- `TODO`: stronger heart/effect presentation and fuller route-like payoff.
+- `Partial`: in-run mercy-miss text and route-reward messaging are materially clearer through first-class route presentation instead of generic reward strings alone, and biome friendship can now resolve into named peaceful-biome carry-home/reflection payoff instead of only generic route wording.
+- `TODO`: stronger heart/effect presentation and deeper route-like payoff beyond the new named peaceful-biome signs.
 
 #### Persistent Memory
 

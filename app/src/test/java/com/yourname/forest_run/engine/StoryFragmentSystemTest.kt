@@ -323,6 +323,39 @@ class StoryFragmentSystemTest {
     }
 
     @Test
+    fun `peaceful biome friendship surfaces named route fragments and weather`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.DUSK_CANYON) }
+        val summary = RunSummary(
+            score = 1_440,
+            distanceM = 980f,
+            isNewHighScore = false,
+            highScore = 1_880,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 8,
+            cleanPasses = 12,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 2,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val restQuote = StoryFragmentSystem.restQuote(context, summary, Biome.DUSK_CANYON, null)
+        val gardenLine = StoryFragmentSystem.gardenReflection(context, summary)
+        val weatherThought = StoryFragmentSystem.weatherThought(context, summary)
+
+        assertTrue(restQuote.contains("Dusk Canyon", ignoreCase = true))
+        assertNotNull(gardenLine)
+        assertTrue(gardenLine!!.contains("Dusk Canyon", ignoreCase = true))
+        assertTrue(weatherThought.contains("Dusk Canyon", ignoreCase = true))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_route_peaceful_bloom_dusk_canyon"))
+    }
+
+    @Test
     fun `kind route unlocks a route reflection page`() {
         val summary = RunSummary(
             score = 990,

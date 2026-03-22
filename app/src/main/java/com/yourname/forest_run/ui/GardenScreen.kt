@@ -648,6 +648,10 @@ class GardenScreen(
             )
             y += 22f
         }
+        if (sanctuaryState.featuredPeaceLabel.isNotBlank()) {
+            canvas.drawText("World: ${sanctuaryState.featuredPeaceLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
+            y += 22f
+        }
         val killerText = summary.lastKiller?.let { formatEntityName(it) } ?: "None"
         canvas.drawText("Last killer: $killerText", lastRunRect.left + 18f, y, statsLabelPaint)
         y += 22f
@@ -667,6 +671,12 @@ class GardenScreen(
         if (sanctuaryState.carryHomeLine.isNotBlank()) {
             y += 22f
             canvas.drawText(sanctuaryState.carryHomeLine.take(94), lastRunRect.left + 18f, y, thoughtPaint)
+        }
+        if (sanctuaryState.featuredPeaceLine.isNotBlank() &&
+            sanctuaryState.featuredPeaceLine != sanctuaryState.carryHomeLine
+        ) {
+            y += 20f
+            canvas.drawText(sanctuaryState.featuredPeaceLine.take(94), lastRunRect.left + 18f, y, thoughtPaint)
         }
         if (sanctuaryState.featuredPresenceLine.isNotBlank() &&
             sanctuaryState.featuredPresenceLine != sanctuaryState.carryHomeLine

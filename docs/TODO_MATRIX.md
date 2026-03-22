@@ -44,7 +44,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: costume overlays and wardrobe flow now include milestone-earned Cat/Fox/Wolf/Dog/Owl/Eagle wardrobe rewards, and Garden now surfaces relationship-aware unlock messaging plus featured reward/cosmetic pairing instead of generic wardrobe notices; expand broader repeated-encounter unlock depth and presentation further.
 - PARTIAL: repeat-killer deja vu lines now exist in rest, Garden reflections, sanctuary badges, stronger `Same Shadow` return/carry-home beats, and new in-run collision flavor; deepen them further into stronger visual and narrative payoff.
 - DONE: dedicated dialogue bubble system.
-- PARTIAL: biome-level friendship bonus baseline now escalates into save-visible pacifist route tiers and stronger route-like rest/Garden payoff; deepen it into broader sanctuary and world-state consequence.
+- PARTIAL: biome-level friendship bonus baseline now escalates into save-visible pacifist route tiers plus named peaceful-biome carry-home, menu/rest/Garden copy, and route-sensitive reflections; deepen it further into broader sanctuary and world-state consequence.
 - PARTIAL: encounter-level history now surfaces through tracked Cat/Fox/Wolf/Dog/Owl/Eagle cues plus new collision/milestone run flavor instead of fallback one-liners alone; expand the same depth across more creatures and normal-run payoff.
 - PARTIAL: stronger spare events and pacifist route feel now include explicit `Kind` / `Merciful` / `Peaceful` run tiers, route-aware return moments, route-aware Garden reflections, route-specific memory pages, stronger mercy-miss and route-reward presentation, and clearer rest/Garden route language; complete broader world-state and feedback.
 - DONE: face/eye state system baseline for the heroine.
@@ -56,7 +56,7 @@ This file is the strict implementation ledger for everything from the original d
 - DONE: added a save-backed `ForestMoodSystem` with run classification into gentle, reckless, fearful, and steady.
 - PARTIAL: current tone now affects Garden palette, menu/rest/Garden labeling, sanctuary ambience, visible carry-home framing, and sanctuary arrival-badge presentation; deepen creature warmth and broader presentation response.
 - PARTIAL: repeated panic or repeated harm from the same creature now surfaces through cautious sanctuary traces, strained-bond `Held At A Distance` returns, stronger `Same Shadow` repeat-killer beats, Garden caution/strained reflections, and save-backed tender streaks; deepen broader creature warmth and world-state response.
-- PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, trust traces, repeat-friend `Shared Path` traces, warmer rest fragments, dedicated `Stayed Gentle` / `Kept Finding You` returns, and stronger lantern/ground-glow atmosphere; deepen the effect and tie it more directly to repeated creature-specific history.
+- PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, trust traces, repeat-friend `Shared Path` traces, warmer rest fragments, dedicated `Stayed Gentle` / `Kept Finding You` returns, stronger lantern/ground-glow atmosphere, and named peaceful-biome carry-home signs; deepen the effect and tie it more directly to repeated creature-specific history.
 - TODO: ensure the player can feel that the world has formed an opinion about how they play.
 
 ### Named Relationship Arcs
@@ -129,7 +129,7 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, quiet story fragments, shared session-arc composition, and sanctuary-derived menu/rest/Garden atmosphere, now with explicit kindness/tender streak carry-over, repeat-friend familiarity, save-backed pacifist route tiers, repeat-killer escalation beats, and milestone reward/cosmetic carry-home surfacing; deepen authored coverage, stronger Garden consequences, and richer payoff.
+- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, quiet story fragments, shared session-arc composition, and sanctuary-derived menu/rest/Garden atmosphere, now with explicit kindness/tender streak carry-over, repeat-friend familiarity, save-backed pacifist route tiers, named peaceful-biome carry-home state, repeat-killer escalation beats, and milestone reward/cosmetic carry-home surfacing; deepen authored coverage, stronger Garden consequences, and richer payoff.
 
 ## Visual And Audio TODOs
 

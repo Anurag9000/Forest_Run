@@ -15,6 +15,9 @@ data class GardenSanctuaryState(
     val carryHomeLine: String = "",
     val arrivalBadge: String = "",
     val featuredRewardLine: String = "",
+    val featuredPeaceBiome: Biome? = null,
+    val featuredPeaceLabel: String = "",
+    val featuredPeaceLine: String = "",
     val featuredPresenceLabel: String = "",
     val featuredPresenceLine: String = "",
     val featuredVisitor: EntityType? = null,
@@ -52,10 +55,36 @@ object GardenSanctuaryPlanner {
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
         val kindnessStreak = repeatedKindnessCreature?.let { PersistentMemoryManager.getKindnessStreak(appContext, it) } ?: 0
         val routeTier = summary?.pacifistRouteTier ?: PacifistRouteTier.NONE
+        val peacefulBiomes = PersistentMemoryManager.peacefulBiomes(appContext)
+        val featuredPeaceBiome = peacefulBiomes.firstOrNull()
         val featuredRewardLine = featuredReward?.let { reward ->
             reward.costumeReward?.let { costume ->
                 "${reward.summary} ${costume.displayName} is waiting in the wardrobe."
             } ?: reward.summary
+        }.orEmpty()
+        val featuredPeaceLabel = featuredPeaceBiome?.let { peace ->
+            when (routeTier) {
+                PacifistRouteTier.PEACEFUL -> "${peace.biome.displayName} At Peace"
+                PacifistRouteTier.MERCIFUL -> "${peace.biome.displayName} Softened"
+                PacifistRouteTier.KIND -> "${peace.biome.displayName} Answered Kindly"
+                PacifistRouteTier.NONE -> if (peace.friendshipCount >= 2) "${peace.biome.displayName} Remembers" else ""
+            }
+        }.orEmpty()
+        val featuredPeaceLine = featuredPeaceBiome?.let { peace ->
+            when (routeTier) {
+                PacifistRouteTier.PEACEFUL ->
+                    "${peace.biome.displayName} still feels at peace with the way you crossed it."
+                PacifistRouteTier.MERCIFUL ->
+                    "${peace.biome.displayName} sounds less guarded after the mercy you left there."
+                PacifistRouteTier.KIND ->
+                    "${peace.biome.displayName} kept a softer opinion of your return."
+                PacifistRouteTier.NONE ->
+                    if (peace.friendshipCount >= 2) {
+                        "${peace.biome.displayName} still lingers in the garden like a place that learned your gentler steps."
+                    } else {
+                        ""
+                    }
+            }
         }.orEmpty()
         val featuredPresenceLabel = featuredReward?.homePresenceLabel.orEmpty()
         val featuredPresenceLine = featuredReward?.homePresenceLine.orEmpty()
@@ -68,7 +97,7 @@ object GardenSanctuaryPlanner {
             ForestMood.RECKLESS -> 1
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3 + (moodState.moodStreak / 2).coerceAtMost(2)
-        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) + (kindnessStreak / 2).coerceAtMost(2) + if (repeatFriend != null) 1 else 0 - if (repeatedHarmCreature != null) 1 else 0 +
+        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) + (kindnessStreak / 2).coerceAtMost(2) + peacefulBiomes.size.coerceAtMost(2) + if (repeatFriend != null) 1 else 0 - if (repeatedHarmCreature != null) 1 else 0 +
             if (featuredReward != null) 1 else 0 +
             when (routeTier) {
                 PacifistRouteTier.NONE -> 0
@@ -82,7 +111,7 @@ object GardenSanctuaryPlanner {
             ForestMood.RECKLESS -> 5
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3
-        } + if ((summary?.sparedCount ?: 0) > 0) 1 else 0 + if (repeatedKindnessCreature != null) 1 else 0 +
+        } + if ((summary?.sparedCount ?: 0) > 0) 1 else 0 + if (repeatedKindnessCreature != null) 1 else 0 + if (featuredPeaceBiome != null) 1 else 0 +
             if (featuredReward != null && mood != ForestMood.FEARFUL) 1 else 0 +
             if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 1 else 0
 
@@ -91,7 +120,7 @@ object GardenSanctuaryPlanner {
             ForestMood.RECKLESS -> 0
             ForestMood.FEARFUL -> 1
             ForestMood.STEADY -> 1
-        } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0 + (kindnessStreak / 3).coerceAtMost(1) +
+        } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0 + (kindnessStreak / 3).coerceAtMost(1) + if (featuredPeaceBiome != null) 1 else 0 +
             if (featuredReward != null) 1 else 0 +
             if (routeTier == PacifistRouteTier.PEACEFUL) 1 else 0
 
@@ -100,10 +129,11 @@ object GardenSanctuaryPlanner {
             ForestMood.RECKLESS -> 0
             ForestMood.FEARFUL -> 3
             ForestMood.STEADY -> 2
-        } + if (repeatedHarmCreature != null) 1 else 0
+        } + if (repeatedHarmCreature != null) 1 else 0 - if (featuredPeaceBiome != null && routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 1 else 0
 
         val lanternGlows = warmBonds.size.coerceAtMost(3) +
             milestoneRewards.size.coerceAtMost(2) +
+            peacefulBiomes.size.coerceAtMost(2) +
             if (repeatFriend != null) 1 else 0 +
             when (routeTier) {
                 PacifistRouteTier.NONE -> 0
@@ -120,6 +150,7 @@ object GardenSanctuaryPlanner {
             ForestMood.STEADY -> 68
         } + if ((summary?.bloomConversions ?: 0) >= 2) 12 else 0 +
             if (featuredReward != null) 8 else 0 +
+            if (featuredPeaceBiome != null) 8 else 0 +
             if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 16 else 0 +
             if (repeatedKindnessCreature != null) 10 else 0
 
@@ -128,7 +159,8 @@ object GardenSanctuaryPlanner {
             ForestMood.RECKLESS -> 22
             ForestMood.FEARFUL -> 54
             ForestMood.STEADY -> 18
-        } + if (memoryPages >= 4) 6 else 0 + if (repeatedHarmCreature != null) 10 else 0
+        } + if (memoryPages >= 4) 6 else 0 + if (repeatedHarmCreature != null) 10 else 0 -
+            if (featuredPeaceBiome != null && routeTier == PacifistRouteTier.PEACEFUL) 6 else 0
 
         val traces = buildList {
             if (strainedBond != null) {
@@ -203,6 +235,7 @@ object GardenSanctuaryPlanner {
             repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature -> "Same Shadow"
             strainedBond != null -> "Held At A Distance"
             repeatedHarmCreature != null -> "Tender Return"
+            routeTier == PacifistRouteTier.PEACEFUL && featuredPeaceBiome != null -> "Peace Carried"
             routeTier == PacifistRouteTier.PEACEFUL -> "Peace Kept"
             routeTier == PacifistRouteTier.MERCIFUL -> "Mercy Stayed"
             routeTier == PacifistRouteTier.KIND -> "Kindness Stayed"
@@ -226,8 +259,12 @@ object GardenSanctuaryPlanner {
             } else {
                 "The sanctuary lowers its voice until your breathing does too."
             }
-            ForestMood.GENTLE -> if (routeTier == PacifistRouteTier.PEACEFUL) {
+            ForestMood.GENTLE -> if (routeTier == PacifistRouteTier.PEACEFUL && featuredPeaceLine.isNotBlank()) {
+                "The sanctuary has started keeping ${featuredPeaceBiome!!.biome.displayName.lowercase()} in the same soft state you left it."
+            } else if (routeTier == PacifistRouteTier.PEACEFUL) {
                 "The sanctuary has started keeping the whole shape of your peaceful runs."
+            } else if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal && featuredPeaceLine.isNotBlank()) {
+                "The sanctuary is letting ${featuredPeaceBiome!!.biome.displayName.lowercase()} answer back through the way home feels tonight."
             } else if (featuredReward != null) {
                 "The sanctuary has started holding onto ${featuredReward.homePresenceLabel.lowercase()} instead of letting it fade between returns."
             } else if (repeatFriend != null) {
@@ -261,6 +298,8 @@ object GardenSanctuaryPlanner {
                 "${formatEntityName(repeatFriend)} has started to feel less like a visit and more like a familiar part of home."
             repeatedKindnessCreature != null && kindnessStreak >= 2 ->
                 "${formatEntityName(repeatedKindnessCreature)} has started leaving trust behind instead of only memory."
+            featuredPeaceLine.isNotBlank() ->
+                featuredPeaceLine
             routeTier == PacifistRouteTier.KIND ->
                 "The garden kept the kinder shape of that run instead of letting it vanish immediately."
             routeTier == PacifistRouteTier.PEACEFUL ->
@@ -284,6 +323,9 @@ object GardenSanctuaryPlanner {
             carryHomeLine = carryHomeLine,
             arrivalBadge = arrivalBadge,
             featuredRewardLine = featuredRewardLine,
+            featuredPeaceBiome = featuredPeaceBiome?.biome,
+            featuredPeaceLabel = featuredPeaceLabel,
+            featuredPeaceLine = featuredPeaceLine,
             featuredPresenceLabel = featuredPresenceLabel,
             featuredPresenceLine = featuredPresenceLine,
             featuredVisitor = featuredVisitor,

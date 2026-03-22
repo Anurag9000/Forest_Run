@@ -25,7 +25,7 @@ Historical exact variants and file inventories remain traceability-only unless t
 | 14 | Partial | particle system exists, breathing-forest density incomplete |
 | 15 | Partial | camera effects exist |
 | 16 | Partial | flavor text exists, and hit/stumble/milestone popups now have stronger authored runtime coverage, but full quote/dialogue coverage is still missing |
-| 17 | Partial | mercy, pacifist, and friendship systems exist, run-level `Kind` / `Merciful` / `Peaceful` payoff carries into rest and Garden, and in-run mercy / route reward language is materially clearer; deeper world-state consequence still missing |
+| 17 | Partial | mercy, pacifist, and friendship systems exist, run-level `Kind` / `Merciful` / `Peaceful` payoff carries into rest and Garden, in-run mercy / route reward language is materially clearer, and biome-friendship can now surface as named peaceful-biome world-state signs; deeper world-state consequence still missing |
 | 18 | Partial | persistent encounter memory and costumes now exist in baseline form |
 | 19 | Partial | ghost exists, now delays reveal and suppresses after impacts for clearer live play, and still needs final tuning and validation |
 | 20 | Partial | audio states now use explicit state-shaped tempo/volume profiles, but the full leitmotif system is incomplete |
@@ -175,7 +175,7 @@ Goal: complete, shippable, polished store-ready product.
 - DONE: formal device acceptance checklist now exists and mirrors deterministic scenario names
 - TODO: verify every entity behavior on actual device
 - DONE: seeds, Bloom, mercy hearts, and garden loop are materially clearer in play
-- PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist, including broader relationship keepsake/costume rewards across all tracked milestone creatures, featured milestone home-presence surfacing, milestone-reactive run/Garden consequence, save-backed kindness/tender streak carry-over, repeat-killer escalation, and explicit pacifist route tiers; finish deeper cross-run payoff and richer route feel
+- PARTIAL: persistent memory, pacifist, dialogue, mercy, costumes, and facial presentation systems now exist, including broader relationship keepsake/costume rewards across all tracked milestone creatures, featured milestone home-presence surfacing, milestone-reactive run/Garden consequence, save-backed kindness/tender streak carry-over, repeat-killer escalation, explicit pacifist route tiers, and named peaceful-biome route carry-home signs; finish deeper cross-run payoff and richer route feel
 - PARTIAL: forest mood, personal return moments, major-creature relationship arcs, and quiet story fragments now exist as explicit implementation work, including repeated-harm caution beats, strained-bond `Held At A Distance` beats, repeated-kindness warmth beats, repeat-friend familiarity beats, repeat-killer `Same Shadow` beats, long-absence familiarity, merciful familiarity, peaceful-Bloom hush, milestone-sensitive warmth, Bloom-afterglow baseline, and tracked live encounter cue swaps; deeper authored payoff still needs to be built
 - PARTIAL: startup, rest, and Garden now share a baseline authored session-arc copy layer plus sanctuary-derived arrival badges and atmosphere cues; finish full sanctuary-grade atmosphere and recovery flow
 - PARTIAL: parallax ambience and leitmotif playback shaping are materially stronger; finish bespoke art, authored score, and real-device perceptual tuning

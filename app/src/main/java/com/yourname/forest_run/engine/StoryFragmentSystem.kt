@@ -42,6 +42,7 @@ object StoryFragmentSystem {
     fun weatherThought(context: Context, summary: RunSummary?): String {
         val appContext = context.applicationContext
         val mood = summary?.forestMood ?: ForestMoodSystem.currentState(appContext).currentMood
+        val peacefulBiome = PersistentMemoryManager.featuredPeaceBiome(appContext)
         val strongest = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.RECOGNITION)
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
         val strainedBond = RelationshipArcSystem.featuredStrainedBond(appContext, RelationshipStage.TRUST)
@@ -49,10 +50,16 @@ object StoryFragmentSystem {
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
         val text = when (mood) {
-            ForestMood.GENTLE -> if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL && (summary.bloomConversions >= 2 || summary.cleanPasses >= 10)) {
+            ForestMood.GENTLE -> if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL && peacefulBiome != null && (summary.bloomConversions >= 2 || summary.cleanPasses >= 10)) {
+                "The evening wind sounds like ${peacefulBiome.biome.displayName} never stopped resting after Bloom passed through it."
+            } else if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL && peacefulBiome != null) {
+                "The evening wind sounds like ${peacefulBiome.biome.displayName} is still trying to keep the peace you left there."
+            } else if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL && (summary.bloomConversions >= 2 || summary.cleanPasses >= 10)) {
                 "The evening wind sounds like it is carrying both Bloom and peace carefully around the garden."
             } else if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL) {
                 "The evening wind sounds like it is trying not to disturb the peace you carried home."
+            } else if (summary?.pacifistRouteTier == PacifistRouteTier.MERCIFUL && peacefulBiome != null) {
+                "The evening wind sounds like ${peacefulBiome.biome.displayName} learned to answer mercy more softly."
             } else if (summary?.pacifistRouteTier == PacifistRouteTier.MERCIFUL && repeatFriend != null) {
                 "The evening wind sounds like mercy taught something familiar to wait for you more softly."
             } else if (repeatFriend != null) {
@@ -118,12 +125,17 @@ object StoryFragmentSystem {
         val repeatedKiller = killer != null && hitCount >= 2
         val relationshipStage = killer?.let { RelationshipArcSystem.stageFor(context, it) }
         val strainedKiller = killer?.takeIf { RelationshipArcSystem.isStrainedBond(context, it) }
+        val peacefulBiome = PersistentMemoryManager.featuredPeaceBiome(context)
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(context)
         val warmCreature = PersistentMemoryManager.featuredWarmCreature(context)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(context)
 
         if (summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL && summary.hitsTaken == 0) {
             val text = when {
+                peacefulBiome != null && summary.bloomConversions >= 2 ->
+                    "${peacefulBiome.biome.displayName} stayed so peaceful that even Bloom felt careful there."
+                peacefulBiome != null ->
+                    "${peacefulBiome.biome.displayName} still feels like it agreed with the way you crossed it."
                 summary.bloomConversions >= 2 ->
                     "Even Bloom came down quietly, like the run never wanted to stop being kind."
                 repeatFriend != null ->
@@ -141,6 +153,8 @@ object StoryFragmentSystem {
 
         if (summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL && summary.sparedCount > 0) {
             val text = when {
+                peacefulBiome != null ->
+                    "${peacefulBiome.biome.displayName} sounds less guarded now that mercy keeps reaching it."
                 repeatFriend != null ->
                     "${formatEntityName(repeatFriend)} is starting to feel the difference between mercy and hesitation."
                 milestoneReward != null ->
@@ -319,6 +333,7 @@ object StoryFragmentSystem {
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(context)
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(context)
         val strainedBond = RelationshipArcSystem.featuredStrainedBond(context, RelationshipStage.TRUST)
+        val peacefulBiome = PersistentMemoryManager.featuredPeaceBiome(context)
         val mood = ForestMoodSystem.currentState(context).currentMood
         val repeatedKiller = PersistentMemoryManager.featuredRepeatKiller(context)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(context)
@@ -402,6 +417,14 @@ object StoryFragmentSystem {
         }
 
         if (summary != null && summary.pacifistRouteTier == PacifistRouteTier.KIND && (summary.sparedCount > 0 || summary.kindnessChain >= 4)) {
+            if (peacefulBiome != null) {
+                return StoryFragment(
+                    id = "garden_route_kind_${peacefulBiome.biome.name.lowercase()}",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = "${peacefulBiome.biome.displayName} kept the kindness of that run close instead of letting it disappear on the way home.",
+                    unlocksPageId = "page_route_kind_${peacefulBiome.biome.name.lowercase()}"
+                )
+            }
             return StoryFragment(
                 id = "garden_route_kind",
                 type = StoryFragmentType.GARDEN_REFLECTION,
@@ -411,6 +434,22 @@ object StoryFragmentSystem {
         }
 
         if (summary != null && summary.hitsTaken == 0 && summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL) {
+            if (peacefulBiome != null && summary.bloomConversions >= 2) {
+                return StoryFragment(
+                    id = "garden_route_peaceful_bloom_${peacefulBiome.biome.name.lowercase()}",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = "${peacefulBiome.biome.displayName} seems to be holding both the peace of the run and the last of Bloom in the same hush.",
+                    unlocksPageId = "page_route_peaceful_bloom_${peacefulBiome.biome.name.lowercase()}"
+                )
+            }
+            if (peacefulBiome != null) {
+                return StoryFragment(
+                    id = "garden_route_peaceful_${peacefulBiome.biome.name.lowercase()}",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = "${peacefulBiome.biome.displayName} still feels at peace with the way you came through it.",
+                    unlocksPageId = "page_route_peaceful_${peacefulBiome.biome.name.lowercase()}"
+                )
+            }
             if (summary.bloomConversions >= 2 && milestoneReward != null) {
                 return StoryFragment(
                     id = "garden_route_peaceful_bloom_${milestoneReward.type.name.lowercase()}",
@@ -428,6 +467,14 @@ object StoryFragmentSystem {
         }
 
         if (summary != null && summary.hitsTaken == 0 && summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL) {
+            if (peacefulBiome != null) {
+                return StoryFragment(
+                    id = "garden_route_merciful_${peacefulBiome.biome.name.lowercase()}",
+                    type = StoryFragmentType.GARDEN_REFLECTION,
+                    text = "${peacefulBiome.biome.displayName} feels less guarded now that mercy keeps finding it.",
+                    unlocksPageId = "page_route_merciful_${peacefulBiome.biome.name.lowercase()}"
+                )
+            }
             return StoryFragment(
                 id = "garden_route_merciful",
                 type = StoryFragmentType.GARDEN_REFLECTION,
