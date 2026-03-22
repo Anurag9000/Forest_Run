@@ -205,6 +205,9 @@ class GardenSanctuaryPlannerTest {
         assertTrue(state.featuredRewardLine.contains("Bell Charm") || state.carryHomeLine.contains("Bell Charm"))
         assertEquals("Open Gate", state.featuredPresenceLabel)
         assertTrue(state.featuredPresenceLine.contains("home", ignoreCase = true) || state.featuredPresenceLine.contains("entrance", ignoreCase = true))
+        assertEquals(EntityType.DOG, state.featuredVisitor)
+        assertEquals("Glad Return", state.featuredVisitorTitle)
+        assertTrue(state.featuredVisitorLine.contains("return", ignoreCase = true) || state.featuredVisitorLine.contains("garden", ignoreCase = true))
         assertTrue(state.traces.any { it.label == "Welcome Bell" })
     }
 

@@ -97,6 +97,8 @@ class RelationshipArcSystemTest {
         assertEquals(CostumeStyle.VINE_SCARF, reward?.costumeReward)
         assertEquals("Quick Path", reward?.homePresenceLabel)
         assertTrue(reward?.homePresenceLine?.contains("path", ignoreCase = true) == true)
+        assertEquals("Trail kept", reward?.milestoneBubbleText)
+        assertTrue(reward?.gardenReactionLine?.contains("line", ignoreCase = true) == true)
         assertTrue(RelationshipArcSystem.hasUnlockedMilestone(context, EntityType.FOX))
     }
 
@@ -115,6 +117,9 @@ class RelationshipArcSystemTest {
         assertEquals("Open Gate", RelationshipArcSystem.milestoneRewardFor(context, EntityType.DOG)?.homePresenceLabel)
         assertEquals("Night Watch", RelationshipArcSystem.milestoneRewardFor(context, EntityType.OWL)?.homePresenceLabel)
         assertEquals("High Thread", RelationshipArcSystem.milestoneRewardFor(context, EntityType.EAGLE)?.homePresenceLabel)
+        assertEquals("Gate open", RelationshipArcSystem.milestoneRewardFor(context, EntityType.DOG)?.milestoneBubbleText)
+        assertEquals("Lantern Owl", RelationshipArcSystem.milestoneRewardFor(context, EntityType.OWL)?.gardenReactionTitle)
+        assertEquals("Sky held", RelationshipArcSystem.milestoneRewardFor(context, EntityType.EAGLE)?.milestoneBubbleText)
     }
 
     @Test

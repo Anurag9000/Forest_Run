@@ -60,11 +60,13 @@ class RunFlavorPresentationTest {
     @Test
     fun `milestone cue changes with route tier and high score`() {
         val peacefulCue = RunFlavorPresentation.milestoneCue(
+            context = context,
             score = 2_000,
             routeTier = PacifistRouteTier.PEACEFUL,
             isNewHighScore = false
         )
         val highScoreCue = RunFlavorPresentation.milestoneCue(
+            context = context,
             score = 1_000,
             routeTier = PacifistRouteTier.NONE,
             isNewHighScore = true
@@ -73,5 +75,21 @@ class RunFlavorPresentationTest {
         assertEquals("Peace held", peacefulCue.bubbleText)
         assertEquals("New best", highScoreCue.bubbleText)
         assertTrue(highScoreCue.flavorText.contains("forest", ignoreCase = true))
+    }
+
+    @Test
+    fun `milestone bond can override generic milestone cue with relationship reaction`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+
+        val cue = RunFlavorPresentation.milestoneCue(
+            context = context,
+            score = 2_000,
+            routeTier = PacifistRouteTier.NONE,
+            isNewHighScore = false
+        )
+
+        assertEquals("Night kept", cue.bubbleText)
+        assertTrue(cue.flavorText.contains("owl", ignoreCase = true) || cue.flavorText.contains("stayed", ignoreCase = true))
     }
 }

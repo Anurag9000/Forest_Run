@@ -206,7 +206,7 @@ Expected qualities:
 - Partial: `ReturnMomentsSystem` now exists in baseline form.
 - Partial: `ReturnMomentsSystem` now also surfaces repeated-harm caution beats, strained-bond `Held At A Distance` returns, repeat-killer `Same Shadow` returns, repeated-kindness `Stayed Gentle` returns, repeat-friend `Kept Finding You` returns, long-absence repeat-friend `Still Here` returns, merciful repeat-friend recognition, peaceful-Bloom hush returns, cleaner familiar-return beats, kind/merciful/peaceful route returns, milestone-bond warmth, Bloom-heavy afterglow returns, and richer absence-sensitive Garden returns; broader authored combinations still need expansion.
 - Implemented: `ReturnMomentsSystem` now also exposes a non-mutating preview path so rest and startup flow can foreshadow Garden return beats without consuming return-state persistence.
-- Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, baseline milestone keepsake rewards, featured home-presence/carry-home lines, strained-bond carry-home lines, and tracked live encounter cue swaps for Cat/Fox/Wolf/Dog/Owl/Eagle; deeper authored stage consequences still need expansion.
+- Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, baseline milestone keepsake rewards, featured home-presence/carry-home lines, milestone-reactive run/Garden cueing, strained-bond carry-home lines, and tracked live encounter cue swaps for Cat/Fox/Wolf/Dog/Owl/Eagle; deeper authored stage consequences still need expansion.
 - Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
 - Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, repeated-harm caution pages, strained-bond pages, repeated-kindness warmth pages, repeated-kindness clean-return pages, repeat-friend familiarity pages, merciful repeat-friend pages, repeat-killer `Same Shadow` pages, milestone-gentleness pages, peaceful-Bloom pages, Bloom-afterglow pages, and baseline kind/peaceful-route reflections.
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, repeated-harm caution traces, strained-bond `Watchful Distance` traces, repeated-kindness trust traces, repeat-friend `Shared Path` traces, arrival badges, mist bands, lantern glows, and ground-light carry-home cues from mood, summary, and relationship state.
@@ -216,7 +216,7 @@ Expected qualities:
 - Implemented: `TreeEncounterFlavor` now centralizes authored tree payoff text so curtain/canopy/gap/gust feedback stays consistent instead of scattering across tree classes.
 - Implemented: `BirdEncounterFlavor` now centralizes authored warning/pass text for the non-relationship bird family instead of leaving bird payoff as scattered fallback strings.
 - Implemented: `AnimalEncounterFlavor` now centralizes non-relationship animal fairness/payoff text where relationship logic is not the right source of truth.
-- Implemented: `RunFlavorPresentation` now centralizes authored collision and milestone popup text so repeat-killer and route-aware in-run messaging no longer lives as scattered `GameView` strings.
+- Implemented: `RunFlavorPresentation` now centralizes authored collision and milestone popup text so repeat-killer, route-aware, and milestone-bond run messaging no longer lives as scattered `GameView` strings.
 - Partial: persistence schema now also carries kindness/tender streak state plus last-run pacifist route tier for cross-run emotional payoff, while repeat-killer escalation and repeat-friend familiarity are now derived from the persisted hit/kindness history.
 - TODO: expand persistence further for richer fragment unlock state and broader relationship milestone presentation beyond the current keepsake, wardrobe, and featured home-presence layer.
 
@@ -236,7 +236,7 @@ Expected data per major creature family:
 ### Current Status
 
 - Implemented: formal relationship stages and baseline authoring data now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
-- Partial: encounter counts, stage persistence, stage-aware dialogue, stage-aware encounter tuning, history-aware live encounter cues, and broader milestone keepsake/costume/home-presence reward hooks now exist across all tracked creatures; deepen Garden presence and broader authored consequences.
+- Partial: encounter counts, stage persistence, stage-aware dialogue, stage-aware encounter tuning, history-aware live encounter cues, and broader milestone keepsake/costume/home-presence/run-reaction reward hooks now exist across all tracked creatures; deepen Garden presence and broader authored consequences.
 
 ## 14. Personal Return Moments Authoring
 

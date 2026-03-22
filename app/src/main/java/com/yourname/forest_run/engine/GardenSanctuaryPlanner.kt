@@ -17,6 +17,9 @@ data class GardenSanctuaryState(
     val featuredRewardLine: String = "",
     val featuredPresenceLabel: String = "",
     val featuredPresenceLine: String = "",
+    val featuredVisitor: EntityType? = null,
+    val featuredVisitorTitle: String = "",
+    val featuredVisitorLine: String = "",
     val fireflyCount: Int = 0,
     val petalCount: Int = 0,
     val bloomPatchCount: Int = 0,
@@ -56,6 +59,9 @@ object GardenSanctuaryPlanner {
         }.orEmpty()
         val featuredPresenceLabel = featuredReward?.homePresenceLabel.orEmpty()
         val featuredPresenceLine = featuredReward?.homePresenceLine.orEmpty()
+        val featuredVisitor = featuredReward?.type
+        val featuredVisitorTitle = featuredReward?.gardenReactionTitle.orEmpty()
+        val featuredVisitorLine = featuredReward?.gardenReactionLine.orEmpty()
 
         val fireflies = when (mood) {
             ForestMood.GENTLE -> 4 + moodState.moodStreak.coerceAtMost(4)
@@ -280,6 +286,9 @@ object GardenSanctuaryPlanner {
             featuredRewardLine = featuredRewardLine,
             featuredPresenceLabel = featuredPresenceLabel,
             featuredPresenceLine = featuredPresenceLine,
+            featuredVisitor = featuredVisitor,
+            featuredVisitorTitle = featuredVisitorTitle,
+            featuredVisitorLine = featuredVisitorLine,
             fireflyCount = fireflies,
             petalCount = petals,
             bloomPatchCount = bloomPatches,

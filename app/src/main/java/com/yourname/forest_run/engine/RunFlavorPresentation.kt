@@ -112,6 +112,7 @@ object RunFlavorPresentation {
     }
 
     fun milestoneCue(
+        context: Context,
         score: Int,
         routeTier: PacifistRouteTier,
         isNewHighScore: Boolean
@@ -123,6 +124,16 @@ object RunFlavorPresentation {
             borderColor = Color.rgb(158, 122, 58),
             flavorColor = Color.rgb(255, 226, 172)
         )
+        RelationshipArcSystem.featuredMilestoneReward(context.applicationContext) != null -> {
+            val reward = requireNotNull(RelationshipArcSystem.featuredMilestoneReward(context.applicationContext))
+            RunFlavorCue(
+                bubbleText = reward.milestoneBubbleText,
+                flavorText = reward.milestoneFlavorText,
+                fillColor = milestoneFillColor(reward.type),
+                borderColor = milestoneBorderColor(reward.type),
+                flavorColor = milestoneFlavorColor(reward.type)
+            )
+        }
         routeTier == PacifistRouteTier.PEACEFUL -> RunFlavorCue(
             bubbleText = "Peace held",
             flavorText = "Calm carries",
@@ -159,6 +170,36 @@ object RunFlavorPresentation {
             flavorColor = Color.rgb(255, 232, 198),
             flavorSize = 24f
         )
+    }
+
+    private fun milestoneFillColor(type: EntityType): Int = when (type) {
+        EntityType.CAT -> Color.rgb(250, 232, 240)
+        EntityType.FOX -> Color.rgb(252, 230, 204)
+        EntityType.WOLF -> Color.rgb(228, 236, 246)
+        EntityType.DOG -> Color.rgb(250, 240, 198)
+        EntityType.OWL -> Color.rgb(234, 232, 252)
+        EntityType.EAGLE -> Color.rgb(228, 240, 252)
+        else -> Color.rgb(244, 240, 226)
+    }
+
+    private fun milestoneBorderColor(type: EntityType): Int = when (type) {
+        EntityType.CAT -> Color.rgb(168, 112, 136)
+        EntityType.FOX -> Color.rgb(176, 120, 72)
+        EntityType.WOLF -> Color.rgb(112, 128, 154)
+        EntityType.DOG -> Color.rgb(170, 142, 58)
+        EntityType.OWL -> Color.rgb(122, 122, 178)
+        EntityType.EAGLE -> Color.rgb(104, 138, 178)
+        else -> Color.rgb(146, 128, 94)
+    }
+
+    private fun milestoneFlavorColor(type: EntityType): Int = when (type) {
+        EntityType.CAT -> Color.rgb(255, 220, 232)
+        EntityType.FOX -> Color.rgb(255, 220, 176)
+        EntityType.WOLF -> Color.rgb(214, 228, 248)
+        EntityType.DOG -> Color.rgb(255, 232, 170)
+        EntityType.OWL -> Color.rgb(220, 224, 255)
+        EntityType.EAGLE -> Color.rgb(208, 232, 255)
+        else -> Color.rgb(255, 232, 198)
     }
 
     private fun repeatKillerFlavor(type: EntityType): String = when (type) {

@@ -668,6 +668,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 HapticManager.mediumPulse()
                 CameraSystem.addTrauma(0.3f)   // gentle nudge on 1000-pt milestone
                 val milestoneCue = RunFlavorPresentation.milestoneCue(
+                    context = context,
                     score = gameState.score,
                     routeTier = gameState.pacifistRouteTier,
                     isNewHighScore = gameState.isNewHighScore

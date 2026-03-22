@@ -416,7 +416,16 @@ class GardenScreen(
             drawWrappedCenteredText(canvas, moment.line, cw / 2f, ch * 0.182f, cw * 0.60f, returnLinePaint)
             drawReturnVisitor(canvas, cw, ch)
         }
-        if (returnMoment == null && arrivalLine.isNotBlank()) {
+        if (returnMoment == null &&
+            sanctuaryState.featuredVisitor != null &&
+            sanctuaryState.featuredVisitorLine.isNotBlank()
+        ) {
+            if (sanctuaryState.featuredVisitorTitle.isNotBlank()) {
+                canvas.drawText(sanctuaryState.featuredVisitorTitle, cw / 2f, ch * 0.16f, returnTitlePaint)
+            }
+            drawWrappedCenteredText(canvas, sanctuaryState.featuredVisitorLine, cw / 2f, ch * 0.182f, cw * 0.60f, returnLinePaint)
+            drawReturnVisitor(canvas, cw, ch)
+        } else if (returnMoment == null && arrivalLine.isNotBlank()) {
             drawWrappedCenteredText(canvas, arrivalLine, cw / 2f, ch * 0.166f, cw * 0.62f, returnLinePaint)
         }
         if (sanctuaryState.sanctuaryLine.isNotBlank()) {
@@ -759,7 +768,8 @@ class GardenScreen(
         forestMoodState = ForestMoodSystem.currentState(context)
         returnMoment = ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
         val strongestBond = RelationshipArcSystem.strongestRelationship(context)
-        returnVisitorSprite = (returnMoment?.visitor ?: strongestBond?.first)?.let(::spriteForVisitor)
+        sanctuaryState = GardenSanctuaryPlanner.build(context, lastRunSummary)
+        returnVisitorSprite = (returnMoment?.visitor ?: sanctuaryState.featuredVisitor ?: strongestBond?.first)?.let(::spriteForVisitor)
         strongestBondLabel = strongestBond?.let { "${formatEntityName(it.first)} ${it.second.displayName}" } ?: "None"
         val reward = RelationshipArcSystem.featuredMilestoneReward(context)
         milestoneRewardLabel = reward?.let {
@@ -772,7 +782,6 @@ class GardenScreen(
         gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
         weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)
         creatureThoughtLine = StoryFragmentSystem.creatureThought(context, strongestBond?.first).orEmpty()
-        sanctuaryState = GardenSanctuaryPlanner.build(context, lastRunSummary)
         arrivalLine = SessionArcComposer.gardenArrivalLine(lastRunSummary, returnMoment, sanctuaryState)
     }
 

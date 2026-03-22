@@ -154,7 +154,7 @@ Current baseline:
 - cautious relationship history now also sharpens live warning text and can leave a visibly strained bond instead of only generic caution
 - ordinary encounter beats now also swap Cat near-miss, Fox landing, Wolf charge, and Dog buddy dialogue based on relationship history instead of generic fallback cues
 - Garden now surfaces the strongest current bond and a baseline bond reward
-- milestone bonds now leave named keepsake traces in the sanctuary, with matching costume paths for Cat, Fox, Wolf, Dog, Owl, and Eagle, plus a featured home-presence line when a bond becomes the garden's clearest reward
+- milestone bonds now leave named keepsake traces in the sanctuary, with matching costume paths for Cat, Fox, Wolf, Dog, Owl, and Eagle, plus a featured home-presence line and bond-specific milestone reaction when a bond becomes the garden's clearest reward
 - deeper Garden presence and broader behavior shifts are still TODO beyond the baseline keepsake, costume, and featured home-presence layer
 
 #### 3.8.3 Personal Return Moments
@@ -163,7 +163,7 @@ Current baseline:
 - The first run of the day should be able to greet the player in a special way.
 - After several failed runs, the Garden should sometimes respond with comfort.
 - After a long absence, the forest should react like it noticed the player was gone.
-- Personal milestones should occasionally cause a favorite creature or trusted presence to appear in the Garden.
+- Personal milestones should occasionally cause a favorite creature or trusted presence to appear or react in the Garden, even when no rarer return beat overrides it.
 - Some dialogue should exist only after specific emotional states such as many deaths, many mercies, long streaks, or a first major Bloom.
 
 Current baseline:
