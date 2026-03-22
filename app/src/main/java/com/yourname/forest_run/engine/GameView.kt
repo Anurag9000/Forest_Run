@@ -510,6 +510,27 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         }
                         val killerType = entityManager.entityTypeOf(collision.entity)
                         killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        val collisionCue = RunFlavorPresentation.collisionCue(
+                            context = context,
+                            type = killerType,
+                            result = CollisionResult.HIT,
+                            routeTier = gameState.pacifistRouteTier
+                        )
+                        DialogueBubbleManager.spawn(
+                            text = collisionCue.bubbleText,
+                            anchorX = player.x + Player.BASE_WIDTH * 0.5f,
+                            anchorY = player.y - 28f,
+                            fillColor = collisionCue.fillColor,
+                            borderColor = collisionCue.borderColor
+                        )
+                        FlavorTextManager.spawn(
+                            text = collisionCue.flavorText,
+                            x = player.x + Player.BASE_WIDTH * 0.18f,
+                            y = player.y - 8f,
+                            colour = collisionCue.flavorColor,
+                            lifetime = 1.25f,
+                            size = collisionCue.flavorSize
+                        )
                         val summaryPreview = gameState.buildRunSummary(lastKiller = killerType)
                         currentRestQuote = RestQuoteManager.quoteFor(
                             context = context,
@@ -530,6 +551,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     }
                     CollisionResult.STUMBLE -> {
                         gameState.recordHit()
+                        val killerType = entityManager.entityTypeOf(collision.entity)
+                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }
                         ghostPlayer.suppress(0.9f)
                         // User Prompt "accompanied by a screen-flash of the forest's dominant color"
                         player.triggerStumble()
@@ -539,6 +562,27 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         SfxManager.playHit() // Non-lethal hit
                         CameraSystem.shakeHit()
                         HapticManager.mediumPulse()
+                        val collisionCue = RunFlavorPresentation.collisionCue(
+                            context = context,
+                            type = killerType,
+                            result = CollisionResult.STUMBLE,
+                            routeTier = gameState.pacifistRouteTier
+                        )
+                        DialogueBubbleManager.spawn(
+                            text = collisionCue.bubbleText,
+                            anchorX = player.x + Player.BASE_WIDTH * 0.5f,
+                            anchorY = player.y - 24f,
+                            fillColor = collisionCue.fillColor,
+                            borderColor = collisionCue.borderColor
+                        )
+                        FlavorTextManager.spawn(
+                            text = collisionCue.flavorText,
+                            x = player.x + Player.BASE_WIDTH * 0.20f,
+                            y = player.y - 10f,
+                            colour = collisionCue.flavorColor,
+                            lifetime = 1.0f,
+                            size = collisionCue.flavorSize
+                        )
                         // Stumble triggers brief invincibility via the player state machine
                         collision.entity.isActive = false // Despawn the animal we hit
                     }
@@ -623,6 +667,26 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (gameState.consumeMilestone()) {
                 HapticManager.mediumPulse()
                 CameraSystem.addTrauma(0.3f)   // gentle nudge on 1000-pt milestone
+                val milestoneCue = RunFlavorPresentation.milestoneCue(
+                    score = gameState.score,
+                    routeTier = gameState.pacifistRouteTier,
+                    isNewHighScore = gameState.isNewHighScore
+                )
+                DialogueBubbleManager.spawn(
+                    text = milestoneCue.bubbleText,
+                    anchorX = player.x + Player.BASE_WIDTH * 0.5f,
+                    anchorY = player.y - 28f,
+                    fillColor = milestoneCue.fillColor,
+                    borderColor = milestoneCue.borderColor
+                )
+                FlavorTextManager.spawn(
+                    text = milestoneCue.flavorText,
+                    x = player.x + Player.BASE_WIDTH * 0.20f,
+                    y = player.y - 8f,
+                    colour = milestoneCue.flavorColor,
+                    lifetime = 1.1f,
+                    size = milestoneCue.flavorSize
+                )
             }
         }
 

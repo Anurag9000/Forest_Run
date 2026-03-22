@@ -216,6 +216,7 @@ Expected qualities:
 - Implemented: `TreeEncounterFlavor` now centralizes authored tree payoff text so curtain/canopy/gap/gust feedback stays consistent instead of scattering across tree classes.
 - Implemented: `BirdEncounterFlavor` now centralizes authored warning/pass text for the non-relationship bird family instead of leaving bird payoff as scattered fallback strings.
 - Implemented: `AnimalEncounterFlavor` now centralizes non-relationship animal fairness/payoff text where relationship logic is not the right source of truth.
+- Implemented: `RunFlavorPresentation` now centralizes authored collision and milestone popup text so repeat-killer and route-aware in-run messaging no longer lives as scattered `GameView` strings.
 - Partial: persistence schema now also carries kindness/tender streak state plus last-run pacifist route tier for cross-run emotional payoff, while repeat-killer escalation and repeat-friend familiarity are now derived from the persisted hit/kindness history.
 - TODO: expand persistence further for richer fragment unlock state and broader relationship milestone presentation.
 

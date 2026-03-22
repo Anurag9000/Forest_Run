@@ -10,6 +10,8 @@ class BirdEncounterFlavorTest {
     fun `duck pass line rewards staying low`() {
         assertEquals("Good duck.", BirdEncounterFlavor.duckPass(stayedLow = true))
         assertEquals("Low pass.", BirdEncounterFlavor.duckPass(stayedLow = false))
+        assertEquals("Too high.", BirdEncounterFlavor.duckHit(0))
+        assertEquals("Same low lane.", BirdEncounterFlavor.duckHit(2))
     }
 
     @Test
@@ -18,6 +20,7 @@ class BirdEncounterFlavorTest {
         assertEquals("Catch the rhythm.", BirdEncounterFlavor.titWarning(5))
         assertEquals("In sync.", BirdEncounterFlavor.titPass(4))
         assertEquals("Held the rhythm.", BirdEncounterFlavor.titPass(5))
+        assertEquals("Lost the rhythm.", BirdEncounterFlavor.titHit(1))
     }
 
     @Test
@@ -26,5 +29,6 @@ class BirdEncounterFlavorTest {
         assertTrue(BirdEncounterFlavor.chickadeePass(130f).contains("flutter"))
         assertEquals("Watch the jitter.", BirdEncounterFlavor.chickadeeWarning(80f))
         assertEquals("Soft wings.", BirdEncounterFlavor.chickadeePass(80f))
+        assertEquals("Same flutter rush.", BirdEncounterFlavor.chickadeeHit(2))
     }
 }

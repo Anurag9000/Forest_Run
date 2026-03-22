@@ -234,8 +234,8 @@ Jump height is tied to touch duration. Short tap = low hop. Full hold = maximum 
 
 ### Current Status
 
-- Implemented: score, distance, milestones, mercy hearts.
-- TODO: stronger close-call payoff, more obvious score logic, and broader player understanding of kindness / mercy bonuses beyond the now-stronger in-run language baseline.
+- Implemented: score, distance, milestones, mercy hearts, and baseline milestone popups.
+- PARTIAL: collision and milestone events now use stronger in-run authored text, including repeat-killer `Again?` style messaging and route-aware milestone lines; deeper close-call payoff, broader score readability, and broader kindness/mercy understanding still remain.
 
 ---
 

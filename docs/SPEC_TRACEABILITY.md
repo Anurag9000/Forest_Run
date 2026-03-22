@@ -534,6 +534,7 @@ Dog:
 #### In-Run Flavour Text
 
 - `Partial`: floating flavor text exists.
+- `Partial`: popup coverage is broader now through authored hit/stumble/milestone runtime cues and repeat-killer in-run messaging.
 - `TODO`: full popup catalog and stronger trigger coverage.
 
 #### Mercy & Pacifist Systems
@@ -548,7 +549,7 @@ Dog:
 #### Persistent Memory
 
 - `Implemented`: encounter counters and costume unlock overlays exist in baseline form.
-- `TODO`: deeper deja vu repeat-killer system and richer cross-run presentation.
+- `Partial`: repeat-killer deja vu now also surfaces in-run through collision flavor, while richer cross-run presentation still remains open.
 
 #### Ghost Run — Spirit Of The Best
 
@@ -570,7 +571,7 @@ Dog:
 #### Dialogue Bubbles
 
 - `Implemented`: dedicated dialogue bubble system exists.
-- `TODO`: broaden trigger coverage and line tables.
+- `Partial`: trigger coverage is stronger through new collision and milestone runtime cues, but line tables and breadth still remain open.
 
 #### New Kotlin Systems Summary
 

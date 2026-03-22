@@ -24,7 +24,7 @@ Historical exact variants and file inventories remain traceability-only unless t
 | 13 | Partial | biome cycle exists, full mood transformation incomplete |
 | 14 | Partial | particle system exists, breathing-forest density incomplete |
 | 15 | Partial | camera effects exist |
-| 16 | Partial | flavor text exists, full quote/dialogue coverage missing |
+| 16 | Partial | flavor text exists, and hit/stumble/milestone popups now have stronger authored runtime coverage, but full quote/dialogue coverage is still missing |
 | 17 | Partial | mercy, pacifist, and friendship systems exist, run-level `Kind` / `Merciful` / `Peaceful` payoff carries into rest and Garden, and in-run mercy / route reward language is materially clearer; deeper world-state consequence still missing |
 | 18 | Partial | persistent encounter memory and costumes now exist in baseline form |
 | 19 | Partial | ghost exists, now delays reveal and suppresses after impacts for clearer live play, and still needs final tuning and validation |

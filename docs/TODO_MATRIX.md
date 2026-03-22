@@ -42,10 +42,10 @@ This file is the strict implementation ledger for everything from the original d
 - PARTIAL: `PersistentMemoryManager` now also tracks save-backed kindness and tender streaks so repeated mercy or repeated hurt can surface in return moments, fragments, and sanctuary carry-home; expand it further into full repeated-encounter payoff and unlock architecture.
 - DONE: canonical post-run summary payload now exists across rest and Garden.
 - PARTIAL: costume overlays and wardrobe flow now include milestone-earned Cat/Fox/Wolf/Dog/Owl/Eagle wardrobe rewards, and Garden now surfaces relationship-aware unlock messaging plus featured reward/cosmetic pairing instead of generic wardrobe notices; expand broader repeated-encounter unlock depth and presentation further.
-- PARTIAL: repeat-killer deja vu lines now exist in rest, Garden reflections, sanctuary badges, and stronger `Same Shadow` return/carry-home beats; deepen them further into stronger visual and narrative payoff.
+- PARTIAL: repeat-killer deja vu lines now exist in rest, Garden reflections, sanctuary badges, stronger `Same Shadow` return/carry-home beats, and new in-run collision flavor; deepen them further into stronger visual and narrative payoff.
 - DONE: dedicated dialogue bubble system.
 - PARTIAL: biome-level friendship bonus baseline now escalates into save-visible pacifist route tiers and stronger route-like rest/Garden payoff; deepen it into broader sanctuary and world-state consequence.
-- PARTIAL: encounter-level history now surfaces through tracked Cat/Fox/Wolf/Dog cues instead of fallback one-liners; expand the same depth across more creatures and normal-run payoff.
+- PARTIAL: encounter-level history now surfaces through tracked Cat/Fox/Wolf/Dog/Owl/Eagle cues plus new collision/milestone run flavor instead of fallback one-liners alone; expand the same depth across more creatures and normal-run payoff.
 - PARTIAL: stronger spare events and pacifist route feel now include explicit `Kind` / `Merciful` / `Peaceful` run tiers, route-aware return moments, route-aware Garden reflections, route-specific memory pages, stronger mercy-miss and route-reward presentation, and clearer rest/Garden route language; complete broader world-state and feedback.
 - DONE: face/eye state system baseline for the heroine.
 
