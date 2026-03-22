@@ -15,6 +15,8 @@ data class GardenSanctuaryState(
     val carryHomeLine: String = "",
     val arrivalBadge: String = "",
     val featuredRewardLine: String = "",
+    val featuredPresenceLabel: String = "",
+    val featuredPresenceLine: String = "",
     val fireflyCount: Int = 0,
     val petalCount: Int = 0,
     val bloomPatchCount: Int = 0,
@@ -52,6 +54,8 @@ object GardenSanctuaryPlanner {
                 "${reward.summary} ${costume.displayName} is waiting in the wardrobe."
             } ?: reward.summary
         }.orEmpty()
+        val featuredPresenceLabel = featuredReward?.homePresenceLabel.orEmpty()
+        val featuredPresenceLine = featuredReward?.homePresenceLine.orEmpty()
 
         val fireflies = when (mood) {
             ForestMood.GENTLE -> 4 + moodState.moodStreak.coerceAtMost(4)
@@ -59,6 +63,7 @@ object GardenSanctuaryPlanner {
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3 + (moodState.moodStreak / 2).coerceAtMost(2)
         } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) + (kindnessStreak / 2).coerceAtMost(2) + if (repeatFriend != null) 1 else 0 - if (repeatedHarmCreature != null) 1 else 0 +
+            if (featuredReward != null) 1 else 0 +
             when (routeTier) {
                 PacifistRouteTier.NONE -> 0
                 PacifistRouteTier.KIND -> 1
@@ -72,6 +77,7 @@ object GardenSanctuaryPlanner {
             ForestMood.FEARFUL -> 2
             ForestMood.STEADY -> 3
         } + if ((summary?.sparedCount ?: 0) > 0) 1 else 0 + if (repeatedKindnessCreature != null) 1 else 0 +
+            if (featuredReward != null && mood != ForestMood.FEARFUL) 1 else 0 +
             if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 1 else 0
 
         val bloomPatches = when (mood) {
@@ -80,6 +86,7 @@ object GardenSanctuaryPlanner {
             ForestMood.FEARFUL -> 1
             ForestMood.STEADY -> 1
         } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0 + (kindnessStreak / 3).coerceAtMost(1) +
+            if (featuredReward != null) 1 else 0 +
             if (routeTier == PacifistRouteTier.PEACEFUL) 1 else 0
 
         val mistBands = when (mood) {
@@ -106,6 +113,7 @@ object GardenSanctuaryPlanner {
             ForestMood.FEARFUL -> 54
             ForestMood.STEADY -> 68
         } + if ((summary?.bloomConversions ?: 0) >= 2) 12 else 0 +
+            if (featuredReward != null) 8 else 0 +
             if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 16 else 0 +
             if (repeatedKindnessCreature != null) 10 else 0
 
@@ -214,6 +222,8 @@ object GardenSanctuaryPlanner {
             }
             ForestMood.GENTLE -> if (routeTier == PacifistRouteTier.PEACEFUL) {
                 "The sanctuary has started keeping the whole shape of your peaceful runs."
+            } else if (featuredReward != null) {
+                "The sanctuary has started holding onto ${featuredReward.homePresenceLabel.lowercase()} instead of letting it fade between returns."
             } else if (repeatFriend != null) {
                 "The sanctuary has started behaving like some bonds expect your return, not just welcome it."
             } else if (warmBonds.isNotEmpty()) {
@@ -240,7 +250,7 @@ object GardenSanctuaryPlanner {
             repeatedHarmCreature != null ->
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
             featuredReward != null ->
-                featuredRewardLine
+                featuredPresenceLine.ifBlank { featuredRewardLine }
             repeatFriend != null ->
                 "${formatEntityName(repeatFriend)} has started to feel less like a visit and more like a familiar part of home."
             repeatedKindnessCreature != null && kindnessStreak >= 2 ->
@@ -268,6 +278,8 @@ object GardenSanctuaryPlanner {
             carryHomeLine = carryHomeLine,
             arrivalBadge = arrivalBadge,
             featuredRewardLine = featuredRewardLine,
+            featuredPresenceLabel = featuredPresenceLabel,
+            featuredPresenceLine = featuredPresenceLine,
             fireflyCount = fireflies,
             petalCount = petals,
             bloomPatchCount = bloomPatches,

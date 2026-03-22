@@ -121,6 +121,8 @@ class GardenScreen(
     private var strongestBondLabel = "None"
     private var milestoneRewardLabel = "None"
     private var milestoneRewardSummary = ""
+    private var milestonePresenceLabel = "None"
+    private var milestonePresenceLine = ""
     private var memoryPageCount = 0
     private var gardenReflectionLine = ""
     private var creatureThoughtLine = ""
@@ -521,7 +523,7 @@ class GardenScreen(
     }
 
     private fun drawStatsPanel(canvas: Canvas, cw: Float, ch: Float) {
-        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.48f)
+        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.58f)
         canvas.drawRoundRect(statsRect, 18f, 18f, statsPanelPaint)
         canvas.drawRoundRect(statsRect, 18f, 18f, statsBorderPaint)
 
@@ -545,6 +547,14 @@ class GardenScreen(
         canvas.drawText(milestoneRewardLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
         if (milestoneRewardSummary.isNotBlank()) {
             canvas.drawText(milestoneRewardSummary.take(28), statsRect.left + 18f, y + 36f, statsLabelPaint)
+            y += 58f
+        } else {
+            y += 44f
+        }
+        canvas.drawText("Home Feature", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(milestonePresenceLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
+        if (milestonePresenceLine.isNotBlank()) {
+            canvas.drawText(milestonePresenceLine.take(28), statsRect.left + 18f, y + 36f, statsLabelPaint)
             y += 58f
         } else {
             y += 44f
@@ -649,6 +659,12 @@ class GardenScreen(
             y += 22f
             canvas.drawText(sanctuaryState.carryHomeLine.take(94), lastRunRect.left + 18f, y, thoughtPaint)
         }
+        if (sanctuaryState.featuredPresenceLine.isNotBlank() &&
+            sanctuaryState.featuredPresenceLine != sanctuaryState.carryHomeLine
+        ) {
+            y += 20f
+            canvas.drawText(sanctuaryState.featuredPresenceLine.take(94), lastRunRect.left + 18f, y, thoughtPaint)
+        }
     }
 
     private fun drawCostumeIcon(canvas: Canvas, rect: RectF, style: CostumeStyle, unlocked: Boolean) {
@@ -750,6 +766,8 @@ class GardenScreen(
             it.costumeReward?.let { costume -> "${it.label} / ${costume.displayName}" } ?: it.label
         } ?: "None"
         milestoneRewardSummary = reward?.summary.orEmpty()
+        milestonePresenceLabel = reward?.homePresenceLabel ?: "None"
+        milestonePresenceLine = reward?.homePresenceLine.orEmpty()
         memoryPageCount = StoryFragmentSystem.memoryPageCount(context)
         gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
         weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)

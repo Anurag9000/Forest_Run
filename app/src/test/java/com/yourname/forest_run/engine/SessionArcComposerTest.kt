@@ -165,4 +165,34 @@ class SessionArcComposerTest {
         assertTrue(menuCopy.atmosphereLine.contains("Bloom") || menuCopy.atmosphereLine.contains("hush"))
         assertTrue(restCopy.subtitle.contains("Bloom") || restCopy.carryHomeLine.contains("Bloom"))
     }
+
+    @Test
+    fun `milestone home presence can carry menu and rest copy`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        val summary = RunSummary(
+            score = 910,
+            distanceM = 620f,
+            isNewHighScore = false,
+            highScore = 1_340,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 4,
+            cleanPasses = 7,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 6,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.STEADY
+        )
+        SaveManager.saveLastRunSummary(context, summary)
+
+        val menuCopy = SessionArcComposer.menuCopy(context)
+        val restCopy = SessionArcComposer.restCopy(context, summary)
+
+        assertTrue(menuCopy.atmosphereLine.contains("night", ignoreCase = true) || menuCopy.atmosphereLine.contains("dark edge", ignoreCase = true))
+        assertTrue(restCopy.carryHomeLine.contains("night", ignoreCase = true) || restCopy.carryHomeLine.contains("dark edge", ignoreCase = true))
+    }
 }

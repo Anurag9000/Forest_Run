@@ -38,7 +38,9 @@ data class RelationshipMilestoneReward(
     val label: String,
     val summary: String,
     val traceLabel: String,
-    val costumeReward: CostumeStyle? = null
+    val costumeReward: CostumeStyle? = null,
+    val homePresenceLabel: String,
+    val homePresenceLine: String
 )
 
 object RelationshipArcSystem {
@@ -208,42 +210,54 @@ object RelationshipArcSystem {
                 label = "Napping Patch",
                 summary = "The cat has made a quiet patch of home for both of you.",
                 traceLabel = "Napping Patch",
-                costumeReward = CostumeStyle.FLOWER_CROWN
+                costumeReward = CostumeStyle.FLOWER_CROWN,
+                homePresenceLabel = "Shared Rest",
+                homePresenceLine = "The cat has started leaving a shared quiet behind, like home already expected both of you."
             )
             EntityType.FOX -> RelationshipMilestoneReward(
                 type = type,
                 label = "Trail Ribbon",
                 summary = "The fox leaves a bright trail that now feels meant for you.",
                 traceLabel = "Trail Ribbon",
-                costumeReward = CostumeStyle.VINE_SCARF
+                costumeReward = CostumeStyle.VINE_SCARF,
+                homePresenceLabel = "Quick Path",
+                homePresenceLine = "The fox has turned one line through the garden into a path that already knows your rhythm."
             )
             EntityType.WOLF -> RelationshipMilestoneReward(
                 type = type,
                 label = "Watch Stone",
                 summary = "The wolf's silence now feels like a guard post instead of a warning.",
                 traceLabel = "Watch Stone",
-                costumeReward = CostumeStyle.MOON_CAPE
+                costumeReward = CostumeStyle.MOON_CAPE,
+                homePresenceLabel = "Kept Watch",
+                homePresenceLine = "The wolf has left a steadier kind of watch behind, so the garden feels guarded instead of judged."
             )
             EntityType.DOG -> RelationshipMilestoneReward(
                 type = type,
                 label = "Welcome Bell",
                 summary = "The dog's joy has turned into something the whole garden keeps.",
                 traceLabel = "Welcome Bell",
-                costumeReward = CostumeStyle.BELL_CHARM
+                costumeReward = CostumeStyle.BELL_CHARM,
+                homePresenceLabel = "Open Gate",
+                homePresenceLine = "The dog has made the whole entrance feel eager for you, like home learned how to rush forward first."
             )
             EntityType.OWL -> RelationshipMilestoneReward(
                 type = type,
                 label = "Lantern Branch",
                 summary = "The owl has made the dark edge of home feel watched over.",
                 traceLabel = "Lantern Branch",
-                costumeReward = CostumeStyle.LANTERN_PIN
+                costumeReward = CostumeStyle.LANTERN_PIN,
+                homePresenceLabel = "Night Watch",
+                homePresenceLine = "The owl has left a calmer kind of night behind, so the dark edge feels kept instead of merely quiet."
             )
             EntityType.EAGLE -> RelationshipMilestoneReward(
                 type = type,
                 label = "Sky Thread",
                 summary = "The eagle has left a stern but welcome line through the sky above home.",
                 traceLabel = "Sky Thread",
-                costumeReward = CostumeStyle.SKY_SASH
+                costumeReward = CostumeStyle.SKY_SASH,
+                homePresenceLabel = "High Thread",
+                homePresenceLine = "The eagle has taught the sky above home to feel held together instead of left too wide."
             )
             else -> null
         }

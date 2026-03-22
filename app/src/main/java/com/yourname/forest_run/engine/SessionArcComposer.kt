@@ -36,6 +36,8 @@ object SessionArcComposer {
                 "Mercy left the path quieter than usual."
             summary.forestMood == ForestMood.FEARFUL || summary.hitsTaken >= 2 ->
                 "Home keeps its voice low until the roughness leaves your hands."
+            sanctuary.featuredPresenceLine.isNotBlank() ->
+                sanctuary.featuredPresenceLine
             repeatFriend != null ->
                 sanctuary.carryHomeLine.ifBlank { RelationshipArcSystem.repeatFriendLine(appContext, repeatFriend) }
             summary.forestMood == ForestMood.GENTLE && summary.sparedCount > 0 ->
@@ -57,6 +59,8 @@ object SessionArcComposer {
             summary == null -> "the willow kept your place"
             summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
                 "the garden still sounds softer after that run"
+            sanctuary.featuredPresenceLabel.isNotBlank() ->
+                "${sanctuary.featuredPresenceLabel.lowercase()} is still waiting at home"
             repeatFriend != null -> "someone familiar is already part of the way home sounds"
             summary.forestMood == ForestMood.FEARFUL -> "the path can wait for steadier hands"
             summary.forestMood == ForestMood.GENTLE -> "the garden remembers the softer version of that run"
@@ -72,6 +76,7 @@ object SessionArcComposer {
         val readySupportLine = when {
             summary == null -> "the first steps are enough"
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL -> "carry the quiet you earned back into the path"
+            sanctuary.featuredPresenceLabel.isNotBlank() -> "carry that familiar homeward sign back into the path"
             repeatFriend != null -> "carry that familiar warmth back into the path"
             summary.forestMood == ForestMood.GENTLE -> "carry the gentler pace with you"
             summary.forestMood == ForestMood.FEARFUL -> "nothing is asking for speed first"
@@ -112,6 +117,9 @@ object SessionArcComposer {
 
         val carryHomeLine = previewMoment?.line?.ifBlank { null }
             ?: sanctuary.carryHomeLine.ifBlank {
+                if (sanctuary.featuredPresenceLine.isNotBlank()) {
+                    sanctuary.featuredPresenceLine
+                } else {
                 when (summary.forestMood) {
                     ForestMood.GENTLE -> if (summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL && summary.sparedCount > 0) {
                         "Mercy is already changing the way home sounds."
@@ -121,6 +129,7 @@ object SessionArcComposer {
                     ForestMood.FEARFUL -> "Home is still making a quieter place for this run."
                     ForestMood.RECKLESS -> "Even a stirred-up run is allowed to settle into home."
                     ForestMood.STEADY -> "Home keeps a little of the steadier shape that run left behind."
+                }
                 }
             }
 
@@ -145,6 +154,9 @@ object SessionArcComposer {
         if (returnMoment != null) return ""
         if (sanctuaryState.carryHomeLine.isNotBlank()) {
             return sanctuaryState.carryHomeLine
+        }
+        if (sanctuaryState.featuredPresenceLine.isNotBlank()) {
+            return sanctuaryState.featuredPresenceLine
         }
         if (summary == null) {
             return "The garden kept a quiet place open for you."
