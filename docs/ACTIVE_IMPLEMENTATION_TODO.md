@@ -30,7 +30,6 @@ Completion standard for removing an item:
 
 ## 2. Emotional Systems
 
-- [ ] Expand `PersistentMemoryManager` / `SaveManager` into richer repeated-history presentation and unlock state.
 - [ ] Broaden `RelationshipArcSystem` positive familiarity so live encounters feel more personally warm.
 - [ ] Broaden `RelationshipArcSystem` negative consequence so disappointment, fear, caution, and tension are more specific.
 - [ ] Add broader milestone rewards that feel relational, not merely numeric or cosmetic.

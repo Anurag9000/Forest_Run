@@ -55,20 +55,19 @@ object GardenSanctuaryPlanner {
         val milestoneRewards = RelationshipArcSystem.unlockedMilestoneTypes(appContext)
             .mapNotNull { RelationshipArcSystem.milestoneRewardFor(appContext, it) }
         val featuredReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
-        val repeatedKillerCreature = PersistentMemoryManager.featuredRepeatKiller(appContext)
-        val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
+        val historySnapshot = PersistentMemoryManager.repeatedHistorySnapshot(appContext)
+        val historyUnlock = historySnapshot.featuredUnlock
+        val repeatedKillerCreature = historySnapshot.featuredRepeatKiller
+        val repeatedHarmCreature = historySnapshot.featuredTenderCreature
             ?: (summary?.lastKiller ?: PersistentMemoryManager.getLastKiller(appContext))?.takeIf {
                 PersistentMemoryManager.getHitCount(appContext, it) >= 2
             }
-        val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
-        val kindnessStreak = repeatedKindnessCreature?.let { PersistentMemoryManager.getKindnessStreak(appContext, it) } ?: 0
+        val repeatedKindnessCreature = historySnapshot.featuredWarmCreature
+        val kindnessStreak = historySnapshot.featuredWarmStreak
         val routeTier = summary?.pacifistRouteTier ?: PacifistRouteTier.NONE
         val peacefulBiomes = PersistentMemoryManager.peacefulBiomes(appContext)
-        val featuredPeaceBiome = peacefulBiomes.firstOrNull()
-        val cactusBloom = PersistentMemoryManager.featuredCleanPass(
-            appContext,
-            candidates = setOf(EntityType.CACTUS)
-        )
+        val featuredPeaceBiome = historySnapshot.featuredPeaceBiome ?: peacefulBiomes.firstOrNull()
+        val cactusBloom = historySnapshot.featuredCleanPass?.takeIf { it.type == EntityType.CACTUS }
         val featuredRewardLine = featuredReward?.let { reward ->
             reward.costumeReward?.let { costume ->
                 "${reward.summary} ${costume.displayName} is waiting in the wardrobe."
@@ -393,6 +392,8 @@ object GardenSanctuaryPlanner {
                 "${formatEntityName(strongestBond)} still lingers in the afterglow you carried back."
             strongestBond != null && RelationshipArcSystem.isWarmBond(appContext, strongestBond) ->
                 "${formatEntityName(strongestBond)} has started to feel like part of home."
+            historyUnlock != null ->
+                historyUnlock.line
             (summary?.forestMood ?: mood) == ForestMood.FEARFUL ->
                 "Nothing here asks you to hurry before you are ready."
             else ->
@@ -431,6 +432,15 @@ object GardenSanctuaryPlanner {
                     HomecomingConsequence(
                         label = "World: ${featuredPeaceLabel.take(22)}",
                         line = featuredPeaceLine
+                    )
+                )
+            }
+
+            if (historyUnlock != null) {
+                add(
+                    HomecomingConsequence(
+                        label = "Memory: ${historyUnlock.label.take(20)}",
+                        line = historyUnlock.line
                     )
                 )
             }

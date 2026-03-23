@@ -372,4 +372,34 @@ class SessionArcComposerTest {
         assertTrue(copy.standingSupportLine.contains("speed", ignoreCase = true) || copy.standingSupportLine.contains("steadiness", ignoreCase = true))
         assertTrue(copy.readyLaunchLine.contains("quieter", ignoreCase = true) || copy.readyLaunchLine.contains("rushed", ignoreCase = true))
     }
+
+    @Test
+    fun `history unlock can surface as opening sign and atmosphere fallback`() {
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.CACTUS) }
+        SaveManager.saveLastRunSummary(
+            context,
+            RunSummary(
+                score = 720,
+                distanceM = 540f,
+                isNewHighScore = false,
+                highScore = 1_220,
+                mercyHearts = 1,
+                mercyMisses = 1,
+                kindnessChain = 2,
+                cleanPasses = 6,
+                sparedCount = 0,
+                hitsTaken = 0,
+                seedsCollected = 5,
+                bloomConversions = 0,
+                lastKiller = null,
+                restQuote = "Quietly.",
+                forestMood = ForestMood.STEADY
+            )
+        )
+
+        val copy = SessionArcComposer.menuCopy(context)
+
+        assertTrue(copy.homeSignLabel.contains("Needle", ignoreCase = true) || copy.homeSignLabel.contains("Clean", ignoreCase = true))
+        assertTrue(copy.atmosphereLine.contains("memory", ignoreCase = true) || copy.secondaryAtmosphereLine.contains("memory", ignoreCase = true))
+    }
 }

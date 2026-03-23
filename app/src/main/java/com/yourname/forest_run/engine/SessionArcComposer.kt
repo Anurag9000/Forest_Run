@@ -31,6 +31,7 @@ object SessionArcComposer {
         val summary = SaveManager.loadLastRunSummary(appContext)
         val sanctuary = GardenSanctuaryPlanner.build(appContext, summary)
         val repeatFriend = RelationshipArcSystem.featuredRepeatFriend(appContext)
+        val historyUnlock = PersistentMemoryManager.featuredHistoryUnlock(appContext)
 
         val atmosphereLine = when {
             summary == null -> "The willow has kept the first path quiet for you."
@@ -57,6 +58,8 @@ object SessionArcComposer {
                 "A little of Bloom is still hanging in the branches."
             sanctuary.homeCharacterLine.isNotBlank() ->
                 sanctuary.homeCharacterLine
+            historyUnlock != null ->
+                historyUnlock.line
             sanctuary.carryHomeLine.isNotBlank() ->
                 sanctuary.carryHomeLine
             else ->
@@ -70,6 +73,8 @@ object SessionArcComposer {
                 "${sanctuary.featuredPeaceLabel} is still visible in the way the garden is holding itself."
             sanctuary.featuredPresenceLabel.isNotBlank() ->
                 "${sanctuary.featuredPresenceLabel} is still part of the air before the run starts."
+            historyUnlock != null ->
+                historyUnlock.line
             repeatFriend != null ->
                 "Something familiar already belongs to the quiet before the run."
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL && summary.bloomConversions >= 2 ->
@@ -90,6 +95,7 @@ object SessionArcComposer {
             summary == null -> "Quiet Start"
             sanctuary.featuredPeaceLabel.isNotBlank() -> sanctuary.featuredPeaceLabel
             sanctuary.featuredPresenceLabel.isNotBlank() -> sanctuary.featuredPresenceLabel
+            historyUnlock != null -> historyUnlock.label
             sanctuary.homeCharacterLabel.isNotBlank() -> sanctuary.homeCharacterLabel
             sanctuary.arrivalBadge.isNotBlank() -> sanctuary.arrivalBadge
             repeatFriend != null -> "Familiar Return"
@@ -111,6 +117,8 @@ object SessionArcComposer {
                 "the garden still sounds softer after that run"
             sanctuary.featuredPresenceLabel.isNotBlank() ->
                 "${sanctuary.featuredPresenceLabel.lowercase()} is still waiting at home"
+            historyUnlock != null ->
+                "${historyUnlock.label.lowercase()} is still part of the way home sounds"
             repeatFriend != null -> "someone familiar is already part of the way home sounds"
             summary.forestMood == ForestMood.FEARFUL -> "the path can wait for steadier hands"
             summary.forestMood == ForestMood.GENTLE -> "the garden remembers the softer version of that run"
@@ -138,6 +146,7 @@ object SessionArcComposer {
             summary == null -> "the garden is making room for the first motion"
             sanctuary.featuredPeaceLine.isNotBlank() -> sanctuary.featuredPeaceLine
             sanctuary.featuredPresenceLine.isNotBlank() -> sanctuary.featuredPresenceLine
+            historyUnlock != null -> historyUnlock.line
             summary.forestMood == ForestMood.FEARFUL -> "nothing here needs speed before steadiness"
             repeatFriend != null -> "the familiar part of home is staying close while you stand"
             summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
@@ -151,6 +160,7 @@ object SessionArcComposer {
             sanctuary.featuredPeaceLabel.isNotBlank() -> "carry that calmer sign back into the path"
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL -> "carry the quiet you earned back into the path"
             sanctuary.featuredPresenceLabel.isNotBlank() -> "carry that familiar homeward sign back into the path"
+            historyUnlock != null -> "carry that remembered shape back into the path"
             repeatFriend != null -> "carry that familiar warmth back into the path"
             summary.forestMood == ForestMood.GENTLE -> "carry the gentler pace with you"
             summary.forestMood == ForestMood.FEARFUL -> "nothing is asking for speed first"
@@ -162,6 +172,7 @@ object SessionArcComposer {
             summary == null -> "the first lane is already open"
             sanctuary.featuredPeaceLabel.isNotBlank() -> "${sanctuary.featuredPeaceLabel} is the first thing leaving with you"
             sanctuary.featuredPresenceLabel.isNotBlank() -> "${sanctuary.featuredPresenceLabel} is already part of the start"
+            historyUnlock != null -> "${historyUnlock.label} is already part of the start"
             repeatFriend != null -> "the path already sounds like familiar company"
             summary.forestMood == ForestMood.FEARFUL -> "take the quieter opening, not the rushed one"
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL -> "start with the hush still intact"

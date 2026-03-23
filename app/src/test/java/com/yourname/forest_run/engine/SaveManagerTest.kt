@@ -186,4 +186,14 @@ class SaveManagerTest {
             SaveManager.loadUnlockedMemoryPages(context)
         )
     }
+
+    @Test
+    fun `history marks persist across reloads`() {
+        SaveManager.saveUnlockedHistoryMarks(context, setOf("history_kindness_cat", "history_repeat_killer_wolf"))
+
+        assertEquals(
+            setOf("history_kindness_cat", "history_repeat_killer_wolf"),
+            SaveManager.loadUnlockedHistoryMarks(context)
+        )
+    }
 }

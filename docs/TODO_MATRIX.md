@@ -41,7 +41,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 ## Personality TODOs
 
 - PARTIAL: contextual rest quotes now react to biome, killer, route tier, clean returns, peaceful Bloom afterglow, merciful familiarity, and stronger bond/repeat-friend state, and rest/Garden now compose varied route/world/weather/creature reflection sets instead of a fixed line order; expand quote pools and trigger richness further.
-- PARTIAL: `PersistentMemoryManager` now also tracks save-backed kindness and tender streaks so repeated mercy or repeated hurt can surface in return moments, fragments, and sanctuary carry-home; expand it further into full repeated-encounter payoff and unlock architecture.
+- PARTIAL: `PersistentMemoryManager` / `SaveManager` now also provide a canonical repeated-history snapshot plus saved unlock marks for kindness, caution, repeat-killer, clean-pass, and peaceful-biome memory, and sanctuary/menu copy now consume that shared presentation state instead of re-deriving it ad hoc; deepen the downstream emotional consequences further.
 - DONE: canonical post-run summary payload now exists across rest and Garden.
 - PARTIAL: costume overlays and wardrobe flow now include milestone-earned Cat/Fox/Wolf/Dog/Owl/Eagle wardrobe rewards, and Garden now surfaces relationship-aware unlock messaging plus featured reward/cosmetic pairing instead of generic wardrobe notices; expand broader repeated-encounter unlock depth and presentation further.
 - PARTIAL: repeat-killer deja vu lines now exist in rest, Garden reflections, sanctuary badges, stronger `Same Shadow` return/carry-home beats, and new in-run collision flavor; deepen them further into stronger visual and narrative payoff.

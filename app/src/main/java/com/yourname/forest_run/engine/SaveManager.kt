@@ -54,6 +54,7 @@ object SaveManager {
     private const val KEY_ROUGH_RUN_STREAK = "rough_run_streak"
     private const val KEY_UNLOCKED_MEMORY_PAGES = "unlocked_memory_pages"
     private const val KEY_UNLOCKED_RELATIONSHIP_MILESTONES = "unlocked_relationship_milestones"
+    private const val KEY_UNLOCKED_HISTORY_MARKS = "unlocked_history_marks"
     private const val GHOST_FILENAME = "ghost_run.bin"
 
     // ── High score ────────────────────────────────────────────────────────
@@ -360,6 +361,13 @@ object SaveManager {
         prefs(context).getStringSet(KEY_UNLOCKED_RELATIONSHIP_MILESTONES, emptySet()).orEmpty()
             .mapNotNull { raw -> runCatching { EntityType.valueOf(raw) }.getOrNull() }
             .toSet()
+
+    fun saveUnlockedHistoryMarks(context: Context, marks: Set<String>) {
+        prefs(context).edit().putStringSet(KEY_UNLOCKED_HISTORY_MARKS, marks).apply()
+    }
+
+    fun loadUnlockedHistoryMarks(context: Context): Set<String> =
+        prefs(context).getStringSet(KEY_UNLOCKED_HISTORY_MARKS, emptySet()).orEmpty()
 
     // ── Helpers ───────────────────────────────────────────────────────────
 

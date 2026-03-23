@@ -418,4 +418,13 @@ class GardenSanctuaryPlannerTest {
         assertTrue(state.homecomingConsequences.any { it.label.contains("History:") && it.line.contains("Wolf") })
         assertTrue(state.homecomingConsequences.any { it.label.contains("Mood: Fearful") })
     }
+
+    @Test
+    fun `history unlock mark surfaces as explicit memory consequence`() {
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.CACTUS) }
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Memory:") && it.line.contains("memory", ignoreCase = true) })
+    }
 }
