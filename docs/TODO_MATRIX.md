@@ -67,7 +67,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 - DONE: each relationship now has first-impression, recognition, trust, and milestone states.
 - PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, encounter generosity/telegraph tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, milestone keepsake rewards, featured home-presence/carry-home framing, and milestone-reactive run/Garden presentation.
 - PARTIAL: relationship milestones now unlock named keepsakes, matching Cat/Fox/Wolf/Dog/Owl/Eagle costume paths, featured sanctuary home-presence lines, bond-specific score-milestone reactions, and fallback bonded Garden visitor reactions; deepen broader milestone presentation and remaining non-costume rewards.
-- PARTIAL: repeated positive interactions now also surface through repeat-friend familiarity beats, `Familiar Return` badges, and creature-specific warmth lines; deepen live encounter and Garden payoff further.
+- PARTIAL: repeated positive interactions now also surface through repeat-friend familiarity beats, `Familiar Return` badges, creature-specific warmth lines, and shared familiarity tiers that now warm ordinary passes, mercy cues, creature thoughts, and bonded returns; deepen Garden payoff further.
 - PARTIAL: repeated negative interactions now surface stronger caution/tension through strained-bond live cue swaps, return beats, sanctuary traces, and fragment writing; deepen disappointment/fear coverage and broader in-run consequence further.
 - TODO: add milestone rewards that feel relational, not merely numerical.
 

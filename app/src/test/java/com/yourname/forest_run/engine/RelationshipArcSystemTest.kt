@@ -217,6 +217,50 @@ class RelationshipArcSystemTest {
     }
 
     @Test
+    fun `strong warm history makes live encounter lines more personal`() {
+        repeat(6) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        repeat(5) { PersistentMemoryManager.recordPass(context, EntityType.CAT) }
+        repeat(6) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        repeat(5) { PersistentMemoryManager.recordPass(context, EntityType.DOG) }
+
+        val catPass = RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.PASS)
+        val catMercy = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.CAT,
+            RelationshipArcSystem.EncounterCue.MERCY
+        )
+        val dogPass = RelationshipArcSystem.lineFor(context, EntityType.DOG, RelationshipArcSystem.Event.PASS)
+        val dogGreeting = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.DOG,
+            RelationshipArcSystem.EncounterCue.DOG_GREETING
+        )
+
+        assertTrue(
+            catPass.contains("quiet", ignoreCase = true) ||
+                catPass.contains("pace", ignoreCase = true)
+        )
+        assertTrue(
+            catMercy.contains("quiet", ignoreCase = true) ||
+                catMercy.contains("your step", ignoreCase = true) ||
+                catMercy.contains("pace", ignoreCase = true) ||
+                catMercy.contains("us", ignoreCase = true) ||
+                catMercy.contains("friend", ignoreCase = true)
+        )
+        assertTrue(
+            dogPass.contains("back", ignoreCase = true) ||
+                dogPass.contains("with me", ignoreCase = true) ||
+                dogPass.contains("friend", ignoreCase = true)
+        )
+        assertTrue(
+            dogGreeting.contains("came back", ignoreCase = true) ||
+                dogGreeting.contains("again", ignoreCase = true)
+        )
+    }
+
+    @Test
     fun `cat repeated-friend lines become more personal after familiar passes`() {
         repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
         repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
