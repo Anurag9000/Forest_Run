@@ -43,6 +43,9 @@ class Fox(
     private val relationshipTuning: RelationshipEncounterTuning =
         RelationshipArcSystem.encounterTuning(context, EntityType.FOX)
     private val warmBond = RelationshipArcSystem.isWarmBond(context, EntityType.FOX)
+    private val repeatMemoryCharm =
+        RelationshipArcSystem.featuredRepeatFriend(context) == EntityType.FOX ||
+            PersistentMemoryManager.getPassCount(context, EntityType.FOX) >= 4
     private val foxH = readability.heightPx
     private val foxW = SpriteSizing.widthForHeight(sprite, foxH, minWidth = readability.minWidthPx)
     private val insetX = foxW * readability.hitInsetXRatio
@@ -56,6 +59,15 @@ class Fox(
         color = Color.argb(118, 255, 184, 96)
         style = Paint.Style.STROKE
         strokeWidth = 3f
+    }
+    private val trailAuraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(44, 255, 220, 164)
+        style = Paint.Style.FILL
+    }
+    private val trailAuraStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(104, 255, 198, 128)
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
     }
 
     private enum class FoxState { WALKING, JUMPING, LANDING, SPARED }
@@ -105,6 +117,9 @@ class Fox(
                     if (warmBond) {
                         ParticleManager.emit(FxPreset.SEED_COLLECT, x + foxW * 0.55f, y + foxH * 0.28f)
                     }
+                    if (repeatMemoryCharm) {
+                        ParticleManager.emit(FxPreset.MERCY_STARS, x + foxW * 0.55f, y + foxH * 0.20f)
+                    }
                 }
             }
             FoxState.LANDING -> {
@@ -124,6 +139,26 @@ class Fox(
 
     override fun draw(canvas: Canvas) {
         if (!spared && foxState == FoxState.WALKING) {
+            if (repeatMemoryCharm) {
+                canvas.drawRoundRect(
+                    detectionRect.left - 18f,
+                    detectionRect.top - 10f,
+                    detectionRect.right + 10f,
+                    detectionRect.bottom + 8f,
+                    24f,
+                    24f,
+                    trailAuraPaint
+                )
+                canvas.drawRoundRect(
+                    detectionRect.left - 18f,
+                    detectionRect.top - 10f,
+                    detectionRect.right + 10f,
+                    detectionRect.bottom + 8f,
+                    24f,
+                    24f,
+                    trailAuraStrokePaint
+                )
+            }
             canvas.drawRoundRect(detectionRect, 20f, 20f, detectionPaint)
             canvas.drawRoundRect(detectionRect, 20f, 20f, detectionStrokePaint)
         }
@@ -155,10 +190,10 @@ class Fox(
         if (!passRewarded && hasJumped && foxState != FoxState.SPARED) {
             passRewarded = true
             gameState.addBonus(
-                points = 150 + relationshipTuning.passBonusPoints,
-                seeds = 1 + relationshipTuning.passBonusSeeds
+                points = 150 + relationshipTuning.passBonusPoints + if (repeatMemoryCharm) 18 else 0,
+                seeds = 1 + relationshipTuning.passBonusSeeds + if (repeatMemoryCharm) 1 else 0
             )
-            if (warmBond) {
+            if (warmBond || repeatMemoryCharm) {
                 ParticleManager.emit(FxPreset.MERCY_STARS, x + foxW * 0.55f, y + foxH * 0.4f)
             }
             DialogueBubbleManager.spawn(

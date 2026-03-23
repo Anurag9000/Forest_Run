@@ -132,8 +132,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: mirror-jump trickster.
 - Dream traits: sly counter-jump, playful line delivery, mercy-based wave-off.
-- Current: mirror-jump logic, stronger detection/clean-pass presentation, history-aware landing payoff, and visible warm-memory pass feedback now exist.
-- TODO: finish final telegraph charm and repeated-memory payoff.
+- Current: mirror-jump logic, stronger detection/clean-pass presentation, more knowingly playful repeat-memory lines, a brighter trail aura, and a stronger remembered-the-trick pass reward now exist.
+- TODO: finish final device-proofing only.
 
 ### Hedgehog
 

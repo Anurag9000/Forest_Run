@@ -117,7 +117,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 ### Animals
 
 - PARTIAL: Cat kindness bonus is much more obvious and warm-bond passes/spares now leave visible reward feedback, more personal repeated-friend lines, a shared-quiet aura, and a stronger familiar pass reward; finish device-proofing only.
-- PARTIAL: Fox mirror jump reads more clearly and warm-memory landings/passes now leave visible payoff; finish final telegraph charm and repeated-memory payoff.
+- PARTIAL: Fox mirror jump reads more clearly and warm-memory landings/passes now leave visible payoff, more knowingly playful repeat-memory lines, a brighter trail aura, and a stronger remembered-the-trick pass reward; finish device-proofing only.
 - PARTIAL: Wolf howl/charge drama is materially stronger and spare payoff is now more visibly rewarding; finish device-proofing and final spare feel tuning.
 - PARTIAL: Hedgehog fairness is materially stronger with warning-stage messaging and clearer debuff feedback; finish final tuning on phone.
 - PARTIAL: Dog bark projectile and buddy mode are clearer, and bonded buddy runs now feel more celebratory; finish memorable buddy payoff and device validation.

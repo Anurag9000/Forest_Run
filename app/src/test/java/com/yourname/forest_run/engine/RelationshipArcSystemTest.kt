@@ -233,6 +233,23 @@ class RelationshipArcSystemTest {
     }
 
     @Test
+    fun `fox repeated-memory lines become more knowingly playful after familiar passes`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.FOX) }
+
+        val passLine = RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.PASS)
+        val landingCue = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.FOX,
+            RelationshipArcSystem.EncounterCue.FOX_LANDING
+        )
+
+        assertTrue(passLine.contains("remember", ignoreCase = true) || passLine.contains("trick", ignoreCase = true))
+        assertTrue(landingCue.contains("remembered", ignoreCase = true) || landingCue.contains("read", ignoreCase = true))
+    }
+
+    @Test
     fun `strained bond chooses cautious trusted creature and surfaces sharper line`() {
         repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }

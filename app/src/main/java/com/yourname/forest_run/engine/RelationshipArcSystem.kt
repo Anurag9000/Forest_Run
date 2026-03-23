@@ -611,7 +611,7 @@ object RelationshipArcSystem {
         val tone = toneFor(context, type)
         return when (type) {
             EntityType.CAT -> catCueLine(context, stage, tone, cue)
-            EntityType.FOX -> foxCueLine(stage, tone, cue)
+            EntityType.FOX -> foxCueLine(context, stage, tone, cue)
             EntityType.WOLF -> wolfCueLine(stage, tone, cue)
             EntityType.OWL -> owlCueLine(context, stage, tone, cue)
             EntityType.EAGLE -> eagleCueLine(stage, tone, cue)
@@ -641,7 +641,7 @@ object RelationshipArcSystem {
         val tone = toneFor(context, type)
         return when (type) {
             EntityType.CAT -> catLine(context, stage, tone, event)
-            EntityType.FOX -> foxLine(stage, tone, event)
+            EntityType.FOX -> foxLine(context, stage, tone, event)
             EntityType.WOLF -> wolfLine(stage, tone, event)
             EntityType.DOG -> dogLine(stage, tone, event)
             EntityType.OWL -> owlLine(context, stage, tone, event)
@@ -725,23 +725,39 @@ object RelationshipArcSystem {
     }
     }
 
-    private fun foxLine(stage: RelationshipStage, tone: RelationshipTone, event: Event): String = when (event) {
+    private fun foxLine(
+        context: Context,
+        stage: RelationshipStage,
+        tone: RelationshipTone,
+        event: Event
+    ): String {
+        val passCount = PersistentMemoryManager.getPassCount(context, EntityType.FOX)
+        return when (event) {
         Event.PASS -> when (stage) {
             RelationshipStage.FIRST_IMPRESSION -> "Heh."
-            RelationshipStage.RECOGNITION -> "Same jump?"
-            RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "Still with me?" else "Caught that."
-            RelationshipStage.MILESTONE -> "Knew you would."
+            RelationshipStage.RECOGNITION ->
+                if (passCount >= 3) "Still reading me?" else "Same jump?"
+            RelationshipStage.TRUST ->
+                if (tone == RelationshipTone.WARM && passCount >= 4) "You remembered the trick." else if (tone == RelationshipTone.WARM) "Still with me?" else "Caught that."
+            RelationshipStage.MILESTONE ->
+                if (passCount >= 4) "Knew you'd remember." else "Knew you would."
         }
         Event.SPARE -> when (stage) {
-            RelationshipStage.MILESTONE -> "Till next time."
-            RelationshipStage.TRUST -> "Fine. Go on."
+            RelationshipStage.MILESTONE -> if (passCount >= 4) "Till the next little trick." else "Till next time."
+            RelationshipStage.TRUST -> if (passCount >= 4) "Fine. You know it now." else "Fine. Go on."
             else -> "Fine."
         }
-        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "Same hesitation." else "Next time..."
+        Event.THREAT -> when {
+            tone == RelationshipTone.CAUTIOUS -> "Same hesitation."
+            passCount >= 3 -> "You know this trick."
+            else -> "Next time..."
+        }
         Event.RETURN -> when (stage) {
-            RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "A fox lingers like it expected you."
+            RelationshipStage.TRUST, RelationshipStage.MILESTONE ->
+                if (passCount >= 4) "A fox lingers like the next trick is already shared." else "A fox lingers like it expected you."
             else -> "Something clever moved through the garden."
         }
+    }
     }
 
     private fun wolfLine(stage: RelationshipStage, tone: RelationshipTone, event: Event): String = when (event) {
@@ -799,15 +815,25 @@ object RelationshipArcSystem {
         }
     }
 
-    private fun foxCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
+    private fun foxCueLine(
+        context: Context,
+        stage: RelationshipStage,
+        tone: RelationshipTone,
+        cue: EncounterCue
+    ): String {
+        val passCount = PersistentMemoryManager.getPassCount(context, EntityType.FOX)
+        return when (cue) {
         EncounterCue.FOX_LANDING -> when {
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM && passCount >= 4 -> "Knew you'd read it."
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM && passCount >= 3 -> "You remembered the line."
             stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Knew you'd stay with me."
             stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "You remembered."
             tone == RelationshipTone.CAUTIOUS -> "Still flinching at the same step?"
             stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Caught that."
             else -> "Next time..."
         }
-        else -> foxLine(stage, tone, Event.THREAT)
+        else -> foxLine(context, stage, tone, Event.THREAT)
+        }
     }
 
     private fun wolfCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
