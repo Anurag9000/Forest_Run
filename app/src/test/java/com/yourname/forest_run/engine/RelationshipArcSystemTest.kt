@@ -304,8 +304,37 @@ class RelationshipArcSystemTest {
         val line = RelationshipArcSystem.strainedBondLine(context, EntityType.WOLF)
 
         assertEquals(EntityType.WOLF, featured)
-        assertTrue(line.contains("careful", ignoreCase = true) || line.contains("break", ignoreCase = true))
+        assertTrue(
+            line.contains("careful", ignoreCase = true) ||
+                line.contains("break", ignoreCase = true) ||
+                line.contains("fear", ignoreCase = true)
+        )
         assertTrue(RelationshipArcSystem.isStrainedBond(context, EntityType.WOLF))
+    }
+
+    @Test
+    fun `strained history differentiates disappointment from fear`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        repeat(4) { PersistentMemoryManager.recordHit(context, EntityType.DOG) }
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.EAGLE) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.EAGLE) }
+        repeat(4) { PersistentMemoryManager.recordHit(context, EntityType.EAGLE) }
+
+        val dogThreat = RelationshipArcSystem.lineFor(context, EntityType.DOG, RelationshipArcSystem.Event.THREAT)
+        val dogStrained = RelationshipArcSystem.strainedBondLine(context, EntityType.DOG)
+        val eagleThreat = RelationshipArcSystem.lineFor(context, EntityType.EAGLE, RelationshipArcSystem.Event.THREAT)
+        val eagleStrained = RelationshipArcSystem.strainedBondLine(context, EntityType.EAGLE)
+
+        assertTrue(
+            dogThreat.contains("hurts", ignoreCase = true) ||
+                dogStrained.contains("hurt", ignoreCase = true) ||
+                dogStrained.contains("let down", ignoreCase = true)
+        )
+        assertTrue(
+            eagleThreat.contains("fear", ignoreCase = true) ||
+                eagleStrained.contains("fear", ignoreCase = true)
+        )
     }
 
     @Test

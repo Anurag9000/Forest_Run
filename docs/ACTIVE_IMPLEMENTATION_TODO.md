@@ -30,7 +30,6 @@ Completion standard for removing an item:
 
 ## 2. Emotional Systems
 
-- [ ] Broaden `RelationshipArcSystem` negative consequence so disappointment, fear, caution, and tension are more specific.
 - [ ] Add broader milestone rewards that feel relational, not merely numeric or cosmetic.
 - [ ] Broaden `PacifistTracker` / `PacifistPresentation` world-state consequence beyond current route text and peaceful-biome signs.
 - [ ] Broaden `CostumeManager` surfacing so costume unlocks matter emotionally outside the wardrobe UI.
