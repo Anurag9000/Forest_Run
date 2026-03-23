@@ -354,6 +354,19 @@ class GameOverScreen(
             ty += 72f
         }
 
+        sanctuaryState.homecomingConsequences.take(2).forEach { consequence ->
+            drawInfoCard(
+                canvas = canvas,
+                left = panelLeft + panelW * 0.10f,
+                top = ty - 6f,
+                width = panelW * 0.80f,
+                label = consequence.label.uppercase(),
+                line = consequence.line,
+                alphaScale = stageAlpha
+            )
+            ty += 68f
+        }
+
         val statSummary = buildList {
             if (summary.seedsCollected > 0) add("+${summary.seedsCollected} seeds")
             if (summary.cleanPasses > 0) add("${summary.cleanPasses} clean")

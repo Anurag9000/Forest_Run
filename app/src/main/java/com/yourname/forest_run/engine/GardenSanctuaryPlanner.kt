@@ -10,12 +10,18 @@ data class SanctuaryTrace(
     val color: Int
 )
 
+data class HomecomingConsequence(
+    val label: String,
+    val line: String
+)
+
 data class GardenSanctuaryState(
     val sanctuaryLine: String = "",
     val carryHomeLine: String = "",
     val arrivalBadge: String = "",
     val homeCharacterLabel: String = "",
     val homeCharacterLine: String = "",
+    val homecomingConsequences: List<HomecomingConsequence> = emptyList(),
     val featuredRewardLine: String = "",
     val featuredPeaceBiome: Biome? = null,
     val featuredPeaceLabel: String = "",
@@ -376,12 +382,110 @@ object GardenSanctuaryPlanner {
                 "The garden keeps a little of the run instead of sending all of it away."
         }
 
+        val homecomingConsequences = buildList {
+            when (routeTier) {
+                PacifistRouteTier.PEACEFUL -> add(
+                    HomecomingConsequence(
+                        label = "Route: Peaceful",
+                        line = if ((summary?.bloomConversions ?: 0) >= 2) {
+                            "Peace and Bloom both made it home without turning harsh."
+                        } else {
+                            "The whole route still feels quieter because you kept peace all the way through."
+                        }
+                    )
+                )
+                PacifistRouteTier.MERCIFUL -> add(
+                    HomecomingConsequence(
+                        label = "Route: Merciful",
+                        line = "Mercy is still the clearest thing home remembers about that run."
+                    )
+                )
+                PacifistRouteTier.KIND -> add(
+                    HomecomingConsequence(
+                        label = "Route: Kind",
+                        line = "Kindness is still shaping the way home answers you."
+                    )
+                )
+                PacifistRouteTier.NONE -> Unit
+            }
+
+            if (featuredPeaceLabel.isNotBlank() && featuredPeaceLine.isNotBlank()) {
+                add(
+                    HomecomingConsequence(
+                        label = "World: ${featuredPeaceLabel.take(22)}",
+                        line = featuredPeaceLine
+                    )
+                )
+            }
+
+            when {
+                strainedBond != null -> add(
+                    HomecomingConsequence(
+                        label = "Bond: Watchful",
+                        line = RelationshipArcSystem.strainedBondLine(appContext, strainedBond)
+                    )
+                )
+                featuredPresenceLabel.isNotBlank() && featuredPresenceLine.isNotBlank() -> add(
+                    HomecomingConsequence(
+                        label = "Bond: ${featuredPresenceLabel.take(20)}",
+                        line = featuredPresenceLine
+                    )
+                )
+                repeatFriend != null -> add(
+                    HomecomingConsequence(
+                        label = "Bond: Familiar",
+                        line = "${formatEntityName(repeatFriend)} is starting to feel expected here, not merely welcomed."
+                    )
+                )
+                strongestBond != null && RelationshipArcSystem.isWarmBond(appContext, strongestBond) -> add(
+                    HomecomingConsequence(
+                        label = "Bond: ${formatEntityName(strongestBond)}",
+                        line = "${formatEntityName(strongestBond)} is part of the way home holds itself now."
+                    )
+                )
+            }
+
+            when {
+                repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature -> add(
+                    HomecomingConsequence(
+                        label = "History: Same Shadow",
+                        line = "${formatEntityName(repeatedKillerCreature)} still defines the darker edge of the return."
+                    )
+                )
+                repeatedHarmCreature != null -> add(
+                    HomecomingConsequence(
+                        label = "History: Tender Return",
+                        line = "${formatEntityName(repeatedHarmCreature)} still leaves the return more careful than usual."
+                    )
+                )
+                repeatedKindnessCreature != null && kindnessStreak >= 2 -> add(
+                    HomecomingConsequence(
+                        label = "History: Trust Kept",
+                        line = "${formatEntityName(repeatedKindnessCreature)} has left trust behind instead of only memory."
+                    )
+                )
+            }
+
+            add(
+                HomecomingConsequence(
+                    label = "Mood: ${mood.displayName}",
+                    line = when (mood) {
+                        ForestMood.GENTLE -> "Home kept the softer shape of the run instead of flattening it back to neutral."
+                        ForestMood.RECKLESS -> "Home is still letting the stirred-up part of the run come down."
+                        ForestMood.FEARFUL -> "Home is still sheltering the shaken edges of the run."
+                        ForestMood.STEADY -> "Home is holding onto the calmer shape of the run."
+                    }
+                )
+            )
+        }.distinctBy { it.label }.take(4)
+
         return GardenSanctuaryState(
             sanctuaryLine = sanctuaryLine,
             carryHomeLine = carryHomeLine,
             arrivalBadge = arrivalBadge,
             homeCharacterLabel = homeCharacterLabel,
             homeCharacterLine = homeCharacterLine,
+            homecomingConsequences = homecomingConsequences,
             featuredRewardLine = featuredRewardLine,
             featuredPeaceBiome = featuredPeaceBiome?.biome,
             featuredPeaceLabel = featuredPeaceLabel,

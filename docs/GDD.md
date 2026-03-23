@@ -131,13 +131,14 @@ This game should keep players returning because the forest feels personal, not b
 - Repeated panic, repeated collisions, or repeated harm from the same creature should create emotional consequences in presentation.
 - Repeated kindness should produce visible trust signs, calmer ambience, and a stronger sense of sanctuary.
 - The player should feel that the forest has formed a soft opinion about them.
+- That opinion should also be explicitly visible when the player comes home, not only inferred through ambience or a single line.
 
 Current baseline:
 
 - recent run tone now affects Garden ambience and carry-home framing
 - repeated harm from the same creature now surfaces as caution in sanctuary traces, strained-bond `Held At A Distance` beats, `Same Shadow` repeat-killer beats, Garden return moments, Garden reflections, and tender memory streaks
 - repeated kindness now surfaces through trust-path traces, repeat-friend `Shared Path` traces, warmer carry-home lines, rest fragments, and dedicated gentle-return beats
-- broader creature warmth and richer world-state consequence are still TODO, even though sanctuary/homecoming atmosphere is now materially stronger and peaceful-biome routes can now leave named world-state signs in rest/Garden copy
+- broader creature warmth and richer world-state consequence are still TODO, even though sanctuary/homecoming atmosphere is now materially stronger, peaceful-biome routes can now leave named world-state signs in rest/Garden copy, and homecoming consequences now surface explicitly across startup, rest, and Garden
 
 #### 3.8.2 Named Relationship Arcs
 
@@ -200,7 +201,7 @@ Current baseline:
 - Partial: post-run reflection composition now varies by route/world/weather/creature emphasis so rest and Garden no longer always replay the same fixed reflection stack after different runs.
 - Partial: mercy-oriented runs now also travel home as explicit route tiers instead of only appearing as near-miss or spare counters.
 - Partial: the remaining animal-family ordinary-play payoffs are stronger, with clearer low-threat fairness and more visible bond reward feedback.
-- PARTIAL: the session arc now shares startup/rest/Garden copy, sanctuary-derived homecoming atmosphere, and a persistent sanctuary home-character layer; finish full authored pacing, launch feel, restorative coherence, and deeper homecoming consequence in real play.
+- PARTIAL: the session arc now shares startup/rest/Garden copy, sanctuary-derived homecoming atmosphere, a persistent sanctuary home-character layer, and explicit shared homecoming consequences; finish full authored pacing, launch feel, restorative coherence, and deeper homecoming consequence in real play.
 
 ---
 

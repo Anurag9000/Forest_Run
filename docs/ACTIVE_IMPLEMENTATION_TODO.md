@@ -20,11 +20,7 @@ Completion standard for removing an item:
 - the affected tests/build are green
 - the docs were updated to reflect the new truth
 
-## 1. Onboarding And Session Arc
-
-- [ ] Deepen visible homecoming consequences from mood, route tier, bonds, repeated kindness, repeated harm, and peaceful-biome state.
-
-## 2. Entity Closure
+## 1. Entity Closure
 
 ### Flora
 
@@ -61,7 +57,7 @@ Completion standard for removing an item:
 
 - [ ] Make flavor text and mercy feedback land reliably in ordinary play, not only in showcase scenarios.
 
-## 3. Emotional Systems
+## 2. Emotional Systems
 
 - [ ] Expand `PersistentMemoryManager` / `SaveManager` into richer repeated-history presentation and unlock state.
 - [ ] Broaden `RelationshipArcSystem` positive familiarity so live encounters feel more personally warm.
@@ -72,7 +68,7 @@ Completion standard for removing an item:
 - [ ] Finish `GhostPlayer` logic/policy so it is consistently helpful and never confusing in dense play.
 - [ ] Make the world’s “opinion” of the player feel stronger and more legible across run, rest, and Garden.
 
-## 4. Authored Return, Fragment, Quote, And Dialogue Coverage
+## 3. Authored Return, Fragment, Quote, And Dialogue Coverage
 
 - [ ] Expand `ReturnMomentsSystem` for more mercy-heavy combinations.
 - [ ] Expand `ReturnMomentsSystem` for more clean-streak combinations.
@@ -88,14 +84,14 @@ Completion standard for removing an item:
 - [ ] Broaden `FlavorTextManager` and `RunFlavorPresentation` coverage so ordinary-play authored voice stays rich across more situations.
 - [ ] Keep all new writing brief, intimate, suggestive, restrained, and non-expository.
 
-## 5. Bloom Completion
+## 4. Bloom Completion
 
 - [ ] Finish the final authored Bloom polish pass beyond the current stronger visual state.
 - [ ] Deepen nearby-world Bloom reaction where it materially improves the power-state fantasy.
 - [ ] Finish Bloom’s distinct music/SFX identity.
 - [ ] Finish Bloom’s top-end power-fantasy presentation so it feels fully unforgettable.
 
-## 6. Visual And Audio Production
+## 5. Visual And Audio Production
 
 - [ ] Replace remaining procedural/parallax-heavy scenery with bespoke scenic background art.
 - [ ] Deepen ambient life density: petals, leaves, fireflies, mist variation, and living-forest motion.
@@ -105,13 +101,13 @@ Completion standard for removing an item:
 - [ ] Expand `LeitmotifManager` from playback shaping into fuller authored motif treatment across menu, Garden, run, Bloom, and rest.
 - [ ] Finish final cinematic polish across visuals and audio.
 
-## 7. Release-Ready Productization
+## 6. Release-Ready Productization
 
 - [ ] Prepare final store-ready art and screenshots.
 - [ ] Finish packaging and publishing readiness.
 - [ ] Finish release-doc cleanup once the remaining product work is actually complete.
 
-## 8. Documentation Hygiene
+## 7. Documentation Hygiene
 
 - [ ] Keep touched docs and stale comments synchronized with current runtime truth.
 - [ ] Remove items from this file only when they are fully complete.

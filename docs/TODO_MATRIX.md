@@ -36,7 +36,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 - PARTIAL: the first 20–30 seconds now use an authored onboarding layer with curated opening spawn lockout, gentler guided spawn pacing, a curated early pool, and visible tap/hold/duck guidance chips; finish real-device proof and any final feel tuning.
 - PARTIAL: Bloom spectacle now includes a full-screen/world shift, stronger conversion spectacle, and stronger active-state HUD framing; finish final authored polish and device validation.
 - PARTIAL: rest now has a staged DYING-to-REST settle window, authored recovery title/line, a visible homeward preview card, sanctuary recovery ambience, a visible persistent home-character beat, a stronger run-kept summary, and a varied post-run reflection focus instead of only quote-plus-stats; finish real-device proof.
-- PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, visible bond traces, arrival badges, mist/lantern/ground-glow atmosphere, a persistent home-character sign/line, and a stronger arrival line when no special return beat is active, while startup now also surfaces a clearer home-sign atmosphere; finish the full restorative scene and remaining deeper homecoming consequence work.
+- PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, visible bond traces, arrival badges, mist/lantern/ground-glow atmosphere, a persistent home-character sign/line, an explicit shared homecoming-consequence layer, and a stronger arrival line when no special return beat is active, while startup now also surfaces a clearer home-sign atmosphere; finish the full restorative scene and remaining deeper homecoming consequence work.
 
 ## Personality TODOs
 
@@ -46,7 +46,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 - PARTIAL: costume overlays and wardrobe flow now include milestone-earned Cat/Fox/Wolf/Dog/Owl/Eagle wardrobe rewards, and Garden now surfaces relationship-aware unlock messaging plus featured reward/cosmetic pairing instead of generic wardrobe notices; expand broader repeated-encounter unlock depth and presentation further.
 - PARTIAL: repeat-killer deja vu lines now exist in rest, Garden reflections, sanctuary badges, stronger `Same Shadow` return/carry-home beats, and new in-run collision flavor; deepen them further into stronger visual and narrative payoff.
 - DONE: dedicated dialogue bubble system.
-- PARTIAL: biome-level friendship bonus baseline now escalates into save-visible pacifist route tiers plus named peaceful-biome carry-home, menu/rest/Garden copy, and route-sensitive reflections; deepen it further into broader sanctuary and world-state consequence.
+- PARTIAL: biome-level friendship bonus baseline now escalates into save-visible pacifist route tiers plus named peaceful-biome carry-home, menu/rest/Garden copy, route-sensitive reflections, and explicit homecoming consequence chips/cards; deepen it further into broader sanctuary/world-state consequence.
 - PARTIAL: encounter-level history now surfaces through tracked Cat/Fox/Wolf/Dog/Owl/Eagle cues plus new collision/milestone run flavor instead of fallback one-liners alone; expand the same depth across more creatures and normal-run payoff.
 - PARTIAL: stronger spare events and pacifist route feel now include explicit `Kind` / `Merciful` / `Peaceful` run tiers, route-aware return moments, route-aware Garden reflections, route-specific memory pages, stronger mercy-miss and route-reward presentation, and clearer rest/Garden route language; complete broader world-state and feedback.
 - DONE: face/eye state system baseline for the heroine.
@@ -56,7 +56,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 ### Forest Memory Layer
 
 - DONE: added a save-backed `ForestMoodSystem` with run classification into gentle, reckless, fearful, and steady.
-- PARTIAL: current tone now affects Garden palette, menu/rest/Garden labeling, sanctuary ambience, visible carry-home framing, and sanctuary arrival-badge presentation; deepen creature warmth and broader presentation response.
+- PARTIAL: current tone now affects Garden palette, menu/rest/Garden labeling, sanctuary ambience, visible carry-home framing, sanctuary arrival-badge presentation, and explicit homecoming consequence chips/cards; deepen creature warmth and broader presentation response.
 - PARTIAL: repeated panic or repeated harm from the same creature now surfaces through cautious sanctuary traces, strained-bond `Held At A Distance` returns, stronger `Same Shadow` repeat-killer beats, Garden caution/strained reflections, and save-backed tender streaks; deepen broader creature warmth and world-state response.
 - PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, trust traces, repeat-friend `Shared Path` traces, warmer rest fragments, dedicated `Stayed Gentle` / `Kept Finding You` returns, stronger lantern/ground-glow atmosphere, and named peaceful-biome carry-home signs; deepen the effect and tie it more directly to repeated creature-specific history.
 - TODO: ensure the player can feel that the world has formed an opinion about how they play.

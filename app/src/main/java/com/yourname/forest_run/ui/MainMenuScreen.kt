@@ -194,6 +194,21 @@ class MainMenuScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val consequenceChipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(176, 232, 246, 208)
+        style = Paint.Style.FILL
+    }
+    private val consequenceChipBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(176, 244, 248, 232)
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+    }
+    private val consequenceChipTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(42, 54, 28)
+        textSize = 10f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
 
     init {
         refreshCopy()
@@ -266,6 +281,7 @@ class MainMenuScreen(
         drawHomeSign(canvas, cw, ch)
         drawHomeCharacter(canvas, cw, ch)
         drawLaunchCue(canvas, cw, ch, groundY)
+        drawHomecomingConsequences(canvas, cw, ch, groundY)
 
         // Prompt
         val promptAlpha = when (phase) {
@@ -429,6 +445,33 @@ class MainMenuScreen(
             rect.centerX(),
             rect.bottom + 18f,
             width,
+            secondaryAtmospherePaint
+        )
+    }
+
+    private fun drawHomecomingConsequences(canvas: Canvas, cw: Float, ch: Float, groundY: Float) {
+        val consequences = sanctuaryState.homecomingConsequences.take(2)
+        if (consequences.isEmpty()) return
+        val chipWidth = cw * 0.18f
+        val chipHeight = ch * 0.04f
+        val rowTop = groundY - ch * 0.17f
+        val gap = cw * 0.02f
+        val totalWidth = consequences.size * chipWidth + (consequences.size - 1) * gap
+        var left = cw / 2f - totalWidth / 2f
+        consequences.forEach { consequence ->
+            val rect = RectF(left, rowTop, left + chipWidth, rowTop + chipHeight)
+            canvas.drawRoundRect(rect, 14f, 14f, consequenceChipPaint)
+            canvas.drawRoundRect(rect, 14f, 14f, consequenceChipBorderPaint)
+            val labelY = rect.centerY() - (consequenceChipTextPaint.descent() + consequenceChipTextPaint.ascent()) / 2f
+            canvas.drawText(consequence.label.take(22), rect.centerX(), labelY, consequenceChipTextPaint)
+            left += chipWidth + gap
+        }
+        drawWrappedCenteredText(
+            canvas,
+            consequences.first().line,
+            cw / 2f,
+            rowTop + chipHeight + 18f,
+            cw * 0.56f,
             secondaryAtmospherePaint
         )
     }

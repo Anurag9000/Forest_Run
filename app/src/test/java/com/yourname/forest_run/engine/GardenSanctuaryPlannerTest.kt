@@ -283,6 +283,9 @@ class GardenSanctuaryPlannerTest {
         assertTrue(state.homeCharacterLine.contains("peace", ignoreCase = true) || state.homeCharacterLine.contains("calmer", ignoreCase = true))
         assertEquals("Peace Carried", state.arrivalBadge)
         assertTrue(state.carryHomeLine.contains("quiet", ignoreCase = true) || state.carryHomeLine.contains("Meadow"))
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Route: Peaceful") })
+        assertTrue(state.homecomingConsequences.any { it.label.contains("World:") && it.line.contains("peace", ignoreCase = true) })
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Mood: Gentle") })
     }
 
     @Test
@@ -348,5 +351,39 @@ class GardenSanctuaryPlannerTest {
         assertEquals("Peace Kept", state.arrivalBadge)
         assertTrue(state.lanternGlowCount >= 3)
         assertTrue(state.groundGlowAlpha >= 100)
+    }
+
+    @Test
+    fun `harm and bond history surface explicit homecoming consequences`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 3, totalRuns = 3, fearfulRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 380,
+            distanceM = 280f,
+            isNewHighScore = false,
+            highScore = 910,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Bond: Watchful") })
+        assertTrue(state.homecomingConsequences.any { it.label.contains("History:") && it.line.contains("Wolf") })
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Mood: Fearful") })
     }
 }

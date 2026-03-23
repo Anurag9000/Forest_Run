@@ -675,6 +675,11 @@ class GardenScreen(
             canvas.drawText("Home: ${sanctuaryState.homeCharacterLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
             y += 22f
         }
+        sanctuaryState.homecomingConsequences.take(3).forEach { consequence ->
+            canvas.drawText(consequence.label, lastRunRect.left + 18f, y, statsLabelPaint)
+            canvas.drawText(consequence.line.take(92), lastRunRect.left + 18f, y + 16f, reflectionPaint)
+            y += 36f
+        }
         val killerText = summary.lastKiller?.let { formatEntityName(it) } ?: "None"
         canvas.drawText("Last killer: $killerText", lastRunRect.left + 18f, y, statsLabelPaint)
         y += 22f

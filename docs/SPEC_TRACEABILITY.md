@@ -110,7 +110,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 #### Cold Start — Garden Main Menu
 
 - `Implemented`: seated/resting menu scene and two-tap stand/run flow.
-- `Partial`: ambient garden tone and startup atmosphere now reflect the carried-home emotional state through shared session-arc copy plus sanctuary-derived homecoming badges and ambience, now including a persistent sanctuary home-character beat across startup, rest, and Garden.
+- `Partial`: ambient garden tone and startup atmosphere now reflect the carried-home emotional state through shared session-arc copy plus sanctuary-derived homecoming badges and ambience, now including a persistent sanctuary home-character beat and explicit shared homecoming consequences across startup, rest, and Garden.
 - `TODO`: full “no hard menu buttons, unlocked plants in background” authored richness.
 - `TODO`: stronger footstep-synced musical launch feel.
 

@@ -269,6 +269,37 @@ class SessionArcComposerTest {
     }
 
     @Test
+    fun `menu copy still keeps explicit homecoming consequence support after peaceful route state`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.MEADOW) }
+        val summary = RunSummary(
+            score = 1_240,
+            distanceM = 860f,
+            isNewHighScore = false,
+            highScore = 1_680,
+            mercyHearts = 4,
+            mercyMisses = 4,
+            kindnessChain = 7,
+            cleanPasses = 10,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 9,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+        SaveManager.saveLastRunSummary(context, summary)
+
+        val menuCopy = SessionArcComposer.menuCopy(context)
+        val sanctuary = GardenSanctuaryPlanner.build(context, summary)
+
+        assertTrue(menuCopy.homeSignLabel.isNotBlank())
+        assertTrue(sanctuary.homecomingConsequences.any { it.label.contains("Route: Peaceful") })
+        assertTrue(sanctuary.homecomingConsequences.any { it.label.contains("World:") })
+    }
+
+    @Test
     fun `first startup gets a dedicated quiet-start home sign`() {
         val copy = SessionArcComposer.menuCopy(context)
 
