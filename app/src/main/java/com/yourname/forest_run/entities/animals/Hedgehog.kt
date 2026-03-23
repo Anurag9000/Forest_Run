@@ -50,10 +50,22 @@ class Hedgehog(
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
+    private val hopLanePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(58, 180, 218, 255)
+        style = Paint.Style.FILL
+    }
+    private val hopLaneStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(170, 214, 234, 255)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
     private val repeatHits = PersistentMemoryManager.getHitCount(context, EntityType.HEDGEHOG)
+    private val warningLeadDurationSec = readability.telegraphDurationSec.coerceIn(0.16f, 0.22f)
 
     private var hasHit = false  // Only apply debuff once per instance
     private var warned = false
+    private var armed = false
+    private var warningLeadTimer = 0f
     private var pulse = 0f
 
     init {
@@ -65,6 +77,12 @@ class Hedgehog(
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= (scrollSpeed * 1.15f) * deltaTime  // Slightly faster than scroll speed (sneaky!)
         pulse += deltaTime * 5.5f
+        if (warned && !armed) {
+            warningLeadTimer = (warningLeadTimer - deltaTime).coerceAtLeast(0f)
+            if (warningLeadTimer <= 0f) {
+                armed = true
+            }
+        }
         hitbox.offsetTo(x + insetX, y + insetY)
         sprite.update(deltaTime)
         if (x < -hogW - 20f) isActive = false
@@ -76,21 +94,50 @@ class Hedgehog(
         warningStrokePaint.alpha = (96f + 44f * pulseValue).toInt().coerceIn(0, 255)
         canvas.drawOval(x - 8f, y + hogH * 0.15f, x + hogW + 8f, y + hogH + 4f, warningPaint)
         canvas.drawOval(x - 8f, y + hogH * 0.15f, x + hogW + 8f, y + hogH + 4f, warningStrokePaint)
+        if (warned && !hasHit) {
+            hopLanePaint.alpha = if (armed) 42 else 76
+            hopLaneStrokePaint.alpha = if (armed) 120 else 188
+            canvas.drawRoundRect(
+                x - 14f,
+                y - hogH * 0.24f,
+                x + hogW + 14f,
+                y + hogH * 0.18f,
+                24f,
+                24f,
+                hopLanePaint
+            )
+            canvas.drawRoundRect(
+                x - 14f,
+                y - hogH * 0.24f,
+                x + hogW + 14f,
+                y + hogH * 0.18f,
+                24f,
+                24f,
+                hopLaneStrokePaint
+            )
+        }
         val drawRect = RectF(x, y, x + hogW, y + hogH)
         sprite.draw(canvas, drawRect)
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 95)
+        val clearedRead = warned
+        gameState.addBonus(
+            points = if (clearedRead) 135 else 95,
+            seeds = if (clearedRead) 1 else 0
+        )
         DialogueBubbleManager.spawn(
-            AnimalEncounterFlavor.hedgehogPass(repeatHits),
+            AnimalEncounterFlavor.hedgehogPass(repeatHits, clearedRead),
             x + hogW * 0.5f,
             y - 14f,
             Color.rgb(255, 246, 220),
             Color.rgb(160, 120, 70)
         )
-        if (repeatHits >= 1) {
+        if (repeatHits >= 1 || clearedRead) {
             ParticleManager.emit(FxPreset.MERCY_STARS, x + hogW * 0.5f, y + hogH * 0.45f)
+        }
+        if (clearedRead) {
+            ParticleManager.emit(FxPreset.SEED_COLLECT, x + hogW * 0.5f, y + hogH * 0.22f)
         }
     }
 
@@ -103,6 +150,8 @@ class Hedgehog(
         )
         if (!warned && RectF.intersects(player.hitbox, warningRect)) {
             warned = true
+            armed = false
+            warningLeadTimer = warningLeadDurationSec
             DialogueBubbleManager.spawn(
                 AnimalEncounterFlavor.hedgehogWarning(repeatHits),
                 x + hogW * 0.5f,
@@ -112,6 +161,16 @@ class Hedgehog(
             )
         }
         if (RectF.intersects(player.hitbox, hitbox)) {
+            if (warned && !armed) {
+                DialogueBubbleManager.spawn(
+                    "Hop now.",
+                    x + hogW * 0.5f,
+                    y - 14f,
+                    Color.rgb(226, 244, 255),
+                    Color.rgb(94, 144, 178)
+                )
+                return CollisionResult.MERCY_MISS
+            }
             if (!hasHit) {
                 hasHit = true
                 // Speed debuff: 50% speed for 3 seconds

@@ -41,6 +41,7 @@ class ReadabilityProfileTest {
         val jacaranda = ReadabilityProfile.entity(EntityType.JACARANDA, screenHeight = 1080f)
         val bamboo = ReadabilityProfile.entity(EntityType.BAMBOO, screenHeight = 1080f)
         val cherry = ReadabilityProfile.entity(EntityType.CHERRY_BLOSSOM, screenHeight = 1080f)
+        val hedgehog = ReadabilityProfile.entity(EntityType.HEDGEHOG, screenHeight = 1080f)
 
         assertTrue(lily.heightPx > 0f)
         assertTrue(lily.heightPx >= 110f)
@@ -60,5 +61,8 @@ class ReadabilityProfileTest {
         assertTrue(bamboo.stagingPaddingPx >= 18f)
         assertTrue(cherry.minWidthPx >= 254f)
         assertTrue(cherry.stagingPaddingPx >= 20f)
+        assertTrue(hedgehog.mercyPaddingPx >= 14f)
+        assertTrue(hedgehog.stagingPaddingPx >= 10f)
+        assertTrue(hedgehog.telegraphDurationSec >= 0.18f)
     }
 }

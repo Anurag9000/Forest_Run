@@ -139,8 +139,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: small friction threat that debuffs instead of killing.
 - Dream traits: fair but sneaky, visible enough to feel earned, not cheap.
-- Current: speed-debuff trap, clearer warning-stage messaging, and stronger debuff feedback now exist.
-- TODO: finish final size/timing validation on device.
+- Current: speed-debuff trap, a true fair-hop arming window, a visible low-lane read, clearer warning-stage messaging, and a stronger clean-clear reward now exist.
+- TODO: finish final device-proofing only.
 
 ### Dog
 

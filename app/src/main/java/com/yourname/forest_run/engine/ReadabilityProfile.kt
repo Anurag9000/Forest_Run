@@ -56,7 +56,7 @@ object ReadabilityProfile {
         EntityType.FOX to EntityReadabilityTemplate(102f, 84f, 0.12f, 0.09f, mercyPaddingPx = 14f, stagingPaddingPx = 12f, detectionRangeBodies = 3.2f),
         EntityType.WOLF to EntityReadabilityTemplate(118f, 94f, 0.11f, 0.07f, mercyPaddingPx = 14f, stagingPaddingPx = 14f, telegraphDurationSec = 1.05f),
         EntityType.DOG to EntityReadabilityTemplate(104f, 82f, 0.13f, 0.07f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
-        EntityType.HEDGEHOG to EntityReadabilityTemplate(66f, 50f, 0.08f, 0.08f, mercyPaddingPx = 12f, stagingPaddingPx = 8f),
+        EntityType.HEDGEHOG to EntityReadabilityTemplate(66f, 50f, 0.08f, 0.08f, mercyPaddingPx = 14f, stagingPaddingPx = 10f, telegraphDurationSec = 0.18f),
         EntityType.DUCK to EntityReadabilityTemplate(96f, 68f, 0.10f, 0.10f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
         EntityType.TIT to EntityReadabilityTemplate(62f, 50f, 0.06f, 0.06f, mercyPaddingPx = 12f, stagingPaddingPx = 10f),
         EntityType.CHICKADEE to EntityReadabilityTemplate(54f, 44f, 0.06f, 0.06f, mercyPaddingPx = 12f, stagingPaddingPx = 10f),
