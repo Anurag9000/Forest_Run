@@ -102,7 +102,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 ### Trees
 
 - PARTIAL: Weeping Willow now stages scenic dominance through a denser canopy silhouette, a stronger curtain read, and an explicit duck lane that stays collision-honest; finish device-proofing only.
-- PARTIAL: Jacaranda now stages a fuller canopy halo and stronger petal-curtain reward; finish device-proofing and final spectacle tuning.
+- PARTIAL: Jacaranda now stages spectacle through a layered canopy halo, a cascading petal veil, and a clearer underside lane that stays collision-honest; finish device-proofing only.
 - PARTIAL: Bamboo now stages its precision gaps more explicitly with stronger lane guidance and payoff; finish device validation and signature threat identity.
 - PARTIAL: Cherry Blossom now sells gust pressure more clearly with layered trails and stronger pass reward; finish device-proofing and final storm feel.
 

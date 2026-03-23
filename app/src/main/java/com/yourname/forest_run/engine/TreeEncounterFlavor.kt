@@ -10,9 +10,9 @@ object TreeEncounterFlavor {
     }
 
     fun jacarandaPass(encounters: Int, repeatHits: Int): String = when {
-        repeatHits >= 2 -> "Past the whole canopy."
-        encounters >= 4 -> "The petals opened a path."
-        else -> "Petal hush."
+        repeatHits >= 2 -> "Past the whole bloom."
+        encounters >= 4 -> "The petals kept a lane."
+        else -> "Under the petal veil."
     }
 
     fun bambooPass(encounters: Int, repeatHits: Int): String = when {

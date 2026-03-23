@@ -8,7 +8,7 @@ class TreeEncounterFlavorTest {
     @Test
     fun `willow and jacaranda reflect familiarity`() {
         assertEquals("Duck the willow lane.", TreeEncounterFlavor.willowPass(encounters = 1, repeatHits = 0))
-        assertEquals("The petals opened a path.", TreeEncounterFlavor.jacarandaPass(encounters = 4, repeatHits = 0))
+        assertEquals("The petals kept a lane.", TreeEncounterFlavor.jacarandaPass(encounters = 4, repeatHits = 0))
     }
 
     @Test

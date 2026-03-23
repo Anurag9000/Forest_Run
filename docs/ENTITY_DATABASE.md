@@ -58,8 +58,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: purple-canopy atmosphere tree with petal drift.
 - Dream traits: visual noise, mood, overhead tension.
-- Current: obstacle now has a clearer petal-curtain read, fuller canopy halo staging, stronger pass reward, and better encounter feel.
-- TODO: finish final device-proofing and last canopy-spectacle tuning.
+- Current: obstacle now has a clearer petal-curtain read, a layered canopy halo, a cascading petal veil, a clearer underside lane, stronger pass reward, and better encounter feel.
+- TODO: finish on-device validation.
 
 ### Bamboo
 

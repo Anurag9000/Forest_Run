@@ -39,6 +39,9 @@ class Jacaranda(
     private val branchBottom = groundY - treeHeight * 0.34f
     private val trunkTop     = groundY - treeHeight * 0.38f
     private val branchHitbox = RectF()
+    private val canopyCoreRect = RectF()
+    private val canopyBloomRect = RectF()
+    private val undersideLaneRect = RectF()
     private val drawRect     = RectF()
     private val petalCurtainPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(54, 218, 176, 255)
@@ -53,23 +56,33 @@ class Jacaranda(
         color = Color.argb(42, 226, 188, 255)
         style = Paint.Style.FILL
     }
+    private val canopyBloomPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(34, 242, 210, 255)
+        style = Paint.Style.FILL
+    }
+    private val undersideLanePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(58, 236, 230, 196)
+        style = Paint.Style.FILL
+    }
+    private val undersideLaneBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(182, 248, 242, 214)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
     private var canopyPulse = 0f
 
     init {
         x = startX
         y = groundY - treeHeight
         swayComponent = SwayComponent(speed = 0.8f, intensity = 15f)
-        hitbox.set(x + treeWidth / 2f - trunkWidth / 2f, trunkTop,
-                   x + treeWidth / 2f + trunkWidth / 2f, groundY)
-        branchHitbox.set(x + treeWidth * 0.08f, branchTop, x + treeWidth * 0.92f, branchBottom)
+        updateGeometry(sway = 0f)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         canopyPulse += deltaTime * 2.6f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + treeWidth / 2f - trunkWidth / 2f, trunkTop)
-        branchHitbox.set(x + treeWidth * 0.08f + sway, branchTop, x + treeWidth * 0.92f + sway, branchBottom)
+        updateGeometry(sway)
         sprite.update(deltaTime)
         if (x < -treeWidth - 50f) isActive = false
     }
@@ -78,21 +91,38 @@ class Jacaranda(
         val sway = swayComponent?.getOffset(0f) ?: 0f
         val pulse = 0.66f + 0.34f * kotlin.math.sin(canopyPulse)
         canopyHaloPaint.alpha = (24f + 26f * pulse).toInt().coerceIn(0, 255)
+        canopyBloomPaint.alpha = (20f + 20f * pulse).toInt().coerceIn(0, 255)
         petalCurtainPaint.alpha = (42f + 24f * pulse).toInt().coerceIn(0, 255)
         petalStrokePaint.alpha = (88f + 44f * pulse).toInt().coerceIn(0, 255)
-        canvas.drawOval(
-            branchHitbox.left - readability.stagingPaddingPx * 1.4f,
-            branchTop - treeHeight * 0.1f,
-            branchHitbox.right + readability.stagingPaddingPx * 1.4f,
-            branchBottom + treeHeight * 0.08f,
-            canopyHaloPaint
-        )
+        undersideLanePaint.alpha = (44f + 24f * pulse).toInt().coerceIn(0, 255)
+        undersideLaneBorderPaint.alpha = (150f + 36f * pulse).toInt().coerceIn(0, 255)
+        canvas.drawOval(canopyBloomRect, canopyBloomPaint)
+        canvas.drawOval(canopyCoreRect, canopyHaloPaint)
         canvas.drawRoundRect(branchHitbox, 28f, 28f, petalCurtainPaint)
         canvas.drawRoundRect(branchHitbox, 28f, 28f, petalStrokePaint)
-        repeat(4) { index ->
-            val driftX = branchHitbox.left + branchHitbox.width() * (0.18f + index * 0.2f)
-            val driftY = branchTop + branchHitbox.height() * (0.12f + index * 0.16f)
-            canvas.drawCircle(driftX + sway * 0.15f, driftY, treeWidth * (0.018f + index * 0.006f), petalStrokePaint)
+        canvas.drawRoundRect(undersideLaneRect, 22f, 22f, undersideLanePaint)
+        canvas.drawRoundRect(undersideLaneRect, 22f, 22f, undersideLaneBorderPaint)
+        repeat(6) { index ->
+            val driftX = branchHitbox.left + branchHitbox.width() * (0.10f + index * 0.14f)
+            val startY = branchTop + branchHitbox.height() * (0.08f + (index % 3) * 0.14f)
+            val endY = branchBottom + treeHeight * (0.06f + (index % 2) * 0.05f)
+            canvas.drawLine(
+                driftX,
+                startY,
+                driftX + sway * (0.10f + index * 0.03f),
+                endY,
+                petalStrokePaint
+            )
+            canvas.drawCircle(
+                driftX + sway * 0.18f,
+                startY + treeHeight * 0.06f,
+                treeWidth * (0.014f + index * 0.003f),
+                petalStrokePaint
+            )
+        }
+        repeat(3) { index ->
+            val laneMarkerX = undersideLaneRect.left + undersideLaneRect.width() * ((index + 1f) / 4f)
+            canvas.drawCircle(laneMarkerX, undersideLaneRect.centerY(), treeWidth * 0.015f, undersideLaneBorderPaint)
         }
         drawRect.set(x, groundY - treeHeight, x + treeWidth, groundY)
         canvas.save()
@@ -121,10 +151,54 @@ class Jacaranda(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox) ||
             RectF.intersects(player.hitbox, branchHitbox)) return CollisionResult.HIT
+        if (!undersideLaneRect.isEmpty &&
+            undersideLaneRect.contains(player.hitbox.left, player.hitbox.top, player.hitbox.right, player.hitbox.bottom)
+        ) {
+            return CollisionResult.NONE
+        }
         val mercyPad = readability.mercyPaddingPx
-        val bm = RectF(branchHitbox.left - mercyPad, branchHitbox.top, branchHitbox.right + mercyPad, branchHitbox.bottom + mercyPad)
+        val bm = RectF(
+            branchHitbox.left - mercyPad,
+            branchHitbox.top,
+            branchHitbox.right + mercyPad,
+            branchHitbox.bottom + mercyPad * 0.40f
+        )
         val tm = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, bm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
+    }
+
+    private fun updateGeometry(sway: Float) {
+        hitbox.set(
+            x + treeWidth / 2f - trunkWidth / 2f,
+            trunkTop,
+            x + treeWidth / 2f + trunkWidth / 2f,
+            groundY
+        )
+        branchHitbox.set(
+            x + treeWidth * 0.06f + sway,
+            branchTop,
+            x + treeWidth * 0.94f + sway,
+            branchBottom
+        )
+        canopyCoreRect.set(
+            branchHitbox.left - readability.stagingPaddingPx * 1.8f,
+            branchTop - treeHeight * 0.14f,
+            branchHitbox.right + readability.stagingPaddingPx * 1.8f,
+            branchBottom + treeHeight * 0.12f
+        )
+        canopyBloomRect.set(
+            branchHitbox.left - readability.stagingPaddingPx * 2.4f,
+            branchTop - treeHeight * 0.20f,
+            branchHitbox.right + readability.stagingPaddingPx * 2.4f,
+            branchBottom + treeHeight * 0.18f
+        )
+        val laneInset = readability.stagingPaddingPx * 0.55f
+        undersideLaneRect.set(
+            maxOf(branchHitbox.left + laneInset, hitbox.right + readability.stagingPaddingPx * 0.30f),
+            branchBottom + readability.stagingPaddingPx * 0.24f,
+            branchHitbox.right - laneInset,
+            groundY - readability.stagingPaddingPx * 0.24f
+        )
     }
 }

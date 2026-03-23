@@ -49,7 +49,7 @@ object ReadabilityProfile {
         EntityType.EUCALYPTUS to EntityReadabilityTemplate(148f, 74f, 0.22f, 0.20f, mercyPaddingPx = 15f, stagingPaddingPx = 16f),
         EntityType.VANILLA_ORCHID to EntityReadabilityTemplate(244f, 112f, 0.18f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 16f),
         EntityType.WEEPING_WILLOW to EntityReadabilityTemplate(724f, 304f, 0.18f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 18f),
-        EntityType.JACARANDA to EntityReadabilityTemplate(638f, 246f, 0.16f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 16f),
+        EntityType.JACARANDA to EntityReadabilityTemplate(656f, 258f, 0.16f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 18f),
         EntityType.BAMBOO to EntityReadabilityTemplate(0f, 0f, 0f, 0f, mercyPaddingPx = 10f, stagingPaddingPx = 16f, secondaryWidthPx = 24f, secondarySpacingPx = 42f),
         EntityType.CHERRY_BLOSSOM to EntityReadabilityTemplate(618f, 246f, 0.16f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 18f),
         EntityType.CAT to EntityReadabilityTemplate(84f, 70f, 0.14f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),

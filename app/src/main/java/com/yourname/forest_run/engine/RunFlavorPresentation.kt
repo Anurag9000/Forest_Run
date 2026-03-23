@@ -87,7 +87,7 @@ object RunFlavorPresentation {
             EntityType.EUCALYPTUS -> if (repeatHits >= 1) "Same late whip." else "Late on the whip."
             EntityType.VANILLA_ORCHID -> if (repeatHits >= 1) "Same closed thread." else "Lost the thread."
             EntityType.WEEPING_WILLOW -> if (repeatHits >= 1) "Lost the lane again." else "Caught in the curtain."
-            EntityType.JACARANDA -> if (repeatHits >= 1) "Same petal veil." else "Lost in petals."
+            EntityType.JACARANDA -> if (repeatHits >= 1) "Same bloom curtain." else "Lost under petals."
             EntityType.BAMBOO -> if (repeatHits >= 1) "Missed the gap again." else "Missed the gap."
             EntityType.CHERRY_BLOSSOM -> if (repeatHits >= 1) "Same gust line." else "Caught in the gust."
             null -> if (isFatal) "The path answered back." else "The path caught you."
@@ -219,7 +219,7 @@ object RunFlavorPresentation {
         EntityType.EUCALYPTUS -> "Same whip line."
         EntityType.VANILLA_ORCHID -> "Same thread closed."
         EntityType.WEEPING_WILLOW -> "Same willow curtain."
-        EntityType.JACARANDA -> "Same petal veil."
+        EntityType.JACARANDA -> "Same bloom curtain."
         EntityType.BAMBOO -> "Same gap missed."
         EntityType.CHERRY_BLOSSOM -> "Same gust line."
     }
