@@ -45,6 +45,8 @@ class Wolf(
     private val relationshipTuning: RelationshipEncounterTuning =
         RelationshipArcSystem.encounterTuning(context, EntityType.WOLF)
     private val warmBond = RelationshipArcSystem.isWarmBond(context, EntityType.WOLF)
+    private val sparedHistory = PersistentMemoryManager.getSparedCount(context, EntityType.WOLF)
+    private val respectStandDownHistory = sparedHistory >= 2 || warmBond
     private val wolfH = readability.heightPx
     private val wolfW = SpriteSizing.widthForHeight(sprite, wolfH, minWidth = readability.minWidthPx)
     private val insetX = wolfW * readability.hitInsetXRatio
@@ -67,6 +69,21 @@ class Wolf(
         color = Color.argb(140, 255, 164, 164)
         style = Paint.Style.STROKE
         strokeWidth = 4f
+    }
+    private val respectPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(62, 194, 226, 255)
+        style = Paint.Style.FILL
+    }
+    private val respectStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(168, 224, 240, 255)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
+    private val standDownTrailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(150, 214, 224, 244)
+        style = Paint.Style.STROKE
+        strokeWidth = 14f
+        strokeCap = Paint.Cap.ROUND
     }
 
     init {
@@ -136,6 +153,29 @@ class Wolf(
         if (wolfState == WolfState.HOWLING || wolfState == WolfState.CHARGING) {
             canvas.drawRoundRect(x - 12f, y - 8f, x + wolfW + 12f, y + wolfH + 8f, 24f, 24f, threatPaint)
             canvas.drawRoundRect(x - 12f, y - 8f, x + wolfW + 12f, y + wolfH + 8f, 24f, 24f, threatStrokePaint)
+        } else if (wolfState == WolfState.SPARED) {
+            val trailStartX = x - wolfW * 0.42f
+            val trailY = y + wolfH * 0.76f
+            canvas.drawLine(trailStartX, trailY, x + wolfW * 0.12f, trailY, standDownTrailPaint)
+            val auraPad = if (respectStandDownHistory) 20f else 12f
+            canvas.drawRoundRect(
+                x - auraPad,
+                y - 6f,
+                x + wolfW + auraPad,
+                y + wolfH + 6f,
+                24f,
+                24f,
+                respectPaint
+            )
+            canvas.drawRoundRect(
+                x - auraPad,
+                y - 6f,
+                x + wolfW + auraPad,
+                y + wolfH + 6f,
+                24f,
+                24f,
+                respectStrokePaint
+            )
         }
         val drawRect = RectF(x, y, x + wolfW, y + wolfH)
         sprite.draw(canvas, drawRect)
@@ -147,19 +187,23 @@ class Wolf(
             spared    = true
             wolfState = WolfState.SPARED
             gameState.addBonus(
-                points = 220 + relationshipTuning.passBonusPoints,
-                seeds = 3 + relationshipTuning.passBonusSeeds + if (warmBond) 1 else 0
+                points = 220 + relationshipTuning.passBonusPoints + if (respectStandDownHistory) 70 else 0,
+                seeds = 3 + relationshipTuning.passBonusSeeds + (if (warmBond) 1 else 0) + (if (respectStandDownHistory) 1 else 0)
             )
             PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
             gameState.recordSpare()
             ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.5f, y + wolfH * 0.40f)
             ParticleManager.emit(FxPreset.SEED_COLLECT, x + wolfW * 0.5f, y + wolfH * 0.20f)
+            if (respectStandDownHistory) {
+                ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.32f, y + wolfH * 0.58f)
+                ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.68f, y + wolfH * 0.58f)
+            }
             DialogueBubbleManager.spawn(
                 RelationshipArcSystem.lineFor(context, EntityType.WOLF, RelationshipArcSystem.Event.SPARE),
                 x + wolfW * 0.5f,
                 y - 20f,
-                Color.rgb(232, 236, 245),
-                Color.rgb(110, 110, 140)
+                if (respectStandDownHistory) Color.rgb(226, 238, 248) else Color.rgb(232, 236, 245),
+                if (respectStandDownHistory) Color.rgb(96, 118, 144) else Color.rgb(110, 110, 140)
             )
             return
         }

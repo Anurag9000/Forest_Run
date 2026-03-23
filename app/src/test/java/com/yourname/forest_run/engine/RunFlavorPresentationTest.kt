@@ -54,7 +54,11 @@ class RunFlavorPresentationTest {
         )
 
         assertEquals("Too close.", cue.bubbleText)
-        assertTrue(cue.flavorText.contains("GRRR", ignoreCase = true) || cue.flavorText.contains("remember", ignoreCase = true))
+        assertTrue(
+            cue.flavorText.contains("GRRR", ignoreCase = true) ||
+                cue.flavorText.contains("remember", ignoreCase = true) ||
+                cue.flavorText.contains("calm", ignoreCase = true)
+        )
     }
 
     @Test

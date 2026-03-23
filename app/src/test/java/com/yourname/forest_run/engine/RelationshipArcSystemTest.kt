@@ -262,4 +262,29 @@ class RelationshipArcSystemTest {
         assertTrue(line.contains("careful", ignoreCase = true) || line.contains("break", ignoreCase = true))
         assertTrue(RelationshipArcSystem.isStrainedBond(context, EntityType.WOLF))
     }
+
+    @Test
+    fun `wolf repeated spare lines become more respectful after stand down history`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.WOLF) }
+
+        val spareLine = RelationshipArcSystem.lineFor(context, EntityType.WOLF, RelationshipArcSystem.Event.SPARE)
+        val chargeCue = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.WOLF,
+            RelationshipArcSystem.EncounterCue.WOLF_CHARGE
+        )
+
+        assertTrue(
+            spareLine.contains("peace", ignoreCase = true) ||
+                spareLine.contains("stand down", ignoreCase = true) ||
+                spareLine.contains("warning", ignoreCase = true)
+        )
+        assertTrue(
+            chargeCue.contains("hold", ignoreCase = true) ||
+                chargeCue.contains("ground", ignoreCase = true) ||
+                chargeCue.contains("ends", ignoreCase = true)
+        )
+    }
 }

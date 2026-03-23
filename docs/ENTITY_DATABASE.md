@@ -118,8 +118,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: sprinter/charger.
 - Dream traits: howl, then charge; intimidating but readable.
-- Current: howl/charge code, stronger threat presentation, relationship-aware charge cueing, and more visible spare reward feedback now exist.
-- TODO: finish device-proofing and deepen the spare payoff.
+- Current: howl/charge code, stronger threat presentation, relationship-aware charge cueing, more respectful spare-history lines, a visible stand-down aura/trail, and a stronger earned-respect spare reward now exist.
+- TODO: finish final device-proofing only.
 
 ### Cat
 

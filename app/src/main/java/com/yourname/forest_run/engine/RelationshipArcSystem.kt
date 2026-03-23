@@ -612,7 +612,7 @@ object RelationshipArcSystem {
         return when (type) {
             EntityType.CAT -> catCueLine(context, stage, tone, cue)
             EntityType.FOX -> foxCueLine(context, stage, tone, cue)
-            EntityType.WOLF -> wolfCueLine(stage, tone, cue)
+            EntityType.WOLF -> wolfCueLine(context, stage, tone, cue)
             EntityType.OWL -> owlCueLine(context, stage, tone, cue)
             EntityType.EAGLE -> eagleCueLine(stage, tone, cue)
             EntityType.DOG -> dogCueLine(stage, tone, cue)
@@ -642,7 +642,7 @@ object RelationshipArcSystem {
         return when (type) {
             EntityType.CAT -> catLine(context, stage, tone, event)
             EntityType.FOX -> foxLine(context, stage, tone, event)
-            EntityType.WOLF -> wolfLine(stage, tone, event)
+            EntityType.WOLF -> wolfLine(context, stage, tone, event)
             EntityType.DOG -> dogLine(stage, tone, event)
             EntityType.OWL -> owlLine(context, stage, tone, event)
             EntityType.EAGLE -> eagleLine(stage, tone, event)
@@ -760,23 +760,59 @@ object RelationshipArcSystem {
     }
     }
 
-    private fun wolfLine(stage: RelationshipStage, tone: RelationshipTone, event: Event): String = when (event) {
+    private fun wolfLine(
+        context: Context,
+        stage: RelationshipStage,
+        tone: RelationshipTone,
+        event: Event
+    ): String {
+        val sparedCount = PersistentMemoryManager.getSparedCount(context, EntityType.WOLF)
+        val passCount = PersistentMemoryManager.getPassCount(context, EntityType.WOLF)
+        val hitCount = PersistentMemoryManager.getHitCount(context, EntityType.WOLF)
+        return when (event) {
         Event.PASS -> when (stage) {
             RelationshipStage.FIRST_IMPRESSION -> "You made it."
-            RelationshipStage.RECOGNITION -> "Again."
-            RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "You held steady." else "Still standing."
-            RelationshipStage.MILESTONE -> "You know the howl now."
+            RelationshipStage.RECOGNITION ->
+                if (passCount >= 3) "Still standing." else "Again."
+            RelationshipStage.TRUST -> when {
+                tone == RelationshipTone.WARM && sparedCount >= 2 -> "You kept the wolf from baring its teeth."
+                tone == RelationshipTone.WARM -> "You held steady."
+                else -> "Still standing."
+            }
+            RelationshipStage.MILESTONE -> when {
+                sparedCount >= 3 -> "You know how to leave the howl empty."
+                passCount >= 4 -> "You know the howl now."
+                else -> "You know the howl now."
+            }
         }
         Event.SPARE -> when (stage) {
-            RelationshipStage.MILESTONE -> "Then pass in peace."
-            RelationshipStage.TRUST -> "Go on."
-            else -> "Not today."
+            RelationshipStage.MILESTONE -> when {
+                sparedCount >= 3 -> "Then let the warning rest. Pass in peace."
+                tone == RelationshipTone.WARM -> "Then pass in peace."
+                else -> "Pass in peace."
+            }
+            RelationshipStage.TRUST -> when {
+                sparedCount >= 2 -> "Keep that calm. I'll stand down."
+                tone == RelationshipTone.WARM -> "Go on. Keep your ground."
+                else -> "Go on."
+            }
+            else -> if (sparedCount >= 1) "Not today. Keep moving." else "Not today."
         }
-        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "I remember where you break." else "GRRR..."
+        Event.THREAT -> when {
+            tone == RelationshipTone.CAUTIOUS && hitCount >= 3 -> "I remember exactly where you break."
+            tone == RelationshipTone.CAUTIOUS -> "I remember where you break."
+            sparedCount >= 2 -> "Hold that calm."
+            else -> "GRRR..."
+        }
         Event.RETURN -> when (stage) {
-            RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "The grove feels watched, not threatened."
+            RelationshipStage.TRUST, RelationshipStage.MILESTONE -> when {
+                sparedCount >= 3 -> "The grove keeps the wolf's respect like a watch that no longer needs teeth."
+                sparedCount >= 1 -> "The grove feels watched, not threatened."
+                else -> "A distant howl still belongs to the path."
+            }
             else -> "A distant howl still belongs to the path."
         }
+    }
     }
 
     private fun dogLine(stage: RelationshipStage, tone: RelationshipTone, event: Event): String = when (event) {
@@ -836,15 +872,26 @@ object RelationshipArcSystem {
         }
     }
 
-    private fun wolfCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
+    private fun wolfCueLine(
+        context: Context,
+        stage: RelationshipStage,
+        tone: RelationshipTone,
+        cue: EncounterCue
+    ): String {
+        val sparedCount = PersistentMemoryManager.getSparedCount(context, EntityType.WOLF)
+        val hitCount = PersistentMemoryManager.getHitCount(context, EntityType.WOLF)
+        return when (cue) {
         EncounterCue.WOLF_CHARGE -> when {
-            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "Hold steady."
+            stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM && sparedCount >= 3 -> "Hold steady. You know how this ends."
+            stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM && sparedCount >= 2 -> "Stand your ground. I'll know if you keep it."
             stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Stand your ground."
+            tone == RelationshipTone.CAUTIOUS && hitCount >= 3 -> "I remember exactly where you break."
             tone == RelationshipTone.CAUTIOUS -> "I remember where you break."
             stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Keep your feet."
             else -> "Here it comes."
         }
-        else -> wolfLine(stage, tone, Event.THREAT)
+        else -> wolfLine(context, stage, tone, Event.THREAT)
+        }
     }
 
     private fun dogCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
