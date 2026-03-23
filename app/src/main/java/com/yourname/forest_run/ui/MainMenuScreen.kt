@@ -164,6 +164,21 @@ class MainMenuScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val launchCuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(116, 246, 238, 176)
+        style = Paint.Style.FILL
+    }
+    private val launchCueBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(156, 252, 246, 214)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val launchCueTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(52, 64, 34)
+        textSize = 11f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
 
     init {
         refreshCopy()
@@ -234,6 +249,7 @@ class MainMenuScreen(
         drawWrappedCenteredText(canvas, sceneCopy.secondaryAtmosphereLine, cw / 2f, ch * 0.205f, cw * 0.68f, secondaryAtmospherePaint)
         drawArrivalBadge(canvas, cw, ch)
         drawHomeSign(canvas, cw, ch)
+        drawLaunchCue(canvas, cw, ch, groundY)
 
         // Prompt
         val promptAlpha = when (phase) {
@@ -244,12 +260,12 @@ class MainMenuScreen(
         promptPaint.alpha = promptAlpha.toInt().coerceIn(0, 255)
         val promptText = when (phase) {
             Phase.IDLE        -> sceneCopy.idlePrompt
-            Phase.STANDING_UP -> "listening..."
+            Phase.STANDING_UP -> sceneCopy.standingPrompt
             Phase.READY       -> sceneCopy.readyPrompt
         }
         val supportText = when (phase) {
             Phase.IDLE -> sceneCopy.idleSupportLine
-            Phase.STANDING_UP -> "the garden is letting the run return by degrees"
+            Phase.STANDING_UP -> sceneCopy.standingSupportLine
             Phase.READY -> sceneCopy.readySupportLine
         }
         canvas.drawText(promptText, cw / 2f, ch * 0.90f, promptPaint)
@@ -334,6 +350,30 @@ class MainMenuScreen(
             canvas.drawCircle(x - 9f, y + 3f, 4f, ambiencePaint)
             canvas.drawCircle(x + 10f, y + 2f, 4f, ambiencePaint)
         }
+
+        if (phase == Phase.STANDING_UP || phase == Phase.READY) {
+            val phaseT = when (phase) {
+                Phase.STANDING_UP -> (standTimer / STAND_DURATION).coerceIn(0f, 1f)
+                Phase.READY -> 1f
+                Phase.IDLE -> 0f
+            }
+            val laneTop = groundY - ch * 0.02f
+            val laneBottom = groundY + ch * 0.02f
+            val laneLeft = cw * 0.58f
+            val laneRight = cw * (0.58f + 0.22f * phaseT)
+            launchCuePaint.color = Color.argb((70 + phaseT * 54).toInt(), 244, 238, 172)
+            canvas.drawRoundRect(RectF(laneLeft, laneTop, laneRight, laneBottom), 20f, 20f, launchCuePaint)
+            launchCueBorderPaint.color = Color.argb((96 + phaseT * 64).toInt(), 252, 244, 208)
+            canvas.drawRoundRect(RectF(laneLeft, laneTop, laneRight, laneBottom), 20f, 20f, launchCueBorderPaint)
+
+            repeat(4) { index ->
+                val footstepT = ((elapsedT * (0.7f + index * 0.12f)) + index * 0.24f) % 1f
+                val x = cw * (0.60f + footstepT * 0.19f)
+                val y = groundY + if (index % 2 == 0) -5f else 5f
+                launchCuePaint.color = Color.argb((64 + phaseT * 72).toInt(), 252, 246, 188)
+                canvas.drawOval(x - 8f, y - 3f, x + 8f, y + 3f, launchCuePaint)
+            }
+        }
     }
 
     private fun drawArrivalBadge(canvas: Canvas, cw: Float, ch: Float) {
@@ -356,6 +396,18 @@ class MainMenuScreen(
         canvas.drawRoundRect(rect, 16f, 16f, homeSignBorderPaint)
         val labelY = rect.centerY() - (homeSignTextPaint.descent() + homeSignTextPaint.ascent()) / 2f
         canvas.drawText(sceneCopy.homeSignLabel.take(26), rect.centerX(), labelY, homeSignTextPaint)
+    }
+
+    private fun drawLaunchCue(canvas: Canvas, cw: Float, ch: Float, groundY: Float) {
+        if (phase != Phase.STANDING_UP && phase != Phase.READY) return
+        val rect = RectF(cw * 0.66f, groundY - ch * 0.105f, cw * 0.92f, groundY - ch * 0.055f)
+        launchCuePaint.color = Color.argb(if (phase == Phase.READY) 172 else 138, 242, 238, 176)
+        canvas.drawRoundRect(rect, 18f, 18f, launchCuePaint)
+        launchCueBorderPaint.color = Color.argb(if (phase == Phase.READY) 184 else 152, 248, 246, 222)
+        canvas.drawRoundRect(rect, 18f, 18f, launchCueBorderPaint)
+        val line = if (phase == Phase.READY) sceneCopy.readyLaunchLine else sceneCopy.standingSupportLine
+        val labelY = rect.top + 17f
+        drawWrappedCenteredText(canvas, line, rect.centerX(), labelY, rect.width() - 18f, launchCueTextPaint)
     }
 
     private fun drawCharacter(canvas: Canvas, x: Float, groundY: Float) {

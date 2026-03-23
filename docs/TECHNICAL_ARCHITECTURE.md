@@ -320,7 +320,7 @@ Expected qualities:
 
 ### Current Status
 
-- Implemented: `SessionArcComposer` now derives menu atmosphere, a stronger secondary opening line, visible home-sign surfacing, rest recovery copy, carry-home wording, and fallback Garden arrival lines from the same saved emotional state.
+- Implemented: `SessionArcComposer` now derives menu atmosphere, a stronger secondary opening line, visible home-sign surfacing, authored stand/ready launch copy, rest recovery copy, carry-home wording, and fallback Garden arrival lines from the same saved emotional state.
 - TODO: expand authored variety further and finish device-proofing the macro flow.
 
 ## 16. Dynamic Difficulty Curve

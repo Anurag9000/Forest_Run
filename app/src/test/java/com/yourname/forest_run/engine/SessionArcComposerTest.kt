@@ -237,6 +237,8 @@ class SessionArcComposerTest {
         assertEquals("Quiet Start", copy.homeSignLabel)
         assertTrue(copy.atmosphereLine.contains("first path", ignoreCase = true) || copy.atmosphereLine.contains("quiet", ignoreCase = true))
         assertTrue(copy.secondaryAtmosphereLine.contains("first step", ignoreCase = true) || copy.secondaryAtmosphereLine.contains("hurry", ignoreCase = true))
+        assertTrue(copy.standingPrompt.contains("rise", ignoreCase = true) || copy.standingPrompt.contains("slowly", ignoreCase = true))
+        assertTrue(copy.readyLaunchLine.contains("lane", ignoreCase = true) || copy.readyLaunchLine.contains("first", ignoreCase = true))
     }
 
     @Test
@@ -268,5 +270,37 @@ class SessionArcComposerTest {
 
         assertTrue(copy.homeSignLabel.contains("Gate", ignoreCase = true) || copy.homeSignLabel.contains("Open", ignoreCase = true))
         assertTrue(copy.secondaryAtmosphereLine.contains("air", ignoreCase = true) || copy.secondaryAtmosphereLine.contains("home", ignoreCase = true))
+        assertTrue(copy.standingSupportLine.contains("home", ignoreCase = true) || copy.standingSupportLine.contains("air", ignoreCase = true))
+        assertTrue(copy.readyLaunchLine.contains("start", ignoreCase = true) || copy.readyLaunchLine.contains("part of", ignoreCase = true))
+    }
+
+    @Test
+    fun `fearful startup gets softer standing and launch wording`() {
+        SaveManager.saveLastRunSummary(
+            context,
+            RunSummary(
+                score = 300,
+                distanceM = 240f,
+                isNewHighScore = false,
+                highScore = 780,
+                mercyHearts = 0,
+                mercyMisses = 0,
+                kindnessChain = 0,
+                cleanPasses = 1,
+                sparedCount = 0,
+                hitsTaken = 2,
+                seedsCollected = 2,
+                bloomConversions = 0,
+                lastKiller = EntityType.WOLF,
+                restQuote = "Again.",
+                forestMood = ForestMood.FEARFUL
+            )
+        )
+
+        val copy = SessionArcComposer.menuCopy(context)
+
+        assertTrue(copy.standingPrompt.contains("feet", ignoreCase = true) || copy.standingPrompt.contains("take", ignoreCase = true))
+        assertTrue(copy.standingSupportLine.contains("speed", ignoreCase = true) || copy.standingSupportLine.contains("steadiness", ignoreCase = true))
+        assertTrue(copy.readyLaunchLine.contains("quieter", ignoreCase = true) || copy.readyLaunchLine.contains("rushed", ignoreCase = true))
     }
 }

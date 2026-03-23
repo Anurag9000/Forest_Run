@@ -1,6 +1,8 @@
 package com.yourname.forest_run.ui
 
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Bitmap
 import androidx.test.core.app.ApplicationProvider
 import com.yourname.forest_run.engine.SpriteManager
 import org.junit.Assert.assertEquals
@@ -55,5 +57,20 @@ class MainMenuScreenTest {
 
         assertTrue(screen.shouldStartRun)
         assertTrue(screen.consumeStartRunRequest())
+    }
+
+    @Test
+    fun `menu draw supports standing and ready launch staging`() {
+        val screen = MainMenuScreen(context, spriteManager, 1_920, 1_080)
+        val bitmap = Bitmap.createBitmap(1_920, 1_080, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+
+        screen.onTap(960f, 540f)
+        screen.draw(canvas)
+        assertEquals(MainMenuScreen.Phase.STANDING_UP, screen.phase)
+
+        screen.update(2.0f)
+        screen.draw(canvas)
+        assertEquals(MainMenuScreen.Phase.READY, screen.phase)
     }
 }

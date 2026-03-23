@@ -22,7 +22,6 @@ Completion standard for removing an item:
 
 ## 1. Onboarding And Session Arc
 
-- [ ] Finish launch staging so the stand-up, ready state, and run start feel fully authored.
 - [ ] Tighten the first 20–30 seconds of onboarding/readability so the early game teaches clearly without feeling sterile.
 - [ ] Finish the restorative rest/failure scene so the player’s fall, pause, and recovery feel emotionally complete.
 - [ ] Expand reflection range after runs so rest and Garden do not feel mechanically repetitive.

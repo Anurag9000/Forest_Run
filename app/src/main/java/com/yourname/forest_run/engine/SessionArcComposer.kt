@@ -8,8 +8,11 @@ data class MenuSceneCopy(
     val homeSignLabel: String,
     val idlePrompt: String,
     val idleSupportLine: String,
+    val standingPrompt: String,
+    val standingSupportLine: String,
     val readyPrompt: String,
-    val readySupportLine: String
+    val readySupportLine: String,
+    val readyLaunchLine: String
 )
 
 data class RestSceneCopy(
@@ -112,6 +115,29 @@ object SessionArcComposer {
             else -> "tap to run"
         }
 
+        val standingPrompt = when {
+            summary == null -> "rise slowly"
+            summary.forestMood == ForestMood.FEARFUL -> "take your feet back"
+            sanctuary.featuredPeaceLabel.isNotBlank() -> "carry that calm up with you"
+            sanctuary.featuredPresenceLabel.isNotBlank() -> "bring home with you"
+            repeatFriend != null -> "something familiar is already listening"
+            summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL -> "keep the hush while you rise"
+            summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL -> "let the softer answer rise first"
+            else -> "let the run return by degrees"
+        }
+
+        val standingSupportLine = when {
+            summary == null -> "the garden is making room for the first motion"
+            sanctuary.featuredPeaceLine.isNotBlank() -> sanctuary.featuredPeaceLine
+            sanctuary.featuredPresenceLine.isNotBlank() -> sanctuary.featuredPresenceLine
+            summary.forestMood == ForestMood.FEARFUL -> "nothing here needs speed before steadiness"
+            repeatFriend != null -> "the familiar part of home is staying close while you stand"
+            summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
+                "the quieter version of the path is already gathering under you"
+            summary.bloomConversions >= 2 -> "the brighter afterglow is settling into something you can carry"
+            else -> "the garden is letting the run rise back into you"
+        }
+
         val readySupportLine = when {
             summary == null -> "the first steps are enough"
             sanctuary.featuredPeaceLabel.isNotBlank() -> "carry that calmer sign back into the path"
@@ -124,14 +150,29 @@ object SessionArcComposer {
             else -> "the forest is ready for another answer"
         }
 
+        val readyLaunchLine = when {
+            summary == null -> "the first lane is already open"
+            sanctuary.featuredPeaceLabel.isNotBlank() -> "${sanctuary.featuredPeaceLabel} is the first thing leaving with you"
+            sanctuary.featuredPresenceLabel.isNotBlank() -> "${sanctuary.featuredPresenceLabel} is already part of the start"
+            repeatFriend != null -> "the path already sounds like familiar company"
+            summary.forestMood == ForestMood.FEARFUL -> "take the quieter opening, not the rushed one"
+            summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL -> "start with the hush still intact"
+            summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL -> "start where mercy already softened the edge"
+            summary.bloomConversions >= 2 -> "even the brighter branches are pointing forward now"
+            else -> "the path is already leaning into your first step"
+        }
+
         return MenuSceneCopy(
             atmosphereLine = atmosphereLine,
             secondaryAtmosphereLine = secondaryAtmosphereLine,
             homeSignLabel = homeSignLabel,
             idlePrompt = idlePrompt,
             idleSupportLine = idleSupportLine,
+            standingPrompt = standingPrompt,
+            standingSupportLine = standingSupportLine,
             readyPrompt = readyPrompt,
-            readySupportLine = readySupportLine
+            readySupportLine = readySupportLine,
+            readyLaunchLine = readyLaunchLine
         )
     }
 
