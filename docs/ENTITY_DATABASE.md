@@ -88,8 +88,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: low flyer that teaches ducking instead of jumping.
 - Dream traits: unmistakable head-height obstruction and clear quack cue.
-- Current: larger readable hazard, pulsing duck-lane cue, explicit down warning, and cleaner duck-through payoff now exist.
-- TODO: finish final on-device tuning and clearer quack/event payoff.
+- Current: larger readable hazard, staged quack call, explicit low-lane answer, and stronger answered-the-quack pass reward now exist.
+- TODO: finish final device-proofing only.
 
 ### Eagle
 

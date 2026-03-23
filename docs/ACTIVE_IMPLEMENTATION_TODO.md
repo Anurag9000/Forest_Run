@@ -24,7 +24,6 @@ Completion standard for removing an item:
 
 ### Birds
 
-- [ ] Finish Duck’s clearer quack/event payoff.
 - [ ] Finish TitGroup’s stronger rhythm payoff.
 - [ ] Finish ChickadeeGroup’s final charm/readability payoff.
 - [ ] Finish Owl’s deeper repeated-memory/night payoff.

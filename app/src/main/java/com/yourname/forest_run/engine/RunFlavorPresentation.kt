@@ -208,7 +208,7 @@ object RunFlavorPresentation {
         EntityType.WOLF -> "Same howl."
         EntityType.DOG -> "Same bark line."
         EntityType.HEDGEHOG -> "Same low thorns."
-        EntityType.DUCK -> "Same low lane."
+        EntityType.DUCK -> "Same quack lane."
         EntityType.TIT -> "Same broken rhythm."
         EntityType.CHICKADEE -> "Same flutter rush."
         EntityType.OWL -> "Same shadow."

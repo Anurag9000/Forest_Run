@@ -7,11 +7,13 @@ import org.junit.Test
 class BirdEncounterFlavorTest {
 
     @Test
-    fun `duck pass line rewards staying low`() {
-        assertEquals("Good duck.", BirdEncounterFlavor.duckPass(stayedLow = true))
-        assertEquals("Low pass.", BirdEncounterFlavor.duckPass(stayedLow = false))
-        assertEquals("Too high.", BirdEncounterFlavor.duckHit(0))
-        assertEquals("Same low lane.", BirdEncounterFlavor.duckHit(2))
+    fun `duck lines stage a call and reward answering it`() {
+        assertEquals("Quack low.", BirdEncounterFlavor.duckCall())
+        assertEquals("Stay under.", BirdEncounterFlavor.duckAnswerPrompt())
+        assertEquals("Answered the quack.", BirdEncounterFlavor.duckPass(answeredQuack = true))
+        assertEquals("Stayed under.", BirdEncounterFlavor.duckPass(answeredQuack = false))
+        assertEquals("Missed the low answer.", BirdEncounterFlavor.duckHit(0))
+        assertEquals("Same quack lane.", BirdEncounterFlavor.duckHit(2))
     }
 
     @Test

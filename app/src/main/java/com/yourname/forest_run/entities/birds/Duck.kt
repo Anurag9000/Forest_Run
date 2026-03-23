@@ -16,6 +16,7 @@ import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
 import com.yourname.forest_run.ui.DialogueBubbleManager
+import kotlin.math.sin
 
 /**
  * Duck (Phase 10)
@@ -35,19 +36,31 @@ class Duck(
     private val flyY = groundY - groundY * 0.30f
     private val insetX = birdW * readability.hitInsetXRatio
     private val insetY = birdH * readability.hitInsetYRatio
+    private val quackCallRect = RectF()
     private val duckLaneRect = RectF()
-    private val cuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(40, 244, 226, 108)
+    private val quackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(36, 255, 247, 188)
         style = Paint.Style.FILL
     }
-    private val cueStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(118, 255, 236, 134)
+    private val quackStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(114, 255, 239, 154)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val lanePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(54, 244, 226, 108)
+        style = Paint.Style.FILL
+    }
+    private val laneStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(126, 255, 236, 134)
         style = Paint.Style.STROKE
         strokeWidth = 3.5f
     }
     private var cuePulse = 0f
-    private var warned = false
+    private var quackCalled = false
+    private var lanePrompted = false
     private var stayedLow = false
+    private var answeredQuack = false
 
     init {
         x = startX
@@ -62,28 +75,62 @@ class Duck(
         cuePulse += deltaTime * 5.2f
         hitbox.offsetTo(x + insetX, y + insetY)
         val pad = readability.stagingPaddingPx
-        duckLaneRect.set(x - pad, y + birdH * 0.18f, x + birdW + pad, y + birdH * 0.86f)
+        quackCallRect.set(
+            x - pad * 4.4f,
+            y - birdH * 0.34f,
+            x + birdW * 0.48f,
+            y + birdH * 0.30f
+        )
+        duckLaneRect.set(
+            x - pad * 0.9f,
+            y + birdH * 0.92f,
+            x + birdW + pad * 1.8f,
+            y + birdH * 1.54f
+        )
         sprite.update(deltaTime)
         if (x < -birdW - 20f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
-        val pulse = 0.55f + 0.45f * kotlin.math.sin(cuePulse)
-        cuePaint.alpha = (26f + 34f * pulse).toInt().coerceIn(0, 255)
-        cueStrokePaint.alpha = (86f + 64f * pulse).toInt().coerceIn(0, 255)
-        canvas.drawRoundRect(duckLaneRect, 16f, 16f, cuePaint)
-        canvas.drawRoundRect(duckLaneRect, 16f, 16f, cueStrokePaint)
+        val pulse = 0.55f + 0.45f * sin(cuePulse)
+        quackPaint.alpha = (18f + 28f * pulse).toInt().coerceIn(0, 255)
+        quackStrokePaint.alpha = (74f + 48f * pulse).toInt().coerceIn(0, 255)
+        lanePaint.alpha = (40f + 40f * pulse).toInt().coerceIn(0, 255)
+        laneStrokePaint.alpha = (92f + 72f * pulse).toInt().coerceIn(0, 255)
+        canvas.drawRoundRect(quackCallRect, 18f, 18f, quackPaint)
+        canvas.drawRoundRect(quackCallRect, 18f, 18f, quackStrokePaint)
+        canvas.drawRoundRect(duckLaneRect, 16f, 16f, lanePaint)
+        canvas.drawRoundRect(duckLaneRect, 16f, 16f, laneStrokePaint)
+        val laneCenterY = duckLaneRect.centerY()
+        val markerSpacing = birdW * 0.22f
+        for (index in 0..2) {
+            val markerX = duckLaneRect.left + birdW * 0.22f + index * markerSpacing
+            canvas.drawLine(
+                markerX,
+                laneCenterY - 10f,
+                markerX + 12f,
+                laneCenterY,
+                laneStrokePaint
+            )
+            canvas.drawLine(
+                markerX + 12f,
+                laneCenterY,
+                markerX,
+                laneCenterY + 10f,
+                laneStrokePaint
+            )
+        }
         val drawRect = RectF(x, y, x + birdW, y + birdH)
         sprite.draw(canvas, drawRect)
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         gameState.addBonus(
-            points = if (stayedLow) 125 else 105,
-            seeds = if (stayedLow) 1 else 0
+            points = if (answeredQuack) 145 else if (stayedLow) 120 else 108,
+            seeds = if (answeredQuack) 1 else 0
         )
         DialogueBubbleManager.spawn(
-            text = BirdEncounterFlavor.duckPass(stayedLow),
+            text = BirdEncounterFlavor.duckPass(answeredQuack),
             anchorX = x + birdW * 0.5f,
             anchorY = y - 16f,
             fillColor = Color.rgb(255, 250, 220),
@@ -92,24 +139,43 @@ class Duck(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        val approach = RectF(
-            hitbox.left - readability.stagingPaddingPx * 5f,
-            hitbox.top - readability.stagingPaddingPx,
-            hitbox.right + readability.stagingPaddingPx,
+        val quackApproach = RectF(
+            hitbox.left - readability.stagingPaddingPx * 7f,
+            hitbox.top - readability.stagingPaddingPx * 2.2f,
+            hitbox.right,
             hitbox.bottom + readability.stagingPaddingPx
         )
-        if (!warned && RectF.intersects(player.hitbox, approach)) {
-            warned = true
+        if (!quackCalled && RectF.intersects(player.hitbox, quackApproach)) {
+            quackCalled = true
             DialogueBubbleManager.spawn(
-                BirdEncounterFlavor.duckWarning(),
-                x + birdW * 0.5f,
-                y - 18f,
+                BirdEncounterFlavor.duckCall(),
+                quackCallRect.centerX(),
+                quackCallRect.top - 12f,
                 Color.rgb(255, 249, 224),
                 Color.rgb(184, 146, 62)
             )
         }
-        if (player.state == PlayerState.DUCKING && player.hitbox.right >= hitbox.left && player.hitbox.left <= hitbox.right) {
+        val laneApproach = RectF(
+            duckLaneRect.left - readability.stagingPaddingPx * 2f,
+            duckLaneRect.top - readability.stagingPaddingPx,
+            duckLaneRect.right,
+            duckLaneRect.bottom + readability.stagingPaddingPx
+        )
+        if (!lanePrompted && RectF.intersects(player.hitbox, laneApproach)) {
+            lanePrompted = true
+            DialogueBubbleManager.spawn(
+                BirdEncounterFlavor.duckAnswerPrompt(),
+                duckLaneRect.centerX(),
+                duckLaneRect.top - 10f,
+                Color.rgb(255, 250, 226),
+                Color.rgb(184, 146, 62)
+            )
+        }
+        if (player.state == PlayerState.DUCKING && RectF.intersects(player.hitbox, duckLaneRect)) {
             stayedLow = true
+            if (quackCalled) {
+                answeredQuack = true
+            }
         }
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
