@@ -54,7 +54,7 @@ Expected transitions:
 ### Current Status
 
 - Implemented: garden/menu, playing, Bloom, rest summary, and fade-back-to-Garden routing, with a stronger Bloom world-state presentation layer.
-- PARTIAL: menu, rest, and Garden now share session-derived copy plus sanctuary-derived arrival badges and atmosphere cues, and rest now stages DYING-to-REST recovery with authored recovery titles/lines plus a homeward preview card; finish the remaining reflection richness and real-device proof.
+- PARTIAL: menu, rest, and Garden now share session-derived copy plus sanctuary-derived arrival badges and atmosphere cues, rest now stages DYING-to-REST recovery with authored recovery titles/lines plus a homeward preview card, and post-run reflection composition now routes through a varied selector instead of a fixed line stack; finish the remaining authored richness and real-device proof.
 
 ## 4. Player State Machine
 

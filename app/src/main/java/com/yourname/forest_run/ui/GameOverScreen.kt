@@ -12,6 +12,7 @@ import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.GardenSanctuaryPlanner
 import com.yourname.forest_run.engine.GardenSanctuaryState
 import com.yourname.forest_run.engine.PacifistPresentation
+import com.yourname.forest_run.engine.PostRunReflectionPlanner
 import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.engine.SessionArcComposer
 import kotlin.math.sin
@@ -212,6 +213,12 @@ class GameOverScreen(
     ) {
         val sceneCopy = SessionArcComposer.restCopy(appContext, summary)
         val sanctuaryState = GardenSanctuaryPlanner.build(appContext, summary)
+        val reflectionEntry = PostRunReflectionPlanner.restEntry(
+            summary = summary,
+            sanctuaryState = sanctuaryState,
+            recoveryLine = sceneCopy.recoveryLine,
+            carryHomeLine = sceneCopy.carryHomeLine
+        )
         val w = screenWidth.toFloat()
         val h = screenHeight.toFloat()
         val stageAlpha = if (isRecovering) (0.38f + recoveryProgress * 0.62f).coerceIn(0f, 1f) else 1f
@@ -320,6 +327,19 @@ class GameOverScreen(
         if (summary.kindnessChain > 0) {
             canvas.drawText("best kindness chain ${summary.kindnessChain}", cx, ty, distancePaint)
             ty += 34f
+        }
+
+        if (reflectionEntry != null) {
+            drawInfoCard(
+                canvas = canvas,
+                left = panelLeft + panelW * 0.10f,
+                top = ty - 8f,
+                width = panelW * 0.80f,
+                label = reflectionEntry.label.uppercase(),
+                line = reflectionEntry.text,
+                alphaScale = stageAlpha
+            )
+            ty += 72f
         }
 
         val statSummary = buildList {

@@ -15,6 +15,8 @@ import com.yourname.forest_run.engine.GardenSanctuaryState
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.PacifistPresentation
 import com.yourname.forest_run.engine.PersistentMemoryManager
+import com.yourname.forest_run.engine.PostRunReflectionEntry
+import com.yourname.forest_run.engine.PostRunReflectionPlanner
 import com.yourname.forest_run.engine.RelationshipArcSystem
 import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.engine.SaveManager
@@ -127,6 +129,7 @@ class GardenScreen(
     private var gardenReflectionLine = ""
     private var creatureThoughtLine = ""
     private var weatherThoughtLine = ""
+    private var reflectionEntries: List<PostRunReflectionEntry> = emptyList()
     private var sanctuaryState = GardenSanctuaryState()
     private var arrivalLine = ""
 
@@ -655,34 +658,12 @@ class GardenScreen(
         val killerText = summary.lastKiller?.let { formatEntityName(it) } ?: "None"
         canvas.drawText("Last killer: $killerText", lastRunRect.left + 18f, y, statsLabelPaint)
         y += 22f
-        canvas.drawText(summary.restQuote.take(92), lastRunRect.left + 18f, y, wardrobeHintPaint)
-        if (gardenReflectionLine.isNotBlank()) {
-            y += 24f
-            canvas.drawText(gardenReflectionLine.take(88), lastRunRect.left + 18f, y, reflectionPaint)
-        }
-        if (weatherThoughtLine.isNotBlank()) {
+        reflectionEntries.forEachIndexed { index, entry ->
+            y += if (index == 0) 18f else 14f
+            canvas.drawText("${entry.label}:", lastRunRect.left + 18f, y, statsLabelPaint)
+            val linePaint = if (entry.label == "Creature") thoughtPaint else reflectionPaint
+            canvas.drawText(entry.text.take(92), lastRunRect.left + 18f, y + 16f, linePaint)
             y += 20f
-            canvas.drawText(weatherThoughtLine.take(90), lastRunRect.left + 18f, y, reflectionPaint)
-        }
-        if (creatureThoughtLine.isNotBlank()) {
-            y += 20f
-            canvas.drawText(creatureThoughtLine.take(90), lastRunRect.left + 18f, y, thoughtPaint)
-        }
-        if (sanctuaryState.carryHomeLine.isNotBlank()) {
-            y += 22f
-            canvas.drawText(sanctuaryState.carryHomeLine.take(94), lastRunRect.left + 18f, y, thoughtPaint)
-        }
-        if (sanctuaryState.featuredPeaceLine.isNotBlank() &&
-            sanctuaryState.featuredPeaceLine != sanctuaryState.carryHomeLine
-        ) {
-            y += 20f
-            canvas.drawText(sanctuaryState.featuredPeaceLine.take(94), lastRunRect.left + 18f, y, thoughtPaint)
-        }
-        if (sanctuaryState.featuredPresenceLine.isNotBlank() &&
-            sanctuaryState.featuredPresenceLine != sanctuaryState.carryHomeLine
-        ) {
-            y += 20f
-            canvas.drawText(sanctuaryState.featuredPresenceLine.take(94), lastRunRect.left + 18f, y, thoughtPaint)
         }
     }
 
@@ -793,6 +774,15 @@ class GardenScreen(
         weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)
         creatureThoughtLine = StoryFragmentSystem.creatureThought(context, strongestBond?.first).orEmpty()
         arrivalLine = SessionArcComposer.gardenArrivalLine(lastRunSummary, returnMoment, sanctuaryState)
+        reflectionEntries = PostRunReflectionPlanner.gardenEntries(
+            summary = lastRunSummary,
+            sanctuaryState = sanctuaryState,
+            restQuote = lastRunSummary?.restQuote.orEmpty(),
+            gardenReflection = gardenReflectionLine,
+            weatherThought = weatherThoughtLine,
+            creatureThought = creatureThoughtLine,
+            arrivalLine = arrivalLine
+        )
     }
 
     private fun syncWardrobe() {

@@ -149,7 +149,7 @@ Missing dream-spec dedicated classes called out by historical docs:
 
 #### Soft Fall / Rest State
 
-- `Partial`: current runtime restores the return-to-Garden loop, and rest now includes authored recovery/carry-home copy, sanctuary-derived recovery atmosphere, repeat-killer and route-sensitive homecoming beats, a non-mutating preview of the likely Garden return tone, a staged DYING-to-REST settle window, and visible run-kept/homeward framing; richer reflection variety is still weaker than the original dream spec.
+- `Partial`: current runtime restores the return-to-Garden loop, and rest now includes authored recovery/carry-home copy, sanctuary-derived recovery atmosphere, repeat-killer and route-sensitive homecoming beats, a non-mutating preview of the likely Garden return tone, a staged DYING-to-REST settle window, visible run-kept/homeward framing, and a more varied post-run reflection selector across rest and Garden; broader authored variety is still weaker than the original dream spec.
 - `Partial`: mercy-oriented runs now also surface explicit route tiers in the carry-home layer, and restorative authored recovery is materially stronger, but broader reflection richness is still incomplete.
 - `Partial`: rest-like player state exists.
 - `Partial`: short death-to-overlay pacing exists.
