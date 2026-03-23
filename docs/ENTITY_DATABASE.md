@@ -65,8 +65,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: vertical-barrier precision hazard.
 - Dream traits: narrow gap threading, jitter sway.
-- Current: stronger gap-readability pass now exists with clearer lane guidance and payoff.
-- TODO: finish signature threat identity and final device validation.
+- Current: stronger gap-readability pass now exists with clearer lane guidance, a featured seam, tighter secondary gaps, and stronger payoff.
+- TODO: finish on-device validation.
 
 ### Cherry Blossom
 

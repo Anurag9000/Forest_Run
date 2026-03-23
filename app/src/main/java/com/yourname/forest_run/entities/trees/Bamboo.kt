@@ -34,12 +34,16 @@ class Bamboo(
 
     private val readability = ReadabilityProfile.entity(EntityType.BAMBOO, screenHeight)
     private val stalkCount        = 5
+    private val gapCount          = stalkCount - 1
+    private val featuredGapIndex  = 1
     private val stalkWidth        = readability.secondaryWidthPx
-    private val gapBetweenStalks  = readability.secondarySpacingPx
-    private val totalWidth        = stalkCount * stalkWidth + (stalkCount - 1) * gapBetweenStalks
+    private val baseGapBetweenStalks = readability.secondarySpacingPx
+    private val gapSizes          = FloatArray(gapCount)
+    private var totalWidth        = 0f
 
     private val topHitboxes       = Array(stalkCount) { RectF() }
     private val bottomHitboxes    = Array(stalkCount) { RectF() }
+    private val gapRects          = Array(gapCount) { RectF() }
     private val topDrawRects      = Array(stalkCount) { RectF() }
     private val bottomDrawRects   = Array(stalkCount) { RectF() }
     private val gapGuidePaint     = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -51,20 +55,33 @@ class Bamboo(
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
+    private val featuredGapPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(66, 238, 248, 202)
+        style = Paint.Style.FILL
+    }
+    private val featuredGapBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(204, 248, 252, 228)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
     private var guidePulse = 0f
 
     init {
         x = startX
         y = 0f
         swayComponent = SwayComponent(speed = 3.0f, intensity = 4f)
+        for (i in 0 until gapCount) {
+            gapSizes[i] = if (i == featuredGapIndex) {
+                baseGapBetweenStalks * 1.55f
+            } else {
+                baseGapBetweenStalks * 0.78f
+            }
+        }
+        totalWidth = stalkCount * stalkWidth + gapSizes.sum()
         val gapHeight  = Player.BASE_HEIGHT * 1.5f
         val gapYCenter = Random.nextFloat() * (groundY - gapHeight * 2f) + gapHeight
 
-        for (i in 0 until stalkCount) {
-            val stalkX = x + i * (stalkWidth + gapBetweenStalks)
-            topHitboxes[i].set(stalkX, 0f, stalkX + stalkWidth, gapYCenter - gapHeight / 2f)
-            bottomHitboxes[i].set(stalkX, gapYCenter + gapHeight / 2f, stalkX + stalkWidth, groundY)
-        }
+        updateGeometry(x, gapYCenter, gapHeight)
         hitbox.set(x, 0f, x + totalWidth, groundY)
     }
 
@@ -73,13 +90,9 @@ class Bamboo(
         guidePulse += deltaTime * 3f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x, 0f)
-        for (i in 0 until stalkCount) {
-            val stalkX = x + i * (stalkWidth + gapBetweenStalks) + sway
-            topHitboxes[i].left    = stalkX
-            topHitboxes[i].right   = stalkX + stalkWidth
-            bottomHitboxes[i].left = stalkX
-            bottomHitboxes[i].right= stalkX + stalkWidth
-        }
+        val gapHeight = bottomHitboxes[0].top - topHitboxes[0].bottom
+        val gapYCenter = topHitboxes[0].bottom + gapHeight / 2f
+        updateGeometry(x + sway, gapYCenter, gapHeight)
         sprite.update(deltaTime)
         if (x < -totalWidth - 50f) isActive = false
     }
@@ -88,15 +101,23 @@ class Bamboo(
         val pulse = 0.6f + 0.4f * kotlin.math.sin(guidePulse)
         gapGuidePaint.alpha = (28f + 26f * pulse).toInt().coerceIn(0, 255)
         gapGuideStrokePaint.alpha = (88f + 36f * pulse).toInt().coerceIn(0, 255)
-        for (i in 0 until stalkCount - 1) {
-            val left = topHitboxes[i].right
-            val right = topHitboxes[i + 1].left
-            if (right > left) {
-                val gapTop = topHitboxes[i].bottom
-                val gapBottom = bottomHitboxes[i].top
-                val radius = readability.stagingPaddingPx
-                canvas.drawRoundRect(left, gapTop, right, gapBottom, radius, radius, gapGuidePaint)
-                canvas.drawRoundRect(left, gapTop, right, gapBottom, radius, radius, gapGuideStrokePaint)
+        featuredGapPaint.alpha = (46f + 34f * pulse).toInt().coerceIn(0, 255)
+        featuredGapBorderPaint.alpha = (156f + 42f * pulse).toInt().coerceIn(0, 255)
+        for (i in 0 until gapCount) {
+            val gapRect = gapRects[i]
+            if (gapRect.width() <= 0f) continue
+            val radius = readability.stagingPaddingPx
+            val fill = if (i == featuredGapIndex) featuredGapPaint else gapGuidePaint
+            val border = if (i == featuredGapIndex) featuredGapBorderPaint else gapGuideStrokePaint
+            canvas.drawRoundRect(gapRect, radius, radius, fill)
+            canvas.drawRoundRect(gapRect, radius, radius, border)
+            if (i == featuredGapIndex) {
+                val centerX = gapRect.centerX()
+                canvas.drawLine(centerX, gapRect.top + 8f, centerX, gapRect.bottom - 8f, featuredGapBorderPaint)
+                repeat(3) { marker ->
+                    val markerY = gapRect.top + gapRect.height() * ((marker + 1f) / 4f)
+                    canvas.drawCircle(centerX, markerY, stalkWidth * 0.18f, featuredGapBorderPaint)
+                }
             }
         }
         for (i in 0 until stalkCount) {
@@ -134,5 +155,24 @@ class Bamboo(
             if (RectF.intersects(player.hitbox, tm) || RectF.intersects(player.hitbox, bm)) nearMiss = true
         }
         return if (nearMiss) CollisionResult.MERCY_MISS else CollisionResult.NONE
+    }
+
+    private fun updateGeometry(offsetX: Float, gapYCenter: Float, gapHeight: Float) {
+        var currentX = offsetX
+        val gapTop = gapYCenter - gapHeight / 2f
+        val gapBottom = gapYCenter + gapHeight / 2f
+        for (i in 0 until stalkCount) {
+            topHitboxes[i].set(currentX, 0f, currentX + stalkWidth, gapTop)
+            bottomHitboxes[i].set(currentX, gapBottom, currentX + stalkWidth, groundY)
+            if (i < gapCount) {
+                gapRects[i].set(
+                    currentX + stalkWidth,
+                    gapTop,
+                    currentX + stalkWidth + gapSizes[i],
+                    gapBottom
+                )
+                currentX += stalkWidth + gapSizes[i]
+            }
+        }
     }
 }

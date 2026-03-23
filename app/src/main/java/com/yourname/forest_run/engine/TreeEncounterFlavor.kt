@@ -16,9 +16,9 @@ object TreeEncounterFlavor {
     }
 
     fun bambooPass(encounters: Int, repeatHits: Int): String = when {
-        repeatHits >= 2 -> "Held the narrow line."
-        encounters >= 4 -> "Every stalk left just enough room."
-        else -> "Thread the grove."
+        repeatHits >= 2 -> "Held the seam."
+        encounters >= 4 -> "The seam stayed open."
+        else -> "Find the bamboo seam."
     }
 
     fun cherryPass(encounters: Int, repeatHits: Int): String = when {

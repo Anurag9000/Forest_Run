@@ -55,5 +55,7 @@ class ReadabilityProfileTest {
         assertTrue(jacaranda.stagingPaddingPx >= 18f)
         assertTrue(bamboo.secondaryWidthPx > 0f)
         assertTrue(bamboo.secondarySpacingPx > 0f)
+        assertTrue(bamboo.secondaryWidthPx >= 26f)
+        assertTrue(bamboo.stagingPaddingPx >= 18f)
     }
 }
