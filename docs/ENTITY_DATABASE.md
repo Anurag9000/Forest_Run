@@ -35,8 +35,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: vertical-window obstacle with vine and overhead branch pressure.
 - Dream traits: safe window between low and high colliders.
-- Current: safe-window readability pass now exists with explicit top/bottom hazard staging and a clearer safe thread.
-- TODO: finish final live-play validation on device.
+- Current: safe-window readability pass now exists with explicit top/bottom hazard staging, a narrower true overlap window, explicit guide markers, and a collision-safe center thread.
+- TODO: finish on-device validation.
 
 ### Cactus
 

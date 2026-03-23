@@ -22,9 +22,9 @@ object FloraEncounterFlavor {
     }
 
     fun orchidPass(encounters: Int, repeatHits: Int): String = when {
-        repeatHits >= 2 -> "Low, then high."
-        encounters >= 4 -> "Still found the window."
-        else -> "Thread the bloom."
+        repeatHits >= 2 -> "Low vine, high branch."
+        encounters >= 4 -> "You held the center thread."
+        else -> "Find the center thread."
     }
 
     fun cactusPass(encounters: Int, repeatHits: Int): String = when {

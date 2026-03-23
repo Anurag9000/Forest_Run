@@ -36,6 +36,7 @@ class ReadabilityProfileTest {
     fun `flora and trees now have explicit readability coverage`() {
         val lily = ReadabilityProfile.entity(EntityType.LILY_OF_VALLEY, screenHeight = 1080f)
         val hyacinth = ReadabilityProfile.entity(EntityType.HYACINTH, screenHeight = 1080f)
+        val orchid = ReadabilityProfile.entity(EntityType.VANILLA_ORCHID, screenHeight = 1080f)
         val willow = ReadabilityProfile.entity(EntityType.WEEPING_WILLOW, screenHeight = 1080f)
         val bamboo = ReadabilityProfile.entity(EntityType.BAMBOO, screenHeight = 1080f)
 
@@ -44,6 +45,8 @@ class ReadabilityProfileTest {
         assertTrue(lily.mercyPaddingPx >= 15f)
         assertTrue(hyacinth.heightPx >= 132f)
         assertTrue(hyacinth.hitInsetYRatio >= 0.34f)
+        assertTrue(orchid.minWidthPx >= 112f)
+        assertTrue(orchid.stagingPaddingPx >= 16f)
         assertTrue(willow.heightPx > 0f)
         assertTrue(bamboo.secondaryWidthPx > 0f)
         assertTrue(bamboo.secondarySpacingPx > 0f)
