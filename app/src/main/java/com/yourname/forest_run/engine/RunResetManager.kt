@@ -28,6 +28,8 @@ class RunResetManager {
     // Fade alpha for the restart fade-out (0 = transparent, 255 = black)
     var restartFadeAlpha: Int = 0
         private set
+    val dyingFraction: Float
+        get() = (timer / DYING_DURATION_S).coerceIn(0f, 1f)
 
     // ── Death trigger ─────────────────────────────────────────────────────
 

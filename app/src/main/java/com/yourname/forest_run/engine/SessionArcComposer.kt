@@ -16,7 +16,10 @@ data class MenuSceneCopy(
 )
 
 data class RestSceneCopy(
+    val recoveryTitle: String,
     val subtitle: String,
+    val recoveryLine: String,
+    val carryHomeLabel: String,
     val carryHomeLine: String,
     val promptLine: String
 )
@@ -181,6 +184,21 @@ object SessionArcComposer {
         val sanctuary = GardenSanctuaryPlanner.build(appContext, summary)
         val previewMoment = ReturnMomentsSystem.previewGardenMoment(appContext, summary)
 
+        val recoveryTitle = when {
+            summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL && summary.bloomConversions >= 2 ->
+                "Let The Bloom Settle"
+            summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
+                "Carry The Quiet In"
+            summary.hitsTaken == 0 && summary.cleanPasses >= 8 ->
+                "Keep The Quiet"
+            summary.forestMood == ForestMood.FEARFUL ->
+                "Stay Here A Moment"
+            summary.forestMood == ForestMood.RECKLESS ->
+                "Come Down Slowly"
+            else ->
+                "Rest"
+        }
+
         val subtitle = when {
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL && summary.bloomConversions >= 2 ->
                 "Bloom came down softly with you."
@@ -196,6 +214,21 @@ object SessionArcComposer {
                 "Even hurried runs are allowed to come down softly."
             else ->
                 "The path is already making room for another calm start."
+        }
+
+        val recoveryLine = when {
+            previewMoment != null ->
+                "${previewMoment.title} is already waiting on the homeward side of this pause."
+            sanctuary.featuredPeaceLine.isNotBlank() ->
+                sanctuary.featuredPeaceLine
+            sanctuary.featuredPresenceLine.isNotBlank() ->
+                sanctuary.featuredPresenceLine
+            summary.hitsTaken >= 2 ->
+                "Let the rougher parts of the run leave first."
+            summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
+                "The calmer answer from that run is already arriving before you do."
+            else ->
+                "Nothing here needs the next run before this one has settled."
         }
 
         val carryHomeLine = previewMoment?.line?.ifBlank { null }
@@ -219,6 +252,20 @@ object SessionArcComposer {
                 }
             }
 
+        val carryHomeLabel = previewMoment?.title?.ifBlank { null }
+            ?: sanctuary.featuredPeaceLabel.ifBlank {
+                sanctuary.featuredPresenceLabel.ifBlank {
+                    when {
+                        summary.pacifistRouteTier != PacifistRouteTier.NONE ->
+                            "${summary.pacifistRouteTier.displayName} Home"
+                        summary.hitsTaken >= 2 ->
+                            "Soft Landing"
+                        else ->
+                            "Homeward"
+                    }
+                }
+            }
+
         val promptLine = if (previewMoment != null) {
             "tap to return home"
         } else {
@@ -226,7 +273,10 @@ object SessionArcComposer {
         }
 
         return RestSceneCopy(
+            recoveryTitle = recoveryTitle,
             subtitle = subtitle,
+            recoveryLine = recoveryLine,
+            carryHomeLabel = carryHomeLabel,
             carryHomeLine = carryHomeLine,
             promptLine = promptLine
         )

@@ -75,10 +75,25 @@ class GameOverScreen(
         textAlign = Paint.Align.CENTER
         color = Color.rgb(44, 50, 24)
     }
+    private val restChipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(216, 230, 245, 220)
+        style = Paint.Style.FILL
+    }
+    private val restChipBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(196, 242, 246, 230)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val restChipTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont
+        textSize = 12f
+        textAlign = Paint.Align.CENTER
+        color = Color.rgb(36, 44, 24)
+    }
 
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface  = pixelFont
-        textSize  = 46f
+        textSize  = 34f
         textAlign = Paint.Align.CENTER
         color     = Color.rgb(220, 255, 210)
     }
@@ -147,13 +162,35 @@ class GameOverScreen(
         textAlign = Paint.Align.CENTER
         color = Color.argb(220, 236, 244, 226)
     }
+    private val sectionLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont
+        textSize = 14f
+        textAlign = Paint.Align.LEFT
+        color = Color.argb(220, 220, 236, 196)
+    }
+    private val sectionBodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont
+        textSize = 16f
+        textAlign = Paint.Align.LEFT
+        color = Color.argb(228, 234, 244, 232)
+    }
+    private val cardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(176, 22, 28, 34)
+        style = Paint.Style.FILL
+    }
+    private val cardBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(136, 202, 222, 204)
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+    }
+    private val infoCardRect = RectF()
 
     // ── Pulse timer ───────────────────────────────────────────────────────
     private var pulseTimer = 0f
 
     // ── Panel rect (computed once) ────────────────────────────────────────
     private val panelW     = screenWidth  * 0.72f
-    private val panelH     = screenHeight * 0.70f
+    private val panelH     = screenHeight * 0.76f
     private val panelLeft  = (screenWidth  - panelW) / 2f
     private val panelTop   = (screenHeight - panelH) / 2f
     private val panelRect  = RectF(panelLeft, panelTop, panelLeft + panelW, panelTop + panelH)
@@ -169,16 +206,22 @@ class GameOverScreen(
 
     fun draw(
         canvas:        Canvas,
-        summary: RunSummary
+        summary: RunSummary,
+        isRecovering: Boolean = false,
+        recoveryProgress: Float = 1f
     ) {
         val sceneCopy = SessionArcComposer.restCopy(appContext, summary)
         val sanctuaryState = GardenSanctuaryPlanner.build(appContext, summary)
         val w = screenWidth.toFloat()
         val h = screenHeight.toFloat()
+        val stageAlpha = if (isRecovering) (0.38f + recoveryProgress * 0.62f).coerceIn(0f, 1f) else 1f
 
         // 1. Scrim
+        scrimPaint.alpha = (180f * stageAlpha).toInt().coerceIn(0, 255)
+        panelPaint.alpha = (232f * stageAlpha).toInt().coerceIn(0, 255)
+        panelBorderPaint.alpha = (255f * stageAlpha).toInt().coerceIn(0, 255)
         canvas.drawRect(0f, 0f, w, h, scrimPaint)
-        drawRecoveryAtmosphere(canvas, w, h, sanctuaryState)
+        drawRecoveryAtmosphere(canvas, w, h, sanctuaryState, stageAlpha)
 
         // 2. Panel
         canvas.drawRoundRect(panelRect, 24f, 24f, panelPaint)
@@ -186,11 +229,19 @@ class GameOverScreen(
 
         var ty = panelTop + 70f
 
-        // 3. Title
-        canvas.drawText("REST", cx, ty, titlePaint)
-        ty += 34f
+        // 3. Rest chip + title
+        val chipRect = RectF(cx - 58f, ty - 26f, cx + 58f, ty - 2f)
+        restChipPaint.alpha = (216f * stageAlpha).toInt().coerceIn(0, 255)
+        restChipBorderPaint.alpha = (196f * stageAlpha).toInt().coerceIn(0, 255)
+        canvas.drawRoundRect(chipRect, 12f, 12f, restChipPaint)
+        canvas.drawRoundRect(chipRect, 12f, 12f, restChipBorderPaint)
+        canvas.drawText("REST", cx, chipRect.centerY() - (restChipTextPaint.descent() + restChipTextPaint.ascent()) / 2f, restChipTextPaint)
+        canvas.drawText(sceneCopy.recoveryTitle, cx, ty + 24f, titlePaint)
+        ty += 56f
 
         drawWrappedCenteredText(canvas, sceneCopy.subtitle, cx, ty, panelW * 0.80f, subtitlePaint)
+        ty += 42f
+        drawWrappedCenteredText(canvas, sceneCopy.recoveryLine, cx, ty, panelW * 0.82f, carryHomePaint)
         ty += 42f
 
         if (sanctuaryState.arrivalBadge.isNotBlank()) {
@@ -271,11 +322,42 @@ class GameOverScreen(
             ty += 34f
         }
 
-        drawWrappedCenteredText(canvas, sceneCopy.carryHomeLine, cx, ty, panelW * 0.82f, carryHomePaint)
-        ty += 42f
+        val statSummary = buildList {
+            if (summary.seedsCollected > 0) add("+${summary.seedsCollected} seeds")
+            if (summary.cleanPasses > 0) add("${summary.cleanPasses} clean")
+            if (summary.sparedCount > 0) add("${summary.sparedCount} spared")
+            if (summary.bloomConversions > 0) add("${summary.bloomConversions} Bloom")
+        }.joinToString("  •  ")
+        if (statSummary.isNotBlank()) {
+            drawInfoCard(
+                canvas = canvas,
+                left = panelLeft + panelW * 0.10f,
+                top = ty - 6f,
+                width = panelW * 0.80f,
+                label = "RUN KEPT",
+                line = statSummary,
+                alphaScale = stageAlpha
+            )
+            ty += 68f
+        }
+
+        drawInfoCard(
+            canvas = canvas,
+            left = panelLeft + panelW * 0.10f,
+            top = ty - 6f,
+            width = panelW * 0.80f,
+            label = sceneCopy.carryHomeLabel.uppercase(),
+            line = sceneCopy.carryHomeLine,
+            alphaScale = stageAlpha
+        )
+        ty += 74f
 
         // 8. Tap prompt — pulsing alpha
-        val promptAlpha = ((sin(pulseTimer * 2.5f) * 0.4f + 0.6f) * 200).toInt().coerceIn(0, 255)
+        val promptAlpha = if (isRecovering) {
+            0
+        } else {
+            ((sin(pulseTimer * 2.5f) * 0.4f + 0.6f) * 200).toInt().coerceIn(0, 255)
+        }
         promptPaint.alpha = promptAlpha
         canvas.drawText(sceneCopy.promptLine, cx, ty + 20f, promptPaint)
     }
@@ -284,28 +366,44 @@ class GameOverScreen(
         canvas: Canvas,
         w: Float,
         h: Float,
-        sanctuaryState: GardenSanctuaryState
+        sanctuaryState: GardenSanctuaryState,
+        alphaScale: Float
     ) {
-        ambiencePaint.color = Color.argb(sanctuaryState.canopyShadeAlpha.coerceAtMost(84), 20, 28, 34)
+        ambiencePaint.color = Color.argb(
+            (sanctuaryState.canopyShadeAlpha.coerceAtMost(84) * alphaScale).toInt().coerceIn(0, 255),
+            20,
+            28,
+            34
+        )
         canvas.drawRect(0f, 0f, w, h * 0.34f, ambiencePaint)
 
         repeat(sanctuaryState.mistBandCount.coerceAtMost(3)) { index ->
-            ambiencePaint.color = Color.argb(24 + index * 10, 228, 240, 236)
+            ambiencePaint.color = Color.argb(
+                ((24 + index * 10) * alphaScale).toInt().coerceIn(0, 255),
+                228,
+                240,
+                236
+            )
             val top = h * (0.26f + index * 0.06f)
             canvas.drawOval(-30f, top, w + 30f, top + h * 0.08f, ambiencePaint)
         }
 
         if (sanctuaryState.groundGlowAlpha > 0) {
-            ambiencePaint.color = Color.argb(sanctuaryState.groundGlowAlpha.coerceAtMost(96), 236, 240, 178)
+            ambiencePaint.color = Color.argb(
+                (sanctuaryState.groundGlowAlpha.coerceAtMost(96) * alphaScale).toInt().coerceIn(0, 255),
+                236,
+                240,
+                178
+            )
             canvas.drawOval(w * 0.16f, h * 0.70f, w * 0.84f, h * 0.92f, ambiencePaint)
         }
 
         repeat(sanctuaryState.lanternGlowCount.coerceAtMost(4)) { index ->
             val x = w * (0.24f + index * 0.16f)
             val y = h * (0.20f + (index % 2) * 0.05f)
-            ambiencePaint.color = Color.argb(58, 255, 236, 170)
+            ambiencePaint.color = Color.argb((58f * alphaScale).toInt().coerceIn(0, 255), 255, 236, 170)
             canvas.drawCircle(x, y, 14f, ambiencePaint)
-            ambiencePaint.color = Color.argb(118, 255, 242, 192)
+            ambiencePaint.color = Color.argb((118f * alphaScale).toInt().coerceIn(0, 255), 255, 242, 192)
             canvas.drawCircle(x, y, 5f, ambiencePaint)
         }
     }
@@ -349,6 +447,67 @@ class GameOverScreen(
         for (line in lines.take(2)) {
             canvas.drawText(line, centerX, y, paint)
             y += paint.textSize + 8f
+        }
+    }
+
+    private fun drawInfoCard(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        width: Float,
+        label: String,
+        line: String,
+        alphaScale: Float
+    ) {
+        val height = 58f
+        infoCardRect.set(left, top, left + width, top + height)
+        cardPaint.alpha = (176f * alphaScale).toInt().coerceIn(0, 255)
+        cardBorderPaint.alpha = (136f * alphaScale).toInt().coerceIn(0, 255)
+        canvas.drawRoundRect(infoCardRect, 14f, 14f, cardPaint)
+        canvas.drawRoundRect(infoCardRect, 14f, 14f, cardBorderPaint)
+        sectionLabelPaint.alpha = (220f * alphaScale).toInt().coerceIn(0, 255)
+        sectionBodyPaint.alpha = (228f * alphaScale).toInt().coerceIn(0, 255)
+        canvas.drawText(label, left + 14f, top + 17f, sectionLabelPaint)
+        drawWrappedLeftText(
+            canvas = canvas,
+            text = line,
+            left = left + 14f,
+            baselineY = top + 35f,
+            maxWidth = width - 28f,
+            paint = sectionBodyPaint
+        )
+    }
+
+    private fun drawWrappedLeftText(
+        canvas: Canvas,
+        text: String,
+        left: Float,
+        baselineY: Float,
+        maxWidth: Float,
+        paint: Paint
+    ) {
+        val words = text.split(" ")
+        if (words.isEmpty()) return
+
+        val lines = mutableListOf<String>()
+        val builder = StringBuilder()
+        for (word in words) {
+            val candidate = if (builder.isEmpty()) word else "${builder} $word"
+            if (paint.measureText(candidate) <= maxWidth) {
+                builder.clear()
+                builder.append(candidate)
+            } else {
+                lines += builder.toString()
+                builder.clear()
+                builder.append(word)
+            }
+        }
+        if (builder.isNotEmpty()) lines += builder.toString()
+
+        var y = baselineY
+        for (line in lines.take(2)) {
+            canvas.drawText(line, left, y, paint)
+            y += paint.textSize + 6f
         }
     }
 }

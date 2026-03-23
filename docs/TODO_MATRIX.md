@@ -35,7 +35,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 - PARTIAL: startup now uses shared session-arc copy plus sanctuary-derived atmosphere, arrival badges, a stronger secondary opening line, a visible home-sign chip, richer carried-home petals/bloom patches, authored stand/ready launch copy, and a visible home-sign lane instead of generic phase text; finish real-device proof.
 - PARTIAL: the first 20–30 seconds now use an authored onboarding layer with curated opening spawn lockout, gentler guided spawn pacing, a curated early pool, and visible tap/hold/duck guidance chips; finish real-device proof and any final feel tuning.
 - PARTIAL: Bloom spectacle now includes a full-screen/world shift, stronger conversion spectacle, and stronger active-state HUD framing; finish final authored polish and device validation.
-- PARTIAL: rest now has a softer authored recovery subtitle, carry-home preview, sanctuary badge, and recovery ambience; finish the full restorative failure scene and richer reflection range.
+- PARTIAL: rest now has a staged DYING-to-REST settle window, authored recovery title/line, a visible homeward preview card, sanctuary recovery ambience, and a stronger run-kept summary instead of only quote-plus-stats; finish richer reflection range and real-device proof.
 - PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, visible bond traces, arrival badges, mist/lantern/ground-glow atmosphere, and a stronger arrival line when no special return beat is active, while startup now also surfaces a clearer home-sign atmosphere; finish the full restorative scene and remaining startup/launch work.
 
 ## Personality TODOs

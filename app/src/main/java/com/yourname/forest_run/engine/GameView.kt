@@ -834,11 +834,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (runState == RunState.GAME_OVER || runState == RunState.DYING) {
             if (::gameOverScreen.isInitialized && ::gameState.isInitialized) {
                 gameOverScreen.draw(
-                    canvas          = canvas,
+                    canvas = canvas,
                     summary = currentRunSummary ?: gameState.buildRunSummary(
                         lastKiller = PersistentMemoryManager.getLastKiller(context),
                         restQuote = currentRestQuote
-                    )
+                    ),
+                    isRecovering = runState == RunState.DYING,
+                    recoveryProgress = if (runState == RunState.DYING) runResetManager.dyingFraction else 1f
                 )
             }
         }

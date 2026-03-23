@@ -80,6 +80,8 @@ class SessionArcComposerTest {
         val copy = SessionArcComposer.restCopy(context, summary)
 
         assertEquals("tap to return home", copy.promptLine)
+        assertTrue(copy.recoveryTitle.isNotBlank())
+        assertTrue(copy.carryHomeLabel.isNotBlank())
         assertTrue(copy.carryHomeLine.contains("cat", ignoreCase = true) || copy.carryHomeLine.contains("gentler", ignoreCase = true))
     }
 
@@ -165,6 +167,7 @@ class SessionArcComposerTest {
         val restCopy = SessionArcComposer.restCopy(context, summary)
 
         assertTrue(menuCopy.atmosphereLine.contains("Bloom") || menuCopy.atmosphereLine.contains("hush"))
+        assertTrue(restCopy.recoveryTitle.contains("Bloom") || restCopy.recoveryTitle.contains("Quiet", ignoreCase = true))
         assertTrue(restCopy.subtitle.contains("Bloom") || restCopy.carryHomeLine.contains("Bloom"))
     }
 
@@ -195,6 +198,7 @@ class SessionArcComposerTest {
         val restCopy = SessionArcComposer.restCopy(context, summary)
 
         assertTrue(menuCopy.atmosphereLine.contains("night", ignoreCase = true) || menuCopy.atmosphereLine.contains("dark edge", ignoreCase = true))
+        assertTrue(restCopy.carryHomeLabel.isNotBlank())
         assertTrue(restCopy.carryHomeLine.contains("night", ignoreCase = true) || restCopy.carryHomeLine.contains("dark edge", ignoreCase = true))
     }
 
