@@ -17,6 +17,7 @@ import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.ui.DialogueBubbleManager
+import kotlin.math.max
 import kotlin.math.sqrt
 
 /**
@@ -48,6 +49,10 @@ class Eagle(
     private var lockTimer = 0f
     private val lockDuration = (readability.telegraphDurationSec * relationshipTuning.telegraphMultiplier).coerceAtLeast(0.28f)
     private var isLocked = false
+    private var markPrompted = false
+    private var heldMark = true
+    private val targetZoneRect = RectF()
+    private val diveCorridorRect = RectF()
     private val reticlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(220, 255, 90, 90)
         style = Paint.Style.STROKE
@@ -55,6 +60,15 @@ class Eagle(
     }
     private val reticleFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(42, 255, 110, 110)
+        style = Paint.Style.FILL
+    }
+    private val corridorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(120, 255, 126, 126)
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+    }
+    private val corridorFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(30, 255, 120, 120)
         style = Paint.Style.FILL
     }
 
@@ -81,6 +95,7 @@ class Eagle(
         val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat().coerceAtLeast(1f)
         velX = dx / dist * diveSpeed
         velY = dy / dist * diveSpeed
+        updateCueGeometry()
         CameraSystem.shakeEagle()  // Phase 15: lock-on tremor
         DialogueBubbleManager.spawn(
             RelationshipArcSystem.encounterCueLine(context, EntityType.EAGLE, RelationshipArcSystem.EncounterCue.EAGLE_LOCK),
@@ -101,6 +116,7 @@ class Eagle(
             x += velX * deltaTime
             y += velY * deltaTime
         }
+        updateCueGeometry()
         hitbox.offsetTo(x + insetX, y + insetY)
         sprite.update(deltaTime)
         // Despawn when completely off screen (using +150f to allow time for the diagonal dive)
@@ -108,6 +124,11 @@ class Eagle(
     }
 
     override fun draw(canvas: Canvas) {
+        val corridorProgress = if (isLocked) 0.28f else 1f - (lockTimer / lockDuration).coerceIn(0f, 1f) * 0.25f
+        corridorFillPaint.alpha = (30f * corridorProgress).toInt().coerceIn(0, 255)
+        corridorPaint.alpha = (120f * corridorProgress).toInt().coerceIn(0, 255)
+        canvas.drawRoundRect(diveCorridorRect, 18f, 18f, corridorFillPaint)
+        canvas.drawRoundRect(diveCorridorRect, 18f, 18f, corridorPaint)
         if (!isLocked) {
             val radius = 22f + lockTimer * 34f
             canvas.drawCircle(targetX, targetY, radius, reticleFillPaint)
@@ -118,17 +139,19 @@ class Eagle(
             canvas.drawLine(targetX, targetY - radius - 8f, targetX, targetY - radius + 6f, reticlePaint)
             canvas.drawLine(targetX, targetY + radius - 6f, targetX, targetY + radius + 8f, reticlePaint)
         }
+        canvas.drawRoundRect(targetZoneRect, 18f, 18f, reticleFillPaint)
+        canvas.drawRoundRect(targetZoneRect, 18f, 18f, reticlePaint)
         val drawRect = RectF(x, y, x + birdW, y + birdH)
         sprite.draw(canvas, drawRect)
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         gameState.addBonus(
-            points = 165 + relationshipTuning.passBonusPoints,
-            seeds = 1 + relationshipTuning.passBonusSeeds
+            points = 165 + relationshipTuning.passBonusPoints + if (heldMark) 18 else 0,
+            seeds = 1 + relationshipTuning.passBonusSeeds + if (heldMark) 1 else 0
         )
         DialogueBubbleManager.spawn(
-            text = RelationshipArcSystem.lineFor(context, EntityType.EAGLE, RelationshipArcSystem.Event.PASS),
+            text = if (heldMark) "Held the mark." else RelationshipArcSystem.lineFor(context, EntityType.EAGLE, RelationshipArcSystem.Event.PASS),
             anchorX = targetX,
             anchorY = targetY - 28f,
             fillColor = Color.rgb(255, 236, 236),
@@ -137,10 +160,45 @@ class Eagle(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+        val markApproach = RectF(
+            targetZoneRect.left - readability.stagingPaddingPx,
+            targetZoneRect.top - readability.stagingPaddingPx,
+            targetZoneRect.right + readability.stagingPaddingPx,
+            targetZoneRect.bottom + readability.stagingPaddingPx
+        )
+        if (!markPrompted && RectF.intersects(player.hitbox, markApproach)) {
+            markPrompted = true
+            DialogueBubbleManager.spawn(
+                "Clear the mark.",
+                targetX,
+                targetY - 12f,
+                Color.rgb(255, 234, 234),
+                Color.rgb(180, 70, 70)
+            )
+        }
+        if (RectF.intersects(player.hitbox, targetZoneRect)) {
+            heldMark = false
+        }
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
         val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
+    }
+
+    private fun updateCueGeometry() {
+        val zoneHalfW = max(birdW * 0.72f, 34f)
+        val zoneHalfH = max(birdH * 0.60f, 28f)
+        targetZoneRect.set(
+            targetX - zoneHalfW,
+            targetY - zoneHalfH,
+            targetX + zoneHalfW,
+            targetY + zoneHalfH
+        )
+        val left = minOf(x + birdW * 0.5f, targetX) - birdW * 0.24f
+        val right = maxOf(x + birdW * 0.5f, targetX) + birdW * 0.24f
+        val top = minOf(y + birdH * 0.5f, targetY) - birdH * 0.24f
+        val bottom = maxOf(y + birdH * 0.5f, targetY) + birdH * 0.24f
+        diveCorridorRect.set(left, top, right, bottom)
     }
 }

@@ -95,8 +95,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: hunter dive threat.
 - Dream traits: screech cue, target lock, diagonal punishment.
-- Current: dive hazard now has a stronger target-lock read, clearer target zone, relationship-aware mark cueing, and better reward payoff on a clean pass.
-- TODO: finish final device-proofing and stronger dramatic cue understanding.
+- Current: dive hazard now has a clearer dive corridor, a held-mark prompt, and a stronger clean-line pass on top of the earlier target-zone and lock-on readability work.
+- TODO: finish final device-proofing only.
 
 ### TitGroup
 

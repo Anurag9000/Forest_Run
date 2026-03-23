@@ -24,8 +24,6 @@ Completion standard for removing an item:
 
 ### Birds
 
-- [ ] Finish Eagle’s stronger dramatic cue understanding.
-
 ### Animals
 
 - [ ] Finish Cat’s deeper repeated-friend warmth.
