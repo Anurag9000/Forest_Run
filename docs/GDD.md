@@ -155,7 +155,7 @@ Current baseline:
 - cautious relationship history now also sharpens live warning text and can leave a visibly strained bond instead of only generic caution
 - ordinary encounter beats now also swap Cat near-miss, Fox landing, Wolf charge, and Dog buddy dialogue based on relationship history instead of generic fallback cues
 - Garden now surfaces the strongest current bond and a baseline bond reward
-- milestone bonds now leave named keepsake traces in the sanctuary, with matching costume paths for Cat, Fox, Wolf, Dog, Owl, and Eagle, plus a featured home-presence line, a named bond ritual, and a bond-specific milestone reaction when a bond becomes the garden's clearest reward
+- milestone bonds now leave named keepsake traces in the sanctuary, with matching costume paths for Cat, Fox, Wolf, Dog, Owl, and Eagle, plus a featured home-presence line, a named bond ritual, a bond-specific milestone reaction, and shared costume-sign / active-costume carry-home surfacing when a bond becomes the garden's clearest reward
 - deeper Garden presence and broader behavior shifts are still TODO beyond the baseline keepsake, costume, and featured home-presence layer
 
 #### 3.8.3 Personal Return Moments
@@ -290,7 +290,7 @@ Jump height is tied to touch duration. Short tap = low hop. Full hold = maximum 
 ### Current Status
 
 - Implemented: high score, lifetime seeds, garden progress, ghost save.
-- TODO: persistent memory systems beyond that, such as repeated-encounter memory and costumes.
+- TODO: deepen persistent memory systems beyond that baseline, such as broader repeated-encounter memory consequence and richer fragment/return coverage.
 - TODO: expand persistence into emotional memory, creature relationship states, sanctuary traces, and failure-context carryover.
 
 ---

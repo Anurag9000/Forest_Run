@@ -54,6 +54,8 @@ object SessionArcComposer {
                 sanctuary.featuredRitualLine
             sanctuary.featuredPresenceLine.isNotBlank() ->
                 sanctuary.featuredPresenceLine
+            sanctuary.featuredCostumeLine.isNotBlank() ->
+                sanctuary.featuredCostumeLine
             repeatFriend != null ->
                 sanctuary.carryHomeLine.ifBlank { RelationshipArcSystem.repeatFriendLine(appContext, repeatFriend) }
             summary.forestMood == ForestMood.GENTLE && summary.sparedCount > 0 ->
@@ -81,6 +83,8 @@ object SessionArcComposer {
                 "${sanctuary.featuredRitualLabel} is still part of how home is expecting you."
             sanctuary.featuredPresenceLabel.isNotBlank() ->
                 "${sanctuary.featuredPresenceLabel} is still part of the air before the run starts."
+            sanctuary.featuredCostumeLabel.isNotBlank() ->
+                "${sanctuary.featuredCostumeLabel} is still part of the way home is holding itself."
             historyUnlock != null ->
                 historyUnlock.line
             repeatFriend != null ->
@@ -105,6 +109,7 @@ object SessionArcComposer {
             sanctuary.routeWorldLabel.isNotBlank() -> sanctuary.routeWorldLabel
             sanctuary.featuredRitualLabel.isNotBlank() -> sanctuary.featuredRitualLabel
             sanctuary.featuredPresenceLabel.isNotBlank() -> sanctuary.featuredPresenceLabel
+            sanctuary.featuredCostumeLabel.isNotBlank() -> sanctuary.featuredCostumeLabel
             historyUnlock != null -> historyUnlock.label
             sanctuary.homeCharacterLabel.isNotBlank() -> sanctuary.homeCharacterLabel
             sanctuary.arrivalBadge.isNotBlank() -> sanctuary.arrivalBadge
@@ -129,6 +134,8 @@ object SessionArcComposer {
                 "the garden still sounds softer after that run"
             sanctuary.featuredPresenceLabel.isNotBlank() ->
                 "${sanctuary.featuredPresenceLabel.lowercase()} is still waiting at home"
+            sanctuary.featuredCostumeLabel.isNotBlank() ->
+                "${sanctuary.featuredCostumeLabel.lowercase()} is still visible before the run starts"
             historyUnlock != null ->
                 "${historyUnlock.label.lowercase()} is still part of the way home sounds"
             repeatFriend != null -> "someone familiar is already part of the way home sounds"
@@ -150,6 +157,7 @@ object SessionArcComposer {
             sanctuary.routeWorldLabel.isNotBlank() -> "rise with that quieter answer still intact"
             sanctuary.featuredRitualLabel.isNotBlank() -> "take that bond back into motion"
             sanctuary.featuredPresenceLabel.isNotBlank() -> "bring home with you"
+            sanctuary.featuredCostumeLabel.isNotBlank() -> "wear that carried sign back into motion"
             repeatFriend != null -> "something familiar is already listening"
             summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL -> "keep the hush while you rise"
             summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL -> "let the softer answer rise first"
@@ -162,6 +170,7 @@ object SessionArcComposer {
             sanctuary.routeWorldLine.isNotBlank() -> sanctuary.routeWorldLine
             sanctuary.featuredRitualLine.isNotBlank() -> sanctuary.featuredRitualLine
             sanctuary.featuredPresenceLine.isNotBlank() -> sanctuary.featuredPresenceLine
+            sanctuary.featuredCostumeLine.isNotBlank() -> sanctuary.featuredCostumeLine
             historyUnlock != null -> historyUnlock.line
             summary.forestMood == ForestMood.FEARFUL -> "nothing here needs speed before steadiness"
             repeatFriend != null -> "the familiar part of home is staying close while you stand"
@@ -178,6 +187,7 @@ object SessionArcComposer {
             sanctuary.routeWorldLabel.isNotBlank() -> "carry the world's softer answer back into the path"
             sanctuary.featuredRitualLabel.isNotBlank() -> "carry that shared bond back into the path"
             sanctuary.featuredPresenceLabel.isNotBlank() -> "carry that familiar homeward sign back into the path"
+            sanctuary.featuredCostumeLabel.isNotBlank() -> "carry that worn sign back into the path"
             historyUnlock != null -> "carry that remembered shape back into the path"
             repeatFriend != null -> "carry that familiar warmth back into the path"
             summary.forestMood == ForestMood.GENTLE -> "carry the gentler pace with you"
@@ -192,6 +202,7 @@ object SessionArcComposer {
             sanctuary.routeWorldLabel.isNotBlank() -> "${sanctuary.routeWorldLabel} is already part of the start"
             sanctuary.featuredRitualLabel.isNotBlank() -> "${sanctuary.featuredRitualLabel} is already part of the start"
             sanctuary.featuredPresenceLabel.isNotBlank() -> "${sanctuary.featuredPresenceLabel} is already part of the start"
+            sanctuary.featuredCostumeLabel.isNotBlank() -> "${sanctuary.featuredCostumeLabel} is already part of the start"
             historyUnlock != null -> "${historyUnlock.label} is already part of the start"
             repeatFriend != null -> "the path already sounds like familiar company"
             summary.forestMood == ForestMood.FEARFUL -> "take the quieter opening, not the rushed one"
@@ -254,11 +265,17 @@ object SessionArcComposer {
 
         val recoveryLine = when {
             previewMoment != null ->
-                "${previewMoment.title} is already waiting on the homeward side of this pause."
+                if (sanctuary.featuredCostumeLabel.isNotBlank()) {
+                    "${previewMoment.title} is already waiting on the homeward side of this pause, and ${sanctuary.featuredCostumeLabel.lowercase()} is still part of what you are carrying back."
+                } else {
+                    "${previewMoment.title} is already waiting on the homeward side of this pause."
+                }
             sanctuary.featuredPeaceLine.isNotBlank() ->
                 sanctuary.featuredPeaceLine
             sanctuary.featuredPresenceLine.isNotBlank() ->
                 sanctuary.featuredPresenceLine
+            sanctuary.featuredCostumeLine.isNotBlank() ->
+                sanctuary.featuredCostumeLine
             summary.hitsTaken >= 2 ->
                 "Let the rougher parts of the run leave first."
             summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
@@ -276,6 +293,8 @@ object SessionArcComposer {
                 } else
                 if (sanctuary.featuredPresenceLine.isNotBlank()) {
                     sanctuary.featuredPresenceLine
+                } else if (sanctuary.featuredCostumeLine.isNotBlank()) {
+                    sanctuary.featuredCostumeLine
                 } else {
                 when (summary.forestMood) {
                     ForestMood.GENTLE -> if (summary.pacifistRouteTier == PacifistRouteTier.MERCIFUL && summary.sparedCount > 0) {
@@ -293,6 +312,7 @@ object SessionArcComposer {
         val carryHomeLabel = previewMoment?.title?.ifBlank { null }
             ?: sanctuary.featuredPeaceLabel.ifBlank {
                 sanctuary.featuredPresenceLabel.ifBlank {
+                    sanctuary.featuredCostumeLabel.ifBlank {
                     sanctuary.homeCharacterLabel.ifBlank {
                     when {
                         summary.pacifistRouteTier != PacifistRouteTier.NONE ->
@@ -301,6 +321,7 @@ object SessionArcComposer {
                             "Soft Landing"
                         else ->
                             "Homeward"
+                    }
                     }
                     }
                 }
@@ -336,6 +357,9 @@ object SessionArcComposer {
         }
         if (sanctuaryState.featuredPresenceLine.isNotBlank()) {
             return sanctuaryState.featuredPresenceLine
+        }
+        if (sanctuaryState.featuredCostumeLine.isNotBlank()) {
+            return sanctuaryState.featuredCostumeLine
         }
         if (summary == null) {
             return "The garden kept a quiet place open for you."

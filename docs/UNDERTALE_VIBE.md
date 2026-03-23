@@ -154,7 +154,7 @@ Examples:
 - Implemented: ghost persistence, persistent memory manager baseline, and costume wardrobe baseline.
 - Partial: ghost readability now delays reveal at run start and suppresses after impacts so it stops crowding the live runner during recovery.
 - Partial: startup and rest now reuse shared carry-home session copy plus sanctuary-derived badges and ambience so the forest feels more aware between screens instead of only inside the Garden hub.
-- Partial: wardrobe unlock surfacing is now more relationship-aware instead of generic when new bond outfits arrive, and tracked Dog/Owl/Eagle bonds now also resolve into matching milestone wardrobe rewards plus featured sanctuary home-presence lines and bonded milestone reactions.
+- Partial: wardrobe unlock surfacing is now more relationship-aware instead of generic when new bond outfits arrive, and tracked Dog/Owl/Eagle bonds now also resolve into matching milestone wardrobe rewards plus featured sanctuary home-presence lines, bonded milestone reactions, and shared costume-sign / active-costume carry-home surfacing outside the wardrobe.
 - TODO: richer repeat-killer system and final tasteful ghost UX tuning.
 
 ### 4.5 Forest Memory Layer
@@ -197,7 +197,7 @@ Examples:
 - Partial: repeated kindness now leaves trust-path traces, repeat-friend `Shared Path` traces, warmer carry-home lines, rest fragments, dedicated gentle-return beats, stronger lantern/ground-glow sanctuary warmth, and baseline kind-route reflections in baseline form.
 - Partial: named relationship arcs now exist in stronger runtime form for Cat, Fox, Wolf, Dog, Owl, and Eagle, with persisted stages, stage-aware dialogue/payoff, bonded Garden return hooks, milestone keepsake rewards, featured home-presence carry-home lines, named bond rituals, bond-specific milestone reactions, and warmer repeated-kindness familiarity tiers that now read more personally during ordinary encounters.
 - Partial: quiet story fragments now exist in stronger runtime form through fragment-driven rest quotes that can now react to the whole run, Garden reflections, weather-linked thoughts, bonded creature thoughts, repeat-friend familiarity fragments, merciful familiarity fragments, peaceful-Bloom hush fragments, milestone-gentleness / Bloom-afterglow reflections, and memory-page unlocks.
-- PARTIAL: cautious relationship history now has sharper live warning text plus strained-bond return, sanctuary, and fragment payoff instead of only generic caution, and it now differentiates disappointment, fear, and tension more clearly during live encounters and carry-home writing; deepen broader mood consequences, fragment coverage, remaining costume payoff depth, and return-moment richness beyond the current baseline.
+- PARTIAL: cautious relationship history now has sharper live warning text plus strained-bond return, sanctuary, and fragment payoff instead of only generic caution, and it now differentiates disappointment, fear, and tension more clearly during live encounters and carry-home writing; deepen broader mood consequences, fragment coverage, and return-moment richness beyond the current baseline.
 
 ---
 

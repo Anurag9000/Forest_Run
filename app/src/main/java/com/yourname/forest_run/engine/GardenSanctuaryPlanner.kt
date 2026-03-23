@@ -28,6 +28,10 @@ data class GardenSanctuaryState(
     val featuredPeaceLine: String = "",
     val routeWorldLabel: String = "",
     val routeWorldLine: String = "",
+    val featuredCostumeLabel: String = "",
+    val featuredCostumeLine: String = "",
+    val activeCostumeLabel: String = "",
+    val activeCostumeLine: String = "",
     val featuredPresenceLabel: String = "",
     val featuredPresenceLine: String = "",
     val featuredRitualLabel: String = "",
@@ -70,6 +74,8 @@ object GardenSanctuaryPlanner {
         val kindnessStreak = historySnapshot.featuredWarmStreak
         val routeTier = summary?.pacifistRouteTier ?: PacifistRouteTier.NONE
         val routeWorldState = PacifistPresentation.routeWorldState(appContext, routeTier)
+        val featuredCostume = CostumeManager.featuredPresentation(appContext)
+        val activeCostume = CostumeManager.activePresentation(appContext)
         val peacefulBiomes = PersistentMemoryManager.peacefulBiomes(appContext)
         val featuredPeaceBiome = historySnapshot.featuredPeaceBiome ?: peacefulBiomes.firstOrNull()
         val cactusBloom = historySnapshot.featuredCleanPass?.takeIf { it.type == EntityType.CACTUS }
@@ -102,6 +108,10 @@ object GardenSanctuaryPlanner {
                     }
             }
         }.orEmpty()
+        val featuredCostumeLabel = featuredCostume?.signLabel.orEmpty()
+        val featuredCostumeLine = featuredCostume?.signLine.orEmpty()
+        val activeCostumeLabel = activeCostume?.activeLabel.orEmpty()
+        val activeCostumeLine = activeCostume?.activeLine.orEmpty()
         val featuredPresenceLabel = featuredReward?.homePresenceLabel.orEmpty()
         val featuredPresenceLine = featuredReward?.homePresenceLine.orEmpty()
         val featuredRitualLabel = featuredReward?.bondRitualLabel.orEmpty()
@@ -131,6 +141,7 @@ object GardenSanctuaryPlanner {
             ForestMood.STEADY -> 3
         } + if ((summary?.sparedCount ?: 0) > 0) 1 else 0 + if (repeatedKindnessCreature != null) 1 else 0 + if (featuredPeaceBiome != null) 1 else 0 +
             if (featuredReward != null && mood != ForestMood.FEARFUL) 1 else 0 +
+            if (featuredCostume != null) 1 else 0 +
             if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 1 else 0
 
         val bloomPatches = when (mood) {
@@ -169,6 +180,7 @@ object GardenSanctuaryPlanner {
             ForestMood.STEADY -> 68
         } + if ((summary?.bloomConversions ?: 0) >= 2) 12 else 0 +
             if (featuredReward != null) 8 else 0 +
+            if (featuredCostume != null) 6 else 0 +
             if (featuredPeaceBiome != null) 8 else 0 +
             if (cactusBloom != null) 6 else 0 +
             if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 16 else 0 +
@@ -327,6 +339,8 @@ object GardenSanctuaryPlanner {
                 "${featuredPeaceBiome.biome.displayName} Sign"
             routeWorldState != null ->
                 routeWorldState.label
+            featuredCostumeLabel.isNotBlank() ->
+                featuredCostumeLabel
             featuredPresenceLabel.isNotBlank() ->
                 featuredPresenceLabel
             repeatFriend != null ->
@@ -359,6 +373,8 @@ object GardenSanctuaryPlanner {
                 routeWorldState.line
             featuredRitualLine.isNotBlank() ->
                 featuredRitualLine
+            featuredCostumeLine.isNotBlank() ->
+                featuredCostumeLine
             featuredPresenceLine.isNotBlank() ->
                 featuredPresenceLine
             repeatFriend != null ->
@@ -387,6 +403,8 @@ object GardenSanctuaryPlanner {
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
             featuredReward != null ->
                 featuredRitualLine.ifBlank { featuredPresenceLine.ifBlank { featuredRewardLine } }
+            featuredCostumeLine.isNotBlank() ->
+                featuredCostumeLine
             repeatFriend != null ->
                 "${formatEntityName(repeatFriend)} has started to feel less like a visit and more like a familiar part of home."
             repeatedKindnessCreature != null && kindnessStreak >= 2 ->
@@ -505,6 +523,27 @@ object GardenSanctuaryPlanner {
             }
 
             when {
+                featuredCostumeLabel.isNotBlank() && activeCostumeLine.isNotBlank() -> add(
+                    HomecomingConsequence(
+                        label = "Dress: ${featuredCostumeLabel.take(18)}",
+                        line = activeCostumeLine
+                    )
+                )
+                featuredCostumeLabel.isNotBlank() && featuredCostumeLine.isNotBlank() -> add(
+                    HomecomingConsequence(
+                        label = "Dress: ${featuredCostumeLabel.take(18)}",
+                        line = featuredCostumeLine
+                    )
+                )
+                activeCostumeLabel.isNotBlank() && activeCostumeLine.isNotBlank() -> add(
+                    HomecomingConsequence(
+                        label = "Dress: ${activeCostumeLabel.take(18)}",
+                        line = activeCostumeLine
+                    )
+                )
+            }
+
+            when {
                 repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature -> add(
                     HomecomingConsequence(
                         label = "History: Same Shadow",
@@ -557,6 +596,10 @@ object GardenSanctuaryPlanner {
             featuredPeaceLine = featuredPeaceLine,
             routeWorldLabel = routeWorldState?.label.orEmpty(),
             routeWorldLine = routeWorldState?.line.orEmpty(),
+            featuredCostumeLabel = featuredCostumeLabel,
+            featuredCostumeLine = featuredCostumeLine,
+            activeCostumeLabel = activeCostumeLabel,
+            activeCostumeLine = activeCostumeLine,
             featuredPresenceLabel = featuredPresenceLabel,
             featuredPresenceLine = featuredPresenceLine,
             featuredRitualLabel = featuredRitualLabel,

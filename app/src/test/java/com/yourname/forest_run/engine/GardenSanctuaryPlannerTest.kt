@@ -2,6 +2,7 @@ package com.yourname.forest_run.engine
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -467,5 +468,20 @@ class GardenSanctuaryPlannerTest {
         val state = GardenSanctuaryPlanner.build(context, null)
 
         assertTrue(state.homecomingConsequences.any { it.label.contains("Memory:") && it.line.contains("memory", ignoreCase = true) })
+    }
+
+    @Test
+    fun `featured costume sign can surface outside the wardrobe`() {
+        SaveManager.saveUnlockedCostumes(context, setOf(CostumeStyle.BLOOM_RIBBON))
+        SaveManager.saveActiveCostume(context, CostumeStyle.BLOOM_RIBBON)
+        SaveManager.saveFeaturedCostume(context, CostumeStyle.BLOOM_RIBBON)
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertEquals("Bloom Afterglow", state.featuredCostumeLabel)
+        assertTrue(state.featuredCostumeLine.contains("afterglow", ignoreCase = true))
+        assertEquals("Bloom Ribbon", state.activeCostumeLabel)
+        assertTrue(state.activeCostumeLine.contains("Bloom", ignoreCase = true))
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Dress", ignoreCase = true) })
     }
 }

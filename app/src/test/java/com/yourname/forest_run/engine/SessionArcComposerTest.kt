@@ -2,6 +2,7 @@ package com.yourname.forest_run.engine
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -477,5 +478,37 @@ class SessionArcComposerTest {
 
         assertTrue(copy.homeSignLabel.contains("Needle", ignoreCase = true) || copy.homeSignLabel.contains("Clean", ignoreCase = true))
         assertTrue(copy.atmosphereLine.contains("memory", ignoreCase = true) || copy.secondaryAtmosphereLine.contains("memory", ignoreCase = true))
+    }
+
+    @Test
+    fun `costume sign can carry menu and rest copy outside the wardrobe`() {
+        SaveManager.saveUnlockedCostumes(context, setOf(CostumeStyle.BLOOM_RIBBON))
+        SaveManager.saveActiveCostume(context, CostumeStyle.BLOOM_RIBBON)
+        SaveManager.saveFeaturedCostume(context, CostumeStyle.BLOOM_RIBBON)
+        val summary = RunSummary(
+            score = 880,
+            distanceM = 610f,
+            isNewHighScore = false,
+            highScore = 1_260,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 0,
+            cleanPasses = 4,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 7,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Warmly.",
+            forestMood = ForestMood.STEADY
+        )
+        SaveManager.saveLastRunSummary(context, summary)
+
+        val menuCopy = SessionArcComposer.menuCopy(context)
+        val restCopy = SessionArcComposer.restCopy(context, summary)
+
+        assertEquals("Bloom Afterglow", menuCopy.homeSignLabel)
+        assertTrue(menuCopy.atmosphereLine.contains("Bloom", ignoreCase = true) || menuCopy.secondaryAtmosphereLine.contains("afterglow", ignoreCase = true))
+        assertTrue(restCopy.recoveryLine.contains("Bloom", ignoreCase = true) || restCopy.carryHomeLine.contains("Bloom", ignoreCase = true))
     }
 }

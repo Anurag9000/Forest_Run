@@ -45,6 +45,7 @@ object SaveManager {
     private const val KEY_ROUTE_PEACEFUL_RUNS = "route_peaceful_runs"
     private const val KEY_UNLOCKED_COSTUMES = "unlocked_costumes"
     private const val KEY_ACTIVE_COSTUME = "active_costume"
+    private const val KEY_FEATURED_COSTUME = "featured_costume"
     private const val KEY_FOREST_MOOD = "forest_mood"
     private const val KEY_FOREST_MOOD_STREAK = "forest_mood_streak"
     private const val KEY_FOREST_TOTAL_RUNS = "forest_total_runs"
@@ -173,6 +174,15 @@ object SaveManager {
         prefs(context).getString(KEY_ACTIVE_COSTUME, CostumeStyle.NONE.name)?.let { raw ->
             runCatching { CostumeStyle.valueOf(raw) }.getOrDefault(CostumeStyle.NONE)
         } ?: CostumeStyle.NONE
+
+    fun saveFeaturedCostume(context: Context, costume: CostumeStyle?) {
+        prefs(context).edit().putString(KEY_FEATURED_COSTUME, costume?.name).apply()
+    }
+
+    fun loadFeaturedCostume(context: Context): CostumeStyle? =
+        prefs(context).getString(KEY_FEATURED_COSTUME, null)?.let { raw ->
+            runCatching { CostumeStyle.valueOf(raw) }.getOrNull()
+        }
 
     // ── Persistent memory (Phase 28+) ─────────────────────────────────────
 

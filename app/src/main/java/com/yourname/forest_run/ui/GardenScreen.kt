@@ -127,6 +127,9 @@ class GardenScreen(
     private var milestonePresenceLine = ""
     private var milestoneRitualLabel = "None"
     private var milestoneRitualLine = ""
+    private var costumeSignLabel = "None"
+    private var costumeSignLine = ""
+    private var activeCostumeLine = ""
     private var memoryPageCount = 0
     private var gardenReflectionLine = ""
     private var creatureThoughtLine = ""
@@ -380,8 +383,10 @@ class GardenScreen(
             if (style == CostumeStyle.NONE || style in unlockedCostumes) {
                 if (CostumeManager.equip(context, style)) {
                     activeCostume = style
-                    wardrobeMessage = "${style.displayName} equipped"
+                    wardrobeMessage = CostumeManager.activePresentation(context)?.activeLine
+                        ?: "${style.displayName} equipped"
                     wardrobeMessageTimer = 2.5f
+                    refreshStats()
                 }
             } else {
                 wardrobeMessage = style.unlockLabel
@@ -597,6 +602,15 @@ class GardenScreen(
         } else {
             y += 44f
         }
+        canvas.drawText("Costume Sign", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(costumeSignLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
+        val visibleCostumeLine = costumeSignLine.ifBlank { activeCostumeLine }
+        if (visibleCostumeLine.isNotBlank()) {
+            canvas.drawText(visibleCostumeLine.take(28), statsRect.left + 18f, y + 36f, statsLabelPaint)
+            y += 58f
+        } else {
+            y += 44f
+        }
         canvas.drawText("Memory Pages", statsRect.left + 18f, y, statsLabelPaint)
         canvas.drawText(memoryPageCount.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
     }
@@ -692,6 +706,15 @@ class GardenScreen(
         if (sanctuaryState.homeCharacterLabel.isNotBlank()) {
             canvas.drawText("Home: ${sanctuaryState.homeCharacterLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
             y += 22f
+        }
+        if (sanctuaryState.featuredCostumeLabel.isNotBlank()) {
+            canvas.drawText("Dress: ${sanctuaryState.featuredCostumeLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
+            y += 22f
+            val costumeLine = sanctuaryState.activeCostumeLine.ifBlank { sanctuaryState.featuredCostumeLine }
+            if (costumeLine.isNotBlank()) {
+                canvas.drawText(costumeLine.take(92), lastRunRect.left + 18f, y, reflectionPaint)
+                y += 22f
+            }
         }
         sanctuaryState.homecomingConsequences.take(3).forEach { consequence ->
             canvas.drawText(consequence.label, lastRunRect.left + 18f, y, statsLabelPaint)
@@ -814,6 +837,9 @@ class GardenScreen(
         milestonePresenceLine = reward?.homePresenceLine.orEmpty()
         milestoneRitualLabel = reward?.bondRitualLabel ?: "None"
         milestoneRitualLine = reward?.bondRitualLine.orEmpty()
+        costumeSignLabel = sanctuaryState.featuredCostumeLabel.ifBlank { "None" }
+        costumeSignLine = sanctuaryState.featuredCostumeLine.orEmpty()
+        activeCostumeLine = sanctuaryState.activeCostumeLine.orEmpty()
         memoryPageCount = StoryFragmentSystem.memoryPageCount(context)
         gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
         weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)

@@ -179,7 +179,7 @@ Dream persistence includes:
 ### Current Status
 
 - Implemented: score, seeds, garden, ghost.
-- Partial: repeated-encounter memory, costumes, persisted run-summary carry-home, relationship milestones, return-state data, fragment unlocks, and pacifist route tier carry-over now exist in stronger form, now including milestone-earned Dog/Owl/Eagle wardrobe rewards plus milestone home-presence / sanctuary carry-home surfacing; richer payoff depth is still missing.
+- Partial: repeated-encounter memory, costumes, persisted run-summary carry-home, relationship milestones, return-state data, fragment unlocks, and pacifist route tier carry-over now exist in stronger form, now including milestone-earned Dog/Owl/Eagle wardrobe rewards plus shared costume-sign and active-costume emotional surfacing across startup, rest, Garden, and sanctuary carry-home; richer payoff depth is still missing elsewhere.
 
 ## 12. Emotional Memory Architecture
 
