@@ -213,6 +213,7 @@ Expected qualities:
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, repeated-harm caution traces, strained-bond `Watchful Distance` traces, repeated-kindness trust traces, repeat-friend `Shared Path` traces, arrival badges, mist bands, lantern glows, ground-light carry-home cues, a persistent home-character label/line, and explicit shared homecoming consequences from mood, route, bond, history, and world state.
 - Implemented: `SessionArcComposer` now centralizes authored startup, Garden-arrival, and rest carry-home copy so the macro loop uses shared emotional state instead of disconnected screen-local strings, while menu/rest/Garden visuals now read from the same sanctuary state.
 - Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
+- Partial: `PacifistTracker` / `PacifistPresentation` now classify and present `Kind`, `Merciful`, and `Peaceful` routes, named peaceful-biome signs, and persisted route-world-state signs derived from cumulative route history instead of only last-run route text; broader downstream world-state consequence still needs expansion.
 - Implemented: `FloraEncounterFlavor` now centralizes authored flora payoff text so lure/rhythm/window feedback stops living as scattered fallback strings.
 - Implemented: `TreeEncounterFlavor` now centralizes authored tree payoff text so curtain/canopy/gap/gust feedback stays consistent instead of scattering across tree classes.
 - Implemented: `BirdEncounterFlavor` now centralizes authored warning/pass text for the non-relationship bird family instead of leaving bird payoff as scattered fallback strings.
@@ -308,7 +309,7 @@ Expected qualities:
 ### Current Status
 
 - Implemented: `PacifistTracker` now classifies `Kind`, `Merciful`, and `Peaceful` route tiers from live run behavior.
-- Partial: route tiers now flow through `RunSummary`, Garden/rest presentation, return moments, sanctuary carry-home, fragment unlocks, startup/homecoming tone, and stronger in-run mercy/reward language in baseline form.
+- Partial: route tiers now flow through `RunSummary`, Garden/rest presentation, return moments, sanctuary carry-home, fragment unlocks, startup/homecoming tone, stronger in-run mercy/reward language, and shared route-world-state signs across menu/rest/Garden/game-over.
 - TODO: deepen route consequences further into broader world-state and production presentation.
 
 ## 15A. Session Arc Composition

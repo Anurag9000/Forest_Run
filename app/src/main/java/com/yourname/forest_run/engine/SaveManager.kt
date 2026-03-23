@@ -40,6 +40,9 @@ object SaveManager {
     private const val KEY_LAST_RUN_KILLER = "last_run_killer"
     private const val KEY_LAST_RUN_FOREST_MOOD = "last_run_forest_mood"
     private const val KEY_LAST_RUN_PACIFIST_ROUTE = "last_run_pacifist_route"
+    private const val KEY_ROUTE_KIND_RUNS = "route_kind_runs"
+    private const val KEY_ROUTE_MERCIFUL_RUNS = "route_merciful_runs"
+    private const val KEY_ROUTE_PEACEFUL_RUNS = "route_peaceful_runs"
     private const val KEY_UNLOCKED_COSTUMES = "unlocked_costumes"
     private const val KEY_ACTIVE_COSTUME = "active_costume"
     private const val KEY_FOREST_MOOD = "forest_mood"
@@ -251,6 +254,7 @@ object SaveManager {
             .putString(KEY_LAST_RUN_FOREST_MOOD, summary.forestMood.name)
             .putString(KEY_LAST_RUN_PACIFIST_ROUTE, summary.pacifistRouteTier.name)
             .apply()
+        incrementRouteTierCount(context, summary.pacifistRouteTier)
     }
 
     fun loadLastRunSummary(context: Context): RunSummary? {
@@ -282,6 +286,21 @@ object SaveManager {
                 runCatching { PacifistRouteTier.valueOf(raw) }.getOrDefault(PacifistRouteTier.NONE)
             } ?: PacifistRouteTier.NONE
         )
+    }
+
+    fun loadRouteTierCount(context: Context, tier: PacifistRouteTier): Int =
+        prefs(context).getInt(routeTierKey(tier), 0)
+
+    private fun incrementRouteTierCount(context: Context, tier: PacifistRouteTier) {
+        if (tier == PacifistRouteTier.NONE) return
+        incrementInt(context, routeTierKey(tier))
+    }
+
+    private fun routeTierKey(tier: PacifistRouteTier): String = when (tier) {
+        PacifistRouteTier.NONE -> "route_none_runs"
+        PacifistRouteTier.KIND -> KEY_ROUTE_KIND_RUNS
+        PacifistRouteTier.MERCIFUL -> KEY_ROUTE_MERCIFUL_RUNS
+        PacifistRouteTier.PEACEFUL -> KEY_ROUTE_PEACEFUL_RUNS
     }
 
     fun incrementBiomeFriendship(context: Context, biome: Biome) {

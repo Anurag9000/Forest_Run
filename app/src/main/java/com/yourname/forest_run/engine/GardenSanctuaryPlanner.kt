@@ -26,6 +26,8 @@ data class GardenSanctuaryState(
     val featuredPeaceBiome: Biome? = null,
     val featuredPeaceLabel: String = "",
     val featuredPeaceLine: String = "",
+    val routeWorldLabel: String = "",
+    val routeWorldLine: String = "",
     val featuredPresenceLabel: String = "",
     val featuredPresenceLine: String = "",
     val featuredRitualLabel: String = "",
@@ -67,6 +69,7 @@ object GardenSanctuaryPlanner {
         val repeatedKindnessCreature = historySnapshot.featuredWarmCreature
         val kindnessStreak = historySnapshot.featuredWarmStreak
         val routeTier = summary?.pacifistRouteTier ?: PacifistRouteTier.NONE
+        val routeWorldState = PacifistPresentation.routeWorldState(appContext, routeTier)
         val peacefulBiomes = PersistentMemoryManager.peacefulBiomes(appContext)
         val featuredPeaceBiome = historySnapshot.featuredPeaceBiome ?: peacefulBiomes.firstOrNull()
         val cactusBloom = historySnapshot.featuredCleanPass?.takeIf { it.type == EntityType.CACTUS }
@@ -322,6 +325,8 @@ object GardenSanctuaryPlanner {
                 "${featuredPeaceBiome.biome.displayName} Quiet"
             featuredPeaceBiome != null && routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
                 "${featuredPeaceBiome.biome.displayName} Sign"
+            routeWorldState != null ->
+                routeWorldState.label
             featuredPresenceLabel.isNotBlank() ->
                 featuredPresenceLabel
             repeatFriend != null ->
@@ -350,6 +355,8 @@ object GardenSanctuaryPlanner {
                 "Home has started keeping ${featuredPeaceBiome!!.biome.displayName.lowercase()} in its quieter state instead of treating that peace like a one-run accident."
             featuredPeaceLine.isNotBlank() ->
                 "Home now carries a visible sign from ${featuredPeaceBiome!!.biome.displayName}, so the calmer answer you left there does not vanish between runs."
+            routeWorldState != null ->
+                routeWorldState.line
             featuredRitualLine.isNotBlank() ->
                 featuredRitualLine
             featuredPresenceLine.isNotBlank() ->
@@ -388,6 +395,8 @@ object GardenSanctuaryPlanner {
                 "The cactus bed has started flowering because you keep reading the sharp line cleanly."
             featuredPeaceLine.isNotBlank() ->
                 featuredPeaceLine
+            routeWorldState != null ->
+                routeWorldState.line
             routeTier == PacifistRouteTier.KIND ->
                 "The garden kept the kinder shape of that run instead of letting it vanish immediately."
             routeTier == PacifistRouteTier.PEACEFUL ->
@@ -440,6 +449,15 @@ object GardenSanctuaryPlanner {
                     HomecomingConsequence(
                         label = "World: ${featuredPeaceLabel.take(22)}",
                         line = featuredPeaceLine
+                    )
+                )
+            }
+
+            if (routeWorldState != null) {
+                add(
+                    HomecomingConsequence(
+                        label = "World: ${routeWorldState.label.take(20)}",
+                        line = routeWorldState.line
                     )
                 )
             }
@@ -537,6 +555,8 @@ object GardenSanctuaryPlanner {
             featuredPeaceBiome = featuredPeaceBiome?.biome,
             featuredPeaceLabel = featuredPeaceLabel,
             featuredPeaceLine = featuredPeaceLine,
+            routeWorldLabel = routeWorldState?.label.orEmpty(),
+            routeWorldLine = routeWorldState?.line.orEmpty(),
             featuredPresenceLabel = featuredPresenceLabel,
             featuredPresenceLine = featuredPresenceLine,
             featuredRitualLabel = featuredRitualLabel,

@@ -138,7 +138,7 @@ Current baseline:
 - recent run tone now affects Garden ambience and carry-home framing
 - repeated harm from the same creature now surfaces as caution in sanctuary traces, strained-bond `Held At A Distance` beats, `Same Shadow` repeat-killer beats, Garden return moments, Garden reflections, and tender memory streaks
 - repeated kindness now surfaces through trust-path traces, repeat-friend `Shared Path` traces, warmer carry-home lines, rest fragments, and dedicated gentle-return beats
-- broader creature warmth and richer world-state consequence are still TODO, even though sanctuary/homecoming atmosphere is now materially stronger, peaceful-biome routes can now leave named world-state signs in rest/Garden copy, and homecoming consequences now surface explicitly across startup, rest, and Garden
+- broader creature warmth and richer world-state consequence are still TODO, even though sanctuary/homecoming atmosphere is now materially stronger, route history can now leave persisted world-state signs across startup/rest/Garden/game-over, peaceful-biome routes can now leave named world-state signs in rest/Garden copy, and homecoming consequences now surface explicitly across startup, rest, and Garden
 
 #### 3.8.2 Named Relationship Arcs
 

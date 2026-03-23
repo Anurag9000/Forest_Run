@@ -224,6 +224,39 @@ class GardenSanctuaryPlannerTest {
     }
 
     @Test
+    fun `route world history can surface a named world sign beyond biome peace`() {
+        repeat(3) {
+            SaveManager.saveLastRunSummary(
+                context,
+                RunSummary(
+                    score = 420 + it,
+                    distanceM = 320f + it,
+                    isNewHighScore = false,
+                    highScore = 900,
+                    mercyHearts = 3,
+                    mercyMisses = 3,
+                    kindnessChain = 6,
+                    cleanPasses = 7,
+                    sparedCount = 2,
+                    hitsTaken = 0,
+                    seedsCollected = 4,
+                    bloomConversions = 0,
+                    lastKiller = null,
+                    restQuote = "Mercy.",
+                    forestMood = ForestMood.GENTLE,
+                    pacifistRouteTier = PacifistRouteTier.MERCIFUL
+                )
+            )
+        }
+
+        val state = GardenSanctuaryPlanner.build(context, SaveManager.loadLastRunSummary(context))
+
+        assertEquals("Mercy Remembered", state.routeWorldLabel)
+        assertTrue(state.routeWorldLine.contains("mercy", ignoreCase = true))
+        assertTrue(state.homecomingConsequences.any { it.label.contains("World: Mercy Remembered", ignoreCase = true) })
+    }
+
+    @Test
     fun `repeated kindness leaves a trust path and warmer carry-home`() {
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
         SaveManager.saveForestMoodState(

@@ -141,6 +141,77 @@ class SaveManagerTest {
     }
 
     @Test
+    fun `route history counts accumulate from saved run summaries`() {
+        SaveManager.saveLastRunSummary(
+            context,
+            RunSummary(
+                score = 200,
+                distanceM = 180f,
+                isNewHighScore = false,
+                highScore = 400,
+                mercyHearts = 2,
+                mercyMisses = 2,
+                kindnessChain = 4,
+                cleanPasses = 4,
+                sparedCount = 1,
+                hitsTaken = 1,
+                seedsCollected = 2,
+                bloomConversions = 0,
+                lastKiller = null,
+                restQuote = "Kindly.",
+                forestMood = ForestMood.GENTLE,
+                pacifistRouteTier = PacifistRouteTier.KIND
+            )
+        )
+        SaveManager.saveLastRunSummary(
+            context,
+            RunSummary(
+                score = 320,
+                distanceM = 260f,
+                isNewHighScore = false,
+                highScore = 400,
+                mercyHearts = 3,
+                mercyMisses = 3,
+                kindnessChain = 6,
+                cleanPasses = 7,
+                sparedCount = 2,
+                hitsTaken = 0,
+                seedsCollected = 3,
+                bloomConversions = 0,
+                lastKiller = null,
+                restQuote = "Mercy.",
+                forestMood = ForestMood.GENTLE,
+                pacifistRouteTier = PacifistRouteTier.MERCIFUL
+            )
+        )
+        SaveManager.saveLastRunSummary(
+            context,
+            RunSummary(
+                score = 520,
+                distanceM = 420f,
+                isNewHighScore = false,
+                highScore = 600,
+                mercyHearts = 5,
+                mercyMisses = 5,
+                kindnessChain = 8,
+                cleanPasses = 10,
+                sparedCount = 2,
+                hitsTaken = 0,
+                seedsCollected = 5,
+                bloomConversions = 1,
+                lastKiller = null,
+                restQuote = "Peace.",
+                forestMood = ForestMood.GENTLE,
+                pacifistRouteTier = PacifistRouteTier.PEACEFUL
+            )
+        )
+
+        assertEquals(1, SaveManager.loadRouteTierCount(context, PacifistRouteTier.KIND))
+        assertEquals(1, SaveManager.loadRouteTierCount(context, PacifistRouteTier.MERCIFUL))
+        assertEquals(1, SaveManager.loadRouteTierCount(context, PacifistRouteTier.PEACEFUL))
+    }
+
+    @Test
     fun `forest mood state persists across reloads`() {
         val state = ForestMoodState(
             currentMood = ForestMood.RECKLESS,

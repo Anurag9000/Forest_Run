@@ -677,6 +677,14 @@ class GardenScreen(
             )
             y += 22f
         }
+        if (sanctuaryState.routeWorldLabel.isNotBlank()) {
+            canvas.drawText("World: ${sanctuaryState.routeWorldLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
+            y += 22f
+            if (sanctuaryState.routeWorldLine.isNotBlank()) {
+                canvas.drawText(sanctuaryState.routeWorldLine.take(92), lastRunRect.left + 18f, y, reflectionPaint)
+                y += 22f
+            }
+        }
         if (sanctuaryState.featuredPeaceLabel.isNotBlank()) {
             canvas.drawText("World: ${sanctuaryState.featuredPeaceLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
             y += 22f

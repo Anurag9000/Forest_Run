@@ -290,6 +290,19 @@ class GameOverScreen(
             )
             ty += 34f
         }
+        if (sanctuaryState.routeWorldLabel.isNotBlank()) {
+            canvas.drawText("World: ${sanctuaryState.routeWorldLabel}", cx, ty, moodPaint)
+            ty += 28f
+            drawWrappedCenteredText(
+                canvas,
+                sanctuaryState.routeWorldLine,
+                cx,
+                ty,
+                panelW * 0.80f,
+                carryHomePaint
+            )
+            ty += 34f
+        }
 
         // 4. Score label + value
         canvas.drawText("SCORE", cx, ty, scoreLabelPaint)

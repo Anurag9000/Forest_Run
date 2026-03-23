@@ -233,6 +233,39 @@ class SessionArcComposerTest {
     }
 
     @Test
+    fun `route world sign can carry menu copy beyond last run route text`() {
+        repeat(4) {
+            SaveManager.saveLastRunSummary(
+                context,
+                RunSummary(
+                    score = 260 + it,
+                    distanceM = 210f + it,
+                    isNewHighScore = false,
+                    highScore = 500,
+                    mercyHearts = 2,
+                    mercyMisses = 2,
+                    kindnessChain = 5,
+                    cleanPasses = 5,
+                    sparedCount = 1,
+                    hitsTaken = 1,
+                    seedsCollected = 3,
+                    bloomConversions = 0,
+                    lastKiller = null,
+                    restQuote = "Kindly.",
+                    forestMood = ForestMood.GENTLE,
+                    pacifistRouteTier = PacifistRouteTier.KIND
+                )
+            )
+        }
+
+        val copy = SessionArcComposer.menuCopy(context)
+
+        assertEquals("Gentler Paths", copy.homeSignLabel)
+        assertTrue(copy.atmosphereLine.contains("gentler", ignoreCase = true) || copy.atmosphereLine.contains("world", ignoreCase = true))
+        assertTrue(copy.readyLaunchLine.contains("Gentler Paths") || copy.readySupportLine.contains("world's softer answer", ignoreCase = true))
+    }
+
+    @Test
     fun `menu and rest copy can fall back to persistent home character tone`() {
         SaveManager.saveForestMoodState(
             context,

@@ -30,7 +30,6 @@ Completion standard for removing an item:
 
 ## 2. Emotional Systems
 
-- [ ] Broaden `PacifistTracker` / `PacifistPresentation` world-state consequence beyond current route text and peaceful-biome signs.
 - [ ] Broaden `CostumeManager` surfacing so costume unlocks matter emotionally outside the wardrobe UI.
 - [ ] Finish `GhostPlayer` logic/policy so it is consistently helpful and never confusing in dense play.
 - [ ] Make the world’s “opinion” of the player feel stronger and more legible across run, rest, and Garden.

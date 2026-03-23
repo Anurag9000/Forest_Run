@@ -1,5 +1,6 @@
 package com.yourname.forest_run.engine
 
+import android.content.Context
 import android.graphics.Color
 
 enum class PacifistRewardKind {
@@ -20,7 +21,42 @@ data class PacifistCue(
     val flavorSize: Float = 28f
 )
 
+data class RouteWorldState(
+    val label: String,
+    val line: String
+)
+
 object PacifistPresentation {
+
+    fun routeWorldState(
+        context: Context,
+        latestRouteTier: PacifistRouteTier
+    ): RouteWorldState? {
+        val appContext = context.applicationContext
+        val kindRuns = SaveManager.loadRouteTierCount(appContext, PacifistRouteTier.KIND)
+        val mercifulRuns = SaveManager.loadRouteTierCount(appContext, PacifistRouteTier.MERCIFUL)
+        val peacefulRuns = SaveManager.loadRouteTierCount(appContext, PacifistRouteTier.PEACEFUL)
+        val cumulativeKind = kindRuns + mercifulRuns + peacefulRuns
+        val cumulativeMerciful = mercifulRuns + peacefulRuns
+        return when {
+            peacefulRuns >= 2 || (latestRouteTier == PacifistRouteTier.PEACEFUL && cumulativeMerciful >= 2) ->
+                RouteWorldState(
+                    label = "Peace Remembered",
+                    line = "The world has started treating peace as something it expects from you, not a one-run accident."
+                )
+            cumulativeMerciful >= 3 || (latestRouteTier == PacifistRouteTier.MERCIFUL && cumulativeKind >= 3) ->
+                RouteWorldState(
+                    label = "Mercy Remembered",
+                    line = "The world has started meeting you with softer edges because mercy keeps making it home."
+                )
+            cumulativeKind >= 4 || (latestRouteTier == PacifistRouteTier.KIND && cumulativeKind >= 2) ->
+                RouteWorldState(
+                    label = "Gentler Paths",
+                    line = "The world has started assuming you might choose the gentler answer again instead of bracing for the harsh one."
+                )
+            else -> null
+        }
+    }
 
     fun mercyMissCue(
         mercyHearts: Int,
