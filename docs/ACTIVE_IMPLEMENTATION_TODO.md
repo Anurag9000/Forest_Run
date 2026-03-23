@@ -28,8 +28,6 @@ Completion standard for removing an item:
 
 ### Cross-Family
 
-- [ ] Make flavor text and mercy feedback land reliably in ordinary play, not only in showcase scenarios.
-
 ## 2. Emotional Systems
 
 - [ ] Expand `PersistentMemoryManager` / `SaveManager` into richer repeated-history presentation and unlock state.

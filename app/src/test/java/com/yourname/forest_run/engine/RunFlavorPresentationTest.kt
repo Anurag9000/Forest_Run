@@ -96,4 +96,39 @@ class RunFlavorPresentationTest {
         assertEquals("Night kept", cue.bubbleText)
         assertTrue(cue.flavorText.contains("owl", ignoreCase = true) || cue.flavorText.contains("stayed", ignoreCase = true))
     }
+
+    @Test
+    fun `mercy cue picks entity-aware flavor during ordinary play`() {
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.HEDGEHOG) }
+
+        val cue = RunFlavorPresentation.mercyCue(
+            context = context,
+            type = EntityType.HEDGEHOG,
+            mercyHearts = 1,
+            kindnessChain = 0,
+            routeTier = PacifistRouteTier.NONE
+        )
+
+        assertTrue(cue.flavorText.contains("thorns", ignoreCase = true) || cue.flavorText.contains("hop", ignoreCase = true))
+    }
+
+    @Test
+    fun `pass cue surfaces tracked and ordinary entity flavor in normal runs`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+
+        val dogCue = RunFlavorPresentation.passCue(
+            context = context,
+            type = EntityType.DOG,
+            routeTier = PacifistRouteTier.KIND
+        )
+        val lilyCue = RunFlavorPresentation.passCue(
+            context = context,
+            type = EntityType.LILY_OF_VALLEY,
+            routeTier = PacifistRouteTier.NONE
+        )
+
+        assertTrue(dogCue.flavorText.contains("friend", ignoreCase = true) || dogCue.flavorText.contains("home", ignoreCase = true))
+        assertTrue(lilyCue.flavorText.contains("glow", ignoreCase = true) || lilyCue.flavorText.contains("above", ignoreCase = true))
+    }
 }

@@ -20,6 +20,7 @@ import com.yourname.forest_run.entities.trees.WeepingWillow
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.systems.SeedOrbManager
+import com.yourname.forest_run.ui.FlavorTextManager
 import kotlin.random.Random
 
 /**
@@ -117,6 +118,21 @@ class EntityManager(
                 entity.hasBeenPassed = true
                 entity.performUniqueAction(player, gameState)
                 gameState.recordCleanPass()
+                entityTypeOf(entity)?.let { type ->
+                    val passCue = RunFlavorPresentation.passCue(
+                        context = context,
+                        type = type,
+                        routeTier = gameState.pacifistRouteTier
+                    )
+                    FlavorTextManager.spawn(
+                        text = passCue.flavorText,
+                        x = entity.hitbox.left,
+                        y = entity.hitbox.top - 10f,
+                        colour = passCue.flavorColor,
+                        lifetime = 0.95f,
+                        size = passCue.flavorSize
+                    )
+                }
                 if (gameState.isBloomActive) {
                     gameState.recordBloomConversion()
                     ParticleManager.emit(FxPreset.BLOOM_CONVERT, entity.hitbox.centerX(), entity.hitbox.centerY())

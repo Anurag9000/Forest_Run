@@ -16,6 +16,114 @@ data class RunFlavorCue(
 
 object RunFlavorPresentation {
 
+    fun mercyCue(
+        context: Context,
+        type: EntityType?,
+        mercyHearts: Int,
+        kindnessChain: Int,
+        routeTier: PacifistRouteTier
+    ): RunFlavorCue {
+        val baseCue = PacifistPresentation.mercyMissCue(
+            mercyHearts = mercyHearts,
+            kindnessChain = kindnessChain,
+            routeTier = routeTier
+        )
+        val appContext = context.applicationContext
+        val repeatHits = type?.let { PersistentMemoryManager.getHitCount(appContext, it) } ?: 0
+        val flavorText = when (type) {
+            EntityType.CAT ->
+                RelationshipArcSystem.encounterCueLine(appContext, EntityType.CAT, RelationshipArcSystem.EncounterCue.MERCY)
+            EntityType.WOLF ->
+                RelationshipArcSystem.encounterCueLine(appContext, EntityType.WOLF, RelationshipArcSystem.EncounterCue.WOLF_CHARGE)
+            EntityType.DOG ->
+                RelationshipArcSystem.encounterCueLine(appContext, EntityType.DOG, RelationshipArcSystem.EncounterCue.DOG_MIDDLE)
+            EntityType.HEDGEHOG -> AnimalEncounterFlavor.hedgehogWarning(repeatHits)
+            EntityType.DUCK -> BirdEncounterFlavor.duckAnswerPrompt()
+            EntityType.TIT -> BirdEncounterFlavor.titThroughPrompt(groupSize = 5)
+            EntityType.CHICKADEE -> BirdEncounterFlavor.chickadeePocketPrompt()
+            EntityType.OWL ->
+                RelationshipArcSystem.encounterCueLine(appContext, EntityType.OWL, RelationshipArcSystem.EncounterCue.OWL_ALERT)
+            EntityType.EAGLE ->
+                RelationshipArcSystem.encounterCueLine(appContext, EntityType.EAGLE, RelationshipArcSystem.EncounterCue.EAGLE_LOCK)
+            EntityType.CACTUS -> if (repeatHits >= 1) "Still the careful line." else "Needles close."
+            EntityType.LILY_OF_VALLEY -> if (repeatHits >= 1) "Low glow. Stay above it." else "Low glow. Careful."
+            EntityType.HYACINTH -> if (repeatHits >= 1) "Keep the third beat." else "Third beat."
+            EntityType.EUCALYPTUS -> if (repeatHits >= 1) "Late whip. Stay ahead." else "Watch the whip."
+            EntityType.VANILLA_ORCHID -> if (repeatHits >= 1) "Thread still open." else "Find the thread."
+            EntityType.WEEPING_WILLOW -> if (repeatHits >= 1) "Duck the curtain." else "Curtain low."
+            EntityType.JACARANDA -> if (repeatHits >= 1) "Petals hide the lane." else "Find the lane."
+            EntityType.BAMBOO -> if (repeatHits >= 1) "Seam still there." else "Thread the seam."
+            EntityType.CHERRY_BLOSSOM -> if (repeatHits >= 1) "Gust band close." else "Gust close."
+            EntityType.FOX -> RelationshipArcSystem.lineFor(appContext, EntityType.FOX, RelationshipArcSystem.Event.THREAT)
+            null -> baseCue.flavorText
+        }
+        return RunFlavorCue(
+            bubbleText = baseCue.bubbleText,
+            flavorText = flavorText,
+            fillColor = baseCue.fillColor,
+            borderColor = baseCue.borderColor,
+            flavorColor = baseCue.flavorColor,
+            flavorSize = baseCue.flavorSize
+        )
+    }
+
+    fun passCue(
+        context: Context,
+        type: EntityType,
+        routeTier: PacifistRouteTier
+    ): RunFlavorCue {
+        val appContext = context.applicationContext
+        val repeatHits = PersistentMemoryManager.getHitCount(appContext, type)
+        val fillColor = when (routeTier) {
+            PacifistRouteTier.PEACEFUL -> Color.rgb(228, 248, 234)
+            PacifistRouteTier.MERCIFUL -> Color.rgb(234, 248, 220)
+            PacifistRouteTier.KIND -> Color.rgb(236, 250, 222)
+            PacifistRouteTier.NONE -> Color.rgb(244, 240, 226)
+        }
+        val borderColor = when (routeTier) {
+            PacifistRouteTier.PEACEFUL -> Color.rgb(92, 146, 116)
+            PacifistRouteTier.MERCIFUL -> Color.rgb(108, 154, 78)
+            PacifistRouteTier.KIND -> Color.rgb(106, 158, 84)
+            PacifistRouteTier.NONE -> Color.rgb(146, 128, 94)
+        }
+        val flavorColor = when (routeTier) {
+            PacifistRouteTier.PEACEFUL -> Color.rgb(214, 255, 228)
+            PacifistRouteTier.MERCIFUL -> Color.rgb(222, 255, 204)
+            PacifistRouteTier.KIND -> Color.rgb(224, 255, 206)
+            PacifistRouteTier.NONE -> Color.rgb(255, 232, 198)
+        }
+        val flavorText = when (type) {
+            EntityType.CAT, EntityType.FOX, EntityType.WOLF, EntityType.DOG, EntityType.OWL, EntityType.EAGLE ->
+                RelationshipArcSystem.lineFor(appContext, type, RelationshipArcSystem.Event.PASS)
+            EntityType.HEDGEHOG -> AnimalEncounterFlavor.hedgehogPass(repeatHits, clearedRead = true)
+            EntityType.DUCK -> BirdEncounterFlavor.duckPass(answeredQuack = true)
+            EntityType.TIT -> BirdEncounterFlavor.titPass(groupSize = 5, keptBeat = true)
+            EntityType.CHICKADEE -> BirdEncounterFlavor.chickadeePass(verticalSpread = 140f, readPocket = true)
+            EntityType.CACTUS -> if (repeatHits >= 1) "Still clean through the needles." else "Past the needles."
+            EntityType.LILY_OF_VALLEY -> "Kept above the low glow."
+            EntityType.HYACINTH -> "Kept the third beat."
+            EntityType.EUCALYPTUS -> "Stayed ahead of the whip."
+            EntityType.VANILLA_ORCHID -> "Held the thread."
+            EntityType.WEEPING_WILLOW -> "Found the curtain gap."
+            EntityType.JACARANDA -> "Stayed under the bloom."
+            EntityType.BAMBOO -> "Held the seam."
+            EntityType.CHERRY_BLOSSOM -> "Stayed out of the gust band."
+        }
+        return RunFlavorCue(
+            bubbleText = when (routeTier) {
+                PacifistRouteTier.PEACEFUL -> "Peace kept"
+                PacifistRouteTier.MERCIFUL -> "Mercy kept"
+                PacifistRouteTier.KIND -> "Kindness kept"
+                PacifistRouteTier.NONE -> "Clean read"
+            },
+            flavorText = flavorText,
+            fillColor = fillColor,
+            borderColor = borderColor,
+            flavorColor = flavorColor,
+            flavorSize = 24f
+        )
+    }
+
     fun collisionCue(
         context: Context,
         type: EntityType?,

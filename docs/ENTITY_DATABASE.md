@@ -155,4 +155,4 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 - DONE: reduce empty space between encounters materially.
 - DONE: formal device acceptance checklist now mirrors deterministic scenario coverage in [docs/DEVICE_ACCEPTANCE_CHECKLIST.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/DEVICE_ACCEPTANCE_CHECKLIST.md).
 - TODO: verify all entity-specific behaviors on actual device.
-- TODO: ensure flavor text and mercy feedback are visible whenever personality is supposed to land.
+- DONE: ordinary-play mercy feedback and clean-pass flavor now surface through shared entity-aware run flavor instead of showcase-only coverage.

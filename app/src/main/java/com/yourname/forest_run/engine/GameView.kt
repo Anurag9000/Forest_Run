@@ -606,7 +606,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         mercyFlashPaint.color = Color.argb(200, 60, 240, 80) // reset green
                         SfxManager.playMercyMiss()    // Phase 20
                         HapticManager.doubleTap()     // Phase 21 — close call buzz
-                        val mercyCue = PacifistPresentation.mercyMissCue(
+                        val mercyCue = RunFlavorPresentation.mercyCue(
+                            context = context,
+                            type = entityManager.entityTypeOf(collision.entity),
                             mercyHearts = gameState.mercyHearts,
                             kindnessChain = gameState.kindnessChain,
                             routeTier = gameState.pacifistRouteTier

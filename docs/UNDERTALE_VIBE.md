@@ -83,7 +83,7 @@ Examples:
 ### Current Status
 
 - Implemented: floating flavor text manager.
-- Partial: rest quote system and dialogue bubble staging now exist, tracked Cat/Fox/Wolf/Dog/Owl/Eagle encounter beats now swap history-aware lines in ordinary play, and run-level hit/stumble/milestone flavor now surfaces repeat-killer `Again?` style messaging in play; much richer trigger coverage still remains.
+- Partial: rest quote system and dialogue bubble staging now exist, tracked Cat/Fox/Wolf/Dog/Owl/Eagle encounter beats now swap history-aware lines in ordinary play, and run-level hit/stumble/mercy-miss/clean-pass/milestone flavor now surfaces entity-aware messaging in play; much richer trigger coverage still remains.
 - Partial: Bloom now reads more like a celebratory power beat through stronger world transformation and conversion spectacle, but still needs real-device proofing to confirm it lands instantly.
 
 ---
