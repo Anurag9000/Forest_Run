@@ -10,9 +10,9 @@ object FloraEncounterFlavor {
     }
 
     fun hyacinthPass(encounters: Int, repeatHits: Int): String = when {
-        repeatHits >= 2 -> "You held the whole rhythm."
-        encounters >= 4 -> "Three beats, one pass."
-        else -> "Brush the petals."
+        repeatHits >= 2 -> "You kept the third beat."
+        encounters >= 4 -> "Three beats, one jump."
+        else -> "Three-beat bloom."
     }
 
     fun eucalyptusPass(repeatHits: Int): String = when {

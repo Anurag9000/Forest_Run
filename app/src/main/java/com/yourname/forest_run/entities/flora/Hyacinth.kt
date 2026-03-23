@@ -39,13 +39,35 @@ class Hyacinth(
     private val drawRect    = RectF()
     private val brushBox    = RectF()
     private val brushPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(52, 188, 120, 228)
+        color = Color.argb(64, 188, 120, 228)
         style = Paint.Style.FILL
     }
     private val rhythmPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(126, 228, 186, 255)
         style = Paint.Style.STROKE
         strokeWidth = 3.5f
+    }
+    private val beatLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(104, 236, 208, 255)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val beatNodePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(210, 246, 218, 255)
+        style = Paint.Style.FILL
+    }
+    private val hitBandPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(72, 246, 198, 255)
+        style = Paint.Style.FILL
+    }
+    private val hitBandBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(184, 250, 226, 255)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val beatGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(54, 230, 180, 255)
+        style = Paint.Style.FILL
     }
     private var rhythmPulse = 0f
 
@@ -62,25 +84,42 @@ class Hyacinth(
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x + hitInsetX + sway, y + hitTopY)
         val pad = readability.stagingPaddingPx
-        brushBox.set(hitbox.left - pad, hitbox.top - pad * 1.4f, hitbox.right + pad, hitbox.bottom)
+        brushBox.set(hitbox.left - pad, hitbox.top - pad * 2.2f, hitbox.right + pad, hitbox.bottom + pad * 0.35f)
         sprite.update(deltaTime)
         if (x < -floraWidth - 20f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
         val sway = swayComponent?.getOffset(0f) ?: 0f
+        val centerX = x + floraWidth * 0.5f + sway * 0.2f
+        val beatTop = y + floraHeight * 0.18f
+        val beatMid = y + floraHeight * 0.38f
+        val beatLow = y + floraHeight * 0.60f
+        val pulseBase = 0.55f + 0.45f * kotlin.math.sin(rhythmPulse)
+        brushPaint.alpha = (54f + 34f * pulseBase).toInt().coerceIn(0, 255)
         canvas.drawRoundRect(brushBox, 12f, 12f, brushPaint)
+        canvas.drawRoundRect(hitbox, 14f, 14f, hitBandPaint)
+        canvas.drawRoundRect(hitbox, 14f, 14f, hitBandBorderPaint)
+        canvas.drawLine(centerX, beatTop, centerX, beatLow + floraHeight * 0.06f, beatLinePaint)
         repeat(3) { index ->
             val phase = rhythmPulse + index * 0.8f
             val pulse = 0.55f + 0.45f * kotlin.math.sin(phase)
+            val beatY = when (index) {
+                0 -> beatTop
+                1 -> beatMid
+                else -> beatLow
+            }
+            val beatX = centerX + when (index) {
+                0 -> -floraWidth * 0.08f
+                1 -> floraWidth * 0.02f
+                else -> floraWidth * 0.10f
+            }
             rhythmPaint.alpha = (70f + 70f * pulse - index * 12f).toInt().coerceIn(0, 255)
-            val radius = floraWidth * (0.16f + index * 0.11f + 0.03f * pulse)
-            canvas.drawCircle(
-                x + floraWidth * 0.5f + sway * 0.2f,
-                y + floraHeight * (0.22f + index * 0.16f),
-                radius,
-                rhythmPaint
-            )
+            beatGlowPaint.alpha = (38f + 30f * pulse - index * 8f).toInt().coerceIn(0, 255)
+            val radius = floraWidth * (0.14f + index * 0.08f + 0.03f * pulse)
+            canvas.drawCircle(beatX, beatY, radius * 1.35f, beatGlowPaint)
+            canvas.drawCircle(beatX, beatY, radius, rhythmPaint)
+            canvas.drawCircle(beatX, beatY, floraWidth * (0.030f + 0.006f * index), beatNodePaint)
         }
         drawRect.set(x, y, x + floraWidth, y + floraHeight)
         canvas.save()

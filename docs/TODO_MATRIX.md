@@ -94,7 +94,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 ### Flora
 
 - PARTIAL: Lily of the Valley now stages its lure and lower seed-trap through stronger local glow dominance, a clearer lure descent, a more explicit low trap band, safer low-hit readability, and clearer pass reward; finish device-tuning only.
-- PARTIAL: Hyacinth now reads more like a single clustered rhythm unit with pulse rings and stronger payoff; finish device validation and final rhythm feel.
+- PARTIAL: Hyacinth now reads like a clearer three-beat clustered rhythm unit with explicit beat nodes, a clearer brush-vs-hit band, stronger rhythm payoff text, and locked brush/hit distinction in tests; finish device validation only.
 - PARTIAL: Eucalyptus now sells the whipping leaf path more clearly with layered gust guides and stronger pass reward; finish final threat tuning on device.
 - PARTIAL: Vanilla Orchid now stages its two hazard zones and safe thread much more explicitly; finish device validation and final live-play clarity.
 - PARTIAL: Cactus now has stronger warning staging, history-aware payoff text, and a clearer reward beat; finish device-proofing and broader memory/cosmetic payoff.

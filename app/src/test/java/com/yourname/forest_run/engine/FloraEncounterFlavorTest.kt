@@ -14,7 +14,9 @@ class FloraEncounterFlavorTest {
 
     @Test
     fun `hyacinth and orchid emphasize timing windows`() {
-        assertEquals("Three beats, one pass.", FloraEncounterFlavor.hyacinthPass(encounters = 4, repeatHits = 0))
+        assertEquals("Three-beat bloom.", FloraEncounterFlavor.hyacinthPass(encounters = 1, repeatHits = 0))
+        assertEquals("Three beats, one jump.", FloraEncounterFlavor.hyacinthPass(encounters = 4, repeatHits = 0))
+        assertEquals("You kept the third beat.", FloraEncounterFlavor.hyacinthPass(encounters = 4, repeatHits = 2))
         assertEquals("Low, then high.", FloraEncounterFlavor.orchidPass(encounters = 2, repeatHits = 2))
     }
 

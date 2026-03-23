@@ -21,8 +21,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: clustered rhythm hazard that encourages longer jumps or risky brush interactions.
 - Dream traits: grouped feel, pollen, partial-brush punishment, distinctive timing.
-- Current: brush/mercy zone, clustered pulse read, and stronger reward text now exist.
-- TODO: finish on-device rhythm tuning.
+- Current: brush/mercy zone, clustered pulse read, explicit three-beat rhythm identity, clearer brush-vs-hit staging, and stronger reward text now exist.
+- TODO: finish on-device validation.
 
 ### Eucalyptus
 

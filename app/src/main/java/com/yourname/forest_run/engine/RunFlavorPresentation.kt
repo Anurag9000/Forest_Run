@@ -83,7 +83,7 @@ object RunFlavorPresentation {
             EntityType.CHICKADEE -> BirdEncounterFlavor.chickadeeHit(repeatHits)
             EntityType.CACTUS -> if (repeatHits >= 1) "Still the rigid line." else "Sharp read missed."
             EntityType.LILY_OF_VALLEY -> if (repeatHits >= 1) "Same low lure." else "Caught the glow."
-            EntityType.HYACINTH -> if (repeatHits >= 1) "Lost the rhythm again." else "Lost the rhythm."
+            EntityType.HYACINTH -> if (repeatHits >= 1) "Lost the third beat again." else "Lost the third beat."
             EntityType.EUCALYPTUS -> if (repeatHits >= 1) "Same late lean." else "Late on the lean."
             EntityType.VANILLA_ORCHID -> if (repeatHits >= 1) "Missed the thread again." else "Missed the thread."
             EntityType.WEEPING_WILLOW -> if (repeatHits >= 1) "Still in the curtain." else "Caught in the curtain."
@@ -215,7 +215,7 @@ object RunFlavorPresentation {
         EntityType.EAGLE -> "Same mark."
         EntityType.CACTUS -> "Same rigid line."
         EntityType.LILY_OF_VALLEY -> "Same low lure."
-        EntityType.HYACINTH -> "Same rhythm slip."
+        EntityType.HYACINTH -> "Same beat slip."
         EntityType.EUCALYPTUS -> "Same late lean."
         EntityType.VANILLA_ORCHID -> "Same thread missed."
         EntityType.WEEPING_WILLOW -> "Same curtain."
