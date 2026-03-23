@@ -125,6 +125,8 @@ class GardenScreen(
     private var milestoneRewardSummary = ""
     private var milestonePresenceLabel = "None"
     private var milestonePresenceLine = ""
+    private var milestoneRitualLabel = "None"
+    private var milestoneRitualLine = ""
     private var memoryPageCount = 0
     private var gardenReflectionLine = ""
     private var creatureThoughtLine = ""
@@ -587,6 +589,14 @@ class GardenScreen(
         } else {
             y += 44f
         }
+        canvas.drawText("Bond Ritual", statsRect.left + 18f, y, statsLabelPaint)
+        canvas.drawText(milestoneRitualLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
+        if (milestoneRitualLine.isNotBlank()) {
+            canvas.drawText(milestoneRitualLine.take(28), statsRect.left + 18f, y + 36f, statsLabelPaint)
+            y += 58f
+        } else {
+            y += 44f
+        }
         canvas.drawText("Memory Pages", statsRect.left + 18f, y, statsLabelPaint)
         canvas.drawText(memoryPageCount.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
     }
@@ -794,6 +804,8 @@ class GardenScreen(
         milestoneRewardSummary = reward?.summary.orEmpty()
         milestonePresenceLabel = reward?.homePresenceLabel ?: "None"
         milestonePresenceLine = reward?.homePresenceLine.orEmpty()
+        milestoneRitualLabel = reward?.bondRitualLabel ?: "None"
+        milestoneRitualLine = reward?.bondRitualLine.orEmpty()
         memoryPageCount = StoryFragmentSystem.memoryPageCount(context)
         gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
         weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)

@@ -28,6 +28,8 @@ data class GardenSanctuaryState(
     val featuredPeaceLine: String = "",
     val featuredPresenceLabel: String = "",
     val featuredPresenceLine: String = "",
+    val featuredRitualLabel: String = "",
+    val featuredRitualLine: String = "",
     val featuredVisitor: EntityType? = null,
     val featuredVisitorTitle: String = "",
     val featuredVisitorLine: String = "",
@@ -99,6 +101,8 @@ object GardenSanctuaryPlanner {
         }.orEmpty()
         val featuredPresenceLabel = featuredReward?.homePresenceLabel.orEmpty()
         val featuredPresenceLine = featuredReward?.homePresenceLine.orEmpty()
+        val featuredRitualLabel = featuredReward?.bondRitualLabel.orEmpty()
+        val featuredRitualLine = featuredReward?.bondRitualLine.orEmpty()
         val featuredVisitor = featuredReward?.type
         val featuredVisitorTitle = featuredReward?.gardenReactionTitle.orEmpty()
         val featuredVisitorLine = featuredReward?.gardenReactionLine.orEmpty()
@@ -287,6 +291,8 @@ object GardenSanctuaryPlanner {
                 "The sanctuary has started keeping the whole shape of your peaceful runs."
             } else if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal && featuredPeaceLine.isNotBlank()) {
                 "The sanctuary is letting ${featuredPeaceBiome!!.biome.displayName.lowercase()} answer back through the way home feels tonight."
+            } else if (featuredRitualLine.isNotBlank()) {
+                "The sanctuary has started keeping ${featuredRitualLabel.lowercase()} alive between returns instead of treating the bond like a finished reward."
             } else if (featuredReward != null) {
                 "The sanctuary has started holding onto ${featuredReward.homePresenceLabel.lowercase()} instead of letting it fade between returns."
             } else if (repeatFriend != null) {
@@ -344,6 +350,8 @@ object GardenSanctuaryPlanner {
                 "Home has started keeping ${featuredPeaceBiome!!.biome.displayName.lowercase()} in its quieter state instead of treating that peace like a one-run accident."
             featuredPeaceLine.isNotBlank() ->
                 "Home now carries a visible sign from ${featuredPeaceBiome!!.biome.displayName}, so the calmer answer you left there does not vanish between runs."
+            featuredRitualLine.isNotBlank() ->
+                featuredRitualLine
             featuredPresenceLine.isNotBlank() ->
                 featuredPresenceLine
             repeatFriend != null ->
@@ -371,7 +379,7 @@ object GardenSanctuaryPlanner {
             repeatedHarmCreature != null ->
                 "${formatEntityName(repeatedHarmCreature)} still lingers in the way the garden holds itself tonight."
             featuredReward != null ->
-                featuredPresenceLine.ifBlank { featuredRewardLine }
+                featuredRitualLine.ifBlank { featuredPresenceLine.ifBlank { featuredRewardLine } }
             repeatFriend != null ->
                 "${formatEntityName(repeatFriend)} has started to feel less like a visit and more like a familiar part of home."
             repeatedKindnessCreature != null && kindnessStreak >= 2 ->
@@ -452,6 +460,12 @@ object GardenSanctuaryPlanner {
                         line = RelationshipArcSystem.strainedBondLine(appContext, strainedBond)
                     )
                 )
+                featuredRitualLabel.isNotBlank() && featuredRitualLine.isNotBlank() -> add(
+                    HomecomingConsequence(
+                        label = "Ritual: ${featuredRitualLabel.take(18)}",
+                        line = featuredRitualLine
+                    )
+                )
                 featuredPresenceLabel.isNotBlank() && featuredPresenceLine.isNotBlank() -> add(
                     HomecomingConsequence(
                         label = "Bond: ${featuredPresenceLabel.take(20)}",
@@ -525,6 +539,8 @@ object GardenSanctuaryPlanner {
             featuredPeaceLine = featuredPeaceLine,
             featuredPresenceLabel = featuredPresenceLabel,
             featuredPresenceLine = featuredPresenceLine,
+            featuredRitualLabel = featuredRitualLabel,
+            featuredRitualLine = featuredRitualLine,
             featuredVisitor = featuredVisitor,
             featuredVisitorTitle = featuredVisitorTitle,
             featuredVisitorLine = featuredVisitorLine,

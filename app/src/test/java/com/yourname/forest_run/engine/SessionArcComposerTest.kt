@@ -203,6 +203,36 @@ class SessionArcComposerTest {
     }
 
     @Test
+    fun `milestone ritual can carry menu staging and home sign`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        val summary = RunSummary(
+            score = 960,
+            distanceM = 640f,
+            isNewHighScore = false,
+            highScore = 1_320,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 5,
+            cleanPasses = 8,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 6,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Gladly.",
+            forestMood = ForestMood.GENTLE
+        )
+        SaveManager.saveLastRunSummary(context, summary)
+
+        val menuCopy = SessionArcComposer.menuCopy(context)
+
+        assertEquals("Meeting Run", menuCopy.homeSignLabel)
+        assertTrue(menuCopy.atmosphereLine.contains("together", ignoreCase = true) || menuCopy.atmosphereLine.contains("halfway", ignoreCase = true))
+        assertTrue(menuCopy.readyLaunchLine.contains("Meeting Run") || menuCopy.readySupportLine.contains("shared bond", ignoreCase = true))
+    }
+
+    @Test
     fun `menu and rest copy can fall back to persistent home character tone`() {
         SaveManager.saveForestMoodState(
             context,
@@ -337,9 +367,22 @@ class SessionArcComposerTest {
 
         val copy = SessionArcComposer.menuCopy(context)
 
-        assertTrue(copy.homeSignLabel.contains("Gate", ignoreCase = true) || copy.homeSignLabel.contains("Open", ignoreCase = true))
-        assertTrue(copy.secondaryAtmosphereLine.contains("air", ignoreCase = true) || copy.secondaryAtmosphereLine.contains("home", ignoreCase = true))
-        assertTrue(copy.standingSupportLine.contains("home", ignoreCase = true) || copy.standingSupportLine.contains("air", ignoreCase = true))
+        assertTrue(
+            copy.homeSignLabel.contains("Gate", ignoreCase = true) ||
+                copy.homeSignLabel.contains("Open", ignoreCase = true) ||
+                copy.homeSignLabel.contains("Meeting", ignoreCase = true)
+        )
+        assertTrue(
+            copy.secondaryAtmosphereLine.contains("air", ignoreCase = true) ||
+                copy.secondaryAtmosphereLine.contains("home", ignoreCase = true) ||
+                copy.secondaryAtmosphereLine.contains("expecting", ignoreCase = true)
+        )
+        assertTrue(
+            copy.standingSupportLine.contains("home", ignoreCase = true) ||
+                copy.standingSupportLine.contains("air", ignoreCase = true) ||
+                copy.standingSupportLine.contains("together", ignoreCase = true) ||
+                copy.standingSupportLine.contains("halfway", ignoreCase = true)
+        )
         assertTrue(copy.readyLaunchLine.contains("start", ignoreCase = true) || copy.readyLaunchLine.contains("part of", ignoreCase = true))
     }
 

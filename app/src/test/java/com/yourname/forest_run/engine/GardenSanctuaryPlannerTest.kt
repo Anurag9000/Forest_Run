@@ -191,7 +191,12 @@ class GardenSanctuaryPlannerTest {
         val state = GardenSanctuaryPlanner.build(context, null)
 
         assertTrue(state.traces.any { it.label == "Napping Patch" })
-        assertTrue(state.carryHomeLine.contains("quiet patch") || state.carryHomeLine.contains("home"))
+        assertTrue(
+            state.carryHomeLine.contains("quiet patch", ignoreCase = true) ||
+                state.carryHomeLine.contains("home", ignoreCase = true) ||
+                state.carryHomeLine.contains("pause", ignoreCase = true) ||
+                state.carryHomeLine.contains("both of you", ignoreCase = true)
+        )
         assertTrue(state.fireflyCount >= 6)
     }
 
@@ -209,6 +214,9 @@ class GardenSanctuaryPlannerTest {
         assertTrue(state.featuredRewardLine.contains("Bell Charm") || state.carryHomeLine.contains("Bell Charm"))
         assertEquals("Open Gate", state.featuredPresenceLabel)
         assertTrue(state.featuredPresenceLine.contains("home", ignoreCase = true) || state.featuredPresenceLine.contains("entrance", ignoreCase = true))
+        assertEquals("Meeting Run", state.featuredRitualLabel)
+        assertTrue(state.featuredRitualLine.contains("together", ignoreCase = true) || state.featuredRitualLine.contains("halfway", ignoreCase = true))
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Ritual", ignoreCase = true) })
         assertEquals(EntityType.DOG, state.featuredVisitor)
         assertEquals("Glad Return", state.featuredVisitorTitle)
         assertTrue(state.featuredVisitorLine.contains("return", ignoreCase = true) || state.featuredVisitorLine.contains("garden", ignoreCase = true))

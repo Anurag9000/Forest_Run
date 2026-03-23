@@ -65,11 +65,10 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 
 - DONE: formal relationship stages now exist for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - DONE: each relationship now has first-impression, recognition, trust, and milestone states.
-- PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, encounter generosity/telegraph tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, milestone keepsake rewards, featured home-presence/carry-home framing, and milestone-reactive run/Garden presentation.
-- PARTIAL: relationship milestones now unlock named keepsakes, matching Cat/Fox/Wolf/Dog/Owl/Eagle costume paths, featured sanctuary home-presence lines, bond-specific score-milestone reactions, and fallback bonded Garden visitor reactions; deepen broader milestone presentation and remaining non-costume rewards.
+- PARTIAL: relationship stages now drive dialogue, threat/pass/spare lines, encounter generosity/telegraph tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, milestone keepsake rewards, featured home-presence/carry-home framing, named bond-ritual surfacing, and milestone-reactive run/Garden presentation.
+- PARTIAL: relationship milestones now unlock named keepsakes, matching Cat/Fox/Wolf/Dog/Owl/Eagle costume paths, featured sanctuary home-presence lines, named bond rituals, bond-specific score-milestone reactions, and fallback bonded Garden visitor reactions; deepen broader milestone presentation further.
 - PARTIAL: repeated positive interactions now also surface through repeat-friend familiarity beats, `Familiar Return` badges, creature-specific warmth lines, and shared familiarity tiers that now warm ordinary passes, mercy cues, creature thoughts, and bonded returns; deepen Garden payoff further.
 - PARTIAL: repeated negative interactions now surface stronger caution/tension through strained-bond live cue swaps, return beats, sanctuary traces, and fragment writing, now with distinct disappointment, fear, and tension language derived from shared strained-history profiles instead of generic caution alone; broaden broader in-run consequence and world-state response further.
-- TODO: add milestone rewards that feel relational, not merely numerical.
 
 ### Personal Return Moments
 
@@ -131,7 +130,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 - PARTIAL: pacifist and friendship tracking systems exist; broaden them into full mercy-route architecture.
 - DONE: deterministic encounter verification harness now includes broad acceptance scenarios for families, individual entities, Bloom, ghost, and rest-loop testing.
 - TODO: deeper authored biome scene system.
-- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, quiet story fragments, shared session-arc composition, and sanctuary-derived menu/rest/Garden atmosphere, now with explicit kindness/tender streak carry-over, repeat-friend familiarity, save-backed pacifist route tiers, named peaceful-biome carry-home state, repeat-killer escalation beats, and milestone reward/cosmetic carry-home surfacing; deepen authored coverage, stronger Garden consequences, and richer payoff.
+- PARTIAL: first-class emotional systems now exist for forest mood, personal return moments, relationship arcs, quiet story fragments, shared session-arc composition, and sanctuary-derived menu/rest/Garden atmosphere, now with explicit kindness/tender streak carry-over, repeat-friend familiarity, save-backed pacifist route tiers, named peaceful-biome carry-home state, repeat-killer escalation beats, and milestone reward/cosmetic/ritual carry-home surfacing; deepen authored coverage, stronger Garden consequences, and richer payoff.
 
 ## Visual And Audio TODOs
 
