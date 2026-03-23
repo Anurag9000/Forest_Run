@@ -109,8 +109,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: erratic aerial chaos.
 - Dream traits: unpredictable altitude shifts and cute panic energy.
-- Current: erratic altitude, flutter-trail read, warning cue, and clean-pass payoff are clearer.
-- TODO: finish final charm and clarity tuning on device.
+- Current: erratic altitude, featured lead-bird charm cue, clearer flutter pocket, and a warmer clean-read reward now exist.
+- TODO: finish final device-proofing only.
 
 ## Animals
 

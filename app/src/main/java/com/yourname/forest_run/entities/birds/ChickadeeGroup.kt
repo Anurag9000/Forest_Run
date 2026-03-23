@@ -34,6 +34,7 @@ class ChickadeeGroup(
     private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = readability.minWidthPx)
     private val spacing = 74f
     private val birdCount = count.coerceIn(2, 4)
+    private val leadBirdIndex = birdCount / 2
     private val flutterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(64, 255, 232, 188)
         style = Paint.Style.FILL
@@ -43,6 +44,19 @@ class ChickadeeGroup(
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
     }
+    private val leadGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(70, 255, 242, 190)
+        style = Paint.Style.FILL
+    }
+    private val pocketPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(54, 255, 236, 196)
+        style = Paint.Style.FILL
+    }
+    private val pocketStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(124, 255, 244, 214)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
 
     // Each bird's individual altitude and timer
     private val altitudes = FloatArray(birdCount) { groundY * (0.3f + Random.nextFloat() * 0.4f) }
@@ -50,6 +64,9 @@ class ChickadeeGroup(
     private val altitudeTimers = FloatArray(birdCount) { Random.nextFloat() * 1.3f }
     private val altitudeIntervals = FloatArray(birdCount) { 0.7f + Random.nextFloat() * 0.6f }
     private var warned = false
+    private var pocketPrompted = false
+    private var readPocket = false
+    private val flutterPocketRect = RectF()
 
     private val birdRects = Array(birdCount) { i ->
         val bx = startX + i * spacing
@@ -80,22 +97,31 @@ class ChickadeeGroup(
         }
 
         hitbox.offsetTo(x, altitudes.min() - birdH)
+        updateFlutterPocket()
         if (x < -(birdCount * spacing) - 50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
+        canvas.drawRoundRect(flutterPocketRect, 16f, 16f, pocketPaint)
+        canvas.drawRoundRect(flutterPocketRect, 16f, 16f, pocketStrokePaint)
         for (i in birdRects.indices) {
             val rect = birdRects[i]
             canvas.drawLine(rect.centerX(), rect.centerY(), rect.centerX(), targetAltitudes[i], flutterTrailPaint)
+            if (i == leadBirdIndex) {
+                canvas.drawCircle(rect.centerX(), rect.centerY(), birdW * 0.42f, leadGlowPaint)
+            }
             canvas.drawCircle(rect.centerX(), rect.centerY(), birdW * 0.28f, flutterPaint)
             sprite.draw(canvas, rect)
         }
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 130 + flutterSpread().toInt().coerceAtMost(40) / 10)
+        gameState.addBonus(
+            points = if (readPocket) 144 + flutterSpread().toInt().coerceAtMost(40) / 10 else 130 + flutterSpread().toInt().coerceAtMost(40) / 10,
+            seeds = if (readPocket) 1 else 0
+        )
         DialogueBubbleManager.spawn(
-            text = BirdEncounterFlavor.chickadeePass(flutterSpread()),
+            text = BirdEncounterFlavor.chickadeePass(flutterSpread(), readPocket),
             anchorX = x + birdCount * spacing * 0.42f,
             anchorY = altitudes.min() - 24f,
             fillColor = Color.rgb(255, 246, 224),
@@ -119,6 +145,25 @@ class ChickadeeGroup(
                 Color.rgb(170, 128, 84)
             )
         }
+        val pocketApproach = RectF(
+            flutterPocketRect.left - readability.stagingPaddingPx,
+            flutterPocketRect.top - readability.stagingPaddingPx,
+            flutterPocketRect.right + readability.stagingPaddingPx,
+            flutterPocketRect.bottom + readability.stagingPaddingPx
+        )
+        if (!pocketPrompted && RectF.intersects(player.hitbox, pocketApproach)) {
+            pocketPrompted = true
+            DialogueBubbleManager.spawn(
+                BirdEncounterFlavor.chickadeePocketPrompt(),
+                flutterPocketRect.centerX(),
+                flutterPocketRect.top - 14f,
+                Color.rgb(255, 246, 224),
+                Color.rgb(170, 128, 84)
+            )
+        }
+        if (RectF.intersects(player.hitbox, flutterPocketRect)) {
+            readPocket = true
+        }
         for (rect in birdRects) {
             if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT
             val mercyPad = readability.mercyPaddingPx
@@ -129,4 +174,27 @@ class ChickadeeGroup(
     }
 
     private fun flutterSpread(): Float = altitudes.max() - altitudes.min()
+
+    private fun updateFlutterPocket() {
+        val leadRect = birdRects[leadBirdIndex]
+        val upperBound = birdRects.minOf { it.bottom } + 4f
+        val lowerBound = birdRects.maxOf { it.top } - 4f
+        val fallbackCenter = leadRect.centerY() + birdH * 0.72f
+        val pocketTop = if (lowerBound > upperBound + birdH * 0.18f) {
+            upperBound
+        } else {
+            fallbackCenter - birdH * 0.20f
+        }
+        val pocketBottom = if (lowerBound > upperBound + birdH * 0.18f) {
+            lowerBound
+        } else {
+            fallbackCenter + birdH * 0.20f
+        }
+        flutterPocketRect.set(
+            leadRect.centerX() - birdW * 0.95f,
+            pocketTop,
+            leadRect.centerX() + birdW * 0.95f,
+            pocketBottom
+        )
+    }
 }

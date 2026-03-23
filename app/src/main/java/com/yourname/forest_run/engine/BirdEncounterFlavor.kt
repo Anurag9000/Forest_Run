@@ -35,14 +35,19 @@ object BirdEncounterFlavor {
     }
 
     fun chickadeeWarning(verticalSpread: Float): String =
-        if (verticalSpread >= 120f) "Too fluttery." else "Watch the jitter."
+        if (verticalSpread >= 120f) "Follow the little gap." else "Watch the tiny jitter."
+
+    fun chickadeePocketPrompt(): String = "Soft gap."
 
     fun chickadeeHit(repeatHits: Int): String = when {
         repeatHits >= 2 -> "Same flutter rush."
-        repeatHits >= 1 -> "Too fluttery again."
+        repeatHits >= 1 -> "Lost the little gap."
         else -> "Too fluttery."
     }
 
-    fun chickadeePass(verticalSpread: Float): String =
-        if (verticalSpread >= 120f) "Read the flutter." else "Soft wings."
+    fun chickadeePass(verticalSpread: Float, readPocket: Boolean): String = when {
+        readPocket -> "Tiny wings trusted you."
+        verticalSpread >= 120f -> "Read the flutter."
+        else -> "Soft wings."
+    }
 }

@@ -29,10 +29,12 @@ class BirdEncounterFlavorTest {
 
     @Test
     fun `chickadee lines react to wider flutter spread`() {
-        assertTrue(BirdEncounterFlavor.chickadeeWarning(130f).contains("fluttery"))
-        assertTrue(BirdEncounterFlavor.chickadeePass(130f).contains("flutter"))
-        assertEquals("Watch the jitter.", BirdEncounterFlavor.chickadeeWarning(80f))
-        assertEquals("Soft wings.", BirdEncounterFlavor.chickadeePass(80f))
+        assertTrue(BirdEncounterFlavor.chickadeeWarning(130f).contains("gap"))
+        assertTrue(BirdEncounterFlavor.chickadeePass(130f, readPocket = false).contains("flutter"))
+        assertEquals("Watch the tiny jitter.", BirdEncounterFlavor.chickadeeWarning(80f))
+        assertEquals("Soft wings.", BirdEncounterFlavor.chickadeePass(80f, readPocket = false))
+        assertEquals("Soft gap.", BirdEncounterFlavor.chickadeePocketPrompt())
+        assertEquals("Tiny wings trusted you.", BirdEncounterFlavor.chickadeePass(80f, readPocket = true))
         assertEquals("Same flutter rush.", BirdEncounterFlavor.chickadeeHit(2))
     }
 }

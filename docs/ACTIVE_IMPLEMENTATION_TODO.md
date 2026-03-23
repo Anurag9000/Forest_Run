@@ -24,7 +24,6 @@ Completion standard for removing an item:
 
 ### Birds
 
-- [ ] Finish ChickadeeGroup’s final charm/readability payoff.
 - [ ] Finish Owl’s deeper repeated-memory/night payoff.
 - [ ] Finish Eagle’s stronger dramatic cue understanding.
 

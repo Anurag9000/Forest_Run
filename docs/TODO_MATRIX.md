@@ -110,7 +110,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 
 - PARTIAL: Duck now has a staged quack call, a more explicit low-lane answer, and a stronger answered-the-quack pass reward on top of the earlier low-flight readability work; finish device-proofing only.
 - PARTIAL: Tit flocks now use a staged beat count-in, a visible trough guide, and a stronger kept-the-beat reward on top of the earlier rhythm-wave readability work; finish device-proofing only.
-- PARTIAL: Chickadee groups now surface their jitter path and flutter-spread payoff more clearly; finish final clarity/charm tuning.
+- PARTIAL: Chickadee groups now feature a highlighted lead bird, a clearer flutter pocket, and a warmer clean-read reward on top of the earlier jitter-path readability work; finish device-proofing only.
 - PARTIAL: Owl now has stronger alert-ring telegraphing, night-glow mood, and relationship-aware alert cueing; finish device-proofing and deeper repeated-memory payoff.
 - PARTIAL: Eagle now has a clearer target zone, stronger lock-on read, and relationship-aware mark cueing; finish device-proofing and stronger dramatic cue understanding.
 
