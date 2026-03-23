@@ -116,6 +116,12 @@ class MainMenuScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val secondaryAtmospherePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(196, 220, 236, 214)
+        textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
     private val supportPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(205, 220, 234, 214)
         textSize = 13f
@@ -140,6 +146,21 @@ class MainMenuScreen(
     private val badgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(52, 60, 26)
         textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
+    private val homeSignPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(192, 236, 246, 220)
+        style = Paint.Style.FILL
+    }
+    private val homeSignBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(176, 244, 248, 238)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val homeSignTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(46, 58, 32)
+        textSize = 11f
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
@@ -210,7 +231,9 @@ class MainMenuScreen(
         // Title
         canvas.drawText("FOREST RUN", cw / 2f, ch * 0.10f + titlePaint.textSize, titlePaint)
         drawWrappedCenteredText(canvas, sceneCopy.atmosphereLine, cw / 2f, ch * 0.17f, cw * 0.70f, atmospherePaint)
+        drawWrappedCenteredText(canvas, sceneCopy.secondaryAtmosphereLine, cw / 2f, ch * 0.205f, cw * 0.68f, secondaryAtmospherePaint)
         drawArrivalBadge(canvas, cw, ch)
+        drawHomeSign(canvas, cw, ch)
 
         // Prompt
         val promptAlpha = when (phase) {
@@ -282,6 +305,14 @@ class MainMenuScreen(
             canvas.drawCircle(x, y, 6f, ambiencePaint)
         }
 
+        repeat(sanctuaryState.petalCount.coerceAtMost(8)) { index ->
+            val driftX = ((elapsedT * (10f + index * 0.6f)) + index * 0.9f) % 1f
+            val x = cw * (0.10f + driftX * 0.80f) + sin(elapsedT * (0.9f + index * 0.08f) + index) * 14f
+            val y = ch * (0.18f + (index % 4) * 0.06f) + sin(elapsedT * (1.4f + index * 0.05f) + index * 0.7f) * 10f
+            ambiencePaint.color = Color.argb(98, 255, 220 - index * 4, 232)
+            canvas.drawOval(x - 6f, y - 3f, x + 6f, y + 3f, ambiencePaint)
+        }
+
         if (sanctuaryState.groundGlowAlpha > 0) {
             ambiencePaint.color = Color.argb(sanctuaryState.groundGlowAlpha.coerceAtMost(120), 240, 246, 184)
             canvas.drawOval(
@@ -291,6 +322,17 @@ class MainMenuScreen(
                 groundY + ch * 0.08f,
                 ambiencePaint
             )
+        }
+
+        repeat(sanctuaryState.bloomPatchCount.coerceAtMost(4)) { index ->
+            val x = cw * (0.28f + index * 0.13f)
+            val y = groundY + ch * 0.008f
+            ambiencePaint.color = Color.argb(74, 250, 236, 166)
+            canvas.drawOval(x - 26f, y - 10f, x + 26f, y + 12f, ambiencePaint)
+            ambiencePaint.color = Color.argb(126, 255, 242, 196)
+            canvas.drawCircle(x, y - 2f, 5f, ambiencePaint)
+            canvas.drawCircle(x - 9f, y + 3f, 4f, ambiencePaint)
+            canvas.drawCircle(x + 10f, y + 2f, 4f, ambiencePaint)
         }
     }
 
@@ -303,6 +345,17 @@ class MainMenuScreen(
         canvas.drawRoundRect(rect, 18f, 18f, badgeBorderPaint)
         val labelY = rect.centerY() - (badgeTextPaint.descent() + badgeTextPaint.ascent()) / 2f
         canvas.drawText(sanctuaryState.arrivalBadge, rect.centerX(), labelY, badgeTextPaint)
+    }
+
+    private fun drawHomeSign(canvas: Canvas, cw: Float, ch: Float) {
+        if (sceneCopy.homeSignLabel.isBlank()) return
+        val width = cw * 0.20f
+        val height = ch * 0.045f
+        val rect = RectF(cw * 0.09f, ch * 0.11f, cw * 0.09f + width, ch * 0.11f + height)
+        canvas.drawRoundRect(rect, 16f, 16f, homeSignPaint)
+        canvas.drawRoundRect(rect, 16f, 16f, homeSignBorderPaint)
+        val labelY = rect.centerY() - (homeSignTextPaint.descent() + homeSignTextPaint.ascent()) / 2f
+        canvas.drawText(sceneCopy.homeSignLabel.take(26), rect.centerX(), labelY, homeSignTextPaint)
     }
 
     private fun drawCharacter(canvas: Canvas, x: Float, groundY: Float) {

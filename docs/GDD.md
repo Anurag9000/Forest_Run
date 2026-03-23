@@ -172,6 +172,7 @@ Current baseline:
 - milestone bonds now produce warmer and more specific return lines instead of only generic greetings
 - rest can now preview the likely homeward tone before the Garden transition without consuming the saved return beat
 - peaceful and merciful runs can now surface distinct homeward return beats instead of only borrowing generic gentle-return lines
+- startup now also carries a stronger cold-start atmosphere through a secondary opening line, a visible home-sign beat, and richer carried-home ambience instead of only one summary sentence
 - broader authored combinations are still TODO, even though startup/rest/Garden continuity now shares stronger carry-home and homecoming atmosphere, including named peaceful-biome homecoming signs for route play
 
 #### 3.8.4 Quiet Story Fragments
@@ -192,6 +193,7 @@ Current baseline:
 
 - Implemented: two-tap menu start, run loop, game over, restart, garden unlock persistence.
 - Partial: menu startup and rest recovery now share authored copy derived from the same saved emotional state, so the session begins and ends with clearer continuity.
+- Partial: cold start now also surfaces a stronger opening atmosphere through a dedicated home-sign beat and richer carried-home ambience, instead of relying on one generic prompt line.
 - Partial: mercy-oriented runs now also travel home as explicit route tiers instead of only appearing as near-miss or spare counters.
 - Partial: the remaining animal-family ordinary-play payoffs are stronger, with clearer low-threat fairness and more visible bond reward feedback.
 - PARTIAL: the session arc now shares startup/rest/Garden copy and sanctuary-derived homecoming atmosphere; finish the full authored pacing, launch feel, and restorative coherence in real play.

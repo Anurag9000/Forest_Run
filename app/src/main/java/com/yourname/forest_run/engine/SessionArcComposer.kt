@@ -4,6 +4,8 @@ import android.content.Context
 
 data class MenuSceneCopy(
     val atmosphereLine: String,
+    val secondaryAtmosphereLine: String,
+    val homeSignLabel: String,
     val idlePrompt: String,
     val idleSupportLine: String,
     val readyPrompt: String,
@@ -53,6 +55,39 @@ object SessionArcComposer {
                 "The path remembers enough to feel familiar, not crowded."
         }
 
+        val secondaryAtmosphereLine = when {
+            summary == null ->
+                "Nothing here needs to hurry before the first step becomes real."
+            sanctuary.featuredPeaceLabel.isNotBlank() ->
+                "${sanctuary.featuredPeaceLabel} is still visible in the way the garden is holding itself."
+            sanctuary.featuredPresenceLabel.isNotBlank() ->
+                "${sanctuary.featuredPresenceLabel} is still part of the air before the run starts."
+            repeatFriend != null ->
+                "Something familiar already belongs to the quiet before the run."
+            summary.pacifistRouteTier == PacifistRouteTier.PEACEFUL && summary.bloomConversions >= 2 ->
+                "Even the brighter branches are holding still around what you brought back."
+            summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
+                "The garden is staying soft enough for that return to be heard twice."
+            summary.forestMood == ForestMood.FEARFUL ->
+                "The rougher edges are being allowed to settle before anything asks for speed."
+            summary.bloomConversions >= 2 ->
+                "A little of Bloom is still caught in the willow and the mist."
+            else ->
+                "The garden is already behaving like your return changed the air."
+        }
+
+        val homeSignLabel = when {
+            summary == null -> "Quiet Start"
+            sanctuary.featuredPeaceLabel.isNotBlank() -> sanctuary.featuredPeaceLabel
+            sanctuary.featuredPresenceLabel.isNotBlank() -> sanctuary.featuredPresenceLabel
+            sanctuary.arrivalBadge.isNotBlank() -> sanctuary.arrivalBadge
+            repeatFriend != null -> "Familiar Return"
+            summary.forestMood == ForestMood.FEARFUL -> "Soft Landing"
+            summary.pacifistRouteTier != PacifistRouteTier.NONE -> summary.pacifistRouteTier.displayName
+            summary.bloomConversions >= 2 -> "Bloom Lingers"
+            else -> "Homecoming"
+        }
+
         val idlePrompt = when {
             summary?.forestMood == ForestMood.FEARFUL -> "tap when you're ready"
             else -> "tap to rise"
@@ -91,6 +126,8 @@ object SessionArcComposer {
 
         return MenuSceneCopy(
             atmosphereLine = atmosphereLine,
+            secondaryAtmosphereLine = secondaryAtmosphereLine,
+            homeSignLabel = homeSignLabel,
             idlePrompt = idlePrompt,
             idleSupportLine = idleSupportLine,
             readyPrompt = readyPrompt,

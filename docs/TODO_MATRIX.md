@@ -2,6 +2,8 @@
 
 This file is the strict implementation ledger for everything from the original dream specs that is not fully realized yet.
 
+For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMPLEMENTATION_TODO.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/ACTIVE_IMPLEMENTATION_TODO.md). Remove items from that file only when they are fully implemented and verified.
+
 ## Recently Closed
 
 - DONE: increased on-screen readability of birds, plants, trees, and animals on phone.
@@ -30,11 +32,11 @@ This file is the strict implementation ledger for everything from the original d
 
 ## GDD TODOs
 
-- PARTIAL: startup now uses shared session-arc copy plus sanctuary-derived atmosphere, arrival badges, and carry-home ambience so the menu already feels connected to the last return; finish final launch staging and real-device proof.
+- PARTIAL: startup now uses shared session-arc copy plus sanctuary-derived atmosphere, arrival badges, a stronger secondary opening line, a visible home-sign chip, and richer carried-home petals/bloom patches so the menu feels more immediately personal; finish final launch staging and real-device proof.
 - TODO: stronger early-game readability and onboarding.
 - PARTIAL: Bloom spectacle now includes a full-screen/world shift, stronger conversion spectacle, and stronger active-state HUD framing; finish final authored polish and device validation.
 - PARTIAL: rest now has a softer authored recovery subtitle, carry-home preview, sanctuary badge, and recovery ambience; finish the full restorative failure scene and richer reflection range.
-- PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, visible bond traces, arrival badges, mist/lantern/ground-glow atmosphere, and a stronger arrival line when no special return beat is active; finish the full restorative scene and startup atmosphere.
+- PARTIAL: the Garden now has mood-based ambience, sanctuary carry-home framing, visible bond traces, arrival badges, mist/lantern/ground-glow atmosphere, and a stronger arrival line when no special return beat is active, while startup now also surfaces a clearer home-sign atmosphere; finish the full restorative scene and remaining startup/launch work.
 
 ## Personality TODOs
 

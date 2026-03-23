@@ -51,6 +51,8 @@ class SessionArcComposerTest {
 
         assertEquals("tap when you're ready", copy.idlePrompt)
         assertTrue(copy.atmosphereLine.contains("voice low") || copy.idleSupportLine.contains("wait"))
+        assertTrue(copy.homeSignLabel.isNotBlank())
+        assertTrue(copy.secondaryAtmosphereLine.isNotBlank())
     }
 
     @Test
@@ -224,5 +226,47 @@ class SessionArcComposerTest {
 
         assertTrue(menuCopy.atmosphereLine.contains("Orchard", ignoreCase = true))
         assertTrue(restCopy.carryHomeLine.contains("Orchard", ignoreCase = true))
+        assertTrue(menuCopy.homeSignLabel.contains("Orchard", ignoreCase = true))
+        assertTrue(menuCopy.secondaryAtmosphereLine.contains("Orchard", ignoreCase = true))
+    }
+
+    @Test
+    fun `first startup gets a dedicated quiet-start home sign`() {
+        val copy = SessionArcComposer.menuCopy(context)
+
+        assertEquals("Quiet Start", copy.homeSignLabel)
+        assertTrue(copy.atmosphereLine.contains("first path", ignoreCase = true) || copy.atmosphereLine.contains("quiet", ignoreCase = true))
+        assertTrue(copy.secondaryAtmosphereLine.contains("first step", ignoreCase = true) || copy.secondaryAtmosphereLine.contains("hurry", ignoreCase = true))
+    }
+
+    @Test
+    fun `milestone presence can surface as opening home sign`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        SaveManager.saveLastRunSummary(
+            context,
+            RunSummary(
+                score = 980,
+                distanceM = 690f,
+                isNewHighScore = false,
+                highScore = 1_420,
+                mercyHearts = 2,
+                mercyMisses = 2,
+                kindnessChain = 5,
+                cleanPasses = 8,
+                sparedCount = 1,
+                hitsTaken = 0,
+                seedsCollected = 7,
+                bloomConversions = 0,
+                lastKiller = null,
+                restQuote = "Gladly.",
+                forestMood = ForestMood.GENTLE
+            )
+        )
+
+        val copy = SessionArcComposer.menuCopy(context)
+
+        assertTrue(copy.homeSignLabel.contains("Gate", ignoreCase = true) || copy.homeSignLabel.contains("Open", ignoreCase = true))
+        assertTrue(copy.secondaryAtmosphereLine.contains("air", ignoreCase = true) || copy.secondaryAtmosphereLine.contains("home", ignoreCase = true))
     }
 }
