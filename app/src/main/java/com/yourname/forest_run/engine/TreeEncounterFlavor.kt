@@ -3,10 +3,10 @@ package com.yourname.forest_run.engine
 object TreeEncounterFlavor {
 
     fun willowPass(encounters: Int, repeatHits: Int): String = when {
-        repeatHits >= 3 -> "You found the hush again."
-        repeatHits >= 1 -> "Through the curtain."
-        encounters >= 4 -> "The willow left a lane."
-        else -> "Duck through the hush."
+        repeatHits >= 3 -> "You found the lane again."
+        repeatHits >= 1 -> "Stayed under the curtain."
+        encounters >= 4 -> "The willow kept a lane."
+        else -> "Duck the willow lane."
     }
 
     fun jacarandaPass(encounters: Int, repeatHits: Int): String = when {

@@ -24,7 +24,6 @@ Completion standard for removing an item:
 
 ### Trees
 
-- [ ] Finish Weeping Willow’s scenic-dominance behavior without cluttering readability.
 - [ ] Finish Jacaranda’s final canopy/petal spectacle design.
 - [ ] Finish Bamboo’s final precision identity.
 - [ ] Finish Cherry Blossom’s final gust-pressure distinction.

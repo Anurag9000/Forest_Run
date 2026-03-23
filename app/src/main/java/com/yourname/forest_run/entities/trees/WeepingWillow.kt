@@ -42,6 +42,8 @@ class WeepingWillow(
     private val curtainBottom = groundY - treeHeight * 0.16f
 
     private val curtainHitbox = RectF()
+    private val canopyRect    = RectF()
+    private val duckLaneRect  = RectF()
     private val drawRect      = RectF()
     private val curtainPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(48, 40, 92, 54)
@@ -56,23 +58,38 @@ class WeepingWillow(
         color = Color.argb(28, 18, 34, 28)
         style = Paint.Style.FILL
     }
+    private val canopyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(52, 32, 78, 46)
+        style = Paint.Style.FILL
+    }
+    private val canopyBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(118, 86, 134, 94)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
+    private val duckLanePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(64, 214, 236, 180)
+        style = Paint.Style.FILL
+    }
+    private val duckLaneBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(186, 244, 248, 210)
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
     private var curtainPulse = 0f
 
     init {
         x = startX
         y = groundY - treeHeight
         swayComponent = SwayComponent(speed = 0.5f, intensity = 20f)
-        hitbox.set(x + treeWidth / 2f - trunkWidth / 2f, trunkTop,
-                   x + treeWidth / 2f + trunkWidth / 2f, groundY)
-        curtainHitbox.set(x + treeWidth * 0.08f, curtainTop, x + treeWidth * 0.92f, curtainBottom)
+        updateGeometry(sway = 0f)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         curtainPulse += deltaTime * 2.2f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + treeWidth / 2f - trunkWidth / 2f, trunkTop)
-        curtainHitbox.set(x + treeWidth * 0.08f + sway, curtainTop, x + treeWidth * 0.92f + sway, curtainBottom)
+        updateGeometry(sway)
         sprite.update(deltaTime)
         if (x < -treeWidth - 50f) isActive = false
     }
@@ -83,6 +100,12 @@ class WeepingWillow(
         curtainPaint.alpha = (42f + 24f * pulse).toInt().coerceIn(0, 255)
         curtainStrokePaint.alpha = (84f + 50f * pulse).toInt().coerceIn(0, 255)
         shadowZonePaint.alpha = (18f + 24f * pulse).toInt().coerceIn(0, 255)
+        canopyPaint.alpha = (38f + 24f * pulse).toInt().coerceIn(0, 255)
+        canopyBorderPaint.alpha = (74f + 34f * pulse).toInt().coerceIn(0, 255)
+        duckLanePaint.alpha = (48f + 28f * pulse).toInt().coerceIn(0, 255)
+        duckLaneBorderPaint.alpha = (146f + 40f * pulse).toInt().coerceIn(0, 255)
+        canvas.drawRoundRect(canopyRect, 44f, 44f, canopyPaint)
+        canvas.drawRoundRect(canopyRect, 44f, 44f, canopyBorderPaint)
         canvas.drawRoundRect(
             curtainHitbox.left - readability.stagingPaddingPx,
             curtainHitbox.top - readability.stagingPaddingPx * 0.35f,
@@ -94,14 +117,20 @@ class WeepingWillow(
         )
         canvas.drawRoundRect(curtainHitbox, 24f, 24f, curtainPaint)
         canvas.drawRoundRect(curtainHitbox, 24f, 24f, curtainStrokePaint)
-        repeat(5) { index ->
-            val strandX = curtainHitbox.left + curtainHitbox.width() * ((index + 1f) / 6f)
-            val strandDrift = sway * (0.3f + index * 0.08f)
+        canvas.drawRoundRect(duckLaneRect, 22f, 22f, duckLanePaint)
+        canvas.drawRoundRect(duckLaneRect, 22f, 22f, duckLaneBorderPaint)
+        repeat(3) { index ->
+            val laneMarkerX = duckLaneRect.left + duckLaneRect.width() * ((index + 1f) / 4f)
+            canvas.drawCircle(laneMarkerX, duckLaneRect.centerY(), treeWidth * 0.018f, duckLaneBorderPaint)
+        }
+        repeat(7) { index ->
+            val strandX = curtainHitbox.left + curtainHitbox.width() * ((index + 1f) / 8f)
+            val strandDrift = sway * (0.28f + index * 0.07f)
             canvas.drawLine(
                 strandX,
                 curtainTop,
                 strandX + strandDrift,
-                curtainBottom,
+                curtainBottom - treeHeight * 0.02f + (index % 2) * treeHeight * 0.015f,
                 curtainStrokePaint
             )
         }
@@ -130,10 +159,48 @@ class WeepingWillow(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox) ||
             RectF.intersects(player.hitbox, curtainHitbox)) return CollisionResult.HIT
+        if (!duckLaneRect.isEmpty &&
+            duckLaneRect.contains(player.hitbox.left, player.hitbox.top, player.hitbox.right, player.hitbox.bottom)
+        ) {
+            return CollisionResult.NONE
+        }
         val mercyPad = readability.mercyPaddingPx
-        val cm = RectF(curtainHitbox.left - mercyPad, curtainHitbox.top, curtainHitbox.right + mercyPad, curtainHitbox.bottom + mercyPad)
+        val cm = RectF(
+            curtainHitbox.left - mercyPad,
+            curtainHitbox.top,
+            curtainHitbox.right + mercyPad,
+            curtainHitbox.bottom + mercyPad * 0.35f
+        )
         val tm = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, cm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
+    }
+
+    private fun updateGeometry(sway: Float) {
+        hitbox.set(
+            x + treeWidth / 2f - trunkWidth / 2f,
+            trunkTop,
+            x + treeWidth / 2f + trunkWidth / 2f,
+            groundY
+        )
+        curtainHitbox.set(
+            x + treeWidth * 0.06f + sway,
+            curtainTop,
+            x + treeWidth * 0.94f + sway,
+            curtainBottom
+        )
+        canopyRect.set(
+            x - treeWidth * 0.08f,
+            y + treeHeight * 0.06f,
+            x + treeWidth * 1.02f,
+            curtainBottom - treeHeight * 0.02f
+        )
+        val laneInset = readability.stagingPaddingPx * 0.55f
+        duckLaneRect.set(
+            maxOf(curtainHitbox.left + laneInset, hitbox.right + readability.stagingPaddingPx * 0.35f),
+            curtainBottom + readability.stagingPaddingPx * 0.18f,
+            curtainHitbox.right - laneInset,
+            groundY - readability.stagingPaddingPx * 0.28f
+        )
     }
 }

@@ -48,6 +48,8 @@ class ReadabilityProfileTest {
         assertTrue(orchid.minWidthPx >= 112f)
         assertTrue(orchid.stagingPaddingPx >= 16f)
         assertTrue(willow.heightPx > 0f)
+        assertTrue(willow.minWidthPx >= 304f)
+        assertTrue(willow.stagingPaddingPx >= 18f)
         assertTrue(bamboo.secondaryWidthPx > 0f)
         assertTrue(bamboo.secondarySpacingPx > 0f)
     }

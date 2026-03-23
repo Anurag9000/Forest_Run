@@ -51,8 +51,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: curtain hazard and core visual icon of the game.
 - Dream traits: forces ducking, obscures what comes next, creates canopy mood.
-- Current: implemented obstacle, iconography, stronger curtain-read pass, and clearer shadow-zone lane staging now exist.
-- TODO: finish scenic dominance and final device-proofing.
+- Current: implemented obstacle, iconography, stronger curtain-read pass, clearer shadow-zone lane staging, a denser canopy silhouette, and an explicit duck lane now exist.
+- TODO: finish on-device validation.
 
 ### Jacaranda
 
