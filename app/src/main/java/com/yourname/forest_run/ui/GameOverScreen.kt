@@ -261,6 +261,18 @@ class GameOverScreen(
             ty += 28f
         }
 
+        if (sanctuaryState.homeCharacterLabel.isNotBlank()) {
+            val homeWidth = panelW * 0.36f
+            val homeRect = RectF(cx - homeWidth / 2f, ty - 14f, cx + homeWidth / 2f, ty + 10f)
+            canvas.drawRoundRect(homeRect, 14f, 14f, restChipPaint)
+            canvas.drawRoundRect(homeRect, 14f, 14f, restChipBorderPaint)
+            val labelY = homeRect.centerY() - (restChipTextPaint.descent() + restChipTextPaint.ascent()) / 2f
+            canvas.drawText(sanctuaryState.homeCharacterLabel, cx, labelY, restChipTextPaint)
+            ty += 26f
+            drawWrappedCenteredText(canvas, sanctuaryState.homeCharacterLine, cx, ty, panelW * 0.80f, carryHomePaint)
+            ty += 34f
+        }
+
         drawWrappedCenteredText(canvas, summary.restQuote, cx, ty, panelW * 0.82f, quotePaint)
         ty += 58f
         canvas.drawText(summary.forestMood.restLine, cx, ty, moodPaint)

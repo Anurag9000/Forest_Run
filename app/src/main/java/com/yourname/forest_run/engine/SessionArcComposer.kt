@@ -55,6 +55,8 @@ object SessionArcComposer {
                 "The garden still holds the gentler shape of your last return."
             summary.bloomConversions >= 3 ->
                 "A little of Bloom is still hanging in the branches."
+            sanctuary.homeCharacterLine.isNotBlank() ->
+                sanctuary.homeCharacterLine
             sanctuary.carryHomeLine.isNotBlank() ->
                 sanctuary.carryHomeLine
             else ->
@@ -78,6 +80,8 @@ object SessionArcComposer {
                 "The rougher edges are being allowed to settle before anything asks for speed."
             summary.bloomConversions >= 2 ->
                 "A little of Bloom is still caught in the willow and the mist."
+            sanctuary.homeCharacterLine.isNotBlank() ->
+                sanctuary.homeCharacterLine
             else ->
                 "The garden is already behaving like your return changed the air."
         }
@@ -86,6 +90,7 @@ object SessionArcComposer {
             summary == null -> "Quiet Start"
             sanctuary.featuredPeaceLabel.isNotBlank() -> sanctuary.featuredPeaceLabel
             sanctuary.featuredPresenceLabel.isNotBlank() -> sanctuary.featuredPresenceLabel
+            sanctuary.homeCharacterLabel.isNotBlank() -> sanctuary.homeCharacterLabel
             sanctuary.arrivalBadge.isNotBlank() -> sanctuary.arrivalBadge
             repeatFriend != null -> "Familiar Return"
             summary.forestMood == ForestMood.FEARFUL -> "Soft Landing"
@@ -227,6 +232,8 @@ object SessionArcComposer {
                 "Let the rougher parts of the run leave first."
             summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
                 "The calmer answer from that run is already arriving before you do."
+            sanctuary.homeCharacterLine.isNotBlank() ->
+                sanctuary.homeCharacterLine
             else ->
                 "Nothing here needs the next run before this one has settled."
         }
@@ -255,6 +262,7 @@ object SessionArcComposer {
         val carryHomeLabel = previewMoment?.title?.ifBlank { null }
             ?: sanctuary.featuredPeaceLabel.ifBlank {
                 sanctuary.featuredPresenceLabel.ifBlank {
+                    sanctuary.homeCharacterLabel.ifBlank {
                     when {
                         summary.pacifistRouteTier != PacifistRouteTier.NONE ->
                             "${summary.pacifistRouteTier.displayName} Home"
@@ -262,6 +270,7 @@ object SessionArcComposer {
                             "Soft Landing"
                         else ->
                             "Homeward"
+                    }
                     }
                 }
             }

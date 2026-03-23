@@ -164,6 +164,21 @@ class MainMenuScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val homeCharacterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(194, 240, 228, 192)
+        style = Paint.Style.FILL
+    }
+    private val homeCharacterBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(176, 246, 240, 224)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val homeCharacterTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(44, 56, 28)
+        textSize = 11f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
     private val launchCuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(116, 246, 238, 176)
         style = Paint.Style.FILL
@@ -249,6 +264,7 @@ class MainMenuScreen(
         drawWrappedCenteredText(canvas, sceneCopy.secondaryAtmosphereLine, cw / 2f, ch * 0.205f, cw * 0.68f, secondaryAtmospherePaint)
         drawArrivalBadge(canvas, cw, ch)
         drawHomeSign(canvas, cw, ch)
+        drawHomeCharacter(canvas, cw, ch)
         drawLaunchCue(canvas, cw, ch, groundY)
 
         // Prompt
@@ -396,6 +412,25 @@ class MainMenuScreen(
         canvas.drawRoundRect(rect, 16f, 16f, homeSignBorderPaint)
         val labelY = rect.centerY() - (homeSignTextPaint.descent() + homeSignTextPaint.ascent()) / 2f
         canvas.drawText(sceneCopy.homeSignLabel.take(26), rect.centerX(), labelY, homeSignTextPaint)
+    }
+
+    private fun drawHomeCharacter(canvas: Canvas, cw: Float, ch: Float) {
+        if (sanctuaryState.homeCharacterLabel.isBlank()) return
+        val width = cw * 0.22f
+        val height = ch * 0.045f
+        val rect = RectF(cw * 0.69f, ch * 0.11f, cw * 0.69f + width, ch * 0.11f + height)
+        canvas.drawRoundRect(rect, 16f, 16f, homeCharacterPaint)
+        canvas.drawRoundRect(rect, 16f, 16f, homeCharacterBorderPaint)
+        val labelY = rect.centerY() - (homeCharacterTextPaint.descent() + homeCharacterTextPaint.ascent()) / 2f
+        canvas.drawText(sanctuaryState.homeCharacterLabel.take(26), rect.centerX(), labelY, homeCharacterTextPaint)
+        drawWrappedCenteredText(
+            canvas,
+            sanctuaryState.homeCharacterLine,
+            rect.centerX(),
+            rect.bottom + 18f,
+            width,
+            secondaryAtmospherePaint
+        )
     }
 
     private fun drawLaunchCue(canvas: Canvas, cw: Float, ch: Float, groundY: Float) {

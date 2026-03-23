@@ -173,6 +173,7 @@ Current baseline:
 - rest can now preview the likely homeward tone before the Garden transition without consuming the saved return beat
 - peaceful and merciful runs can now surface distinct homeward return beats instead of only borrowing generic gentle-return lines
 - startup now also carries a stronger cold-start atmosphere through a secondary opening line, a visible home-sign beat, and richer carried-home ambience instead of only one summary sentence
+- startup, rest, and Garden now also share a visible sanctuary home-character beat, so home can keep a longer-term identity instead of only reacting through one-off lines
 - broader authored combinations are still TODO, even though startup/rest/Garden continuity now shares stronger carry-home and homecoming atmosphere, including named peaceful-biome homecoming signs for route play
 
 #### 3.8.4 Quiet Story Fragments
@@ -199,7 +200,7 @@ Current baseline:
 - Partial: post-run reflection composition now varies by route/world/weather/creature emphasis so rest and Garden no longer always replay the same fixed reflection stack after different runs.
 - Partial: mercy-oriented runs now also travel home as explicit route tiers instead of only appearing as near-miss or spare counters.
 - Partial: the remaining animal-family ordinary-play payoffs are stronger, with clearer low-threat fairness and more visible bond reward feedback.
-- PARTIAL: the session arc now shares startup/rest/Garden copy and sanctuary-derived homecoming atmosphere; finish the full authored pacing, launch feel, and restorative coherence in real play.
+- PARTIAL: the session arc now shares startup/rest/Garden copy, sanctuary-derived homecoming atmosphere, and a persistent sanctuary home-character layer; finish full authored pacing, launch feel, restorative coherence, and deeper homecoming consequence in real play.
 
 ---
 

@@ -22,7 +22,6 @@ Completion standard for removing an item:
 
 ## 1. Onboarding And Session Arc
 
-- [ ] Finish long-term sanctuary feel so startup, run, rest, and Garden read as one authored emotional loop.
 - [ ] Deepen visible homecoming consequences from mood, route tier, bonds, repeated kindness, repeated harm, and peaceful-biome state.
 
 ## 2. Entity Closure

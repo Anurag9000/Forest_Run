@@ -228,6 +228,21 @@ class GardenScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val homeCharacterChipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(210, 240, 230, 188)
+        style = Paint.Style.FILL
+    }
+    private val homeCharacterChipBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(184, 244, 244, 228)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val homeCharacterChipTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(40, 52, 26)
+        textSize = 12f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
     private val canopyShadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
@@ -434,6 +449,7 @@ class GardenScreen(
         if (sanctuaryState.sanctuaryLine.isNotBlank()) {
             drawWrappedCenteredText(canvas, sanctuaryState.sanctuaryLine, cw / 2f, ch * 0.212f, cw * 0.64f, sanctuaryLinePaint)
         }
+        drawHomeCharacter(canvas, cw, ch)
         drawArrivalBadge(canvas, cw, ch)
         drawSanctuaryTraces(canvas, cw, ch)
 
@@ -653,6 +669,10 @@ class GardenScreen(
         }
         if (sanctuaryState.featuredPeaceLabel.isNotBlank()) {
             canvas.drawText("World: ${sanctuaryState.featuredPeaceLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
+            y += 22f
+        }
+        if (sanctuaryState.homeCharacterLabel.isNotBlank()) {
+            canvas.drawText("Home: ${sanctuaryState.homeCharacterLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
             y += 22f
         }
         val killerText = summary.lastKiller?.let { formatEntityName(it) } ?: "None"
@@ -943,6 +963,24 @@ class GardenScreen(
         canvas.drawRoundRect(rect, 18f, 18f, arrivalBadgeBorderPaint)
         val labelY = rect.centerY() - (arrivalBadgeTextPaint.descent() + arrivalBadgeTextPaint.ascent()) / 2f
         canvas.drawText(sanctuaryState.arrivalBadge, rect.centerX(), labelY, arrivalBadgeTextPaint)
+    }
+
+    private fun drawHomeCharacter(canvas: Canvas, cw: Float, ch: Float) {
+        if (sanctuaryState.homeCharacterLabel.isBlank()) return
+        val width = cw * 0.24f
+        val rect = RectF(cw / 2f - width / 2f, ch * 0.235f, cw / 2f + width / 2f, ch * 0.235f + ch * 0.042f)
+        canvas.drawRoundRect(rect, 16f, 16f, homeCharacterChipPaint)
+        canvas.drawRoundRect(rect, 16f, 16f, homeCharacterChipBorderPaint)
+        val labelY = rect.centerY() - (homeCharacterChipTextPaint.descent() + homeCharacterChipTextPaint.ascent()) / 2f
+        canvas.drawText(sanctuaryState.homeCharacterLabel.take(28), rect.centerX(), labelY, homeCharacterChipTextPaint)
+        drawWrappedCenteredText(
+            canvas,
+            sanctuaryState.homeCharacterLine,
+            cw / 2f,
+            rect.bottom + 18f,
+            cw * 0.60f,
+            returnLinePaint
+        )
     }
 
     private fun spriteForVisitor(type: EntityType): SpriteSheet = when (type) {

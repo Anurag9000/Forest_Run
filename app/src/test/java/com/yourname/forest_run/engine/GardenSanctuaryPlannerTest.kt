@@ -70,6 +70,8 @@ class GardenSanctuaryPlannerTest {
 
         assertEquals(ForestMood.FEARFUL.gardenLine, ForestMoodSystem.currentState(context).currentMood.gardenLine)
         assertTrue(state.sanctuaryLine.contains("lowers its voice"))
+        assertEquals("Sheltering Home", state.homeCharacterLabel)
+        assertTrue(state.homeCharacterLine.contains("shelter", ignoreCase = true))
         assertTrue(state.canopyShadeAlpha >= 50)
     }
 
@@ -139,8 +141,10 @@ class GardenSanctuaryPlannerTest {
         val state = GardenSanctuaryPlanner.build(context, summary)
 
         assertEquals("Held At A Distance", state.arrivalBadge)
+        assertEquals("Watchful Home", state.homeCharacterLabel)
         assertTrue(state.traces.any { it.type == EntityType.WOLF && it.label == "Watchful Distance" })
         assertTrue(state.sanctuaryLine.contains("watchful"))
+        assertTrue(state.homeCharacterLine.contains("watchful", ignoreCase = true))
         assertTrue(state.carryHomeLine.contains("careful", ignoreCase = true) || state.carryHomeLine.contains("break", ignoreCase = true))
     }
 
@@ -272,10 +276,13 @@ class GardenSanctuaryPlannerTest {
         val state = GardenSanctuaryPlanner.build(context, summary)
 
         assertEquals(Biome.MEADOW, state.featuredPeaceBiome)
+        assertTrue(state.homeCharacterLabel.contains("Meadow"))
+        assertTrue(state.homeCharacterLabel.contains("Quiet"))
         assertTrue(state.featuredPeaceLabel.contains("Meadow"))
         assertTrue(state.featuredPeaceLine.contains("Meadow"))
+        assertTrue(state.homeCharacterLine.contains("peace", ignoreCase = true) || state.homeCharacterLine.contains("calmer", ignoreCase = true))
         assertEquals("Peace Carried", state.arrivalBadge)
-        assertTrue(state.carryHomeLine.contains("Meadow"))
+        assertTrue(state.carryHomeLine.contains("quiet", ignoreCase = true) || state.carryHomeLine.contains("Meadow"))
     }
 
     @Test

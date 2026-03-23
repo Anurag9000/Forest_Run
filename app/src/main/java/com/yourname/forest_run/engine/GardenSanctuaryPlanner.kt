@@ -14,6 +14,8 @@ data class GardenSanctuaryState(
     val sanctuaryLine: String = "",
     val carryHomeLine: String = "",
     val arrivalBadge: String = "",
+    val homeCharacterLabel: String = "",
+    val homeCharacterLine: String = "",
     val featuredRewardLine: String = "",
     val featuredPeaceBiome: Biome? = null,
     val featuredPeaceLabel: String = "",
@@ -285,6 +287,62 @@ object GardenSanctuaryPlanner {
         }
 
         val strongestBond = bonds.firstOrNull()?.first
+        val homeCharacterLabel = when {
+            repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature ->
+                "Shadowed Home"
+            strainedBond != null ->
+                "Watchful Home"
+            featuredPeaceBiome != null && routeTier == PacifistRouteTier.PEACEFUL ->
+                "${featuredPeaceBiome.biome.displayName} Quiet"
+            featuredPeaceBiome != null && routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal ->
+                "${featuredPeaceBiome.biome.displayName} Sign"
+            featuredPresenceLabel.isNotBlank() ->
+                featuredPresenceLabel
+            repeatFriend != null ->
+                "Familiar Hearth"
+            repeatedKindnessCreature != null && kindnessStreak >= 2 ->
+                "Trusting Home"
+            milestoneRewards.size >= 2 || warmBonds.size >= 2 ->
+                "Lantern Home"
+            memoryPages >= 4 ->
+                "Remembering Home"
+            (summary?.forestMood ?: mood) == ForestMood.FEARFUL ->
+                "Sheltering Home"
+            (summary?.forestMood ?: mood) == ForestMood.GENTLE ->
+                "Soft Home"
+            (summary?.forestMood ?: mood) == ForestMood.RECKLESS ->
+                "Settling Home"
+            else ->
+                "Kept Home"
+        }
+        val homeCharacterLine = when {
+            repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature ->
+                "Home has learned the darker outline your trouble keeps returning with, and it answers by dimming everything around it."
+            strainedBond != null ->
+                "Home has become more watchful than fearful, keeping room for distance without pretending it is not there."
+            featuredPeaceLine.isNotBlank() && routeTier == PacifistRouteTier.PEACEFUL ->
+                "Home has started keeping ${featuredPeaceBiome!!.biome.displayName.lowercase()} in its quieter state instead of treating that peace like a one-run accident."
+            featuredPeaceLine.isNotBlank() ->
+                "Home now carries a visible sign from ${featuredPeaceBiome!!.biome.displayName}, so the calmer answer you left there does not vanish between runs."
+            featuredPresenceLine.isNotBlank() ->
+                featuredPresenceLine
+            repeatFriend != null ->
+                "${formatEntityName(repeatFriend)} has turned home into a place that sounds familiar before the run even begins."
+            repeatedKindnessCreature != null && kindnessStreak >= 2 ->
+                "${formatEntityName(repeatedKindnessCreature)} has made home feel more trusting, not just more forgiving."
+            milestoneRewards.size >= 2 || warmBonds.size >= 2 ->
+                "Several bonds are bright enough now that home feels lit by what keeps returning kindly."
+            memoryPages >= 4 ->
+                "Home has become a place that keeps your quieter pages open without forcing them into explanation."
+            (summary?.forestMood ?: mood) == ForestMood.FEARFUL ->
+                "Home has learned to shelter first and explain later."
+            (summary?.forestMood ?: mood) == ForestMood.GENTLE ->
+                "Home has taken on the softer shape of the way you keep coming back."
+            (summary?.forestMood ?: mood) == ForestMood.RECKLESS ->
+                "Home now feels like the place where stirred-up air is allowed to settle on purpose."
+            else ->
+                "Home has started keeping a recognizable shape between runs instead of resetting to neutral."
+        }
         val carryHomeLine = when {
             repeatedKillerCreature != null && repeatedKillerCreature == repeatedHarmCreature ->
                 "${formatEntityName(repeatedKillerCreature)} has started to feel like the shape your trouble keeps taking."
@@ -322,6 +380,8 @@ object GardenSanctuaryPlanner {
             sanctuaryLine = sanctuaryLine,
             carryHomeLine = carryHomeLine,
             arrivalBadge = arrivalBadge,
+            homeCharacterLabel = homeCharacterLabel,
+            homeCharacterLine = homeCharacterLine,
             featuredRewardLine = featuredRewardLine,
             featuredPeaceBiome = featuredPeaceBiome?.biome,
             featuredPeaceLabel = featuredPeaceLabel,

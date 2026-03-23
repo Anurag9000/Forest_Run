@@ -203,6 +203,40 @@ class SessionArcComposerTest {
     }
 
     @Test
+    fun `menu and rest copy can fall back to persistent home character tone`() {
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 3, totalRuns = 3, fearfulRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 420,
+            distanceM = 300f,
+            isNewHighScore = false,
+            highScore = 900,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Slowly.",
+            forestMood = ForestMood.FEARFUL
+        )
+        SaveManager.saveLastRunSummary(context, summary)
+
+        val menuCopy = SessionArcComposer.menuCopy(context)
+        val restCopy = SessionArcComposer.restCopy(context, summary)
+
+        assertEquals("Sheltering Home", menuCopy.homeSignLabel)
+        assertTrue(menuCopy.secondaryAtmosphereLine.contains("settle", ignoreCase = true) || menuCopy.secondaryAtmosphereLine.contains("rougher", ignoreCase = true))
+        assertTrue(restCopy.carryHomeLabel.isNotBlank())
+        assertTrue(restCopy.recoveryLine.isNotBlank())
+    }
+
+    @Test
     fun `menu and rest copy can name a peaceful biome world-state sign`() {
         repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.ORCHARD) }
         val summary = RunSummary(

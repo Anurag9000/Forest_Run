@@ -54,7 +54,7 @@ Expected transitions:
 ### Current Status
 
 - Implemented: garden/menu, playing, Bloom, rest summary, and fade-back-to-Garden routing, with a stronger Bloom world-state presentation layer.
-- PARTIAL: menu, rest, and Garden now share session-derived copy plus sanctuary-derived arrival badges and atmosphere cues, rest now stages DYING-to-REST recovery with authored recovery titles/lines plus a homeward preview card, and post-run reflection composition now routes through a varied selector instead of a fixed line stack; finish the remaining authored richness and real-device proof.
+- PARTIAL: menu, rest, and Garden now share session-derived copy plus sanctuary-derived arrival badges and atmosphere cues, a persistent sanctuary home-character layer, a staged DYING-to-REST recovery with authored recovery titles/lines plus a homeward preview card, and a varied post-run reflection selector instead of a fixed line stack; finish the remaining authored richness, deeper homecoming consequence, and real-device proof.
 
 ## 4. Player State Machine
 
@@ -209,7 +209,7 @@ Expected qualities:
 - Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, baseline milestone keepsake rewards, featured home-presence/carry-home lines, milestone-reactive run/Garden cueing, strained-bond carry-home lines, and tracked live encounter cue swaps for Cat/Fox/Wolf/Dog/Owl/Eagle; deeper authored stage consequences still need expansion.
 - Implemented: `StoryFragmentSystem` now exists as a first-class runtime and persistence layer for rest fragments, Garden reflections, and memory-page unlocks.
 - Partial: fragment coverage now drives rest quotes, Garden reflection/carry-home presentation, bonded creature thoughts, weather-linked sanctuary writing, repeated-harm caution pages, strained-bond pages, repeated-kindness warmth pages, repeated-kindness clean-return pages, repeat-friend familiarity pages, merciful repeat-friend pages, repeat-killer `Same Shadow` pages, milestone-gentleness pages, peaceful-Bloom pages, Bloom-afterglow pages, and baseline kind/peaceful-route reflections.
-- Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, repeated-harm caution traces, strained-bond `Watchful Distance` traces, repeated-kindness trust traces, repeat-friend `Shared Path` traces, arrival badges, mist bands, lantern glows, and ground-light carry-home cues from mood, summary, and relationship state.
+- Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, repeated-harm caution traces, strained-bond `Watchful Distance` traces, repeated-kindness trust traces, repeat-friend `Shared Path` traces, arrival badges, mist bands, lantern glows, ground-light carry-home cues, and a persistent home-character label/line from mood, summary, and relationship state.
 - Implemented: `SessionArcComposer` now centralizes authored startup, Garden-arrival, and rest carry-home copy so the macro loop uses shared emotional state instead of disconnected screen-local strings, while menu/rest/Garden visuals now read from the same sanctuary state.
 - Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
 - Implemented: `FloraEncounterFlavor` now centralizes authored flora payoff text so lure/rhythm/window feedback stops living as scattered fallback strings.
