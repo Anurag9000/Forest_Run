@@ -334,4 +334,5 @@ Expected:
 ### Current Status
 
 - Implemented: base scaling.
+- Partial: `GameStateManager`, `EntityManager`, and `HUD` now cooperate on a first-30-seconds opening-guidance layer with input discovery, curated early spawn pacing, and visible teaching chips instead of relying on raw spawn order alone.
 - TODO: tune against readability and delight, not just raw challenge.

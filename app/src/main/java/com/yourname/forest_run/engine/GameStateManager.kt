@@ -17,6 +17,7 @@ class GameStateManager(context: Context) {
     private val appContext = context.applicationContext
     private val pacifistTracker = PacifistTracker()
     private val mercySystem = MercySystem()
+    private var openingInputState = OpeningInputState()
 
     // -----------------------------------------------------------------------
     // Scroll & distance
@@ -28,6 +29,10 @@ class GameStateManager(context: Context) {
 
     /** Total metres run this session. */
     var distanceMetres: Float = 0f
+        private set
+
+    /** Total runtime seconds for the current run. */
+    var runTimeSeconds: Float = 0f
         private set
 
     // -----------------------------------------------------------------------
@@ -116,6 +121,14 @@ class GameStateManager(context: Context) {
         get() = pacifistTracker.hitsThisRun
     val pacifistRouteTier: PacifistRouteTier
         get() = pacifistTracker.currentRouteTier(mercyHearts, kindnessChain)
+    val openingGuidanceCue: OpeningGuidanceCue?
+        get() = OpeningReadabilityGuide.cueFor(
+            runTimeSeconds = runTimeSeconds,
+            inputState = openingInputState,
+            routeTier = pacifistRouteTier,
+            mercyHearts = mercyHearts,
+            kindnessChain = kindnessChain
+        )
 
     // -----------------------------------------------------------------------
     // Speed Debuff (applied by Hedgehog / Hyacinth brush)
@@ -133,6 +146,7 @@ class GameStateManager(context: Context) {
 
     fun update(deltaTime: Float) {
         // ── Scroll speed ramp ────────────────────────────────────────────
+        runTimeSeconds += deltaTime
         distanceMetres += scrollSpeed / 1000f * deltaTime
 
         val baseSpeed = MathUtils.clamp(
@@ -306,12 +320,36 @@ class GameStateManager(context: Context) {
 
     fun consumePacifistReward(): PacifistReward? = pacifistTracker.consumeReward()
 
+    fun shouldLockRandomOpeningSpawns(): Boolean =
+        OpeningReadabilityGuide.isRandomSpawnLocked(runTimeSeconds)
+
+    fun openingSpawnInterval(defaultInterval: Float): Float =
+        OpeningReadabilityGuide.adjustedSpawnInterval(runTimeSeconds, defaultInterval)
+
+    fun openingSpawnPool(defaultPool: List<EntityType>): List<EntityType> =
+        OpeningReadabilityGuide.spawnPoolFor(runTimeSeconds, defaultPool)
+
+    fun recordJumpInput() {
+        openingInputState = openingInputState.copy(jumpSeen = true)
+    }
+
+    fun recordJumpHold(holdSeconds: Float) {
+        if (holdSeconds >= OpeningReadabilityGuide.HOLD_DISCOVERY_THRESHOLD_SEC) {
+            openingInputState = openingInputState.copy(holdSeen = true)
+        }
+    }
+
+    fun recordDuckInput() {
+        openingInputState = openingInputState.copy(duckSeen = true)
+    }
+
     // -----------------------------------------------------------------------
     // Run lifecycle
     // -----------------------------------------------------------------------
 
     /** Reset all per-run state (called at the start of a new run). */
     fun resetRun() {
+        runTimeSeconds        = 0f
         distanceMetres        = 0f
         scrollSpeed           = GameConstants.BASE_SCROLL_SPEED
         score                 = 0
@@ -329,6 +367,7 @@ class GameStateManager(context: Context) {
         lastMilestone         = 0
         milestoneReady        = false
         pacifistTracker.reset()
+        openingInputState     = OpeningInputState()
     }
 
     /** Persist high score and lifetime seeds to SharedPreferences. */

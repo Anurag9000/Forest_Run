@@ -358,10 +358,25 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         val prev_duck     = inputHandler.onDuckPressed
         val prev_duckEnd  = inputHandler.onDuckReleased
 
-        inputHandler.onJumpPressed  = { prev_pressed?.invoke();           player.onJumpPressed() }
-        inputHandler.onJumpHeld     = { holdSec -> player.onJumpHeld(holdSec) }
-        inputHandler.onJumpReleased = { holdSec -> prev_released?.invoke(holdSec); player.onJumpReleased(holdSec) }
-        inputHandler.onDuckPressed  = { prev_duck?.invoke();              player.onDuckPressed() }
+        inputHandler.onJumpPressed  = {
+            prev_pressed?.invoke()
+            if (::gameState.isInitialized) gameState.recordJumpInput()
+            player.onJumpPressed()
+        }
+        inputHandler.onJumpHeld     = { holdSec ->
+            if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
+            player.onJumpHeld(holdSec)
+        }
+        inputHandler.onJumpReleased = { holdSec ->
+            prev_released?.invoke(holdSec)
+            if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
+            player.onJumpReleased(holdSec)
+        }
+        inputHandler.onDuckPressed  = {
+            prev_duck?.invoke()
+            if (::gameState.isInitialized) gameState.recordDuckInput()
+            player.onDuckPressed()
+        }
         inputHandler.onDuckReleased = { prev_duckEnd?.invoke();           player.onDuckReleased() }
     }
 
@@ -786,8 +801,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         // 8. HUD — always screen-space, never shakes
-        if (::hud.isInitialized && ::gameState.isInitialized)
-            hud.draw(canvas, gameState)
+        if (::hud.isInitialized && ::gameState.isInitialized) {
+            val openingCue = when {
+                encounterDirector?.isScenarioActive == true &&
+                    encounterDirector.activeScenario != EncounterScenario.OPENING_READABILITY -> null
+                else -> gameState.openingGuidanceCue
+            }
+            hud.draw(canvas, gameState, openingCue)
+        }
 
         if (debugToolsEnabled &&
             ::entityManager.isInitialized &&

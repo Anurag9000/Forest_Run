@@ -194,6 +194,7 @@ Current baseline:
 - Implemented: two-tap menu start, run loop, game over, restart, garden unlock persistence.
 - Partial: menu startup and rest recovery now share authored copy derived from the same saved emotional state, so the session begins and ends with clearer continuity.
 - Partial: cold start now also surfaces a stronger opening atmosphere through a dedicated home-sign beat, richer carried-home ambience, and authored stand/ready launch wording instead of relying on generic phase text.
+- Partial: the first run window now also uses authored onboarding guidance, visible tap/hold/duck teaching chips, a brief random-spawn lockout, and a curated opening pool so the lane teaches itself without falling back to a sterile tutorial mode.
 - Partial: mercy-oriented runs now also travel home as explicit route tiers instead of only appearing as near-miss or spare counters.
 - Partial: the remaining animal-family ordinary-play payoffs are stronger, with clearer low-threat fairness and more visible bond reward feedback.
 - PARTIAL: the session arc now shares startup/rest/Garden copy and sanctuary-derived homecoming atmosphere; finish the full authored pacing, launch feel, and restorative coherence in real play.

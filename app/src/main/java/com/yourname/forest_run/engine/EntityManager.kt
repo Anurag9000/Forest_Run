@@ -91,10 +91,11 @@ class EntityManager(
         // 1. Advance spawn timer
         if (encounterDirector?.isScenarioActive != true) {
             spawnTimer += deltaTime
-            val spawnInterval = DifficultyScaler.getSpawnInterval(gameState.distanceMetres)
-            if (spawnTimer >= spawnInterval) {
+            val defaultSpawnInterval = DifficultyScaler.getSpawnInterval(gameState.distanceMetres)
+            val spawnInterval = gameState.openingSpawnInterval(defaultSpawnInterval)
+            if (!gameState.shouldLockRandomOpeningSpawns() && spawnTimer >= spawnInterval) {
                 spawnTimer = 0f
-                spawnRandom(gameState.distanceMetres)
+                spawnRandom(gameState)
             }
         }
 
@@ -205,8 +206,10 @@ class EntityManager(
 
     // ── Spawning Helper ───────────────────────────────────────────────────
 
-    private fun spawnRandom(distanceMetres: Float) {
-        val pool = DifficultyScaler.getSpawnPool(distanceMetres, biomeManager)
+    private fun spawnRandom(gameState: GameStateManager) {
+        val pool = gameState.openingSpawnPool(
+            DifficultyScaler.getSpawnPool(gameState.distanceMetres, biomeManager)
+        )
         val type = pool[Random.nextInt(pool.size)]
         spawn(type)
     }

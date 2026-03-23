@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.OpeningGuidanceCue
 import com.yourname.forest_run.utils.MathUtils
 import kotlin.math.sin
 
@@ -63,6 +64,8 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     private val glowRect   = RectF()
     private val partRect   = RectF()
     private val bloomPanelRect = RectF()
+    private val onboardingPanelRect = RectF()
+    private val onboardingChipRect = RectF()
 
     // ── Animated fill ─────────────────────────────────────────────────────
     /** Smoothly-lerped fill level (0..SEG_COUNT). Drives segment rendering. */
@@ -161,6 +164,40 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
+    private val onboardingPanelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(188, 10, 16, 12)
+        style = Paint.Style.FILL
+    }
+    private val onboardingPanelBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(150, 212, 200, 160)
+        style = Paint.Style.STROKE
+        strokeWidth = 2.4f
+    }
+    private val onboardingTitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(242, 232, 204)
+        textSize = LABEL_SIZE
+        typeface = pixelFont
+        textAlign = Paint.Align.LEFT
+    }
+    private val onboardingLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(225, 226, 240, 224)
+        textSize = SMALL_SIZE
+        typeface = pixelFont
+        textAlign = Paint.Align.LEFT
+    }
+    private val onboardingChipFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val onboardingChipBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.8f
+    }
+    private val onboardingChipTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = SMALL_SIZE - 2f
+        typeface = pixelFont
+        textAlign = Paint.Align.CENTER
+    }
 
     // ── Update ────────────────────────────────────────────────────────────
 
@@ -186,7 +223,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
 
     // ── Draw ──────────────────────────────────────────────────────────────
 
-    fun draw(canvas: Canvas, state: GameStateManager) {
+    fun draw(canvas: Canvas, state: GameStateManager, openingCue: OpeningGuidanceCue? = null) {
         // HUD background strip
         canvas.drawRect(hudBgRect, hudBgPaint)
         canvas.drawRect(hudBgRect, hudBorderPaint)
@@ -194,6 +231,9 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         drawSeedAndHearts(canvas, state)
         drawBloomMeter(canvas, state)
         drawScoreArea(canvas, state)
+        if (openingCue != null) {
+            drawOpeningGuidance(canvas, openingCue)
+        }
     }
 
     // ── Sections ─────────────────────────────────────────────────────────
@@ -326,6 +366,42 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         // Ghost best score (when not yet a new high score)
         if (!state.isNewHighScore && state.highScore > 0) {
             canvas.drawText("best ${formatScore(state.highScore)}", rightX, scoreY + SMALL_SIZE + 4f, ghostPaint)
+        }
+    }
+
+    private fun drawOpeningGuidance(canvas: Canvas, cue: OpeningGuidanceCue) {
+        val panelWidth = screenWidth * 0.56f
+        val panelLeft = (screenWidth - panelWidth) * 0.5f
+        val panelTop = screenHeight - 170f
+        onboardingPanelRect.set(panelLeft, panelTop, panelLeft + panelWidth, panelTop + 112f)
+        onboardingPanelBorderPaint.color = cue.accentColor
+
+        canvas.drawRoundRect(onboardingPanelRect, 18f, 18f, onboardingPanelPaint)
+        canvas.drawRoundRect(onboardingPanelRect, 18f, 18f, onboardingPanelBorderPaint)
+
+        onboardingTitlePaint.color = cue.accentColor
+        canvas.drawText(cue.title, panelLeft + 18f, panelTop + 28f, onboardingTitlePaint)
+        onboardingLinePaint.color = Color.argb(228, 226, 240, 224)
+        canvas.drawText(cue.line, panelLeft + 18f, panelTop + 56f, onboardingLinePaint)
+
+        val chipTop = panelTop + 72f
+        val chipWidth = 88f
+        val chipGap = 12f
+        val startX = panelLeft + 18f
+        cue.chips.forEachIndexed { index, chip ->
+            val left = startX + index * (chipWidth + chipGap)
+            onboardingChipRect.set(left, chipTop, left + chipWidth, chipTop + 24f)
+            onboardingChipFillPaint.color =
+                if (chip.isComplete) cue.accentColor else Color.argb(72, 255, 255, 255)
+            onboardingChipBorderPaint.color =
+                if (chip.isComplete) cue.accentColor else Color.argb(120, 214, 214, 214)
+            onboardingChipTextPaint.color =
+                if (chip.isComplete) Color.rgb(12, 18, 12) else Color.argb(225, 236, 236, 236)
+            canvas.drawRoundRect(onboardingChipRect, 12f, 12f, onboardingChipFillPaint)
+            canvas.drawRoundRect(onboardingChipRect, 12f, 12f, onboardingChipBorderPaint)
+            val textY = onboardingChipRect.centerY() -
+                (onboardingChipTextPaint.descent() + onboardingChipTextPaint.ascent()) / 2f
+            canvas.drawText(chip.label, onboardingChipRect.centerX(), textY, onboardingChipTextPaint)
         }
     }
 

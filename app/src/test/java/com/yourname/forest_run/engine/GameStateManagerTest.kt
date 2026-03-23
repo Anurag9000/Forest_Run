@@ -62,6 +62,23 @@ class GameStateManagerTest {
     }
 
     @Test
+    fun `reset run clears opening guidance state`() {
+        val state = GameStateManager(context)
+
+        state.recordJumpInput()
+        state.recordJumpHold(OpeningReadabilityGuide.HOLD_DISCOVERY_THRESHOLD_SEC)
+        state.recordDuckInput()
+        state.update(12f)
+        assertTrue(state.openingGuidanceCue?.chips?.all { it.isComplete } == true)
+
+        state.resetRun()
+
+        assertEquals(0f, state.runTimeSeconds, 0.0001f)
+        assertEquals("Find The Stride", state.openingGuidanceCue?.title)
+        assertTrue(state.openingGuidanceCue?.chips?.none { it.isComplete } == true)
+    }
+
+    @Test
     fun `pacifist rewards flow through game state`() {
         val state = GameStateManager(context)
 
