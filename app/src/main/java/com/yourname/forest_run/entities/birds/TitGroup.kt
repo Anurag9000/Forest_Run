@@ -42,14 +42,30 @@ class TitGroup(
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
+    private val troughPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(58, 164, 230, 255)
+        style = Paint.Style.FILL
+    }
+    private val troughStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(126, 214, 244, 255)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
     private val crestPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(88, 232, 246, 255)
+        style = Paint.Style.FILL
+    }
+    private val beatPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(138, 238, 252, 255)
         style = Paint.Style.FILL
     }
 
     private var time = 0f
     private val birdCount = count.coerceIn(3, 5)
-    private var warned = false
+    private var countInPrompted = false
+    private var throughPrompted = false
+    private var keptBeat = false
+    private val troughGuideRect = RectF()
 
     // Individual rects for collision — all birds share the same wave
     private val birdRects = Array(birdCount) { i ->
@@ -76,11 +92,24 @@ class TitGroup(
             birdRects[i].offsetTo(bx + 3f, baseLine + waveY - birdH / 2f + 3f)
         }
         hitbox.offsetTo(x, baseLine + waveY - birdH)
+        val guideWidth = birdCount * spacing + birdW * 0.4f
+        val guideLeft = x - readability.stagingPaddingPx
+        val guideTop = baseLine + waveY + birdH * 0.78f
+        val guideBottom = guideTop + birdH * 0.42f
+        troughGuideRect.set(guideLeft, guideTop, guideLeft + guideWidth, guideBottom)
 
         if (x < -(birdCount * spacing) - 50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
+        canvas.drawRoundRect(troughGuideRect, 18f, 18f, troughPaint)
+        canvas.drawRoundRect(troughGuideRect, 18f, 18f, troughStrokePaint)
+        val beatDotSpacing = troughGuideRect.width() / (birdCount + 1)
+        for (index in 1..birdCount) {
+            val dotX = troughGuideRect.left + beatDotSpacing * index
+            val dotY = if (index % 2 == 0) troughGuideRect.top + 10f else troughGuideRect.bottom - 10f
+            canvas.drawCircle(dotX, dotY, birdW * 0.10f, beatPaint)
+        }
         for (i in 0 until birdCount - 1) {
             val first = birdRects[i]
             val second = birdRects[i + 1]
@@ -93,11 +122,14 @@ class TitGroup(
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 120 + (birdCount - 3) * 10)
+        gameState.addBonus(
+            points = if (keptBeat) 142 + (birdCount - 3) * 12 else 120 + (birdCount - 3) * 10,
+            seeds = if (keptBeat) 1 else 0
+        )
         DialogueBubbleManager.spawn(
-            text = BirdEncounterFlavor.titPass(birdCount),
+            text = BirdEncounterFlavor.titPass(birdCount, keptBeat),
             anchorX = x + birdCount * spacing * 0.45f,
-            anchorY = baseLine - waveAmplitude - 18f,
+            anchorY = troughGuideRect.top - 18f,
             fillColor = Color.rgb(230, 244, 255),
             borderColor = Color.rgb(88, 138, 196)
         )
@@ -106,18 +138,37 @@ class TitGroup(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         val approachLeft = birdRects.first().left - readability.stagingPaddingPx * 6f
         val approachRight = birdRects.last().right + readability.stagingPaddingPx
-        if (!warned &&
+        if (!countInPrompted &&
             player.hitbox.right >= approachLeft &&
             player.hitbox.left <= approachRight
         ) {
-            warned = true
+            countInPrompted = true
             DialogueBubbleManager.spawn(
-                BirdEncounterFlavor.titWarning(birdCount),
+                BirdEncounterFlavor.titCountIn(birdCount),
                 x + birdCount * spacing * 0.45f,
                 baseLine - waveAmplitude - 18f,
                 Color.rgb(232, 246, 255),
                 Color.rgb(88, 138, 196)
             )
+        }
+        val troughApproach = RectF(
+            troughGuideRect.left - readability.stagingPaddingPx * 1.6f,
+            troughGuideRect.top - readability.stagingPaddingPx,
+            troughGuideRect.right,
+            troughGuideRect.bottom + readability.stagingPaddingPx
+        )
+        if (!throughPrompted && RectF.intersects(player.hitbox, troughApproach)) {
+            throughPrompted = true
+            DialogueBubbleManager.spawn(
+                BirdEncounterFlavor.titThroughPrompt(birdCount),
+                troughGuideRect.centerX(),
+                troughGuideRect.top - 16f,
+                Color.rgb(232, 246, 255),
+                Color.rgb(88, 138, 196)
+            )
+        }
+        if (RectF.intersects(player.hitbox, troughGuideRect)) {
+            keptBeat = true
         }
         for (rect in birdRects) {
             if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT

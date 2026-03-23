@@ -18,11 +18,13 @@ class BirdEncounterFlavorTest {
 
     @Test
     fun `tit warning and pass scale with flock size`() {
-        assertEquals("Follow the wave.", BirdEncounterFlavor.titWarning(4))
-        assertEquals("Catch the rhythm.", BirdEncounterFlavor.titWarning(5))
-        assertEquals("In sync.", BirdEncounterFlavor.titPass(4))
-        assertEquals("Held the rhythm.", BirdEncounterFlavor.titPass(5))
-        assertEquals("Lost the rhythm.", BirdEncounterFlavor.titHit(1))
+        assertEquals("One, two.", BirdEncounterFlavor.titCountIn(4))
+        assertEquals("One, two, through.", BirdEncounterFlavor.titCountIn(5))
+        assertEquals("Through the wave.", BirdEncounterFlavor.titThroughPrompt(4))
+        assertEquals("Hold the beat.", BirdEncounterFlavor.titThroughPrompt(5))
+        assertEquals("In sync.", BirdEncounterFlavor.titPass(4, keptBeat = false))
+        assertEquals("Held the whole beat.", BirdEncounterFlavor.titPass(5, keptBeat = true))
+        assertEquals("Missed the count.", BirdEncounterFlavor.titHit(1))
     }
 
     @Test

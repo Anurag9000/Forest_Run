@@ -102,8 +102,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: rhythm-wave flock.
 - Dream traits: group sine motion and timing-based reads.
-- Current: wave readability, rhythm warning, crest read, and clean-pass payoff are stronger.
-- TODO: finish device-proofing and stronger rhythm identity.
+- Current: wave readability, staged beat count-in, visible trough guide, and a stronger kept-the-beat reward now exist.
+- TODO: finish final device-proofing only.
 
 ### ChickadeeGroup
 
