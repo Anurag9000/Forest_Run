@@ -216,6 +216,23 @@ class RelationshipArcSystemTest {
     }
 
     @Test
+    fun `cat repeated-friend lines become more personal after familiar passes`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.CAT) }
+
+        val passLine = RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.PASS)
+        val mercyCue = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.CAT,
+            RelationshipArcSystem.EncounterCue.MERCY
+        )
+
+        assertTrue(passLine.contains("quiet", ignoreCase = true) || passLine.contains("pace", ignoreCase = true))
+        assertTrue(mercyCue.contains("pace", ignoreCase = true) || mercyCue.contains("us", ignoreCase = true))
+    }
+
+    @Test
     fun `strained bond chooses cautious trusted creature and surfaces sharper line`() {
         repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }

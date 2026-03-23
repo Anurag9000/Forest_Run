@@ -125,8 +125,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: kindness-rewarding decoy.
 - Dream traits: tiny optional reward hazard, kindness bonus, spare-like warmth.
-- Current: kindness reward logic, stronger reward presentation, relationship-aware near-miss cueing, and visible warm-bond pass/spare reward feedback now exist.
-- TODO: deepen repeated-friend payoff and device-proof the feel.
+- Current: kindness reward logic, stronger reward presentation, relationship-aware near-miss cueing, more personal repeated-friend lines, a shared-quiet aura, and a stronger familiar pass reward now exist.
+- TODO: finish final device-proofing only.
 
 ### Fox
 

@@ -44,6 +44,9 @@ class Cat(
     private val relationshipTuning: RelationshipEncounterTuning =
         RelationshipArcSystem.encounterTuning(context, EntityType.CAT)
     private val warmBond = RelationshipArcSystem.isWarmBond(context, EntityType.CAT)
+    private val repeatFriendHistory =
+        RelationshipArcSystem.featuredRepeatFriend(context) == EntityType.CAT ||
+            PersistentMemoryManager.getPassCount(context, EntityType.CAT) >= 4
     private val catH = readability.heightPx
     private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = readability.minWidthPx)
     private val insetX = catW * readability.hitInsetXRatio
@@ -56,6 +59,15 @@ class Cat(
         color = Color.argb(120, 255, 196, 226)
         style = Paint.Style.STROKE
         strokeWidth = 3f
+    }
+    private val sharedQuietPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(44, 242, 214, 255)
+        style = Paint.Style.FILL
+    }
+    private val sharedQuietStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(102, 224, 198, 255)
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
     }
 
     // Tracks whether the player has already passed this specific cat instance
@@ -87,6 +99,10 @@ class Cat(
         if (!waving) {
             canvas.drawOval(x - 10f, y + catH * 0.18f, x + catW + 10f, y + catH + 4f, auraPaint)
             canvas.drawOval(x - 10f, y + catH * 0.18f, x + catW + 10f, y + catH + 4f, auraStrokePaint)
+            if (repeatFriendHistory) {
+                canvas.drawOval(x - 18f, y + catH * 0.08f, x + catW + 18f, y + catH + 10f, sharedQuietPaint)
+                canvas.drawOval(x - 18f, y + catH * 0.08f, x + catW + 18f, y + catH + 10f, sharedQuietStrokePaint)
+            }
         }
         val drawRect = RectF(x, y, x + catW, y + catH)
         sprite.draw(canvas, drawRect)
@@ -98,10 +114,10 @@ class Cat(
             playerHasPassed = true
             // Kindness bonus: flat 500 pts + double seeds (removed broken permanent 2x multiplier)
             gameState.addBonus(
-                points = 500 + relationshipTuning.passBonusPoints,
-                seeds = 2 + relationshipTuning.passBonusSeeds
+                points = 500 + relationshipTuning.passBonusPoints + if (repeatFriendHistory) 22 else 0,
+                seeds = 2 + relationshipTuning.passBonusSeeds + if (repeatFriendHistory) 1 else 0
             )
-            if (warmBond) {
+            if (warmBond || repeatFriendHistory) {
                 ParticleManager.emit(FxPreset.SEED_COLLECT, x + catW * 0.5f, y + catH * 0.32f)
             }
             DialogueBubbleManager.spawn(

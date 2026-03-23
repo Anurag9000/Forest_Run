@@ -26,7 +26,6 @@ Completion standard for removing an item:
 
 ### Animals
 
-- [ ] Finish Cat’s deeper repeated-friend warmth.
 - [ ] Finish Fox’s deeper repeated-memory charm.
 - [ ] Finish Wolf’s deeper spare payoff.
 - [ ] Finish Hedgehog’s final fairness logic and payoff.
