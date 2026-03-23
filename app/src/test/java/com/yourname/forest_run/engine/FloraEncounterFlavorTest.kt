@@ -27,6 +27,9 @@ class FloraEncounterFlavorTest {
         assertEquals("Lean, then whip.", FloraEncounterFlavor.eucalyptusPass(repeatHits = 0))
         assertEquals("Past the lean line.", FloraEncounterFlavor.eucalyptusPass(repeatHits = 1))
         assertEquals("You read the whip early.", FloraEncounterFlavor.eucalyptusPass(repeatHits = 3))
-        assertEquals("Not the thorns again.", FloraEncounterFlavor.cactusPass(encounters = 6, repeatHits = 3))
+        assertEquals("Sharp read.", FloraEncounterFlavor.cactusPass(encounters = 1, repeatHits = 0, cleanPasses = 0))
+        assertEquals("The needles flowered.", FloraEncounterFlavor.cactusPass(encounters = 4, repeatHits = 0, cleanPasses = 3))
+        assertEquals("Needle bloom kept.", FloraEncounterFlavor.cactusPass(encounters = 6, repeatHits = 0, cleanPasses = 5))
+        assertEquals("Not the thorns again.", FloraEncounterFlavor.cactusPass(encounters = 6, repeatHits = 3, cleanPasses = 0))
     }
 }

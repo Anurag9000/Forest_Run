@@ -65,6 +65,10 @@ object GardenSanctuaryPlanner {
         val routeTier = summary?.pacifistRouteTier ?: PacifistRouteTier.NONE
         val peacefulBiomes = PersistentMemoryManager.peacefulBiomes(appContext)
         val featuredPeaceBiome = peacefulBiomes.firstOrNull()
+        val cactusBloom = PersistentMemoryManager.featuredCleanPass(
+            appContext,
+            candidates = setOf(EntityType.CACTUS)
+        )
         val featuredRewardLine = featuredReward?.let { reward ->
             reward.costumeReward?.let { costume ->
                 "${reward.summary} ${costume.displayName} is waiting in the wardrobe."
@@ -130,6 +134,7 @@ object GardenSanctuaryPlanner {
             ForestMood.STEADY -> 1
         } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0 + (kindnessStreak / 3).coerceAtMost(1) + if (featuredPeaceBiome != null) 1 else 0 +
             if (featuredReward != null) 1 else 0 +
+            if (cactusBloom != null) 1 else 0 +
             if (routeTier == PacifistRouteTier.PEACEFUL) 1 else 0
 
         val mistBands = when (mood) {
@@ -159,6 +164,7 @@ object GardenSanctuaryPlanner {
         } + if ((summary?.bloomConversions ?: 0) >= 2) 12 else 0 +
             if (featuredReward != null) 8 else 0 +
             if (featuredPeaceBiome != null) 8 else 0 +
+            if (cactusBloom != null) 6 else 0 +
             if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 16 else 0 +
             if (repeatedKindnessCreature != null) 10 else 0
 
@@ -206,6 +212,15 @@ object GardenSanctuaryPlanner {
                         repeatFriend,
                         "Shared Path",
                         Color.rgb(248, 236, 198)
+                    )
+                )
+            }
+            if (cactusBloom != null) {
+                add(
+                    SanctuaryTrace(
+                        EntityType.CACTUS,
+                        "Needle Bloom",
+                        Color.rgb(214, 244, 164)
                     )
                 )
             }
@@ -362,6 +377,8 @@ object GardenSanctuaryPlanner {
                 "${formatEntityName(repeatFriend)} has started to feel less like a visit and more like a familiar part of home."
             repeatedKindnessCreature != null && kindnessStreak >= 2 ->
                 "${formatEntityName(repeatedKindnessCreature)} has started leaving trust behind instead of only memory."
+            cactusBloom != null ->
+                "The cactus bed has started flowering because you keep reading the sharp line cleanly."
             featuredPeaceLine.isNotBlank() ->
                 featuredPeaceLine
             routeTier == PacifistRouteTier.KIND ->
@@ -462,6 +479,12 @@ object GardenSanctuaryPlanner {
                     HomecomingConsequence(
                         label = "History: Trust Kept",
                         line = "${formatEntityName(repeatedKindnessCreature)} has left trust behind instead of only memory."
+                    )
+                )
+                cactusBloom != null -> add(
+                    HomecomingConsequence(
+                        label = "Flora: Needle Bloom",
+                        line = "Repeated clean cactus reads have started leaving a small bloom sign behind at home."
                     )
                 )
             }

@@ -42,8 +42,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: classic runner baseline hazard.
 - Dream traits: rigid, harsh silhouette, contrast against the softer forest.
-- Current: classic static hazard now has stronger warning staging, history-aware payoff text, and clearer reward feedback.
-- TODO: finish final device-proofing and broader memory/cosmetic payoff.
+- Current: classic static hazard now has stronger warning staging, history-aware payoff text, clearer reward feedback, persistent clean-pass memory, a named `Needle Bloom` Garden trace, and carried-home cactus-sign payoff.
+- TODO: finish on-device validation.
 
 ## Trees
 

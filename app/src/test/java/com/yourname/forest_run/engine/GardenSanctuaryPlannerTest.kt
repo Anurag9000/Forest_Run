@@ -248,6 +248,38 @@ class GardenSanctuaryPlannerTest {
     }
 
     @Test
+    fun `repeated clean cactus reads leave a named needle bloom trace`() {
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.CACTUS) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.STEADY, moodStreak = 2, totalRuns = 2, steadyRuns = 2)
+        )
+        val summary = RunSummary(
+            score = 780,
+            distanceM = 560f,
+            isNewHighScore = false,
+            highScore = 1_100,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 1,
+            cleanPasses = 6,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 5,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Steady.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertTrue(state.traces.any { it.type == EntityType.CACTUS && it.label == "Needle Bloom" })
+        assertTrue(state.homecomingConsequences.any { it.label == "Flora: Needle Bloom" })
+        assertTrue(state.carryHomeLine.contains("flowering") || state.carryHomeLine.contains("cactus"))
+    }
+
+    @Test
     fun `peaceful biome friendship surfaces named world-state signs`() {
         repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.MEADOW) }
         SaveManager.saveForestMoodState(

@@ -83,6 +83,16 @@ class SaveManagerTest {
     }
 
     @Test
+    fun `clean pass memory persists across reloads`() {
+        SaveManager.incrementCleanPassCount(context, EntityType.CACTUS)
+        SaveManager.incrementCleanPassCount(context, EntityType.CACTUS)
+        SaveManager.incrementCleanPassCount(context, EntityType.LILY_OF_VALLEY)
+
+        assertEquals(2, SaveManager.loadCleanPassCount(context, EntityType.CACTUS))
+        assertEquals(1, SaveManager.loadCleanPassCount(context, EntityType.LILY_OF_VALLEY))
+    }
+
+    @Test
     fun `costume unlocks and active costume persist`() {
         SaveManager.saveUnlockedCostumes(context, setOf(CostumeStyle.FLOWER_CROWN, CostumeStyle.MOON_CAPE))
         SaveManager.saveActiveCostume(context, CostumeStyle.MOON_CAPE)

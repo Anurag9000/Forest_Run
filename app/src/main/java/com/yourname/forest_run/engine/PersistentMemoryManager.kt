@@ -16,6 +16,12 @@ object PersistentMemoryManager {
         val friendshipCount: Int
     )
 
+    data class CleanPassMark(
+        val type: EntityType,
+        val passCount: Int,
+        val hitCount: Int
+    )
+
     fun recordEncounter(context: Context, type: EntityType) {
         val appContext = context.applicationContext
         SaveManager.incrementEncounterCount(appContext, type)
@@ -45,6 +51,10 @@ object PersistentMemoryManager {
         }
     }
 
+    fun recordPass(context: Context, type: EntityType) {
+        SaveManager.incrementCleanPassCount(context.applicationContext, type)
+    }
+
     fun getEncounterCount(context: Context, type: EntityType): Int =
         SaveManager.loadEncounterCount(context.applicationContext, type)
 
@@ -53,6 +63,9 @@ object PersistentMemoryManager {
 
     fun getHitCount(context: Context, type: EntityType): Int =
         SaveManager.loadHitCount(context.applicationContext, type)
+
+    fun getPassCount(context: Context, type: EntityType): Int =
+        SaveManager.loadCleanPassCount(context.applicationContext, type)
 
     fun getKindnessStreak(context: Context, type: EntityType): Int =
         SaveManager.loadKindnessStreak(context.applicationContext, type)
@@ -126,4 +139,24 @@ object PersistentMemoryManager {
             .filter { (_, hits, _) -> hits >= minimumHits }
             .maxWithOrNull(compareBy<Triple<EntityType, Int, Int>> { it.second }.thenBy { it.third })
             ?.first
+
+    fun featuredCleanPass(
+        context: Context,
+        candidates: Set<EntityType> = EntityType.entries.toSet(),
+        minimumPasses: Int = 3
+    ): CleanPassMark? =
+        candidates
+            .asSequence()
+            .map { type ->
+                CleanPassMark(
+                    type = type,
+                    passCount = getPassCount(context, type),
+                    hitCount = getHitCount(context, type)
+                )
+            }
+            .filter { it.passCount >= minimumPasses && it.passCount > it.hitCount }
+            .maxWithOrNull(
+                compareBy<CleanPassMark> { it.passCount - it.hitCount }
+                    .thenBy { it.passCount }
+            )
 }

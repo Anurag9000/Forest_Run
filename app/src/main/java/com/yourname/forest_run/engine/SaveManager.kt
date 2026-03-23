@@ -193,6 +193,13 @@ object SaveManager {
     fun loadHitCount(context: Context, type: EntityType): Int =
         prefs(context).getInt("hit_${type.name.lowercase()}", 0)
 
+    fun incrementCleanPassCount(context: Context, type: EntityType) {
+        incrementInt(context, "clean_pass_${type.name.lowercase()}")
+    }
+
+    fun loadCleanPassCount(context: Context, type: EntityType): Int =
+        prefs(context).getInt("clean_pass_${type.name.lowercase()}", 0)
+
     fun incrementKindnessStreak(context: Context, type: EntityType) {
         incrementInt(context, "kindness_streak_${type.name.lowercase()}")
     }

@@ -341,6 +341,16 @@ object StoryFragmentSystem {
                 PersistentMemoryManager.getHitCount(context, it) >= 2
             }
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(context)
+        val cactusBloom = PersistentMemoryManager.featuredCleanPass(context, setOf(EntityType.CACTUS))
+
+        if (cactusBloom != null && summary?.hitsTaken == 0) {
+            return StoryFragment(
+                id = "garden_cactus_bloom",
+                type = StoryFragmentType.GARDEN_REFLECTION,
+                text = "Even the cactus patch has started flowering where you keep reading the rigid line cleanly.",
+                unlocksPageId = "page_garden_cactus_bloom"
+            )
+        }
 
         if (milestoneReward != null && summary?.forestMood == ForestMood.GENTLE && (summary.sparedCount > 0 || summary.kindnessChain >= 5)) {
             return StoryFragment(

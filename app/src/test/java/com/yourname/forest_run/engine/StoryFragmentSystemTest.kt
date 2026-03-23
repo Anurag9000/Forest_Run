@@ -264,6 +264,34 @@ class StoryFragmentSystemTest {
     }
 
     @Test
+    fun `cactus bloom memory unlocks a dedicated garden page`() {
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.CACTUS) }
+        val summary = RunSummary(
+            score = 820,
+            distanceM = 600f,
+            isNewHighScore = false,
+            highScore = 1_220,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 1,
+            cleanPasses = 7,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 5,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Steady.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("cactus", ignoreCase = true) || line.contains("flowering", ignoreCase = true))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_cactus_bloom"))
+    }
+
+    @Test
     fun `repeat friend unlocks dedicated rest and garden pages`() {
         repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
         PersistentMemoryManager.recordSpare(context, EntityType.DOG)

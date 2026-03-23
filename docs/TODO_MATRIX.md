@@ -97,7 +97,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 - PARTIAL: Hyacinth now reads like a clearer three-beat clustered rhythm unit with explicit beat nodes, a clearer brush-vs-hit band, stronger rhythm payoff text, and locked brush/hit distinction in tests; finish device validation only.
 - PARTIAL: Eucalyptus now sells the whipping leaf path more honestly with an earlier whip read, a clearer lean lane, an explicit danger band, layered gust guides, and stronger pass reward; finish device-tuning only.
 - PARTIAL: Vanilla Orchid now stages its two hazard zones and safe thread through a narrower true overlap window, explicit guide markers, and a collision-safe center thread; finish device validation only.
-- PARTIAL: Cactus now has stronger warning staging, history-aware payoff text, and a clearer reward beat; finish device-proofing and broader memory/cosmetic payoff.
+- PARTIAL: Cactus now has stronger warning staging, history-aware payoff text, persistent clean-pass memory, a named `Needle Bloom` Garden trace, a carried-home cactus sign, and dedicated reflection-page payoff; finish device-proofing only.
 
 ### Trees
 

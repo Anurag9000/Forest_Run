@@ -27,7 +27,9 @@ object FloraEncounterFlavor {
         else -> "Find the center thread."
     }
 
-    fun cactusPass(encounters: Int, repeatHits: Int): String = when {
+    fun cactusPass(encounters: Int, repeatHits: Int, cleanPasses: Int): String = when {
+        cleanPasses >= 5 -> "Needle bloom kept."
+        cleanPasses >= 3 -> "The needles flowered."
         repeatHits >= 3 -> "Not the thorns again."
         repeatHits >= 1 -> "Read the needles."
         encounters >= 5 -> "The path stayed sharp."

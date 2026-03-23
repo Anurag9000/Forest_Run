@@ -22,10 +22,6 @@ Completion standard for removing an item:
 
 ## 1. Entity Closure
 
-### Flora
-
-- [ ] Finish Cactus’s broader memory/cosmetic payoff.
-
 ### Trees
 
 - [ ] Finish Weeping Willow’s scenic-dominance behavior without cluttering readability.

@@ -81,11 +81,13 @@ class Cactus(
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         gameState.addBonus(points = 95)
+        PersistentMemoryManager.recordPass(context, EntityType.CACTUS)
         val encounters = PersistentMemoryManager.getEncounterCount(context, EntityType.CACTUS)
         val hitCount = PersistentMemoryManager.getHitCount(context, EntityType.CACTUS)
+        val cleanPasses = PersistentMemoryManager.getPassCount(context, EntityType.CACTUS)
         ParticleManager.emit(FxPreset.SEED_COLLECT, x + cactusWidth * 0.5f, y + cactusHeight * 0.42f)
         DialogueBubbleManager.spawn(
-            text = FloraEncounterFlavor.cactusPass(encounters, hitCount),
+            text = FloraEncounterFlavor.cactusPass(encounters, hitCount, cleanPasses),
             anchorX = x + cactusWidth * 0.5f,
             anchorY = y - 14f,
             fillColor = Color.rgb(255, 244, 220),
