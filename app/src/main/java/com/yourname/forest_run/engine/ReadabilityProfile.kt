@@ -51,7 +51,7 @@ object ReadabilityProfile {
         EntityType.WEEPING_WILLOW to EntityReadabilityTemplate(724f, 304f, 0.18f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 18f),
         EntityType.JACARANDA to EntityReadabilityTemplate(656f, 258f, 0.16f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 18f),
         EntityType.BAMBOO to EntityReadabilityTemplate(0f, 0f, 0f, 0f, mercyPaddingPx = 10f, stagingPaddingPx = 18f, secondaryWidthPx = 26f, secondarySpacingPx = 40f),
-        EntityType.CHERRY_BLOSSOM to EntityReadabilityTemplate(618f, 246f, 0.16f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 18f),
+        EntityType.CHERRY_BLOSSOM to EntityReadabilityTemplate(632f, 254f, 0.16f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 20f),
         EntityType.CAT to EntityReadabilityTemplate(84f, 70f, 0.14f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
         EntityType.FOX to EntityReadabilityTemplate(102f, 84f, 0.12f, 0.09f, mercyPaddingPx = 14f, stagingPaddingPx = 12f, detectionRangeBodies = 3.2f),
         EntityType.WOLF to EntityReadabilityTemplate(118f, 94f, 0.11f, 0.07f, mercyPaddingPx = 14f, stagingPaddingPx = 14f, telegraphDurationSec = 1.05f),

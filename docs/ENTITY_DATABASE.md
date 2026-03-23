@@ -72,8 +72,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: wind-making environmental modifier.
 - Dream traits: petal blinding, gust influence, gentle beauty with danger.
-- Current: obstacle now has clearer gust staging, layered gust trails, better pass reward, and stronger petal-storm identity.
-- TODO: finish final device-proofing and last gust-pressure tuning.
+- Current: obstacle now has clearer gust staging, a true pressure band, a broader storm veil, clearer crosswind staging, better pass reward, and stronger petal-storm identity.
+- TODO: finish on-device validation.
 
 ## Birds
 

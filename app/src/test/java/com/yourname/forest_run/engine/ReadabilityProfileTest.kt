@@ -40,6 +40,7 @@ class ReadabilityProfileTest {
         val willow = ReadabilityProfile.entity(EntityType.WEEPING_WILLOW, screenHeight = 1080f)
         val jacaranda = ReadabilityProfile.entity(EntityType.JACARANDA, screenHeight = 1080f)
         val bamboo = ReadabilityProfile.entity(EntityType.BAMBOO, screenHeight = 1080f)
+        val cherry = ReadabilityProfile.entity(EntityType.CHERRY_BLOSSOM, screenHeight = 1080f)
 
         assertTrue(lily.heightPx > 0f)
         assertTrue(lily.heightPx >= 110f)
@@ -57,5 +58,7 @@ class ReadabilityProfileTest {
         assertTrue(bamboo.secondarySpacingPx > 0f)
         assertTrue(bamboo.secondaryWidthPx >= 26f)
         assertTrue(bamboo.stagingPaddingPx >= 18f)
+        assertTrue(cherry.minWidthPx >= 254f)
+        assertTrue(cherry.stagingPaddingPx >= 20f)
     }
 }

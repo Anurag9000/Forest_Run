@@ -39,6 +39,7 @@ class CherryBlossom(
     private val branchHeightHigh = groundY - treeHeight * 0.58f
     private val trunkTop         = groundY - treeHeight * 0.34f
     private val branchHitbox    = RectF()
+    private val stormVeilRect   = RectF()
     private val drawRect        = RectF()
     private val gustPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(46, 255, 222, 236)
@@ -54,23 +55,24 @@ class CherryBlossom(
         style = Paint.Style.STROKE
         strokeWidth = 4f
     }
+    private val gustCorePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(74, 255, 234, 242)
+        style = Paint.Style.FILL
+    }
     private var gustPulse = 0f
 
     init {
         x = startX
         y = groundY - treeHeight
         swayComponent = SwayComponent(speed = 0.6f, intensity = 12f)
-        hitbox.set(x + treeWidth / 2f - trunkWidth / 2f, trunkTop,
-                   x + treeWidth / 2f + trunkWidth / 2f, groundY)
-        branchHitbox.set(x + treeWidth * 0.08f, branchHeightHigh, x + treeWidth * 0.92f, branchHeightLow)
+        updateGeometry(sway = 0f)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         gustPulse += deltaTime * 2.7f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + treeWidth / 2f - trunkWidth / 2f, trunkTop)
-        branchHitbox.set(x + treeWidth * 0.08f + sway, branchHeightHigh, x + treeWidth * 0.92f + sway, branchHeightLow)
+        updateGeometry(sway)
         sprite.update(deltaTime)
         if (x < -treeWidth - 50f) isActive = false
     }
@@ -82,17 +84,23 @@ class CherryBlossom(
         gustPaint.alpha = (36f + 24f * pulse).toInt().coerceIn(0, 255)
         gustStrokePaint.alpha = (90f + 42f * pulse).toInt().coerceIn(0, 255)
         gustTrailPaint.alpha = (72f + 40f * pulse).toInt().coerceIn(0, 255)
-        canvas.drawRoundRect(branchHitbox.left - pad, branchHitbox.top - pad * 0.5f, branchHitbox.right + pad, branchHitbox.bottom + pad * 0.5f, 24f, 24f, gustPaint)
-        canvas.drawRoundRect(branchHitbox.left - pad, branchHitbox.top - pad * 0.5f, branchHitbox.right + pad, branchHitbox.bottom + pad * 0.5f, 24f, 24f, gustStrokePaint)
-        repeat(3) { index ->
-            val yOffset = branchHitbox.top + branchHitbox.height() * (0.22f + index * 0.24f)
+        gustCorePaint.alpha = (52f + 34f * pulse).toInt().coerceIn(0, 255)
+        canvas.drawRoundRect(stormVeilRect, 28f, 28f, gustPaint)
+        canvas.drawRoundRect(stormVeilRect, 28f, 28f, gustStrokePaint)
+        canvas.drawRoundRect(branchHitbox, 22f, 22f, gustCorePaint)
+        repeat(4) { index ->
+            val yOffset = stormVeilRect.top + stormVeilRect.height() * (0.16f + index * 0.19f)
             canvas.drawLine(
-                branchHitbox.left - pad * (1.1f + index * 0.2f),
+                stormVeilRect.left - pad * (1.0f + index * 0.18f),
                 yOffset,
-                branchHitbox.right + pad * (0.8f + index * 0.1f),
-                yOffset - treeHeight * (0.05f + index * 0.015f),
+                stormVeilRect.right + pad * (0.8f + index * 0.12f),
+                yOffset - treeHeight * (0.04f + index * 0.012f),
                 gustTrailPaint
             )
+        }
+        repeat(3) { index ->
+            val pressureY = branchHitbox.top + branchHitbox.height() * ((index + 1f) / 4f)
+            canvas.drawLine(branchHitbox.left + pad * 0.2f, pressureY, branchHitbox.right - pad * 0.2f, pressureY, gustStrokePaint)
         }
         drawRect.set(x, groundY - treeHeight, x + treeWidth, groundY)
         canvas.save()
@@ -123,9 +131,35 @@ class CherryBlossom(
         if (RectF.intersects(player.hitbox, hitbox) ||
             RectF.intersects(player.hitbox, branchHitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
-        val bm = RectF(branchHitbox.left - mercyPad, branchHitbox.top - mercyPad, branchHitbox.right + mercyPad, branchHitbox.bottom + mercyPad)
+        val bm = RectF(
+            stormVeilRect.left - mercyPad * 0.25f,
+            stormVeilRect.top - mercyPad * 0.45f,
+            stormVeilRect.right + mercyPad * 0.25f,
+            stormVeilRect.bottom + mercyPad * 0.45f
+        )
         val tm = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
         if (RectF.intersects(player.hitbox, bm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
+    }
+
+    private fun updateGeometry(sway: Float) {
+        hitbox.set(
+            x + treeWidth / 2f - trunkWidth / 2f,
+            trunkTop,
+            x + treeWidth / 2f + trunkWidth / 2f,
+            groundY
+        )
+        branchHitbox.set(
+            x + treeWidth * 0.14f + sway,
+            branchHeightHigh + treeHeight * 0.04f,
+            x + treeWidth * 0.86f + sway,
+            branchHeightLow - treeHeight * 0.04f
+        )
+        stormVeilRect.set(
+            x + treeWidth * 0.06f + sway,
+            branchHeightHigh - readability.stagingPaddingPx * 0.25f,
+            x + treeWidth * 0.94f + sway,
+            branchHeightLow + readability.stagingPaddingPx * 0.25f
+        )
     }
 }

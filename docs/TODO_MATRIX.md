@@ -104,7 +104,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 - PARTIAL: Weeping Willow now stages scenic dominance through a denser canopy silhouette, a stronger curtain read, and an explicit duck lane that stays collision-honest; finish device-proofing only.
 - PARTIAL: Jacaranda now stages spectacle through a layered canopy halo, a cascading petal veil, and a clearer underside lane that stays collision-honest; finish device-proofing only.
 - PARTIAL: Bamboo now stages its precision gaps through a featured seam, tighter secondary gaps, and clearer precision-line staging; finish device validation only.
-- PARTIAL: Cherry Blossom now sells gust pressure more clearly with layered trails and stronger pass reward; finish device-proofing and final storm feel.
+- PARTIAL: Cherry Blossom now sells gust pressure through a true pressure band, a broader storm veil, and clearer crosswind staging; finish device-proofing only.
 
 ### Birds
 

@@ -14,6 +14,6 @@ class TreeEncounterFlavorTest {
     @Test
     fun `bamboo and cherry react to repeat hits`() {
         assertEquals("Held the seam.", TreeEncounterFlavor.bambooPass(encounters = 2, repeatHits = 2))
-        assertEquals("You stayed with the gust.", TreeEncounterFlavor.cherryPass(encounters = 3, repeatHits = 2))
+        assertEquals("You held the pressure line.", TreeEncounterFlavor.cherryPass(encounters = 3, repeatHits = 2))
     }
 }

@@ -22,10 +22,6 @@ Completion standard for removing an item:
 
 ## 1. Entity Closure
 
-### Trees
-
-- [ ] Finish Cherry Blossom’s final gust-pressure distinction.
-
 ### Birds
 
 - [ ] Finish Duck’s clearer quack/event payoff.

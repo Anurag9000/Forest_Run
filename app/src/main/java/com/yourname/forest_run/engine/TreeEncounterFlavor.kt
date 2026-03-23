@@ -22,8 +22,8 @@ object TreeEncounterFlavor {
     }
 
     fun cherryPass(encounters: Int, repeatHits: Int): String = when {
-        repeatHits >= 2 -> "You stayed with the gust."
-        encounters >= 4 -> "The storm broke around you."
-        else -> "Blossom gust."
+        repeatHits >= 2 -> "You held the pressure line."
+        encounters >= 4 -> "The storm broke wide."
+        else -> "Read the gust band."
     }
 }

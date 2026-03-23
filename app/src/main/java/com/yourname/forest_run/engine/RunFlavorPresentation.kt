@@ -89,7 +89,7 @@ object RunFlavorPresentation {
             EntityType.WEEPING_WILLOW -> if (repeatHits >= 1) "Lost the lane again." else "Caught in the curtain."
             EntityType.JACARANDA -> if (repeatHits >= 1) "Same bloom curtain." else "Lost under petals."
             EntityType.BAMBOO -> if (repeatHits >= 1) "Missed the seam again." else "Missed the seam."
-            EntityType.CHERRY_BLOSSOM -> if (repeatHits >= 1) "Same gust line." else "Caught in the gust."
+            EntityType.CHERRY_BLOSSOM -> if (repeatHits >= 1) "Same pressure band." else "Caught in the gust band."
             null -> if (isFatal) "The path answered back." else "The path caught you."
             else -> if (isFatal) "Again." else "Too close."
         }
@@ -221,7 +221,7 @@ object RunFlavorPresentation {
         EntityType.WEEPING_WILLOW -> "Same willow curtain."
         EntityType.JACARANDA -> "Same bloom curtain."
         EntityType.BAMBOO -> "Same seam missed."
-        EntityType.CHERRY_BLOSSOM -> "Same gust line."
+        EntityType.CHERRY_BLOSSOM -> "Same gust band."
     }
 
     private fun shorten(text: String, maxLength: Int): String =
