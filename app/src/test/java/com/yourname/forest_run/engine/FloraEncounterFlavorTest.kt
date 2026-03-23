@@ -22,7 +22,9 @@ class FloraEncounterFlavorTest {
 
     @Test
     fun `eucalyptus and cactus react to repeat hits`() {
-        assertEquals("You read the gust early.", FloraEncounterFlavor.eucalyptusPass(repeatHits = 3))
+        assertEquals("Lean, then whip.", FloraEncounterFlavor.eucalyptusPass(repeatHits = 0))
+        assertEquals("Past the lean line.", FloraEncounterFlavor.eucalyptusPass(repeatHits = 1))
+        assertEquals("You read the whip early.", FloraEncounterFlavor.eucalyptusPass(repeatHits = 3))
         assertEquals("Not the thorns again.", FloraEncounterFlavor.cactusPass(encounters = 6, repeatHits = 3))
     }
 }

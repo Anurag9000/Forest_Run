@@ -28,8 +28,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: forward-leaning plant that punishes late reads.
 - Dream traits: fast whip sway, trapezoid feel, leaf drama.
-- Current: stronger leaning/readability pass now exists with layered gust guides and clearer pass feedback.
-- TODO: finish final high-threat tuning on device.
+- Current: stronger leaning/readability pass now exists with layered gust guides, an earlier whip read, a clearer lean lane, a more explicit danger band, and clearer pass feedback.
+- TODO: finish on-device validation.
 
 ### Vanilla Orchid
 

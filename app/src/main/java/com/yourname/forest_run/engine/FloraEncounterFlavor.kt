@@ -16,9 +16,9 @@ object FloraEncounterFlavor {
     }
 
     fun eucalyptusPass(repeatHits: Int): String = when {
-        repeatHits >= 3 -> "You read the gust early."
-        repeatHits >= 1 -> "Leaves missed you."
-        else -> "Leaves whip past."
+        repeatHits >= 3 -> "You read the whip early."
+        repeatHits >= 1 -> "Past the lean line."
+        else -> "Lean, then whip."
     }
 
     fun orchidPass(encounters: Int, repeatHits: Int): String = when {

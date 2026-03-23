@@ -24,7 +24,6 @@ Completion standard for removing an item:
 
 ### Flora
 
-- [ ] Finish Eucalyptus’s final high-threat fairness design.
 - [ ] Finish Vanilla Orchid’s final safe-thread clarity.
 - [ ] Finish Cactus’s broader memory/cosmetic payoff.
 
