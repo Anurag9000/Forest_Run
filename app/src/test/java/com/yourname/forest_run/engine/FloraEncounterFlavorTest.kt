@@ -7,8 +7,9 @@ class FloraEncounterFlavorTest {
 
     @Test
     fun `lily flavor shifts from lure to resolved read`() {
-        assertEquals("Moonlit lure.", FloraEncounterFlavor.lilyPass(encounters = 1, repeatHits = 0))
-        assertEquals("You ignored the lure.", FloraEncounterFlavor.lilyPass(encounters = 5, repeatHits = 3))
+        assertEquals("Glow high, trap low.", FloraEncounterFlavor.lilyPass(encounters = 1, repeatHits = 0))
+        assertEquals("You read the low trap early.", FloraEncounterFlavor.lilyPass(encounters = 5, repeatHits = 0))
+        assertEquals("You left the low lure behind.", FloraEncounterFlavor.lilyPass(encounters = 5, repeatHits = 3))
     }
 
     @Test

@@ -14,8 +14,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: tiny low hazard, ghost-flower lure, often paired with tempting seed placement.
 - Dream traits: glows at night, distracts near the player’s feet, creates tricky seed traps.
-- Current: glow/readability pass now exists with stronger visual identity, explicit lure-to-trap staging, and a clearer reward beat.
-- TODO: finish final on-device tuning and trap readability validation.
+- Current: glow/readability pass now exists with stronger visual identity, explicit lure-to-trap staging, stronger local glow dominance, a clearer lure descent, a more explicit low trap band, and a clearer reward beat.
+- TODO: finish on-device validation.
 
 ### Hyacinth
 

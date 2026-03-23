@@ -3,10 +3,10 @@ package com.yourname.forest_run.engine
 object FloraEncounterFlavor {
 
     fun lilyPass(encounters: Int, repeatHits: Int): String = when {
-        repeatHits >= 3 -> "You ignored the lure."
-        repeatHits >= 1 -> "Past the lure."
-        encounters >= 4 -> "The glow didn't fool you."
-        else -> "Moonlit lure."
+        repeatHits >= 3 -> "You left the low lure behind."
+        repeatHits >= 1 -> "Past the low glow."
+        encounters >= 4 -> "You read the low trap early."
+        else -> "Glow high, trap low."
     }
 
     fun hyacinthPass(encounters: Int, repeatHits: Int): String = when {

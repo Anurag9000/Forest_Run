@@ -65,6 +65,7 @@ Dream particle families include:
 - Bloom trail
 - fireflies
 - Lily glow wisps
+- Lily local lure column and low trap glow band now exist as part of the readability layer and should dominate the night scene locally
 - kindness bonus particles
 - bark shockwaves
 

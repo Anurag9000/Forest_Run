@@ -93,7 +93,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 
 ### Flora
 
-- PARTIAL: Lily of the Valley now stages its lure and lower seed-trap more explicitly through glow, stem-guidance, and pass reward; finish device-tuning and final trap readability.
+- PARTIAL: Lily of the Valley now stages its lure and lower seed-trap through stronger local glow dominance, a clearer lure descent, a more explicit low trap band, safer low-hit readability, and clearer pass reward; finish device-tuning only.
 - PARTIAL: Hyacinth now reads more like a single clustered rhythm unit with pulse rings and stronger payoff; finish device validation and final rhythm feel.
 - PARTIAL: Eucalyptus now sells the whipping leaf path more clearly with layered gust guides and stronger pass reward; finish final threat tuning on device.
 - PARTIAL: Vanilla Orchid now stages its two hazard zones and safe thread much more explicitly; finish device validation and final live-play clarity.

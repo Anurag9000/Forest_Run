@@ -44,7 +44,7 @@ object ReadabilityProfile {
 
     private val templates = mapOf(
         EntityType.CACTUS to EntityReadabilityTemplate(138f, 72f, 0.16f, 0.10f, mercyPaddingPx = 13f, stagingPaddingPx = 14f),
-        EntityType.LILY_OF_VALLEY to EntityReadabilityTemplate(98f, 62f, 0.22f, 0.16f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
+        EntityType.LILY_OF_VALLEY to EntityReadabilityTemplate(110f, 70f, 0.18f, 0.12f, mercyPaddingPx = 15f, stagingPaddingPx = 14f),
         EntityType.HYACINTH to EntityReadabilityTemplate(124f, 54f, 0.22f, 0.28f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
         EntityType.EUCALYPTUS to EntityReadabilityTemplate(140f, 68f, 0.18f, 0.14f, mercyPaddingPx = 13f, stagingPaddingPx = 14f),
         EntityType.VANILLA_ORCHID to EntityReadabilityTemplate(236f, 106f, 0.18f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 14f),

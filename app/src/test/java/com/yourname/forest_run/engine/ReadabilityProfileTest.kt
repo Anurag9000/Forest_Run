@@ -39,6 +39,8 @@ class ReadabilityProfileTest {
         val bamboo = ReadabilityProfile.entity(EntityType.BAMBOO, screenHeight = 1080f)
 
         assertTrue(lily.heightPx > 0f)
+        assertTrue(lily.heightPx >= 110f)
+        assertTrue(lily.mercyPaddingPx >= 15f)
         assertTrue(willow.heightPx > 0f)
         assertTrue(bamboo.secondaryWidthPx > 0f)
         assertTrue(bamboo.secondarySpacingPx > 0f)

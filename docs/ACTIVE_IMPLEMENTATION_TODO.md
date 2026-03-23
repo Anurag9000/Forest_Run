@@ -24,7 +24,6 @@ Completion standard for removing an item:
 
 ### Flora
 
-- [ ] Finish Lily of the Valley’s final lure/trap readability design.
 - [ ] Finish Hyacinth’s final rhythm identity.
 - [ ] Finish Eucalyptus’s final high-threat fairness design.
 - [ ] Finish Vanilla Orchid’s final safe-thread clarity.

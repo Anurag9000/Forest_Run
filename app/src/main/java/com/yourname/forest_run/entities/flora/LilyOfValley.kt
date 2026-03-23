@@ -34,14 +34,22 @@ class LilyOfValley(
     private val floraHeight = readability.heightPx
     private val floraWidth  = SpriteSizing.widthForHeight(sprite, floraHeight, minWidth = readability.minWidthPx)
     private val hitInsetX   = floraWidth * readability.hitInsetXRatio
-    private val hitTopY     = floraHeight * 0.45f
+    private val hitTopY     = floraHeight * 0.58f
     private val drawRect    = RectF()
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(70, 214, 255, 236)
+        color = Color.argb(92, 214, 255, 236)
         style = Paint.Style.FILL
     }
     private val coreGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(130, 246, 255, 248)
+        color = Color.argb(156, 246, 255, 248)
+        style = Paint.Style.FILL
+    }
+    private val outerGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(52, 198, 244, 232)
+        style = Paint.Style.FILL
+    }
+    private val lureColumnPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(86, 224, 255, 244)
         style = Paint.Style.FILL
     }
     private val lureStemPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -50,7 +58,20 @@ class LilyOfValley(
         strokeWidth = 4f
     }
     private val seedTrapPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(52, 248, 244, 188)
+        color = Color.argb(78, 248, 244, 188)
+        style = Paint.Style.FILL
+    }
+    private val trapBandBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(176, 252, 242, 208)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val trapBandGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(58, 254, 240, 174)
+        style = Paint.Style.FILL
+    }
+    private val lureBeadPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(198, 255, 246, 186)
         style = Paint.Style.FILL
     }
     private val seedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -83,26 +104,67 @@ class LilyOfValley(
         val blossomX = x + floraWidth * 0.52f
         val blossomY = y + floraHeight * 0.28f
         val trapGlow = 0.7f + 0.3f * kotlin.math.sin(trapPulse)
-        glowPaint.alpha = (60f + 45f * pulse).toInt().coerceIn(0, 255)
-        coreGlowPaint.alpha = (105f + 65f * pulse).toInt().coerceIn(0, 255)
-        lureStemPaint.alpha = (90f + 40f * pulse).toInt().coerceIn(0, 255)
-        seedTrapPaint.alpha = (42f + 28f * trapGlow).toInt().coerceIn(0, 255)
-        canvas.drawLine(blossomX, blossomY, x + floraWidth * 0.5f, y + floraHeight * 0.82f, lureStemPaint)
+        val trapTop = y + floraHeight * 0.56f
+        val trapBottom = y + floraHeight * 0.94f
+        val trapLeft = x + floraWidth * 0.12f
+        val trapRight = x + floraWidth * 0.90f
+        glowPaint.alpha = (76f + 52f * pulse).toInt().coerceIn(0, 255)
+        coreGlowPaint.alpha = (128f + 72f * pulse).toInt().coerceIn(0, 255)
+        outerGlowPaint.alpha = (38f + 28f * pulse).toInt().coerceIn(0, 255)
+        lureStemPaint.alpha = (104f + 46f * pulse).toInt().coerceIn(0, 255)
+        lureColumnPaint.alpha = (54f + 32f * pulse).toInt().coerceIn(0, 255)
+        seedTrapPaint.alpha = (62f + 34f * trapGlow).toInt().coerceIn(0, 255)
+        trapBandGlowPaint.alpha = (44f + 34f * trapGlow).toInt().coerceIn(0, 255)
+        lureBeadPaint.alpha = (164f + 44f * pulse).toInt().coerceIn(0, 255)
+
+        canvas.drawCircle(blossomX, blossomY, floraWidth * (0.48f + 0.10f * pulse), outerGlowPaint)
+        canvas.drawOval(
+            blossomX - floraWidth * 0.14f,
+            blossomY + floraHeight * 0.02f,
+            blossomX + floraWidth * 0.14f,
+            trapTop - floraHeight * 0.02f,
+            lureColumnPaint
+        )
+        canvas.drawLine(blossomX, blossomY, x + floraWidth * 0.5f, trapBottom, lureStemPaint)
+        repeat(4) { index ->
+            val beadT = index / 3f
+            val seedY = blossomY + floraHeight * (0.12f + beadT * 0.34f)
+            val seedRadius = floraWidth * (0.034f + 0.005f * (3 - index))
+            canvas.drawCircle(blossomX + sway * 0.18f, seedY, seedRadius, lureBeadPaint)
+        }
         canvas.drawRoundRect(
-            x + floraWidth * 0.14f,
-            y + floraHeight * 0.48f,
-            x + floraWidth * 0.88f,
-            y + floraHeight * 0.92f,
+            trapLeft,
+            trapTop,
+            trapRight,
+            trapBottom,
             16f,
             16f,
             seedTrapPaint
         )
+        canvas.drawRoundRect(
+            trapLeft - 4f,
+            trapTop + floraHeight * 0.02f,
+            trapRight + 4f,
+            trapBottom + 2f,
+            18f,
+            18f,
+            trapBandGlowPaint
+        )
+        canvas.drawRoundRect(
+            trapLeft,
+            trapTop,
+            trapRight,
+            trapBottom,
+            16f,
+            16f,
+            trapBandBorderPaint
+        )
         repeat(3) { index ->
             val step = index / 2f
-            val seedY = blossomY + floraHeight * (0.16f + step * 0.14f)
-            val seedRadius = floraWidth * (0.038f + 0.006f * index)
+            val seedY = trapTop + floraHeight * (0.06f + step * 0.10f)
+            val seedRadius = floraWidth * (0.040f + 0.005f * index)
             seedPaint.alpha = (160f + 30f * pulse - index * 18f).toInt().coerceIn(0, 255)
-            canvas.drawCircle(blossomX + sway * 0.2f, seedY, seedRadius, seedPaint)
+            canvas.drawCircle(blossomX + sway * 0.18f, seedY, seedRadius, seedPaint)
         }
         canvas.drawCircle(blossomX, blossomY, floraWidth * (0.34f + 0.08f * pulse), glowPaint)
         canvas.drawCircle(blossomX, blossomY, floraWidth * 0.18f, coreGlowPaint)
