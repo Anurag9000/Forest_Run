@@ -180,6 +180,28 @@ class RelationshipArcSystemTest {
     }
 
     @Test
+    fun `owl alert and pass lines deepen with repeated shadow history`() {
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.OWL) }
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.OWL) }
+
+        val owlAlert = RelationshipArcSystem.encounterCueLine(
+            context,
+            EntityType.OWL,
+            RelationshipArcSystem.EncounterCue.OWL_ALERT
+        )
+        val owlPass = RelationshipArcSystem.lineFor(context, EntityType.OWL, RelationshipArcSystem.Event.PASS)
+
+        assertTrue(owlAlert.contains("shadow", ignoreCase = true) || owlAlert.contains("remembers", ignoreCase = true))
+        assertTrue(
+            owlPass.contains("night", ignoreCase = true) ||
+                owlPass.contains("dark", ignoreCase = true) ||
+                owlPass.contains("shape", ignoreCase = true)
+        )
+    }
+
+    @Test
     fun `repeat friend chooses the warmest trusted bond`() {
         repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
         PersistentMemoryManager.recordSpare(context, EntityType.DOG)

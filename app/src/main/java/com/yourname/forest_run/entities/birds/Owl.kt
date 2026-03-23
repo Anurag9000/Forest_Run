@@ -6,9 +6,11 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
 import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.RelationshipArcSystem
+import com.yourname.forest_run.engine.RelationshipStage
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
 import com.yourname.forest_run.entities.EntityType
@@ -38,6 +40,10 @@ class Owl(
     private val perchY = groundY * 0.2f // High-up perch
     private val insetX = birdW * readability.hitInsetXRatio
     private val insetY = birdH * readability.hitInsetYRatio
+    private val repeatShadowHistory = PersistentMemoryManager.getHitCount(context, EntityType.OWL) >= 2
+    private val familiarNightHistory =
+        PersistentMemoryManager.getPassCount(context, EntityType.OWL) >= 3 ||
+            RelationshipArcSystem.stageFor(context, EntityType.OWL).ordinal >= RelationshipStage.TRUST.ordinal
 
     private enum class OwlState { SLEEPING, ALERT, DIVING }
     private var owlState = OwlState.SLEEPING
@@ -60,6 +66,15 @@ class Owl(
     }
     private val eyeGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(132, 255, 184, 72)
+        style = Paint.Style.FILL
+    }
+    private val memoryRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(118, 198, 218, 255)
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    private val familiarNightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(56, 172, 206, 255)
         style = Paint.Style.FILL
     }
 
@@ -115,6 +130,9 @@ class Owl(
     override fun draw(canvas: Canvas) {
         val drawRect = RectF(x, y, x + birdW, y + birdH)
         if (owlState == OwlState.SLEEPING || owlState == OwlState.ALERT) {
+            if (familiarNightHistory) {
+                canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), birdW * 0.66f, familiarNightPaint)
+            }
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), birdW * 0.48f, eyeGlowPaint)
         }
         if (owlState == OwlState.ALERT) {
@@ -123,12 +141,20 @@ class Owl(
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), radius, alertFillPaint)
             alertPaint.alpha = (180 * (1f - (alertTimer / alertDuration).coerceIn(0f, 1f))).toInt().coerceIn(40, 180)
             canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), radius, alertPaint)
+            if (repeatShadowHistory) {
+                val memoryRadius = radius + birdW * 0.18f
+                memoryRingPaint.alpha = (132 * (1f - (alertTimer / alertDuration).coerceIn(0f, 1f))).toInt().coerceIn(44, 132)
+                canvas.drawCircle(drawRect.centerX(), drawRect.centerY(), memoryRadius, memoryRingPaint)
+            }
         }
         currentSprite.draw(canvas, drawRect)
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        gameState.addBonus(points = 150 + relationshipTuning.passBonusPoints, seeds = relationshipTuning.passBonusSeeds)
+        gameState.addBonus(
+            points = 150 + relationshipTuning.passBonusPoints + if (familiarNightHistory) 12 else 0,
+            seeds = relationshipTuning.passBonusSeeds + if (familiarNightHistory) 1 else 0
+        )
         DialogueBubbleManager.spawn(
             text = RelationshipArcSystem.lineFor(context, EntityType.OWL, RelationshipArcSystem.Event.PASS),
             anchorX = x + birdW * 0.5f,

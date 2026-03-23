@@ -613,7 +613,7 @@ object RelationshipArcSystem {
             EntityType.CAT -> catCueLine(stage, tone, cue)
             EntityType.FOX -> foxCueLine(stage, tone, cue)
             EntityType.WOLF -> wolfCueLine(stage, tone, cue)
-            EntityType.OWL -> owlCueLine(stage, tone, cue)
+            EntityType.OWL -> owlCueLine(context, stage, tone, cue)
             EntityType.EAGLE -> eagleCueLine(stage, tone, cue)
             EntityType.DOG -> dogCueLine(stage, tone, cue)
             else -> lineFor(context, type, Event.THREAT)
@@ -644,7 +644,7 @@ object RelationshipArcSystem {
             EntityType.FOX -> foxLine(stage, tone, event)
             EntityType.WOLF -> wolfLine(stage, tone, event)
             EntityType.DOG -> dogLine(stage, tone, event)
-            EntityType.OWL -> owlLine(stage, tone, event)
+            EntityType.OWL -> owlLine(context, stage, tone, event)
             EntityType.EAGLE -> eagleLine(stage, tone, event)
             else -> ""
         }
@@ -824,15 +824,27 @@ object RelationshipArcSystem {
         else -> dogLine(stage, tone, Event.PASS)
     }
 
-    private fun owlCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
+    private fun owlCueLine(
+        context: Context,
+        stage: RelationshipStage,
+        tone: RelationshipTone,
+        cue: EncounterCue
+    ): String {
+        val repeatHits = PersistentMemoryManager.getHitCount(context, EntityType.OWL)
+        val passCount = PersistentMemoryManager.getPassCount(context, EntityType.OWL)
+        return when (cue) {
         EncounterCue.OWL_ALERT -> when {
+            repeatHits >= 3 -> "Same shadow. Same jump."
+            repeatHits >= 2 -> "The night remembers this jump."
+            passCount >= 4 && tone == RelationshipTone.WARM -> "You know this shadow."
             stage == RelationshipStage.MILESTONE && tone == RelationshipTone.WARM -> "I know your timing."
             stage.ordinal >= RelationshipStage.TRUST.ordinal && tone == RelationshipTone.WARM -> "Not prey."
             tone == RelationshipTone.CAUTIOUS -> "The night remembers."
             stage.ordinal >= RelationshipStage.RECOGNITION.ordinal -> "Still jumping?"
             else -> "...hoo?"
         }
-        else -> owlLine(stage, tone, Event.THREAT)
+        else -> owlLine(context, stage, tone, Event.THREAT)
+        }
     }
 
     private fun eagleCueLine(stage: RelationshipStage, tone: RelationshipTone, cue: EncounterCue): String = when (cue) {
@@ -846,19 +858,38 @@ object RelationshipArcSystem {
         else -> eagleLine(stage, tone, Event.THREAT)
     }
 
-    private fun owlLine(stage: RelationshipStage, tone: RelationshipTone, event: Event): String = when (event) {
+    private fun owlLine(
+        context: Context,
+        stage: RelationshipStage,
+        tone: RelationshipTone,
+        event: Event
+    ): String {
+        val repeatHits = PersistentMemoryManager.getHitCount(context, EntityType.OWL)
+        val passCount = PersistentMemoryManager.getPassCount(context, EntityType.OWL)
+        return when (event) {
         Event.PASS -> when (stage) {
-            RelationshipStage.FIRST_IMPRESSION -> "Silent pass."
-            RelationshipStage.RECOGNITION -> "Still awake."
-            RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "Not prey." else "Too slow."
-            RelationshipStage.MILESTONE -> "The night knows you."
+            RelationshipStage.FIRST_IMPRESSION -> if (repeatHits >= 2 && passCount >= 1) "Not the same shadow tonight." else "Silent pass."
+            RelationshipStage.RECOGNITION -> if (passCount >= 3) "The dark edge remembered you kindly." else "Still awake."
+            RelationshipStage.TRUST -> when {
+                passCount >= 4 && tone == RelationshipTone.WARM -> "The night kept your shape."
+                tone == RelationshipTone.WARM -> "Not prey."
+                repeatHits >= 2 -> "Not the same jump tonight."
+                else -> "Too slow."
+            }
+            RelationshipStage.MILESTONE -> if (passCount >= 4) "The dark edge feels familiar now." else "The night knows you."
         }
         Event.SPARE -> "The branch stays yours."
-        Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "The night remembers." else "...hoo?"
+        Event.THREAT -> when {
+            repeatHits >= 2 -> "The same shadow remembers."
+            tone == RelationshipTone.CAUTIOUS -> "The night remembers."
+            else -> "...hoo?"
+        }
         Event.RETURN -> when (stage) {
-            RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "Night holds a familiar pair of eyes."
+            RelationshipStage.TRUST, RelationshipStage.MILESTONE ->
+                if (passCount >= 4) "Night holds a familiar pair of eyes." else "Something patient watches the dark edge."
             else -> "Something patient watches the dark edge."
         }
+    }
     }
 
     private fun eagleLine(stage: RelationshipStage, tone: RelationshipTone, event: Event): String = when (event) {

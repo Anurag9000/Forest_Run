@@ -81,8 +81,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: night watcher that punishes reckless jumping.
 - Dream traits: sleeping perch, reactive dive, eerie glow.
-- Current: dive trigger logic, clearer telegraphing, stronger alert ring, stronger night-glow mood, and relationship-aware alert cueing now exist.
-- TODO: finish final device-proofing and deeper repeated-memory payoff.
+- Current: dive trigger logic, stronger same-shadow alert cueing, a visible memory ring, a more familiar-night clean pass, and stronger night-glow mood now exist.
+- TODO: finish final device-proofing only.
 
 ### Duck
 
