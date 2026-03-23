@@ -26,8 +26,6 @@ Completion standard for removing an item:
 
 ### Animals
 
-- [ ] Finish Dog’s truly memorable buddy-mode payoff.
-
 ### Cross-Family
 
 - [ ] Make flavor text and mercy feedback land reliably in ordinary play, not only in showcase scenarios.

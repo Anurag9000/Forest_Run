@@ -152,8 +152,9 @@ class RelationshipArcSystemTest {
         val dialogue = RelationshipArcSystem.dogBuddyDialogue(context)
         val durationBonus = RelationshipArcSystem.dogBuddyDurationBonusSec(context)
 
-        assertEquals(3, dialogue.size)
+        assertEquals(4, dialogue.size)
         assertTrue(dialogue.first().isNotBlank())
+        assertTrue(dialogue.last().contains("home", ignoreCase = true) || dialogue.last().contains("soon", ignoreCase = true))
         assertTrue(durationBonus > 0f)
     }
 

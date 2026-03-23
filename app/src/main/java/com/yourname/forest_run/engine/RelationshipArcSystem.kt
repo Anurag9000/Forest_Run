@@ -623,6 +623,7 @@ object RelationshipArcSystem {
     fun dogBuddyDialogue(context: Context): List<String> = listOf(
         encounterCueLine(context, EntityType.DOG, EncounterCue.DOG_GREETING),
         encounterCueLine(context, EntityType.DOG, EncounterCue.DOG_MIDDLE),
+        lineFor(context, EntityType.DOG, Event.PASS),
         encounterCueLine(context, EntityType.DOG, EncounterCue.DOG_FAREWELL)
     )
 
@@ -822,7 +823,12 @@ object RelationshipArcSystem {
             RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "Still here!" else "Nice one!"
             RelationshipStage.MILESTONE -> "Best friend!"
         }
-        Event.SPARE -> "Best friend!"
+        Event.SPARE -> when (stage) {
+            RelationshipStage.MILESTONE -> if (tone == RelationshipTone.WARM) "Best friend. Race you home!" else "Best friend!"
+            RelationshipStage.TRUST -> if (tone == RelationshipTone.WARM) "Come on. Home's this way!" else "Best friend!"
+            RelationshipStage.RECOGNITION -> "See you home!"
+            else -> "Best friend!"
+        }
         Event.THREAT -> if (tone == RelationshipTone.CAUTIOUS) "Easy. Not that line again." else "Hi!!"
         Event.RETURN -> when (stage) {
             RelationshipStage.TRUST, RelationshipStage.MILESTONE -> "The garden still feels wagged awake."

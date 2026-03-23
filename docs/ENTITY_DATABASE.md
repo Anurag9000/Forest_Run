@@ -146,8 +146,8 @@ No generic obstacle feeling is acceptable. Every entity should have a distinct s
 
 - Role: barker and occasional running buddy.
 - Dream traits: bark projectile timing plus lovable buddy variant.
-- Current: both modes exist, are materially clearer in play, use relationship-aware buddy dialogue with longer bonded buddy runs, and now celebrate bonded buddy exits more visibly.
-- TODO: make buddy mode truly memorable and finish bark timing validation on device.
+- Current: both modes exist, are materially clearer in play, use a fuller escort-style buddy dialogue sequence, leave a visible celebration trail during harmless runs, and now end bonded buddy visits with a more distinct finale burst and reward.
+- TODO: finish final device-proofing only.
 
 ## Mandatory Entity TODOs
 

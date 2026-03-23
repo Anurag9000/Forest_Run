@@ -120,7 +120,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 - PARTIAL: Fox mirror jump reads more clearly and warm-memory landings/passes now leave visible payoff, more knowingly playful repeat-memory lines, a brighter trail aura, and a stronger remembered-the-trick pass reward; finish device-proofing only.
 - PARTIAL: Wolf howl/charge drama now includes a true stand-down aura/trail, more respectful spare-history lines, and a stronger earned-respect spare reward on top of the earlier readability work; finish device-proofing only.
 - PARTIAL: Hedgehog fairness now includes a true fair-hop arming window, a visible low-lane read, and a stronger clean-clear reward on top of the earlier warning/debuff work; finish device-proofing only.
-- PARTIAL: Dog bark projectile and buddy mode are clearer, and bonded buddy runs now feel more celebratory; finish memorable buddy payoff and device validation.
+- PARTIAL: Dog bark projectile and buddy mode now include a fuller escort dialogue sequence, a visible celebration trail, and a more distinct bonded finale burst/reward on top of the earlier readability work; finish device-proofing only.
 
 ## Architecture TODOs
 
