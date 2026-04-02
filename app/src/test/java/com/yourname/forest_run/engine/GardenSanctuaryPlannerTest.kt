@@ -258,6 +258,21 @@ class GardenSanctuaryPlannerTest {
     }
 
     @Test
+    fun `world opinion is surfaced as a first class homecoming consequence`() {
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertEquals("Trusting", state.worldOpinionLabel)
+        assertTrue(state.worldOpinionLine.contains("Cat", ignoreCase = true))
+        assertTrue(state.homecomingConsequences.first().label.contains("Opinion:", ignoreCase = true))
+    }
+
+    @Test
     fun `repeated kindness leaves a trust path and warmer carry-home`() {
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
         SaveManager.saveForestMoodState(

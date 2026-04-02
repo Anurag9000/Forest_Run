@@ -511,4 +511,5 @@ class SessionArcComposerTest {
         assertTrue(menuCopy.atmosphereLine.contains("Bloom", ignoreCase = true) || menuCopy.secondaryAtmosphereLine.contains("afterglow", ignoreCase = true))
         assertTrue(restCopy.recoveryLine.contains("Bloom", ignoreCase = true) || restCopy.carryHomeLine.contains("Bloom", ignoreCase = true))
     }
+
 }

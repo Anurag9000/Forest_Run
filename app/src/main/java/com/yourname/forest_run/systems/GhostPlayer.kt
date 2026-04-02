@@ -36,12 +36,23 @@ import kotlin.math.abs
  */
 class GhostPlayer {
 
+    data class VisibilityContext(
+        val livePlayerX: Float,
+        val livePlayerY: Float,
+        val livePlayerWidth: Float,
+        val livePlayerHeight: Float,
+        val nearbyHazardCount: Int,
+        val nearestHazardDistancePx: Float
+    )
+
     companion object {
         const val GHOST_ALPHA  = 102   // 40% of 255
         const val WAVE_DURATION = 0.8f  // seconds for wave + fade-out
         private const val START_DELAY = 1.15f
         private const val FADE_IN_DURATION = 0.65f
-        private const val MIN_SEPARATION_RATIO = 0.18f
+        private const val DENSE_SUPPRESSION_DURATION = 0.32f
+        private const val FADE_OUT_SPEED = 8.5f
+        private const val FADE_IN_SPEED = 3.1f
 
         // White-blue colour filter: cool tint, low saturation
         private val GHOST_FILTER: ColorMatrixColorFilter by lazy {
@@ -52,7 +63,7 @@ class GhostPlayer {
                 0.8f, 0f, 0f, 0f, 20f,   // R
                 0f, 0.8f, 0f, 0f, 30f,   // G
                 0f, 0f, 1.1f, 0f, 60f,   // B
-                0f, 0f, 0f, 0.4f, 0f     // A  (40% opacity baked in)
+                0f, 0f, 0f, 1f, 0f       // A  (paint alpha controls final opacity)
             )
             ColorMatrixColorFilter(ColorMatrix(tint))
         }
@@ -66,6 +77,9 @@ class GhostPlayer {
     private var waveTimer: Float   = 0f
     private var isActive:  Boolean = false
     private var suppressedFor: Float = 0f
+    private var denseSuppressedFor: Float = 0f
+    private var visibilityAlpha: Float = 0f
+    private var revealImmediately: Boolean = false
 
     // ── Paints ────────────────────────────────────────────────────────────
     private val ghostPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -80,30 +94,37 @@ class GhostPlayer {
     // ── API ───────────────────────────────────────────────────────────────
 
     /** Load a frame list recorded from a previous run. Starts ghost playback. */
-    fun load(recordedFrames: List<GhostFrame>) {
+    fun load(recordedFrames: List<GhostFrame>, revealImmediately: Boolean = false) {
         frames    = recordedFrames
         elapsed   = 0f
         frameIdx  = 0
         isWaving  = false
         waveTimer = 0f
         suppressedFor = 0f
+        denseSuppressedFor = 0f
+        visibilityAlpha = 0f
+        this.revealImmediately = revealImmediately
         isActive  = recordedFrames.isNotEmpty()
     }
 
     fun reset() {
         isActive = false
         frames   = emptyList()
+        revealImmediately = false
     }
 
     val hasGhost: Boolean get() = isActive
 
     /** Advance ghost playback. Call every PLAYING frame. */
-    fun update(deltaTime: Float) {
+    fun update(deltaTime: Float, visibilityContext: VisibilityContext? = null) {
         if (!isActive) return
 
         elapsed += deltaTime
         if (suppressedFor > 0f) {
             suppressedFor = (suppressedFor - deltaTime).coerceAtLeast(0f)
+        }
+        if (denseSuppressedFor > 0f) {
+            denseSuppressedFor = (denseSuppressedFor - deltaTime).coerceAtLeast(0f)
         }
 
         if (isWaving) {
@@ -125,6 +146,18 @@ class GhostPlayer {
             isWaving  = true
             waveTimer = 0f
         }
+
+        if (!isWaving) {
+            visibilityContext?.let { context ->
+                if (shouldSuppressForDensePlay(context)) {
+                    denseSuppressedFor = maxOf(denseSuppressedFor, DENSE_SUPPRESSION_DURATION)
+                }
+            }
+        }
+
+        val targetAlpha = visibilityTargetFor(visibilityContext)
+        val speed = if (targetAlpha < visibilityAlpha) FADE_OUT_SPEED else FADE_IN_SPEED
+        visibilityAlpha = approach(visibilityAlpha, targetAlpha, speed * deltaTime)
     }
 
     fun suppress(durationSec: Float) {
@@ -135,7 +168,7 @@ class GhostPlayer {
      * Draw the ghost. Call BEFORE the live player.
      * @param spriteManager Supplies the same sprite sheets used by the live player.
      */
-    fun draw(canvas: Canvas, spriteManager: SpriteManager, livePlayer: Player? = null) {
+    fun draw(canvas: Canvas, spriteManager: SpriteManager) {
         if (!isActive || frames.isEmpty()) return
 
         val frame = frames[frameIdx.coerceIn(0, frames.lastIndex)]
@@ -147,25 +180,7 @@ class GhostPlayer {
             (1f - (waveTimer / WAVE_DURATION)).coerceIn(0f, 1f)
         } else 1f
 
-        if (suppressedFor > 0f) {
-            return
-        }
-        val revealProgress = ((elapsed - START_DELAY) / FADE_IN_DURATION).coerceIn(0f, 1f)
-        if (revealProgress <= 0f) return
-        alphaMulti *= revealProgress
-
-        livePlayer?.let { player ->
-            val horizontalDistance = abs((player.x + Player.BASE_WIDTH / 2f) - (frame.x + Player.BASE_WIDTH / 2f))
-            if (horizontalDistance <= Player.BASE_WIDTH * MIN_SEPARATION_RATIO) {
-                return
-            }
-            val overlapFade = when {
-                horizontalDistance <= Player.BASE_WIDTH * 0.30f -> 0.08f
-                horizontalDistance >= Player.BASE_WIDTH * 0.90f -> 1f
-                else -> (horizontalDistance - Player.BASE_WIDTH * 0.30f) / (Player.BASE_WIDTH * 0.60f)
-            }
-            alphaMulti *= overlapFade
-        }
+        alphaMulti *= visibilityAlpha
         if (alphaMulti <= 0.02f) return
 
         ghostPaint.alpha = (GHOST_ALPHA * alphaMulti).toInt()
@@ -187,6 +202,8 @@ class GhostPlayer {
     // ── Ghost's last known world position (for GameView sparkle on finish) ──
     var lastX: Float = 0f; private set
     var lastY: Float = 0f; private set
+    internal val visibilityAlphaForTest: Float get() = visibilityAlpha
+    internal val denseSuppressionRemainingForTest: Float get() = denseSuppressedFor
 
     private fun spriteForState(ordinal: Int, sm: SpriteManager): SpriteSheet {
         val state = PlayerState.entries.getOrElse(ordinal) { PlayerState.RUNNING }
@@ -198,6 +215,72 @@ class GhostPlayer {
             PlayerState.LANDING    -> sm.playerLanding
             PlayerState.DUCKING    -> sm.playerDuck
             else                   -> sm.playerRun
+        }
+    }
+
+    private fun visibilityTargetFor(visibilityContext: VisibilityContext?): Float {
+        if (suppressedFor > 0f || denseSuppressedFor > 0f) return 0f
+
+        val revealDelay = if (revealImmediately) 0f else START_DELAY
+        val revealProgress = ((elapsed - revealDelay) / FADE_IN_DURATION).coerceIn(0f, 1f)
+        if (revealProgress <= 0f) return 0f
+        if (visibilityContext == null || frames.isEmpty()) return revealProgress
+
+        val frame = frames[frameIdx.coerceIn(0, frames.lastIndex)]
+        val ghostWidth = Player.BASE_WIDTH * frame.scaleX
+        val ghostHeight = Player.BASE_HEIGHT * frame.scaleY
+        val ghostCenterX = frame.x + ghostWidth * 0.5f
+        val ghostCenterY = frame.y + ghostHeight * 0.5f
+        val liveCenterX = visibilityContext.livePlayerX + visibilityContext.livePlayerWidth * 0.5f
+        val liveCenterY = visibilityContext.livePlayerY + visibilityContext.livePlayerHeight * 0.5f
+
+        val horizontalRatio = abs(liveCenterX - ghostCenterX) /
+            maxOf(visibilityContext.livePlayerWidth, ghostWidth)
+        val verticalRatio = abs(liveCenterY - ghostCenterY) /
+            maxOf(visibilityContext.livePlayerHeight * 0.9f, ghostHeight * 0.9f)
+
+        val horizontalFade = when {
+            horizontalRatio <= 0.18f -> 0f
+            horizontalRatio >= 1.05f -> 1f
+            else -> (horizontalRatio - 0.18f) / 0.87f
+        }
+        val laneFade = when {
+            horizontalRatio >= 0.70f -> 1f
+            verticalRatio <= 0.12f -> 0.18f
+            verticalRatio >= 0.92f -> 1f
+            else -> 0.18f + ((verticalRatio - 0.12f) / 0.80f) * 0.82f
+        }
+        val overlapFade = horizontalFade * laneFade
+
+        val nearestHazardDistance = visibilityContext.nearestHazardDistancePx
+        val hazardFade = when {
+            nearestHazardDistance <= visibilityContext.livePlayerWidth * 0.95f -> 0.30f
+            nearestHazardDistance >= visibilityContext.livePlayerWidth * 3.8f -> 1f
+            else -> 0.30f + (
+                (nearestHazardDistance - visibilityContext.livePlayerWidth * 0.95f) /
+                    (visibilityContext.livePlayerWidth * 2.85f)
+                ) * 0.70f
+        }
+        val crowdFade = when {
+            visibilityContext.nearbyHazardCount >= 3 -> 0.35f
+            visibilityContext.nearbyHazardCount == 2 -> 0.58f
+            visibilityContext.nearbyHazardCount == 1 -> 0.82f
+            else -> 1f
+        }
+
+        return (revealProgress * overlapFade * hazardFade * crowdFade).coerceIn(0f, 1f)
+    }
+
+    private fun shouldSuppressForDensePlay(visibilityContext: VisibilityContext): Boolean {
+        return visibilityContext.nearbyHazardCount >= 2 &&
+            visibilityContext.nearestHazardDistancePx <= visibilityContext.livePlayerWidth * 1.65f
+    }
+
+    private fun approach(current: Float, target: Float, delta: Float): Float {
+        return when {
+            current < target -> minOf(target, current + delta)
+            current > target -> maxOf(target, current - delta)
+            else -> current
         }
     }
 }

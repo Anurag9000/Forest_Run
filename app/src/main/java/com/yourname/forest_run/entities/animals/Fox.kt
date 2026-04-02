@@ -74,7 +74,10 @@ class Fox(
     private var foxState = FoxState.WALKING
 
     private val walkSpeed = 200f
-    private val detectionRange get() = foxW * readability.detectionRangeBodies * relationshipTuning.detectionMultiplier
+    private val baseDetectionRange get() =
+        foxW * readability.detectionRangeBodies * relationshipTuning.detectionMultiplier
+    private val visibleDetectionRange get() = baseDetectionRange * 1.8f
+    private val mirrorDetectionRange get() = baseDetectionRange * 2.6f
     private var hasJumped = false
 
     // Fox jump physics (mirrors player jump mini version)
@@ -132,7 +135,7 @@ class Fox(
         }
 
         val pad = readability.stagingPaddingPx
-        detectionRect.set(x - detectionRange, y - pad, x + foxW + pad * 0.7f, y + foxH + pad * 0.5f)
+        detectionRect.set(x - visibleDetectionRange, y - pad, x + foxW + pad * 0.7f, y + foxH + pad * 0.5f)
         hitbox.offsetTo(x + insetX, y + insetY)
         if (x < -foxW - 50f) isActive = false
     }
@@ -209,13 +212,19 @@ class Fox(
     private fun tryMirrorJump(player: Player) {
         if (hasJumped || spared || foxState != FoxState.WALKING) return
 
-        val playerIsJumping = player.state in listOf(
-            PlayerState.JUMPING, PlayerState.JUMP_START, PlayerState.APEX
+        // A nearby airborne answer should still read as "you matched the trick"
+        // on a real phone, even if the player is already on the falling half
+        // of the arc by the time the fox checks the lane.
+        val playerAnsweredTheLine = player.state in listOf(
+            PlayerState.JUMPING,
+            PlayerState.JUMP_START,
+            PlayerState.APEX,
+            PlayerState.FALLING
         )
-        val inRange = (player.x + Player.BASE_WIDTH) > (x - detectionRange) &&
-            player.x < (x + foxW)
+        val inRange = (player.x + Player.BASE_WIDTH) > (x - mirrorDetectionRange) &&
+            player.x < (x + foxW + Player.BASE_WIDTH * 0.35f)
 
-        if (playerIsJumping && inRange) {
+        if (playerAnsweredTheLine && inRange) {
             hasJumped = true
             foxState  = FoxState.JUMPING
             foxVelY   = foxJumpForce

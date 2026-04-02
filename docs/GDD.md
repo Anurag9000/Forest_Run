@@ -138,6 +138,7 @@ Current baseline:
 - recent run tone now affects Garden ambience and carry-home framing
 - repeated harm from the same creature now surfaces as caution in sanctuary traces, strained-bond `Held At A Distance` beats, `Same Shadow` repeat-killer beats, Garden return moments, Garden reflections, and tender memory streaks
 - repeated kindness now surfaces through trust-path traces, repeat-friend `Shared Path` traces, warmer carry-home lines, rest fragments, and dedicated gentle-return beats
+- one explicit world-opinion layer now resolves from mood, route, and repeated-history state and surfaces in run milestones plus rest/Garden homecoming presentation instead of relying only on ambience or separate chips
 - broader creature warmth and richer world-state consequence are still TODO, even though sanctuary/homecoming atmosphere is now materially stronger, route history can now leave persisted world-state signs across startup/rest/Garden/game-over, peaceful-biome routes can now leave named world-state signs in rest/Garden copy, and homecoming consequences now surface explicitly across startup, rest, and Garden
 
 #### 3.8.2 Named Relationship Arcs
@@ -219,8 +220,8 @@ Jump height is tied to touch duration. Short tap = low hop. Full hold = maximum 
 ### Current Status
 
 - Implemented: tap, hold, swipe-down.
-- Partial: ghost playback now delays reveal and suppresses briefly after impacts so the live runner stays clearer during crowded moments.
-- TODO: validate all touch affordances on device across long sessions and finish eliminating any confusion caused by ghost overlap or visual clutter.
+- Partial: ghost playback now delays reveal, suppresses after impacts, fades by live-player overlap, suppresses during dense hazard windows, and re-enters smoothly so the live runner stays clearer during crowded moments.
+- TODO: validate all touch affordances on device across long sessions and finish final device-proof ghost/readability tuning.
 
 ---
 

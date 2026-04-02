@@ -205,8 +205,8 @@ enum class EncounterScenario(
         summary = "Kindness bonus and spare warmth",
         forcedBiome = Biome.MEADOW,
         steps = listOf(
-            EncounterStep(0.20f, EntityType.CAT, 420f),
-            EncounterStep(1.65f, EntityType.CAT, 920f)
+            EncounterStep(0.35f, EntityType.CAT, 760f),
+            EncounterStep(2.20f, EntityType.CAT, 1_420f)
         )
     ),
     FOX_MIRROR(
@@ -214,8 +214,8 @@ enum class EncounterScenario(
         summary = "Mirror-jump personality read",
         forcedBiome = Biome.ORCHARD,
         steps = listOf(
-            EncounterStep(0.20f, EntityType.FOX, 460f),
-            EncounterStep(1.85f, EntityType.FOX, 980f)
+            EncounterStep(0.25f, EntityType.FOX, 260f),
+            EncounterStep(1.70f, EntityType.FOX, 760f)
         )
     ),
     WOLF_CHARGE(
@@ -223,8 +223,8 @@ enum class EncounterScenario(
         summary = "Howl, charge, and spare tension",
         forcedBiome = Biome.ANCIENT_GROVE,
         steps = listOf(
-            EncounterStep(0.20f, EntityType.WOLF, 500f),
-            EncounterStep(2.30f, EntityType.WOLF, 1_080f)
+            EncounterStep(0.20f, EntityType.WOLF, 240f),
+            EncounterStep(1.90f, EntityType.WOLF, 720f)
         )
     ),
     HEDGEHOG_DEBUFF(
@@ -277,12 +277,12 @@ enum class EncounterScenario(
             EncounterStep(2.35f, EntityType.HYACINTH, 1_100f)
         )
     ),
-    REST_RETURN_LOOP(
-        title = "Rest Return Loop",
+    REST_LOOP(
+        title = "Rest Loop",
         summary = "Take a clear hit and verify the fade back to Garden",
         forcedBiome = Biome.DUSK_CANYON,
         steps = listOf(
-            EncounterStep(0.40f, EntityType.CACTUS, 360f),
+            EncounterStep(0.15f, EntityType.CACTUS, 180f),
             EncounterStep(1.90f, EntityType.WOLF, 900f)
         )
     );
@@ -321,6 +321,10 @@ class EncounterDirector {
 
     fun nextScenario() {
         selectedIndex = (selectedIndex + 1) % EncounterScenario.entries.size
+    }
+
+    fun selectScenario(scenario: EncounterScenario) {
+        selectedIndex = EncounterScenario.entries.indexOf(scenario).coerceAtLeast(0)
     }
 
     fun startSelectedScenario() {

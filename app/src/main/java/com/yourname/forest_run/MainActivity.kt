@@ -1,5 +1,6 @@
 package com.yourname.forest_run
 
+import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -19,8 +20,14 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var gameView: GameView
 
+    companion object {
+        const val EXTRA_DEBUG_AUTOSTART = "debug_autostart"
+        const val EXTRA_DEBUG_SCENARIO = "debug_scenario"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
         // Keep screen on while the app is in the foreground
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -29,7 +36,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(gameView)
 
         // WindowInsetsController can be null during very early activity creation on some OEM builds.
-        gameView.post { hideSystemUI() }
+        gameView.post {
+            hideSystemUI()
+            gameView.applyDebugLaunchIntent(intent)
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

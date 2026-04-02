@@ -82,6 +82,24 @@ class RunFlavorPresentationTest {
     }
 
     @Test
+    fun `milestone cue can surface shared world opinion`() {
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+
+        val cue = RunFlavorPresentation.milestoneCue(
+            context = context,
+            score = 1_000,
+            routeTier = PacifistRouteTier.NONE,
+            isNewHighScore = false
+        )
+
+        assertEquals("World softens", cue.bubbleText)
+        assertTrue(cue.flavorText.contains("forest", ignoreCase = true) || cue.flavorText.contains("gently", ignoreCase = true))
+    }
+
+    @Test
     fun `milestone bond can override generic milestone cue with relationship reaction`() {
         repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
         repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }

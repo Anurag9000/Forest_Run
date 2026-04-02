@@ -1,6 +1,7 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Canvas
 import android.graphics.Color
@@ -16,6 +17,7 @@ import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.entities.PlayerState
 import com.yourname.forest_run.systems.FxPreset
+import com.yourname.forest_run.systems.GhostFrame
 import com.yourname.forest_run.systems.GhostPlayer
 import com.yourname.forest_run.systems.GhostRecorder
 import com.yourname.forest_run.systems.ParticleManager
@@ -28,6 +30,7 @@ import com.yourname.forest_run.ui.DialogueBubbleManager
 import com.yourname.forest_run.ui.DebugEncounterOverlay
 import com.yourname.forest_run.ui.DebugOverlayAction
 import com.yourname.forest_run.ui.RestQuoteManager
+import kotlin.math.hypot
 
 private const val TAG = "ForestRun"
 
@@ -45,6 +48,18 @@ private const val TAG = "ForestRun"
  *  - Phase 12: [EntityManager] spawner + collision loop live
  */
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+    private enum class DebugScriptAction {
+        TAP_JUMP,
+        HOLD_JUMP_START,
+        HOLD_JUMP_END,
+        DUCK_START,
+        DUCK_END
+    }
+
+    private data class DebugScriptStep(
+        val atSeconds: Float,
+        val action: DebugScriptAction
+    )
     @Volatile
     internal var debugFrameCounter: Long = 0
     private val debugToolsEnabled =
@@ -99,6 +114,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var currentRunSummary: RunSummary? = null
     private val encounterDirector = if (debugToolsEnabled) EncounterDirector() else null
     private var debugEncounterOverlay: DebugEncounterOverlay? = null
+    private var pendingDebugLaunchIntent: Intent? = null
+    private var debugScenarioVisualsEnabled = true
+    private var debugScenarioScript: List<DebugScriptStep> = emptyList()
+    private var debugScenarioScriptIndex = 0
 
     // Restart fade-to-black overlay
     private val restartFadePaint = Paint().apply { color = Color.BLACK }
@@ -286,6 +305,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         gameThread.isRunning = true
         if (gameThread.state == Thread.State.NEW) gameThread.start()
+        pendingDebugLaunchIntent?.let {
+            pendingDebugLaunchIntent = null
+            post { applyDebugLaunchIntent(it) }
+        }
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -311,6 +334,65 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (holder.surface?.isValid == true) {
             gameThread.isRunning = true
             gameThread.start()
+        }
+        pendingDebugLaunchIntent?.let {
+            pendingDebugLaunchIntent = null
+            post { applyDebugLaunchIntent(it) }
+        }
+    }
+
+    fun applyDebugLaunchIntent(intent: Intent?) {
+        if (!debugToolsEnabled || intent == null) return
+
+        val scenarioName = intent.getStringExtra(com.yourname.forest_run.MainActivity.EXTRA_DEBUG_SCENARIO)
+        val autoStart = intent.getBooleanExtra(com.yourname.forest_run.MainActivity.EXTRA_DEBUG_AUTOSTART, false)
+        if (scenarioName.isNullOrBlank() && !autoStart) return
+
+        if (!::mainMenuScreen.isInitialized ||
+            !::entityManager.isInitialized ||
+            !::player.isInitialized ||
+            !::gameState.isInitialized ||
+            holder.surface?.isValid != true
+        ) {
+            pendingDebugLaunchIntent = Intent(intent)
+            postDelayed({ applyDebugLaunchIntent(intent) }, 100L)
+            return
+        }
+
+        if (!scenarioName.isNullOrBlank()) {
+            val director = encounterDirector ?: return
+            val scenario = EncounterScenario.entries.firstOrNull { it.name == scenarioName } ?: return
+            debugScenarioVisualsEnabled = false
+            debugScenarioScript = debugScriptForScenario(scenario)
+            debugScenarioScriptIndex = 0
+            if (scenario == EncounterScenario.GHOST_READABILITY) {
+                ghostPlayer.load(
+                    listOf(
+                        GhostFrame(0.00f, 520f, 860f, PlayerState.RUNNING.ordinal, 1f, 1f),
+                        GhostFrame(0.35f, 560f, 780f, PlayerState.JUMPING.ordinal, 0.96f, 1.04f),
+                        GhostFrame(0.72f, 610f, 710f, PlayerState.APEX.ordinal, 0.92f, 1.08f),
+                        GhostFrame(1.05f, 660f, 790f, PlayerState.FALLING.ordinal, 1.0f, 1f),
+                        GhostFrame(1.42f, 720f, 860f, PlayerState.RUNNING.ordinal, 1f, 1f),
+                        GhostFrame(1.80f, 780f, 790f, PlayerState.JUMPING.ordinal, 0.96f, 1.04f),
+                        GhostFrame(2.15f, 840f, 860f, PlayerState.RUNNING.ordinal, 1f, 1f)
+                    ),
+                    revealImmediately = true
+                )
+            }
+            director.selectScenario(scenario)
+            appState = AppGameState.PLAYING
+            runState = RunState.PLAYING
+            prepareEncounterScenario()
+            return
+        }
+
+        if (autoStart) {
+            debugScenarioVisualsEnabled = false
+            debugScenarioScript = emptyList()
+            debugScenarioScriptIndex = 0
+            prepareFreshRun()
+            appState = AppGameState.PLAYING
+            runState = RunState.PLAYING
         }
     }
 
@@ -647,8 +729,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             ghostRecorder.record(deltaTime, player)
         }
         if (shouldDrawGhostPlayback()) {
-            ghostPlayer.update(deltaTime)
+            ghostPlayer.update(deltaTime, ghostVisibilityContext())
         }
+        runDebugScenarioScript()
 
         // Phase 20: Music layer transition + tempo scaling
         if (::gameState.isInitialized) {
@@ -752,13 +835,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
             // 4. Ghost player (behind live player, 40% opacity white-blue) — Phase 19
             if (::spriteManager.isInitialized && shouldDrawGhostPlayback()) {
-                ghostPlayer.draw(canvas, spriteManager, if (::player.isInitialized) player else null)
+                ghostPlayer.draw(canvas, spriteManager)
             }
 
             // 5. Live Player
             if (::player.isInitialized) player.draw(canvas)
 
-            if (debugToolsEnabled && encounterDirector?.isScenarioActive == true) {
+            if (debugToolsEnabled &&
+                debugScenarioVisualsEnabled &&
+                encounterDirector?.isScenarioActive == true
+            ) {
                 drawDebugScenarioLayer(canvas)
             }
 
@@ -813,6 +899,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         if (debugToolsEnabled &&
+            debugScenarioVisualsEnabled &&
             ::entityManager.isInitialized &&
             ::gameState.isInitialized &&
             debugEncounterOverlay != null &&
@@ -855,6 +942,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun prepareFreshRun() {
         encounterDirector?.stopScenario()
+        debugScenarioScript = emptyList()
+        debugScenarioScriptIndex = 0
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
@@ -871,6 +960,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         val director = encounterDirector ?: return
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
         val scenario = director.selectedScenario
+        debugScenarioScriptIndex = 0
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
         entityManager.biomeManager.forceDebugBiome(scenario.forcedBiome)
@@ -883,6 +973,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         currentRestQuote = "Scenario verification active."
         currentRunSummary = null
         director.startSelectedScenario()
+        if (scenario == EncounterScenario.REST_LOOP) {
+            entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 14f)
+        } else if (scenario == EncounterScenario.WOLF_CHARGE) {
+            entityManager.debugSpawnAt(EntityType.WOLF, player.x + 520f)
+        } else if (scenario == EncounterScenario.EAGLE_MARK) {
+            entityManager.debugSpawnAt(EntityType.EAGLE, player.x + 420f)
+        }
         LeitmotifManager.playRunStart()
     }
 
@@ -918,11 +1015,113 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (frames.isNotEmpty()) ghostPlayer.load(frames)
     }
 
+    private fun runDebugScenarioScript() {
+        if (!debugToolsEnabled ||
+            debugScenarioScriptIndex >= debugScenarioScript.size ||
+            !::gameState.isInitialized ||
+            appState != AppGameState.PLAYING ||
+            runState != RunState.PLAYING
+        ) return
+
+        val elapsed = gameState.runTimeSeconds
+        while (debugScenarioScriptIndex < debugScenarioScript.size &&
+            debugScenarioScript[debugScenarioScriptIndex].atSeconds <= elapsed
+        ) {
+            when (debugScenarioScript[debugScenarioScriptIndex].action) {
+                DebugScriptAction.TAP_JUMP -> {
+                    player.onJumpPressed()
+                    player.onJumpReleased(0f)
+                }
+                DebugScriptAction.HOLD_JUMP_START -> player.onJumpPressed()
+                DebugScriptAction.HOLD_JUMP_END -> player.onJumpReleased(0.35f)
+                DebugScriptAction.DUCK_START -> player.onDuckPressed()
+                DebugScriptAction.DUCK_END -> player.onDuckReleased()
+            }
+            debugScenarioScriptIndex++
+        }
+    }
+
+    private fun debugScriptForScenario(scenario: EncounterScenario): List<DebugScriptStep> = when (scenario) {
+        EncounterScenario.CACTUS_READ -> listOf(
+            DebugScriptStep(3.18f, DebugScriptAction.HOLD_JUMP_START),
+            DebugScriptStep(3.48f, DebugScriptAction.HOLD_JUMP_END),
+            DebugScriptStep(5.06f, DebugScriptAction.HOLD_JUMP_START),
+            DebugScriptStep(5.36f, DebugScriptAction.HOLD_JUMP_END)
+        )
+        EncounterScenario.CAT_KINDNESS -> listOf(
+            DebugScriptStep(0.95f, DebugScriptAction.HOLD_JUMP_START),
+            DebugScriptStep(1.22f, DebugScriptAction.HOLD_JUMP_END),
+            DebugScriptStep(3.25f, DebugScriptAction.HOLD_JUMP_START),
+            DebugScriptStep(3.52f, DebugScriptAction.HOLD_JUMP_END)
+        )
+        EncounterScenario.FOX_MIRROR -> listOf(
+            DebugScriptStep(2.10f, DebugScriptAction.HOLD_JUMP_START),
+            DebugScriptStep(2.40f, DebugScriptAction.HOLD_JUMP_END),
+            DebugScriptStep(4.35f, DebugScriptAction.HOLD_JUMP_START),
+            DebugScriptStep(4.64f, DebugScriptAction.HOLD_JUMP_END)
+        )
+        EncounterScenario.EAGLE_MARK -> listOf(
+            DebugScriptStep(1.35f, DebugScriptAction.HOLD_JUMP_START),
+            DebugScriptStep(1.66f, DebugScriptAction.HOLD_JUMP_END),
+            DebugScriptStep(4.30f, DebugScriptAction.HOLD_JUMP_START),
+            DebugScriptStep(4.62f, DebugScriptAction.HOLD_JUMP_END)
+        )
+        else -> emptyList()
+    }
+
     private fun shouldDrawGhostPlayback(): Boolean {
         val director = encounterDirector
         if (director?.isScenarioActive == true) {
             return director.activeScenario?.allowGhostPlayback == true
         }
         return true
+    }
+
+    private fun ghostVisibilityContext(): GhostPlayer.VisibilityContext? {
+        if (!::player.isInitialized) return null
+        val liveHitbox = player.hitbox
+        var nearbyHazardCount = 0
+        var nearestHazardDistancePx = Float.POSITIVE_INFINITY
+
+        if (::entityManager.isInitialized) {
+            val focusRect = RectF(
+                liveHitbox.left - Player.BASE_WIDTH * 1.4f,
+                liveHitbox.top - Player.BASE_HEIGHT * 0.9f,
+                liveHitbox.right + Player.BASE_WIDTH * 4.8f,
+                liveHitbox.bottom + Player.BASE_HEIGHT * 0.9f
+            )
+            entityManager.activeEntities.forEach { entity ->
+                if (!entity.isActive || entity.hitbox.isEmpty) return@forEach
+                if (!RectF.intersects(focusRect, entity.hitbox)) return@forEach
+                nearbyHazardCount++
+                nearestHazardDistancePx = minOf(
+                    nearestHazardDistancePx,
+                    rectGapDistance(liveHitbox, entity.hitbox)
+                )
+            }
+        }
+
+        return GhostPlayer.VisibilityContext(
+            livePlayerX = player.x,
+            livePlayerY = player.y,
+            livePlayerWidth = player.currentWidth,
+            livePlayerHeight = player.currentHeight,
+            nearbyHazardCount = nearbyHazardCount,
+            nearestHazardDistancePx = nearestHazardDistancePx
+        )
+    }
+
+    private fun rectGapDistance(a: RectF, b: RectF): Float {
+        val dx = when {
+            a.right < b.left -> b.left - a.right
+            b.right < a.left -> a.left - b.right
+            else -> 0f
+        }
+        val dy = when {
+            a.bottom < b.top -> b.top - a.bottom
+            b.bottom < a.top -> a.top - b.bottom
+            else -> 0f
+        }
+        return hypot(dx.toDouble(), dy.toDouble()).toFloat()
     }
 }

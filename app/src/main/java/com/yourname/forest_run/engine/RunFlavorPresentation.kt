@@ -242,6 +242,36 @@ object RunFlavorPresentation {
                 flavorColor = milestoneFlavorColor(reward.type)
             )
         }
+        WorldOpinionPresentation.current(context.applicationContext, routeTierOverride = routeTier) != null -> {
+            val opinion = requireNotNull(
+                WorldOpinionPresentation.current(context.applicationContext, routeTierOverride = routeTier)
+            )
+            RunFlavorCue(
+                bubbleText = opinion.runBubbleText,
+                flavorText = opinion.runFlavorText,
+                fillColor = when (opinion.label) {
+                    "Shadowed" -> Color.rgb(238, 232, 246)
+                    "Watchful", "Sheltering" -> Color.rgb(230, 240, 252)
+                    "Softened", "Soft Home", "Trusting", "Warmed" -> Color.rgb(232, 248, 228)
+                    "Stirred" -> Color.rgb(248, 236, 212)
+                    else -> Color.rgb(240, 244, 228)
+                },
+                borderColor = when (opinion.label) {
+                    "Shadowed" -> Color.rgb(118, 112, 160)
+                    "Watchful", "Sheltering" -> Color.rgb(106, 132, 172)
+                    "Softened", "Soft Home", "Trusting", "Warmed" -> Color.rgb(92, 146, 112)
+                    "Stirred" -> Color.rgb(164, 118, 74)
+                    else -> Color.rgb(128, 138, 102)
+                },
+                flavorColor = when (opinion.label) {
+                    "Shadowed" -> Color.rgb(222, 214, 255)
+                    "Watchful", "Sheltering" -> Color.rgb(214, 232, 255)
+                    "Softened", "Soft Home", "Trusting", "Warmed" -> Color.rgb(214, 255, 220)
+                    "Stirred" -> Color.rgb(255, 220, 182)
+                    else -> Color.rgb(232, 246, 212)
+                }
+            )
+        }
         routeTier == PacifistRouteTier.PEACEFUL -> RunFlavorCue(
             bubbleText = "Peace held",
             flavorText = "Calm carries",

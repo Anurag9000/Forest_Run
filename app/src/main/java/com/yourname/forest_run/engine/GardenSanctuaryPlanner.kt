@@ -19,6 +19,8 @@ data class GardenSanctuaryState(
     val sanctuaryLine: String = "",
     val carryHomeLine: String = "",
     val arrivalBadge: String = "",
+    val worldOpinionLabel: String = "",
+    val worldOpinionLine: String = "",
     val homeCharacterLabel: String = "",
     val homeCharacterLine: String = "",
     val homecomingConsequences: List<HomecomingConsequence> = emptyList(),
@@ -74,6 +76,7 @@ object GardenSanctuaryPlanner {
         val kindnessStreak = historySnapshot.featuredWarmStreak
         val routeTier = summary?.pacifistRouteTier ?: PacifistRouteTier.NONE
         val routeWorldState = PacifistPresentation.routeWorldState(appContext, routeTier)
+        val worldOpinion = WorldOpinionPresentation.current(appContext, summary = summary, routeTierOverride = routeTier)
         val featuredCostume = CostumeManager.featuredPresentation(appContext)
         val activeCostume = CostumeManager.activePresentation(appContext)
         val peacefulBiomes = PersistentMemoryManager.peacefulBiomes(appContext)
@@ -436,6 +439,15 @@ object GardenSanctuaryPlanner {
         }
 
         val homecomingConsequences = buildList {
+            if (worldOpinion != null) {
+                add(
+                    HomecomingConsequence(
+                        label = "Opinion: ${worldOpinion.label.take(18)}",
+                        line = worldOpinion.line
+                    )
+                )
+            }
+
             when (routeTier) {
                 PacifistRouteTier.PEACEFUL -> add(
                     HomecomingConsequence(
@@ -581,12 +593,14 @@ object GardenSanctuaryPlanner {
                     }
                 )
             )
-        }.distinctBy { it.label }.take(4)
+        }.distinctBy { it.label }.take(5)
 
         return GardenSanctuaryState(
             sanctuaryLine = sanctuaryLine,
             carryHomeLine = carryHomeLine,
             arrivalBadge = arrivalBadge,
+            worldOpinionLabel = worldOpinion?.label.orEmpty(),
+            worldOpinionLine = worldOpinion?.line.orEmpty(),
             homeCharacterLabel = homeCharacterLabel,
             homeCharacterLine = homeCharacterLine,
             homecomingConsequences = homecomingConsequences,

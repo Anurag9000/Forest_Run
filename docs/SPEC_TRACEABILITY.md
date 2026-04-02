@@ -396,7 +396,7 @@ Background assets:
 
 #### Ghost Readability
 
-- `Partial`: ghost playback now delays its reveal at run start and suppresses briefly after impacts so the live runner stays visually dominant.
+- `Partial`: ghost playback now delays its reveal at run start, suppresses briefly after impacts, fades by live-player overlap, suppresses during dense hazard windows, and re-enters smoothly so the live runner stays visually dominant.
 - `TODO`: final on-device threshold tuning and acceptance validation.
 
 ### E. Entity Database (`947e4e1:docs/ENTITY_DATABASE.md`)

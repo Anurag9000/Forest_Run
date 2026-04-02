@@ -30,15 +30,8 @@ Completion standard for removing an item:
 
 ## 2. Emotional Systems
 
-- [ ] Finish `GhostPlayer` logic/policy so it is consistently helpful and never confusing in dense play.
-- [ ] Make the world’s “opinion” of the player feel stronger and more legible across run, rest, and Garden.
-
 ## 3. Authored Return, Fragment, Quote, And Dialogue Coverage
 
-- [ ] Expand `ReturnMomentsSystem` for more mercy-heavy combinations.
-- [ ] Expand `ReturnMomentsSystem` for more clean-streak combinations.
-- [ ] Expand `ReturnMomentsSystem` for more bond-milestone combinations.
-- [ ] Expand `ReturnMomentsSystem` for more absence + mood + bond combinations.
 - [ ] Expand `ReturnMomentsSystem` for more repeated-negative-history combinations.
 - [ ] Expand `StoryFragmentSystem` creature-thought coverage.
 - [ ] Expand `StoryFragmentSystem` weather-linked reflection coverage.

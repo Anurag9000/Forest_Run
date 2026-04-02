@@ -54,21 +54,25 @@ class Eagle(
     private val targetZoneRect = RectF()
     private val diveCorridorRect = RectF()
     private val reticlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(220, 255, 90, 90)
+        color = Color.argb(255, 255, 232, 202)
         style = Paint.Style.STROKE
-        strokeWidth = 4f
+        strokeWidth = 6f
     }
     private val reticleFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(42, 255, 110, 110)
+        color = Color.argb(96, 255, 182, 132)
         style = Paint.Style.FILL
     }
     private val corridorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(120, 255, 126, 126)
+        color = Color.argb(210, 255, 224, 184)
         style = Paint.Style.STROKE
-        strokeWidth = 5f
+        strokeWidth = 8f
     }
     private val corridorFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(30, 255, 120, 120)
+        color = Color.argb(84, 255, 188, 140)
+        style = Paint.Style.FILL
+    }
+    private val eagleGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(86, 255, 220, 160)
         style = Paint.Style.FILL
     }
 
@@ -124,9 +128,9 @@ class Eagle(
     }
 
     override fun draw(canvas: Canvas) {
-        val corridorProgress = if (isLocked) 0.28f else 1f - (lockTimer / lockDuration).coerceIn(0f, 1f) * 0.25f
-        corridorFillPaint.alpha = (30f * corridorProgress).toInt().coerceIn(0, 255)
-        corridorPaint.alpha = (120f * corridorProgress).toInt().coerceIn(0, 255)
+        val corridorProgress = if (isLocked) 0.7f else 1f - (lockTimer / lockDuration).coerceIn(0f, 1f) * 0.18f
+        corridorFillPaint.alpha = (84f * corridorProgress).toInt().coerceIn(36, 255)
+        corridorPaint.alpha = (210f * corridorProgress).toInt().coerceIn(120, 255)
         canvas.drawRoundRect(diveCorridorRect, 18f, 18f, corridorFillPaint)
         canvas.drawRoundRect(diveCorridorRect, 18f, 18f, corridorPaint)
         if (!isLocked) {
@@ -141,6 +145,9 @@ class Eagle(
         }
         canvas.drawRoundRect(targetZoneRect, 18f, 18f, reticleFillPaint)
         canvas.drawRoundRect(targetZoneRect, 18f, 18f, reticlePaint)
+        canvas.drawLine(targetZoneRect.left + 8f, targetY, targetZoneRect.right - 8f, targetY, reticlePaint)
+        canvas.drawLine(targetX, targetZoneRect.top + 8f, targetX, targetZoneRect.bottom - 8f, reticlePaint)
+        canvas.drawCircle(x + birdW * 0.5f, y + birdH * 0.5f, birdW * 0.42f, eagleGlowPaint)
         val drawRect = RectF(x, y, x + birdW, y + birdH)
         sprite.draw(canvas, drawRect)
     }
@@ -187,18 +194,18 @@ class Eagle(
     }
 
     private fun updateCueGeometry() {
-        val zoneHalfW = max(birdW * 0.72f, 34f)
-        val zoneHalfH = max(birdH * 0.60f, 28f)
+        val zoneHalfW = max(birdW * 0.96f, 48f)
+        val zoneHalfH = max(birdH * 0.78f, 40f)
         targetZoneRect.set(
             targetX - zoneHalfW,
             targetY - zoneHalfH,
             targetX + zoneHalfW,
             targetY + zoneHalfH
         )
-        val left = minOf(x + birdW * 0.5f, targetX) - birdW * 0.24f
-        val right = maxOf(x + birdW * 0.5f, targetX) + birdW * 0.24f
-        val top = minOf(y + birdH * 0.5f, targetY) - birdH * 0.24f
-        val bottom = maxOf(y + birdH * 0.5f, targetY) + birdH * 0.24f
+        val left = minOf(x + birdW * 0.5f, targetX) - birdW * 0.46f
+        val right = maxOf(x + birdW * 0.5f, targetX) + birdW * 0.46f
+        val top = minOf(y + birdH * 0.5f, targetY) - birdH * 0.44f
+        val bottom = maxOf(y + birdH * 0.5f, targetY) + birdH * 0.44f
         diveCorridorRect.set(left, top, right, bottom)
     }
 }

@@ -152,10 +152,10 @@ Examples:
 ### Current Status
 
 - Implemented: ghost persistence, persistent memory manager baseline, and costume wardrobe baseline.
-- Partial: ghost readability now delays reveal at run start and suppresses after impacts so it stops crowding the live runner during recovery.
+- Partial: ghost readability now delays reveal at run start, suppresses after impacts, fades by live-player overlap, suppresses during dense hazard windows, and re-enters smoothly so it stops crowding the live runner during recovery.
 - Partial: startup and rest now reuse shared carry-home session copy plus sanctuary-derived badges and ambience so the forest feels more aware between screens instead of only inside the Garden hub.
 - Partial: wardrobe unlock surfacing is now more relationship-aware instead of generic when new bond outfits arrive, and tracked Dog/Owl/Eagle bonds now also resolve into matching milestone wardrobe rewards plus featured sanctuary home-presence lines, bonded milestone reactions, and shared costume-sign / active-costume carry-home surfacing outside the wardrobe.
-- TODO: richer repeat-killer system and final tasteful ghost UX tuning.
+- TODO: richer repeat-killer system and final on-device ghost UX tuning.
 
 ### 4.5 Forest Memory Layer
 

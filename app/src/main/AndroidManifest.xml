@@ -19,7 +19,7 @@
             android:immersive="true"
             android:keepScreenOn="true"
             android:launchMode="singleTask"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="landscape"
             android:windowSoftInputMode="stateHidden|adjustNothing">
 
             <intent-filter>

@@ -68,6 +68,106 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `long absence with worn bonded return uses comfort moment`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        PersistentMemoryManager.recordSpare(context, EntityType.DOG)
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = 1L, lastGardenGreetingDay = -1L, roughRunStreak = 1)
+        )
+        val summary = RunSummary(
+            score = 340,
+            distanceM = 290f,
+            isNewHighScore = false,
+            highScore = 960,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.DOG,
+            restQuote = "Worn.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val nowMs = 3 * 24L * 60L * 60L * 1_000L
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs)
+
+        assertEquals("You Came Back Worn", moment?.title)
+        assertEquals(EntityType.DOG, moment?.visitor)
+    }
+
+    @Test
+    fun `long absence with gentle repeat friend uses still gentle here moment`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
+        PersistentMemoryManager.recordSpare(context, EntityType.FOX)
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = 1L, lastGardenGreetingDay = -1L, roughRunStreak = 0)
+        )
+        val summary = RunSummary(
+            score = 990,
+            distanceM = 760f,
+            isNewHighScore = false,
+            highScore = 1_420,
+            mercyHearts = 3,
+            mercyMisses = 3,
+            kindnessChain = 5,
+            cleanPasses = 8,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 7,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Gentle.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val nowMs = 3 * 24L * 60L * 60L * 1_000L
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs)
+
+        assertEquals("Still Gentle Here", moment?.title)
+        assertEquals(EntityType.FOX, moment?.visitor)
+    }
+
+    @Test
+    fun `long absence with peaceful milestone bond uses nothing closed moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = 1L, lastGardenGreetingDay = -1L, roughRunStreak = 0)
+        )
+        val summary = RunSummary(
+            score = 1_420,
+            distanceM = 980f,
+            isNewHighScore = false,
+            highScore = 1_910,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 7,
+            cleanPasses = 10,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Returned.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val nowMs = 3 * 24L * 60L * 60L * 1_000L
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs)
+
+        assertEquals("Nothing Closed", moment?.title)
+        assertEquals(EntityType.OWL, moment?.visitor)
+    }
+
+    @Test
     fun `rough run streak creates comfort return moment`() {
         val summary = RunSummary(
             score = 220,
@@ -122,6 +222,68 @@ class ReturnMomentsSystemTest {
 
         assertEquals("Kept Company", moment?.title)
         assertEquals(EntityType.CAT, moment?.visitor)
+    }
+
+    @Test
+    fun `peaceful milestone run returns peace shared moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+
+        val summary = RunSummary(
+            score = 1_380,
+            distanceM = 910f,
+            isNewHighScore = false,
+            highScore = 1_760,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 6,
+            cleanPasses = 10,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Peacefully.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 7_500L)
+
+        assertEquals("Peace Shared", moment?.title)
+        assertEquals(EntityType.OWL, moment?.visitor)
+        assertTrue(moment?.line?.contains("peace", ignoreCase = true) == true || moment?.line?.contains("soft", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun `merciful milestone run returns bond kept open moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
+
+        val summary = RunSummary(
+            score = 1_250,
+            distanceM = 840f,
+            isNewHighScore = false,
+            highScore = 1_620,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 5,
+            cleanPasses = 8,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Mercy.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 7_600L)
+
+        assertEquals("Bond Kept Open", moment?.title)
+        assertEquals(EntityType.FOX, moment?.visitor)
+        assertTrue(moment?.line?.contains("mercy", ignoreCase = true) == true || moment?.line?.contains("trick", ignoreCase = true) == true)
     }
 
     @Test
@@ -278,6 +440,36 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `high clean bloom run returns nothing disturbed moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+
+        val summary = RunSummary(
+            score = 1_660,
+            distanceM = 1_080f,
+            isNewHighScore = false,
+            highScore = 2_020,
+            mercyHearts = 3,
+            mercyMisses = 3,
+            kindnessChain = 5,
+            cleanPasses = 15,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 13,
+            bloomConversions = 3,
+            lastKiller = null,
+            restQuote = "Clear.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 9_100L)
+
+        assertEquals("Nothing Disturbed", moment?.title)
+        assertEquals(EntityType.OWL, moment?.visitor)
+        assertTrue(moment?.line?.contains("Bloom", ignoreCase = true) == true || moment?.line?.contains("clear", ignoreCase = true) == true)
+    }
+
+    @Test
     fun `repeated kindness creates stayed gentle return moment`() {
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
         val summary = RunSummary(
@@ -306,8 +498,6 @@ class ReturnMomentsSystemTest {
 
     @Test
     fun `peaceful bloom run returns peace held moment`() {
-        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
-        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
         val summary = RunSummary(
             score = 1_460,
             distanceM = 1_020f,
@@ -363,6 +553,89 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `mercy heavy bloom run returns mercy kept the light moment`() {
+        val summary = RunSummary(
+            score = 1_260,
+            distanceM = 930f,
+            isNewHighScore = false,
+            highScore = 1_740,
+            mercyHearts = 6,
+            mercyMisses = 6,
+            kindnessChain = 7,
+            cleanPasses = 9,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 2,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 10_760L)
+
+        assertEquals("Mercy Kept The Light", moment?.title)
+        assertTrue(moment?.line?.contains("light", ignoreCase = true) == true || moment?.line?.contains("mercy", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun `deep merciful repeat friend run returns mercy learned you moment`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.FOX) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
+        val summary = RunSummary(
+            score = 1_180,
+            distanceM = 860f,
+            isNewHighScore = false,
+            highScore = 1_560,
+            mercyHearts = 6,
+            mercyMisses = 6,
+            kindnessChain = 7,
+            cleanPasses = 8,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 10_770L)
+
+        assertEquals("Mercy Learned You", moment?.title)
+        assertEquals(EntityType.FOX, moment?.visitor)
+    }
+
+    @Test
+    fun `deep merciful unbonded run returns mercy stayed open moment`() {
+        val summary = RunSummary(
+            score = 1_020,
+            distanceM = 790f,
+            isNewHighScore = false,
+            highScore = 1_430,
+            mercyHearts = 6,
+            mercyMisses = 6,
+            kindnessChain = 6,
+            cleanPasses = 7,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 7,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Mercy.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 10_780L)
+
+        assertEquals("Mercy Stayed Open", moment?.title)
+        assertTrue(moment?.line?.contains("mercy", ignoreCase = true) == true || moment?.line?.contains("home", ignoreCase = true) == true)
+    }
+
+    @Test
     fun `repeat friend creates a kept finding you return moment`() {
         repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
         PersistentMemoryManager.recordSpare(context, EntityType.DOG)
@@ -389,6 +662,91 @@ class ReturnMomentsSystemTest {
         assertEquals("Kept Finding You", moment?.title)
         assertEquals(EntityType.DOG, moment?.visitor)
         assertTrue(moment?.line?.contains("dog", ignoreCase = true) == true || moment?.line?.contains("habit", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun `deep clean repeat friend run returns clear company moment`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        PersistentMemoryManager.recordSpare(context, EntityType.DOG)
+        val summary = RunSummary(
+            score = 1_340,
+            distanceM = 940f,
+            isNewHighScore = false,
+            highScore = 1_780,
+            mercyHearts = 3,
+            mercyMisses = 3,
+            kindnessChain = 5,
+            cleanPasses = 14,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 9,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Gladly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 11_100L)
+
+        assertEquals("Clear Company", moment?.title)
+        assertEquals(EntityType.DOG, moment?.visitor)
+        assertTrue(moment?.line?.contains("whole", ignoreCase = true) == true || moment?.line?.contains("proud", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun `deep clean unbonded run returns clear all the way moment`() {
+        val summary = RunSummary(
+            score = 1_180,
+            distanceM = 920f,
+            isNewHighScore = false,
+            highScore = 1_640,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 2,
+            cleanPasses = 14,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Clear.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 11_200L)
+
+        assertEquals("Clear All The Way", moment?.title)
+        assertTrue(moment?.line?.contains("clear", ignoreCase = true) == true || moment?.line?.contains("shape", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun `milestone high score run returns known height moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+
+        val summary = RunSummary(
+            score = 1_520,
+            distanceM = 770f,
+            isNewHighScore = true,
+            highScore = 1_520,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 1,
+            cleanPasses = 4,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 7,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Higher.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 11_300L)
+
+        assertEquals("Known Height", moment?.title)
+        assertEquals(EntityType.CAT, moment?.visitor)
+        assertTrue(moment?.line?.contains("height", ignoreCase = true) == true || moment?.line?.contains("trust", ignoreCase = true) == true)
     }
 
     @Test

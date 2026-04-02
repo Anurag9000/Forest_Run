@@ -81,7 +81,7 @@ Expected qualities:
 ### Current Status
 
 - Implemented: most core player states and apex feel.
-- Partial: face layer exists, but stronger authored feel and final ghost/live-player tuning are still needed.
+- Partial: face layer exists, but stronger authored feel is still needed; ghost/live-player visibility policy is now centralized and context-aware.
 
 ## 5. Entity System
 
@@ -204,7 +204,7 @@ Expected qualities:
 - Implemented: `ForestMoodSystem` now exists as a first-class runtime and persistence layer.
 - Implemented: `RelationshipArcSystem` now exists as a first-class runtime and persistence layer for Cat, Fox, Wolf, Dog, Owl, and Eagle.
 - Partial: `ReturnMomentsSystem` now exists in baseline form.
-- Partial: `ReturnMomentsSystem` now also surfaces repeated-harm caution beats, strained-bond `Held At A Distance` returns, repeat-killer `Same Shadow` returns, repeated-kindness `Stayed Gentle` returns, repeat-friend `Kept Finding You` returns, long-absence repeat-friend `Still Here` returns, merciful repeat-friend recognition, peaceful-Bloom hush returns, cleaner familiar-return beats, kind/merciful/peaceful route returns, milestone-bond warmth, Bloom-heavy afterglow returns, and richer absence-sensitive Garden returns; broader authored combinations still need expansion.
+- Partial: `ReturnMomentsSystem` now also surfaces repeated-harm caution beats, strained-bond `Held At A Distance` returns, repeat-killer `Same Shadow` returns, repeated-kindness `Stayed Gentle` returns, repeat-friend `Kept Finding You` returns, long-absence repeat-friend `Still Here` returns, long-absence worn/gentle/milestone-bond returns, merciful repeat-friend recognition, mercy-heavy Bloom returns, deeper mercy-without-bond returns, peaceful-Bloom hush returns, deeper clean-Bloom returns, stronger deep-clean repeat-friend/homecoming returns, milestone-bond peaceful returns, milestone-bond merciful returns, milestone-bond standout-homecoming returns, kind/merciful/peaceful route returns, milestone-bond warmth, Bloom-heavy afterglow returns, and richer absence-sensitive Garden returns; broader authored combinations still need expansion.
 - Implemented: `ReturnMomentsSystem` now also exposes a non-mutating preview path so rest and startup flow can foreshadow Garden return beats without consuming return-state persistence.
 - Partial: relationship stages are now persisted and surfaced in creature dialogue, encounter tuning, Garden strongest-bond presentation, bonded visitors, sanctuary traces, baseline milestone keepsake rewards, featured home-presence/carry-home lines, named milestone bond-ritual lines, milestone-reactive run/Garden cueing, strained-bond carry-home lines, and tracked live encounter cue swaps for Cat/Fox/Wolf/Dog/Owl/Eagle, now including shared positive-familiarity tiers that deepen warm pass/spare/cue/return language from repeated positive history; broader stage consequences still need expansion.
 - Partial: strained relationship history is now centralized enough to drive live cue swaps, return lines, sanctuary traces, and fragment selection, and its authored output now differentiates disappointment, fear, and tension through a shared strained-history profile instead of generic caution alone; broader downstream world-state consequence still needs expansion.
@@ -213,7 +213,7 @@ Expected qualities:
 - Implemented: `GardenSanctuaryPlanner` now derives visible sanctuary ambience, bond traces, repeated-harm caution traces, strained-bond `Watchful Distance` traces, repeated-kindness trust traces, repeat-friend `Shared Path` traces, arrival badges, mist bands, lantern glows, ground-light carry-home cues, a persistent home-character label/line, and explicit shared homecoming consequences from mood, route, bond, history, and world state.
 - Implemented: `SessionArcComposer` now centralizes authored startup, Garden-arrival, and rest carry-home copy so the macro loop uses shared emotional state instead of disconnected screen-local strings, while menu/rest/Garden visuals now read from the same sanctuary state.
 - Implemented: `ReadabilityProfile` now centralizes spawn pacing plus readability baselines across flora, trees, birds, and animals.
-- Partial: `PacifistTracker` / `PacifistPresentation` now classify and present `Kind`, `Merciful`, and `Peaceful` routes, named peaceful-biome signs, and persisted route-world-state signs derived from cumulative route history instead of only last-run route text; broader downstream world-state consequence still needs expansion.
+- Partial: `PacifistTracker` / `PacifistPresentation` now classify and present `Kind`, `Merciful`, and `Peaceful` routes, named peaceful-biome signs, persisted route-world-state signs derived from cumulative route history instead of only last-run route text, and a shared world-opinion presentation layer; broader downstream world-state consequence still needs expansion.
 - Implemented: `FloraEncounterFlavor` now centralizes authored flora payoff text so lure/rhythm/window feedback stops living as scattered fallback strings.
 - Implemented: `TreeEncounterFlavor` now centralizes authored tree payoff text so curtain/canopy/gap/gust feedback stays consistent instead of scattering across tree classes.
 - Implemented: `BirdEncounterFlavor` now centralizes authored warning/pass text for the non-relationship bird family instead of leaving bird payoff as scattered fallback strings.
@@ -270,7 +270,7 @@ Expected qualities:
 
 ### Current Status
 
-- Partial: ghost playback now delays its reveal at run start and briefly suppresses after impacts so the live player remains visually dominant in the most confusing moments.
+- Partial: ghost playback now delays its reveal at run start, briefly suppresses after impacts, fades by live-player overlap, suppresses during dense hazard windows, and re-enters smoothly from a shared centralized policy; only final device-proof tuning remains.
 - TODO: finish final on-device tuning for distance thresholds, fade timing, and overall readability under dense encounters.
 
 ## 15. Quiet Story Fragment Authoring

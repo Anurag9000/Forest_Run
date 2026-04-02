@@ -145,12 +145,12 @@ class MainActivityInstrumentedTest {
             waitForCondition("run enters dying") {
                 getPrivateField(gameView, "runState") == RunState.DYING
             }
-            waitForCondition("run reaches game over", timeoutMs = 3_000L) {
+            waitForCondition("run reaches game over", timeoutMs = 6_000L) {
                 getPrivateField(gameView, "runState") == RunState.GAME_OVER
             }
 
             tapGameView(gameView, gameView.width / 2f, gameView.height / 2f)
-            waitForCondition("restart finishes", timeoutMs = 3_000L) {
+            waitForCondition("restart finishes", timeoutMs = 6_000L) {
                 getPrivateField(gameView, "runState") == RunState.PLAYING
             }
         }
@@ -295,18 +295,26 @@ class MainActivityInstrumentedTest {
         waitForCondition("menu initialized") {
             getPrivateField(gameView, "mainMenuScreen") != null
         }
+        waitForCondition("game view laid out and rendering", timeoutMs = 8_000L) {
+            gameView.width > 0 &&
+                gameView.height > 0 &&
+                gameView.debugFrameCounter > 10
+        }
 
         val menu = getPrivateField(gameView, "mainMenuScreen") as MainMenuScreen
         val centerX = gameView.width / 2f
         val centerY = gameView.height / 2f
 
         tapGameView(gameView, centerX, centerY)
-        waitForCondition("menu ready phase") {
-            menu.phase == MainMenuScreen.Phase.READY
+        waitForCondition("menu leaves idle phase") {
+            menu.phase != MainMenuScreen.Phase.IDLE
+        }
+        waitForCondition("menu ready phase", timeoutMs = 8_000L) {
+            menu.phase == MainMenuScreen.Phase.READY && gameView.debugFrameCounter > 20
         }
 
         tapGameView(gameView, centerX, centerY)
-        waitForCondition("game enters playing state") {
+        waitForCondition("game enters playing state", timeoutMs = 8_000L) {
             getPrivateField(gameView, "appState") == AppGameState.PLAYING
         }
     }

@@ -59,7 +59,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 - PARTIAL: current tone now affects Garden palette, menu/rest/Garden labeling, sanctuary ambience, visible carry-home framing, sanctuary arrival-badge presentation, and explicit homecoming consequence chips/cards; deepen creature warmth and broader presentation response.
 - PARTIAL: repeated panic or repeated harm from the same creature now surfaces through cautious sanctuary traces, strained-bond `Held At A Distance` returns, stronger `Same Shadow` repeat-killer beats, Garden caution/strained reflections, and save-backed tender streaks; deepen broader creature warmth and world-state response.
 - PARTIAL: repeated kindness can now brighten the sanctuary through added ambience, bloom patches, trust traces, repeat-friend `Shared Path` traces, warmer rest fragments, dedicated `Stayed Gentle` / `Kept Finding You` returns, stronger lantern/ground-glow atmosphere, and named peaceful-biome carry-home signs; deepen the effect and tie it more directly to repeated creature-specific history.
-- TODO: ensure the player can feel that the world has formed an opinion about how they play.
+- DONE: the world now resolves one explicit opinion from mood, route, and repeated-history state, and that opinion now surfaces through run milestone feedback plus dedicated rest/Garden homecoming presentation instead of only ambience and separate chips.
 
 ### Named Relationship Arcs
 
@@ -74,7 +74,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 
 - DONE: added baseline first-run-of-day greeting logic, long-absence recognition, rough-run comfort returns, and milestone-sensitive Garden messages.
 - PARTIAL: Garden return moments now use bonded visitors and stronger mercy/clean-play/high-score hooks, including milestone-bond warmth, Bloom-linger, and stronger absence-sensitive returns.
-- PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, Bloom-heavy runs, repeated tenderness, repeated kindness streaks, repeat-friend familiarity, long-absence familiarity, repeat-killer patterns, and explicit kind/merciful/peaceful route states; continue expanding authored combinations.
+- PARTIAL: return moments now bind more deeply to many mercies, clean runs, stronger bonds, Bloom-heavy runs, repeated tenderness, repeated kindness streaks, repeat-friend familiarity, long-absence familiarity, repeat-killer patterns, and explicit kind/merciful/peaceful route states, now including distinct mercy-heavy Bloom, mercy-with-familiarity, mercy-without-bond, deeper clean-Bloom, stronger deep-clean repeat-friend/homecoming, milestone-bond peaceful returns, milestone-bond merciful returns, milestone-bond standout-homecoming returns, and long-absence mood-sensitive bond returns instead of relying only on generic route, clean-return, or generic `Welcome Back` beats; continue expanding authored combinations.
 - DONE: rest flow can now preview the likely Garden return beat without mutating save state, so return continuity can be written before the actual hub transition.
 - TODO: ensure return sessions feel intimate instead of mechanically identical.
 
@@ -124,7 +124,7 @@ For the current non-hardware implementation burn-down list, use [docs/ACTIVE_IMP
 ## Architecture TODOs
 
 - PARTIAL: dedicated readability tuning layer now exists via `ReadabilityProfile`, including central spawn pacing plus full flora, tree, bird, and animal sizing/staging/mercy baselines; final device retuning is still required.
-- PARTIAL: ghost presentation now uses delayed reveal and post-impact suppression so it stops competing with the live runner at the most confusing moments; final device-proof tuning is still required.
+- PARTIAL: ghost presentation now uses delayed reveal, post-impact suppression, overlap-aware fade near the live runner, temporary dense-hazard suppression, and smooth re-entry so it stays motivational instead of competing visually; only final device-proof tuning remains.
 - PARTIAL: persistent encounter memory architecture exists; broaden it into richer payoff and authoring tools.
 - DONE: costume overlay architecture baseline exists.
 - PARTIAL: pacifist and friendship tracking systems now also persist cumulative route history and expose shared route-world-state signs across menu/rest/Garden/game-over; broaden them further into full mercy-route architecture.
