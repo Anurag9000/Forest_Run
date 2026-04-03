@@ -1,0 +1,68 @@
+{
+  "screenshots": [
+    {
+      "order": 1,
+      "raw_file": "01-opening.png",
+      "final_file": "01-opening.png",
+      "scenario": "OPENING_READABILITY",
+      "title": "Opening Readability",
+      "purpose": "Readable first-run scene and startup atmosphere."
+    },
+    {
+      "order": 2,
+      "raw_file": "02-bloom.png",
+      "final_file": "02-bloom.png",
+      "scenario": "BLOOM_SHOWCASE",
+      "title": "Bloom",
+      "purpose": "Bloom transformation, HUD state, and power surge."
+    },
+    {
+      "order": 3,
+      "raw_file": "03-ghost.png",
+      "final_file": "03-ghost.png",
+      "scenario": "GHOST_READABILITY",
+      "title": "Ghost Readability",
+      "purpose": "Helpful ghost guidance without visual clutter."
+    },
+    {
+      "order": 4,
+      "raw_file": "04-rest.png",
+      "final_file": "04-rest.png",
+      "scenario": "REST_LOOP",
+      "title": "Rest Loop",
+      "purpose": "Restorative rest scene and carry-home tone."
+    },
+    {
+      "order": 5,
+      "raw_file": "05-cat.png",
+      "final_file": "05-cat.png",
+      "scenario": "CAT_KINDNESS",
+      "title": "Cat Kindness",
+      "purpose": "Warm kindness payoff during ordinary play."
+    },
+    {
+      "order": 6,
+      "raw_file": "06-dog.png",
+      "final_file": "06-dog.png",
+      "scenario": "DOG_BUDDY",
+      "title": "Dog Buddy",
+      "purpose": "Buddy-mode escort payoff and motion."
+    },
+    {
+      "order": 7,
+      "raw_file": "07-owl.png",
+      "final_file": "07-owl.png",
+      "scenario": "OWL_DIVE",
+      "title": "Owl Dive",
+      "purpose": "Night readability and memory-rich encounter tone."
+    },
+    {
+      "order": 8,
+      "raw_file": "08-jacaranda.png",
+      "final_file": "08-jacaranda.png",
+      "scenario": "JACARANDA_PETALS",
+      "title": "Jacaranda Petals",
+      "purpose": "Scenic biome identity and petal spectacle."
+    }
+  ]
+}

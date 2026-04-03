@@ -24,6 +24,13 @@ import android.util.Log
  */
 object SfxManager {
 
+    internal enum class BloomSfxEvent { READY, CONVERT, FADE }
+
+    internal data class BloomSfxProfile(
+        val volume: Float,
+        val rate: Float
+    )
+
     private const val TAG       = "SfxManager"
     private const val MAX_STREAMS = 8
     private const val PRIORITY  = 1
@@ -40,6 +47,9 @@ object SfxManager {
     private var idScreech       = 0
     private var idHowl          = 0
     private var idBloomActivate = 0
+    private var idBloomReady    = 0
+    private var idBloomConvert  = 0
+    private var idBloomFade     = 0
     private var idMercyMiss     = 0
     private var idHit           = 0
 
@@ -73,6 +83,9 @@ object SfxManager {
         idScreech       = load("sfx_screech")
         idHowl          = load("sfx_howl")
         idBloomActivate = load("sfx_bloom")
+        idBloomReady    = load("sfx_bloom_ready")
+        idBloomConvert  = load("sfx_bloom_convert")
+        idBloomFade     = load("sfx_bloom_fade")
         idMercyMiss     = load("sfx_mercy_miss")
         idHit           = load("sfx_hit")
     }
@@ -93,6 +106,18 @@ object SfxManager {
     fun playScreech()       = play(idScreech,       1.0f)
     fun playHowl()          = play(idHowl,          1.0f)
     fun playBloomActivate() = play(idBloomActivate, 1.0f)
+    fun playBloomReady() {
+        val profile = buildBloomSfxProfile(BloomSfxEvent.READY, 0)
+        play(if (idBloomReady != 0) idBloomReady else idSeedPing, profile.volume, profile.rate)
+    }
+    fun playBloomConvert(conversionsInBurst: Int) {
+        val profile = buildBloomSfxProfile(BloomSfxEvent.CONVERT, conversionsInBurst)
+        play(if (idBloomConvert != 0) idBloomConvert else idSeedPing, profile.volume, profile.rate)
+    }
+    fun playBloomFade(conversionsInBurst: Int) {
+        val profile = buildBloomSfxProfile(BloomSfxEvent.FADE, conversionsInBurst)
+        play(if (idBloomFade != 0) idBloomFade else idBloomActivate, profile.volume, profile.rate)
+    }
     fun playMercyMiss()     = play(idMercyMiss,     0.6f)
     fun playHit()           = play(idHit,           1.0f)
 
@@ -101,5 +126,26 @@ object SfxManager {
     fun destroy() {
         pool?.release()
         pool = null
+    }
+}
+
+internal fun buildBloomSfxProfile(
+    event: SfxManager.BloomSfxEvent,
+    conversionsInBurst: Int
+): SfxManager.BloomSfxProfile {
+    val burstLift = conversionsInBurst.coerceAtLeast(0).coerceAtMost(6)
+    return when (event) {
+        SfxManager.BloomSfxEvent.READY -> SfxManager.BloomSfxProfile(
+            volume = 0.72f,
+            rate = 1.12f
+        )
+        SfxManager.BloomSfxEvent.CONVERT -> SfxManager.BloomSfxProfile(
+            volume = (0.70f + burstLift * 0.05f).coerceAtMost(1f),
+            rate = (1.02f + burstLift * 0.035f).coerceAtMost(1.28f)
+        )
+        SfxManager.BloomSfxEvent.FADE -> SfxManager.BloomSfxProfile(
+            volume = (0.62f + burstLift * 0.03f).coerceAtMost(0.86f),
+            rate = (0.90f + burstLift * 0.02f).coerceAtMost(1.08f)
+        )
     }
 }

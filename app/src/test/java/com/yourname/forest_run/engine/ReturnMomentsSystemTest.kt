@@ -319,6 +319,38 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `harsh repeat killer history escalates into already bracing return moment`() {
+        repeat(4) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = 10_000L, lastGardenGreetingDay = -1L, roughRunStreak = 2)
+        )
+        val summary = RunSummary(
+            score = 260,
+            distanceM = 230f,
+            isNewHighScore = false,
+            highScore = 900,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 12_250L)
+
+        assertEquals("You Were Already Bracing", moment?.title)
+        assertEquals(EntityType.WOLF, moment?.visitor)
+        assertTrue(moment?.line?.contains("bracing", ignoreCase = true) == true || moment?.line?.contains("howl", ignoreCase = true) == true)
+    }
+
+    @Test
     fun `strained tracked bond creates held at a distance return moment`() {
         repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
@@ -353,6 +385,40 @@ class ReturnMomentsSystemTest {
     }
 
     @Test
+    fun `rough strained bond escalates into nothing in you unclenched return moment`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = 10_000L, lastGardenGreetingDay = -1L, roughRunStreak = 2)
+        )
+        val summary = RunSummary(
+            score = 340,
+            distanceM = 285f,
+            isNewHighScore = false,
+            highScore = 930,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Tense.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 12_750L)
+
+        assertEquals("Nothing In You Unclenched", moment?.title)
+        assertEquals(EntityType.WOLF, moment?.visitor)
+        assertTrue(moment?.line?.contains("tense", ignoreCase = true) == true || moment?.line?.contains("unclenching", ignoreCase = true) == true || moment?.line?.contains("bracing", ignoreCase = true) == true)
+    }
+
+    @Test
     fun `repeat killer history escalates into same shadow return moment`() {
         repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
         val summary = RunSummary(
@@ -378,6 +444,38 @@ class ReturnMomentsSystemTest {
         assertEquals("Same Shadow", moment?.title)
         assertEquals(EntityType.WOLF, moment?.visitor)
         assertTrue(moment?.line?.contains("howl", ignoreCase = true) == true || moment?.line?.contains("same", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun `deep repeated harm rough streak returns it came home with you moment`() {
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.OWL) }
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = 10_000L, lastGardenGreetingDay = -1L, roughRunStreak = 3)
+        )
+        val summary = RunSummary(
+            score = 310,
+            distanceM = 260f,
+            isNewHighScore = false,
+            highScore = 880,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.OWL,
+            restQuote = "Tight.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val moment = ReturnMomentsSystem.resolveGardenMoment(context, summary, nowMs = 13_250L)
+
+        assertEquals("It Came Home With You", moment?.title)
+        assertEquals(EntityType.OWL, moment?.visitor)
+        assertTrue(moment?.line?.contains("shadow", ignoreCase = true) == true || moment?.line?.contains("home", ignoreCase = true) == true)
     }
 
     @Test

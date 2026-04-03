@@ -213,6 +213,13 @@ class Player(
     // -----------------------------------------------------------------------
     private var bloomAuraEmitter: ParticleEmitter? = null
     private var bloomTrailEmitter: ParticleEmitter? = null
+    private var bloomPowerScaleBoost = 0f
+    private var bloomPowerAuraAlpha = 0
+    private val bloomPowerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(0, 255, 242, 188)
+        style = Paint.Style.FILL
+    }
+    private var presentationElapsed = 0f
 
     fun activateBloom() {
         isInvincible = true
@@ -230,6 +237,8 @@ class Player(
     fun deactivateBloom() {
         isInvincible = false
         bloomTimer = 0f
+        bloomPowerScaleBoost = 0f
+        bloomPowerAuraAlpha = 0
         bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomTrailEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomAuraEmitter = null
@@ -247,6 +256,8 @@ class Player(
         y         = groundY - BASE_HEIGHT
         transitionTo(PlayerState.REST)
         isInvincible = false
+        bloomPowerScaleBoost = 0f
+        bloomPowerAuraAlpha = 0
         // Stop bloom aura if it was active
         bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomTrailEmitter?.let { ParticleManager.removeContinuous(it) }
@@ -268,6 +279,9 @@ class Player(
         y = groundY - BASE_HEIGHT
         velocityY = 0f
         isInvincible = false
+        presentationElapsed = 0f
+        bloomPowerScaleBoost = 0f
+        bloomPowerAuraAlpha = 0
         bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomTrailEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomAuraEmitter = null
@@ -279,6 +293,7 @@ class Player(
     // Update (called every game frame)
     // -----------------------------------------------------------------------
     fun update(deltaTime: Float, scrollSpeed: Float = 400f) {
+        presentationElapsed += deltaTime
         stateTimer += deltaTime
         when (state) {
             PlayerState.REST    -> { /* frozen */ }
@@ -416,6 +431,11 @@ class Player(
         }
     }
 
+    fun setBloomPowerPresentation(scaleBoost: Float, auraAlpha: Int) {
+        bloomPowerScaleBoost = scaleBoost.coerceIn(0f, 0.12f)
+        bloomPowerAuraAlpha = auraAlpha.coerceIn(0, 255)
+    }
+
     private fun checkLanding() {
         if (y >= groundY - BASE_HEIGHT) {
             y         = groundY - BASE_HEIGHT
@@ -482,16 +502,39 @@ class Player(
     fun draw(canvas: Canvas) {
         val cx = x + BASE_WIDTH  / 2f   // horizontal centre
         val fy = y + BASE_HEIGHT         // feet Y (squash/stretch pivot)
+        val bloomScale = if (state == PlayerState.BLOOM || bloomPowerScaleBoost > 0f) {
+            1f + bloomPowerScaleBoost
+        } else {
+            1f
+        }
+        val motion = PlayerSecondaryMotion.resolve(
+            state = state,
+            velocityY = velocityY,
+            bodyHeight = BASE_HEIGHT,
+            elapsed = presentationElapsed,
+            isInvincible = isInvincible
+        )
 
         // The imported real atlas already contains its own vertical body motion.
-        val yOffset = 0f
+        val yOffset = motion.bodyLiftPx
+
+        if (bloomPowerAuraAlpha > 0 && (state == PlayerState.BLOOM || isInvincible)) {
+            bloomPowerPaint.alpha = bloomPowerAuraAlpha
+            canvas.drawCircle(
+                cx,
+                y + BASE_HEIGHT * 0.48f,
+                BASE_WIDTH * (0.56f + bloomPowerScaleBoost * 1.9f),
+                bloomPowerPaint
+            )
+        }
 
         canvas.save()
-        canvas.scale(scaleX, scaleY, cx, fy)
+        canvas.rotate(motion.bodyTiltDegrees, cx, fy)
+        canvas.scale(scaleX * bloomScale, scaleY * bloomScale, cx, fy)
         drawRect.set(x, y + yOffset, x + BASE_WIDTH, y + BASE_HEIGHT + yOffset)
         currentAnimation.draw(canvas, drawRect)
-        costumeOverlay.draw(canvas, drawRect, costumeStyle, state, isInvincible)
-        faceManager.draw(canvas, drawRect, state, velocityY, isInvincible)
+        costumeOverlay.draw(canvas, drawRect, costumeStyle, state, isInvincible, motion)
+        faceManager.draw(canvas, drawRect, state, velocityY, isInvincible, motion)
         canvas.restore()
     }
 

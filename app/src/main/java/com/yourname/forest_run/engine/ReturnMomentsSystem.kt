@@ -120,6 +120,16 @@ object ReturnMomentsSystem {
                         ReturnMoment("Welcome Back", RelationshipArcSystem.lineFor(appContext, it, RelationshipArcSystem.Event.RETURN), it)
                     } ?: ReturnMoment("Welcome Back", "The willow kept your place.", EntityType.CAT)
                 }
+            repeatedKiller != null &&
+                repeatedKiller == repeatedHarmCreature &&
+                (summary?.hitsTaken ?: 0) > 0 &&
+                previous.roughRunStreak >= 2 &&
+                PersistentMemoryManager.getHitCount(appContext, repeatedKiller) >= 4 ->
+                ReturnMoment(
+                    "You Were Already Bracing",
+                    repeatedKillerPressureLine(repeatedKiller),
+                    if (RelationshipArcSystem.isTracked(repeatedKiller)) repeatedKiller else bondedVisitor
+                )
             repeatedKiller != null && repeatedKiller == repeatedHarmCreature &&
                 (summary?.hitsTaken ?: 0) > 0 &&
                 PersistentMemoryManager.getHitCount(appContext, repeatedKiller) >= 3 ->
@@ -129,12 +139,28 @@ object ReturnMomentsSystem {
                     if (RelationshipArcSystem.isTracked(repeatedKiller)) repeatedKiller else bondedVisitor
                 )
             strainedBond != null &&
+                previous.roughRunStreak >= 2 &&
+                ((summary?.hitsTaken ?: 0) > 0 || summary?.lastKiller == strainedBond) ->
+                ReturnMoment(
+                    "Nothing In You Unclenched",
+                    strainedBondPressureLine(strainedBond),
+                    strainedBond
+                )
+            strainedBond != null &&
                 (summary?.hitsTaken ?: 0) > 0 &&
                 (summary?.lastKiller == strainedBond || previous.roughRunStreak >= 1) ->
                 ReturnMoment(
                     "Held At A Distance",
                     RelationshipArcSystem.strainedBondLine(appContext, strainedBond),
                     strainedBond
+                )
+            repeatedHarmCreature != null &&
+                previous.roughRunStreak >= 3 &&
+                ((summary?.hitsTaken ?: 0) > 0 || summary?.forestMood == ForestMood.FEARFUL) ->
+                ReturnMoment(
+                    "It Came Home With You",
+                    repeatedHarmWeightLine(repeatedHarmCreature),
+                    if (RelationshipArcSystem.isTracked(repeatedHarmCreature)) repeatedHarmCreature else bondedVisitor
                 )
             repeatedHarmCreature != null && ((summary?.hitsTaken ?: 0) > 0 || previous.roughRunStreak >= 2) ->
                 ReturnMoment(
@@ -531,6 +557,46 @@ object ReturnMomentsSystem {
         EntityType.CACTUS, EntityType.LILY_OF_VALLEY, EntityType.HYACINTH, EntityType.EUCALYPTUS,
         EntityType.VANILLA_ORCHID, EntityType.WEEPING_WILLOW, EntityType.JACARANDA, EntityType.BAMBOO,
         EntityType.CHERRY_BLOSSOM -> "The forest keeps returning to the same shape of trouble until you answer it differently."
+    }
+
+    private fun repeatedKillerPressureLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat had you bracing for the same quiet mistake before it even reached you."
+        EntityType.FOX -> "The fox now feels like a test your body starts failing before the trick fully arrives."
+        EntityType.WOLF -> "The same howl had you tightening early, like the grove reached your nerves before it reached your path."
+        EntityType.DOG -> "The bark-line came back already inside your shoulders, like you knew the rush before it happened."
+        EntityType.HEDGEHOG -> "The thorns felt familiar enough that you were already protecting the old wound instead of meeting the new hop."
+        EntityType.DUCK -> "The duck's low surprise had you preparing for the old miss before the lane even answered."
+        EntityType.TIT, EntityType.CHICKADEE -> "The flock reached you as a memory first and a motion second."
+        EntityType.OWL -> "The owl's shadow had you bracing long before the dive finished choosing you."
+        EntityType.EAGLE -> "The mark felt like it landed in memory before it landed in the sky."
+        EntityType.CACTUS, EntityType.LILY_OF_VALLEY, EntityType.HYACINTH, EntityType.EUCALYPTUS,
+        EntityType.VANILLA_ORCHID, EntityType.WEEPING_WILLOW, EntityType.JACARANDA, EntityType.BAMBOO,
+        EntityType.CHERRY_BLOSSOM -> "The forest shape that kept hurting you was already in your body before it was back on the path."
+    }
+
+    private fun strainedBondPressureLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat kept even its nearness edged enough that you came home without ever really unclenching."
+        EntityType.FOX -> "The fox left the whole return feeling like a bright line you still did not trust yourself to answer."
+        EntityType.WOLF -> "The wolf made the watch feel so tense you brought the bracing all the way home with you."
+        EntityType.DOG -> "Even the dog's noise felt like something you had to survive before you could hear it as welcome again."
+        EntityType.OWL -> "The owl left the dark edge so watchful that nothing in you softened back down on the way home."
+        EntityType.EAGLE -> "The eagle held the sky tense enough that the return never fully left the marked place."
+        else -> "The bond stayed strained enough that the whole return came home braced."
+    }
+
+    private fun repeatedHarmWeightLine(type: EntityType): String = when (type) {
+        EntityType.CAT -> "The cat's lesson followed you home like the quiet itself had turned careful."
+        EntityType.FOX -> "The fox left your timing carrying more apology than ease."
+        EntityType.WOLF -> "The grove came back with you still sounding like it expected you to flinch."
+        EntityType.DOG -> "The dog's rush still lived in your shoulders after the path had already ended."
+        EntityType.HEDGEHOG -> "The thorns followed you home as caution instead of only pain."
+        EntityType.DUCK -> "The duck's low lane stayed in your body longer than the run did."
+        EntityType.TIT, EntityType.CHICKADEE -> "The flock never really left your nerves when the run ended."
+        EntityType.OWL -> "The owl's shadow came home with you and kept the night tighter than it needed to be."
+        EntityType.EAGLE -> "The eagle's mark lingered past the sky and into the way home felt."
+        EntityType.CACTUS, EntityType.LILY_OF_VALLEY, EntityType.HYACINTH, EntityType.EUCALYPTUS,
+        EntityType.VANILLA_ORCHID, EntityType.WEEPING_WILLOW, EntityType.JACARANDA, EntityType.BAMBOO,
+        EntityType.CHERRY_BLOSSOM -> "The forest carried the same hurt home with you instead of leaving it on the path."
     }
 
     private fun kindRouteLine(biome: Biome?, type: EntityType?): String = when {

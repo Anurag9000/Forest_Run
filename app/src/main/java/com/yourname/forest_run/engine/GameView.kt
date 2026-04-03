@@ -112,6 +112,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private lateinit var gardenScreen: GardenScreen
     private var currentRestQuote: String = "The forest is waiting for a cleaner run."
     private var currentRunSummary: RunSummary? = null
+    private var surfacedMercyTier = 0
+    private var surfacedKindnessTier = 0
+    private var surfacedCleanTier = 0
     private val encounterDirector = if (debugToolsEnabled) EncounterDirector() else null
     private var debugEncounterOverlay: DebugEncounterOverlay? = null
     private var pendingDebugLaunchIntent: Intent? = null
@@ -135,6 +138,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val ambientOverlayPaint = Paint().apply { color = Color.BLACK }
     private var bloomScreenPulse = 0f
     private var bloomActivationFlash = 0f
+    private var bloomAfterglowTimer = 0f
+    private var bloomSessionConversionBase = 0
+    private var bloomLastBurstConversions = 0
+    private var bloomReadyAnnounced = false
+    private var bloomLastAudioConversionCount = 0
+    private var bloomPowerSurgeTimer = 0f
+    private var bloomPowerTier = 0
+    private var bloomPowerSurgeStrength = 0f
     private val bloomScreenPaint = Paint().apply {
         color = Color.argb(0, 255, 204, 96)
     }
@@ -153,6 +164,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
     private val bloomFlashPaint = Paint().apply {
         color = Color.argb(0, 255, 245, 220)
+    }
+    private val bloomAfterglowPaint = Paint().apply {
+        color = Color.argb(0, 255, 220, 176)
     }
     private val debugHitboxPaint = Paint().apply {
         color = Color.argb(210, 255, 96, 96)
@@ -180,6 +194,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val bgPaint = Paint().apply {
         color = Color.BLACK; style = Paint.Style.FILL
     }
+    private val cinematicOverlay = CinematicOverlayRenderer()
 
     // -----------------------------------------------------------------------
     // Screen dimensions
@@ -475,9 +490,21 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         inputHandler.tick(deltaTime)
 
         if (!::gameState.isInitialized) return
+        if (!gameState.isBloomActive && gameState.bloomMeter >= gameState.bloomSeedTarget - 1 && !bloomReadyAnnounced) {
+            bloomReadyAnnounced = true
+            SfxManager.playBloomReady()
+        } else if (!gameState.isBloomActive && gameState.bloomMeter < gameState.bloomSeedTarget - 1) {
+            bloomReadyAnnounced = false
+        }
         bloomScreenPulse = if (gameState.isBloomActive) bloomScreenPulse + deltaTime * 4.8f else 0f
         if (bloomActivationFlash > 0f) {
             bloomActivationFlash = (bloomActivationFlash - deltaTime).coerceAtLeast(0f)
+        }
+        if (bloomAfterglowTimer > 0f) {
+            bloomAfterglowTimer = (bloomAfterglowTimer - deltaTime).coerceAtLeast(0f)
+        }
+        if (bloomPowerSurgeTimer > 0f) {
+            bloomPowerSurgeTimer = (bloomPowerSurgeTimer - deltaTime).coerceAtLeast(0f)
         }
 
         // Phase 22: MENU state — update menu screen, gate physics
@@ -505,7 +532,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             RunState.DYING -> {
                 val next = runResetManager.update(deltaTime, runState)
                 if (next == RunState.GAME_OVER) runState = RunState.GAME_OVER
-                CameraSystem.update(deltaTime)
+                // CameraSystem.update() is already called unconditionally at the top of update() —
+                // calling it a second time here would double-decay shake trauma, halving death-shake duration.
                 ParticleManager.update(deltaTime)
                 FlavorTextManager.update(deltaTime)
                 DialogueBubbleManager.update(deltaTime)
@@ -542,7 +570,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (::parallaxBackground.isInitialized) {
             parallaxBackground.setBloomState(
                 isActive = gameState.isBloomActive,
-                activationLevel = bloomActivationFlash / 0.32f
+                activationLevel = bloomActivationFlash / 0.32f,
+                afterglowLevel = bloomAfterglowFraction()
             )
             parallaxBackground.update(deltaTime, gameState.scrollSpeed)
         }
@@ -557,6 +586,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             gameState.updatePacifistBiome(entityManager.biomeManager.currentBiome)
             if (::parallaxBackground.isInitialized) {
                 val bm = entityManager.biomeManager
+                parallaxBackground.applyBiomeScene(bm.currentBiome)
                 parallaxBackground.applyBiomeColours(
                     bm.currentSkyTop, bm.currentSkyBottom,
                     bm.currentGround, bm.currentFoliage
@@ -568,16 +598,94 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         if (gameState.isBloomActive && !player.isInvincible) {
             player.activateBloom()
+            bloomSessionConversionBase = gameState.bloomConversionsThisRun
+            bloomLastBurstConversions = 0
+            bloomLastAudioConversionCount = gameState.bloomConversionsThisRun
+            bloomAfterglowTimer = 0f
+            bloomPowerSurgeTimer = 0f
+            bloomPowerTier = 0
+            bloomPowerSurgeStrength = 0f
+            bloomReadyAnnounced = false
             LeitmotifManager.playBloom()
             SfxManager.playBloomActivate()
             HapticManager.bloomSurge()
             CameraSystem.shakeBloom()
             bloomActivationFlash = 0.32f
+            player.setBloomPowerPresentation(scaleBoost = 0.02f, auraAlpha = 112)
             ParticleManager.emit(FxPreset.BLOOM_ACTIVATE, player.x + Player.BASE_WIDTH / 2f, player.y + Player.BASE_HEIGHT / 2f)
             ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, player.x + Player.BASE_WIDTH / 2f, player.y + Player.BASE_HEIGHT * 0.35f)
         } else if (!gameState.isBloomActive && player.isInvincible) {
             player.deactivateBloom()
+            bloomLastBurstConversions =
+                (gameState.bloomConversionsThisRun - bloomSessionConversionBase).coerceAtLeast(0)
+            bloomAfterglowTimer = if (bloomLastBurstConversions >= 3) 1.8f else 1.2f
+            bloomPowerSurgeTimer = 0f
+            bloomPowerTier = 0
+            bloomPowerSurgeStrength = 0f
+            if (bloomLastBurstConversions > 0) {
+                ParticleManager.emit(
+                    FxPreset.BLOOM_WORLD_BURST,
+                    player.x + Player.BASE_WIDTH / 2f,
+                    player.y + Player.BASE_HEIGHT * 0.38f
+                )
+            } else {
+                ParticleManager.emit(
+                    FxPreset.BLOOM_CONVERT,
+                    player.x + Player.BASE_WIDTH / 2f,
+                    player.y + Player.BASE_HEIGHT * 0.44f
+                )
+            }
+            SfxManager.playBloomFade(bloomLastBurstConversions)
             LeitmotifManager.endBloom(gameState.distanceMetres)
+        }
+
+        if (gameState.isBloomActive) {
+            val liveBurstConversions =
+                (gameState.bloomConversionsThisRun - bloomSessionConversionBase).coerceAtLeast(0)
+            val powerState = BloomPowerPresentation.resolve(
+                secondsRemaining = gameState.bloomSecondsRemaining,
+                conversionsInBurst = liveBurstConversions,
+                recentSurgeFraction = bloomPowerSurgeFraction()
+            )
+            player.setBloomPowerPresentation(
+                scaleBoost = powerState.playerScaleBoost,
+                auraAlpha = powerState.auraAlpha
+            )
+            bloomPowerTier = powerState.tier
+            bloomPowerSurgeStrength = powerState.surgeStrength
+            bloomLastBurstConversions = liveBurstConversions
+            LeitmotifManager.updateBloomSignature(
+                secondsRemaining = gameState.bloomSecondsRemaining,
+                conversions = liveBurstConversions
+            )
+            val audioConversions = gameState.bloomConversionsThisRun
+            if (audioConversions > bloomLastAudioConversionCount) {
+                repeat(audioConversions - bloomLastAudioConversionCount) { offset ->
+                    val burstCount = (audioConversions - bloomSessionConversionBase - offset).coerceAtLeast(1)
+                    SfxManager.playBloomConvert(burstCount)
+                }
+                bloomPowerSurgeTimer = 0.55f
+                CameraSystem.shakeBloomChain(powerState.tier)
+                if (powerState.tier >= 2) {
+                    ParticleManager.emit(
+                        FxPreset.BLOOM_WORLD_BURST,
+                        player.x + Player.BASE_WIDTH / 2f,
+                        player.y + Player.BASE_HEIGHT * 0.32f
+                    )
+                } else {
+                    ParticleManager.emit(
+                        FxPreset.BLOOM_CONVERT,
+                        player.x + Player.BASE_WIDTH / 2f,
+                        player.y + Player.BASE_HEIGHT * 0.38f
+                    )
+                }
+                if (powerState.tier >= 3) {
+                    bloomActivationFlash = maxOf(bloomActivationFlash, 0.18f)
+                }
+                bloomLastAudioConversionCount = audioConversions
+            }
+        } else {
+            player.setBloomPowerPresentation(scaleBoost = 0f, auraAlpha = 0)
         }
 
         player.update(deltaTime, gameState.scrollSpeed)
@@ -789,6 +897,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     size = milestoneCue.flavorSize
                 )
             }
+
+            emitOrdinaryProgressCues()
         }
 
         // Flavor text float animation
@@ -871,21 +981,61 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
         }
 
-        if (::gameState.isInitialized && gameState.isBloomActive) {
+        val bloomAfterglow = bloomAfterglowFraction()
+        if (::gameState.isInitialized && (gameState.isBloomActive || bloomAfterglow > 0f)) {
             val pulse = 0.55f + 0.45f * kotlin.math.sin(bloomScreenPulse)
-            bloomScreenPaint.alpha = (78f + 72f * pulse).toInt().coerceIn(0, 255)
-            bloomGlowPaint.alpha = (32f + 52f * pulse).toInt().coerceIn(0, 255)
-            bloomFramePaint.alpha = (160f + 82f * pulse).toInt().coerceIn(0, 255)
-            bloomInnerFramePaint.alpha = (120f + 92f * pulse).toInt().coerceIn(0, 255)
+            val powerBoost = if (gameState.isBloomActive) {
+                bloomPowerSurgeStrength * (0.22f + bloomPowerTier * 0.08f)
+            } else {
+                0f
+            }
+            val bloomStrength = if (gameState.isBloomActive) 1f + powerBoost else 0.38f * bloomAfterglow
+            bloomScreenPaint.alpha = (78f + 72f * pulse * bloomStrength).toInt().coerceIn(0, 255)
+            bloomGlowPaint.alpha = (32f + 52f * pulse * (bloomStrength + powerBoost * 0.3f)).toInt().coerceIn(0, 255)
+            bloomFramePaint.alpha = (160f + 82f * pulse * (bloomStrength + powerBoost * 0.45f)).toInt().coerceIn(0, 255)
+            bloomInnerFramePaint.alpha = (120f + 92f * pulse * (bloomStrength + powerBoost * 0.55f)).toInt().coerceIn(0, 255)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomScreenPaint)
             canvas.drawRect(14f, 14f, width.toFloat() - 14f, height.toFloat() - 14f, bloomGlowPaint)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomFramePaint)
             canvas.drawRect(22f, 22f, width.toFloat() - 22f, height.toFloat() - 22f, bloomInnerFramePaint)
+            if (gameState.isBloomActive && bloomPowerTier >= 2) {
+                bloomFlashPaint.alpha = (18f + 26f * bloomPowerSurgeStrength).toInt().coerceIn(0, 90)
+                canvas.drawRect(34f, height * 0.12f, width.toFloat() - 34f, height * 0.88f, bloomFlashPaint)
+            }
+            if (!gameState.isBloomActive && bloomAfterglow > 0f) {
+                bloomAfterglowPaint.alpha = (28f + 52f * bloomAfterglow).toInt().coerceIn(0, 120)
+                canvas.drawRect(0f, height * 0.08f, width.toFloat(), height * 0.92f, bloomAfterglowPaint)
+            }
         }
         if (bloomActivationFlash > 0f) {
             val flashAlpha = ((bloomActivationFlash / 0.32f) * 170f).toInt().coerceIn(0, 170)
             bloomFlashPaint.alpha = flashAlpha
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomFlashPaint)
+        }
+        if (::gameState.isInitialized) {
+            val motif = LeitmotifManager.currentMotifSignature()
+            val nightFactor = if (::entityManager.isInitialized) {
+                (entityManager.biomeManager.ambientAlpha / 255f).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+            val runLighting = buildRunLightingIdentity(
+                nightFactor = nightFactor,
+                bloomStrength = if (gameState.isBloomActive) 1f else bloomAfterglow * 0.55f
+            )
+            cinematicOverlay.draw(
+                canvas = canvas,
+                width = width.toFloat(),
+                height = height.toFloat(),
+                profile = buildCinematicPolishProfile(
+                    scene = CinematicScene.RUN,
+                    emphasis = ((motif.cadenceLift + motif.shimmer) * 0.5f).coerceIn(0f, 1f),
+                    bloomStrength = if (gameState.isBloomActive) 1f else bloomAfterglow * 0.55f
+                ),
+                elapsedSeconds = debugFrameCounter / 60f,
+                glowColor = runLighting.horizonGlowColor,
+                centerYFraction = 0.47f
+            )
         }
 
         // 8. HUD — always screen-space, never shakes
@@ -895,7 +1045,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     encounterDirector.activeScenario != EncounterScenario.OPENING_READABILITY -> null
                 else -> gameState.openingGuidanceCue
             }
-            hud.draw(canvas, gameState, openingCue)
+            hud.draw(
+                canvas = canvas,
+                state = gameState,
+                bloomPresentation = BloomPresentation.hudPresentation(
+                    bloomMeter = gameState.bloomMeter,
+                    seedTarget = gameState.bloomSeedTarget,
+                    isActive = gameState.isBloomActive,
+                    secondsRemaining = gameState.bloomSecondsRemaining,
+                    totalConversions = gameState.bloomConversionsThisRun,
+                    burstConversions = bloomLastBurstConversions,
+                    recentAfterglow = bloomAfterglow
+                ),
+                openingCue = openingCue
+            )
         }
 
         if (debugToolsEnabled &&
@@ -953,8 +1116,78 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         reloadGhost()
         currentRestQuote = "The forest is waiting for a cleaner run."
         currentRunSummary = null
+        resetBloomPresentationState()
+        resetOrdinaryProgressCueState()
         LeitmotifManager.playRunStart()
     }
+
+    private fun emitOrdinaryProgressCues() {
+        if (!::gameState.isInitialized || !::player.isInitialized) return
+        if (encounterDirector?.isScenarioActive == true) return
+
+        val mercyTier = progressTier(gameState.mercyHearts, intArrayOf(2, 4, 6))
+        if (mercyTier > surfacedMercyTier) {
+            surfacedMercyTier = mercyTier
+            spawnOrdinaryProgressCue(
+                RunFlavorPresentation.ordinaryProgressCue(
+                    progressKind = "mercy",
+                    currentValue = gameState.mercyHearts,
+                    routeTier = gameState.pacifistRouteTier
+                )
+            )
+        }
+
+        val kindnessTier = progressTier(gameState.kindnessChain, intArrayOf(3, 5, 8))
+        if (kindnessTier > surfacedKindnessTier) {
+            surfacedKindnessTier = kindnessTier
+            spawnOrdinaryProgressCue(
+                RunFlavorPresentation.ordinaryProgressCue(
+                    progressKind = "kindness",
+                    currentValue = gameState.kindnessChain,
+                    routeTier = gameState.pacifistRouteTier
+                )
+            )
+        }
+
+        val cleanTier = progressTier(gameState.cleanPassesThisRun, intArrayOf(4, 8, 12))
+        if (cleanTier > surfacedCleanTier) {
+            surfacedCleanTier = cleanTier
+            spawnOrdinaryProgressCue(
+                RunFlavorPresentation.ordinaryProgressCue(
+                    progressKind = "clean",
+                    currentValue = gameState.cleanPassesThisRun,
+                    routeTier = gameState.pacifistRouteTier
+                )
+            )
+        }
+    }
+
+    private fun spawnOrdinaryProgressCue(cue: RunFlavorCue) {
+        DialogueBubbleManager.spawn(
+            text = cue.bubbleText,
+            anchorX = player.x + Player.BASE_WIDTH * 0.5f,
+            anchorY = player.y - 30f,
+            fillColor = cue.fillColor,
+            borderColor = cue.borderColor
+        )
+        FlavorTextManager.spawn(
+            text = cue.flavorText,
+            x = player.x + Player.BASE_WIDTH * 0.18f,
+            y = player.y - 10f,
+            colour = cue.flavorColor,
+            lifetime = 1.05f,
+            size = cue.flavorSize
+        )
+    }
+
+    private fun resetOrdinaryProgressCueState() {
+        surfacedMercyTier = 0
+        surfacedKindnessTier = 0
+        surfacedCleanTier = 0
+    }
+
+    private fun progressTier(value: Int, thresholds: IntArray): Int =
+        thresholds.count { value >= it }
 
     private fun prepareEncounterScenario() {
         val director = encounterDirector ?: return
@@ -972,6 +1205,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         ghostRecorder.reset()
         currentRestQuote = "Scenario verification active."
         currentRunSummary = null
+        resetBloomPresentationState()
+        resetOrdinaryProgressCueState()
         director.startSelectedScenario()
         if (scenario == EncounterScenario.REST_LOOP) {
             entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 14f)
@@ -1014,6 +1249,27 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         val frames = SaveManager.loadGhostRun(context)
         if (frames.isNotEmpty()) ghostPlayer.load(frames)
     }
+
+    private fun resetBloomPresentationState() {
+        bloomActivationFlash = 0f
+        bloomAfterglowTimer = 0f
+        bloomSessionConversionBase = 0
+        bloomLastBurstConversions = 0
+        bloomReadyAnnounced = false
+        bloomLastAudioConversionCount = 0
+        bloomPowerSurgeTimer = 0f
+        bloomPowerTier = 0
+        bloomPowerSurgeStrength = 0f
+        if (::player.isInitialized) {
+            player.setBloomPowerPresentation(scaleBoost = 0f, auraAlpha = 0)
+        }
+    }
+
+    private fun bloomAfterglowFraction(): Float =
+        (bloomAfterglowTimer / 1.8f).coerceIn(0f, 1f)
+
+    private fun bloomPowerSurgeFraction(): Float =
+        (bloomPowerSurgeTimer / 0.55f).coerceIn(0f, 1f)
 
     private fun runDebugScenarioScript() {
         if (!debugToolsEnabled ||

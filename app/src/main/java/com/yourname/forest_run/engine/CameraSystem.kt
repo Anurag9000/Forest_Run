@@ -126,4 +126,6 @@ object CameraSystem {
     fun shakeMercyMiss()  = addTrauma(0.15f)
     /** Bloom activation surge. */
     fun shakeBloom()      = addTrauma(0.32f)
+    /** Conversion-streak surge while Bloom is already active. */
+    fun shakeBloomChain(tier: Int) = addTrauma((0.12f + tier.coerceAtLeast(0).coerceAtMost(3) * 0.05f).coerceAtMost(0.32f))
 }

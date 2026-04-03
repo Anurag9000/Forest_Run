@@ -147,7 +147,11 @@ class GameStateManager(context: Context) {
     fun update(deltaTime: Float) {
         // ── Scroll speed ramp ────────────────────────────────────────────
         runTimeSeconds += deltaTime
-        distanceMetres += scrollSpeed / 1000f * deltaTime
+        // Capture speed BEFORE recalculating so distance and score both use the same
+        // value this frame. Using different values for each would cause score to drift
+        // ahead of distance by one frame's worth of acceleration, every single frame.
+        val speedThisFrame = scrollSpeed
+        distanceMetres += speedThisFrame / 1000f * deltaTime
 
         val baseSpeed = MathUtils.clamp(
             GameConstants.BASE_SCROLL_SPEED + distanceMetres * GameConstants.SPEED_PER_METRE,
@@ -166,7 +170,8 @@ class GameStateManager(context: Context) {
         }
 
         // ── Score ────────────────────────────────────────────────────────
-        val distanceDelta = scrollSpeed / 1000f * deltaTime
+        // Use the same captured speed so score and distance are always in sync.
+        val distanceDelta = speedThisFrame / 1000f * deltaTime
         exactScore += GameConstants.POINTS_PER_METRE * scoreMultiplier * distanceDelta
         val deltaInt = exactScore.toInt()
         if (deltaInt > 0) {

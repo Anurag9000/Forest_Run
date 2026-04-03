@@ -3,6 +3,7 @@ package com.yourname.forest_run.engine
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.yourname.forest_run.entities.EntityType
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -54,6 +55,38 @@ class StoryFragmentSystemTest {
     }
 
     @Test
+    fun `rest quotes unlock contextual biome mood route and killer pages`() {
+        val summary = RunSummary(
+            score = 1_080,
+            distanceM = 740f,
+            isNewHighScore = false,
+            highScore = 1_500,
+            mercyHearts = 3,
+            mercyMisses = 3,
+            kindnessChain = 5,
+            cleanPasses = 8,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 2,
+            lastKiller = EntityType.EAGLE,
+            restQuote = "",
+            forestMood = ForestMood.STEADY,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
+        )
+
+        StoryFragmentSystem.restQuote(context, summary, Biome.NIGHT_FOREST, EntityType.EAGLE)
+
+        val pages = StoryFragmentSystem.unlockedMemoryPages(context)
+        assertTrue(pages.contains("page_rest_biome_night_forest"))
+        assertTrue(pages.contains("page_rest_mood_steady"))
+        assertTrue(pages.contains("page_rest_route_merciful"))
+        assertTrue(pages.contains("page_rest_bloom_memory"))
+        assertTrue(pages.contains("page_rest_clean_pattern"))
+        assertTrue(pages.contains("page_rest_killer_eagle"))
+    }
+
+    @Test
     fun `garden reflections unlock a page after a gentle spared run`() {
         val summary = RunSummary(
             score = 900,
@@ -76,7 +109,41 @@ class StoryFragmentSystemTest {
         val line = StoryFragmentSystem.gardenReflection(context, summary)
 
         assertTrue(line!!.contains("trusted") || line.contains("breathes"))
-        assertEquals(1, StoryFragmentSystem.memoryPageCount(context))
+        assertTrue(StoryFragmentSystem.memoryPageCount(context) >= 2)
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_mood_gentle"))
+    }
+
+    @Test
+    fun `garden reflections unlock contextual mood route biome and history pages`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.ORCHARD) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        val summary = RunSummary(
+            score = 980,
+            distanceM = 710f,
+            isNewHighScore = false,
+            highScore = 1_420,
+            mercyHearts = 3,
+            mercyMisses = 3,
+            kindnessChain = 5,
+            cleanPasses = 8,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 2,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.KIND
+        )
+
+        StoryFragmentSystem.gardenReflection(context, summary)
+
+        val pages = StoryFragmentSystem.unlockedMemoryPages(context)
+        assertTrue(pages.contains("page_garden_mood_gentle"))
+        assertTrue(pages.contains("page_garden_route_kind"))
+        assertTrue(pages.contains("page_garden_peace_orchard"))
+        assertTrue(pages.contains("page_garden_warmth_cat"))
+        assertTrue(pages.contains("page_garden_bloom_memory"))
     }
 
     @Test
@@ -90,6 +157,92 @@ class StoryFragmentSystemTest {
         assertNotNull(creatureThought)
         assertTrue(creatureThought!!.contains("fox") || creatureThought.contains("path") || creatureThought.contains("answer"))
         assertTrue(weatherThought.contains("wind") || weatherThought.contains("air") || weatherThought.contains("branches"))
+    }
+
+    @Test
+    fun `creature and weather thoughts unlock deeper family and context pages`() {
+        repeat(3) { PersistentMemoryManager.recordPass(context, EntityType.CACTUS) }
+        repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.EAGLE) }
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.DUSK_CANYON) }
+        val summary = RunSummary(
+            score = 940,
+            distanceM = 700f,
+            isNewHighScore = false,
+            highScore = 1_420,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 3,
+            cleanPasses = 7,
+            sparedCount = 1,
+            hitsTaken = 1,
+            seedsCollected = 7,
+            bloomConversions = 2,
+            lastKiller = EntityType.EAGLE,
+            restQuote = "",
+            forestMood = ForestMood.RECKLESS,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
+        )
+
+        StoryFragmentSystem.creatureThought(context, EntityType.CACTUS)
+        StoryFragmentSystem.weatherThought(context, summary)
+
+        val pages = StoryFragmentSystem.unlockedMemoryPages(context)
+        assertTrue(pages.contains("page_thought_family_flora"))
+        assertTrue(pages.contains("page_thought_learned_cactus"))
+        assertTrue(pages.contains("page_weather_route_merciful"))
+        assertTrue(pages.contains("page_weather_biome_dusk_canyon"))
+        assertTrue(pages.contains("page_weather_bloom"))
+        assertTrue(pages.contains("page_weather_repeat_eagle"))
+    }
+
+    @Test
+    fun `non tracked entities now all provide creature thoughts`() {
+        val nonTracked = listOf(
+            EntityType.CACTUS,
+            EntityType.LILY_OF_VALLEY,
+            EntityType.HYACINTH,
+            EntityType.EUCALYPTUS,
+            EntityType.VANILLA_ORCHID,
+            EntityType.WEEPING_WILLOW,
+            EntityType.JACARANDA,
+            EntityType.BAMBOO,
+            EntityType.CHERRY_BLOSSOM,
+            EntityType.DUCK,
+            EntityType.TIT,
+            EntityType.CHICKADEE,
+            EntityType.HEDGEHOG
+        )
+
+        nonTracked.forEach { type ->
+            val thought = StoryFragmentSystem.creatureThought(context, type)
+            assertNotNull("expected creature thought for $type", thought)
+            assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_thought_${type.name.lowercase()}"))
+        }
+    }
+
+    @Test
+    fun `flora creature thoughts react to pass and hit history`() {
+        val base = StoryFragmentSystem.creatureThought(context, EntityType.CACTUS)
+        repeat(3) { PersistentMemoryManager.recordPass(context, EntityType.CACTUS) }
+        val passThought = StoryFragmentSystem.creatureThought(context, EntityType.CACTUS)
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.LILY_OF_VALLEY) }
+        val hitThought = StoryFragmentSystem.creatureThought(context, EntityType.LILY_OF_VALLEY)
+
+        assertNotEquals(base, passThought)
+        assertTrue(passThought!!.contains("patience", ignoreCase = true) || passThought.contains("trusting", ignoreCase = true))
+        assertTrue(hitThought!!.contains("beauty", ignoreCase = true) || hitThought.contains("spacing", ignoreCase = true))
+    }
+
+    @Test
+    fun `bird and tree creature thoughts react to learned history`() {
+        repeat(3) { PersistentMemoryManager.recordPass(context, EntityType.DUCK) }
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.BAMBOO) }
+
+        val duckThought = StoryFragmentSystem.creatureThought(context, EntityType.DUCK)
+        val bambooThought = StoryFragmentSystem.creatureThought(context, EntityType.BAMBOO)
+
+        assertTrue(duckThought!!.contains("lesson", ignoreCase = true) || duckThought.contains("answer", ignoreCase = true))
+        assertTrue(bambooThought!!.contains("precision", ignoreCase = true) || bambooThought.contains("width", ignoreCase = true))
     }
 
     @Test
@@ -233,6 +386,85 @@ class StoryFragmentSystemTest {
         val weatherThought = StoryFragmentSystem.weatherThought(context, summary)
 
         assertTrue(weatherThought.contains("recognizes") || weatherThought.contains("patient"))
+    }
+
+    @Test
+    fun `reckless weather thought names repeated killer pressure`() {
+        repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        val summary = RunSummary(
+            score = 320,
+            distanceM = 260f,
+            isNewHighScore = false,
+            highScore = 930,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.RECKLESS
+        )
+
+        val weatherThought = StoryFragmentSystem.weatherThought(context, summary)
+
+        assertTrue(weatherThought.contains("wolf", ignoreCase = true) || weatherThought.contains("same old mistake", ignoreCase = true))
+    }
+
+    @Test
+    fun `fearful weather thought deepens with milestone bond after a hit`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        val summary = RunSummary(
+            score = 880,
+            distanceM = 620f,
+            isNewHighScore = false,
+            highScore = 1_240,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 2,
+            cleanPasses = 4,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 5,
+            bloomConversions = 0,
+            lastKiller = EntityType.DOG,
+            restQuote = "Careful.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val weatherThought = StoryFragmentSystem.weatherThought(context, summary)
+
+        assertTrue(weatherThought.contains("Welcome Bell", ignoreCase = true) || weatherThought.contains("knows you well", ignoreCase = true) || weatherThought.contains("bruise", ignoreCase = true))
+    }
+
+    @Test
+    fun `steady weather thought deepens with peaceful bloom overlap`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.DUSK_CANYON) }
+        val summary = RunSummary(
+            score = 1_180,
+            distanceM = 900f,
+            isNewHighScore = false,
+            highScore = 1_600,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 3,
+            cleanPasses = 10,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 2,
+            lastKiller = null,
+            restQuote = "Steady.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val weatherThought = StoryFragmentSystem.weatherThought(context, summary)
+
+        assertTrue(weatherThought.contains("Dusk Canyon", ignoreCase = true) || weatherThought.contains("Bloom", ignoreCase = true))
     }
 
     @Test
@@ -466,5 +698,145 @@ class StoryFragmentSystemTest {
         assertNotNull(line)
         assertTrue(line!!.contains("Fox", ignoreCase = true) || line.contains("mercy", ignoreCase = true))
         assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_route_merciful_friend_fox"))
+    }
+
+    @Test
+    fun `meadow biome reflection carries gentleness outside route fallback`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.MEADOW) }
+        val summary = RunSummary(
+            score = 760,
+            distanceM = 560f,
+            isNewHighScore = false,
+            highScore = 1_240,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 4,
+            cleanPasses = 6,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 6,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("meadow", ignoreCase = true) || line.contains("kindness", ignoreCase = true))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_biome_meadow"))
+    }
+
+    @Test
+    fun `orchard biome reflection deepens clean rhythm returns`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.ORCHARD) }
+        val summary = RunSummary(
+            score = 930,
+            distanceM = 700f,
+            isNewHighScore = false,
+            highScore = 1_360,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 2,
+            cleanPasses = 8,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 7,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Steady.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("orchard", ignoreCase = true) || line.contains("rhythm", ignoreCase = true))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_biome_orchard"))
+    }
+
+    @Test
+    fun `ancient grove reflection answers fearful wolf memory`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.ANCIENT_GROVE) }
+        val summary = RunSummary(
+            score = 690,
+            distanceM = 510f,
+            isNewHighScore = false,
+            highScore = 1_180,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 3,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 4,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Careful.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("Ancient Grove", ignoreCase = true) || line.contains("courage", ignoreCase = true))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_biome_ancient_grove"))
+    }
+
+    @Test
+    fun `dusk canyon reflection keeps mercy in shorter choices`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.DUSK_CANYON) }
+        val summary = RunSummary(
+            score = 850,
+            distanceM = 620f,
+            isNewHighScore = false,
+            highScore = 1_300,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 3,
+            cleanPasses = 5,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 6,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Mercy.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("Dusk Canyon", ignoreCase = true) || line.contains("mercy", ignoreCase = true))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_biome_dusk_canyon"))
+    }
+
+    @Test
+    fun `night forest reflection keeps bloom memory outside peaceful route`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.NIGHT_FOREST) }
+        val summary = RunSummary(
+            score = 1_010,
+            distanceM = 760f,
+            isNewHighScore = false,
+            highScore = 1_420,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 1,
+            cleanPasses = 7,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 2,
+            lastKiller = null,
+            restQuote = "Bright.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val line = StoryFragmentSystem.gardenReflection(context, summary)
+
+        assertNotNull(line)
+        assertTrue(line!!.contains("Night Forest", ignoreCase = true) || line.contains("Bloom", ignoreCase = true))
+        assertTrue(StoryFragmentSystem.unlockedMemoryPages(context).contains("page_garden_biome_night_forest"))
     }
 }

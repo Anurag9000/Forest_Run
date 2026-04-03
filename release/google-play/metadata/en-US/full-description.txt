@@ -1,0 +1,15 @@
+Run through a living forest that remembers how you move through it.
+
+Forest Run is a pixel-art endless runner built around rhythm, mercy, and return. Every run moves through five shifting biomes, and every rest carries something back to the Garden: mood, kindness, caution, Bloom afterglow, milestone bonds, and the world's changing opinion of you.
+
+What is in the current build:
+
+- Gesture-anywhere controls for jump, hold, and duck.
+- Five runtime biomes with distinct hazards, atmosphere, and scenic composition.
+- Mercy, kindness, and clean-play payoff across animals, birds, flora, and trees.
+- Bloom power that activates at 8 seeds and transforms the run.
+- A full loop of run, restorative rest, Garden return, and another run.
+- Quiet return writing, creature thoughts, relationship traces, and sanctuary carry-home state.
+- Wardrobe, milestone keepsakes, bond rituals, peaceful-biome world signs, and ghost playback.
+
+Forest Run is not about outrunning a forest that hates you. It is about learning what kind of rhythm you leave behind, and whether the world answers that rhythm with fear, warmth, or something gentler than either.

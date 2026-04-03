@@ -149,4 +149,52 @@ class RunFlavorPresentationTest {
         assertTrue(dogCue.flavorText.contains("friend", ignoreCase = true) || dogCue.flavorText.contains("home", ignoreCase = true))
         assertTrue(lilyCue.flavorText.contains("glow", ignoreCase = true) || lilyCue.flavorText.contains("above", ignoreCase = true))
     }
+
+    @Test
+    fun `pass bubble texts broaden ordinary and warm-bond pass messaging`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+
+        val dogOptions = RunFlavorPresentation.passBubbleTexts(
+            context = context,
+            type = EntityType.DOG,
+            routeTier = PacifistRouteTier.KIND
+        )
+        val bambooOptions = RunFlavorPresentation.passBubbleTexts(
+            context = context,
+            type = EntityType.BAMBOO,
+            routeTier = PacifistRouteTier.NONE
+        )
+
+        assertTrue(dogOptions.contains("Still with you"))
+        assertTrue(dogOptions.contains("Known step"))
+        assertTrue(bambooOptions.contains("Held the line"))
+        assertTrue(bambooOptions.contains("Stayed exact"))
+    }
+
+    @Test
+    fun `ordinary progress cue varies with progress kind and route tier`() {
+        val mercyCue = RunFlavorPresentation.ordinaryProgressCue(
+            progressKind = "mercy",
+            currentValue = 4,
+            routeTier = PacifistRouteTier.MERCIFUL
+        )
+        val kindnessCue = RunFlavorPresentation.ordinaryProgressCue(
+            progressKind = "kindness",
+            currentValue = 5,
+            routeTier = PacifistRouteTier.KIND
+        )
+        val cleanCue = RunFlavorPresentation.ordinaryProgressCue(
+            progressKind = "clean",
+            currentValue = 12,
+            routeTier = PacifistRouteTier.PEACEFUL
+        )
+
+        assertEquals("Mercy rises", mercyCue.bubbleText)
+        assertTrue(mercyCue.flavorText.contains("leave room", ignoreCase = true) || mercyCue.flavorText.contains("forest", ignoreCase = true))
+        assertEquals("Kindness gathers", kindnessCue.bubbleText)
+        assertTrue(kindnessCue.flavorText.contains("gentleness", ignoreCase = true) || kindnessCue.flavorText.contains("pace", ignoreCase = true))
+        assertEquals("Peace steadies", cleanCue.bubbleText)
+        assertTrue(cleanCue.flavorSize >= 28f)
+    }
 }

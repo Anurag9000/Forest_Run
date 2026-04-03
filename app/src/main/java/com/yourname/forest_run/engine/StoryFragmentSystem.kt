@@ -19,8 +19,10 @@ data class StoryFragment(
 object StoryFragmentSystem {
 
     fun restQuote(context: Context, summary: RunSummary, biome: Biome, killer: EntityType?): String {
-        val fragment = selectRestFragment(context.applicationContext, summary, biome, killer)
-        fragment.unlocksPageId?.let { unlockMemoryPage(context.applicationContext, it) }
+        val appContext = context.applicationContext
+        val fragment = selectRestFragment(appContext, summary, biome, killer)
+        fragment.unlocksPageId?.let { unlockMemoryPage(appContext, it) }
+        unlockRestContextPages(appContext, summary, biome, killer)
         return fragment.text
     }
 
@@ -28,14 +30,25 @@ object StoryFragmentSystem {
         val appContext = context.applicationContext
         val fragment = selectGardenFragment(appContext, summary) ?: return null
         fragment.unlocksPageId?.let { unlockMemoryPage(appContext, it) }
+        unlockGardenContextPages(appContext, summary)
         return fragment.text
     }
 
     fun creatureThought(context: Context, type: EntityType?): String? {
         val tracked = type ?: return null
-        val text = RelationshipArcSystem.creatureThought(context.applicationContext, tracked) ?: return null
+        val appContext = context.applicationContext
+        val text = RelationshipArcSystem.creatureThought(appContext, tracked)
+            ?: fallbackCreatureThought(appContext, tracked)
+            ?: return null
         val pageId = "page_thought_${tracked.name.lowercase()}"
-        unlockMemoryPage(context.applicationContext, pageId)
+        unlockMemoryPage(appContext, pageId)
+        thoughtFamilyPage(tracked)?.let { unlockMemoryPage(appContext, it) }
+        if (PersistentMemoryManager.getPassCount(appContext, tracked) >= 3) {
+            unlockMemoryPage(appContext, "page_thought_learned_${tracked.name.lowercase()}")
+        }
+        if (PersistentMemoryManager.getHitCount(appContext, tracked) >= 2) {
+            unlockMemoryPage(appContext, "page_thought_caution_${tracked.name.lowercase()}")
+        }
         return text
     }
 
@@ -48,6 +61,7 @@ object StoryFragmentSystem {
         val strainedBond = RelationshipArcSystem.featuredStrainedBond(appContext, RelationshipStage.TRUST)
         val milestoneReward = RelationshipArcSystem.featuredMilestoneReward(appContext)
         val repeatedHarmCreature = PersistentMemoryManager.featuredTenderCreature(appContext)
+        val repeatedKiller = PersistentMemoryManager.featuredRepeatKiller(appContext)
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
         val text = when (mood) {
             ForestMood.GENTLE -> if (summary?.pacifistRouteTier == PacifistRouteTier.PEACEFUL && peacefulBiome != null && (summary.bloomConversions >= 2 || summary.cleanPasses >= 10)) {
@@ -62,6 +76,8 @@ object StoryFragmentSystem {
                 "The evening wind sounds like ${peacefulBiome.biome.displayName} learned to answer mercy more softly."
             } else if (summary?.pacifistRouteTier == PacifistRouteTier.MERCIFUL && repeatFriend != null) {
                 "The evening wind sounds like mercy taught something familiar to wait for you more softly."
+            } else if (summary?.pacifistRouteTier == PacifistRouteTier.MERCIFUL && milestoneReward != null) {
+                "The evening wind moves like ${milestoneReward.label} learned to keep mercy from fading on the way home."
             } else if (repeatFriend != null) {
                 "The evening wind sounds like it has started expecting the same familiar kindness to return."
             } else if (summary?.pacifistRouteTier == PacifistRouteTier.KIND) {
@@ -73,7 +89,9 @@ object StoryFragmentSystem {
             } else {
                 "The evening wind has nothing urgent left to say."
             }
-            ForestMood.RECKLESS -> if (strainedBond != null) {
+            ForestMood.RECKLESS -> if (repeatedKiller != null && summary?.lastKiller == repeatedKiller) {
+                "Even the restless branches seem to lean away from ${formatEntityName(repeatedKiller)}, like the same old mistake reached the weather before it reached you."
+            } else if (strainedBond != null) {
                 "Even the restless branches sound careful around ${formatEntityName(strainedBond)}, like trust there has started holding itself back."
             } else if (summary?.lastKiller != null && repeatedHarmCreature == summary.lastKiller) {
                 "Even the restless branches seem to know you are still carrying the exact same sharp mistake."
@@ -86,6 +104,8 @@ object StoryFragmentSystem {
             }
             ForestMood.FEARFUL -> if (strainedBond != null) {
                 "The air stays careful around ${formatEntityName(strainedBond)}, as if even familiarity learned to leave you more room."
+            } else if (milestoneReward != null && summary?.hitsTaken ?: 0 > 0) {
+                "The air stays careful even around ${milestoneReward.label}, like something that knows you well is trying not to press the bruise any further."
             } else if (repeatFriend != null) {
                 "The air stays careful, but not empty, as if something familiar decided to keep you company through it."
             } else if (repeatedHarmCreature != null) {
@@ -93,8 +113,12 @@ object StoryFragmentSystem {
             } else {
                 "The air stays soft, as if the weather decided not to press its luck."
             }
-            ForestMood.STEADY -> if ((summary?.cleanPasses ?: 0) >= 12 && repeatFriend != null) {
+            ForestMood.STEADY -> if ((summary?.cleanPasses ?: 0) >= 10 && (summary?.bloomConversions ?: 0) >= 2 && peacefulBiome != null) {
+                "The wind keeps ${peacefulBiome.biome.displayName} in a patient glow, like calm and Bloom learned how to share the same weather."
+            } else if ((summary?.cleanPasses ?: 0) >= 12 && repeatFriend != null) {
                 "The wind keeps a patient pace, like it recognized both your calm and the familiar company inside it."
+            } else if ((summary?.bloomConversions ?: 0) >= 2 && milestoneReward != null) {
+                "The wind keeps Bloom from sounding wild, as if ${milestoneReward.label} taught even the weather how to hold a line."
             } else if (repeatFriend != null) {
                 "The wind keeps a steady pace, like it recognizes a familiar bond walking back in."
             } else if (repeatedKindnessCreature != null && summary?.pacifistRouteTier == PacifistRouteTier.KIND) {
@@ -106,6 +130,14 @@ object StoryFragmentSystem {
             }
         }
         unlockMemoryPage(appContext, "page_weather_${mood.name.lowercase()}")
+        summary?.pacifistRouteTier?.takeIf { it != PacifistRouteTier.NONE }?.let {
+            unlockMemoryPage(appContext, "page_weather_route_${it.name.lowercase()}")
+        }
+        peacefulBiome?.let { unlockMemoryPage(appContext, "page_weather_biome_${it.biome.name.lowercase()}") }
+        if ((summary?.bloomConversions ?: 0) >= 2) {
+            unlockMemoryPage(appContext, "page_weather_bloom")
+        }
+        repeatedKiller?.let { unlockMemoryPage(appContext, "page_weather_repeat_${it.name.lowercase()}") }
         return text
     }
 
@@ -114,6 +146,79 @@ object StoryFragmentSystem {
 
     fun unlockedMemoryPages(context: Context): Set<String> =
         SaveManager.loadUnlockedMemoryPages(context.applicationContext)
+
+    private fun fallbackCreatureThought(context: Context, type: EntityType): String? {
+        val passCount = PersistentMemoryManager.getPassCount(context, type)
+        val hitCount = PersistentMemoryManager.getHitCount(context, type)
+        return when (type) {
+            EntityType.CACTUS -> when {
+                passCount >= 3 -> "The cactus has started trusting your patience around what it keeps sharp."
+                hitCount >= 2 -> "The cactus thinks you still reach too quickly for what only needed room."
+                else -> "The cactus keeps its bloom where only patience can find it."
+            }
+            EntityType.LILY_OF_VALLEY -> when {
+                passCount >= 3 -> "The lily lowers its light like it expects you to read both glow and warning together."
+                hitCount >= 2 -> "The lily thinks you still trust beauty faster than you trust spacing."
+                else -> "The lily keeps a bright hush over the small danger it hides."
+            }
+            EntityType.HYACINTH -> when {
+                passCount >= 3 -> "The hyacinth has started treating your timing like part of its clustered rhythm."
+                hitCount >= 2 -> "The hyacinth thinks you still arrive off-beat and call it bad luck."
+                else -> "The hyacinth keeps counting in little pulses near the path."
+            }
+            EntityType.EUCALYPTUS -> when {
+                passCount >= 3 -> "The eucalyptus keeps its harder line honest when your calm stays honest with it."
+                hitCount >= 2 -> "The eucalyptus thinks your body still panics before the bend is even real."
+                else -> "The eucalyptus leans like it already knows the wind will test you."
+            }
+            EntityType.VANILLA_ORCHID -> when {
+                passCount >= 3 -> "The orchid leaves a narrow kindness open now that you have started honoring it."
+                hitCount >= 2 -> "The orchid thinks you still rush past the one quiet thread it gives you."
+                else -> "The orchid keeps one careful lane hidden inside all that softness."
+            }
+            EntityType.WEEPING_WILLOW -> when {
+                passCount >= 3 -> "The willow parts its curtain just enough, like it has started trusting your patience."
+                hitCount >= 2 -> "The willow thinks you still push into the curtain instead of listening for the lane."
+                else -> "The willow keeps lowering the same patient green warning."
+            }
+            EntityType.JACARANDA -> when {
+                passCount >= 3 -> "The jacaranda lets the falling canopy feel almost celebratory when you hold your line."
+                hitCount >= 2 -> "The jacaranda thinks you still get lost in the spectacle before you read the space under it."
+                else -> "The jacaranda lets beauty arrive thick enough to test whether you can still see through it."
+            }
+            EntityType.BAMBOO -> when {
+                passCount >= 3 -> "The bamboo keeps a cleaner seam now that you have started respecting how exact it wants to be."
+                hitCount >= 2 -> "The bamboo thinks you still trust width where only precision will do."
+                else -> "The bamboo stands like it expects you to choose one exact answer."
+            }
+            EntityType.CHERRY_BLOSSOM -> when {
+                passCount >= 3 -> "The cherry blossom lets the gust feel playful when you stop fighting every shift in it."
+                hitCount >= 2 -> "The cherry blossom thinks you still argue with the wind too late."
+                else -> "The cherry blossom keeps the air sweet enough to hide how much it wants to move you."
+            }
+            EntityType.DUCK -> when {
+                passCount >= 3 -> "The duck sounds less like a warning now and more like a lesson you finally answer in time."
+                hitCount >= 2 -> "The duck thinks you still forget how low the lane can become."
+                else -> "The duck keeps one low answer ready under the quack."
+            }
+            EntityType.TIT -> when {
+                passCount >= 3 -> "The tit flock thinks you have finally started hearing the beat inside the rush."
+                hitCount >= 2 -> "The tit flock thinks you still mistake hurry for rhythm."
+                else -> "The tit flock keeps a fast little count the air expects you to learn."
+            }
+            EntityType.CHICKADEE -> when {
+                passCount >= 3 -> "The chickadees keep a softer pocket for you when your timing stays kind."
+                hitCount >= 2 -> "The chickadees think you still flinch at charm before it turns into motion."
+                else -> "The chickadees make sweetness move faster than nerves expect."
+            }
+            EntityType.HEDGEHOG -> when {
+                passCount >= 3 -> "The hedgehog thinks you have finally learned how much room a small fear needs."
+                hitCount >= 2 -> "The hedgehog thinks you still meet every thorn with more speed than care."
+                else -> "The hedgehog keeps its little caution curled close to the ground."
+            }
+            else -> null
+        }
+    }
 
     private fun selectRestFragment(
         context: Context,
@@ -529,6 +634,16 @@ object StoryFragmentSystem {
             }
         }
 
+        if (summary != null && peacefulBiome != null) {
+            biomeGardenFragment(
+                summary = summary,
+                peacefulBiome = peacefulBiome,
+                repeatFriend = repeatFriend,
+                milestoneReward = milestoneReward,
+                strainedBond = strainedBond
+            )?.let { return it }
+        }
+
         summary?.let {
             if (repeatedKiller != null && repeatedKiller == repeatedHarmCreature && it.hitsTaken > 0) {
                 return StoryFragment(
@@ -597,6 +712,127 @@ object StoryFragmentSystem {
             type = StoryFragmentType.GARDEN_REFLECTION,
             text = text
         )
+    }
+
+    private fun biomeGardenFragment(
+        summary: RunSummary,
+        peacefulBiome: PersistentMemoryManager.BiomeFriendshipMark,
+        repeatFriend: EntityType?,
+        milestoneReward: RelationshipMilestoneReward?,
+        strainedBond: EntityType?
+    ): StoryFragment? {
+        val biome = peacefulBiome.biome
+        val pageId = "page_garden_biome_${biome.name.lowercase()}"
+        val text = when (biome) {
+            Biome.MEADOW -> when {
+                summary.forestMood == ForestMood.GENTLE && (summary.sparedCount > 0 || summary.kindnessChain >= 4) ->
+                    "The meadow edge still feels open enough to keep the kindness of that run from closing back up."
+                summary.cleanPasses >= 8 && summary.hitsTaken == 0 ->
+                    "The meadow grass keeps the line you held, like calm is easier to believe there now."
+                else ->
+                    "The meadow side of home feels a little wider, like it recognized your softer return."
+            }
+            Biome.ORCHARD -> when {
+                summary.cleanPasses >= 8 && summary.hitsTaken == 0 ->
+                    "The orchard light still falls in rhythm, like the cleaner run taught it not to rush the next note."
+                milestoneReward != null ->
+                    "${milestoneReward.label} leaves the orchard sounding more like a chorus than a reward."
+                else ->
+                    "The orchard keeps a patient sweetness, like it heard you choose rhythm over hurry."
+            }
+            Biome.ANCIENT_GROVE -> when {
+                strainedBond == EntityType.WOLF || summary.lastKiller == EntityType.WOLF || summary.forestMood == ForestMood.FEARFUL ->
+                    "Ancient Grove keeps its older patience close, as if it knows courage still needs more quiet than noise."
+                repeatFriend == EntityType.WOLF || milestoneReward?.type == EntityType.WOLF || (summary.cleanPasses >= 8 && summary.hitsTaken == 0) ->
+                    "Ancient Grove feels more like a place that recognized your calm than a place that tested it."
+                else ->
+                    "Ancient Grove still waits the way only old places do, asking for patience before anything else."
+            }
+            Biome.DUSK_CANYON -> when {
+                summary.pacifistRouteTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal || summary.sparedCount > 0 ->
+                    "Dusk Canyon still carries the mercy of shorter choices, like even its sharp edge softened for the way you moved through it."
+                summary.hitsTaken > 0 || summary.forestMood == ForestMood.FEARFUL ->
+                    "Dusk Canyon keeps the bruise of rushed choices visible, but not cruel."
+                else ->
+                    "Dusk Canyon still glows like it remembers how carefully you crossed what closes quickly."
+            }
+            Biome.NIGHT_FOREST -> when {
+                summary.bloomConversions >= 2 ->
+                    "Night Forest is still holding a little Bloom under the dark, like it refused to let that light disappear on schedule."
+                repeatFriend == EntityType.OWL || repeatFriend == EntityType.EAGLE || milestoneReward?.type == EntityType.OWL || milestoneReward?.type == EntityType.EAGLE ->
+                    "Night Forest feels less lonely than severe tonight, as if the dark kept watch instead of distance."
+                else ->
+                    "Night Forest keeps more memory than silence tonight."
+            }
+        }
+        return StoryFragment(
+            id = "garden_biome_${biome.name.lowercase()}",
+            type = StoryFragmentType.GARDEN_REFLECTION,
+            text = text,
+            unlocksPageId = pageId
+        )
+    }
+
+    private fun unlockRestContextPages(
+        context: Context,
+        summary: RunSummary,
+        biome: Biome,
+        killer: EntityType?
+    ) {
+        unlockMemoryPage(context, "page_rest_biome_${biome.name.lowercase()}")
+        unlockMemoryPage(context, "page_rest_mood_${summary.forestMood.name.lowercase()}")
+        summary.pacifistRouteTier.takeIf { it != PacifistRouteTier.NONE }?.let {
+            unlockMemoryPage(context, "page_rest_route_${it.name.lowercase()}")
+        }
+        if (summary.cleanPasses >= 8 && summary.hitsTaken == 0) {
+            unlockMemoryPage(context, "page_rest_clean_pattern")
+        }
+        if (summary.bloomConversions >= 2) {
+            unlockMemoryPage(context, "page_rest_bloom_memory")
+        }
+        killer?.let { unlockMemoryPage(context, "page_rest_killer_${it.name.lowercase()}") }
+    }
+
+    private fun unlockGardenContextPages(context: Context, summary: RunSummary?) {
+        val mood = summary?.forestMood ?: ForestMoodSystem.currentState(context).currentMood
+        unlockMemoryPage(context, "page_garden_mood_${mood.name.lowercase()}")
+        summary?.pacifistRouteTier?.takeIf { it != PacifistRouteTier.NONE }?.let {
+            unlockMemoryPage(context, "page_garden_route_${it.name.lowercase()}")
+        }
+        PersistentMemoryManager.featuredPeaceBiome(context)?.let {
+            unlockMemoryPage(context, "page_garden_peace_${it.biome.name.lowercase()}")
+        }
+        PersistentMemoryManager.featuredWarmCreature(context)?.let {
+            unlockMemoryPage(context, "page_garden_warmth_${it.name.lowercase()}")
+        }
+        PersistentMemoryManager.featuredRepeatKiller(context)?.let {
+            unlockMemoryPage(context, "page_garden_repeat_${it.name.lowercase()}")
+        }
+        if ((summary?.bloomConversions ?: 0) >= 2) {
+            unlockMemoryPage(context, "page_garden_bloom_memory")
+        }
+    }
+
+    private fun thoughtFamilyPage(type: EntityType): String? = when (type) {
+        EntityType.CACTUS,
+        EntityType.LILY_OF_VALLEY,
+        EntityType.HYACINTH,
+        EntityType.EUCALYPTUS,
+        EntityType.VANILLA_ORCHID -> "page_thought_family_flora"
+        EntityType.WEEPING_WILLOW,
+        EntityType.JACARANDA,
+        EntityType.BAMBOO,
+        EntityType.CHERRY_BLOSSOM -> "page_thought_family_trees"
+        EntityType.DUCK,
+        EntityType.TIT,
+        EntityType.CHICKADEE,
+        EntityType.OWL,
+        EntityType.EAGLE -> "page_thought_family_birds"
+        EntityType.CAT,
+        EntityType.FOX,
+        EntityType.WOLF,
+        EntityType.DOG,
+        EntityType.HEDGEHOG -> "page_thought_family_animals"
     }
 
     private fun formatEntityName(type: EntityType): String =

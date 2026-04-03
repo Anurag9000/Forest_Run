@@ -180,7 +180,9 @@ class SpriteManager(private val context: Context) {
      */
     private fun sanitizeBitmap(bitmap: Bitmap, assetPath: String): Bitmap {
         if (!assetPath.startsWith("sprites/birds/")) return bitmap
-        if (bitmap.config == Bitmap.Config.HARDWARE) return bitmap.copy(Bitmap.Config.ARGB_8888, false)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (bitmap.config == Bitmap.Config.HARDWARE) return bitmap.copy(Bitmap.Config.ARGB_8888, false)
+        }
 
         val working = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val width = working.width

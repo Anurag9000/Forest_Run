@@ -9,12 +9,17 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
+import com.yourname.forest_run.engine.CinematicOverlayRenderer
+import com.yourname.forest_run.engine.CinematicScene
 import com.yourname.forest_run.engine.GardenSanctuaryPlanner
 import com.yourname.forest_run.engine.GardenSanctuaryState
 import com.yourname.forest_run.engine.PacifistPresentation
 import com.yourname.forest_run.engine.PostRunReflectionPlanner
 import com.yourname.forest_run.engine.RunSummary
+import com.yourname.forest_run.engine.SanctuaryLightingScene
 import com.yourname.forest_run.engine.SessionArcComposer
+import com.yourname.forest_run.engine.buildCinematicPolishProfile
+import com.yourname.forest_run.engine.buildSanctuaryLightingIdentity
 import kotlin.math.sin
 
 /**
@@ -196,6 +201,7 @@ class GameOverScreen(
     private val panelTop   = (screenHeight - panelH) / 2f
     private val panelRect  = RectF(panelLeft, panelTop, panelLeft + panelW, panelTop + panelH)
     private val cx         = screenWidth / 2f
+    private val cinematicOverlay = CinematicOverlayRenderer()
 
     // ── Update ────────────────────────────────────────────────────────────
 
@@ -229,6 +235,24 @@ class GameOverScreen(
         panelBorderPaint.alpha = (255f * stageAlpha).toInt().coerceIn(0, 255)
         canvas.drawRect(0f, 0f, w, h, scrimPaint)
         drawRecoveryAtmosphere(canvas, w, h, sanctuaryState, stageAlpha)
+        val restLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.REST)
+        val restEmphasis = (
+            0.38f +
+                sanctuaryState.lanternGlowCount * 0.05f +
+                sanctuaryState.homecomingConsequences.size * 0.07f
+            ).coerceIn(0f, 1f) * stageAlpha
+        cinematicOverlay.draw(
+            canvas = canvas,
+            width = w,
+            height = h,
+            profile = buildCinematicPolishProfile(
+                scene = CinematicScene.REST,
+                emphasis = restEmphasis
+            ),
+            elapsedSeconds = pulseTimer,
+            glowColor = restLighting.groundGlowColor,
+            centerYFraction = 0.50f
+        )
 
         // 2. Panel
         canvas.drawRoundRect(panelRect, 24f, 24f, panelPaint)
@@ -440,20 +464,21 @@ class GameOverScreen(
         sanctuaryState: GardenSanctuaryState,
         alphaScale: Float
     ) {
+        val lighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.REST)
         ambiencePaint.color = Color.argb(
             (sanctuaryState.canopyShadeAlpha.coerceAtMost(84) * alphaScale).toInt().coerceIn(0, 255),
-            20,
-            28,
-            34
+            Color.red(lighting.canopyColor),
+            Color.green(lighting.canopyColor),
+            Color.blue(lighting.canopyColor)
         )
         canvas.drawRect(0f, 0f, w, h * 0.34f, ambiencePaint)
 
         repeat(sanctuaryState.mistBandCount.coerceAtMost(3)) { index ->
             ambiencePaint.color = Color.argb(
                 ((24 + index * 10) * alphaScale).toInt().coerceIn(0, 255),
-                228,
-                240,
-                236
+                Color.red(lighting.mistColor),
+                Color.green(lighting.mistColor),
+                Color.blue(lighting.mistColor)
             )
             val top = h * (0.26f + index * 0.06f)
             canvas.drawOval(-30f, top, w + 30f, top + h * 0.08f, ambiencePaint)
@@ -462,9 +487,9 @@ class GameOverScreen(
         if (sanctuaryState.groundGlowAlpha > 0) {
             ambiencePaint.color = Color.argb(
                 (sanctuaryState.groundGlowAlpha.coerceAtMost(96) * alphaScale).toInt().coerceIn(0, 255),
-                236,
-                240,
-                178
+                Color.red(lighting.groundGlowColor),
+                Color.green(lighting.groundGlowColor),
+                Color.blue(lighting.groundGlowColor)
             )
             canvas.drawOval(w * 0.16f, h * 0.70f, w * 0.84f, h * 0.92f, ambiencePaint)
         }
@@ -472,9 +497,19 @@ class GameOverScreen(
         repeat(sanctuaryState.lanternGlowCount.coerceAtMost(4)) { index ->
             val x = w * (0.24f + index * 0.16f)
             val y = h * (0.20f + (index % 2) * 0.05f)
-            ambiencePaint.color = Color.argb((58f * alphaScale).toInt().coerceIn(0, 255), 255, 236, 170)
+            ambiencePaint.color = Color.argb(
+                (58f * alphaScale).toInt().coerceIn(0, 255),
+                Color.red(lighting.lanternOuterColor),
+                Color.green(lighting.lanternOuterColor),
+                Color.blue(lighting.lanternOuterColor)
+            )
             canvas.drawCircle(x, y, 14f, ambiencePaint)
-            ambiencePaint.color = Color.argb((118f * alphaScale).toInt().coerceIn(0, 255), 255, 242, 192)
+            ambiencePaint.color = Color.argb(
+                (118f * alphaScale).toInt().coerceIn(0, 255),
+                Color.red(lighting.lanternInnerColor),
+                Color.green(lighting.lanternInnerColor),
+                Color.blue(lighting.lanternInnerColor)
+            )
             canvas.drawCircle(x, y, 5f, ambiencePaint)
         }
     }

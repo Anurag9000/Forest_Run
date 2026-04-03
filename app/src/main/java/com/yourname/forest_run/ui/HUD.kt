@@ -9,6 +9,8 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
+import com.yourname.forest_run.engine.BloomHudPresentation
+import com.yourname.forest_run.engine.BloomPresentationMode
 import com.yourname.forest_run.engine.GameConstants
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.OpeningGuidanceCue
@@ -223,13 +225,18 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
 
     // ── Draw ──────────────────────────────────────────────────────────────
 
-    fun draw(canvas: Canvas, state: GameStateManager, openingCue: OpeningGuidanceCue? = null) {
+    fun draw(
+        canvas: Canvas,
+        state: GameStateManager,
+        bloomPresentation: BloomHudPresentation,
+        openingCue: OpeningGuidanceCue? = null
+    ) {
         // HUD background strip
         canvas.drawRect(hudBgRect, hudBgPaint)
         canvas.drawRect(hudBgRect, hudBorderPaint)
 
         drawSeedAndHearts(canvas, state)
-        drawBloomMeter(canvas, state)
+        drawBloomMeter(canvas, state, bloomPresentation)
         drawScoreArea(canvas, state)
         if (openingCue != null) {
             drawOpeningGuidance(canvas, openingCue)
@@ -262,14 +269,57 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         }
     }
 
-    private fun drawBloomMeter(canvas: Canvas, state: GameStateManager) {
+    private fun drawBloomMeter(canvas: Canvas, state: GameStateManager, presentation: BloomHudPresentation) {
         val cx = (METER_LEFT + METER_RIGHT) / 2f
+        val pulse = 0.6f + 0.4f * sin(bloomPulse)
 
-        if (state.isBloomActive) {
-            val pulse = 0.6f + 0.4f * sin(bloomPulse)
+        if (presentation.mode != BloomPresentationMode.CHARGING) {
             bloomPanelRect.set(METER_LEFT - 18f, METER_TOP - 10f, METER_RIGHT + 18f, METER_BOTTOM + 54f)
-            bloomPanelPaint.alpha = (55f + 45f * pulse).toInt().coerceIn(0, 160)
-            bloomPanelBorderPaint.alpha = (140f + 90f * pulse).toInt().coerceIn(0, 255)
+            when (presentation.mode) {
+                BloomPresentationMode.ACTIVE -> {
+                    bloomPanelPaint.color = Color.argb(
+                        (52f + 72f * pulse * presentation.emphasis).toInt().coerceIn(0, 180),
+                        120,
+                        52,
+                        18
+                    )
+                    bloomPanelBorderPaint.color = Color.argb(
+                        (136f + 96f * pulse * presentation.emphasis).toInt().coerceIn(0, 255),
+                        255,
+                        214,
+                        136
+                    )
+                }
+                BloomPresentationMode.READY -> {
+                    bloomPanelPaint.color = Color.argb(
+                        (40f + 56f * pulse * presentation.emphasis).toInt().coerceIn(0, 140),
+                        54,
+                        88,
+                        34
+                    )
+                    bloomPanelBorderPaint.color = Color.argb(
+                        (124f + 74f * pulse).toInt().coerceIn(0, 255),
+                        198,
+                        255,
+                        160
+                    )
+                }
+                BloomPresentationMode.AFTERGLOW -> {
+                    bloomPanelPaint.color = Color.argb(
+                        (34f + 42f * presentation.emphasis).toInt().coerceIn(0, 120),
+                        110,
+                        74,
+                        30
+                    )
+                    bloomPanelBorderPaint.color = Color.argb(
+                        (110f + 72f * presentation.emphasis).toInt().coerceIn(0, 220),
+                        255,
+                        220,
+                        162
+                    )
+                }
+                BloomPresentationMode.CHARGING -> Unit
+            }
             canvas.drawRoundRect(bloomPanelRect, 14f, 14f, bloomPanelPaint)
             canvas.drawRoundRect(bloomPanelRect, 14f, 14f, bloomPanelBorderPaint)
         }
@@ -285,11 +335,11 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
 
             if (fillFrac > 0f) {
                 // Pulse brightness when bloom is active
-                val pulse = if (state.isBloomActive)
+                val activePulse = if (state.isBloomActive)
                     (0.75f + 0.25f * sin(bloomPulse))
                 else 1f
 
-                val alpha = (150 + (105 * fillFrac * pulse).toInt()).coerceIn(0, 255)
+                val alpha = (150 + (105 * fillFrac * activePulse).toInt()).coerceIn(0, 255)
                 segFilledPaint.shader = LinearGradient(
                     left, METER_BOTTOM, left, METER_TOP,
                     intArrayOf(
@@ -327,20 +377,33 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         }
 
         // Meter label
-        val labelText  = if (state.isBloomActive) "BLOOM" else "bloom"
-        val labelPaint = if (state.isBloomActive) bloomActiveLabelPaint else bloomLabelPaint
-        if (state.isBloomActive) {
-            bloomActiveLabelPaint.alpha =
-                (200 + (55 * sin(bloomPulse)).toInt()).coerceIn(0, 255)
+        val labelPaint = if (presentation.mode == BloomPresentationMode.CHARGING) bloomLabelPaint else bloomActiveLabelPaint
+        when (presentation.mode) {
+            BloomPresentationMode.ACTIVE -> {
+                bloomActiveLabelPaint.color = Color.rgb(200, 100, 255)
+                bloomActiveLabelPaint.alpha =
+                    (200 + (55 * sin(bloomPulse)).toInt()).coerceIn(0, 255)
+            }
+            BloomPresentationMode.READY -> {
+                bloomActiveLabelPaint.color = Color.rgb(202, 255, 170)
+                bloomActiveLabelPaint.alpha = (188f + 48f * pulse).toInt().coerceIn(0, 255)
+            }
+            BloomPresentationMode.AFTERGLOW -> {
+                bloomActiveLabelPaint.color = Color.rgb(255, 214, 164)
+                bloomActiveLabelPaint.alpha = (164f + 46f * presentation.emphasis).toInt().coerceIn(0, 255)
+            }
+            BloomPresentationMode.CHARGING -> {
+                bloomLabelPaint.color = Color.argb(190, 140, 255, 140)
+            }
         }
-        canvas.drawText(labelText, cx, METER_BOTTOM + 22f, labelPaint)
-
-        val statusText = if (state.isBloomActive) {
-            String.format("%.1fs  •  %d converts  •  world open", state.bloomSecondsRemaining, state.bloomConversionsThisRun)
-        } else {
-            "${state.bloomMeter}/${state.bloomSeedTarget}"
+        bloomCountPaint.color = when (presentation.mode) {
+            BloomPresentationMode.CHARGING -> Color.argb(220, 210, 255, 210)
+            BloomPresentationMode.READY -> Color.argb(230, 220, 255, 198)
+            BloomPresentationMode.ACTIVE -> Color.argb(230, 255, 246, 214)
+            BloomPresentationMode.AFTERGLOW -> Color.argb(224, 255, 228, 196)
         }
-        canvas.drawText(statusText, cx, METER_BOTTOM + 42f, bloomCountPaint)
+        canvas.drawText(presentation.labelText, cx, METER_BOTTOM + 22f, labelPaint)
+        canvas.drawText(presentation.statusText, cx, METER_BOTTOM + 42f, bloomCountPaint)
     }
 
     private fun drawScoreArea(canvas: Canvas, state: GameStateManager) {

@@ -1,100 +1,49 @@
 # Forest Run
 
-`Forest Run` is a native Android endless runner in Kotlin using a custom `SurfaceView` loop. The intended product is not a minimal score-chaser. The intended product is a handcrafted, personality-rich forest journey with cute reactive entities, a mercy system, Bloom power spikes, a chill garden meta-loop, and enough audiovisual identity to feel like a complete indie game rather than a prototype.
+Native Android endless runner in Kotlin using a custom `SurfaceView` game loop. A handcrafted, personality-rich forest journey — not a prototype.
 
-## Product Direction
+## What It Is
 
-The non-negotiable direction for this repo is:
+A lush cottagecore endless runner with Ghibli × Stardew Valley tone. The player runs through five atmospheric biomes, collecting seeds, activating Bloom power states, practicing mercy on the creatures she meets, growing a personal garden, and slowly earning the forest's trust across many sessions.
 
-- Restore and fully implement the product-desirable parts of the original dream spec from the early long-form docs.
-- Treat the original GDD, Undertale-inspired personality layer, garden progression, and polish roadmap as the target product, not as discarded aspirations.
-- Use the current implementation as the canonical runtime baseline where older docs conflict with each other.
-- Close every gap between the shipped build and the intended experience without reopening historical variants that the repo has already canonically resolved.
+**Core loop:** run → soft failure → rest reflection → Garden return → run again
 
-## Original Dream
+## What's Built
 
-The original vision combined:
+Every engine feature is fully implemented:
 
-- a lush cottagecore endless runner with Ghibli x Stardew Valley tone
-- a ritualized start flow: sit in garden, stand, then run
-- five atmospheric biomes that feel like mood chapters
-- seeds as both in-run power progression and long-term garden currency
-- Bloom as a dramatic, audiovisual invincibility state
-- animals with individual personality, reactions, mercy logic, and spare outcomes
-- flavor text, ghost replay, memory, and Undertale-like charm
-- a restorative garden loop that gives every run long-term meaning
+- `SurfaceView` render loop, 60 FPS, frame-independent `deltaTime`
+- Player state machine: run, jump (variable height + Mario abort), duck, apex hover, squash/stretch, Bloom, rest, stumble
+- 19 entity classes across flora, trees, birds, and animals — each with unique behavior, personality, and authored payoff
+- Collision resolution: `HIT`, `STUMBLE`, `MERCY_MISS`, `NONE` with proximity-based mercy window
+- Five-biome cycle (Meadow → Orchard → Ancient Grove → Dusk Canyon → Night Forest)
+- Seeds, Bloom meter (8 seeds → 6s invincibility), Bloom conversion, Bloom spectacle
+- Mercy hearts + pacifist route tiers (Kind, Merciful, Peaceful) carrying through rest, Garden, and persistence
+- Ghost replay with context-aware visibility policy
+- Forest memory: mood system, relationship arcs (Cat/Fox/Wolf/Dog/Owl/Eagle), return moments, story fragments, session arc composition, sanctuary planner
+- Garden screen with plant unlock, wardrobe, sanctuary atmosphere, and carry-home state
+- HUD: score, distance, seeds, Bloom meter, mercy hearts
+- Camera shake (trauma-based, correctly fires once per frame)
+- Particle system with BLOOM, MERCY, DEATH, SEED, DUST, and ambient presets
+- Haptics, audio (adaptive music with leitmotif signatures), dialogue bubbles, flavor text
+- Local persistence: high score, lifetime seeds, ghost run, garden state, relationships, emotional memory
+- Debug scenario launcher mirroring the full device acceptance checklist
 
-See [docs/GDD.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/GDD.md), [docs/UNDERTALE_VIBE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/UNDERTALE_VIBE.md), [docs/IMPLEMENTATION_ROADMAP.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/IMPLEMENTATION_ROADMAP.md), and [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md).
+## What Remains
 
-## Current Repo Reality
+**All remaining items are hardware validation or store pipeline.** No engine features are missing.
 
-What exists in code today:
+See [`docs/RELEASE.md`](docs/RELEASE.md) for the complete checklist.
 
-- native Android app module, package `com.yourname.forest_run`
-- `SurfaceView` render loop and landscape activity
-- two-tap menu start and separate garden screen
-- player movement with run, jump, duck, stumble, bloom, and rest states
-- 19 entity classes across flora, trees, birds, and animals
-- five-biome tint cycle with biome-specific spawn pools
-- HUD for score, distance, seeds, Bloom meter, and mercy hearts
-- seed persistence, Bloom activation, ghost save/load, and garden unlock persistence
-- dedicated mercy, pacifist, memory, face, dialogue, and costume systems
-- Garden wardrobe equip flow and rest-to-Garden death loop
-- friendship persistence and richer rest/Garden run summaries
-- forest mood persistence, relationship arcs, richer Garden return moments, and fragment-driven emotional writing
-- stronger Bloom activation spectacle, player-following Bloom effects, and environmental conversion reactions
-- audio and haptics managers
+## Documentation
 
-What is still missing, incomplete, or user-reported as unsatisfactory:
+| File | Contents |
+|---|---|
+| [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) | Vision, design pillars, session lifecycle, all systems, all 19 entities |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Runtime structure, all engine systems, constants, wiring |
+| [`docs/RELEASE.md`](docs/RELEASE.md) | Build commands, device acceptance checklist, open items |
 
-- several entity families still need stronger, clearer on-device telegraphing and charm even after the readability pass
-- the ghost runner is materially clearer now, but still needs final default-behavior tuning and scenario-based verification
-- many entity-specific personalities exist in code but are not yet delivered with enough clarity, frequency, staging, or charm to feel deliberate in play
-- the forest still lacks the full handcrafted art, dense environmental life, and layered spectacle described in the original dream
-- the persistent memory, costume, dialogue, pacifist, and determination-quote layers now exist in baseline form but are not fully deep, rich, or complete
-- forest mood, relationship arcs, richer Garden return moments, and quiet fragments now exist in baseline form, but deeper authored emotional payoff is still missing
-- several dream-spec feedback loops may exist technically but are not surfacing reliably enough to a player during normal play
-
-## Canonical Runtime Truth
-
-The repo now treats these as the frozen implementation canon:
-
-- `5` runtime biomes: `MEADOW`, `ORCHARD`, `ANCIENT_GROVE`, `DUSK_CANYON`, `NIGHT_FOREST`
-- Bloom auto-activates at `8` seeds for `6` seconds
-- failure flow is `run -> rest summary -> fade -> Garden -> run`
-- tap jump, hold higher jump, and swipe-down duck are the canonical input model
-- old conflicting historical variants are preserved in docs only as traceability, not as competing runtime requirements
-
-## Canonical Resolution Policy
-
-Historical docs still matter, but not every exact old detail is an active blocker.
-
-- Active product work:
-  - real-device readability and delight
-  - emotional systems depth
-  - authored session arc and sanctuary feel
-  - bespoke scenic art, ambience, audio, and haptics
-  - release hardening
-- Traceability-only historical exactness unless explicitly re-promoted:
-  - `10`-seed / `5s` Bloom variants
-  - six-biome or day-phase runtime variants
-  - side-of-screen split input
-  - exact historical asset filenames and frame counts
-  - exact historical score tables
-  - exact old save-file shape
-
-## Immediate Product Concerns
-
-The latest user-reported playtest concerns must be treated as active product bugs, not minor polish:
-
-- entity readability and scale
-- spawn density and encounter pacing
-- ghost playback clarity and whether it should be shown by default
-- final phone-proof trustworthiness of Bloom state, mercy hearts, and the garden loop
-- whether each entity behavior actually feels unique and readable on device
-- whether the personality layer is emotionally legible during play rather than merely present in code
-
-## Build And Test
+## Build & Test
 
 ```bash
 bash gradlew testDebugUnitTest
@@ -103,19 +52,12 @@ bash gradlew assembleDebugAndroidTest
 bash gradlew connectedDebugAndroidTest
 ```
 
-Generated artifacts:
+Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 
-- Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
-- Android test APK: `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
+## Canonical Runtime Truth
 
-## Documentation Map
-
-- [docs/GDD.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/GDD.md): full game dream, current implementation, missing experience
-- [docs/IMPLEMENTATION_ROADMAP.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/IMPLEMENTATION_ROADMAP.md): phase-by-phase path to reach the original target
-- [docs/UNDERTALE_VIBE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/UNDERTALE_VIBE.md): personality, mercy, memory, charm systems
-- [docs/ENTITY_DATABASE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/ENTITY_DATABASE.md): intended behavior for every entity and current gap
-- [docs/TODO_MATRIX.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TODO_MATRIX.md): strict list of unimplemented or insufficient dream-spec items
-- [docs/SPEC_TRACEABILITY.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/SPEC_TRACEABILITY.md): source-by-source mapping of historical specs to current status
-- [docs/TECHNICAL_ARCHITECTURE.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/TECHNICAL_ARCHITECTURE.md): runtime structure and architectural gaps
-- [docs/VISUAL_FX_SPEC.md](/home/anurag-basistha/Projects/TODO/Forest_Run/docs/VISUAL_FX_SPEC.md): presentation and feedback target
-- [spec.md](/home/anurag-basistha/Projects/TODO/Forest_Run/spec.md): repo truth and product mandate
+- **5 biomes:** `MEADOW`, `ORCHARD`, `ANCIENT_GROVE`, `DUSK_CANYON`, `NIGHT_FOREST`
+- **Bloom:** 8 seeds → 6 seconds invincibility
+- **Input:** tap jump, hold for higher jump, swipe-down duck — gesture anywhere
+- **Failure flow:** run → rest summary → fade → Garden → run
+- **Package:** `com.yourname.forest_run`, Min SDK 24, Target SDK 34, Kotlin, sensorLandscape

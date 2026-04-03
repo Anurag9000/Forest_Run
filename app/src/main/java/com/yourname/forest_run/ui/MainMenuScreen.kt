@@ -11,11 +11,16 @@ import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.GardenSanctuaryPlanner
 import com.yourname.forest_run.engine.GardenSanctuaryState
+import com.yourname.forest_run.engine.CinematicOverlayRenderer
+import com.yourname.forest_run.engine.CinematicScene
+import com.yourname.forest_run.engine.SanctuaryLightingScene
 import com.yourname.forest_run.engine.SaveManager
 import com.yourname.forest_run.engine.SessionArcComposer
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.engine.buildCinematicPolishProfile
+import com.yourname.forest_run.engine.buildSanctuaryLightingIdentity
 import kotlin.math.sin
 
 /**
@@ -209,6 +214,7 @@ class MainMenuScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
+    private val cinematicOverlay = CinematicOverlayRenderer()
 
     init {
         refreshCopy()
@@ -272,6 +278,23 @@ class MainMenuScreen(
         drawAmbientBird(canvas, cw, ch)
         drawWillow(canvas, cw * 0.35f, groundY)
         drawCharacter(canvas, cw * 0.62f, groundY)
+        val menuLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.MENU)
+        cinematicOverlay.draw(
+            canvas = canvas,
+            width = cw,
+            height = ch,
+            profile = buildCinematicPolishProfile(
+                scene = CinematicScene.MENU,
+                emphasis = when (phase) {
+                    Phase.IDLE -> 0.36f
+                    Phase.STANDING_UP -> 0.58f
+                    Phase.READY -> 0.74f
+                }
+            ),
+            elapsedSeconds = elapsedT,
+            glowColor = menuLighting.groundGlowColor,
+            centerYFraction = 0.44f
+        )
 
         // Title
         canvas.drawText("FOREST RUN", cw / 2f, ch * 0.10f + titlePaint.textSize, titlePaint)
@@ -325,11 +348,22 @@ class MainMenuScreen(
     }
 
     private fun drawMenuSanctuaryAtmosphere(canvas: Canvas, cw: Float, ch: Float, groundY: Float) {
-        canopyShadePaint.color = Color.argb(sanctuaryState.canopyShadeAlpha.coerceAtMost(72), 26, 42, 34)
+        val lighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.MENU)
+        canopyShadePaint.color = Color.argb(
+            sanctuaryState.canopyShadeAlpha.coerceAtMost(72),
+            Color.red(lighting.canopyColor),
+            Color.green(lighting.canopyColor),
+            Color.blue(lighting.canopyColor)
+        )
         canvas.drawRect(0f, 0f, cw, ch * 0.34f, canopyShadePaint)
 
         repeat(sanctuaryState.mistBandCount) { index ->
-            ambiencePaint.color = Color.argb(32 + index * 10, 232, 246, 236)
+            ambiencePaint.color = Color.argb(
+                32 + index * 10,
+                Color.red(lighting.mistColor),
+                Color.green(lighting.mistColor),
+                Color.blue(lighting.mistColor)
+            )
             val top = ch * (0.19f + index * 0.055f)
             canvas.drawOval(-40f, top, cw + 40f, top + ch * 0.08f, ambiencePaint)
         }
@@ -338,18 +372,18 @@ class MainMenuScreen(
             val drift = sin(elapsedT * (1.1f + index * 0.08f) + index * 0.6f) * 11f
             val x = cw * (0.14f + (index * 0.14f)) + drift
             val y = ch * (0.14f + (index % 3) * 0.05f)
-            ambiencePaint.color = Color.argb(136, 252, 246, 182)
+            ambiencePaint.color = Color.argb(136, Color.red(lighting.fireflyColor), Color.green(lighting.fireflyColor), Color.blue(lighting.fireflyColor))
             canvas.drawCircle(x, y, 3.5f + (index % 2), ambiencePaint)
-            ambiencePaint.color = Color.argb(64, 252, 246, 182)
+            ambiencePaint.color = Color.argb(64, Color.red(lighting.fireflyColor), Color.green(lighting.fireflyColor), Color.blue(lighting.fireflyColor))
             canvas.drawCircle(x, y, 8f + (index % 3), ambiencePaint)
         }
 
         repeat(sanctuaryState.lanternGlowCount.coerceAtMost(4)) { index ->
             val x = cw * (0.18f + index * 0.18f)
             val y = groundY - ch * (0.07f + (index % 2) * 0.03f)
-            ambiencePaint.color = Color.argb(70, 255, 235, 168)
+            ambiencePaint.color = Color.argb(70, Color.red(lighting.lanternOuterColor), Color.green(lighting.lanternOuterColor), Color.blue(lighting.lanternOuterColor))
             canvas.drawCircle(x, y, 16f, ambiencePaint)
-            ambiencePaint.color = Color.argb(128, 255, 240, 188)
+            ambiencePaint.color = Color.argb(128, Color.red(lighting.lanternInnerColor), Color.green(lighting.lanternInnerColor), Color.blue(lighting.lanternInnerColor))
             canvas.drawCircle(x, y, 6f, ambiencePaint)
         }
 
@@ -362,7 +396,12 @@ class MainMenuScreen(
         }
 
         if (sanctuaryState.groundGlowAlpha > 0) {
-            ambiencePaint.color = Color.argb(sanctuaryState.groundGlowAlpha.coerceAtMost(120), 240, 246, 184)
+            ambiencePaint.color = Color.argb(
+                sanctuaryState.groundGlowAlpha.coerceAtMost(120),
+                Color.red(lighting.groundGlowColor),
+                Color.green(lighting.groundGlowColor),
+                Color.blue(lighting.groundGlowColor)
+            )
             canvas.drawOval(
                 cw * 0.24f,
                 groundY - ch * 0.05f,
@@ -375,9 +414,9 @@ class MainMenuScreen(
         repeat(sanctuaryState.bloomPatchCount.coerceAtMost(4)) { index ->
             val x = cw * (0.28f + index * 0.13f)
             val y = groundY + ch * 0.008f
-            ambiencePaint.color = Color.argb(74, 250, 236, 166)
+            ambiencePaint.color = Color.argb(74, Color.red(lighting.bloomPatchColor), Color.green(lighting.bloomPatchColor), Color.blue(lighting.bloomPatchColor))
             canvas.drawOval(x - 26f, y - 10f, x + 26f, y + 12f, ambiencePaint)
-            ambiencePaint.color = Color.argb(126, 255, 242, 196)
+            ambiencePaint.color = Color.argb(126, Color.red(lighting.bloomPatchColor), Color.green(lighting.bloomPatchColor), Color.blue(lighting.bloomPatchColor))
             canvas.drawCircle(x, y - 2f, 5f, ambiencePaint)
             canvas.drawCircle(x - 9f, y + 3f, 4f, ambiencePaint)
             canvas.drawCircle(x + 10f, y + 2f, 4f, ambiencePaint)

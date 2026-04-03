@@ -10,6 +10,8 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.engine.CostumeManager
+import com.yourname.forest_run.engine.CinematicOverlayRenderer
+import com.yourname.forest_run.engine.CinematicScene
 import com.yourname.forest_run.engine.GardenSanctuaryPlanner
 import com.yourname.forest_run.engine.GardenSanctuaryState
 import com.yourname.forest_run.engine.GameConstants
@@ -30,10 +32,13 @@ import com.yourname.forest_run.engine.ForestMoodState
 import com.yourname.forest_run.engine.ForestMoodSystem
 import com.yourname.forest_run.engine.ReturnMoment
 import com.yourname.forest_run.engine.ReturnMomentsSystem
+import com.yourname.forest_run.engine.SanctuaryLightingScene
 import com.yourname.forest_run.entities.CostumeStyle
 import com.yourname.forest_run.entities.EntityType
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
+import com.yourname.forest_run.engine.buildCinematicPolishProfile
+import com.yourname.forest_run.engine.buildSanctuaryLightingIdentity
 import kotlin.math.sin
 
 /**
@@ -274,6 +279,7 @@ class GardenScreen(
     private val backPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(180, 220, 220, 220); textSize = 16f; typeface = pixelFont; textAlign = Paint.Align.CENTER
     }
+    private val cinematicOverlay = CinematicOverlayRenderer()
     private val statsPanelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(145, 20, 40, 30)
         style = Paint.Style.FILL
@@ -431,6 +437,21 @@ class GardenScreen(
         canvas.drawRect(0f, 0f, cw, ch, skyPaint)
         canvas.drawRect(0f, groundY, cw, ch, groundPaint)
         drawSanctuaryAtmosphere(canvas, cw, ch, groundY)
+        val gardenLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.GARDEN)
+        val traceEmphasis = (0.34f + sanctuaryState.traces.size * 0.06f + sanctuaryState.bloomPatchCount * 0.04f)
+            .coerceIn(0f, 1f)
+        cinematicOverlay.draw(
+            canvas = canvas,
+            width = cw,
+            height = ch,
+            profile = buildCinematicPolishProfile(
+                scene = CinematicScene.GARDEN,
+                emphasis = traceEmphasis
+            ),
+            elapsedSeconds = elapsed,
+            glowColor = gardenLighting.groundGlowColor,
+            centerYFraction = 0.48f
+        )
 
         // Title
         titlePaint.color = forestMoodState.currentMood.accentColor
@@ -934,11 +955,22 @@ class GardenScreen(
     }
 
     private fun drawSanctuaryAtmosphere(canvas: Canvas, cw: Float, ch: Float, groundY: Float) {
-        canopyShadePaint.color = Color.argb(sanctuaryState.canopyShadeAlpha, 24, 44, 38)
+        val lighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.GARDEN)
+        canopyShadePaint.color = Color.argb(
+            sanctuaryState.canopyShadeAlpha,
+            Color.red(lighting.canopyColor),
+            Color.green(lighting.canopyColor),
+            Color.blue(lighting.canopyColor)
+        )
         canvas.drawRect(0f, 0f, cw, ch * 0.34f, canopyShadePaint)
 
         repeat(sanctuaryState.mistBandCount) { index ->
-            ambiencePaint.color = Color.argb(28 + index * 10, 236, 248, 236)
+            ambiencePaint.color = Color.argb(
+                28 + index * 10,
+                Color.red(lighting.mistColor),
+                Color.green(lighting.mistColor),
+                Color.blue(lighting.mistColor)
+            )
             val top = ch * (0.18f + index * 0.055f)
             canvas.drawOval(-40f, top, cw + 40f, top + ch * 0.075f, ambiencePaint)
         }
@@ -947,9 +979,9 @@ class GardenScreen(
             val drift = sin(elapsed * (1.2f + index * 0.08f) + index) * 14f
             val x = cw * (0.10f + ((index * 0.13f) % 0.76f)) + drift
             val y = ch * (0.16f + (index % 4) * 0.05f) + sin(elapsed * 1.6f + index * 0.7f) * 10f
-            ambiencePaint.color = Color.argb(150, 252, 246, 180)
+            ambiencePaint.color = Color.argb(150, Color.red(lighting.fireflyColor), Color.green(lighting.fireflyColor), Color.blue(lighting.fireflyColor))
             canvas.drawCircle(x, y, 4f + (index % 3), ambiencePaint)
-            ambiencePaint.color = Color.argb(72, 252, 246, 180)
+            ambiencePaint.color = Color.argb(72, Color.red(lighting.fireflyColor), Color.green(lighting.fireflyColor), Color.blue(lighting.fireflyColor))
             canvas.drawCircle(x, y, 9f + (index % 3) * 2f, ambiencePaint)
         }
 
@@ -964,24 +996,29 @@ class GardenScreen(
         repeat(sanctuaryState.lanternGlowCount.coerceAtMost(5)) { index ->
             val x = cw * (0.16f + index * 0.16f)
             val y = groundY - ch * (0.08f + (index % 2) * 0.035f)
-            ambiencePaint.color = Color.argb(64, 255, 234, 170)
+            ambiencePaint.color = Color.argb(64, Color.red(lighting.lanternOuterColor), Color.green(lighting.lanternOuterColor), Color.blue(lighting.lanternOuterColor))
             canvas.drawCircle(x, y, 18f, ambiencePaint)
-            ambiencePaint.color = Color.argb(126, 255, 242, 192)
+            ambiencePaint.color = Color.argb(126, Color.red(lighting.lanternInnerColor), Color.green(lighting.lanternInnerColor), Color.blue(lighting.lanternInnerColor))
             canvas.drawCircle(x, y, 6f, ambiencePaint)
         }
 
         repeat(sanctuaryState.bloomPatchCount) { index ->
             val x = cw * (0.18f + index * 0.19f)
             val y = groundY + ch * 0.06f + sin(elapsed * 0.8f + index) * 5f
-            ambiencePaint.color = Color.argb(64, 232, 255, 204)
+            ambiencePaint.color = Color.argb(64, Color.red(lighting.bloomPatchColor), Color.green(lighting.bloomPatchColor), Color.blue(lighting.bloomPatchColor))
             canvas.drawCircle(x, y, 18f, ambiencePaint)
-            ambiencePaint.color = Color.argb(112, 255, 240, 186)
+            ambiencePaint.color = Color.argb(112, Color.red(lighting.bloomPatchColor), Color.green(lighting.bloomPatchColor), Color.blue(lighting.bloomPatchColor))
             canvas.drawCircle(x - 8f, y + 4f, 7f, ambiencePaint)
             canvas.drawCircle(x + 10f, y - 2f, 6f, ambiencePaint)
         }
 
         if (sanctuaryState.groundGlowAlpha > 0) {
-            ambiencePaint.color = Color.argb(sanctuaryState.groundGlowAlpha, 240, 246, 186)
+            ambiencePaint.color = Color.argb(
+                sanctuaryState.groundGlowAlpha,
+                Color.red(lighting.groundGlowColor),
+                Color.green(lighting.groundGlowColor),
+                Color.blue(lighting.groundGlowColor)
+            )
             canvas.drawOval(
                 cw * 0.18f,
                 groundY - ch * 0.03f,

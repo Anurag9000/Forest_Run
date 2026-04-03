@@ -9,7 +9,22 @@ import android.util.Log
 
 internal data class LeitmotifPlaybackProfile(
     val tempo: Float,
-    val targetVolume: Float
+    val targetVolume: Float,
+    val motifSignature: LeitmotifSignature
+)
+
+internal data class BloomMusicSignature(
+    val secondsRemaining: Float,
+    val conversions: Int
+)
+
+internal data class LeitmotifSignature(
+    val motifLabel: String,
+    val leadPresence: Float,
+    val pulsePresence: Float,
+    val warmth: Float,
+    val shimmer: Float,
+    val cadenceLift: Float
 )
 
 /**
@@ -58,6 +73,18 @@ object LeitmotifManager {
     private var currentSpeed: Float = 1f
     private var currentScrollSpeed: Float = GameConstants.BASE_SCROLL_SPEED
     private var currentTargetVolume: Float = 0.48f
+    private var currentMotifSignature = LeitmotifSignature(
+        motifLabel = "Garden Hush",
+        leadPresence = 0.34f,
+        pulsePresence = 0.22f,
+        warmth = 0.82f,
+        shimmer = 0.44f,
+        cadenceLift = 0.28f
+    )
+    private var bloomMusicSignature = BloomMusicSignature(
+        secondsRemaining = GameConstants.BLOOM_DURATION_S,
+        conversions = 0
+    )
 
     // ── Context (application context, no leak) ───────────────────────────
     private var ctx: Context? = null
@@ -111,9 +138,16 @@ object LeitmotifManager {
         } ?: return
 
         val oldProfile = buildLeitmotifPlaybackProfile(oldState, currentScrollSpeed)
-        val newProfile = buildLeitmotifPlaybackProfile(newState, currentScrollSpeed)
+        if (newState == MusicState.BLOOM) {
+            bloomMusicSignature = BloomMusicSignature(
+                secondsRemaining = GameConstants.BLOOM_DURATION_S,
+                conversions = 0
+            )
+        }
+        val newProfile = buildLeitmotifPlaybackProfile(newState, currentScrollSpeed, bloomMusicSignature)
         currentSpeed = newProfile.tempo
         currentTargetVolume = newProfile.targetVolume
+        currentMotifSignature = newProfile.motifSignature
         applyTempoToPlayer(newPlayer, newProfile.tempo)
 
         val oldPlayer = activePlayer
@@ -148,10 +182,11 @@ object LeitmotifManager {
      */
     fun updateTempo(scrollSpeed: Float) {
         currentScrollSpeed = scrollSpeed
-        val profile = buildLeitmotifPlaybackProfile(currentState, scrollSpeed)
+        val profile = buildLeitmotifPlaybackProfile(currentState, scrollSpeed, bloomMusicSignature)
         if (profile.tempo == currentSpeed && profile.targetVolume == currentTargetVolume) return
         currentSpeed = profile.tempo
         currentTargetVolume = profile.targetVolume
+        currentMotifSignature = profile.motifSignature
         activePlayer?.let {
             applyTempoToPlayer(it, profile.tempo)
             if (fadeThread == null) {
@@ -160,7 +195,7 @@ object LeitmotifManager {
         }
         fadingPlayer?.let { fading ->
             val fadeState = previousState ?: return@let
-            val fadeProfile = buildLeitmotifPlaybackProfile(fadeState, scrollSpeed)
+            val fadeProfile = buildLeitmotifPlaybackProfile(fadeState, scrollSpeed, bloomMusicSignature)
             applyTempoToPlayer(fading, fadeProfile.tempo)
         }
     }
@@ -172,11 +207,37 @@ object LeitmotifManager {
 
     /** Transition to BLOOM music. Automatically reverts to correct PLAYING layer on Bloom end. */
     fun playBloom() {
+        bloomMusicSignature = BloomMusicSignature(
+            secondsRemaining = GameConstants.BLOOM_DURATION_S,
+            conversions = 0
+        )
         transitionTo(MusicState.BLOOM)
+    }
+
+    fun updateBloomSignature(secondsRemaining: Float, conversions: Int) {
+        bloomMusicSignature = BloomMusicSignature(
+            secondsRemaining = secondsRemaining.coerceIn(0f, GameConstants.BLOOM_DURATION_S),
+            conversions = conversions.coerceAtLeast(0)
+        )
+        if (currentState != MusicState.BLOOM) return
+        val profile = buildLeitmotifPlaybackProfile(MusicState.BLOOM, currentScrollSpeed, bloomMusicSignature)
+        currentSpeed = profile.tempo
+        currentTargetVolume = profile.targetVolume
+        currentMotifSignature = profile.motifSignature
+        activePlayer?.let {
+            applyTempoToPlayer(it, profile.tempo)
+            if (fadeThread == null) {
+                setPlayerVolume(it, profile.targetVolume)
+            }
+        }
     }
 
     /** Called when Bloom invincibility ends — reverts to the previous PLAYING layer. */
     fun endBloom(distanceM: Float) {
+        bloomMusicSignature = BloomMusicSignature(
+            secondsRemaining = 0f,
+            conversions = 0
+        )
         currentState = MusicState.MENU  // force re-evaluate
         updateDistance(distanceM)
     }
@@ -206,9 +267,19 @@ object LeitmotifManager {
         currentScrollSpeed = GameConstants.BASE_SCROLL_SPEED
         currentTargetVolume = 0.48f
         currentSpeed = 1f
+        currentMotifSignature = buildLeitmotifPlaybackProfile(
+            MusicState.MENU,
+            GameConstants.BASE_SCROLL_SPEED
+        ).motifSignature
+        bloomMusicSignature = BloomMusicSignature(
+            secondsRemaining = GameConstants.BLOOM_DURATION_S,
+            conversions = 0
+        )
         previousState = null
         currentState = MusicState.MENU
     }
+
+    internal fun currentMotifSignature(): LeitmotifSignature = currentMotifSignature
 
     // ── Internals ─────────────────────────────────────────────────────────
 
@@ -267,7 +338,11 @@ object LeitmotifManager {
 
 internal fun buildLeitmotifPlaybackProfile(
     state: LeitmotifManager.MusicState,
-    scrollSpeed: Float
+    scrollSpeed: Float,
+    bloomSignature: BloomMusicSignature = BloomMusicSignature(
+        secondsRemaining = GameConstants.BLOOM_DURATION_S,
+        conversions = 0
+    )
 ): LeitmotifPlaybackProfile {
     val base = GameConstants.BASE_SCROLL_SPEED
     val speedRatio = (scrollSpeed / base).coerceIn(0.75f, 2.0f)
@@ -277,27 +352,103 @@ internal fun buildLeitmotifPlaybackProfile(
     return when (state) {
         LeitmotifManager.MusicState.MENU -> LeitmotifPlaybackProfile(
             tempo = 0.94f,
-            targetVolume = 0.48f
+            targetVolume = 0.48f,
+            motifSignature = LeitmotifSignature(
+                motifLabel = "Garden Hush",
+                leadPresence = 0.34f,
+                pulsePresence = 0.20f,
+                warmth = 0.84f,
+                shimmer = 0.46f,
+                cadenceLift = 0.26f
+            )
         )
         LeitmotifManager.MusicState.REST -> LeitmotifPlaybackProfile(
             tempo = 0.92f,
-            targetVolume = 0.44f
+            targetVolume = 0.44f,
+            motifSignature = LeitmotifSignature(
+                motifLabel = "Lantern Recovery",
+                leadPresence = 0.30f,
+                pulsePresence = 0.16f,
+                warmth = 0.72f,
+                shimmer = 0.22f,
+                cadenceLift = 0.18f
+            )
         )
         LeitmotifManager.MusicState.PLAYING_1 -> LeitmotifPlaybackProfile(
             tempo = runTempo,
-            targetVolume = (0.66f + speedLift * 0.05f).coerceIn(0.55f, 0.78f)
+            targetVolume = (0.66f + speedLift * 0.05f).coerceIn(0.55f, 0.78f),
+            motifSignature = LeitmotifSignature(
+                motifLabel = "First Footing",
+                leadPresence = 0.42f,
+                pulsePresence = (0.42f + speedLift * 0.10f).coerceIn(0.40f, 0.58f),
+                warmth = 0.50f,
+                shimmer = 0.18f,
+                cadenceLift = 0.30f
+            )
         )
         LeitmotifManager.MusicState.PLAYING_2 -> LeitmotifPlaybackProfile(
             tempo = (runTempo + 0.04f).coerceAtMost(1.8f),
-            targetVolume = (0.78f + speedLift * 0.06f).coerceIn(0.68f, 0.90f)
+            targetVolume = (0.78f + speedLift * 0.06f).coerceIn(0.68f, 0.90f),
+            motifSignature = LeitmotifSignature(
+                motifLabel = "Open Path",
+                leadPresence = 0.58f,
+                pulsePresence = (0.56f + speedLift * 0.08f).coerceIn(0.52f, 0.70f),
+                warmth = 0.56f,
+                shimmer = 0.30f,
+                cadenceLift = 0.42f
+            )
         )
         LeitmotifManager.MusicState.PLAYING_3 -> LeitmotifPlaybackProfile(
             tempo = (runTempo + 0.08f).coerceAtMost(1.8f),
-            targetVolume = (0.90f + speedLift * 0.06f).coerceIn(0.82f, 0.98f)
+            targetVolume = (0.90f + speedLift * 0.06f).coerceIn(0.82f, 0.98f),
+            motifSignature = LeitmotifSignature(
+                motifLabel = "Forest In Full",
+                leadPresence = 0.74f,
+                pulsePresence = (0.72f + speedLift * 0.06f).coerceIn(0.68f, 0.84f),
+                warmth = 0.60f,
+                shimmer = 0.42f,
+                cadenceLift = 0.58f
+            )
         )
         LeitmotifManager.MusicState.BLOOM -> LeitmotifPlaybackProfile(
-            tempo = maxOf(1.12f, (runTempo + 0.10f).coerceAtMost(1.8f)),
-            targetVolume = 1f
+            tempo = maxOf(
+                1.08f,
+                (
+                    runTempo +
+                        0.08f +
+                        (bloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S) * 0.08f +
+                        bloomSignature.conversions.coerceAtMost(5) * 0.014f
+                    ).coerceAtMost(1.8f)
+            ),
+            targetVolume = (
+                0.88f +
+                    (bloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S) * 0.08f +
+                    bloomSignature.conversions.coerceAtMost(5) * 0.015f
+                ).coerceIn(0.88f, 1f),
+            motifSignature = LeitmotifSignature(
+                motifLabel = "Bloom Surge",
+                leadPresence = (
+                    0.78f +
+                        (bloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S) * 0.08f +
+                        bloomSignature.conversions.coerceAtMost(5) * 0.02f
+                    ).coerceIn(0.78f, 0.96f),
+                pulsePresence = (
+                    0.74f +
+                        bloomSignature.conversions.coerceAtMost(5) * 0.035f
+                    ).coerceIn(0.74f, 0.96f),
+                warmth = (
+                    0.58f +
+                        (bloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S) * 0.08f
+                    ).coerceIn(0.58f, 0.74f),
+                shimmer = (
+                    0.68f +
+                        bloomSignature.conversions.coerceAtMost(5) * 0.045f
+                    ).coerceIn(0.68f, 0.94f),
+                cadenceLift = (
+                    0.66f +
+                        bloomSignature.conversions.coerceAtMost(5) * 0.04f
+                    ).coerceIn(0.66f, 0.90f)
+            )
         )
     }
 }

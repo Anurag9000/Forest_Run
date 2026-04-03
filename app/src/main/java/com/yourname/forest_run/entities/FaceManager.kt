@@ -39,10 +39,11 @@ class FaceManager {
         bodyRect: RectF,
         state: PlayerState,
         velocityY: Float,
-        isInvincible: Boolean
+        isInvincible: Boolean,
+        motion: PlayerSecondaryMotionState
     ) {
         val faceCenterX = bodyRect.centerX()
-        val faceCenterY = bodyRect.top + bodyRect.height() * 0.34f
+        val faceCenterY = bodyRect.top + bodyRect.height() * 0.34f + motion.headOffsetPx
         val eyeOffsetX = bodyRect.width() * 0.12f
         val eyeY = faceCenterY
         val eyeW = bodyRect.width() * 0.08f

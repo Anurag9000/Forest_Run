@@ -16,6 +16,46 @@ data class RunFlavorCue(
 
 object RunFlavorPresentation {
 
+    fun ordinaryProgressCue(
+        progressKind: String,
+        currentValue: Int,
+        routeTier: PacifistRouteTier
+    ): RunFlavorCue {
+        val cue = when (progressKind) {
+            "clean" -> when (routeTier) {
+                PacifistRouteTier.PEACEFUL -> progressTemplate("Peace steadies", "The run is holding its hush.")
+                PacifistRouteTier.MERCIFUL -> progressTemplate("Mercy steadies", "Clean rhythm is giving mercy more room to stay open.")
+                PacifistRouteTier.KIND -> progressTemplate("Kindness steadies", "The calmer line is starting to feel deliberate now.")
+                PacifistRouteTier.NONE -> progressTemplate("Rhythm holds", "The path is beginning to trust your timing.")
+            }
+            "kindness" -> when (routeTier) {
+                PacifistRouteTier.PEACEFUL -> progressTemplate("Peace gathers", "Kindness is no longer arriving by accident.")
+                PacifistRouteTier.MERCIFUL -> progressTemplate("Mercy gathers", "The run is staying open longer between dangers.")
+                PacifistRouteTier.KIND -> progressTemplate("Kindness gathers", "Gentleness is starting to feel like the run's real pace.")
+                PacifistRouteTier.NONE -> progressTemplate("Softness stays", "Something about the run is learning to remain gentle.")
+            }
+            else -> when (routeTier) {
+                PacifistRouteTier.PEACEFUL -> progressTemplate("Peace rises", "Mercy is building without asking the run to stop moving.")
+                PacifistRouteTier.MERCIFUL -> progressTemplate("Mercy rises", "The forest is starting to notice how often you leave room.")
+                PacifistRouteTier.KIND -> progressTemplate("Kindness rises", "Close calls are beginning to soften instead of only warn.")
+                PacifistRouteTier.NONE -> progressTemplate("Mercy climbs", "The run noticed you left a little more room that time.")
+            }
+        }
+        val flavorSize = when {
+            currentValue >= 8 -> 28f
+            currentValue >= 5 -> 26f
+            else -> 24f
+        }
+        return RunFlavorCue(
+            bubbleText = cue.bubbleText,
+            flavorText = cue.flavorText,
+            fillColor = cue.fillColor,
+            borderColor = cue.borderColor,
+            flavorColor = cue.flavorColor,
+            flavorSize = flavorSize
+        )
+    }
+
     fun mercyCue(
         context: Context,
         type: EntityType?,
@@ -122,6 +162,57 @@ object RunFlavorPresentation {
             flavorColor = flavorColor,
             flavorSize = 24f
         )
+    }
+
+    fun passBubbleTexts(
+        context: Context,
+        type: EntityType,
+        routeTier: PacifistRouteTier
+    ): List<String> {
+        val appContext = context.applicationContext
+        val trackedBond = type.takeIf { RelationshipArcSystem.isTracked(it) }
+        return when {
+            trackedBond != null && RelationshipArcSystem.isWarmBond(appContext, trackedBond) -> listOf(
+                "Still with you",
+                "Known step",
+                "Kept gentle"
+            )
+            trackedBond != null -> listOf(
+                "Clean read",
+                "Held the line",
+                "Past it"
+            )
+            routeTier == PacifistRouteTier.PEACEFUL -> listOf(
+                "Peace kept",
+                "Still peaceful",
+                "Held softly"
+            )
+            routeTier == PacifistRouteTier.MERCIFUL -> listOf(
+                "Mercy kept",
+                "Still merciful",
+                "Left room"
+            )
+            routeTier == PacifistRouteTier.KIND -> listOf(
+                "Kindness kept",
+                "Still kind",
+                "Stayed gentle"
+            )
+            type == EntityType.DUCK || type == EntityType.TIT || type == EntityType.CHICKADEE -> listOf(
+                "Clean read",
+                "Kept the beat",
+                "Past clean"
+            )
+            type == EntityType.CACTUS || type == EntityType.BAMBOO -> listOf(
+                "Held the line",
+                "Stayed exact",
+                "Past clean"
+            )
+            else -> listOf(
+                "Clean read",
+                "Kept clear",
+                "Past it"
+            )
+        }
     }
 
     fun collisionCue(
@@ -364,4 +455,14 @@ object RunFlavorPresentation {
 
     private fun shorten(text: String, maxLength: Int): String =
         if (text.length <= maxLength) text else text.take(maxLength - 1).trimEnd() + "…"
+
+    private fun progressTemplate(bubble: String, flavor: String): RunFlavorCue =
+        RunFlavorCue(
+            bubbleText = bubble,
+            flavorText = flavor,
+            fillColor = Color.rgb(240, 246, 226),
+            borderColor = Color.rgb(120, 144, 96),
+            flavorColor = Color.rgb(228, 252, 210),
+            flavorSize = 24f
+        )
 }

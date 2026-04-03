@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.yourname.forest_run.engine.Biome
 import com.yourname.forest_run.engine.ForestMood
+import com.yourname.forest_run.engine.PacifistRouteTier
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.entities.EntityType
@@ -77,5 +78,69 @@ class RestQuoteManagerTest {
         val quote = RestQuoteManager.quoteFor(context, summary, Biome.NIGHT_FOREST, null)
 
         assertTrue(quote.contains("Night"))
+        assertTrue(
+            quote.contains("room", ignoreCase = true) ||
+                quote.contains("rest", ignoreCase = true) ||
+                quote.contains("night", ignoreCase = true)
+        )
+    }
+
+    @Test
+    fun `route quote adds route coda beyond fragment base`() {
+        val summary = RunSummary(
+            score = 1_040,
+            distanceM = 760f,
+            isNewHighScore = false,
+            highScore = 1_400,
+            mercyHearts = 4,
+            mercyMisses = 4,
+            kindnessChain = 6,
+            cleanPasses = 9,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.MERCIFUL
+        )
+
+        val quote = RestQuoteManager.quoteFor(context, summary, Biome.DUSK_CANYON, null)
+
+        assertTrue(
+            quote.contains("Mercy", ignoreCase = true) ||
+                quote.contains("spared", ignoreCase = true) ||
+                quote.contains("Dusk Canyon", ignoreCase = true)
+        )
+    }
+
+    @Test
+    fun `killer quote adds mood sensitive killer coda`() {
+        val summary = RunSummary(
+            score = 510,
+            distanceM = 430f,
+            isNewHighScore = false,
+            highScore = 1_100,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.EAGLE,
+            restQuote = "",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val quote = RestQuoteManager.quoteFor(context, summary, Biome.NIGHT_FOREST, EntityType.EAGLE)
+
+        assertTrue(
+            quote.contains("eagle", ignoreCase = true) ||
+                quote.contains("room", ignoreCase = true) ||
+                quote.contains("careful", ignoreCase = true)
+        )
     }
 }

@@ -20,6 +20,7 @@ import com.yourname.forest_run.entities.trees.WeepingWillow
 import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.systems.SeedOrbManager
+import com.yourname.forest_run.ui.DialogueBubbleManager
 import com.yourname.forest_run.ui.FlavorTextManager
 import kotlin.random.Random
 
@@ -56,6 +57,9 @@ class EntityManager(
 
     // ── Spawn timer ───────────────────────────────────────────────────────
     private var spawnTimer = 0f
+    private var bloomReactionCooldown = 0f
+    private var bloomWasActive = false
+    private val bloomReactedEntities: MutableSet<Int> = mutableSetOf()
 
     // ── Spawn X: slightly off the right edge of the screen ────────────────
     private val spawnX get() = screenWidth + 120f
@@ -85,6 +89,15 @@ class EntityManager(
         player: Player,
         encounterDirector: EncounterDirector? = null
     ) {
+        if (gameState.isBloomActive && !bloomWasActive) {
+            bloomReactedEntities.clear()
+            bloomReactionCooldown = 0f
+        } else if (!gameState.isBloomActive && bloomWasActive) {
+            bloomReactedEntities.clear()
+            bloomReactionCooldown = 0f
+        }
+        bloomWasActive = gameState.isBloomActive
+
         encounterDirector?.advance(deltaTime)?.forEach { directive ->
             spawn(directive.type, directive.variant, screenWidth + directive.xOffset)
         }
@@ -124,6 +137,18 @@ class EntityManager(
                         type = type,
                         routeTier = gameState.pacifistRouteTier
                     )
+                    DialogueBubbleManager.spawnVariant(
+                        triggerKey = "pass_${type.name}_${gameState.pacifistRouteTier.name}",
+                        textOptions = RunFlavorPresentation.passBubbleTexts(
+                            context = context,
+                            type = type,
+                            routeTier = gameState.pacifistRouteTier
+                        ),
+                        anchorX = entity.hitbox.centerX(),
+                        anchorY = entity.hitbox.top - 18f,
+                        fillColor = passCue.fillColor,
+                        borderColor = passCue.borderColor
+                    )
                     FlavorTextManager.spawn(
                         text = passCue.flavorText,
                         x = entity.hitbox.left,
@@ -146,6 +171,10 @@ class EntityManager(
                     spawnRate  = orbSpawnRateFor(entity)
                 )
             }
+        }
+
+        if (gameState.isBloomActive) {
+            updateBloomNearbyWorldReaction(deltaTime, player)
         }
 
         // Update orbs (collection check + scroll)
@@ -214,6 +243,70 @@ class EntityManager(
                 ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, x, y - 20f)
             }
             else -> {
+                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
+                ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 12f)
+            }
+        }
+    }
+
+    private fun updateBloomNearbyWorldReaction(deltaTime: Float, player: Player) {
+        bloomReactionCooldown = (bloomReactionCooldown - deltaTime).coerceAtLeast(0f)
+        val playerCenterX = player.hitbox.centerX()
+        val playerCenterY = player.hitbox.centerY()
+
+        for (entity in activeEntities) {
+            if (!entity.isActive || entity.hasBeenPassed || entity.hitbox.isEmpty) continue
+            val type = entityTypeOf(entity) ?: continue
+            val reactionKey = System.identityHashCode(entity)
+            if (!BloomWorldReaction.shouldReact(
+                    playerCenterX = playerCenterX,
+                    playerCenterY = playerCenterY,
+                    entityCenterX = entity.hitbox.centerX(),
+                    entityCenterY = entity.hitbox.centerY(),
+                    alreadyReacted = reactionKey in bloomReactedEntities
+                )
+            ) continue
+
+            bloomReactedEntities.add(reactionKey)
+            emitBloomProximityReaction(entity, type)
+            if (bloomReactionCooldown <= 0f) {
+                val cue = BloomWorldReaction.cueFor(type)
+                FlavorTextManager.spawn(
+                    text = cue.text,
+                    x = entity.hitbox.left,
+                    y = entity.hitbox.top - 12f,
+                    colour = when (cue.family) {
+                        BloomReactionFamily.FLORA -> android.graphics.Color.rgb(255, 226, 168)
+                        BloomReactionFamily.TREE -> android.graphics.Color.rgb(255, 214, 178)
+                        BloomReactionFamily.BIRD -> android.graphics.Color.rgb(226, 214, 255)
+                        BloomReactionFamily.ANIMAL -> android.graphics.Color.rgb(255, 236, 190)
+                    },
+                    lifetime = 0.85f,
+                    size = 25f
+                )
+                bloomReactionCooldown = 0.18f
+            }
+        }
+    }
+
+    private fun emitBloomProximityReaction(entity: Entity, type: EntityType) {
+        val x = entity.hitbox.centerX()
+        val y = entity.hitbox.centerY()
+        ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, x, y)
+        when (BloomWorldReaction.cueFor(type).family) {
+            BloomReactionFamily.FLORA -> {
+                ParticleManager.emit(FxPreset.POLLEN_BURST, x, y)
+                ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 16f)
+            }
+            BloomReactionFamily.TREE -> {
+                ParticleManager.emit(FxPreset.PETAL_DRIFT, x, y - 20f)
+                ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 18f)
+            }
+            BloomReactionFamily.BIRD -> {
+                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
+                ParticleManager.emit(FxPreset.MERCY_STARS, x, y - 14f)
+            }
+            BloomReactionFamily.ANIMAL -> {
                 ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
                 ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 12f)
             }
@@ -308,6 +401,9 @@ class EntityManager(
         recyclePool.clear()
         seedOrbManager.reset()
         spawnTimer = 0f
+        bloomReactionCooldown = 0f
+        bloomWasActive = false
+        bloomReactedEntities.clear()
         debugActiveEntityCount = 0
     }
 

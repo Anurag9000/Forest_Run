@@ -26,6 +26,7 @@ object DialogueBubbleManager {
     private const val MAX_WIDTH = 240f
 
     private var pixelFont: Typeface? = null
+    private val variantCounts = mutableMapOf<String, Int>()
 
     data class Bubble(
         val text: String,
@@ -78,6 +79,26 @@ object DialogueBubbleManager {
     ) {
         if (active.size >= MAX_BUBBLES) active.removeAt(0)
         active.add(Bubble(text = text, x = anchorX, y = anchorY, fillColor = fillColor, borderColor = borderColor))
+    }
+
+    fun spawnVariant(
+        triggerKey: String,
+        textOptions: List<String>,
+        anchorX: Float,
+        anchorY: Float,
+        fillColor: Int = Color.rgb(250, 246, 228),
+        borderColor: Int = Color.rgb(40, 40, 40)
+    ) {
+        if (textOptions.isEmpty()) return
+        val nextIndex = variantCounts.getOrDefault(triggerKey, 0)
+        variantCounts[triggerKey] = nextIndex + 1
+        spawn(
+            text = textOptions[nextIndex % textOptions.size],
+            anchorX = anchorX,
+            anchorY = anchorY,
+            fillColor = fillColor,
+            borderColor = borderColor
+        )
     }
 
     fun update(deltaTime: Float) {
@@ -134,5 +155,10 @@ object DialogueBubbleManager {
         }
     }
 
-    fun clear() = active.clear()
+    fun clear() {
+        active.clear()
+        variantCounts.clear()
+    }
+
+    internal fun activeTextsForTest(): List<String> = active.map { it.text }
 }
