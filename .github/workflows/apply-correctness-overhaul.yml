@@ -215,6 +215,8 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout HEAD -- .github/workflows/apply-correctness-overhaul.yml
+          rm -f .github/workflows/android-ci.yml
           git add -A
           if git diff --cached --quiet; then
             echo "The overhaul produced no changes; refusing a false-success commit." >&2
