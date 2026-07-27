@@ -1,9 +1,6 @@
 name: Apply correctness overhaul
 
 on:
-  push:
-    branches:
-      - agent/forest-run-correctness-overhaul
   pull_request:
     branches:
       - main
@@ -14,8 +11,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: correctness-overhaul-${{ github.ref }}
-  cancel-in-progress: false
+  group: correctness-overhaul-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   apply-and-verify:
