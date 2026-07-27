@@ -84,44 +84,49 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
+          import re
+
           path = Path('app/build.gradle.kts')
-          source = path.read_text()
-          source = source.replace(
+          source = path.read_text().replace(
               'testImplementation("org.robolectric:robolectric:4.14.1")',
               'testImplementation("org.robolectric:robolectric:4.16.1")'
           )
           if 'testImplementation("org.robolectric:robolectric:4.16.1")' not in source:
               raise SystemExit('Robolectric 4.16.1 dependency not present after overhaul')
-          anchor = 'unitTests.isIncludeAndroidResources = true'
-          if anchor not in source:
-              raise SystemExit('Android-resource unit-test anchor not found after overhaul')
-          if '--add-opens=java.base/java.lang=ALL-UNNAMED' not in source:
-              pos = source.index(anchor)
-              line_start = source.rfind('\n', 0, pos) + 1
-              block_indent = source[line_start:pos]
-              child_indent = block_indent + '    '
-              flag_indent = child_indent + '    '
-              flags = [
-                  '--add-opens=java.base/java.lang=ALL-UNNAMED',
-                  '--add-opens=java.base/java.util=ALL-UNNAMED',
-                  '--add-opens=java.base/java.io=ALL-UNNAMED',
-                  '--add-opens=java.base/java.net=ALL-UNNAMED',
-                  '--add-opens=java.base/java.security=ALL-UNNAMED',
-                  '--add-opens=java.base/java.text=ALL-UNNAMED',
-                  '--add-opens=java.base/jdk.internal.access=ALL-UNNAMED',
-                  '--add-opens=java.desktop/java.awt.font=ALL-UNNAMED',
-                  '--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
-              ]
-              rendered = '\n'.join(f'{flag_indent}"{flag}",' for flag in flags)
-              addition = (
-                  f'{anchor}\n'
-                  f'{block_indent}unitTests.all {{\n'
-                  f'{child_indent}it.jvmArgs(\n'
-                  f'{rendered}\n'
-                  f'{child_indent})\n'
-                  f'{block_indent}}}'
-              )
-              source = source.replace(anchor, addition, 1)
+
+          pattern = re.compile(
+              r'(?ms)^(?P<indent>[ \t]*)testOptions\s*\{\s*'
+              r'unitTests\.isIncludeAndroidResources\s*=\s*true\s*\}'
+          )
+          match = pattern.search(source)
+          if match is None:
+              raise SystemExit('Expected testOptions block not found after overhaul')
+          indent = match.group('indent')
+          flags = [
+              '--add-opens=java.base/java.lang=ALL-UNNAMED',
+              '--add-opens=java.base/java.util=ALL-UNNAMED',
+              '--add-opens=java.base/java.io=ALL-UNNAMED',
+              '--add-opens=java.base/java.net=ALL-UNNAMED',
+              '--add-opens=java.base/java.security=ALL-UNNAMED',
+              '--add-opens=java.base/java.text=ALL-UNNAMED',
+              '--add-opens=java.base/jdk.internal.access=ALL-UNNAMED',
+              '--add-opens=java.desktop/java.awt.font=ALL-UNNAMED',
+              '--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
+          ]
+          rendered_flags = '\n'.join(
+              f'{indent}            "{flag}",' for flag in flags
+          )
+          replacement = (
+              f'{indent}testOptions {{\n'
+              f'{indent}    unitTests.isIncludeAndroidResources = true\n'
+              f'{indent}    unitTests.all {{\n'
+              f'{indent}        it.jvmArgs(\n'
+              f'{rendered_flags}\n'
+              f'{indent}        )\n'
+              f'{indent}    }}\n'
+              f'{indent}}}'
+          )
+          source = pattern.sub(replacement, source, count=1)
           path.write_text(source)
           PY
 
