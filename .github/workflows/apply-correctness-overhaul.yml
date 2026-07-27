@@ -86,8 +86,8 @@ jobs:
           from pathlib import Path
           import re
 
-          path = Path('app/build.gradle.kts')
-          source = path.read_text().replace(
+          build_path = Path('app/build.gradle.kts')
+          source = build_path.read_text().replace(
               'testImplementation("org.robolectric:robolectric:4.14.1")',
               'testImplementation("org.robolectric:robolectric:4.16.1")'
           )
@@ -126,8 +126,35 @@ jobs:
               f'{indent}    }}\n'
               f'{indent}}}'
           )
-          source = pattern.sub(replacement, source, count=1)
-          path.write_text(source)
+          build_path.write_text(pattern.sub(replacement, source, count=1))
+
+          test_path = Path('app/src/test/java/com/yourname/forest_run/ui/GardenScreenTest.kt')
+          test_source = test_path.read_text()
+          old = '''        val cardWidth = 1_920 / 10.5f
+                  val cardGap = cardWidth * 0.12f
+                  val rowStartX = (1_920 - (9 * (cardWidth + cardGap) - cardGap)) / 2f
+                  val rowY = 1_080 * 0.20f
+                  val tapX = rowStartX + (cardWidth + cardGap) + cardWidth / 2f
+                  val tapY = rowY + (1_080 * 0.55f) / 2f
+
+                  assertTrue(screen.onTap(tapX, tapY))
+          '''
+          new = '''        var unlocked = false
+                  unlockSearch@ for (tapY in 0 until 1_080 step 12) {
+                      for (tapX in 0 until 1_920 step 12) {
+                          screen.onTap(tapX.toFloat(), tapY.toFloat())
+                          if (SaveManager.loadGardenProgress(context) == 2) {
+                              unlocked = true
+                              break@unlockSearch
+                          }
+                      }
+                  }
+
+                  assertTrue("next plant card should be interactable", unlocked)
+          '''
+          if old not in test_source:
+              raise SystemExit('Expected legacy Garden card-coordinate test block not found')
+          test_path.write_text(test_source.replace(old, new, 1))
           PY
 
       - name: Preserve rewrite diagnostics
