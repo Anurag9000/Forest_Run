@@ -257,6 +257,16 @@ class MainMenuScreen(
         sanctuaryState = GardenSanctuaryPlanner.build(context, summary)
     }
 
+    /** Reset the sit -> rise -> run ritual when returning home. */
+    fun resetRitual() {
+        phase = Phase.IDLE
+        standTimer = 0f
+        startRunRequested = false
+        standPlayerSprite.reset()
+        readyPlayerSprite.reset()
+        refreshCopy()
+    }
+
     /** Consume a pending run-start request so it only fires once. */
     fun consumeStartRunRequest(): Boolean {
         if (!startRunRequested) return false

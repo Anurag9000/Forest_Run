@@ -293,7 +293,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!::gardenScreen.isInitialized) {
             gardenScreen = GardenScreen(context, spriteManager, screenWidth, screenHeight)
             gardenScreen.onBack = {
-                if (::mainMenuScreen.isInitialized) mainMenuScreen.refreshCopy()
+                if (::mainMenuScreen.isInitialized) mainMenuScreen.resetRitual()
+                inputHandler.cancelActiveGesture()
                 appState = AppGameState.MENU
             }
             gardenScreen.onRun = {
@@ -338,7 +339,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     fun pause() {
         stopThread()
         LeitmotifManager.pause()   // Phase 20
-        if (::gameState.isInitialized) gameState.save()   // persist high score
+        if (::gameState.isInitialized && encounterDirector?.isScenarioActive != true) {
+            gameState.save()
+        }
     }
 
     fun resume() {
@@ -413,11 +416,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun stopThread() {
         gameThread.isRunning = false
-        var retry = true
-        while (retry) {
-            try { gameThread.join(); retry = false }
-            catch (e: InterruptedException) { Thread.currentThread().interrupt() }
+        gameThread.interrupt()
+        var interrupted = false
+        try {
+            gameThread.join(1_500L)
+        } catch (_: InterruptedException) {
+            interrupted = true
         }
+        if (gameThread.isAlive) {
+            Log.w(TAG, "Game thread did not stop within timeout")
+        }
+        if (interrupted) Thread.currentThread().interrupt()
     }
 
     // -----------------------------------------------------------------------
@@ -455,26 +464,39 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         val prev_duck     = inputHandler.onDuckPressed
         val prev_duckEnd  = inputHandler.onDuckReleased
 
-        inputHandler.onJumpPressed  = {
+        inputHandler.onJumpPressed = {
             prev_pressed?.invoke()
-            if (::gameState.isInitialized) gameState.recordJumpInput()
-            player.onJumpPressed()
+            if (appState == AppGameState.PLAYING && runState == RunState.PLAYING) {
+                if (::gameState.isInitialized) gameState.recordJumpInput()
+                player.onJumpPressed()
+            }
         }
-        inputHandler.onJumpHeld     = { holdSec ->
-            if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
-            player.onJumpHeld(holdSec)
+        inputHandler.onJumpHeld = { holdSec ->
+            if (appState == AppGameState.PLAYING && runState == RunState.PLAYING) {
+                if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
+                player.onJumpHeld(holdSec)
+            }
         }
         inputHandler.onJumpReleased = { holdSec ->
+            val gameplayInput = appState == AppGameState.PLAYING && runState == RunState.PLAYING
             prev_released?.invoke(holdSec)
-            if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
-            player.onJumpReleased(holdSec)
+            if (gameplayInput) {
+                if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
+                player.onJumpReleased(holdSec)
+            }
         }
-        inputHandler.onDuckPressed  = {
+        inputHandler.onDuckPressed = {
             prev_duck?.invoke()
-            if (::gameState.isInitialized) gameState.recordDuckInput()
-            player.onDuckPressed()
+            if (appState == AppGameState.PLAYING && runState == RunState.PLAYING) {
+                if (::gameState.isInitialized) gameState.recordDuckInput()
+                player.onDuckPressed()
+            }
         }
-        inputHandler.onDuckReleased = { prev_duckEnd?.invoke();           player.onDuckReleased() }
+        inputHandler.onDuckReleased = {
+            val gameplayInput = appState == AppGameState.PLAYING && runState == RunState.PLAYING
+            prev_duckEnd?.invoke()
+            if (gameplayInput) player.onDuckReleased()
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -707,14 +729,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         LeitmotifManager.playRest()   // Phase 20
                         HapticManager.longPulse()     // Phase 21 — strong death feedback
                         // Phase 19: save ghost if this run is a new best distance
-                        if (::gameState.isInitialized &&
+                        if (encounterDirector?.isScenarioActive != true &&
+                            ::gameState.isInitialized &&
                             gameState.distanceMetres > SaveManager.loadBestDistance(context)
                         ) {
                             SaveManager.saveGhostRun(context, ghostRecorder.snapshot())
                             SaveManager.saveBestDistance(context, gameState.distanceMetres)
                         }
                         val killerType = entityManager.entityTypeOf(collision.entity)
-                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        if (encounterDirector?.isScenarioActive != true) {
+                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        }
                         val collisionCue = RunFlavorPresentation.collisionCue(
                             context = context,
                             type = killerType,
@@ -744,20 +769,29 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                             killer = killerType
                         )
                         currentRunSummary = summaryPreview.copy(restQuote = currentRestQuote)
-                        currentRunSummary?.let {
-                            ForestMoodSystem.recordRun(context, it)
-                            ReturnMomentsSystem.recordRunOutcome(context, it)
-                            SaveManager.saveLastRunSummary(context, it)
+                        if (encounterDirector?.isScenarioActive != true) {
+                            currentRunSummary?.let {
+                                ForestMoodSystem.recordRun(context, it)
+                                ReturnMomentsSystem.recordRunOutcome(context, it)
+                                SaveManager.saveLastRunSummary(context, it)
+                            }
                         }
                         ghostRecorder.reset()
                         // Transition to DYING
-                        if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
+                        if (::gameState.isInitialized) {
+                            runResetManager.triggerDeath(
+                                gameState,
+                                persistScore = encounterDirector?.isScenarioActive != true
+                            )
+                        }
                         runState = RunState.DYING
                     }
                     CollisionResult.STUMBLE -> {
                         gameState.recordHit()
                         val killerType = entityManager.entityTypeOf(collision.entity)
-                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        if (encounterDirector?.isScenarioActive != true) {
+                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        }
                         ghostPlayer.suppress(0.9f)
                         // User Prompt "accompanied by a screen-flash of the forest's dominant color"
                         player.triggerStumble()
@@ -1109,6 +1143,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         debugScenarioScriptIndex = 0
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
         player.setCostume(CostumeManager.activeCostume(context))
+        gameState.reloadPersistentState()
         runResetManager.executeReset(gameState, entityManager, player)
         entityManager.biomeManager.forceDebugBiome(null)
         entityManager.seedOpeningSequence()
@@ -1195,6 +1230,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         val scenario = director.selectedScenario
         debugScenarioScriptIndex = 0
         player.setCostume(CostumeManager.activeCostume(context))
+        gameState.reloadPersistentState()
         runResetManager.executeReset(gameState, entityManager, player)
         entityManager.biomeManager.forceDebugBiome(scenario.forcedBiome)
         if (scenario.startsWithBloom) {

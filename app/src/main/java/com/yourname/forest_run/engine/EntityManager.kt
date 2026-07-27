@@ -1,7 +1,9 @@
+
 package com.yourname.forest_run.engine
 
 import android.content.Context
 import com.yourname.forest_run.entities.CollisionResult
+import com.yourname.forest_run.entities.EncounterOutcome
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityFactory
 import com.yourname.forest_run.entities.EntityType
@@ -25,201 +27,242 @@ import com.yourname.forest_run.ui.FlavorTextManager
 import kotlin.random.Random
 
 /**
- * Manages the full lifecycle of all on-screen entities:
- *   • Choosing and spawning entity types from the difficulty-scaled pool.
- *   • Updating every active entity each frame.
- *   • Removing inactive entities.
- *   • Running the collision loop against the player.
- *   • Calling [Entity.performUniqueAction] when the player fully passes an entity.
+ * Owns entity spawning, updates and one-shot encounter resolution.
  *
- * Object pooling: retired Entity instances are kept in [recyclePool] per type
- * and re-initialised on next use, avoiding allocations mid-run.
+ * Entities are intentionally constructed fresh. The previous pool reset only three fields
+ * and leaked subclass state, projectiles, timers and relationship snapshots between spawns.
  */
 class EntityManager(
     private val context: Context,
     private val screenWidth: Float,
     private val screenHeight: Float,
     private val spriteManager: SpriteManager,
-    /** Injected from GameView — updated every frame before EntityManager.update() is called. */
     val biomeManager: BiomeManager = BiomeManager()
 ) {
     @Volatile
     internal var debugActiveEntityCount: Int = 0
 
-    /** Seed orb spawner — public so GameView can call draw() with bloomFraction. */
     val seedOrbManager = SeedOrbManager()
-
-    /** All entities currently on screen or within the active window. */
     val activeEntities: MutableList<Entity> = mutableListOf()
 
-    /** Retired instances, keyed by type for object pooling (Phase 12+). */
-    private val recyclePool: MutableMap<EntityType, MutableList<Entity>> = mutableMapOf()
-
-    // ── Spawn timer ───────────────────────────────────────────────────────
     private var spawnTimer = 0f
     private var bloomReactionCooldown = 0f
     private var bloomWasActive = false
-    private val bloomReactedEntities: MutableSet<Int> = mutableSetOf()
-
-    // ── Spawn X: slightly off the right edge of the screen ────────────────
+    private val bloomReactedEntities = mutableSetOf<Int>()
     private val spawnX get() = screenWidth + 120f
 
-    // ── Pass-detection threshold ──────────────────────────────────────────
-    // An entity is considered "passed" when its right edge moves behind the player's left edge.
-    private val playerPassX = screenWidth * 0.25f  // rough player position
+    data class CollisionFrame(val result: CollisionResult, val entity: Entity)
 
-    // ── Result accumulator (reset each collision frame) ───────────────────
-    data class CollisionFrame(
-        val result: CollisionResult,
-        val entity: Entity
-    )
-
-    // ── Update ────────────────────────────────────────────────────────────
-
-    /**
-     * Main update. Call from [GameView.update()] every frame.
-     *
-     * @param deltaTime   Seconds since last frame.
-     * @param gameState   The mutable game state (score, seeds, speed).
-     * @param player      The active player instance.
-     */
     fun update(
         deltaTime: Float,
         gameState: GameStateManager,
         player: Player,
         encounterDirector: EncounterDirector? = null
     ) {
-        if (gameState.isBloomActive && !bloomWasActive) {
-            bloomReactedEntities.clear()
-            bloomReactionCooldown = 0f
-        } else if (!gameState.isBloomActive && bloomWasActive) {
+        if (gameState.isBloomActive != bloomWasActive) {
             bloomReactedEntities.clear()
             bloomReactionCooldown = 0f
         }
         bloomWasActive = gameState.isBloomActive
 
         encounterDirector?.advance(deltaTime)?.forEach { directive ->
-            spawn(directive.type, directive.variant, screenWidth + directive.xOffset)
+            spawn(
+                type = directive.type,
+                variant = directive.variant,
+                startX = screenWidth + directive.xOffset,
+                persistEncounter = false
+            )
         }
 
-        // 1. Advance spawn timer
         if (encounterDirector?.isScenarioActive != true) {
             spawnTimer += deltaTime
-            val defaultSpawnInterval = DifficultyScaler.getSpawnInterval(gameState.distanceMetres)
-            val spawnInterval = gameState.openingSpawnInterval(defaultSpawnInterval)
-            if (!gameState.shouldLockRandomOpeningSpawns() && spawnTimer >= spawnInterval) {
+            val interval = gameState.openingSpawnInterval(
+                DifficultyScaler.getSpawnInterval(gameState.distanceMetres)
+            )
+            if (!gameState.shouldLockRandomOpeningSpawns() &&
+                spawnTimer >= interval &&
+                hasSafeSpawnGap(gameState.scrollSpeed)
+            ) {
                 spawnTimer = 0f
                 spawnRandom(gameState)
             }
         }
 
-        // 2. Update every active entity
-        val iter = activeEntities.iterator()
-        while (iter.hasNext()) {
-            val entity = iter.next()
-            entity.update(deltaTime, gameState.scrollSpeed)
-
-            // Remove if entity flagged itself as done
-            if (!entity.isActive) {
-                recycle(entity)
-                iter.remove()
-                continue
-            }
-
-            // 3. Pass detection — entity has scrolled past the player's position
-            if (!entity.hasBeenPassed && entity.hitbox.right < playerPassX) {
-                entity.hasBeenPassed = true
-                entity.performUniqueAction(player, gameState)
-                gameState.recordCleanPass()
-                entityTypeOf(entity)?.let { type ->
-                    val passCue = RunFlavorPresentation.passCue(
-                        context = context,
-                        type = type,
-                        routeTier = gameState.pacifistRouteTier
-                    )
-                    DialogueBubbleManager.spawnVariant(
-                        triggerKey = "pass_${type.name}_${gameState.pacifistRouteTier.name}",
-                        textOptions = RunFlavorPresentation.passBubbleTexts(
-                            context = context,
-                            type = type,
-                            routeTier = gameState.pacifistRouteTier
-                        ),
-                        anchorX = entity.hitbox.centerX(),
-                        anchorY = entity.hitbox.top - 18f,
-                        fillColor = passCue.fillColor,
-                        borderColor = passCue.borderColor
-                    )
-                    FlavorTextManager.spawn(
-                        text = passCue.flavorText,
-                        x = entity.hitbox.left,
-                        y = entity.hitbox.top - 10f,
-                        colour = passCue.flavorColor,
-                        lifetime = 0.95f,
-                        size = passCue.flavorSize
-                    )
-                }
-                if (gameState.isBloomActive) {
-                    gameState.recordBloomConversion()
-                    ParticleManager.emit(FxPreset.BLOOM_CONVERT, entity.hitbox.centerX(), entity.hitbox.centerY())
-                    emitBloomEnvironmentReaction(entity)
-                    entity.isActive = false
-                }
-                // Trigger seed orb spawn above the entity (60% base chance)
-                seedOrbManager.trySpawn(
-                    centreX    = entity.hitbox.centerX(),
-                    topY       = entity.hitbox.top,
-                    spawnRate  = orbSpawnRateFor(entity)
-                )
-            }
+        activeEntities.forEach { entity ->
+            if (entity.isActive) entity.update(deltaTime, gameState.scrollSpeed)
         }
 
-        if (gameState.isBloomActive) {
-            updateBloomNearbyWorldReaction(deltaTime, player)
-        }
-
-        // Update orbs (collection check + scroll)
+        if (gameState.isBloomActive) updateBloomNearbyWorldReaction(deltaTime, player)
         seedOrbManager.update(deltaTime, gameState, player)
         debugActiveEntityCount = activeEntities.size
     }
 
     /**
-     * Runs collision detection for all active entities vs the player.
-     * Returns the first [CollisionFrame] that produces a non-NONE result,
-     * or null if no collisions occurred this frame.
-     *
-     * Called from GameView AFTER update().
+     * Resolves all overlaps by priority, then finalises passes. This makes the result
+     * independent of list order and prevents pass rewards from preceding a same-frame hit.
      */
     fun checkCollisions(player: Player, gameState: GameStateManager): CollisionFrame? {
-        // Bloom makes player invincible — skip all collision
-        if (gameState.isBloomActive) return null
+        var selected: CollisionFrame? = null
 
-        for (entity in activeEntities) {
-            val result = entity.onCollision(player, gameState)
-            if (result != CollisionResult.NONE) {
-                if (result == CollisionResult.MERCY_MISS) {
+        if (!gameState.isBloomActive) {
+            for (entity in activeEntities) {
+                if (!entity.isActive || entity.isEncounterResolved) continue
+                val result = entity.onCollision(player, gameState)
+                if (result == CollisionResult.NONE) continue
+                val candidate = CollisionFrame(result, entity)
+                if (selected == null || collisionPriority(result) > collisionPriority(selected!!.result)) {
+                    selected = candidate
+                }
+            }
+
+            selected?.let { frame ->
+                val outcome = when (frame.result) {
+                    CollisionResult.HIT -> EncounterOutcome.HIT
+                    CollisionResult.STUMBLE -> EncounterOutcome.STUMBLE
+                    CollisionResult.MERCY_MISS -> EncounterOutcome.MERCY
+                    CollisionResult.NONE -> EncounterOutcome.DESPAWNED
+                }
+                if (frame.entity.resolveEncounter(outcome) && frame.result == CollisionResult.MERCY_MISS) {
                     gameState.addMercyHeart()
                 }
-                return CollisionFrame(result, entity)
             }
         }
-        return null
+
+        if (selected?.result != CollisionResult.HIT) {
+            finalisePassedEntities(player, gameState)
+        }
+        finaliseInactiveEntities(player, gameState)
+        activeEntities.removeAll { !it.isActive }
+        debugActiveEntityCount = activeEntities.size
+        return selected
     }
 
-    // ── Draw ──────────────────────────────────────────────────────────────
-
-    /** Draw all active entities. Call from [GameView.draw()] after background, before HUD. */
-    fun draw(canvas: android.graphics.Canvas) {
-        for (entity in activeEntities) {
-            entity.draw(canvas)
+    private fun finalisePassedEntities(player: Player, gameState: GameStateManager) {
+        val passBoundary = player.hitbox.left
+        activeEntities.forEach { entity ->
+            if (!entity.isEncounterResolved && entity.hitbox.right < passBoundary) {
+                if (gameState.isBloomActive) {
+                    if (entity.resolveEncounter(EncounterOutcome.BLOOM_CONVERTED)) {
+                        gameState.recordBloomConversion()
+                        ParticleManager.emit(FxPreset.BLOOM_CONVERT, entity.hitbox.centerX(), entity.hitbox.centerY())
+                        emitBloomEnvironmentReaction(entity)
+                        entity.isActive = false
+                    }
+                } else if (entity.resolveEncounter(EncounterOutcome.CLEAN_PASS)) {
+                    if (entity.persistProgression) {
+                        entity.performUniqueAction(player, gameState)
+                        entityTypeOf(entity)?.let { PersistentMemoryManager.recordPass(context, it) }
+                    }
+                    gameState.recordCleanPass()
+                    emitPassPresentation(entity, gameState)
+                    seedOrbManager.trySpawn(
+                        centreX = entity.hitbox.centerX(),
+                        topY = entity.hitbox.top,
+                        spawnRate = orbSpawnRateFor(entity),
+                        minimumReachableX = player.hitbox.right + (gameState.scrollSpeed * 0.35f).coerceIn(180f, 420f)
+                    )
+                }
+            }
         }
     }
 
-    /**
-     * Draw seed orbs. Call AFTER entity draw, BEFORE player draw so orbs appear between.
-     * @param bloomFraction 0..1 — Bloom Meter fill proportion (drives orb colour).
-     */
+    private fun finaliseInactiveEntities(player: Player, gameState: GameStateManager) {
+        activeEntities.forEach { entity ->
+            if (entity.isActive || entity.isEncounterResolved) return@forEach
+            if (entity.hitbox.right < player.hitbox.left) {
+                if (gameState.isBloomActive && entity.resolveEncounter(EncounterOutcome.BLOOM_CONVERTED)) {
+                    gameState.recordBloomConversion()
+                    emitBloomEnvironmentReaction(entity)
+                } else if (!gameState.isBloomActive && entity.resolveEncounter(EncounterOutcome.CLEAN_PASS)) {
+                    if (entity.persistProgression) {
+                        entity.performUniqueAction(player, gameState)
+                        entityTypeOf(entity)?.let { PersistentMemoryManager.recordPass(context, it) }
+                    }
+                    gameState.recordCleanPass()
+                }
+            } else {
+                entity.resolveEncounter(EncounterOutcome.DESPAWNED)
+            }
+        }
+    }
+
+    private fun emitPassPresentation(entity: Entity, gameState: GameStateManager) {
+        val type = entityTypeOf(entity) ?: return
+        val cue = RunFlavorPresentation.passCue(context, type, gameState.pacifistRouteTier)
+        DialogueBubbleManager.spawnVariant(
+            triggerKey = "pass_${type.name}_${gameState.pacifistRouteTier.name}",
+            textOptions = RunFlavorPresentation.passBubbleTexts(context, type, gameState.pacifistRouteTier),
+            anchorX = entity.hitbox.centerX(),
+            anchorY = entity.hitbox.top - 18f,
+            fillColor = cue.fillColor,
+            borderColor = cue.borderColor
+        )
+        FlavorTextManager.spawn(
+            text = cue.flavorText,
+            x = entity.hitbox.left,
+            y = entity.hitbox.top - 10f,
+            colour = cue.flavorColor,
+            lifetime = 0.95f,
+            size = cue.flavorSize
+        )
+    }
+
+    fun draw(canvas: android.graphics.Canvas) = activeEntities.forEach { it.draw(canvas) }
+
     fun drawOrbs(canvas: android.graphics.Canvas, bloomFraction: Float) {
         seedOrbManager.draw(canvas, bloomFraction)
+    }
+
+    private fun collisionPriority(result: CollisionResult): Int = when (result) {
+        CollisionResult.HIT -> 3
+        CollisionResult.STUMBLE -> 2
+        CollisionResult.MERCY_MISS -> 1
+        CollisionResult.NONE -> 0
+    }
+
+    private fun hasSafeSpawnGap(scrollSpeed: Float): Boolean {
+        val rightmost = activeEntities.asSequence()
+            .filter { it.isActive && !it.isEncounterResolved }
+            .map { maxOf(it.x, it.hitbox.right) }
+            .maxOrNull() ?: return true
+        val minimumGap = (scrollSpeed * 0.62f).coerceIn(300f, 900f)
+        return spawnX - rightmost >= minimumGap
+    }
+
+    private fun spawnRandom(gameState: GameStateManager) {
+        val pool = gameState.openingSpawnPool(
+            DifficultyScaler.getSpawnPool(gameState.distanceMetres, biomeManager)
+        )
+        if (pool.isNotEmpty()) spawn(pool[Random.nextInt(pool.size)])
+    }
+
+    fun spawn(
+        type: EntityType,
+        variant: EncounterVariant = EncounterVariant.DEFAULT,
+        startX: Float = spawnX,
+        persistEncounter: Boolean = true
+    ) {
+        val entity = EntityFactory.create(
+            context, type, startX, screenWidth, screenHeight, spriteManager, variant
+        )
+        entity.isActive = true
+        entity.x = startX
+        entity.resetEncounterTracking(persistEncounter)
+        if (persistEncounter) PersistentMemoryManager.recordEncounter(context, type)
+        activeEntities.add(entity)
+        debugActiveEntityCount = activeEntities.size
+    }
+
+    fun seedOpeningSequence() {
+        if (activeEntities.isNotEmpty()) return
+        spawn(EntityType.DUCK, startX = screenWidth + 380f)
+        spawn(EntityType.LILY_OF_VALLEY, startX = screenWidth + 700f)
+        spawn(EntityType.CAT, startX = screenWidth + 980f)
+        spawn(EntityType.TIT, startX = screenWidth + 1_240f)
+    }
+
+    internal fun debugSpawnAt(type: EntityType, worldX: Float) {
+        spawn(type, startX = worldX, persistEncounter = false)
     }
 
     private fun emitBloomEnvironmentReaction(entity: Entity) {
@@ -230,22 +273,13 @@ class EntityManager(
             is LilyOfValley, is Hyacinth, is VanillaOrchid -> {
                 ParticleManager.emit(FxPreset.POLLEN_BURST, x, y)
                 ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 18f)
-                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y - 24f)
             }
             is Eucalyptus, is WeepingWillow, is Jacaranda, is CherryBlossom, is Bamboo -> {
                 ParticleManager.emit(FxPreset.PETAL_DRIFT, x, y - 24f)
-                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
                 ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 22f)
             }
-            is Cactus -> {
-                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
-                ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 10f)
-                ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, x, y - 20f)
-            }
-            else -> {
-                ParticleManager.emit(FxPreset.BLOOM_CONVERT, x, y)
-                ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 12f)
-            }
+            is Cactus -> ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 10f)
+            else -> ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 12f)
         }
     }
 
@@ -253,9 +287,8 @@ class EntityManager(
         bloomReactionCooldown = (bloomReactionCooldown - deltaTime).coerceAtLeast(0f)
         val playerCenterX = player.hitbox.centerX()
         val playerCenterY = player.hitbox.centerY()
-
         for (entity in activeEntities) {
-            if (!entity.isActive || entity.hasBeenPassed || entity.hitbox.isEmpty) continue
+            if (!entity.isActive || entity.isEncounterResolved || entity.hitbox.isEmpty) continue
             val type = entityTypeOf(entity) ?: continue
             val reactionKey = System.identityHashCode(entity)
             if (!BloomWorldReaction.shouldReact(
@@ -266,7 +299,6 @@ class EntityManager(
                     alreadyReacted = reactionKey in bloomReactedEntities
                 )
             ) continue
-
             bloomReactedEntities.add(reactionKey)
             emitBloomProximityReaction(entity, type)
             if (bloomReactionCooldown <= 0f) {
@@ -313,92 +345,31 @@ class EntityManager(
         }
     }
 
-    // ── Spawning Helper ───────────────────────────────────────────────────
-
-    private fun spawnRandom(gameState: GameStateManager) {
-        val pool = gameState.openingSpawnPool(
-            DifficultyScaler.getSpawnPool(gameState.distanceMetres, biomeManager)
-        )
-        val type = pool[Random.nextInt(pool.size)]
-        spawn(type)
-    }
-
-    fun spawn(
-        type: EntityType,
-        variant: EncounterVariant = EncounterVariant.DEFAULT,
-        startX: Float = spawnX
-    ) {
-        // Check recycle pool first
-        val recycled = if (variant == EncounterVariant.DEFAULT) {
-            recyclePool[type]?.removeLastOrNull()
-        } else {
-            null
-        }
-        val entity = recycled ?: EntityFactory.create(
-            context, type, startX, screenWidth, screenHeight, spriteManager, variant
-        )
-        PersistentMemoryManager.recordEncounter(context, type)
-        // Guarantee it's active and placed at spawn X
-        entity.isActive = true
-        entity.hasBeenPassed = false
-        entity.x = startX
-        activeEntities.add(entity)
-        debugActiveEntityCount = activeEntities.size
-    }
-
-    fun seedOpeningSequence() {
-        if (activeEntities.isNotEmpty()) return
-        spawnAt(EntityType.DUCK, screenWidth + 380f)
-        spawnAt(EntityType.LILY_OF_VALLEY, screenWidth + 700f)
-        spawnAt(EntityType.CAT, screenWidth + 980f)
-        spawnAt(EntityType.TIT, screenWidth + 1_240f)
-    }
-
-    internal fun debugSpawnAt(type: EntityType, worldX: Float) {
-        spawn(type, startX = worldX)
-    }
-
-    private fun spawnAt(type: EntityType, startX: Float) {
-        spawn(type, startX = startX)
-    }
-
-    // ── Recycling ─────────────────────────────────────────────────────────
-
-    private fun recycle(entity: Entity) {
-        // Only keep a small pool per type to cap memory usage
-        val type = entityTypeOf(entity) ?: return
-        val pool = recyclePool.getOrPut(type) { mutableListOf() }
-        if (pool.size < 3) pool.add(entity)
-    }
-
-    /** Maps an entity instance back to its type for recycling. Extensible as we add more. */
     fun entityTypeOf(entity: Entity): EntityType? = when (entity) {
-        is com.yourname.forest_run.entities.flora.Cactus          -> EntityType.CACTUS
-        is com.yourname.forest_run.entities.flora.LilyOfValley    -> EntityType.LILY_OF_VALLEY
-        is com.yourname.forest_run.entities.flora.Hyacinth        -> EntityType.HYACINTH
-        is com.yourname.forest_run.entities.flora.Eucalyptus      -> EntityType.EUCALYPTUS
-        is com.yourname.forest_run.entities.flora.VanillaOrchid   -> EntityType.VANILLA_ORCHID
-        is com.yourname.forest_run.entities.trees.WeepingWillow   -> EntityType.WEEPING_WILLOW
-        is com.yourname.forest_run.entities.trees.Jacaranda       -> EntityType.JACARANDA
-        is com.yourname.forest_run.entities.trees.Bamboo          -> EntityType.BAMBOO
-        is com.yourname.forest_run.entities.trees.CherryBlossom   -> EntityType.CHERRY_BLOSSOM
-        is com.yourname.forest_run.entities.birds.Duck            -> EntityType.DUCK
-        is com.yourname.forest_run.entities.birds.TitGroup        -> EntityType.TIT
-        is com.yourname.forest_run.entities.birds.ChickadeeGroup  -> EntityType.CHICKADEE
-        is com.yourname.forest_run.entities.birds.Owl             -> EntityType.OWL
-        is com.yourname.forest_run.entities.birds.Eagle           -> EntityType.EAGLE
-        is com.yourname.forest_run.entities.animals.Cat           -> EntityType.CAT
-        is com.yourname.forest_run.entities.animals.Wolf          -> EntityType.WOLF
-        is com.yourname.forest_run.entities.animals.Fox           -> EntityType.FOX
-        is com.yourname.forest_run.entities.animals.Hedgehog      -> EntityType.HEDGEHOG
-        is com.yourname.forest_run.entities.animals.Dog           -> EntityType.DOG
+        is com.yourname.forest_run.entities.flora.Cactus -> EntityType.CACTUS
+        is com.yourname.forest_run.entities.flora.LilyOfValley -> EntityType.LILY_OF_VALLEY
+        is com.yourname.forest_run.entities.flora.Hyacinth -> EntityType.HYACINTH
+        is com.yourname.forest_run.entities.flora.Eucalyptus -> EntityType.EUCALYPTUS
+        is com.yourname.forest_run.entities.flora.VanillaOrchid -> EntityType.VANILLA_ORCHID
+        is com.yourname.forest_run.entities.trees.WeepingWillow -> EntityType.WEEPING_WILLOW
+        is com.yourname.forest_run.entities.trees.Jacaranda -> EntityType.JACARANDA
+        is com.yourname.forest_run.entities.trees.Bamboo -> EntityType.BAMBOO
+        is com.yourname.forest_run.entities.trees.CherryBlossom -> EntityType.CHERRY_BLOSSOM
+        is com.yourname.forest_run.entities.birds.Duck -> EntityType.DUCK
+        is com.yourname.forest_run.entities.birds.TitGroup -> EntityType.TIT
+        is com.yourname.forest_run.entities.birds.ChickadeeGroup -> EntityType.CHICKADEE
+        is com.yourname.forest_run.entities.birds.Owl -> EntityType.OWL
+        is com.yourname.forest_run.entities.birds.Eagle -> EntityType.EAGLE
+        is com.yourname.forest_run.entities.animals.Cat -> EntityType.CAT
+        is com.yourname.forest_run.entities.animals.Wolf -> EntityType.WOLF
+        is com.yourname.forest_run.entities.animals.Fox -> EntityType.FOX
+        is com.yourname.forest_run.entities.animals.Hedgehog -> EntityType.HEDGEHOG
+        is com.yourname.forest_run.entities.animals.Dog -> EntityType.DOG
         else -> null
     }
 
-    /** Clear all entities and orbs (on run reset). */
     fun reset() {
         activeEntities.clear()
-        recyclePool.clear()
         seedOrbManager.reset()
         spawnTimer = 0f
         bloomReactionCooldown = 0f
@@ -410,6 +381,6 @@ class EntityManager(
     private fun orbSpawnRateFor(entity: Entity): Float = when (entity) {
         is LilyOfValley -> 1.35f
         is Dog, is Wolf -> 1.20f
-        else -> 1.0f
+        else -> 1f
     }
 }

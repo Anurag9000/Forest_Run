@@ -90,13 +90,13 @@ class Player(
 
     private var stateTimer: Float = 0f    // seconds spent in the current transient state
     private var apexTimer:  Float = 0f    // time spent at apex (low-gravity window)
+    private var jumpHeld: Boolean = false
+    private var jumpHoldSeconds: Float = 0f
 
     // -----------------------------------------------------------------------
-    // Bloom
+    // Bloom power state (orthogonal to locomotion)
     // -----------------------------------------------------------------------
     var isInvincible: Boolean = false
-    private var bloomTimer: Float = 0f
-    private val BLOOM_DURATION_S = GameConstants.BLOOM_DURATION_S
 
     // -----------------------------------------------------------------------
     // Hitbox
@@ -166,37 +166,39 @@ class Player(
     // Input interface (called from GameView callbacks)
     // -----------------------------------------------------------------------
 
-    /** Called when the finger first touches the screen. */
-    fun onJumpPressed() {
-        // Only accept a new jump if we are grounded and not already in a jump
-        if (state == PlayerState.RUNNING || state == PlayerState.LANDING) {
-            transitionTo(PlayerState.JUMP_START)
-        }
-    }
 
-    /**
-     * Called every frame while the finger is held.
-     * We don't need the holdSec here because we commit the force on release.
-     */
-    fun onJumpHeld(@Suppress("UNUSED_PARAMETER") holdSec: Float) {
-        // Physics applied on release; nothing to do each-frame for now.
+/** Called once after the gesture has been classified as a jump. */
+fun onJumpPressed() {
+    if (state == PlayerState.RUNNING || state == PlayerState.LANDING) {
+        jumpHeld = true
+        jumpHoldSeconds = 0f
+        velocityY = MIN_JUMP_FORCE
+        transitionTo(PlayerState.JUMP_START)
+        SfxManager.playJump()
+        HapticManager.shortPulse()
     }
+}
 
-    /**
-     * Commit the jump with [holdSec] seconds of charge.
-     * Force is applied immediately at JUMP_START; release just triggers JUMPING.
-     */
-    fun onJumpReleased(@Suppress("UNUSED_PARAMETER") holdSec: Float) {
-        if (state == PlayerState.JUMP_START) {
-            transitionTo(PlayerState.JUMPING)
-        } else if (state == PlayerState.JUMPING && velocityY < 0f) {
-            // "Mario" variable jump: if user lets go while still rising, cut upward velocity by half
-            velocityY *= 0.5f
-        }
-        // Audio and haptics handled in updatePhysics when force is applied
+/** Records that the finger remains held; physics applies the lift per frame. */
+fun onJumpHeld(holdSec: Float) {
+    if (state == PlayerState.JUMP_START || state == PlayerState.JUMPING) {
+        jumpHeld = true
+        jumpHoldSeconds = holdSec.coerceIn(0f, MAX_HOLD_DURATION_S)
     }
+}
 
-    fun onDuckPressed() {
+/** Ends jump sustain. A quick tap still keeps its minimum launch impulse. */
+fun onJumpReleased(holdSec: Float) {
+    jumpHoldSeconds = holdSec.coerceIn(0f, MAX_HOLD_DURATION_S)
+    jumpHeld = false
+    if ((state == PlayerState.JUMP_START || state == PlayerState.JUMPING) &&
+        velocityY < 0f && holdSec >= 0.10f
+    ) {
+        velocityY *= 0.62f
+    }
+}
+
+fun onDuckPressed() {
         if (state == PlayerState.RUNNING || state == PlayerState.LANDING) {
             transitionTo(PlayerState.DUCKING)
         }
@@ -222,9 +224,8 @@ class Player(
     private var presentationElapsed = 0f
 
     fun activateBloom() {
+        if (isInvincible) return
         isInvincible = true
-        bloomTimer   = 0f
-        transitionTo(PlayerState.BLOOM)
         val centerX = x + BASE_WIDTH / 2f
         val centerY = y + BASE_HEIGHT / 2f
         val aura = FxPreset.BLOOM_AURA.build(centerX, centerY)
@@ -235,17 +236,14 @@ class Player(
     }
 
     fun deactivateBloom() {
+        if (!isInvincible && bloomAuraEmitter == null && bloomTrailEmitter == null) return
         isInvincible = false
-        bloomTimer = 0f
         bloomPowerScaleBoost = 0f
         bloomPowerAuraAlpha = 0
         bloomAuraEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomTrailEmitter?.let { ParticleManager.removeContinuous(it) }
         bloomAuraEmitter = null
         bloomTrailEmitter = null
-        if (state == PlayerState.BLOOM) {
-            transitionTo(PlayerState.RUNNING)
-        }
     }
 
     // -----------------------------------------------------------------------
@@ -269,7 +267,7 @@ class Player(
 
     /** Triggers a non-lethal stumble animation. */
     fun triggerStumble() {
-        if (state != PlayerState.REST && state != PlayerState.BLOOM) {
+        if (state != PlayerState.REST && !isInvincible) {
             transitionTo(PlayerState.STUMBLE)
         }
     }
@@ -279,6 +277,8 @@ class Player(
         y = groundY - BASE_HEIGHT
         velocityY = 0f
         isInvincible = false
+        jumpHeld = false
+        jumpHoldSeconds = 0f
         presentationElapsed = 0f
         bloomPowerScaleBoost = 0f
         bloomPowerAuraAlpha = 0
@@ -297,15 +297,15 @@ class Player(
         stateTimer += deltaTime
         when (state) {
             PlayerState.REST    -> { /* frozen */ }
-            PlayerState.BLOOM   -> updateBloom(deltaTime)
             PlayerState.DUCKING -> updateDucking(deltaTime)
             PlayerState.STUMBLE -> updateStumble(deltaTime)
             else                -> updatePhysics(deltaTime)
         }
+        if (isInvincible) syncBloomEffects()
         updateHitbox()
         
         // Velocity Sync: Scale run animation FPS based on scroll speed
-        if (state == PlayerState.RUNNING || state == PlayerState.BLOOM) {
+        if (state == PlayerState.RUNNING) {
             // Base speed ~400 -> 24 fps. Max speed ~800 -> 32 fps
             val targetFps = MathUtils.map(scrollSpeed, GameConstants.BASE_SCROLL_SPEED, GameConstants.MAX_SCROLL_SPEED, 24f, 32f)
             animRun.framesPerSec = targetFps
@@ -338,30 +338,27 @@ class Player(
     private fun updatePhysics(deltaTime: Float) {
         when (state) {
 
-            PlayerState.JUMP_START -> {
-                // Hold the squash on the ground for JUMP_START_DURATION_S
-                // If the timer expires, auto-transition to JUMPING and apply MAX jump force.
-                if (stateTimer >= JUMP_START_DURATION_S && y >= groundY - BASE_HEIGHT - 1f) {
-                    velocityY = MAX_JUMP_FORCE
-                    SfxManager.playJump()   // Phase 20
-                    HapticManager.shortPulse() // Phase 21
-                    transitionTo(PlayerState.JUMPING)
-                }
-            }
 
-            PlayerState.JUMPING -> {
-                // Apply gravity
-                velocityY += GRAVITY * deltaTime
-                y += velocityY * deltaTime
+PlayerState.JUMP_START -> {
+    applyJumpForces(deltaTime)
+    if (stateTimer >= JUMP_START_DURATION_S) {
+        transitionTo(PlayerState.JUMPING)
+    }
+    if (velocityY >= 0f) {
+        apexTimer = 0f
+        transitionTo(PlayerState.APEX)
+    }
+}
 
-                // Crossing zero velocity → apex
-                if (velocityY >= 0f && state == PlayerState.JUMPING) {
-                    apexTimer = 0f
-                    transitionTo(PlayerState.APEX)
-                }
-            }
+PlayerState.JUMPING -> {
+    applyJumpForces(deltaTime)
+    if (velocityY >= 0f) {
+        apexTimer = 0f
+        transitionTo(PlayerState.APEX)
+    }
+}
 
-            PlayerState.APEX -> {
+PlayerState.APEX -> {
                 // Reduced gravity for floaty feel
                 apexTimer += deltaTime
                 velocityY += GRAVITY * APEX_GRAVITY_FACTOR * deltaTime
@@ -407,15 +404,15 @@ class Player(
         y = groundY - currentHeight    // currentHeight uses DUCK_HEIGHT_FACTOR
     }
 
-    private fun updateBloom(deltaTime: Float) {
-        bloomTimer += deltaTime
-        if (bloomTimer >= BLOOM_DURATION_S) {
-            isInvincible = false
-            transitionTo(PlayerState.RUNNING)
+    private fun applyJumpForces(deltaTime: Float) {
+        if (jumpHeld && jumpHoldSeconds <= MAX_HOLD_DURATION_S) {
+            val holdFraction = (jumpHoldSeconds / MAX_HOLD_DURATION_S).coerceIn(0f, 1f)
+            val liftPerSecond = 1_450f * (0.45f + holdFraction * 0.55f)
+            velocityY = (velocityY - liftPerSecond * deltaTime).coerceAtLeast(MAX_JUMP_FORCE)
         }
-        // Bloom is grounded (she runs at high speed but physics still apply)
-        updatePhysics(deltaTime)
-        syncBloomEffects()
+        val gravityFactor = if (jumpHeld) 0.46f else 1f
+        velocityY += GRAVITY * gravityFactor * deltaTime
+        y += velocityY * deltaTime
     }
 
     private fun syncBloomEffects() {
@@ -502,7 +499,7 @@ class Player(
     fun draw(canvas: Canvas) {
         val cx = x + BASE_WIDTH  / 2f   // horizontal centre
         val fy = y + BASE_HEIGHT         // feet Y (squash/stretch pivot)
-        val bloomScale = if (state == PlayerState.BLOOM || bloomPowerScaleBoost > 0f) {
+        val bloomScale = if (isInvincible || bloomPowerScaleBoost > 0f) {
             1f + bloomPowerScaleBoost
         } else {
             1f
@@ -518,7 +515,7 @@ class Player(
         // The imported real atlas already contains its own vertical body motion.
         val yOffset = motion.bodyLiftPx
 
-        if (bloomPowerAuraAlpha > 0 && (state == PlayerState.BLOOM || isInvincible)) {
+        if (bloomPowerAuraAlpha > 0 && isInvincible) {
             bloomPowerPaint.alpha = bloomPowerAuraAlpha
             canvas.drawCircle(
                 cx,

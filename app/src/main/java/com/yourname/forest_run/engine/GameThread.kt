@@ -2,6 +2,7 @@ package com.yourname.forest_run.engine
 
 import android.graphics.Canvas
 import android.view.SurfaceHolder
+import android.util.Log
 
 /**
  * Dedicated background thread that drives the game loop.
@@ -36,24 +37,25 @@ class GameThread(
                 .coerceIn(0f, 0.05f)
             lastTimeNs = nowNs
 
-            // ----- Update game logic -----
-            gameView.update(deltaTime)
-
-            // ----- Draw -----
+            // ----- Update + draw -----
             var canvas: Canvas? = null
             try {
+                gameView.update(deltaTime)
                 canvas = surfaceHolder.lockCanvas()
                 if (canvas != null) {
                     synchronized(surfaceHolder) {
                         gameView.draw(canvas)
                     }
                 }
+            } catch (t: Throwable) {
+                Log.e("GameThread", "Fatal game-loop failure; stopping loop", t)
+                isRunning = false
             } finally {
                 if (canvas != null) {
                     try {
                         surfaceHolder.unlockCanvasAndPost(canvas)
-                    } catch (e: Exception) {
-                        // Surface was destroyed while we held the canvas – ignore.
+                    } catch (_: Exception) {
+                        // Surface was destroyed while held.
                     }
                 }
             }
@@ -64,8 +66,10 @@ class GameThread(
             if (sleepNs > 0) {
                 try {
                     sleep(sleepNs / 1_000_000L, (sleepNs % 1_000_000L).toInt())
-                } catch (e: InterruptedException) {
+                } catch (_: InterruptedException) {
+                    isRunning = false
                     currentThread().interrupt()
+                    break
                 }
             }
         }

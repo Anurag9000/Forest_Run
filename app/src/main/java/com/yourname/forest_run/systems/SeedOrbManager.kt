@@ -2,6 +2,8 @@ package com.yourname.forest_run.systems
 
 import android.graphics.Canvas
 import com.yourname.forest_run.engine.GameStateManager
+import com.yourname.forest_run.engine.HapticManager
+import com.yourname.forest_run.engine.SfxManager
 import com.yourname.forest_run.entities.Player
 import kotlin.random.Random
 
@@ -43,15 +45,21 @@ class SeedOrbManager {
      * @param topY     World Y of the top of the passed entity.
      * @param spawnRate Probability multiplier (1.0 = 60%, 2.0 = 100% clamped).
      */
-    fun trySpawn(centreX: Float, topY: Float, spawnRate: Float = 1.0f) {
+    fun trySpawn(
+        centreX: Float,
+        topY: Float,
+        spawnRate: Float = 1.0f,
+        minimumReachableX: Float = Float.NEGATIVE_INFINITY
+    ) {
         if (orbs.size >= MAX_ORBS) return
 
         val chance = (BASE_SPAWN_RATE * spawnRate).coerceIn(0f, 1f)
         if (Random.nextFloat() > chance) return
 
         val offsetY = SPAWN_HEIGHT_MIN + Random.nextFloat() * (SPAWN_HEIGHT_MAX - SPAWN_HEIGHT_MIN)
+        val jitteredX = centreX + (Random.nextFloat() - 0.5f) * 60f
         orbs.add(SeedOrb(
-            x = centreX + (Random.nextFloat() - 0.5f) * 60f,   // slight X jitter
+            x = maxOf(jitteredX, minimumReachableX),
             y = topY - offsetY
         ))
     }
@@ -75,7 +83,8 @@ class SeedOrbManager {
                 orb.isCollected = true
                 // Emit sparkle burst at orb position
                 ParticleManager.emit(FxPreset.SEED_COLLECT, orb.x, orb.y)
-                // Update game state (handles bloom trigger)
+                SfxManager.playSeedPing()
+                HapticManager.shortPulse()
                 gameState.collectSeed()
             }
 

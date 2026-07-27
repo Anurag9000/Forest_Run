@@ -1,3 +1,4 @@
+
 package com.yourname.forest_run.engine
 
 import android.view.MotionEvent
@@ -5,150 +6,98 @@ import android.view.View
 import com.yourname.forest_run.utils.MathUtils
 
 /**
- * Translates raw [MotionEvent]s into high-level game input callbacks.
+ * Converts raw touch input into mutually-exclusive jump or duck gestures.
  *
- * Gestures handled:
- *  - **Tap (short)** → [onJumpPressed] then immediately [onJumpReleased]
- *  - **Hold (long press)** → [onJumpPressed], repeated [onJumpHeld], then [onJumpReleased]
- *  - **Swipe Down** → [onDuckPressed]; lift → [onDuckReleased]
- *
- * Jump height is variable: [onJumpReleased] receives the total hold
- * duration in seconds so the physics engine can scale the jump force.
- *
- * Multi-touch: each pointer is tracked independently; only the *first*
- * active pointer drives game input (subsequent fingers are ignored).
+ * A touch is deliberately kept pending until either it crosses the downward
+ * swipe threshold or the short decision window expires. This prevents the
+ * old failure mode where ACTION_DOWN started a jump before a swipe could be
+ * recognised as a duck.
  */
 class InputHandler : View.OnTouchListener {
 
-    // ------------------------------------------------------------------
-    // Callbacks – set by the owner (GameView / GameStateManager)
-    // ------------------------------------------------------------------
-
-    /** Finger touched the screen – start charging the jump. */
     var onJumpPressed: (() -> Unit)? = null
-
-    /**
-     * Finger is still held down.
-     * @param holdSeconds seconds the finger has been held so far.
-     */
     var onJumpHeld: ((holdSeconds: Float) -> Unit)? = null
-
-    /**
-     * Finger lifted – commit the jump.
-     * @param holdSeconds total hold duration in seconds (0 = quick tap).
-     */
     var onJumpReleased: ((holdSeconds: Float) -> Unit)? = null
-
-    /** Swipe-down detected while finger is still on screen. */
     var onDuckPressed: (() -> Unit)? = null
-
-    /** Swipe-down finger lifted. */
     var onDuckReleased: (() -> Unit)? = null
 
-    // ------------------------------------------------------------------
-    // Internal state
-    // ------------------------------------------------------------------
-
-    /** True while the primary pointer is performing a duck gesture. */
     var isDucking: Boolean = false
         private set
-
-    /** True while the primary pointer has a jump charge in progress. */
     var isChargingJump: Boolean = false
         private set
-
-    /** Read-only current hold duration in seconds (0 when not pressing). */
     var holdDuration: Float = 0f
         private set
-
-    /** Last raw gesture string for debug display. */
     var lastGestureLabel: String = "none"
         private set
 
-    // Primary pointer tracking
-    private var primaryPointerId: Int = INVALID_POINTER
-    private var touchStartX: Float = 0f
-    private var touchStartY: Float = 0f
-    private var touchStartTimeMs: Long = 0L
+    private var primaryPointerId = INVALID_POINTER
+    private var touchStartY = 0f
+    private var jumpCommitted = false
 
-    // ------------------------------------------------------------------
-    // Constants
-    // ------------------------------------------------------------------
     companion object {
         private const val INVALID_POINTER = -1
-
-        /** Vertical swipe threshold in pixels. Swipes shorter than this are jumps. */
-        private const val SWIPE_DOWN_THRESHOLD_PX = 80f
-
-        /** Minimum hold time in seconds before [onJumpHeld] fires. */
+        internal const val SWIPE_DOWN_THRESHOLD_PX = 80f
+        internal const val GESTURE_DECISION_WINDOW_S = 0.10f
         private const val HOLD_FIRE_THRESHOLD_S = 0.05f
     }
 
-    // ------------------------------------------------------------------
-    // Touch listener
-    // ------------------------------------------------------------------
-
-    override fun onTouch(v: View, event: MotionEvent): Boolean {
-        return when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN        -> handleDown(event)
-            MotionEvent.ACTION_POINTER_DOWN -> false // ignore extra fingers
-            MotionEvent.ACTION_MOVE        -> handleMove(event)
-            MotionEvent.ACTION_UP          -> {
-                v.performClick()
-                handleUp(event)
-            }
-            MotionEvent.ACTION_POINTER_UP  -> handlePointerUp(event)
-            MotionEvent.ACTION_CANCEL      -> handleCancel()
-            else                           -> false
+    override fun onTouch(v: View, event: MotionEvent): Boolean = when (event.actionMasked) {
+        MotionEvent.ACTION_DOWN -> handleDown(event)
+        MotionEvent.ACTION_POINTER_DOWN -> true
+        MotionEvent.ACTION_MOVE -> handleMove(event)
+        MotionEvent.ACTION_UP -> {
+            v.performClick()
+            handleUp(event)
         }
+        MotionEvent.ACTION_POINTER_UP -> handlePointerUp(event)
+        MotionEvent.ACTION_CANCEL -> {
+            cancelActiveGesture()
+            true
+        }
+        else -> false
     }
 
-    // ------------------------------------------------------------------
-    // Called every game frame from GameView.update() while a finger is held
-    // ------------------------------------------------------------------
-
-    /**
-     * Must be called once per game frame (with [deltaTime] in seconds) so we
-     * can track the hold duration and fire [onJumpHeld] continuously.
-     */
     fun tick(deltaTime: Float) {
-        if (primaryPointerId != INVALID_POINTER && isChargingJump && !isDucking) {
-            holdDuration += deltaTime
-            if (holdDuration >= HOLD_FIRE_THRESHOLD_S) {
-                onJumpHeld?.invoke(holdDuration)
-            }
+        if (primaryPointerId == INVALID_POINTER || isDucking) return
+        holdDuration = (holdDuration + deltaTime.coerceAtLeast(0f)).coerceAtMost(PlayerHoldLimit.SECONDS)
+
+        if (!jumpCommitted && holdDuration >= GESTURE_DECISION_WINDOW_S) {
+            commitJumpStart()
+        }
+        if (jumpCommitted && holdDuration >= HOLD_FIRE_THRESHOLD_S) {
+            onJumpHeld?.invoke(holdDuration)
         }
     }
 
-    // ------------------------------------------------------------------
-    // Private event handlers
-    // ------------------------------------------------------------------
+    /** Clears a partially recognised gesture without emitting gameplay input. */
+    fun cancelActiveGesture() {
+        if (isDucking) onDuckReleased?.invoke()
+        primaryPointerId = INVALID_POINTER
+        isDucking = false
+        isChargingJump = false
+        jumpCommitted = false
+        holdDuration = 0f
+        lastGestureLabel = "CANCEL"
+    }
 
     private fun handleDown(event: MotionEvent): Boolean {
-        if (primaryPointerId != INVALID_POINTER) return false // already tracking
-
-        val idx = event.actionIndex
-        primaryPointerId = event.getPointerId(idx)
-        touchStartX = event.getX(idx)
-        touchStartY = event.getY(idx)
-        touchStartTimeMs = System.currentTimeMillis()
+        if (primaryPointerId != INVALID_POINTER) return true
+        val index = event.actionIndex
+        primaryPointerId = event.getPointerId(index)
+        touchStartY = event.getY(index)
         holdDuration = 0f
         isDucking = false
         isChargingJump = true
-
-        lastGestureLabel = "PRESS"
-        onJumpPressed?.invoke()
+        jumpCommitted = false
+        lastGestureLabel = "PENDING"
         return true
     }
 
     private fun handleMove(event: MotionEvent): Boolean {
-        val idx = event.findPointerIndex(primaryPointerId)
-        if (idx < 0) return false
-
-        val dy = event.getY(idx) - touchStartY
-
-        if (!isDucking && dy > SWIPE_DOWN_THRESHOLD_PX) {
-            // Transition: jump charge → duck
+        val index = event.findPointerIndex(primaryPointerId)
+        if (index < 0) return false
+        val dy = event.getY(index) - touchStartY
+        if (!jumpCommitted && !isDucking && dy > SWIPE_DOWN_THRESHOLD_PX) {
             isDucking = true
             isChargingJump = false
             holdDuration = 0f
@@ -165,34 +114,48 @@ class InputHandler : View.OnTouchListener {
     }
 
     private fun handlePointerUp(event: MotionEvent): Boolean {
-        if (event.getPointerId(event.actionIndex) != primaryPointerId) return false
+        if (event.getPointerId(event.actionIndex) != primaryPointerId) return true
         commitRelease()
         return true
     }
 
-    private fun handleCancel(): Boolean {
-        commitRelease()
-        return true
+    private fun commitJumpStart() {
+        if (jumpCommitted || isDucking) return
+        jumpCommitted = true
+        isChargingJump = true
+        lastGestureLabel = "JUMP:PRESS"
+        onJumpPressed?.invoke()
     }
 
     private fun commitRelease() {
-        val wasDucking    = isDucking
-        val wasCharging   = isChargingJump
-        val finalHold     = holdDuration
+        val wasDucking = isDucking
+        val finalHold = MathUtils.clamp(holdDuration, 0f, PlayerHoldLimit.SECONDS)
 
-        // Reset state first so callbacks see clean state if they re-enter
-        primaryPointerId  = INVALID_POINTER
-        isDucking         = false
-        isChargingJump    = false
-        holdDuration      = 0f
+        if (!wasDucking && !jumpCommitted) {
+            // Quick taps still receive a real jump press before release.
+            commitJumpStart()
+        }
+
+        primaryPointerId = INVALID_POINTER
+        isDucking = false
+        isChargingJump = false
+        jumpCommitted = false
+        holdDuration = 0f
 
         if (wasDucking) {
             lastGestureLabel = "DUCK_END"
             onDuckReleased?.invoke()
-        } else if (wasCharging) {
-            val label = if (finalHold < 0.12f) "JUMP:TAP" else "JUMP:HOLD(${String.format("%.2f", finalHold)}s)"
-            lastGestureLabel = label
-            onJumpReleased?.invoke(MathUtils.clamp(finalHold, 0f, 0.6f))
+        } else {
+            lastGestureLabel = if (finalHold < 0.12f) {
+                "JUMP:TAP"
+            } else {
+                "JUMP:HOLD(${String.format("%.2f", finalHold)}s)"
+            }
+            onJumpReleased?.invoke(finalHold)
         }
+    }
+
+    private object PlayerHoldLimit {
+        const val SECONDS = 0.60f
     }
 }

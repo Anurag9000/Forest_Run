@@ -57,6 +57,7 @@ object SfxManager {
 
     @android.annotation.SuppressLint("DiscouragedApi")
     fun init(context: Context) {
+        destroy()
         val attrs = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_GAME)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)

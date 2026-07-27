@@ -29,6 +29,7 @@ object FlavorTextManager {
     private const val SHADOW_DX    = 2f
     private const val SHADOW_DY    = 2f
     private const val FADE_START   = 0.55f   // fraction of lifetime where fade begins
+    private const val MAX_ACTIVE = 24
 
     // ── Font (loaded lazily on first spawn) ──────────────────────────────
     private var pixelFont: Typeface? = null
@@ -97,6 +98,7 @@ object FlavorTextManager {
         lifetime: Float = 1.4f,
         size:     Float = 30f
     ) {
+        if (active.size >= MAX_ACTIVE) active.removeAt(0)
         active.add(FlavorText(text, x, y, colour, lifetime, size))
     }
 

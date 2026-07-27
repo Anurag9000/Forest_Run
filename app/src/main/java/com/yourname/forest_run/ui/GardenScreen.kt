@@ -150,11 +150,14 @@ class GardenScreen(
 
     // ── Layout ────────────────────────────────────────────────────────────
 
-    private val CARD_W     = screenW / 10.5f
-    private val CARD_H     = screenH * 0.55f
-    private val CARD_GAP   = CARD_W * 0.12f
-    private val ROW_START_X = (screenW - (catalogue.size * (CARD_W + CARD_GAP) - CARD_GAP)) / 2f
-    private val ROW_Y       = screenH * 0.20f
+    private val CARD_COLUMNS = 3
+    private val CARD_W = screenW * 0.075f
+    private val CARD_H = screenH * 0.14f
+    private val CARD_GAP_X = screenW * 0.012f
+    private val CARD_GAP_Y = screenH * 0.014f
+    private val GRID_W = CARD_COLUMNS * CARD_W + (CARD_COLUMNS - 1) * CARD_GAP_X
+    private val ROW_START_X = (screenW - GRID_W) / 2f
+    private val ROW_Y = screenH * 0.25f
     private val cardRect    = RectF()
     private val spriteRect  = RectF()
     private val runButtonRect = RectF()
@@ -348,18 +351,19 @@ class GardenScreen(
         unlockedCount = SaveManager.loadGardenProgress(context).coerceAtLeast(1)
         lifeSeeds     = SaveManager.loadLifetimeSeeds(context)
         syncWardrobe()
-        refreshStats()
+        refreshStats(consumeReturnMoment = false)
     }
 
-    /** Called after a run to refresh the seed count. */
+    /** Called when the Garden becomes visible. */
     fun refresh() {
         lifeSeeds = SaveManager.loadLifetimeSeeds(context)
         syncWardrobe()
-        refreshStats()
+        refreshStats(consumeReturnMoment = true)
     }
 
     fun update(deltaTime: Float) {
         elapsed += deltaTime
+        ParticleManager.update(deltaTime)
         catalogueSprites.forEach { it.update(deltaTime) }
         returnVisitorSprite?.update(deltaTime)
         if (unlockAnim >= 0f) {
@@ -406,8 +410,10 @@ class GardenScreen(
 
         // Card taps
         for (i in catalogue.indices) {
-            val cx = ROW_START_X + i * (CARD_W + CARD_GAP) + CARD_W / 2f
-            val cy = ROW_Y + CARD_H / 2f
+            val column = i % CARD_COLUMNS
+            val row = i / CARD_COLUMNS
+            val cx = ROW_START_X + column * (CARD_W + CARD_GAP_X) + CARD_W / 2f
+            val cy = ROW_Y + row * (CARD_H + CARD_GAP_Y) + CARD_H / 2f
             if (tapX in cx - CARD_W / 2f..cx + CARD_W / 2f &&
                 tapY in cy - CARD_H / 2f..cy + CARD_H / 2f) {
                 if (i == unlockedCount && lifeSeeds >= catalogue[i].seedCost) {
@@ -490,10 +496,12 @@ class GardenScreen(
         drawLastRunPanel(canvas)
         drawWardrobe(canvas, cw, ch)
 
-        // Cards
+        // Compact 3x3 plant grid between the left and right information panels.
         for (i in catalogue.indices) {
-            val left = ROW_START_X + i * (CARD_W + CARD_GAP)
-            val top  = ROW_Y
+            val column = i % CARD_COLUMNS
+            val row = i / CARD_COLUMNS
+            val left = ROW_START_X + column * (CARD_W + CARD_GAP_X)
+            val top = ROW_Y + row * (CARD_H + CARD_GAP_Y)
             cardRect.set(left, top, left + CARD_W, top + CARD_H)
 
             val isUnlocked = i < unlockedCount
@@ -572,7 +580,7 @@ class GardenScreen(
         // Back hint
         val backAlpha = (0.5f + 0.5f * sin(elapsed * 2f)) * 200
         backPaint.alpha = backAlpha.toInt()
-        canvas.drawText("tap anywhere to go back", cw / 2f, ch * 0.93f, backPaint)
+        canvas.drawText("tap the bottom edge to go back", cw / 2f, ch * 0.93f, backPaint)
 
         // Particle layer
         ParticleManager.draw(canvas)
@@ -842,7 +850,7 @@ class GardenScreen(
         wardrobeCardPaint.alpha = 255
     }
 
-    private fun refreshStats() {
+    private fun refreshStats(consumeReturnMoment: Boolean = false) {
         bestDistance = SaveManager.loadBestDistance(context)
         lastKillerLabel = PersistentMemoryManager.getLastKiller(context)?.let { formatEntityName(it) } ?: "None"
         sparedTotal =
@@ -852,7 +860,11 @@ class GardenScreen(
         friendshipTotal = Biome.entries.sumOf { PersistentMemoryManager.getBiomeFriendship(context, it) }
         lastRunSummary = SaveManager.loadLastRunSummary(context)
         forestMoodState = ForestMoodSystem.currentState(context)
-        returnMoment = ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
+        returnMoment = if (consumeReturnMoment) {
+            ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
+        } else {
+            ReturnMomentsSystem.previewGardenMoment(context, lastRunSummary)
+        }
         val strongestBond = RelationshipArcSystem.strongestRelationship(context)
         sanctuaryState = GardenSanctuaryPlanner.build(context, lastRunSummary)
         returnVisitorSprite = (returnMoment?.visitor ?: sanctuaryState.featuredVisitor ?: strongestBond?.first)?.let(::spriteForVisitor)

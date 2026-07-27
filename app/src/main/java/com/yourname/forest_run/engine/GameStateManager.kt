@@ -75,9 +75,9 @@ class GameStateManager(context: Context) {
     var seedsThisRun: Int = 0
         private set
 
-    /** Lifetime seeds (persists across sessions – used for Garden meta-loop). */
-    var lifetimeSeeds: Int = SaveManager.loadLifetimeSeeds(appContext)
-        private set
+    /** Lifetime seed wallet. Persistence is authoritative so Garden spending cannot be overwritten. */
+    val lifetimeSeeds: Int
+        get() = SaveManager.loadLifetimeSeeds(appContext)
 
     /**
      * Bloom meter fill 0–[GameConstants.BLOOM_SEED_COUNT].
@@ -204,15 +204,20 @@ class GameStateManager(context: Context) {
     // Seed collection
     // -----------------------------------------------------------------------
 
-    /** Call when the player collects a Seed orb. */
-    fun collectSeed() {
+    /**
+     * Collect a Seed. Seeds earned during Bloom still enter the lifetime wallet but do not
+     * silently charge or restart the active Bloom window.
+     */
+    fun collectSeed(chargeBloom: Boolean = true) {
         seedsThisRun++
-        lifetimeSeeds++
-        bloomMeter++
-        if (bloomMeter >= GameConstants.BLOOM_SEED_COUNT) {
-            bloomMeter   = 0
-            isBloomActive = true
-            bloomTimer   = 0f
+        SaveManager.saveLifetimeSeeds(appContext, lifetimeSeeds + 1)
+        if (chargeBloom && !isBloomActive) {
+            bloomMeter++
+            if (bloomMeter >= GameConstants.BLOOM_SEED_COUNT) {
+                bloomMeter = 0
+                isBloomActive = true
+                bloomTimer = 0f
+            }
         }
     }
 
@@ -240,7 +245,8 @@ class GameStateManager(context: Context) {
 
     fun recordBloomConversion() {
         bloomConversionsThisRun++
-        addBonus(points = 140, seeds = 1)
+        addBonus(points = 140)
+        collectSeed(chargeBloom = false)
     }
 
     fun debugPrimeBloomMeter(seedCount: Int) {
@@ -375,9 +381,14 @@ class GameStateManager(context: Context) {
         openingInputState     = OpeningInputState()
     }
 
-    /** Persist high score and lifetime seeds to SharedPreferences. */
+    /** Reload values that debug/test runs are not allowed to persist. */
+    fun reloadPersistentState() {
+        highScore = SaveManager.loadHighScore(appContext)
+        isNewHighScore = score > highScore
+    }
+
+    /** Persist high score. Lifetime Seeds are committed atomically when collected/spent. */
     fun save() {
         SaveManager.saveHighScore(appContext, highScore)
-        SaveManager.saveLifetimeSeeds(appContext, lifetimeSeeds)
     }
 }

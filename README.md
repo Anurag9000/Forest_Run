@@ -10,30 +10,18 @@ A lush cottagecore endless runner with Ghibli × Stardew Valley tone. The player
 
 ## What's Built
 
-Every engine feature is fully implemented:
 
-- `SurfaceView` render loop, 60 FPS, frame-independent `deltaTime`
-- Player state machine: run, jump (variable height + Mario abort), duck, apex hover, squash/stretch, Bloom, rest, stumble
-- 19 entity classes across flora, trees, birds, and animals — each with unique behavior, personality, and authored payoff
-- Collision resolution: `HIT`, `STUMBLE`, `MERCY_MISS`, `NONE` with proximity-based mercy window
-- Five-biome cycle (Meadow → Orchard → Ancient Grove → Dusk Canyon → Night Forest)
-- Seeds, Bloom meter (8 seeds → 6s invincibility), Bloom conversion, Bloom spectacle
-- Mercy hearts + pacifist route tiers (Kind, Merciful, Peaceful) carrying through rest, Garden, and persistence
-- Ghost replay with context-aware visibility policy
-- Forest memory: mood system, relationship arcs (Cat/Fox/Wolf/Dog/Owl/Eagle), return moments, story fragments, session arc composition, sanctuary planner
-- Garden screen with plant unlock, wardrobe, sanctuary atmosphere, and carry-home state
-- HUD: score, distance, seeds, Bloom meter, mercy hearts
-- Camera shake (trauma-based, correctly fires once per frame)
-- Particle system with BLOOM, MERCY, DEATH, SEED, DUST, and ambient presets
-- Haptics, audio (adaptive music with leitmotif signatures), dialogue bubbles, flavor text
-- Local persistence: high score, lifetime seeds, ghost run, garden state, relationships, emotional memory
-- Debug scenario launcher mirroring the full device acceptance checklist
+The broad product surface is implemented, but the project is in a **correctness-hardening beta**.
+Core controls, encounter resolution, Bloom, persistence and release automation are protected by
+regression tests and CI; physical-device tuning and final store acceptance remain mandatory.
 
-## What Remains
+## Implemented Surface
 
-**All remaining items are hardware validation or store pipeline.** No engine features are missing.
-
-See [`docs/RELEASE.md`](docs/RELEASE.md) for the complete checklist.
+- Native `SurfaceView` runner with five biomes and nineteen entity families
+- Mutually-exclusive jump/duck gesture recognition and variable-height jump physics
+- Single-clock Bloom power state and one-shot encounter outcomes
+- Mercy routes, persistent memory, Garden, wardrobe, ghost, audio, haptics and debug scenarios
+- Android CI for unit tests and lint
 
 ## Documentation
 

@@ -1,6 +1,7 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
+import java.util.Calendar
 import com.yourname.forest_run.entities.EntityType
 
 data class ReturnMoment(
@@ -16,7 +17,6 @@ data class ReturnMomentState(
 )
 
 object ReturnMomentsSystem {
-    private const val DAY_MS = 24L * 60L * 60L * 1_000L
     private const val LONG_ABSENCE_MS = 36L * 60L * 60L * 1_000L
 
     fun recordRunOutcome(context: Context, summary: RunSummary, nowMs: Long = System.currentTimeMillis()) {
@@ -54,7 +54,10 @@ object ReturnMomentsSystem {
         persist: Boolean
     ): ReturnMoment? {
         val previous = SaveManager.loadReturnMomentState(appContext)
-        val dayId = nowMs / DAY_MS
+        val localDate = Calendar.getInstance().apply { timeInMillis = nowMs }
+        val dayId = localDate.get(Calendar.YEAR).toLong() * 10_000L +
+            (localDate.get(Calendar.MONTH) + 1).toLong() * 100L +
+            localDate.get(Calendar.DAY_OF_MONTH).toLong()
         val alreadyGreetedToday = previous.lastGardenGreetingDay == dayId
         val bondedVisitor = RelationshipArcSystem.preferredGardenVisitor(appContext)
         val milestoneBond = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.MILESTONE)

@@ -1,5 +1,6 @@
 package com.yourname.forest_run
 
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
@@ -9,6 +10,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import com.yourname.forest_run.engine.GameView
+import com.yourname.forest_run.engine.HapticManager
 import com.yourname.forest_run.engine.LeitmotifManager
 import com.yourname.forest_run.engine.SfxManager
 
@@ -42,6 +44,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (::gameView.isInitialized) {
+            gameView.post { gameView.applyDebugLaunchIntent(intent) }
+        }
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         // Re-hide system UI if the user accidentally pulled it down
@@ -60,6 +70,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        HapticManager.cancel()
         LeitmotifManager.destroy()
         SfxManager.destroy()
     }

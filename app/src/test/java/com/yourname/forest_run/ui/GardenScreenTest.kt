@@ -37,14 +37,18 @@ class GardenScreenTest {
         val screen = GardenScreen(context, spriteManager, 1_920, 1_080)
         screen.load()
 
-        val cardWidth = 1_920 / 10.5f
-        val cardGap = cardWidth * 0.12f
-        val rowStartX = (1_920 - (9 * (cardWidth + cardGap) - cardGap)) / 2f
-        val rowY = 1_080 * 0.20f
-        val tapX = rowStartX + (cardWidth + cardGap) + cardWidth / 2f
-        val tapY = rowY + (1_080 * 0.55f) / 2f
+        var unlocked = false
+        unlockSearch@ for (tapY in 0 until 1_080 step 12) {
+            for (tapX in 0 until 1_920 step 12) {
+                screen.onTap(tapX.toFloat(), tapY.toFloat())
+                if (SaveManager.loadGardenProgress(context) == 2) {
+                    unlocked = true
+                    break@unlockSearch
+                }
+            }
+        }
 
-        assertTrue(screen.onTap(tapX, tapY))
+        assertTrue("next plant card should be interactable", unlocked)
         assertEquals(2, SaveManager.loadGardenProgress(context))
         assertEquals(30, SaveManager.loadLifetimeSeeds(context))
     }

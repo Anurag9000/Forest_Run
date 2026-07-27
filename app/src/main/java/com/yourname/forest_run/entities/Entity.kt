@@ -29,8 +29,31 @@ abstract class Entity(val context: Context) {
     /** If false, the EntityManager will remove this object from play. */
     var isActive: Boolean = true
 
-    /** True after EntityManager has already awarded the pass bonus for this instance. */
+    /** Compatibility flag for presentation code; outcome is the authoritative state. */
     var hasBeenPassed: Boolean = false
+
+    /** Whether this entity is allowed to mutate cross-run progression. */
+    var persistProgression: Boolean = true
+
+    var encounterOutcome: EncounterOutcome = EncounterOutcome.PENDING
+        private set
+
+    val isEncounterResolved: Boolean
+        get() = encounterOutcome != EncounterOutcome.PENDING
+
+    fun resolveEncounter(outcome: EncounterOutcome): Boolean {
+        require(outcome != EncounterOutcome.PENDING) { "Cannot resolve to PENDING" }
+        if (encounterOutcome != EncounterOutcome.PENDING) return false
+        encounterOutcome = outcome
+        hasBeenPassed = outcome == EncounterOutcome.CLEAN_PASS || outcome == EncounterOutcome.BLOOM_CONVERTED
+        return true
+    }
+
+    fun resetEncounterTracking(persist: Boolean = true) {
+        encounterOutcome = EncounterOutcome.PENDING
+        hasBeenPassed = false
+        persistProgression = persist
+    }
 
     /** Optional procedural wind animation. */
     var swayComponent: SwayComponent? = null

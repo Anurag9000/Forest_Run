@@ -37,10 +37,10 @@ class RunResetManager {
      * Call this the moment a HIT collision is detected.
      * Saves high-score immediately to survive process kill.
      */
-    fun triggerDeath(gameState: GameStateManager) {
+    fun triggerDeath(gameState: GameStateManager, persistScore: Boolean = true) {
         timer = 0f
         restartFadeAlpha = 0
-        gameState.save()    // Persist high score immediately
+        if (persistScore) gameState.save()
     }
 
     // ── Frame update ─────────────────────────────────────────────────────

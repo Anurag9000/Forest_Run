@@ -177,4 +177,27 @@ class GameStateManagerTest {
         assertEquals(ForestMood.GENTLE, summary.forestMood)
         assertEquals(PacifistRouteTier.KIND, summary.pacifistRouteTier)
     }
+
+
+@Test
+fun `bloom conversions do not restart the active bloom clock`() {
+    val state = GameStateManager(context)
+    repeat(GameConstants.BLOOM_SEED_COUNT) { state.collectSeed() }
+    state.update(3f)
+    repeat(GameConstants.BLOOM_SEED_COUNT) { state.recordBloomConversion() }
+    assertEquals(0, state.bloomMeter)
+    state.update(3.1f)
+    assertFalse(state.isBloomActive)
+}
+
+@Test
+fun `save never refunds seeds spent by the Garden`() {
+    val state = GameStateManager(context)
+    repeat(10) { state.collectSeed() }
+    SaveManager.saveLifetimeSeeds(context, 4)
+    state.save()
+    assertEquals(4, SaveManager.loadLifetimeSeeds(context))
+    assertEquals(4, state.lifetimeSeeds)
+}
+
 }
