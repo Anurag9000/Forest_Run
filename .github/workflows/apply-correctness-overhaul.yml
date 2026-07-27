@@ -155,6 +155,33 @@ jobs:
           if old not in test_source:
               raise SystemExit('Expected legacy Garden card-coordinate test block not found')
           test_path.write_text(test_source.replace(old, new, 1))
+
+          return_path = Path('app/src/main/java/com/yourname/forest_run/engine/ReturnMomentsSystem.kt')
+          return_source = return_path.read_text()
+          return_source = return_source.replace('import java.time.Instant\n', '')
+          return_source = return_source.replace('import java.time.ZoneId\n', '')
+          if 'import java.util.Calendar' not in return_source:
+              return_source = return_source.replace(
+                  'import android.content.Context\n',
+                  'import android.content.Context\nimport java.util.Calendar\n',
+                  1
+              )
+          day_pattern = re.compile(
+              r'(?ms)^(?P<indent>[ \t]*)val dayId = Instant\.ofEpochMilli\(nowMs\)\s*'
+              r'\.atZone\(ZoneId\.systemDefault\(\)\)\s*'
+              r'\.toLocalDate\(\)\s*\.toEpochDay\(\)'
+          )
+          day_match = day_pattern.search(return_source)
+          if day_match is None:
+              raise SystemExit('Expected java.time day-id calculation not found')
+          day_indent = day_match.group('indent')
+          day_replacement = (
+              f'{day_indent}val localDate = Calendar.getInstance().apply {{ timeInMillis = nowMs }}\n'
+              f'{day_indent}val dayId = localDate.get(Calendar.YEAR).toLong() * 10_000L +\n'
+              f'{day_indent}    (localDate.get(Calendar.MONTH) + 1).toLong() * 100L +\n'
+              f'{day_indent}    localDate.get(Calendar.DAY_OF_MONTH).toLong()'
+          )
+          return_path.write_text(day_pattern.sub(day_replacement, return_source, count=1))
           PY
 
       - name: Preserve rewrite diagnostics
