@@ -1,0 +1,69 @@
+name: Apply correctness overhaul
+
+on:
+  push:
+    branches:
+      - agent/forest-run-correctness-overhaul
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: correctness-overhaul-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/forest-run-correctness-overhaul
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 36 platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Reconstruct and apply audited patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat scripts/overhaul_payload.part{1..6} > scripts/apply_correctness_overhaul.py.gz.b64
+          base64 --decode scripts/apply_correctness_overhaul.py.gz.b64 | gzip --decompress > scripts/apply_correctness_overhaul.py
+          rm scripts/overhaul_payload.part{1..6}
+          python3 scripts/apply_correctness_overhaul.py
+
+      - name: Run unit tests and lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest lintDebug
+
+      - name: Commit verified overhaul
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The overhaul produced no changes; refusing a false-success commit." >&2
+            exit 1
+          fi
+          git commit -m "fix core gameplay and progression invariants"
+          git push origin HEAD:agent/forest-run-correctness-overhaul
