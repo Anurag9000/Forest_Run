@@ -54,30 +54,27 @@ jobs:
           path = Path('scripts/apply_correctness_overhaul.py')
           source = path.read_text()
 
-          # The Garden-to-menu callback already resets the ritual, so the later
-          # duplicate insertion is unnecessary and was whitespace-sensitive.
           start_marker = "replace_once(gv_path,\n'''                        if (::gardenScreen.isInitialized) gardenScreen.refresh()"
           next_marker = "replace_once(gv_path,\n'''                        if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)"
           start = source.index(start_marker)
           end = source.index(next_marker, start)
           source = source[:start] + source[end:]
 
-          # Fatal-hit and stumble paths contain the same persistence line. Narrow
-          # the fatal-hit rewrite using the following collision-cue declaration.
           generic_start = "replace_once(gv_path,\n'''                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }\n''',"
           summary_marker = "replace_once(gv_path,\n'''                        currentRunSummary?.let {"
           start = source.index(generic_start)
           end = source.index(summary_marker, start)
-          narrowed = '''replace_once(gv_path,
-''' + "'''" + '''                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }
-                        val collisionCue = RunFlavorPresentation.collisionCue(
-''' + "'''" + ''',
-''' + "'''" + '''                        if (encounterDirector?.isScenarioActive != true) {
-                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }
-                        }
-                        val collisionCue = RunFlavorPresentation.collisionCue(
-''' + "'''" + ''')
-'''
+          narrowed = (
+              "replace_once(gv_path,\n"
+              "'''                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }\n"
+              "                        val collisionCue = RunFlavorPresentation.collisionCue(\n"
+              "''',\n"
+              "'''                        if (encounterDirector?.isScenarioActive != true) {\n"
+              "                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }\n"
+              "                        }\n"
+              "                        val collisionCue = RunFlavorPresentation.collisionCue(\n"
+              "''')\n"
+          )
           source = source[:start] + narrowed + source[end:]
           path.write_text(source)
           PY
