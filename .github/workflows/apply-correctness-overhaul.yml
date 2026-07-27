@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - agent/forest-run-correctness-overhaul
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
