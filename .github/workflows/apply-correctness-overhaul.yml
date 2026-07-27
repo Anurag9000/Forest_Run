@@ -96,9 +96,11 @@ jobs:
           if anchor not in source:
               raise SystemExit('Android-resource unit-test anchor not found after overhaul')
           if '--add-opens=java.base/java.lang=ALL-UNNAMED' not in source:
-              indent = source[:source.index(anchor)].splitlines()[-1]
-              block_indent = indent
+              pos = source.index(anchor)
+              line_start = source.rfind('\n', 0, pos) + 1
+              block_indent = source[line_start:pos]
               child_indent = block_indent + '    '
+              flag_indent = child_indent + '    '
               flags = [
                   '--add-opens=java.base/java.lang=ALL-UNNAMED',
                   '--add-opens=java.base/java.util=ALL-UNNAMED',
@@ -110,7 +112,7 @@ jobs:
                   '--add-opens=java.desktop/java.awt.font=ALL-UNNAMED',
                   '--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
               ]
-              rendered = '\n'.join(f'{child_indent}"{flag}",' for flag in flags)
+              rendered = '\n'.join(f'{flag_indent}"{flag}",' for flag in flags)
               addition = (
                   f'{anchor}\n'
                   f'{block_indent}unitTests.all {{\n'
