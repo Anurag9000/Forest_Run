@@ -49,6 +49,16 @@ jobs:
           cat scripts/overhaul_payload.part{1..6} > scripts/apply_correctness_overhaul.py.gz.b64
           base64 --decode scripts/apply_correctness_overhaul.py.gz.b64 | gzip --decompress > scripts/apply_correctness_overhaul.py
           rm scripts/overhaul_payload.part{1..6}
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/apply_correctness_overhaul.py')
+          source = path.read_text()
+          start_marker = "replace_once(gv_path,\n'''                        if (::gardenScreen.isInitialized) gardenScreen.refresh()"
+          next_marker = "replace_once(gv_path,\n'''                        if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)"
+          start = source.index(start_marker)
+          end = source.index(next_marker, start)
+          path.write_text(source[:start] + source[end:])
+          PY
           python3 scripts/apply_correctness_overhaul.py 2>&1 | tee /tmp/overhaul-apply.log
 
       - name: Preserve rewrite diagnostics
