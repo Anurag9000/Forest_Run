@@ -4,72 +4,133 @@
 from pathlib import Path
 
 
-def replace_once(path: Path, old: str, new: str, label: str) -> None:
+def replace_first(path: Path, old: str, new: str, label: str) -> None:
     text = path.read_text(encoding="utf-8")
-    count = text.count(old)
-    if count != 1:
-        raise RuntimeError(f"{path}: {label}: expected one match, found {count}")
+    if new in text:
+        return
+    if old not in text:
+        raise RuntimeError(f"{path}: {label}: source pattern not found")
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
 
 def main() -> None:
     manager = Path("app/src/main/java/com/yourname/forest_run/engine/EntityManager.kt")
-    replace_once(
+    replace_first(
         manager,
-        """        entityTypeOf(entity)?.let { type ->\n            PersistentMemoryManager.recordPass(context, type)\n            val passCue = RunFlavorPresentation.passCue(\n""",
-        """        entityTypeOf(entity)?.let { type ->\n            if (entity.shouldRecordPersistence) {\n                PersistentMemoryManager.recordPass(context, type)\n            }\n            val passCue = RunFlavorPresentation.passCue(\n""",
+        """        entityTypeOf(entity)?.let { type ->
+            PersistentMemoryManager.recordPass(context, type)
+            val passCue = RunFlavorPresentation.passCue(
+""",
+        """        entityTypeOf(entity)?.let { type ->
+            if (entity.shouldRecordPersistence) {
+                PersistentMemoryManager.recordPass(context, type)
+            }
+            val passCue = RunFlavorPresentation.passCue(
+""",
         "gate persistent clean pass",
     )
 
     cat = Path("app/src/main/java/com/yourname/forest_run/entities/animals/Cat.kt")
-    replace_once(
+    replace_first(
         cat,
         "        PersistentMemoryManager.recordSpare(context, EntityType.CAT)\n",
-        """        if (shouldRecordPersistence) {\n            PersistentMemoryManager.recordSpare(context, EntityType.CAT)\n        }\n""",
+        """        if (shouldRecordPersistence) {
+            PersistentMemoryManager.recordSpare(context, EntityType.CAT)
+        }
+""",
         "gate Cat spare persistence",
     )
 
     game_view = Path("app/src/main/java/com/yourname/forest_run/engine/GameView.kt")
-    replace_once(
+    replace_first(
         game_view,
-        """        if (::gameState.isInitialized) gameState.save()   // persist high score\n""",
-        """        if (::gameState.isInitialized && encounterDirector?.isScenarioActive != true) {\n            gameState.save()   // persist ordinary-play high score only\n        }\n""",
+        """        if (::gameState.isInitialized) gameState.save()   // persist high score
+""",
+        """        if (::gameState.isInitialized && encounterDirector?.isScenarioActive != true) {
+            gameState.save()   // persist ordinary-play high score only
+        }
+""",
         "gate debug high-score save",
     )
-    replace_once(
+    replace_first(
         game_view,
-        """            val collision = entityManager.checkCollisions(player, gameState)\n            if (collision != null) {\n                when (collision.result) {\n""",
-        """            val collision = entityManager.checkCollisions(player, gameState)\n            if (collision != null) {\n                val persistEncounter = collision.entity.shouldRecordPersistence &&\n                    encounterDirector?.isScenarioActive != true\n                when (collision.result) {\n""",
+        """            val collision = entityManager.checkCollisions(player, gameState)
+            if (collision != null) {
+                when (collision.result) {
+""",
+        """            val collision = entityManager.checkCollisions(player, gameState)
+            if (collision != null) {
+                val persistEncounter = collision.entity.shouldRecordPersistence &&
+                    encounterDirector?.isScenarioActive != true
+                when (collision.result) {
+""",
         "derive selected persistence policy",
     )
-    replace_once(
+    replace_first(
         game_view,
-        """                        if (::gameState.isInitialized &&\n                            gameState.distanceMetres > SaveManager.loadBestDistance(context)\n                        ) {\n""",
-        """                        if (persistEncounter &&\n                            ::gameState.isInitialized &&\n                            gameState.distanceMetres > SaveManager.loadBestDistance(context)\n                        ) {\n""",
+        """                        if (::gameState.isInitialized &&
+                            gameState.distanceMetres > SaveManager.loadBestDistance(context)
+                        ) {
+""",
+        """                        if (persistEncounter &&
+                            ::gameState.isInitialized &&
+                            gameState.distanceMetres > SaveManager.loadBestDistance(context)
+                        ) {
+""",
         "gate debug ghost and best distance",
     )
-    replace_once(
+    replace_first(
         game_view,
-        """                        val killerType = entityManager.entityTypeOf(collision.entity)\n                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }\n""",
-        """                        val killerType = entityManager.entityTypeOf(collision.entity)\n                        if (persistEncounter) {\n                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }\n                        }\n""",
+        """                        val killerType = entityManager.entityTypeOf(collision.entity)
+                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+""",
+        """                        val killerType = entityManager.entityTypeOf(collision.entity)
+                        if (persistEncounter) {
+                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        }
+""",
         "gate lethal hit persistence",
     )
-    replace_once(
+    replace_first(
         game_view,
-        """                        currentRunSummary?.let {\n                            ForestMoodSystem.recordRun(context, it)\n                            ReturnMomentsSystem.recordRunOutcome(context, it)\n                            SaveManager.saveLastRunSummary(context, it)\n                        }\n""",
-        """                        if (persistEncounter) {\n                            currentRunSummary?.let {\n                                ForestMoodSystem.recordRun(context, it)\n                                ReturnMomentsSystem.recordRunOutcome(context, it)\n                                SaveManager.saveLastRunSummary(context, it)\n                            }\n                        }\n""",
+        """                        currentRunSummary?.let {
+                            ForestMoodSystem.recordRun(context, it)
+                            ReturnMomentsSystem.recordRunOutcome(context, it)
+                            SaveManager.saveLastRunSummary(context, it)
+                        }
+""",
+        """                        if (persistEncounter) {
+                            currentRunSummary?.let {
+                                ForestMoodSystem.recordRun(context, it)
+                                ReturnMomentsSystem.recordRunOutcome(context, it)
+                                SaveManager.saveLastRunSummary(context, it)
+                            }
+                        }
+""",
         "gate debug run-summary persistence",
     )
-    replace_once(
+    replace_first(
         game_view,
-        """                        gameState.recordHit()\n                        val killerType = entityManager.entityTypeOf(collision.entity)\n                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }\n""",
-        """                        gameState.recordHit()\n                        val killerType = entityManager.entityTypeOf(collision.entity)\n                        if (persistEncounter) {\n                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }\n                        }\n""",
+        """                        gameState.recordHit()
+                        val killerType = entityManager.entityTypeOf(collision.entity)
+                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+""",
+        """                        gameState.recordHit()
+                        val killerType = entityManager.entityTypeOf(collision.entity)
+                        if (persistEncounter) {
+                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        }
+""",
         "gate stumble hit persistence",
     )
-    replace_once(
+    replace_first(
         game_view,
-        """                reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }\n""",
-        """                if (encounterDirector?.isScenarioActive != true) {\n                    reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }\n                }\n""",
+        """                reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }
+""",
+        """                if (encounterDirector?.isScenarioActive != true) {
+                    reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }
+                }
+""",
         "gate debug biome friendship",
     )
 
