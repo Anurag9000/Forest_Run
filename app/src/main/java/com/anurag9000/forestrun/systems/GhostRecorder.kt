@@ -16,21 +16,25 @@ class GhostRecorder {
         const val SAMPLE_INTERVAL_S = 1f / SAMPLE_RATE_HZ
         const val MAX_DURATION_S = 20 * 60
         const val MAX_FRAMES = SAMPLE_RATE_HZ * MAX_DURATION_S
+
+        private const val INITIAL_CAPACITY = SAMPLE_RATE_HZ * 180
     }
 
     private var elapsed = 0f
     private var lastSampleTime = Float.NEGATIVE_INFINITY
+    private var activeFrames = ArrayList<GhostFrame>(INITIAL_CAPACITY)
 
-    /** Mutable internally; callers should use [snapshot] at run end. */
-    val frames = ArrayList<GhostFrame>(SAMPLE_RATE_HZ * 180)
+    /** Read-only view of the currently recording run. */
+    val frames: List<GhostFrame>
+        get() = activeFrames
 
     fun record(deltaTime: Float, player: Player) {
-        if (!deltaTime.isFinite() || deltaTime <= 0f || frames.size >= MAX_FRAMES) return
+        if (!deltaTime.isFinite() || deltaTime <= 0f || activeFrames.size >= MAX_FRAMES) return
 
         elapsed = (elapsed + deltaTime).coerceAtMost(MAX_DURATION_S.toFloat())
-        if (frames.isNotEmpty() && elapsed - lastSampleTime < SAMPLE_INTERVAL_S) return
+        if (activeFrames.isNotEmpty() && elapsed - lastSampleTime < SAMPLE_INTERVAL_S) return
 
-        frames.add(
+        activeFrames.add(
             GhostFrame(
                 t = elapsed,
                 x = player.x,
@@ -47,14 +51,34 @@ class GhostRecorder {
         get() = elapsed
 
     /**
-     * Returns the current frame list without duplicating tens of thousands of
-     * objects. SaveManager consumes it synchronously before GameView resets the
-     * recorder, so this read-only view is safe for the existing call path.
+     * Stable defensive snapshot for diagnostics and tests. The gameplay death
+     * path uses [detachSnapshot] to avoid copying tens of thousands of entries.
      */
-    fun snapshot(): List<GhostFrame> = frames
+    fun snapshot(): List<GhostFrame> = activeFrames.toList()
+
+    /**
+     * Transfers ownership of the completed run in O(1), immediately preparing
+     * an independent buffer for the next run. The returned list is never
+     * mutated by this recorder again and is therefore safe for async storage.
+     */
+    fun detachSnapshot(): List<GhostFrame> {
+        if (activeFrames.isEmpty()) {
+            resetClock()
+            return emptyList()
+        }
+
+        val completedRun = activeFrames
+        activeFrames = ArrayList(INITIAL_CAPACITY)
+        resetClock()
+        return completedRun
+    }
 
     fun reset() {
-        frames.clear()
+        activeFrames.clear()
+        resetClock()
+    }
+
+    private fun resetClock() {
         elapsed = 0f
         lastSampleTime = Float.NEGATIVE_INFINITY
     }
