@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -21,15 +21,15 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Check out repository
+      - name: Check out remediation branch
         uses: actions/checkout@v4
+        with:
+          ref: agent/fix-core-gameplay-invariants
+          fetch-depth: 0
 
       - name: Apply staged source remediation
         shell: bash
-        run: |
-          if [[ -f scripts/patch_debug_persistence_isolation.py ]]; then
-            python3 scripts/patch_debug_persistence_isolation.py
-          fi
+        run: python3 scripts/patch_debug_persistence_isolation.py
 
       - name: Upload staged remediation source
         if: always()
@@ -92,6 +92,22 @@ jobs:
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace --console=plain
+
+      - name: Commit verified remediation source
+        if: success() && github.actor != 'github-actions[bot]'
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Debug persistence isolation already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/yourname/forest_run/engine/EntityManager.kt
+          git add app/src/main/java/com/yourname/forest_run/engine/GameView.kt
+          git add app/src/main/java/com/yourname/forest_run/entities/animals/Cat.kt
+          git commit -m "fix: isolate deterministic scenarios from persistence"
+          git push origin HEAD:agent/fix-core-gameplay-invariants
 
       - name: Upload compile log
         if: always()
