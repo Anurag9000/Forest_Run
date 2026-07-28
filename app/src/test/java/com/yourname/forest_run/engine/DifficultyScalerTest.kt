@@ -8,9 +8,17 @@ import org.junit.Test
 class DifficultyScalerTest {
 
     @Test
-    fun `spawn interval clamps between early and late bounds`() {
-        assertEquals(1.7f, DifficultyScaler.getSpawnInterval(0f), 0.0001f)
-        assertEquals(0.62f, DifficultyScaler.getSpawnInterval(5_000f), 0.0001f)
+    fun `spawn distance clamps between early and late bounds`() {
+        assertEquals(
+            GameConstants.SPAWN_GAP_MAX_PX,
+            DifficultyScaler.getSpawnGapPx(0f),
+            0.0001f
+        )
+        assertEquals(
+            GameConstants.SPAWN_GAP_MIN_PX,
+            DifficultyScaler.getSpawnGapPx(5_000f),
+            0.0001f
+        )
     }
 
     @Test
