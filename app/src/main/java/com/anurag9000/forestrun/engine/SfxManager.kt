@@ -94,7 +94,7 @@ object SfxManager {
     }
 
     private fun play(id: Int, volume: Float = 1f, rate: Float = RATE_1X) {
-        if (id == 0 || id !in readySamples) return
+        if (!FeedbackSettings.audioEnabled || id == 0 || id !in readySamples) return
         pool?.play(
             id,
             volume.coerceIn(0f, 1f),

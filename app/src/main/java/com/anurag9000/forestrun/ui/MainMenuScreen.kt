@@ -215,6 +215,7 @@ class MainMenuScreen(
         textAlign = Paint.Align.CENTER
     }
     private val cinematicOverlay = CinematicOverlayRenderer()
+    private val feedbackSettingsPanel = FeedbackSettingsPanel(context, screenW, screenH)
 
     init {
         refreshCopy()
@@ -224,6 +225,7 @@ class MainMenuScreen(
 
     /** Called on each tap from GameView.onTouchListener. */
     fun onTap(tapX: Float = 0f, tapY: Float = 0f) {
+        if (phase == Phase.IDLE && feedbackSettingsPanel.onTap(tapX, tapY)) return
         // Garden button: bottom-left strip in IDLE phase
         if (phase == Phase.IDLE && tapX < screenW * 0.35f && tapY > screenH * 0.85f) {
             onGardenTap?.invoke()
@@ -315,6 +317,7 @@ class MainMenuScreen(
         drawHomeCharacter(canvas, cw, ch)
         drawLaunchCue(canvas, cw, ch, groundY)
         drawHomecomingConsequences(canvas, cw, ch, groundY)
+        if (phase == Phase.IDLE) feedbackSettingsPanel.draw(canvas)
 
         // Prompt
         val promptAlpha = when (phase) {

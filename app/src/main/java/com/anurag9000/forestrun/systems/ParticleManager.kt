@@ -4,6 +4,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.anurag9000.forestrun.engine.FeedbackSettings
+import com.anurag9000.forestrun.engine.adjustedParticleCount
 
 /**
  * Central particle engine — singleton.
@@ -82,7 +84,7 @@ object ParticleManager {
      * Finds [emitter.count] free slots from the pool and initialises them.
      */
     fun emit(emitter: ParticleEmitter) {
-        repeat(emitter.count) {
+        repeat(adjustedParticleCount(emitter.count, FeedbackSettings.reducedMotion)) {
             val p = acquireParticle() ?: return@repeat
             emitter.configure(p)
         }

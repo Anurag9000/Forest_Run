@@ -61,11 +61,15 @@ object CameraSystem {
      * - 0.15f — MERCY_MISS hit feedback
      */
     fun addTrauma(amount: Float) {
+        if (FeedbackSettings.reducedMotion) return
         trauma = (trauma + amount).coerceIn(0f, 1f)
         // Randomise phase so repeated rapid hits vary the shake pattern
         phaseX = Random.nextFloat() * 6.28f
         phaseY = Random.nextFloat() * 6.28f
     }
+
+    internal val traumaForTest: Float
+        get() = trauma
 
     /** Reset to zero shake — call on run start/reset. */
     fun reset() {

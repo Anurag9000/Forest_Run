@@ -72,6 +72,7 @@ object LeitmotifManager {
 
     private val audioLock = Any()
 
+    private var audioEnabled = true
     private var currentState: MusicState = MusicState.MENU
     private var previousState: MusicState? = null
     private var activePlayer: MediaPlayer? = null
@@ -100,16 +101,42 @@ object LeitmotifManager {
     )
 
     fun init(context: Context) {
+        val enabled = FeedbackSettings.audioEnabled
         synchronized(audioLock) {
             ctx = context.applicationContext
+            audioEnabled = enabled
         }
         // currentState starts as MENU, but no MediaPlayer exists yet. The
         // transition method therefore checks both state and player presence.
-        transitionTo(MusicState.MENU)
+        if (enabled) transitionTo(MusicState.MENU)
+    }
+
+    fun setAudioEnabled(enabled: Boolean) {
+        var resumeState: MusicState? = null
+        synchronized(audioLock) {
+            if (audioEnabled == enabled) return
+            audioEnabled = enabled
+            if (!enabled) {
+                stopFadeLocked()
+                releasePlayer(activePlayer)
+                releasePlayer(fadingPlayer)
+                activePlayer = null
+                fadingPlayer = null
+            } else if (ctx != null) {
+                resumeState = currentState
+            }
+        }
+        resumeState?.let(::transitionTo)
     }
 
     fun transitionTo(newState: MusicState) {
         synchronized(audioLock) {
+            if (!audioEnabled) {
+                previousState = currentState
+                currentState = newState
+                if (newState == MusicState.BLOOM) bloomMusicSignature = defaultBloomMusicSignature
+                return
+            }
             if (newState == currentState && activePlayer != null) return
 
             val appContext = ctx ?: return
@@ -265,6 +292,7 @@ object LeitmotifManager {
 
     fun resume() {
         synchronized(audioLock) {
+            if (!audioEnabled) return
             runCatching { activePlayer?.start() }
             runCatching { fadingPlayer?.start() }
         }

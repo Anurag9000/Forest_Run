@@ -6,7 +6,6 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
-import kotlin.math.sin
 
 internal enum class CinematicScene { MENU, RUN, GARDEN, REST }
 
@@ -94,7 +93,11 @@ internal class CinematicOverlayRenderer {
         glowColor: Int,
         centerYFraction: Float = 0.46f
     ) {
-        val shimmerPulse = 0.55f + 0.45f * sin(elapsedSeconds * (1.2f + profile.shimmerStrength))
+        val shimmerPulse = cinematicShimmerPulse(
+            elapsedSeconds = elapsedSeconds,
+            shimmerStrength = profile.shimmerStrength,
+            reducedMotion = FeedbackSettings.reducedMotion
+        )
         val topLetterbox = (height * profile.letterboxHeightFraction).coerceAtLeast(0f)
         val bottomLetterboxTop = height - topLetterbox
         val normalizedCenter = centerYFraction.coerceIn(0.2f, 0.8f)

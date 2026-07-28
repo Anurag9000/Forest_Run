@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import com.anurag9000.forestrun.engine.FeedbackSettings
 import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.HapticManager
 import com.anurag9000.forestrun.engine.LeitmotifManager
@@ -34,6 +35,7 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        FeedbackSettings.init(this)
         RuntimeAssetValidator.validateRelease(this)
         gameView = GameView(this)
         setContentView(gameView)

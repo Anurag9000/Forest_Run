@@ -57,6 +57,7 @@ object HapticManager {
 
     /** Bloom activation surge with a stronger rising feel than a flat long pulse. */
     fun bloomSurge() {
+        if (!FeedbackSettings.hapticsEnabled) return
         val vib = vibrator ?: return
         if (!vib.hasVibrator()) return
 
@@ -75,6 +76,7 @@ object HapticManager {
      * timings array (API 26): [wait, vibrate, wait, vibrate] — all in ms.
      */
     fun doubleTap() {
+        if (!FeedbackSettings.hapticsEnabled) return
         val vib = vibrator ?: return
         if (!vib.hasVibrator()) return
 
@@ -91,6 +93,7 @@ object HapticManager {
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private fun pulse(durationMs: Long) {
+        if (!FeedbackSettings.hapticsEnabled) return
         val vib = vibrator ?: return
         if (!vib.hasVibrator()) return
 
