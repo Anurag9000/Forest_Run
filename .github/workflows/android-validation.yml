@@ -38,7 +38,15 @@ jobs:
         uses: gradle/actions/wrapper-validation@v4
 
       - name: Report packaged sprite dimensions
-        run: find app/src/main/assets/sprites -type f -name '*.png' -print0 | sort -z | xargs -0 file
+        run: find app/src/main/assets/sprites -type f -name '*.png' -print0 | sort -z | xargs -0 file | tee sprite-dimensions.txt
+
+      - name: Upload sprite dimension inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprite-dimensions
+          path: sprite-dimensions.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Compile debug sources and tests
         shell: bash
