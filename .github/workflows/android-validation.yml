@@ -38,7 +38,21 @@ jobs:
         uses: gradle/actions/wrapper-validation@v4
 
       - name: Compile debug sources and tests
-        run: ./gradlew compileDebugKotlin compileDebugUnitTestKotlin --no-daemon --stacktrace --console=plain
+        shell: bash
+        run: |
+          set +e
+          ./gradlew compileDebugKotlin compileDebugUnitTestKotlin \
+            --no-daemon --stacktrace --console=plain > compile.log 2>&1
+          status=$?
+          if [[ $status -ne 0 ]]; then
+            echo "::group::Kotlin compiler diagnostics"
+            grep -E '(^e: | error: |FAILURE:|Execution failed for task|\* What went wrong:)' compile.log || true
+            echo "::endgroup::"
+            echo "::group::Final compile log"
+            tail -n 160 compile.log
+            echo "::endgroup::"
+          fi
+          exit $status
 
       - name: Run debug unit tests
         run: ./gradlew testDebugUnitTest --no-daemon --stacktrace --console=plain
@@ -48,6 +62,15 @@ jobs:
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace --console=plain
+
+      - name: Upload compile log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compile-log
+          path: compile.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload unit-test reports
         if: always()
