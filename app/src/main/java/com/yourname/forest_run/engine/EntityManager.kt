@@ -46,7 +46,7 @@ class EntityManager(
     val seedOrbManager = SeedOrbManager()
     val activeEntities: MutableList<Entity> = mutableListOf()
 
-    private var spawnTimer = 0f
+    private var distanceSinceRandomSpawnPx = 0f
     private var bloomReactionCooldown = 0f
     private var bloomWasActive = false
     private val bloomReactedEntities: MutableSet<Int> = mutableSetOf()
@@ -80,11 +80,17 @@ class EntityManager(
         }
 
         if (encounterDirector?.isScenarioActive != true) {
-            spawnTimer += deltaTime
-            val defaultInterval = DifficultyScaler.getSpawnInterval(gameState.distanceMetres)
-            val spawnInterval = gameState.openingSpawnInterval(defaultInterval)
-            if (!gameState.shouldLockRandomOpeningSpawns() && spawnTimer >= spawnInterval) {
-                spawnTimer = 0f
+            distanceSinceRandomSpawnPx +=
+                (gameState.scrollSpeed * deltaTime.coerceAtLeast(0f)).coerceAtLeast(0f)
+            val requiredGapPx = SpawnPacing.requiredGapPx(
+                distanceMetres = gameState.distanceMetres,
+                runTimeSeconds = gameState.runTimeSeconds,
+                scrollSpeedPxPerSec = gameState.scrollSpeed
+            )
+            if (!gameState.shouldLockRandomOpeningSpawns() &&
+                distanceSinceRandomSpawnPx >= requiredGapPx
+            ) {
+                distanceSinceRandomSpawnPx = 0f
                 spawnRandom(gameState)
             }
         }
@@ -419,7 +425,7 @@ class EntityManager(
     fun reset() {
         activeEntities.clear()
         seedOrbManager.reset()
-        spawnTimer = 0f
+        distanceSinceRandomSpawnPx = 0f
         bloomReactionCooldown = 0f
         bloomWasActive = false
         bloomReactedEntities.clear()
