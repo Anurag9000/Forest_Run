@@ -37,6 +37,9 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
+      - name: Report packaged sprite dimensions
+        run: find app/src/main/assets/sprites -type f -name '*.png' -print0 | sort -z | xargs -0 file
+
       - name: Compile debug sources and tests
         shell: bash
         run: |
