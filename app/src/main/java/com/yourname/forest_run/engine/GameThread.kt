@@ -9,19 +9,25 @@ class GameThread(
     private val gameView: GameView
 ) : Thread("GameThread") {
     @Volatile
-    var isRunning: Boolean = false
+    private var running: Boolean = false
+
+    var isRunning: Boolean
+        get() = running
+        set(value) {
+            running = value
+            if (!value) interrupt()
+        }
 
     private val targetFrameTimeNs: Long = 1_000_000_000L / 60L
 
     fun requestStop() {
         isRunning = false
-        interrupt()
     }
 
     override fun run() {
         var lastTimeNs = System.nanoTime()
         try {
-            while (isRunning) {
+            while (running) {
                 val nowNs = System.nanoTime()
                 val deltaTime = ((nowNs - lastTimeNs) / 1_000_000_000.0).toFloat()
                     .coerceIn(0f, 0.05f)
@@ -56,14 +62,15 @@ class GameThread(
                             (sleepNs % 1_000_000L).toInt()
                         )
                     } catch (_: InterruptedException) {
-                        // Interruption is a shutdown signal. Returning rather
-                        // than re-interrupting avoids a permanent busy loop.
+                        // Stopping the thread interrupts sleep so shutdown does
+                        // not wait for the remainder of a frame. Any other
+                        // interruption is also treated as cancellation.
                         return
                     }
                 }
             }
         } finally {
-            isRunning = false
+            running = false
         }
     }
 }
