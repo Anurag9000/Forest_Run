@@ -3,47 +3,26 @@ name: Android validation
 on:
   push:
     branches:
-      - agent/fix-core-gameplay-invariants
+      - main
+      - 'agent/**'
   pull_request:
 
 concurrency:
-  group: identity-migration-${{ github.ref }}
+  group: android-validation-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate-and-validate:
-    name: Migrate identity and validate release surface
-    if: github.actor != 'github-actions[bot]'
+  validate:
+    name: Compile, test, lint, and build debug/release
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
-      - name: Check out remediation branch
+      - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: agent/fix-core-gameplay-invariants
-          fetch-depth: 0
-
-      - name: Migrate final application identity
-        shell: bash
-        run: |
-          python3 scripts/migrate_application_identity.py
-          rm scripts/migrate_application_identity.py
-          if grep -R --line-number --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle \
-              -e 'com\.yourname\.forest_run' -e 'com/yourname/forest_run' .; then
-            echo "Placeholder package identity remains after migration."
-            exit 1
-          fi
-          test -d app/src/main/java/com/anurag9000/forestrun
-          test -d app/src/test/java/com/anurag9000/forestrun
-          test ! -d app/src/main/java/com/yourname/forest_run
-          test ! -d app/src/test/java/com/yourname/forest_run
-          grep -q 'applicationId = "com.anurag9000.forestrun"' app/build.gradle.kts
-          grep -q 'namespace = "com.anurag9000.forestrun"' app/build.gradle.kts
-          grep -q 'targetSdk = 36' app/build.gradle.kts
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -70,6 +49,34 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
+      - name: Verify production identity and toolchain
+        shell: bash
+        run: |
+          test -d app/src/main/java/com/anurag9000/forestrun
+          test -d app/src/test/java/com/anurag9000/forestrun
+          test ! -d app/src/main/java/com/yourname/forest_run
+          if grep -R --line-number --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle \
+              -e 'com\.yourname\.forest_run' -e 'com/yourname/forest_run' .; then
+            echo "Placeholder package identity remains."
+            exit 1
+          fi
+          grep -q 'applicationId = "com.anurag9000.forestrun"' app/build.gradle.kts
+          grep -q 'namespace = "com.anurag9000.forestrun"' app/build.gradle.kts
+          grep -q 'compileSdk = 36' app/build.gradle.kts
+          grep -q 'targetSdk = 36' app/build.gradle.kts
+          grep -q 'org.robolectric:robolectric:4.16' app/build.gradle.kts
+
+      - name: Report packaged sprite dimensions
+        run: find app/src/main/assets/sprites -type f -name '*.png' -print0 | sort -z | xargs -0 file | tee sprite-dimensions.txt
+
+      - name: Upload sprite dimension inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprite-dimensions
+          path: sprite-dimensions.txt
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Compile debug and release sources
         shell: bash
         run: |
@@ -78,8 +85,12 @@ jobs:
             --no-daemon --stacktrace --console=plain > compile.log 2>&1
           status=$?
           if [[ $status -ne 0 ]]; then
+            echo "::group::Kotlin compiler diagnostics"
             grep -E '(^e: | error: |FAILURE:|Execution failed for task|\* What went wrong:)' compile.log || true
+            echo "::endgroup::"
+            echo "::group::Final compile log"
             tail -n 200 compile.log
+            echo "::endgroup::"
           fi
           exit $status
 
@@ -95,31 +106,39 @@ jobs:
       - name: Build minified release bundle
         run: ./gradlew bundleRelease --no-daemon --stacktrace --console=plain
 
-      - name: Verify artifacts
+      - name: Verify build artifacts
         shell: bash
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
           test -s app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
           test -s app/build/outputs/bundle/release/app-release.aab
 
-      - name: Commit verified identity migration
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A ':!.github/workflows/android-validation.yml'
-          git commit -m "build: finalize Forest Run application identity"
-          git push origin HEAD:agent/fix-core-gameplay-invariants
-
-      - name: Upload migration diagnostics
+      - name: Upload compile log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: identity-migration-diagnostics
+          name: compile-log
+          path: compile.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload unit-test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
           path: |
-            compile.log
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: |
             app/build/reports/lint-results-debug.html
             app/build/reports/lint-results-debug.xml
             app/build/reports/lint-results-release.html
@@ -127,14 +146,22 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Upload migration build artifacts
+      - name: Upload debug APKs
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: identity-migration-artifacts
+          name: forest-run-debug-apks
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload unsigned release bundle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forest-run-release-aab-unsigned
+          path: app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 7
