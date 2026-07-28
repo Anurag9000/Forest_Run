@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/fix-core-gameplay-invariants
+  pull_request:
 
 concurrency:
   group: ghost-persistence-remediation-${{ github.ref }}
@@ -101,9 +102,10 @@ jobs:
           test -s app/build/outputs/bundle/release/app-release.aab
 
       - name: Commit verified ghost persistence
+        if: success() && github.event_name == 'push'
         shell: bash
         run: |
-          git show HEAD^:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
+          git show 7b4b4e0b67d46d4d0ab2ae29c225b3155e744733:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
           rm scripts/patch_async_ghost_persistence.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
