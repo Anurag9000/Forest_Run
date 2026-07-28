@@ -52,6 +52,23 @@ class FeedbackSettingsTest {
     }
 
     @Test
+    fun `wrong typed stored preferences fall back safely and are repaired`() {
+        val prefs = context.getSharedPreferences(FeedbackSettings.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("reduced_motion", "broken")
+            .putInt("audio_enabled", 7)
+            .putFloat("haptics_enabled", 1f)
+            .commit()
+
+        FeedbackSettings.init(context)
+
+        assertEquals(FeedbackPreferences(), FeedbackSettings.snapshot())
+        assertEquals(false, prefs.getBoolean("reduced_motion", true))
+        assertEquals(true, prefs.getBoolean("audio_enabled", false))
+        assertEquals(true, prefs.getBoolean("haptics_enabled", false))
+    }
+
+    @Test
     fun `reduced motion prevents camera trauma`() {
         FeedbackSettings.setReducedMotion(context, true)
         CameraSystem.addTrauma(1f)

@@ -24,7 +24,31 @@ import java.io.FileOutputStream
  */
 object SaveManager {
 
-    private const val PREFS_NAME     = "forest_run_prefs"
+    internal const val PREFS_NAME     = "forest_run_prefs"
+    private const val COMPAT_PREFS_PREFIX = "forest_run_prefs_compat_v"
+
+    @Volatile
+    private var activePrefsName: String = PREFS_NAME
+
+    @Volatile
+    private var activeGhostFilename: String = "ghost_run.bin"
+
+    internal val activePrefsNameForTests: String
+        get() = activePrefsName
+
+    internal val activeGhostFilenameForTests: String
+        get() = activeGhostFilename
+
+    internal fun usePrimaryPreferences() {
+        activePrefsName = PREFS_NAME
+        activeGhostFilename = GHOST_FILENAME
+    }
+
+    internal fun useCompatibilityPreferences(schemaVersion: Int) {
+        val safeVersion = schemaVersion.coerceAtLeast(0)
+        activePrefsName = "$COMPAT_PREFS_PREFIX$safeVersion"
+        activeGhostFilename = "ghost_run_compat_v$safeVersion.bin"
+    }
     private const val KEY_HIGH_SCORE = "high_score"
     private const val KEY_LIFETIME_SEEDS = "lifetime_seeds"
     private const val KEY_BEST_DIST  = "best_distance"
@@ -69,7 +93,7 @@ object SaveManager {
     // ── High score ────────────────────────────────────────────────────────
 
     fun saveHighScore(context: Context, score: Int) {
-        prefs(context).edit().putInt(KEY_HIGH_SCORE, score).apply()
+        prefs(context).edit().putInt(KEY_HIGH_SCORE, score.coerceAtLeast(0)).apply()
     }
 
     fun loadHighScore(context: Context): Int =
@@ -78,7 +102,8 @@ object SaveManager {
     // ── Best distance ─────────────────────────────────────────────────────
 
     fun saveBestDistance(context: Context, distanceM: Float) {
-        prefs(context).edit().putFloat(KEY_BEST_DIST, distanceM).apply()
+        val safeDistance = distanceM.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
+        prefs(context).edit().putFloat(KEY_BEST_DIST, safeDistance).apply()
     }
 
     fun loadBestDistance(context: Context): Float =
@@ -87,7 +112,7 @@ object SaveManager {
     // ── Lifetime seeds ────────────────────────────────────────────────────
 
     fun saveLifetimeSeeds(context: Context, seeds: Int) {
-        prefs(context).edit().putInt(KEY_LIFETIME_SEEDS, seeds).apply()
+        prefs(context).edit().putInt(KEY_LIFETIME_SEEDS, seeds.coerceAtLeast(0)).apply()
     }
 
     fun loadLifetimeSeeds(context: Context): Int =
@@ -201,7 +226,7 @@ object SaveManager {
     private const val KEY_GARDEN = "garden_unlocked"
 
     fun saveGardenProgress(context: Context, unlockedCount: Int) {
-        prefs(context).edit().putInt(KEY_GARDEN, unlockedCount).apply()
+        prefs(context).edit().putInt(KEY_GARDEN, unlockedCount.coerceIn(1, 9)).apply()
     }
 
     fun loadGardenProgress(context: Context): Int =
@@ -299,19 +324,20 @@ object SaveManager {
         }
 
     fun saveLastRunSummary(context: Context, summary: RunSummary) {
+        val safeDistance = summary.distanceM.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
         prefs(context).edit()
-            .putInt(KEY_LAST_RUN_SCORE, summary.score)
-            .putFloat(KEY_LAST_RUN_DISTANCE, summary.distanceM)
+            .putInt(KEY_LAST_RUN_SCORE, summary.score.coerceAtLeast(0))
+            .putFloat(KEY_LAST_RUN_DISTANCE, safeDistance)
             .putBoolean(KEY_LAST_RUN_NEW_HIGH, summary.isNewHighScore)
-            .putInt(KEY_LAST_RUN_HIGH_SCORE, summary.highScore)
-            .putInt(KEY_LAST_RUN_MERCY_HEARTS, summary.mercyHearts)
-            .putInt(KEY_LAST_RUN_MERCY_MISSES, summary.mercyMisses)
-            .putInt(KEY_LAST_RUN_KINDNESS_CHAIN, summary.kindnessChain)
-            .putInt(KEY_LAST_RUN_CLEAN_PASSES, summary.cleanPasses)
-            .putInt(KEY_LAST_RUN_SPARED, summary.sparedCount)
-            .putInt(KEY_LAST_RUN_HITS, summary.hitsTaken)
-            .putInt(KEY_LAST_RUN_SEEDS, summary.seedsCollected)
-            .putInt(KEY_LAST_RUN_BLOOM_CONVERSIONS, summary.bloomConversions)
+            .putInt(KEY_LAST_RUN_HIGH_SCORE, summary.highScore.coerceAtLeast(0))
+            .putInt(KEY_LAST_RUN_MERCY_HEARTS, summary.mercyHearts.coerceAtLeast(0))
+            .putInt(KEY_LAST_RUN_MERCY_MISSES, summary.mercyMisses.coerceAtLeast(0))
+            .putInt(KEY_LAST_RUN_KINDNESS_CHAIN, summary.kindnessChain.coerceAtLeast(0))
+            .putInt(KEY_LAST_RUN_CLEAN_PASSES, summary.cleanPasses.coerceAtLeast(0))
+            .putInt(KEY_LAST_RUN_SPARED, summary.sparedCount.coerceAtLeast(0))
+            .putInt(KEY_LAST_RUN_HITS, summary.hitsTaken.coerceAtLeast(0))
+            .putInt(KEY_LAST_RUN_SEEDS, summary.seedsCollected.coerceAtLeast(0))
+            .putInt(KEY_LAST_RUN_BLOOM_CONVERSIONS, summary.bloomConversions.coerceAtLeast(0))
             .putString(KEY_LAST_RUN_QUOTE, summary.restQuote)
             .putString(KEY_LAST_RUN_KILLER, summary.lastKiller?.name)
             .putString(KEY_LAST_RUN_FOREST_MOOD, summary.forestMood.name)
@@ -376,12 +402,12 @@ object SaveManager {
     fun saveForestMoodState(context: Context, state: ForestMoodState) {
         prefs(context).edit()
             .putString(KEY_FOREST_MOOD, state.currentMood.name)
-            .putInt(KEY_FOREST_MOOD_STREAK, state.moodStreak)
-            .putInt(KEY_FOREST_TOTAL_RUNS, state.totalRuns)
-            .putInt(KEY_FOREST_GENTLE_RUNS, state.gentleRuns)
-            .putInt(KEY_FOREST_RECKLESS_RUNS, state.recklessRuns)
-            .putInt(KEY_FOREST_FEARFUL_RUNS, state.fearfulRuns)
-            .putInt(KEY_FOREST_STEADY_RUNS, state.steadyRuns)
+            .putInt(KEY_FOREST_MOOD_STREAK, state.moodStreak.coerceAtLeast(0))
+            .putInt(KEY_FOREST_TOTAL_RUNS, state.totalRuns.coerceAtLeast(0))
+            .putInt(KEY_FOREST_GENTLE_RUNS, state.gentleRuns.coerceAtLeast(0))
+            .putInt(KEY_FOREST_RECKLESS_RUNS, state.recklessRuns.coerceAtLeast(0))
+            .putInt(KEY_FOREST_FEARFUL_RUNS, state.fearfulRuns.coerceAtLeast(0))
+            .putInt(KEY_FOREST_STEADY_RUNS, state.steadyRuns.coerceAtLeast(0))
             .apply()
     }
 
@@ -403,9 +429,9 @@ object SaveManager {
 
     fun saveReturnMomentState(context: Context, state: ReturnMomentState) {
         prefs(context).edit()
-            .putLong(KEY_LAST_ACTIVE_AT_MS, state.lastActiveAtMs)
-            .putLong(KEY_LAST_GARDEN_GREETING_DAY, state.lastGardenGreetingDay)
-            .putInt(KEY_ROUGH_RUN_STREAK, state.roughRunStreak)
+            .putLong(KEY_LAST_ACTIVE_AT_MS, state.lastActiveAtMs.coerceAtLeast(0L))
+            .putLong(KEY_LAST_GARDEN_GREETING_DAY, state.lastGardenGreetingDay.coerceAtLeast(-1L))
+            .putInt(KEY_ROUGH_RUN_STREAK, state.roughRunStreak.coerceAtLeast(0))
             .apply()
     }
 
@@ -454,12 +480,14 @@ object SaveManager {
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        context.getSharedPreferences(activePrefsName, Context.MODE_PRIVATE)
 
-    private fun ghostFile(context: Context) = File(context.filesDir, GHOST_FILENAME)
+    private fun ghostFile(context: Context) = File(context.filesDir, activeGhostFilename)
 
     private fun incrementInt(context: Context, key: String) {
         val prefs = prefs(context)
-        prefs.edit().putInt(key, prefs.getInt(key, 0) + 1).apply()
+        val current = (prefs.all[key] as? Int)?.coerceAtLeast(0) ?: 0
+        val next = if (current == Int.MAX_VALUE) Int.MAX_VALUE else current + 1
+        prefs.edit().putInt(key, next).apply()
     }
 }

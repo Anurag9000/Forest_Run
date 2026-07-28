@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.CostumeStyle
 import com.anurag9000.forestrun.entities.EntityType
+import com.anurag9000.forestrun.systems.GhostFrame
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -30,11 +32,13 @@ class SaveIntegrityManagerTest {
             "${SaveManager.PREFS_NAME}_compat_v${SaveIntegrityManager.CURRENT_SCHEMA_VERSION}",
             Context.MODE_PRIVATE
         ).edit().clear().commit()
+        deleteGhostFiles()
     }
 
     @After
     fun tearDown() {
         SaveManager.usePrimaryPreferences()
+        deleteGhostFiles()
     }
 
     @Test
@@ -93,17 +97,33 @@ class SaveIntegrityManagerTest {
             .putString("high_score", "future-owned-value")
             .putString("future_only_key", "keep")
             .commit()
+        val primaryGhost = File(context.filesDir, "ghost_run.bin")
+        val futureGhostBytes = byteArrayOf(9, 8, 7, 6)
+        primaryGhost.writeBytes(futureGhostBytes)
         val before = prefs.all.toMap()
 
         val report = SaveIntegrityManager.repair(context)
 
         assertEquals(SaveIntegrityStatus.FUTURE_VERSION, report.status)
         assertEquals(before, prefs.all)
+        assertEquals(futureGhostBytes.toList(), primaryGhost.readBytes().toList())
         assertEquals(
             "${SaveManager.PREFS_NAME}_compat_v${SaveIntegrityManager.CURRENT_SCHEMA_VERSION}",
             SaveManager.activePrefsNameForTests
         )
+        assertEquals(
+            "ghost_run_compat_v${SaveIntegrityManager.CURRENT_SCHEMA_VERSION}.bin",
+            SaveManager.activeGhostFilenameForTests
+        )
         assertEquals(0, SaveManager.loadHighScore(context))
+
+        val compatibilityFrames = listOf(GhostFrame(0.033f, 100f, 200f, 0, 1f, 1f))
+        assertTrue(SaveManager.saveGhostRun(context, compatibilityFrames))
+        assertEquals(futureGhostBytes.toList(), primaryGhost.readBytes().toList())
+        assertEquals(
+            compatibilityFrames,
+            SaveManager.loadGhostRun(context)
+        )
     }
 
     @Test
@@ -111,6 +131,7 @@ class SaveIntegrityManagerTest {
         prefs.edit()
             .putInt("last_run_score", 500)
             .putFloat("last_run_distance", 250f)
+            .putString("last_run_quote", "A partial summary must not be invented.")
             .putString("last_run_killer", EntityType.WOLF.name)
             .commit()
 
@@ -154,5 +175,64 @@ class SaveIntegrityManagerTest {
         assertEquals(0, SaveManager.loadLifetimeSeeds(context))
         assertEquals(9, SaveManager.loadGardenProgress(context))
         assertEquals(Int.MAX_VALUE, SaveManager.loadEncounterCount(context, EntityType.FOX))
+
+        SaveManager.saveLastRunSummary(
+            context,
+            RunSummary(
+                score = -1,
+                distanceM = Float.NaN,
+                isNewHighScore = false,
+                highScore = -2,
+                mercyHearts = -3,
+                mercyMisses = -4,
+                kindnessChain = -5,
+                cleanPasses = -6,
+                sparedCount = -7,
+                hitsTaken = -8,
+                seedsCollected = -9,
+                bloomConversions = -10,
+                lastKiller = null,
+                restQuote = "safe",
+                forestMood = ForestMood.STEADY,
+                pacifistRouteTier = PacifistRouteTier.NONE
+            )
+        )
+        val summary = requireNotNull(SaveManager.loadLastRunSummary(context))
+        assertEquals(0, summary.score)
+        assertEquals(0f, summary.distanceM, 0f)
+        assertEquals(0, summary.seedsCollected)
+
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(
+                currentMood = ForestMood.GENTLE,
+                moodStreak = -1,
+                totalRuns = -2,
+                gentleRuns = -3,
+                recklessRuns = -4,
+                fearfulRuns = -5,
+                steadyRuns = -6
+            )
+        )
+        assertEquals(0, SaveManager.loadForestMoodState(context).totalRuns)
+
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(lastActiveAtMs = -1L, lastGardenGreetingDay = -9L, roughRunStreak = -2)
+        )
+        assertEquals(ReturnMomentState(0L, -1L, 0), SaveManager.loadReturnMomentState(context))
+    }
+
+    private fun deleteGhostFiles() {
+        File(context.filesDir, "ghost_run.bin").delete()
+        File(
+            context.filesDir,
+            "ghost_run_compat_v${SaveIntegrityManager.CURRENT_SCHEMA_VERSION}.bin"
+        ).delete()
+        File(context.filesDir, "ghost_run.bin.bak").delete()
+        File(
+            context.filesDir,
+            "ghost_run_compat_v${SaveIntegrityManager.CURRENT_SCHEMA_VERSION}.bin.bak"
+        ).delete()
     }
 }

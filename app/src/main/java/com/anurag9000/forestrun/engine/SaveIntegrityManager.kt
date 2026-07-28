@@ -46,6 +46,7 @@ object SaveIntegrityManager {
         "last_run_forest_mood",
         "last_run_pacifist_route"
     )
+    private val requiredLastRunKeys = lastRunKeys - "last_run_killer"
 
     internal fun repair(context: Context): SaveIntegrityReport {
         SaveManager.usePrimaryPreferences()
@@ -145,7 +146,10 @@ object SaveIntegrityManager {
 
     private fun repairLastRun(repair: RepairSession, all: Map<String, *>) {
         if (lastRunKeys.none(all::containsKey)) return
-        if (all["last_run_score"] !is Int || all["last_run_quote"] !is String) {
+        if (requiredLastRunKeys.any { it !in all } ||
+            all["last_run_score"] !is Int ||
+            all["last_run_quote"] !is String
+        ) {
             lastRunKeys.forEach(repair::removeIfPresent)
             return
         }

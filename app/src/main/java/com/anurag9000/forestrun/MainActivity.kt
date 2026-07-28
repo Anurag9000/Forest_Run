@@ -17,6 +17,7 @@ import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.HapticManager
 import com.anurag9000.forestrun.engine.LeitmotifManager
 import com.anurag9000.forestrun.engine.RuntimeAssetValidator
+import com.anurag9000.forestrun.engine.SaveIntegrityManager
 import com.anurag9000.forestrun.engine.SfxManager
 
 /** Single full-screen Activity hosting the custom SurfaceView game. */
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        SaveIntegrityManager.repair(this)
         FeedbackSettings.init(this)
         RuntimeAssetValidator.validateRelease(this)
         gameView = GameView(this)
