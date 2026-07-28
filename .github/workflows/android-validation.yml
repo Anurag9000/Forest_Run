@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   validate:
-    name: Unit tests, lint, and debug build
+    name: Compile, test, lint, and build
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -37,15 +37,26 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
-      - name: Run unit tests, lint, and assemble debug APK
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace
+      - name: Compile debug sources and tests
+        run: ./gradlew compileDebugKotlin compileDebugUnitTestKotlin --no-daemon --stacktrace --console=plain
+
+      - name: Run debug unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace --console=plain
+
+      - name: Run debug lint
+        run: ./gradlew lintDebug --no-daemon --stacktrace --console=plain
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace --console=plain
 
       - name: Upload unit-test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-reports
-          path: app/build/reports/tests/testDebugUnitTest/
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
           if-no-files-found: warn
           retention-days: 7
 
@@ -54,7 +65,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lint-report
-          path: app/build/reports/lint-results-debug.html
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.xml
           if-no-files-found: warn
           retention-days: 7
 
