@@ -36,14 +36,31 @@ import kotlin.math.abs
  */
 class GhostPlayer {
 
-    data class VisibilityContext(
-        val livePlayerX: Float,
-        val livePlayerY: Float,
-        val livePlayerWidth: Float,
-        val livePlayerHeight: Float,
-        val nearbyHazardCount: Int,
-        val nearestHazardDistancePx: Float
-    )
+    class VisibilityContext(
+        var livePlayerX: Float,
+        var livePlayerY: Float,
+        var livePlayerWidth: Float,
+        var livePlayerHeight: Float,
+        var nearbyHazardCount: Int,
+        var nearestHazardDistancePx: Float
+    ) {
+        fun set(
+            livePlayerX: Float,
+            livePlayerY: Float,
+            livePlayerWidth: Float,
+            livePlayerHeight: Float,
+            nearbyHazardCount: Int,
+            nearestHazardDistancePx: Float
+        ): VisibilityContext {
+            this.livePlayerX = livePlayerX
+            this.livePlayerY = livePlayerY
+            this.livePlayerWidth = livePlayerWidth
+            this.livePlayerHeight = livePlayerHeight
+            this.nearbyHazardCount = nearbyHazardCount
+            this.nearestHazardDistancePx = nearestHazardDistancePx
+            return this
+        }
+    }
 
     companion object {
         const val GHOST_ALPHA  = 102   // 40% of 255

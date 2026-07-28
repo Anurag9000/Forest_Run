@@ -188,6 +188,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // ── Phase 19: Ghost Run ───────────────────────────────────────────────
     private val ghostRecorder = GhostRecorder()
     private val ghostPlayer   = GhostPlayer()
+    private val ghostHazardFocusRect = RectF()
+    private val reusableGhostVisibilityContext = GhostPlayer.VisibilityContext(
+        livePlayerX = 0f,
+        livePlayerY = 0f,
+        livePlayerWidth = Player.BASE_WIDTH,
+        livePlayerHeight = Player.BASE_HEIGHT,
+        nearbyHazardCount = 0,
+        nearestHazardDistancePx = Float.POSITIVE_INFINITY
+    )
 
     // -----------------------------------------------------------------------
     // Paint objects – created ONCE, never inside draw()
@@ -1430,7 +1439,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         var nearestHazardDistancePx = Float.POSITIVE_INFINITY
 
         if (::entityManager.isInitialized) {
-            val focusRect = RectF(
+            ghostHazardFocusRect.set(
                 liveHitbox.left - Player.BASE_WIDTH * 1.4f,
                 liveHitbox.top - Player.BASE_HEIGHT * 0.9f,
                 liveHitbox.right + Player.BASE_WIDTH * 4.8f,
@@ -1438,7 +1447,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             )
             entityManager.activeEntities.forEach { entity ->
                 if (!entity.isActive || entity.hitbox.isEmpty) return@forEach
-                if (!RectF.intersects(focusRect, entity.hitbox)) return@forEach
+                if (!RectF.intersects(ghostHazardFocusRect, entity.hitbox)) return@forEach
                 nearbyHazardCount++
                 nearestHazardDistancePx = minOf(
                     nearestHazardDistancePx,
@@ -1447,7 +1456,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
         }
 
-        return GhostPlayer.VisibilityContext(
+        return reusableGhostVisibilityContext.set(
             livePlayerX = player.x,
             livePlayerY = player.y,
             livePlayerWidth = player.currentWidth,
