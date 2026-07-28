@@ -26,12 +26,12 @@ import com.yourname.forest_run.ui.FlavorTextManager
 import kotlin.random.Random
 
 /**
- * Owns entity spawning, updates, collision resolution, pass rewards, and seed
- * orbs. Every entity receives exactly one terminal [EncounterOutcome].
+ * Owns entity spawning, updates, collision resolution, pass rewards, and Seed
+ * Orbs. Every entity receives exactly one terminal [EncounterOutcome].
  *
  * Pooling is intentionally disabled until every concrete entity implements a
- * complete reset contract. Reusing partially reset animals corrupted timers,
- * modes, hitboxes, projectiles, and relationship tuning.
+ * complete reset contract. Persistent encounter counts are written only when
+ * an encounter actually resolves, never merely because an entity spawned.
  */
 class EntityManager(
     private val context: Context,
@@ -70,8 +70,6 @@ class EntityManager(
         }
         bloomWasActive = gameState.isBloomActive
 
-        // EncounterDirector exists only in debug builds. Its scripted entities
-        // must never mutate the player's real relationship history.
         encounterDirector?.advance(deltaTime)?.forEach { directive ->
             spawn(
                 type = directive.type,
@@ -95,9 +93,7 @@ class EntityManager(
         while (iterator.hasNext()) {
             val entity = iterator.next()
             entity.update(deltaTime, gameState.scrollSpeed)
-            if (!entity.isActive) {
-                iterator.remove()
-            }
+            if (!entity.isActive) iterator.remove()
         }
 
         if (gameState.isBloomActive) {
@@ -109,9 +105,9 @@ class EntityManager(
     }
 
     /**
-     * Resolves collisions before pass rewards. HIT outranks STUMBLE, which
-     * outranks MERCY. If no collision wins, entities behind the player's real
-     * hitbox are resolved as clean passes or Bloom conversions.
+     * Resolve collision outcomes before any pass reward. HIT outranks STUMBLE,
+     * which outranks MERCY. If no collision wins, entities behind the player's
+     * real hitbox resolve as clean passes or Bloom conversions.
      */
     fun checkCollisions(player: Player, gameState: GameStateManager): CollisionFrame? {
         if (!gameState.isBloomActive) {
@@ -140,6 +136,7 @@ class EntityManager(
                     CollisionResult.NONE -> EncounterOutcome.PENDING
                 }
                 selectedEntity.hasBeenPassed = true
+                recordResolvedEncounter(selectedEntity)
                 if (selectedResult == CollisionResult.MERCY_MISS) {
                     gameState.addMercyHeart()
                 }
@@ -174,6 +171,7 @@ class EntityManager(
 
     private fun resolveBloomConversion(entity: Entity, gameState: GameStateManager) {
         entity.encounterOutcome = EncounterOutcome.BLOOM_CONVERTED
+        recordResolvedEncounter(entity)
         gameState.recordBloomConversion()
         ParticleManager.emit(
             FxPreset.BLOOM_CONVERT,
@@ -186,6 +184,7 @@ class EntityManager(
 
     private fun resolveCleanPass(entity: Entity, player: Player, gameState: GameStateManager) {
         entity.encounterOutcome = EncounterOutcome.CLEAN_PASS
+        recordResolvedEncounter(entity)
         entity.performUniqueAction(player, gameState)
         gameState.recordCleanPass()
 
@@ -218,8 +217,6 @@ class EntityManager(
             )
         }
 
-        // The entity is already behind the player at pass time. Spawn the orb
-        // ahead of the player so it is actually collectible while scrolling.
         val reachableX = maxOf(
             entity.hitbox.centerX(),
             player.hitbox.right + maxOf(120f, screenWidth * 0.08f)
@@ -230,6 +227,13 @@ class EntityManager(
             topY = reachableTopY,
             spawnRate = orbSpawnRateFor(entity)
         )
+    }
+
+    private fun recordResolvedEncounter(entity: Entity) {
+        if (!entity.shouldRecordPersistence) return
+        entityTypeOf(entity)?.let { type ->
+            PersistentMemoryManager.recordEncounter(context, type)
+        }
     }
 
     fun draw(canvas: android.graphics.Canvas) {
@@ -364,7 +368,7 @@ class EntityManager(
             spriteManager,
             variant
         )
-        if (recordPersistence) PersistentMemoryManager.recordEncounter(context, type)
+        entity.shouldRecordPersistence = recordPersistence
         activeEntities.add(entity)
         debugActiveEntityCount = activeEntities.size
     }
