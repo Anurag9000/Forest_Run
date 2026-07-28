@@ -1,7 +1,7 @@
 package com.yourname.forest_run.ui
 
-import androidx.test.core.app.ApplicationProvider
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -11,7 +11,6 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class DialogueBubbleManagerTest {
-
     @Suppress("unused")
     private val context: Context = ApplicationProvider.getApplicationContext()
 
@@ -69,5 +68,29 @@ class DialogueBubbleManagerTest {
 
         assertEquals(5, DialogueBubbleManager.activeTextsForTest().size)
         assertTrue(DialogueBubbleManager.activeTextsForTest().isNotEmpty())
+    }
+
+    @Test
+    fun `long dialogue wraps to no more than three lines`() {
+        val lines = DialogueBubbleManager.wrapTextForTest(
+            text = "The forest remembers every gentle crossing and every hurried mistake you bring home.",
+            maxWidth = 120f
+        )
+
+        assertTrue(lines.isNotEmpty())
+        assertTrue(lines.size <= 3)
+        assertTrue(lines.all { it.isNotBlank() })
+    }
+
+    @Test
+    fun `oversized unbroken word is split safely`() {
+        val lines = DialogueBubbleManager.wrapTextForTest(
+            text = "supercalifragilisticexpialidocioussupercalifragilisticexpialidocious",
+            maxWidth = 70f
+        )
+
+        assertTrue(lines.isNotEmpty())
+        assertTrue(lines.size <= 3)
+        assertTrue(lines.all { it.isNotBlank() })
     }
 }
