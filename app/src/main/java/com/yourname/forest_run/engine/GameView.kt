@@ -310,7 +310,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!::gardenScreen.isInitialized) {
             gardenScreen = GardenScreen(context, spriteManager, screenWidth, screenHeight)
             gardenScreen.onBack = {
-                if (::mainMenuScreen.isInitialized) mainMenuScreen.refreshCopy()
+                if (::mainMenuScreen.isInitialized) {
+                    mainMenuScreen.resetRitual()
+                    mainMenuScreen.refreshCopy()
+                }
                 appState = AppGameState.MENU
             }
             gardenScreen.onRun = {

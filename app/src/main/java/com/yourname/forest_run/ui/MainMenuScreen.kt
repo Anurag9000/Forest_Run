@@ -257,6 +257,16 @@ class MainMenuScreen(
         sanctuaryState = GardenSanctuaryPlanner.build(context, summary)
     }
 
+    /** Restore the willow sit-rise ritual whenever the player returns home. */
+    fun resetRitual() {
+        phase = Phase.IDLE
+        standTimer = 0f
+        startRunRequested = false
+        standPlayerSprite.reset()
+        readyPlayerSprite.reset()
+        idlePlayerSprite.setFrame(3)
+    }
+
     /** Consume a pending run-start request so it only fires once. */
     fun consumeStartRunRequest(): Boolean {
         if (!startRunRequested) return false

@@ -621,13 +621,13 @@ object GardenSanctuaryPlanner {
             featuredVisitor = featuredVisitor,
             featuredVisitorTitle = featuredVisitorTitle,
             featuredVisitorLine = featuredVisitorLine,
-            fireflyCount = fireflies,
-            petalCount = petals,
-            bloomPatchCount = bloomPatches,
-            mistBandCount = mistBands,
-            lanternGlowCount = lanternGlows,
-            groundGlowAlpha = groundGlowAlpha.coerceAtMost(180),
-            canopyShadeAlpha = canopyShadeAlpha,
+            fireflyCount = fireflies.coerceAtLeast(0),
+            petalCount = petals.coerceAtLeast(0),
+            bloomPatchCount = bloomPatches.coerceAtLeast(0),
+            mistBandCount = mistBands.coerceAtLeast(0),
+            lanternGlowCount = lanternGlows.coerceAtLeast(0),
+            groundGlowAlpha = groundGlowAlpha.coerceIn(0, 180),
+            canopyShadeAlpha = canopyShadeAlpha.coerceIn(0, 255),
             traces = traces
         )
     }

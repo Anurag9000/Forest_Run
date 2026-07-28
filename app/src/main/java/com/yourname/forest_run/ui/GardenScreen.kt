@@ -348,20 +348,23 @@ class GardenScreen(
         unlockedCount = SaveManager.loadGardenProgress(context).coerceAtLeast(1)
         lifeSeeds     = SaveManager.loadLifetimeSeeds(context)
         syncWardrobe()
-        refreshStats()
+        // Surface creation may happen while the menu is still visible. Preview
+        // the greeting here; only an actual Garden entry may consume it.
+        refreshStats(consumeReturnMoment = false)
     }
 
-    /** Called after a run to refresh the seed count. */
+    /** Called when the Garden is actually entered or revisited. */
     fun refresh() {
         lifeSeeds = SaveManager.loadLifetimeSeeds(context)
         syncWardrobe()
-        refreshStats()
+        refreshStats(consumeReturnMoment = true)
     }
 
     fun update(deltaTime: Float) {
         elapsed += deltaTime
         catalogueSprites.forEach { it.update(deltaTime) }
         returnVisitorSprite?.update(deltaTime)
+        ParticleManager.update(deltaTime)
         if (unlockAnim >= 0f) {
             unlockAnim = (unlockAnim + deltaTime * 1.5f).coerceAtMost(1f)
             if (unlockAnim >= 1f) unlockAnim = -1f
@@ -392,7 +395,7 @@ class GardenScreen(
                     wardrobeMessage = CostumeManager.activePresentation(context)?.activeLine
                         ?: "${style.displayName} equipped"
                     wardrobeMessageTimer = 2.5f
-                    refreshStats()
+                    refreshStats(consumeReturnMoment = false)
                 }
             } else {
                 wardrobeMessage = style.unlockLabel
@@ -572,7 +575,7 @@ class GardenScreen(
         // Back hint
         val backAlpha = (0.5f + 0.5f * sin(elapsed * 2f)) * 200
         backPaint.alpha = backAlpha.toInt()
-        canvas.drawText("tap anywhere to go back", cw / 2f, ch * 0.93f, backPaint)
+        canvas.drawText("tap the bottom edge to go back", cw / 2f, ch * 0.93f, backPaint)
 
         // Particle layer
         ParticleManager.draw(canvas)
@@ -842,7 +845,7 @@ class GardenScreen(
         wardrobeCardPaint.alpha = 255
     }
 
-    private fun refreshStats() {
+    private fun refreshStats(consumeReturnMoment: Boolean) {
         bestDistance = SaveManager.loadBestDistance(context)
         lastKillerLabel = PersistentMemoryManager.getLastKiller(context)?.let { formatEntityName(it) } ?: "None"
         sparedTotal =
@@ -852,7 +855,11 @@ class GardenScreen(
         friendshipTotal = Biome.entries.sumOf { PersistentMemoryManager.getBiomeFriendship(context, it) }
         lastRunSummary = SaveManager.loadLastRunSummary(context)
         forestMoodState = ForestMoodSystem.currentState(context)
-        returnMoment = ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
+        returnMoment = if (consumeReturnMoment) {
+            ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
+        } else {
+            ReturnMomentsSystem.previewGardenMoment(context, lastRunSummary)
+        }
         val strongestBond = RelationshipArcSystem.strongestRelationship(context)
         sanctuaryState = GardenSanctuaryPlanner.build(context, lastRunSummary)
         returnVisitorSprite = (returnMoment?.visitor ?: sanctuaryState.featuredVisitor ?: strongestBond?.first)?.let(::spriteForVisitor)

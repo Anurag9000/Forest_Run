@@ -14,7 +14,9 @@ import com.yourname.forest_run.engine.CinematicScene
 import com.yourname.forest_run.engine.GardenSanctuaryPlanner
 import com.yourname.forest_run.engine.GardenSanctuaryState
 import com.yourname.forest_run.engine.PacifistPresentation
+import com.yourname.forest_run.engine.PostRunReflectionEntry
 import com.yourname.forest_run.engine.PostRunReflectionPlanner
+import com.yourname.forest_run.engine.RestSceneCopy
 import com.yourname.forest_run.engine.RunSummary
 import com.yourname.forest_run.engine.SanctuaryLightingScene
 import com.yourname.forest_run.engine.SessionArcComposer
@@ -203,6 +205,33 @@ class GameOverScreen(
     private val cx         = screenWidth / 2f
     private val cinematicOverlay = CinematicOverlayRenderer()
 
+    private data class RestComposition(
+        val summary: RunSummary,
+        val sceneCopy: RestSceneCopy,
+        val sanctuaryState: GardenSanctuaryState,
+        val reflectionEntry: PostRunReflectionEntry?
+    )
+
+    private var cachedComposition: RestComposition? = null
+
+    private fun compositionFor(summary: RunSummary): RestComposition {
+        cachedComposition?.takeIf { it.summary == summary }?.let { return it }
+
+        val sceneCopy = SessionArcComposer.restCopy(appContext, summary)
+        val sanctuaryState = GardenSanctuaryPlanner.build(appContext, summary)
+        return RestComposition(
+            summary = summary,
+            sceneCopy = sceneCopy,
+            sanctuaryState = sanctuaryState,
+            reflectionEntry = PostRunReflectionPlanner.restEntry(
+                summary = summary,
+                sanctuaryState = sanctuaryState,
+                recoveryLine = sceneCopy.recoveryLine,
+                carryHomeLine = sceneCopy.carryHomeLine
+            )
+        ).also { cachedComposition = it }
+    }
+
     // ── Update ────────────────────────────────────────────────────────────
 
     fun update(deltaTime: Float) {
@@ -217,14 +246,10 @@ class GameOverScreen(
         isRecovering: Boolean = false,
         recoveryProgress: Float = 1f
     ) {
-        val sceneCopy = SessionArcComposer.restCopy(appContext, summary)
-        val sanctuaryState = GardenSanctuaryPlanner.build(appContext, summary)
-        val reflectionEntry = PostRunReflectionPlanner.restEntry(
-            summary = summary,
-            sanctuaryState = sanctuaryState,
-            recoveryLine = sceneCopy.recoveryLine,
-            carryHomeLine = sceneCopy.carryHomeLine
-        )
+        val composition = compositionFor(summary)
+        val sceneCopy = composition.sceneCopy
+        val sanctuaryState = composition.sanctuaryState
+        val reflectionEntry = composition.reflectionEntry
         val w = screenWidth.toFloat()
         val h = screenHeight.toFloat()
         val stageAlpha = if (isRecovering) (0.38f + recoveryProgress * 0.62f).coerceIn(0f, 1f) else 1f

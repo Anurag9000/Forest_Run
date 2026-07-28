@@ -16,7 +16,6 @@ data class ReturnMomentState(
 )
 
 object ReturnMomentsSystem {
-    private const val DAY_MS = 24L * 60L * 60L * 1_000L
     private const val LONG_ABSENCE_MS = 36L * 60L * 60L * 1_000L
 
     fun recordRunOutcome(context: Context, summary: RunSummary, nowMs: Long = System.currentTimeMillis()) {
@@ -54,7 +53,7 @@ object ReturnMomentsSystem {
         persist: Boolean
     ): ReturnMoment? {
         val previous = SaveManager.loadReturnMomentState(appContext)
-        val dayId = nowMs / DAY_MS
+        val dayId = localCalendarDayId(nowMs)
         val alreadyGreetedToday = previous.lastGardenGreetingDay == dayId
         val bondedVisitor = RelationshipArcSystem.preferredGardenVisitor(appContext)
         val milestoneBond = RelationshipArcSystem.preferredGardenVisitor(appContext, RelationshipStage.MILESTONE)
