@@ -9,6 +9,9 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.HapticManager
 import com.anurag9000.forestrun.engine.LeitmotifManager
@@ -29,10 +32,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         RuntimeAssetValidator.validateRelease(this)
         gameView = GameView(this)
         setContentView(gameView)
+        configureSafeAreaInsets()
         gameView.post {
             hideSystemUI()
             gameView.applyDebugLaunchIntent(intent)
@@ -80,6 +85,23 @@ class MainActivity : AppCompatActivity() {
         LeitmotifManager.destroy()
         SfxManager.destroy()
         super.onDestroy()
+    }
+
+    private fun configureSafeAreaInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(gameView) { _, insets ->
+            val safe = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or
+                    WindowInsetsCompat.Type.displayCutout()
+            )
+            gameView.setSafeAreaInsets(
+                left = safe.left,
+                top = safe.top,
+                right = safe.right,
+                bottom = safe.bottom
+            )
+            insets
+        }
+        ViewCompat.requestApplyInsets(gameView)
     }
 
     private fun hideSystemUI() {

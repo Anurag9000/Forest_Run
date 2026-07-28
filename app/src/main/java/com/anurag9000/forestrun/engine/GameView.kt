@@ -204,6 +204,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         private set
     var screenHeight: Int = 0
         private set
+    private var safeAreaInsets = SafeAreaInsets()
+    @Volatile
+    private var safeContentTransform = SafeContentTransform.create(1, 1)
 
     // -----------------------------------------------------------------------
     // Lifecycle
@@ -214,12 +217,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             val idx = event.actionIndex.coerceAtLeast(0)
             lastTouchX = event.getX(idx)
             lastTouchY = event.getY(idx)
+            val logicalTouch = safeContentTransform.toLogical(lastTouchX, lastTouchY)
 
             if (acceptsGameplayInput()) {
                 if (debugToolsEnabled &&
                     event.actionMasked == android.view.MotionEvent.ACTION_UP
                 ) {
-                    debugEncounterOverlay?.handleTap(lastTouchX, lastTouchY)?.let { action ->
+                    debugEncounterOverlay?.handleTap(logicalTouch.x, logicalTouch.y)?.let { action ->
                         handleDebugOverlayAction(action)
                         return@setOnTouchListener true
                     }
@@ -234,9 +238,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     view.performClick()
                     when {
                         appState == AppGameState.MENU && ::mainMenuScreen.isInitialized ->
-                            mainMenuScreen.onTap(lastTouchX, lastTouchY)
+                            mainMenuScreen.onTap(logicalTouch.x, logicalTouch.y)
                         appState == AppGameState.GARDEN && ::gardenScreen.isInitialized ->
-                            gardenScreen.onTap(lastTouchX, lastTouchY)
+                            gardenScreen.onTap(logicalTouch.x, logicalTouch.y)
                         runState == RunState.GAME_OVER ->
                             runState = runResetManager.beginRestart()
                     }
@@ -249,6 +253,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     override fun surfaceCreated(holder: SurfaceHolder) {
         screenWidth  = width
         screenHeight = height
+        rebuildSafeContentTransform()
 
         // Phase 5: GameStateManager first (owns scroll speed)
         if (!::gameState.isInitialized) {
@@ -350,6 +355,38 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         screenWidth  = width
         screenHeight = height
+        rebuildSafeContentTransform()
+    }
+
+    fun setSafeAreaInsets(left: Int, top: Int, right: Int, bottom: Int) {
+        safeAreaInsets = SafeAreaInsets(left, top, right, bottom)
+        rebuildSafeContentTransform()
+    }
+
+    private fun rebuildSafeContentTransform() {
+        safeContentTransform = SafeContentTransform.create(
+            surfaceWidth = screenWidth.takeIf { it > 0 } ?: width,
+            surfaceHeight = screenHeight.takeIf { it > 0 } ?: height,
+            insets = safeAreaInsets
+        )
+    }
+
+    private inline fun drawInSafeContent(canvas: Canvas, drawBlock: () -> Unit) {
+        val transform = safeContentTransform
+        val checkpoint = canvas.save()
+        canvas.translate(transform.contentLeft, transform.contentTop)
+        canvas.scale(transform.scale, transform.scale)
+        canvas.clipRect(
+            0f,
+            0f,
+            transform.logicalWidth.toFloat(),
+            transform.logicalHeight.toFloat()
+        )
+        try {
+            drawBlock()
+        } finally {
+            canvas.restoreToCount(checkpoint)
+        }
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
@@ -958,13 +995,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 22: MENU renders its own full-screen scene
         if (appState == AppGameState.MENU) {
-            if (::mainMenuScreen.isInitialized) mainMenuScreen.draw(canvas)
+            if (::mainMenuScreen.isInitialized) {
+                drawInSafeContent(canvas) { mainMenuScreen.draw(canvas) }
+            }
             return
         }
 
         // Phase 23: GARDEN renders plant meta-loop
         if (appState == AppGameState.GARDEN) {
-            if (::gardenScreen.isInitialized) gardenScreen.draw(canvas)
+            if (::gardenScreen.isInitialized) {
+                drawInSafeContent(canvas) { gardenScreen.draw(canvas) }
+            }
             return
         }
 
@@ -1086,20 +1127,22 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     encounterDirector.activeScenario != EncounterScenario.OPENING_READABILITY -> null
                 else -> gameState.openingGuidanceCue
             }
-            hud.draw(
-                canvas = canvas,
-                state = gameState,
-                bloomPresentation = BloomPresentation.hudPresentation(
-                    bloomMeter = gameState.bloomMeter,
-                    seedTarget = gameState.bloomSeedTarget,
-                    isActive = gameState.isBloomActive,
-                    secondsRemaining = gameState.bloomSecondsRemaining,
-                    totalConversions = gameState.bloomConversionsThisRun,
-                    burstConversions = bloomLastBurstConversions,
-                    recentAfterglow = bloomAfterglow
-                ),
-                openingCue = openingCue
-            )
+            drawInSafeContent(canvas) {
+                hud.draw(
+                    canvas = canvas,
+                    state = gameState,
+                    bloomPresentation = BloomPresentation.hudPresentation(
+                        bloomMeter = gameState.bloomMeter,
+                        seedTarget = gameState.bloomSeedTarget,
+                        isActive = gameState.isBloomActive,
+                        secondsRemaining = gameState.bloomSecondsRemaining,
+                        totalConversions = gameState.bloomConversionsThisRun,
+                        burstConversions = bloomLastBurstConversions,
+                        recentAfterglow = bloomAfterglow
+                    ),
+                    openingCue = openingCue
+                )
+            }
         }
 
         if (debugToolsEnabled &&
@@ -1111,30 +1154,36 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             runState == RunState.PLAYING
         ) {
             val director = encounterDirector
-            debugEncounterOverlay?.draw(
-                canvas = canvas,
-                director = director ?: return,
-                biomeLabel = entityManager.biomeManager.currentBiome.displayName,
-                activeEntityCount = entityManager.activeEntities.size,
-                bloomText = "${gameState.bloomMeter}/${gameState.bloomSeedTarget}",
-                mercyHearts = gameState.mercyHearts,
-                kindnessChain = gameState.kindnessChain,
-                bloomConversions = gameState.bloomConversionsThisRun
-            )
+            if (director != null) {
+                drawInSafeContent(canvas) {
+                    debugEncounterOverlay?.draw(
+                        canvas = canvas,
+                        director = director,
+                        biomeLabel = entityManager.biomeManager.currentBiome.displayName,
+                        activeEntityCount = entityManager.activeEntities.size,
+                        bloomText = "${gameState.bloomMeter}/${gameState.bloomSeedTarget}",
+                        mercyHearts = gameState.mercyHearts,
+                        kindnessChain = gameState.kindnessChain,
+                        bloomConversions = gameState.bloomConversionsThisRun
+                    )
+                }
+            }
         }
 
         // 9. Game Over overlay (DYING: faint, GAME_OVER: full)
         if (runState == RunState.GAME_OVER || runState == RunState.DYING) {
             if (::gameOverScreen.isInitialized && ::gameState.isInitialized) {
-                gameOverScreen.draw(
-                    canvas = canvas,
-                    summary = currentRunSummary ?: gameState.buildRunSummary(
-                        lastKiller = PersistentMemoryManager.getLastKiller(context),
-                        restQuote = currentRestQuote
-                    ),
-                    isRecovering = runState == RunState.DYING,
-                    recoveryProgress = if (runState == RunState.DYING) runResetManager.dyingFraction else 1f
-                )
+                drawInSafeContent(canvas) {
+                    gameOverScreen.draw(
+                        canvas = canvas,
+                        summary = currentRunSummary ?: gameState.buildRunSummary(
+                            lastKiller = PersistentMemoryManager.getLastKiller(context),
+                            restQuote = currentRestQuote
+                        ),
+                        isRecovering = runState == RunState.DYING,
+                        recoveryProgress = if (runState == RunState.DYING) runResetManager.dyingFraction else 1f
+                    )
+                }
             }
         }
 
