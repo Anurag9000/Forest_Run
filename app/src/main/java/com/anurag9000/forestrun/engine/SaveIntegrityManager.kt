@@ -47,7 +47,7 @@ object SaveIntegrityManager {
         "last_run_pacifist_route"
     )
 
-    fun repair(context: Context): SaveIntegrityReport {
+    internal fun repair(context: Context): SaveIntegrityReport {
         SaveManager.usePrimaryPreferences()
         val appContext = context.applicationContext
         val primary = appContext.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
