@@ -8,10 +8,10 @@ import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
-import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.RelationshipArcSystem
-import com.yourname.forest_run.engine.SpriteSizing
+import com.yourname.forest_run.engine.RelationshipEncounterTuning
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
 import com.yourname.forest_run.entities.EntityType
@@ -20,26 +20,12 @@ import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
-/**
- * Cat (Phase 11)
- *
- * Behaviour:
- * - Sits stationary on the ground. Tail-flick animation via SpriteSheet.
- * - Player PASSES it cleanly → awardKindnessBonus() (double seeds + 2× multiplier + "Meow?").
- * - MERCY_MISS overlap → flavour text but smaller reward.
- * - Direct HIT → game over (cat hisses).
- * - After 5 passed (spared): cat waves and exits. [Spare event — Phase 17 full handling]
- *
- * Spares / costumes tracked via Phase 18 PersistentMemoryManager.
- * For now the spare counter is per-instance and fires once.
- */
 class Cat(
     context: Context,
     startX: Float,
     groundY: Float,
     private val sprite: SpriteSheet
 ) : Entity(context) {
-
     private val readability = ReadabilityProfile.entityForGround(EntityType.CAT, groundY)
     private val relationshipTuning: RelationshipEncounterTuning =
         RelationshipArcSystem.encounterTuning(context, EntityType.CAT)
@@ -51,6 +37,7 @@ class Cat(
     private val catW = SpriteSizing.widthForHeight(sprite, catH, minWidth = readability.minWidthPx)
     private val insetX = catW * readability.hitInsetXRatio
     private val insetY = catH * readability.hitInsetYRatio
+
     private val auraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(54, 255, 214, 236)
         style = Paint.Style.FILL
@@ -70,10 +57,10 @@ class Cat(
         strokeWidth = 2.5f
     }
 
-    // Tracks whether the player has already passed this specific cat instance
     private var playerHasPassed = false
     private var waving = false
     private var waveTimer = 0f
+    private var waveStartX = 0f
 
     init {
         x = startX
@@ -85,10 +72,9 @@ class Cat(
         if (!waving) {
             x -= scrollSpeed * deltaTime
         } else {
-            // Cat trots off screen to the right during Spare event
             x += scrollSpeed * 0.4f * deltaTime
             waveTimer -= deltaTime
-            if (waveTimer <= 0f || x > x + 200f) isActive = false
+            if (waveTimer <= 0f || x > waveStartX + 200f) isActive = false
         }
         hitbox.offsetTo(x + insetX, y + insetY)
         sprite.update(deltaTime)
@@ -104,43 +90,38 @@ class Cat(
                 canvas.drawOval(x - 18f, y + catH * 0.08f, x + catW + 18f, y + catH + 10f, sharedQuietStrokePaint)
             }
         }
-        val drawRect = RectF(x, y, x + catW, y + catH)
-        sprite.draw(canvas, drawRect)
+        sprite.draw(canvas, RectF(x, y, x + catW, y + catH))
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        // Called by EntityManager when player has fully passed (player.hitbox.left > hitbox.right)
-        if (!playerHasPassed) {
-            playerHasPassed = true
-            // Kindness bonus: flat 500 pts + double seeds (removed broken permanent 2x multiplier)
-            gameState.addBonus(
-                points = 500 + relationshipTuning.passBonusPoints + if (repeatFriendHistory) 22 else 0,
-                seeds = 2 + relationshipTuning.passBonusSeeds + if (repeatFriendHistory) 1 else 0
-            )
-            if (warmBond || repeatFriendHistory) {
-                ParticleManager.emit(FxPreset.SEED_COLLECT, x + catW * 0.5f, y + catH * 0.32f)
-            }
-            DialogueBubbleManager.spawn(
-                text = RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.PASS),
-                anchorX = x + catW * 0.5f,
-                anchorY = y - 12f,
-                fillColor = Color.rgb(255, 235, 248),
-                borderColor = Color.rgb(150, 80, 130)
-            )
+        if (playerHasPassed) return
+        playerHasPassed = true
 
-            // Check for Spare threshold (5 clean passes for this cat type)
-            // Phase 18: PersistentMemoryManager.getSpared(CAT) >= 5
-            // For now, use a simple run-level mercy heart check
-            if (gameState.mercyHearts >= 5 && !waving) {
-                triggerSpare()
-                gameState.recordSpare()
-            }
+        gameState.addBonus(
+            points = 500 + relationshipTuning.passBonusPoints + if (repeatFriendHistory) 22 else 0,
+            seeds = 2 + relationshipTuning.passBonusSeeds + if (repeatFriendHistory) 1 else 0
+        )
+        if (warmBond || repeatFriendHistory) {
+            ParticleManager.emit(FxPreset.SEED_COLLECT, x + catW * 0.5f, y + catH * 0.32f)
+        }
+        DialogueBubbleManager.spawn(
+            text = RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.PASS),
+            anchorX = x + catW * 0.5f,
+            anchorY = y - 12f,
+            fillColor = Color.rgb(255, 235, 248),
+            borderColor = Color.rgb(150, 80, 130)
+        )
+
+        if (gameState.mercyHearts >= 5 && !waving) {
+            triggerSpare()
+            gameState.recordSpare()
         }
     }
 
     private fun triggerSpare() {
         waving = true
         waveTimer = 2.5f
+        waveStartX = x
         PersistentMemoryManager.recordSpare(context, EntityType.CAT)
         ParticleManager.emit(FxPreset.MERCY_STARS, x + catW * 0.5f, y + catH * 0.38f)
         DialogueBubbleManager.spawn(
@@ -165,11 +146,20 @@ class Cat(
         }
 
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
-        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
+        val mercy = RectF(
+            hitbox.left - mercyPad,
+            hitbox.top - mercyPad,
+            hitbox.right + mercyPad,
+            hitbox.bottom + mercyPad
+        )
         if (RectF.intersects(player.hitbox, mercy)) {
             if (!playerHasPassed) {
                 DialogueBubbleManager.spawn(
-                    RelationshipArcSystem.encounterCueLine(context, EntityType.CAT, RelationshipArcSystem.EncounterCue.MERCY),
+                    RelationshipArcSystem.encounterCueLine(
+                        context,
+                        EntityType.CAT,
+                        RelationshipArcSystem.EncounterCue.MERCY
+                    ),
                     player.x + Player.BASE_WIDTH * 0.5f,
                     player.y - 24f,
                     Color.rgb(255, 245, 220),
