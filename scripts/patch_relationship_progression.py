@@ -75,7 +75,7 @@ def main() -> None:
         val earnedScore = familiarity +
             cleanPasses.coerceAtLeast(0) +
             spared.coerceAtLeast(0) * 3 -
-            hits.coerceAtLeast(0) * 2
+            hits.coerceAtLeast(0)
 
         return when {
             positiveOutcomes > 0 && earnedScore >= config.milestoneScore -> RelationshipStage.MILESTONE
