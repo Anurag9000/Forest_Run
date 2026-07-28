@@ -3,23 +3,52 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releaseKeystorePath = providers.gradleProperty("FOREST_RUN_KEYSTORE").orNull
+    ?: providers.environmentVariable("FOREST_RUN_KEYSTORE").orNull
+val releaseStorePassword = providers.gradleProperty("FOREST_RUN_STORE_PASSWORD").orNull
+    ?: providers.environmentVariable("FOREST_RUN_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.gradleProperty("FOREST_RUN_KEY_ALIAS").orNull
+    ?: providers.environmentVariable("FOREST_RUN_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.gradleProperty("FOREST_RUN_KEY_PASSWORD").orNull
+    ?: providers.environmentVariable("FOREST_RUN_KEY_PASSWORD").orNull
+val hasReleaseSigning = listOf(
+    releaseKeystorePath,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.yourname.forest_run"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.yourname.forest_run"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(requireNotNull(releaseKeystorePath))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
+        }
+    }
+
     buildTypes {
         release {
+            isDebuggable = false
             isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
