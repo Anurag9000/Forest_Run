@@ -1,7 +1,7 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
-import com.yourname.forest_run.BuildConfig
+import android.content.pm.ApplicationInfo
 
 /** Fails release startup when a required packaged asset is absent or empty. */
 object RuntimeAssetValidator {
@@ -60,9 +60,11 @@ object RuntimeAssetValidator {
     )
 
     fun validateRelease(context: Context) {
-        if (BuildConfig.DEBUG) return
-
         val appContext = context.applicationContext
+        val isDebuggable =
+            (appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (isDebuggable) return
+
         val missingAssets = requiredAssetPaths.filterNot { path ->
             runCatching {
                 appContext.assets.open(path).use { stream -> stream.read() >= 0 }
