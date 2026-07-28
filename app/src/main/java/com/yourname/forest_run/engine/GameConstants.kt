@@ -34,14 +34,14 @@ object GameConstants {
     const val MERCY_WINDOW_FRAC  = 0.18f  // Phase 25: new constant
 
     // ── Entity Spawning ──────────────────────────────────────────────────
-    /** Minimum distance between spawned objects (metres). Lower = denser. */
-    const val SPAWN_MIN_GAP_M    = 3.5f   // Phase 25: new constant
+    /** Spawn-origin distance at the beginning of a run. */
+    const val SPAWN_GAP_MAX_PX = 1_100f
 
-    /**
-     * Multiplier applied to per-entity base spawn rate at max difficulty.
-     * 1.0 = normal density, 2.0 = twice as many entities at 3000m.
-     */
-    const val SPAWN_DENSITY_SCALE = 1.8f  // Phase 25: new constant
+    /** Tightest permitted spawn-origin distance at full pacing difficulty. */
+    const val SPAWN_GAP_MIN_PX = 780f
+
+    /** Distance over which the world-space gap tightens to its minimum. */
+    const val SPAWN_GAP_RAMP_METRES = 2_000f
 
     // ── Biomes ───────────────────────────────────────────────────────────
     /** Metres between biome transitions. */
@@ -49,11 +49,11 @@ object GameConstants {
     /** Canonical alias used by BiomeManager and Biome enum. */
     const val BIOME_LENGTH_METRES  = 500f
 
-    // ── Score ─────────────────────────────────────────────────────────────
+    // ── Score ────────────────────────────────────────────────────────────
     /** Points per metre of distance travelled. */
-    const val POINTS_PER_METRE   = 1.5f   // Phase 25: 1→1.5 (scores feel bigger)
+    const val POINTS_PER_METRE   = 1.5f
 
-    // ── Wind ──────────────────────────────────────────────────────────────
+    // ── Wind ─────────────────────────────────────────────────────────────
     /** Base global wind speed multiplier for SwayComponent. */
     const val BASE_WIND_SPEED    = 1.0f
 }
