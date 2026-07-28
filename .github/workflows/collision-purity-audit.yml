@@ -6,16 +6,20 @@ on:
       - agent/fix-core-gameplay-invariants
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inventory:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: agent/fix-core-gameplay-invariants
+          fetch-depth: 0
 
       - name: Extract entity collision methods
         shell: bash
@@ -63,14 +67,21 @@ jobs:
                   out.append(f'===== {path} =====\n{text[line_start:end].rstrip()}\n')
                   start = end
 
-          Path('collision-methods.txt').write_text('\n'.join(out), encoding='utf-8')
+          target = Path('audit/collision-methods.txt')
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text('\n'.join(out), encoding='utf-8')
           print(f'Extracted {len(out)} collision methods')
           PY
 
-      - name: Upload collision inventory
-        uses: actions/upload-artifact@v4
-        with:
-          name: collision-methods
-          path: collision-methods.txt
-          if-no-files-found: error
-          retention-days: 7
+      - name: Commit collision inventory
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/collision-methods.txt
+          if git diff --cached --quiet; then
+            echo "Collision inventory already current."
+            exit 0
+          fi
+          git commit -m "chore: publish collision purity inventory"
+          git push origin HEAD:agent/fix-core-gameplay-invariants
