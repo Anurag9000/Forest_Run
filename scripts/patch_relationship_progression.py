@@ -79,7 +79,7 @@ def main() -> None:
             hits.coerceAtLeast(0)
 
         return when {
-            positiveOutcomes > 0 && earnedScore >= config.milestoneScore -> RelationshipStage.MILESTONE
+            positiveOutcomes >= 3 && earnedScore >= config.milestoneScore -> RelationshipStage.MILESTONE
             positiveOutcomes > 0 && earnedScore >= config.trustScore -> RelationshipStage.TRUST
             else -> RelationshipStage.RECOGNITION
         }
@@ -124,6 +124,27 @@ def main() -> None:
     }
 ''',
         "immediate pass-stage refresh",
+    )
+
+    return_moments_test = Path(
+        "app/src/test/java/com/anurag9000/forestrun/engine/ReturnMomentsSystemTest.kt"
+    )
+    replace_once(
+        return_moments_test,
+        '''    fun `gentle high kindness milestone run can return stronger bonded moment`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+
+        val summary = RunSummary(
+''',
+        '''    fun `gentle high kindness milestone run can return stronger bonded moment`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        PersistentMemoryManager.recordPass(context, EntityType.CAT)
+
+        val summary = RunSummary(
+''',
+        "milestone fixture includes third positive outcome",
     )
 
 
