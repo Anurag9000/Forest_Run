@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-        Full-screen immersive game theme.
-        Uses Theme.AppCompat.NoActionBar as parent (stable in compileSdk 34).
-        Status bar / nav bar are hidden in code via immersive sticky flags.
+        Full-screen immersive game theme for the API 36 application target.
+        Status and navigation bars are hidden in code; essential UI is mapped
+        into system-bar and display-cutout safe content bounds.
     -->
     <style name="Theme.ForestRun" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowFullscreen">true</item>
