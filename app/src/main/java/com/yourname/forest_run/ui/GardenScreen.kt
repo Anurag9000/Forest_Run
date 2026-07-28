@@ -150,11 +150,21 @@ class GardenScreen(
 
     // ── Layout ────────────────────────────────────────────────────────────
 
-    private val CARD_W     = screenW / 10.5f
-    private val CARD_H     = screenH * 0.55f
-    private val CARD_GAP   = CARD_W * 0.12f
-    private val ROW_START_X = (screenW - (catalogue.size * (CARD_W + CARD_GAP) - CARD_GAP)) / 2f
-    private val ROW_Y       = screenH * 0.20f
+    private val layoutPlan = GardenLayoutPlanner.build(
+        width = screenW.toFloat(),
+        height = screenH.toFloat(),
+        plantCount = catalogue.size,
+        costumeCount = CostumeStyle.entries.size
+    )
+    private val CARD_W = layoutPlan.plantCards.first().width
+    private val CARD_H = layoutPlan.plantCards.first().height
+    private val CARD_GAP = if (layoutPlan.plantCards.size > 1) {
+        layoutPlan.plantCards[1].left - layoutPlan.plantCards[0].right
+    } else {
+        0f
+    }
+    private val ROW_START_X = layoutPlan.catalogueBand.left
+    private val ROW_Y = layoutPlan.catalogueBand.top
     private val cardRect    = RectF()
     private val spriteRect  = RectF()
     private val runButtonRect = RectF()
@@ -480,9 +490,15 @@ class GardenScreen(
         if (sanctuaryState.sanctuaryLine.isNotBlank()) {
             drawWrappedCenteredText(canvas, sanctuaryState.sanctuaryLine, cw / 2f, ch * 0.212f, cw * 0.64f, sanctuaryLinePaint)
         }
-        drawHomeCharacter(canvas, cw, ch)
-        drawArrivalBadge(canvas, cw, ch)
-        drawSanctuaryTraces(canvas, cw, ch)
+        when {
+            sanctuaryState.arrivalBadge.isNotBlank() -> {
+                drawArrivalBadge(canvas, cw, ch)
+                drawSanctuaryTraces(canvas, cw, ch)
+            }
+            sanctuaryState.homeCharacterLabel.isNotBlank() ->
+                drawHomeCharacter(canvas, cw, ch)
+            else -> drawSanctuaryTraces(canvas, cw, ch)
+        }
 
         // Seed count
         canvas.drawText("🌱 $lifeSeeds", 28f, ch * 0.10f, seedCountPaint)
@@ -581,62 +597,34 @@ class GardenScreen(
         ParticleManager.draw(canvas)
     }
 
-    private fun drawStatsPanel(canvas: Canvas, cw: Float, ch: Float) {
-        statsRect.set(cw * 0.05f, ch * 0.13f, cw * 0.35f, ch * 0.58f)
+    private fun drawStatsPanel(canvas: Canvas, @Suppress("UNUSED_PARAMETER") cw: Float, @Suppress("UNUSED_PARAMETER") ch: Float) {
         canvas.drawRoundRect(statsRect, 18f, 18f, statsPanelPaint)
         canvas.drawRoundRect(statsRect, 18f, 18f, statsBorderPaint)
 
-        var y = statsRect.top + 30f
-        canvas.drawText("Best Run", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(formatDistance(bestDistance), statsRect.left + 18f, y + 18f, statsValuePaint)
-        y += 44f
-        canvas.drawText("Last Killer", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(lastKillerLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
-        y += 44f
-        canvas.drawText("Spared", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(sparedTotal.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
-        y += 44f
-        canvas.drawText("Friend Biomes", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(friendshipTotal.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
-        y += 44f
-        canvas.drawText("Strongest Bond", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(strongestBondLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
-        y += 44f
-        canvas.drawText("Bond Reward", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(milestoneRewardLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
-        if (milestoneRewardSummary.isNotBlank()) {
-            canvas.drawText(milestoneRewardSummary.take(28), statsRect.left + 18f, y + 36f, statsLabelPaint)
-            y += 58f
-        } else {
-            y += 44f
+        val rows = listOf(
+            "Best Run" to formatDistance(bestDistance),
+            "Last Killer" to lastKillerLabel,
+            "Spared" to sparedTotal.toString(),
+            "Friend Biomes" to friendshipTotal.toString(),
+            "Strongest Bond" to strongestBondLabel,
+            "Memory Pages" to memoryPageCount.toString()
+        )
+        val innerLeft = statsRect.left + 18f
+        val rowHeight = (statsRect.height() - 46f) / rows.size
+        var top = statsRect.top + 26f
+        canvas.save()
+        canvas.clipRect(statsRect)
+        rows.forEach { (label, value) ->
+            canvas.drawText(label, innerLeft, top, statsLabelPaint)
+            canvas.drawText(
+                ellipsizeText(value, statsRect.width() - 36f, statsValuePaint),
+                innerLeft,
+                top + 18f,
+                statsValuePaint
+            )
+            top += rowHeight
         }
-        canvas.drawText("Home Feature", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(milestonePresenceLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
-        if (milestonePresenceLine.isNotBlank()) {
-            canvas.drawText(milestonePresenceLine.take(28), statsRect.left + 18f, y + 36f, statsLabelPaint)
-            y += 58f
-        } else {
-            y += 44f
-        }
-        canvas.drawText("Bond Ritual", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(milestoneRitualLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
-        if (milestoneRitualLine.isNotBlank()) {
-            canvas.drawText(milestoneRitualLine.take(28), statsRect.left + 18f, y + 36f, statsLabelPaint)
-            y += 58f
-        } else {
-            y += 44f
-        }
-        canvas.drawText("Costume Sign", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(costumeSignLabel, statsRect.left + 18f, y + 18f, statsValuePaint)
-        val visibleCostumeLine = costumeSignLine.ifBlank { activeCostumeLine }
-        if (visibleCostumeLine.isNotBlank()) {
-            canvas.drawText(visibleCostumeLine.take(28), statsRect.left + 18f, y + 36f, statsLabelPaint)
-            y += 58f
-        } else {
-            y += 44f
-        }
-        canvas.drawText("Memory Pages", statsRect.left + 18f, y, statsLabelPaint)
-        canvas.drawText(memoryPageCount.toString(), statsRect.left + 18f, y + 18f, statsValuePaint)
+        canvas.restore()
     }
 
     private fun drawRunButton(canvas: Canvas, @Suppress("UNUSED_PARAMETER") cw: Float, @Suppress("UNUSED_PARAMETER") ch: Float) {
@@ -671,7 +659,15 @@ class GardenScreen(
 
         if (wardrobeMessageTimer > 0f && wardrobeMessage.isNotBlank()) {
             wardrobeHintPaint.alpha = ((wardrobeMessageTimer / 2.5f) * 255).toInt().coerceIn(120, 255)
-            canvas.drawText(wardrobeMessage, wardrobeRect.left + 20f, wardrobeRect.bottom - 12f, wardrobeHintPaint)
+            drawWrappedLeftText(
+                canvas = canvas,
+                text = wardrobeMessage,
+                left = wardrobeRect.left + 20f,
+                baselineY = wardrobeRect.bottom - 28f,
+                maxWidth = wardrobeRect.width() - 40f,
+                paint = wardrobeHintPaint,
+                maxLines = 2
+            )
             wardrobeHintPaint.alpha = 210
         }
     }
@@ -681,88 +677,80 @@ class GardenScreen(
         canvas.drawRoundRect(lastRunRect, 18f, 18f, statsPanelPaint)
         canvas.drawRoundRect(lastRunRect, 18f, 18f, statsBorderPaint)
 
+        val left = lastRunRect.left + 18f
+        val maxWidth = lastRunRect.width() - 36f
+        val bottomLimit = lastRunRect.bottom - 14f
         var y = lastRunRect.top + 28f
-        canvas.drawText("Last Run", lastRunRect.left + 18f, y, wardrobeHintPaint)
-        y += 26f
+
+        canvas.save()
+        canvas.clipRect(lastRunRect)
+        canvas.drawText("Last Run", left, y, wardrobeHintPaint)
+        y += 24f
         canvas.drawText(
-            "${formatDistance(summary.distanceM)}  •  ${summary.seedsCollected} seeds",
-            lastRunRect.left + 18f,
+            ellipsizeText(
+                "${formatDistance(summary.distanceM)}  •  ${summary.seedsCollected} seeds  •  ${summary.score} pts",
+                maxWidth,
+                statsValuePaint
+            ),
+            left,
             y,
             statsValuePaint
         )
-        y += 24f
+        y += 22f
 
-        val detailBits = buildList {
+        val summaryBits = buildList {
+            add("Tone: ${summary.forestMood.displayName}")
+            if (summary.pacifistRouteTier != com.yourname.forest_run.engine.PacifistRouteTier.NONE) {
+                add("Route: ${summary.pacifistRouteTier.displayName}")
+            }
             if (summary.sparedCount > 0) add("${summary.sparedCount} spared")
             if (summary.bloomConversions > 0) add("${summary.bloomConversions} Bloom")
             if (summary.kindnessChain > 0) add("chain ${summary.kindnessChain}")
         }
-        if (detailBits.isNotEmpty()) {
-            canvas.drawText(detailBits.joinToString("  •  "), lastRunRect.left + 18f, y, statsLabelPaint)
-            y += 22f
+        canvas.drawText(
+            ellipsizeText(summaryBits.joinToString("  •  "), maxWidth, statsLabelPaint),
+            left,
+            y,
+            statsLabelPaint
+        )
+        y += 21f
+
+        fun narrative(label: String, line: String, maxLines: Int = 2) {
+            if (line.isBlank() || y >= bottomLimit) return
+            canvas.drawText(ellipsizeText(label, maxWidth, statsLabelPaint), left, y, statsLabelPaint)
+            y += 16f
+            y = drawWrappedLeftText(
+                canvas = canvas,
+                text = line,
+                left = left,
+                baselineY = y,
+                maxWidth = maxWidth,
+                paint = reflectionPaint,
+                maxLines = maxLines
+            ) + 6f
         }
 
-        canvas.drawText("Tone: ${summary.forestMood.displayName}", lastRunRect.left + 18f, y, statsLabelPaint)
-        y += 22f
         if (summary.pacifistRouteTier != com.yourname.forest_run.engine.PacifistRouteTier.NONE) {
-            canvas.drawText("Route: ${summary.pacifistRouteTier.displayName}", lastRunRect.left + 18f, y, statsLabelPaint)
-            y += 22f
-            canvas.drawText(
-                PacifistPresentation.routeAfterglowLine(summary.pacifistRouteTier).take(92),
-                lastRunRect.left + 18f,
-                y,
-                reflectionPaint
+            narrative(
+                "Route afterglow",
+                PacifistPresentation.routeAfterglowLine(summary.pacifistRouteTier),
+                maxLines = 2
             )
-            y += 22f
         }
-        if (sanctuaryState.worldOpinionLabel.isNotBlank()) {
-            canvas.drawText("Opinion: ${sanctuaryState.worldOpinionLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
-            y += 22f
-            if (sanctuaryState.worldOpinionLine.isNotBlank()) {
-                canvas.drawText(sanctuaryState.worldOpinionLine.take(92), lastRunRect.left + 18f, y, reflectionPaint)
-                y += 22f
-            }
+        if (sanctuaryState.worldOpinionLine.isNotBlank()) {
+            narrative(
+                "Opinion: ${sanctuaryState.worldOpinionLabel}",
+                sanctuaryState.worldOpinionLine,
+                maxLines = 2
+            )
         }
-        if (sanctuaryState.routeWorldLabel.isNotBlank()) {
-            canvas.drawText("World: ${sanctuaryState.routeWorldLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
-            y += 22f
-            if (sanctuaryState.routeWorldLine.isNotBlank()) {
-                canvas.drawText(sanctuaryState.routeWorldLine.take(92), lastRunRect.left + 18f, y, reflectionPaint)
-                y += 22f
-            }
+        sanctuaryState.homecomingConsequences.firstOrNull()?.let { consequence ->
+            narrative(consequence.label, consequence.line, maxLines = 2)
         }
-        if (sanctuaryState.featuredPeaceLabel.isNotBlank()) {
-            canvas.drawText("World: ${sanctuaryState.featuredPeaceLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
-            y += 22f
+        reflectionEntries.take(2).forEach { entry ->
+            narrative(entry.label, entry.text, maxLines = 2)
         }
-        if (sanctuaryState.homeCharacterLabel.isNotBlank()) {
-            canvas.drawText("Home: ${sanctuaryState.homeCharacterLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
-            y += 22f
-        }
-        if (sanctuaryState.featuredCostumeLabel.isNotBlank()) {
-            canvas.drawText("Dress: ${sanctuaryState.featuredCostumeLabel}", lastRunRect.left + 18f, y, statsLabelPaint)
-            y += 22f
-            val costumeLine = sanctuaryState.activeCostumeLine.ifBlank { sanctuaryState.featuredCostumeLine }
-            if (costumeLine.isNotBlank()) {
-                canvas.drawText(costumeLine.take(92), lastRunRect.left + 18f, y, reflectionPaint)
-                y += 22f
-            }
-        }
-        sanctuaryState.homecomingConsequences.take(3).forEach { consequence ->
-            canvas.drawText(consequence.label, lastRunRect.left + 18f, y, statsLabelPaint)
-            canvas.drawText(consequence.line.take(92), lastRunRect.left + 18f, y + 16f, reflectionPaint)
-            y += 36f
-        }
-        val killerText = summary.lastKiller?.let { formatEntityName(it) } ?: "None"
-        canvas.drawText("Last killer: $killerText", lastRunRect.left + 18f, y, statsLabelPaint)
-        y += 22f
-        reflectionEntries.forEachIndexed { index, entry ->
-            y += if (index == 0) 18f else 14f
-            canvas.drawText("${entry.label}:", lastRunRect.left + 18f, y, statsLabelPaint)
-            val linePaint = if (entry.label == "Creature") thoughtPaint else reflectionPaint
-            canvas.drawText(entry.text.take(92), lastRunRect.left + 18f, y + 16f, linePaint)
-            y += 20f
-        }
+        canvas.restore()
     }
 
     private fun drawCostumeIcon(canvas: Canvas, rect: RectF, style: CostumeStyle, unlocked: Boolean) {
@@ -906,26 +894,17 @@ class GardenScreen(
         }
     }
 
-    private fun syncInteractiveLayout(cw: Float, ch: Float) {
-        runButtonRect.set(cw * 0.70f, ch * 0.14f, cw * 0.93f, ch * 0.26f)
-        lastRunRect.set(cw * 0.62f, ch * 0.30f, cw * 0.95f, ch * 0.66f)
-        wardrobeRect.set(cw * 0.05f, ch * 0.68f, cw * 0.95f, ch * 0.89f)
-        val columns = 4
-        val cardGapX = wardrobeRect.width() * 0.015f
-        val rows = ((CostumeStyle.entries.size + columns - 1) / columns).coerceAtLeast(1)
-        val innerLeft = wardrobeRect.left + 18f
-        val innerRight = wardrobeRect.right - 18f
-        val innerTop = wardrobeRect.top + 34f
-        val innerBottom = wardrobeRect.bottom - 22f
-        val cardWidth = (innerRight - innerLeft - cardGapX * (columns - 1)) / columns
-        val cardGapY = wardrobeRect.height() * 0.06f
-        val cardHeight = (innerBottom - innerTop - cardGapY * (rows - 1)) / rows
-        CostumeStyle.entries.forEachIndexed { index, _ ->
-            val row = index / columns
-            val column = index % columns
-            val left = innerLeft + column * (cardWidth + cardGapX)
-            val top = innerTop + row * (cardHeight + cardGapY)
-            wardrobeCardRects[index].set(left, top, left + cardWidth, top + cardHeight)
+    private fun syncInteractiveLayout(@Suppress("UNUSED_PARAMETER") cw: Float, @Suppress("UNUSED_PARAMETER") ch: Float) {
+        fun RectF.apply(box: LayoutBox) {
+            set(box.left, box.top, box.right, box.bottom)
+        }
+
+        runButtonRect.apply(layoutPlan.runButton)
+        statsRect.apply(layoutPlan.statsPanel)
+        lastRunRect.apply(layoutPlan.lastRunPanel)
+        wardrobeRect.apply(layoutPlan.wardrobePanel)
+        layoutPlan.wardrobeCards.forEachIndexed { index, box ->
+            wardrobeCardRects[index].apply(box)
         }
     }
 
@@ -1043,7 +1022,7 @@ class GardenScreen(
         val gap = cw * 0.012f
         val totalWidth = sanctuaryState.traces.size * chipWidth + (sanctuaryState.traces.size - 1) * gap
         var left = (cw - totalWidth) / 2f
-        val top = if (sanctuaryState.arrivalBadge.isNotBlank()) ch * 0.268f else ch * 0.225f
+        val top = if (sanctuaryState.arrivalBadge.isNotBlank()) ch * 0.292f else ch * 0.268f
 
         sanctuaryState.traces.forEach { trace ->
             val rect = RectF(left, top, left + chipWidth, top + chipHeight)
@@ -1104,28 +1083,68 @@ class GardenScreen(
         maxWidth: Float,
         paint: Paint
     ) {
-        val words = text.split(" ")
-        if (words.isEmpty()) return
+        var y = baselineY
+        wrapTextLines(text, maxWidth, paint, maxLines = 2).forEach { line ->
+            canvas.drawText(line, centerX, y, paint)
+            y += paint.textSize + 6f
+        }
+    }
 
+    private fun drawWrappedLeftText(
+        canvas: Canvas,
+        text: String,
+        left: Float,
+        baselineY: Float,
+        maxWidth: Float,
+        paint: Paint,
+        maxLines: Int
+    ): Float {
+        var y = baselineY
+        wrapTextLines(text, maxWidth, paint, maxLines).forEach { line ->
+            canvas.drawText(line, left, y, paint)
+            y += paint.textSize + 4f
+        }
+        return y
+    }
+
+    private fun wrapTextLines(
+        text: String,
+        maxWidth: Float,
+        paint: Paint,
+        maxLines: Int
+    ): List<String> {
+        if (text.isBlank() || maxLines <= 0 || maxWidth <= 0f) return emptyList()
         val lines = mutableListOf<String>()
         val builder = StringBuilder()
-        for (word in words) {
-            val candidate = if (builder.isEmpty()) word else "${builder} $word"
-            if (paint.measureText(candidate) <= maxWidth) {
+        for (word in text.trim().split(Regex("\\s+"))) {
+            val candidate = if (builder.isEmpty()) word else "$builder $word"
+            if (paint.measureText(candidate) <= maxWidth || builder.isEmpty()) {
                 builder.clear()
                 builder.append(candidate)
             } else {
                 lines += builder.toString()
                 builder.clear()
                 builder.append(word)
+                if (lines.size >= maxLines) break
             }
         }
-        if (builder.isNotEmpty()) lines += builder.toString()
-
-        var y = baselineY
-        for (line in lines.take(2)) {
-            canvas.drawText(line, centerX, y, paint)
-            y += paint.textSize + 6f
+        if (builder.isNotEmpty() && lines.size < maxLines) lines += builder.toString()
+        return lines.take(maxLines).mapIndexed { index, line ->
+            if (index == maxLines - 1 && paint.measureText(line) > maxWidth) {
+                ellipsizeText(line, maxWidth, paint)
+            } else {
+                line
+            }
         }
+    }
+
+    private fun ellipsizeText(text: String, maxWidth: Float, paint: Paint): String {
+        if (paint.measureText(text) <= maxWidth) return text
+        val suffix = "…"
+        var end = text.length
+        while (end > 0 && paint.measureText(text.substring(0, end).trimEnd() + suffix) > maxWidth) {
+            end--
+        }
+        return text.substring(0, end).trimEnd() + suffix
     }
 }
