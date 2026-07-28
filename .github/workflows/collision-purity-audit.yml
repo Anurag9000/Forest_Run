@@ -1,0 +1,76 @@
+name: Collision purity audit
+
+on:
+  push:
+    branches:
+      - agent/fix-core-gameplay-invariants
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Extract entity collision methods
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('app/src/main/java/com/yourname/forest_run/entities')
+          out = []
+          for path in sorted(root.rglob('*.kt')):
+              text = path.read_text(encoding='utf-8')
+              marker = 'override fun onCollision('
+              start = 0
+              while True:
+                  index = text.find(marker, start)
+                  if index < 0:
+                      break
+                  line_start = text.rfind('\n', 0, index) + 1
+                  brace = text.find('{', index)
+                  if brace < 0:
+                      break
+                  depth = 0
+                  end = brace
+                  in_string = False
+                  escaped = False
+                  for pos in range(brace, len(text)):
+                      ch = text[pos]
+                      if in_string:
+                          if escaped:
+                              escaped = False
+                          elif ch == '\\':
+                              escaped = True
+                          elif ch == '"':
+                              in_string = False
+                          continue
+                      if ch == '"':
+                          in_string = True
+                      elif ch == '{':
+                          depth += 1
+                      elif ch == '}':
+                          depth -= 1
+                          if depth == 0:
+                              end = pos + 1
+                              break
+                  out.append(f'===== {path} =====\n{text[line_start:end].rstrip()}\n')
+                  start = end
+
+          Path('collision-methods.txt').write_text('\n'.join(out), encoding='utf-8')
+          print(f'Extracted {len(out)} collision methods')
+          PY
+
+      - name: Upload collision inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: collision-methods
+          path: collision-methods.txt
+          if-no-files-found: error
+          retention-days: 7
