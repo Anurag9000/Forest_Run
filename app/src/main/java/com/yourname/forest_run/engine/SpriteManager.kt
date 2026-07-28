@@ -65,7 +65,9 @@ class SpriteManager(private val context: Context) {
     val dogSprite: SpriteSheet
 
     init {
-        val playerFrameWidth = 72
+        // The packaged technical runner sheets are 80x100 per frame. They are
+        // still drawn into Player.BASE_WIDTH x BASE_HEIGHT destination bounds.
+        val playerFrameWidth = 80
         val playerFrameHeight = 100
 
         val runBitmap = loadValidated(
