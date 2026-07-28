@@ -32,7 +32,7 @@ A checklist item is complete only when the command actually passes on the audite
 
 | Setting | Current repository value | Release action |
 |---|---:|---|
-| Application ID | `com.yourname.forest_run` | Replace placeholder identity |
+| Application ID | `com.anurag9000.forestrun` | Replace placeholder identity |
 | Min SDK | API 24 | Revalidate against supported-device policy |
 | Compile/Target SDK | API 34 | Revalidate against current Android and store requirements |
 | Java/Kotlin JVM | 17 | Verify clean build on documented toolchain |

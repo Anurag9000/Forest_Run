@@ -75,7 +75,7 @@ Expected debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 - **Bloom target:** eight seeds and a six-second active window
 - **Input intent:** tap for a short jump, hold for a higher jump, swipe down to duck
 - **Failure flow:** run → rest summary → fade → Garden → next run
-- **Current package placeholder:** `com.yourname.forest_run`
+- **Current package placeholder:** `com.anurag9000.forestrun`
 - **Current manifest orientation:** `landscape`
 
 The package identity, release SDK/toolchain settings, signing, and orientation policy must be deliberately finalized before store release.

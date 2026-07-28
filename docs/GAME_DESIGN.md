@@ -1,7 +1,7 @@
 # Forest Run — Game Design
 
 **Platform:** Android (native Kotlin, SurfaceView)  
-**Package:** `com.yourname.forest_run`  
+**Package:** `com.anurag9000.forestrun`  
 **Orientation:** `sensorLandscape`  
 **Target FPS:** 60  
 **Tone:** Ghibli × Stardew Valley — cottagecore, intimate, alive

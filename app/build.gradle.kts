@@ -19,11 +19,11 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() }
 
 android {
-    namespace = "com.yourname.forest_run"
+    namespace = "com.anurag9000.forestrun"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.yourname.forest_run"
+        applicationId = "com.anurag9000.forestrun"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

@@ -10,7 +10,7 @@
 -keep class * implements com.google.gson.JsonDeserializer
 
 # Keep all Forest_Run data classes used with Gson (save system)
--keep class com.yourname.forest_run.** { *; }
+-keep class com.anurag9000.forestrun.** { *; }
 
 # Keep enums (entity types, biomes, game states)
 -keepclassmembers enum * {

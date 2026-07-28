@@ -29,7 +29,7 @@ BUILD_FILE = ROOT / "app" / "build.gradle.kts"
 MANIFEST_FILE = ROOT / "app" / "src" / "main" / "AndroidManifest.xml"
 
 PLACEHOLDER_APPLICATION_IDS = {
-    "com.yourname.forest_run",
+    "com.anurag9000.forestrun",
     "com.example.forest_run",
     "com.example.forestrun",
 }

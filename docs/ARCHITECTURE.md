@@ -2,7 +2,7 @@
 
 **Language:** Kotlin  
 **Rendering:** `SurfaceView` — custom 2D game loop  
-**Build:** Gradle, `com.yourname.forest_run`, Min SDK 24, Target SDK 34, Java 17  
+**Build:** Gradle, `com.anurag9000.forestrun`, Min SDK 24, Target SDK 34, Java 17  
 **Persistence:** local `SharedPreferences` only, no cloud sync in v1.0
 
 ---
@@ -10,7 +10,7 @@
 ## 1. Project Structure
 
 ```
-app/src/main/java/com/yourname/forest_run/
+app/src/main/java/com/anurag9000/forestrun/
 ├── MainActivity.kt
 ├── engine/          — game loop, state, input, systems, audio, haptics
 ├── entities/        — Player, Entity base, flora/, trees/, birds/, animals/
