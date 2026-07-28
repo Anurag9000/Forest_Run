@@ -5,9 +5,7 @@ import android.graphics.RectF
 import androidx.test.core.app.ApplicationProvider
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteManager
-import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Player
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -27,7 +25,7 @@ class EagleTest {
     }
 
     @Test
-    fun `eagle exposes a marked zone and rewards clearing it`() {
+    fun `eagle exposes a live marked zone and rewards clearing it`() {
         val heldMarkEagle = Eagle(
             context = context,
             startX = 560f,
@@ -46,21 +44,32 @@ class EagleTest {
         val markMissState = GameStateManager(context)
         val player = Player(1920, 1080, spriteManager)
 
-        val targetZone = rectField(heldMarkEagle, "targetZoneRect")
-        val corridor = rectField(heldMarkEagle, "diveCorridorRect")
-        assertTrue(targetZone.width() > 0f)
-        assertTrue(targetZone.height() > 0f)
-        assertTrue(corridor.width() >= targetZone.width())
-        assertTrue(corridor.height() >= targetZone.height())
+        val initialTarget = rectField(heldMarkEagle, "targetZoneRect")
+        val initialCorridor = rectField(heldMarkEagle, "diveCorridorRect")
+        assertTrue(initialTarget.width() > 0f)
+        assertTrue(initialTarget.height() > 0f)
+        assertTrue(initialCorridor.width() >= initialTarget.width())
+        assertTrue(initialCorridor.height() >= initialTarget.height())
 
-        val missedZone = rectField(markMissEagle, "targetZoneRect")
+        // During telegraph the target follows the live player without counting
+        // as a failure. Only remaining inside after lock and grace loses the
+        // held-mark bonus.
+        player.hitbox.set(420f, 720f, 500f, 820f)
+        markMissEagle.updatePlayerInteraction(player, markMissState)
+        val liveTarget = rectField(markMissEagle, "targetZoneRect")
+        assertTrue(kotlin.math.abs(liveTarget.centerX() - player.hitbox.centerX()) < 1f)
+        assertTrue(kotlin.math.abs(liveTarget.centerY() - player.hitbox.centerY()) < 1f)
+        assertTrue(booleanField(markMissEagle, "heldMark"))
+
+        markMissEagle.update(deltaTime = 0.5f, scrollSpeed = 0f)
+        markMissEagle.update(deltaTime = 0.20f, scrollSpeed = 0f)
         player.hitbox.set(
-            missedZone.left + 6f,
-            missedZone.top + 6f,
-            missedZone.right - 6f,
-            missedZone.bottom - 6f
+            liveTarget.left + 6f,
+            liveTarget.top + 6f,
+            liveTarget.right - 6f,
+            liveTarget.bottom - 6f
         )
-        assertEquals(CollisionResult.NONE, markMissEagle.onCollision(player, markMissState))
+        markMissEagle.updatePlayerInteraction(player, markMissState)
         assertTrue(!booleanField(markMissEagle, "heldMark"))
 
         heldMarkEagle.performUniqueAction(player, heldState)
