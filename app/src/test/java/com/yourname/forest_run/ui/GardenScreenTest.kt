@@ -36,13 +36,15 @@ class GardenScreenTest {
         SaveManager.saveGardenProgress(context, 1)
         val screen = GardenScreen(context, spriteManager, 1_920, 1_080)
         screen.load()
-
-        val cardWidth = 1_920 / 10.5f
-        val cardGap = cardWidth * 0.12f
-        val rowStartX = (1_920 - (9 * (cardWidth + cardGap) - cardGap)) / 2f
-        val rowY = 1_080 * 0.20f
-        val tapX = rowStartX + (cardWidth + cardGap) + cardWidth / 2f
-        val tapY = rowY + (1_080 * 0.55f) / 2f
+        val layout = GardenLayoutPlanner.build(
+            width = 1_920f,
+            height = 1_080f,
+            plantCount = 9,
+            costumeCount = CostumeStyle.entries.size
+        )
+        val nextPlantCard = layout.plantCards[1]
+        val tapX = (nextPlantCard.left + nextPlantCard.right) / 2f
+        val tapY = (nextPlantCard.top + nextPlantCard.bottom) / 2f
 
         assertTrue(screen.onTap(tapX, tapY))
         assertEquals(2, SaveManager.loadGardenProgress(context))
@@ -56,23 +58,15 @@ class GardenScreenTest {
 
         val screen = GardenScreen(context, spriteManager, 1_920, 1_080)
         screen.load()
-
-        val wardrobeLeft = 1_920 * 0.05f
-        val wardrobeTop = 1_080 * 0.68f
-        val wardrobeWidth = 1_920 * 0.90f
-        val wardrobeHeight = 1_080 * 0.21f
-        val columns = 4
-        val gapX = wardrobeWidth * 0.015f
-        val innerLeft = wardrobeLeft + 18f
-        val innerRight = wardrobeLeft + wardrobeWidth - 18f
-        val innerTop = wardrobeTop + 34f
-        val innerBottom = wardrobeTop + wardrobeHeight - 22f
-        val cardWidth = (innerRight - innerLeft - gapX * (columns - 1)) / columns
-        val rows = 2
-        val gapY = wardrobeHeight * 0.06f
-        val cardHeight = (innerBottom - innerTop - gapY * (rows - 1)) / rows
-        val tapX = innerLeft + cardWidth + gapX + cardWidth / 2f
-        val tapY = innerTop + cardHeight / 2f
+        val layout = GardenLayoutPlanner.build(
+            width = 1_920f,
+            height = 1_080f,
+            plantCount = 9,
+            costumeCount = CostumeStyle.entries.size
+        )
+        val flowerCrownCard = layout.wardrobeCards[CostumeStyle.FLOWER_CROWN.ordinal]
+        val tapX = (flowerCrownCard.left + flowerCrownCard.right) / 2f
+        val tapY = (flowerCrownCard.top + flowerCrownCard.bottom) / 2f
 
         assertTrue(screen.onTap(tapX, tapY))
         assertEquals(CostumeStyle.FLOWER_CROWN, SaveManager.loadActiveCostume(context))
