@@ -209,22 +209,39 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
     init {
         holder.addCallback(this)
-        wireInputCallbacks()
         setOnTouchListener { view, event ->
             val idx = event.actionIndex.coerceAtLeast(0)
             lastTouchX = event.getX(idx)
             lastTouchY = event.getY(idx)
-            if (debugToolsEnabled &&
-                event.actionMasked == android.view.MotionEvent.ACTION_UP &&
-                appState == AppGameState.PLAYING &&
-                runState == RunState.PLAYING
-            ) {
-                debugEncounterOverlay?.handleTap(lastTouchX, lastTouchY)?.let { action ->
-                    handleDebugOverlayAction(action)
-                    return@setOnTouchListener true
+
+            if (acceptsGameplayInput()) {
+                if (debugToolsEnabled &&
+                    event.actionMasked == android.view.MotionEvent.ACTION_UP
+                ) {
+                    debugEncounterOverlay?.handleTap(lastTouchX, lastTouchY)?.let { action ->
+                        handleDebugOverlayAction(action)
+                        return@setOnTouchListener true
+                    }
                 }
+                inputHandler.onTouch(view, event)
+            } else {
+                // A screen/state transition can occur while a pointer is still
+                // down. Drop that gesture without converting it into a delayed
+                // jump or duck release on the new screen.
+                inputHandler.cancelActiveGesture()
+                if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                    view.performClick()
+                    when {
+                        appState == AppGameState.MENU && ::mainMenuScreen.isInitialized ->
+                            mainMenuScreen.onTap(lastTouchX, lastTouchY)
+                        appState == AppGameState.GARDEN && ::gardenScreen.isInitialized ->
+                            gardenScreen.onTap(lastTouchX, lastTouchY)
+                        runState == RunState.GAME_OVER ->
+                            runState = runResetManager.beginRestart()
+                    }
+                }
+                true
             }
-            inputHandler.onTouch(view, event)
         }
     }
 
@@ -412,11 +429,29 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun stopThread() {
-        gameThread.isRunning = false
-        var retry = true
-        while (retry) {
-            try { gameThread.join(); retry = false }
-            catch (e: InterruptedException) { Thread.currentThread().interrupt() }
+        val thread = gameThread
+        thread.requestStop()
+
+        val deadlineNs = System.nanoTime() + 1_000_000_000L
+        var callerWasInterrupted = false
+        while (thread.isAlive) {
+            val remainingNs = deadlineNs - System.nanoTime()
+            if (remainingNs <= 0L) break
+
+            val waitMs = (remainingNs / 1_000_000L).coerceIn(1L, 250L)
+            try {
+                thread.join(waitMs)
+            } catch (_: InterruptedException) {
+                callerWasInterrupted = true
+                thread.requestStop()
+            }
+        }
+
+        if (thread.isAlive) {
+            Log.w(TAG, "GameThread did not terminate within the 1 second shutdown bound")
+        }
+        if (callerWasInterrupted) {
+            Thread.currentThread().interrupt()
         }
     }
 
@@ -424,57 +459,40 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // Input callback wiring
     // -----------------------------------------------------------------------
 
-    private fun wireInputCallbacks() {
-        // These callbacks run regardless of whether the player is initialized yet.
-        inputHandler.onJumpReleased = {
-            when {
-                // Menu taps drive the menu screen
-                appState == AppGameState.MENU -> {
-                    if (::mainMenuScreen.isInitialized) {
-                        mainMenuScreen.onTap(lastTouchX, lastTouchY)
-                    }
-                }
-                appState == AppGameState.GARDEN -> {
-                    if (::gardenScreen.isInitialized) {
-                        gardenScreen.onTap(lastTouchX, lastTouchY)
-                    }
-                }
-                // GAME_OVER tap begins restart
-                runState == RunState.GAME_OVER -> {
-                    runState = runResetManager.beginRestart()
-                }
-                else -> { /* handled by wirePlayerToInput when PLAYING */ }
-            }
-        }
-    }
+    private fun acceptsGameplayInput(): Boolean =
+        appState == AppGameState.PLAYING &&
+            runState == RunState.PLAYING &&
+            ::player.isInitialized
 
     /** Called once after [player] is initialized to attach physics callbacks. */
     private fun wirePlayerToInput() {
-        val prev_pressed  = inputHandler.onJumpPressed
-        val prev_released = inputHandler.onJumpReleased
-        val prev_duck     = inputHandler.onDuckPressed
-        val prev_duckEnd  = inputHandler.onDuckReleased
-
-        inputHandler.onJumpPressed  = {
-            prev_pressed?.invoke()
-            if (::gameState.isInitialized) gameState.recordJumpInput()
-            player.onJumpPressed()
+        inputHandler.onJumpPressed = {
+            if (acceptsGameplayInput()) {
+                if (::gameState.isInitialized) gameState.recordJumpInput()
+                player.onJumpPressed()
+            }
         }
-        inputHandler.onJumpHeld     = { holdSec ->
-            if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
-            player.onJumpHeld(holdSec)
+        inputHandler.onJumpHeld = { holdSec ->
+            if (acceptsGameplayInput()) {
+                if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
+                player.onJumpHeld(holdSec)
+            }
         }
         inputHandler.onJumpReleased = { holdSec ->
-            prev_released?.invoke(holdSec)
-            if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
-            player.onJumpReleased(holdSec)
+            if (acceptsGameplayInput()) {
+                if (::gameState.isInitialized) gameState.recordJumpHold(holdSec)
+                player.onJumpReleased(holdSec)
+            }
         }
-        inputHandler.onDuckPressed  = {
-            prev_duck?.invoke()
-            if (::gameState.isInitialized) gameState.recordDuckInput()
-            player.onDuckPressed()
+        inputHandler.onDuckPressed = {
+            if (acceptsGameplayInput()) {
+                if (::gameState.isInitialized) gameState.recordDuckInput()
+                player.onDuckPressed()
+            }
         }
-        inputHandler.onDuckReleased = { prev_duckEnd?.invoke();           player.onDuckReleased() }
+        inputHandler.onDuckReleased = {
+            if (acceptsGameplayInput()) player.onDuckReleased()
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -486,8 +504,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // Phase 15: Advance camera shake
         CameraSystem.update(deltaTime)
 
-        // Input tick
-        inputHandler.tick(deltaTime)
+        // Gesture time advances only during live gameplay. All other
+        // top-level states silently discard any in-flight pointer state.
+        if (acceptsGameplayInput()) {
+            inputHandler.tick(deltaTime)
+        } else {
+            inputHandler.cancelActiveGesture()
+        }
 
         if (!::gameState.isInitialized) return
         if (!gameState.isBloomActive && gameState.bloomMeter >= gameState.bloomSeedTarget - 1 && !bloomReadyAnnounced) {
