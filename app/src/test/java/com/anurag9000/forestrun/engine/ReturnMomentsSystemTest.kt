@@ -199,6 +199,7 @@ class ReturnMomentsSystemTest {
     fun `gentle high kindness milestone run can return stronger bonded moment`() {
         repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        PersistentMemoryManager.recordPass(context, EntityType.CAT)
 
         val summary = RunSummary(
             score = 1_050,

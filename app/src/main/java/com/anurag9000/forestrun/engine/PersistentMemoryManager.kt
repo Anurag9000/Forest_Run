@@ -77,6 +77,9 @@ object PersistentMemoryManager {
         val appContext = context.applicationContext
         SaveManager.incrementCleanPassCount(appContext, type)
         refreshHistoryUnlockState(appContext)
+        if (RelationshipArcSystem.isTracked(type)) {
+            RelationshipArcSystem.refreshStage(appContext, type)
+        }
     }
 
     fun getEncounterCount(context: Context, type: EntityType): Int =
