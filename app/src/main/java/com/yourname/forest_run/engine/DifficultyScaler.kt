@@ -5,25 +5,22 @@ import com.yourname.forest_run.entities.EntityType
 /**
  * Stateless utility that maps [distanceMetres] to difficulty parameters.
  *
- * All values tuned so the game is comfortably learnable in the first 500m,
- * challenging around 1000m, and sweat-inducing past 2000m.
+ * All values are tuned so the game is comfortably learnable in the first
+ * 500m, challenging around 1000m, and demanding past 2000m.
  */
 object DifficultyScaler {
 
     /**
-     * Returns the number of seconds to wait before the next entity spawns.
-     * Routed through the central readability profile so pacing tweaks do not
-     * drift away from the rest of the presentation tuning.
+     * Returns the required world-space distance between random spawn origins.
+     * Unlike a time interval, this does not change unpredictably when the
+     * runner accelerates or receives a temporary speed debuff.
      */
-    fun getSpawnInterval(distanceMetres: Float): Float =
-        ReadabilityProfile.spawnInterval(distanceMetres)
+    fun getSpawnGapPx(distanceMetres: Float): Float =
+        ReadabilityProfile.spawnGapPx(distanceMetres)
 
     // ── Biome-based spawn pools ───────────────────────────────────────────
 
-    /**
-     * Early game pool: ground flora and simple birds only.
-     * No wolf, fox, or bamboo yet.
-     */
+    /** Early game pool: ground flora and simple birds only. */
     private val POOL_EARLY = listOf(
         EntityType.CACTUS,
         EntityType.LILY_OF_VALLEY,
@@ -34,9 +31,7 @@ object DifficultyScaler {
         EntityType.HEDGEHOG
     )
 
-    /**
-     * Mid game pool: adds trees and more complex birds.
-     */
+    /** Mid game pool: adds trees and more complex birds. */
     private val POOL_MID = listOf(
         EntityType.CACTUS,
         EntityType.EUCALYPTUS,
@@ -54,15 +49,13 @@ object DifficultyScaler {
         EntityType.DOG
     )
 
-    /**
-     * Late game pool: everything including Fox, Eagle, Bamboo, Jacaranda.
-     */
+    /** Late game pool: everything including Fox, Eagle, Bamboo, Jacaranda. */
     private val POOL_LATE = EntityType.values().toList()
 
     /**
      * Returns the spawn pool to use at the given distance.
-     * If a [biomeManager] is supplied, uses its biome-specific pool (with crossfade mixing).
-     * Falls back to the distance-tiered pools for test contexts without a BiomeManager.
+     * If a [biomeManager] is supplied, uses its biome-specific pool with
+     * crossfade mixing. Falls back to distance tiers in isolated tests.
      */
     fun getSpawnPool(distanceMetres: Float, biomeManager: BiomeManager? = null): List<EntityType> {
         if (biomeManager != null) return biomeManager.entityPool
