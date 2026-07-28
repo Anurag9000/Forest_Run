@@ -20,22 +20,22 @@ jobs:
           ref: agent/fix-core-gameplay-invariants
           fetch-depth: 0
 
-      - name: Apply validated transform and restore permanent CI
+      - name: Apply exact validated transform
         shell: bash
         run: |
           python3 scripts/patch_async_ghost_persistence.py
           grep -q 'AtomicFile' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
           grep -q 'GhostPersistenceManager.saveBestRunAsync' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
           grep -q 'GhostPersistenceManager.loadLatest' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
-          git show 7b4b4e0b67d46d4d0ab2ae29c225b3155e744733:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
           rm scripts/patch_async_ghost_persistence.py
-          rm -f .github/workflows/commit-ghost-remediation.yml
 
-      - name: Push exact validated source
+      - name: Push only validated production source
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          git add app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          git add -u scripts/patch_async_ghost_persistence.py
           git commit -m 'perf: persist best-run ghosts off the render thread'
           git push origin HEAD:agent/fix-core-gameplay-invariants
