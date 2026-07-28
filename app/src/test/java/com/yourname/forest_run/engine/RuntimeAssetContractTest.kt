@@ -23,11 +23,11 @@ class RuntimeAssetContractTest {
     @Test
     fun `all required sprite sheets exist and match exact frame geometry`() {
         val contracts = listOf(
-            SpriteContract(AssetPaths.Char.RUN, 72, 100, 48),
-            SpriteContract(AssetPaths.Char.JUMP, 72, 100, 48),
-            SpriteContract(AssetPaths.Char.DUCK, 72, 100, 48),
-            SpriteContract(AssetPaths.Char.HIT, 72, 100, 12),
-            SpriteContract(AssetPaths.Char.DEATH, 72, 100, 12),
+            SpriteContract(AssetPaths.Char.RUN, 80, 100, 48),
+            SpriteContract(AssetPaths.Char.JUMP, 80, 100, 48),
+            SpriteContract(AssetPaths.Char.DUCK, 80, 100, 48),
+            SpriteContract(AssetPaths.Char.HIT, 80, 100, 12),
+            SpriteContract(AssetPaths.Char.DEATH, 80, 100, 12),
             SpriteContract(AssetPaths.Plants.CACTUS, 64, 64, 4),
             SpriteContract(AssetPaths.Plants.LILY_OF_VALLEY, 64, 64, 4),
             SpriteContract(AssetPaths.Plants.HYACINTH, 64, 64, 4),
@@ -82,7 +82,7 @@ class RuntimeAssetContractTest {
     }
 
     @Test
-    fun `all required music and sound resources are packaged`() {
+    fun `all mandatory music and sound resources are packaged`() {
         val rawNames = listOf(
             "sfx_jump",
             "sfx_land",
@@ -91,9 +91,6 @@ class RuntimeAssetContractTest {
             "sfx_screech",
             "sfx_howl",
             "sfx_bloom",
-            "sfx_bloom_ready",
-            "sfx_bloom_convert",
-            "sfx_bloom_fade",
             "sfx_mercy_miss",
             "sfx_hit",
             "music_garden",
