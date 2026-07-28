@@ -27,9 +27,17 @@ class ReadabilityProfileTest {
     }
 
     @Test
-    fun `spawn interval remains within canonical readability bounds`() {
-        assertEquals(1.7f, ReadabilityProfile.spawnInterval(0f), 0.0001f)
-        assertEquals(0.62f, ReadabilityProfile.spawnInterval(5_000f), 0.0001f)
+    fun `spawn gap remains within canonical readability bounds`() {
+        assertEquals(
+            GameConstants.SPAWN_GAP_MAX_PX,
+            ReadabilityProfile.spawnGapPx(0f),
+            0.0001f
+        )
+        assertEquals(
+            GameConstants.SPAWN_GAP_MIN_PX,
+            ReadabilityProfile.spawnGapPx(5_000f),
+            0.0001f
+        )
     }
 
     @Test
