@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - agent/fix-core-gameplay-invariants
-  pull_request:
 
 concurrency:
   group: relationship-remediation-${{ github.ref }}
@@ -16,6 +15,7 @@ permissions:
 jobs:
   validate:
     name: Apply relationship patch and validate debug/release
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -104,7 +104,6 @@ jobs:
           test -s app/build/outputs/bundle/release/app-release.aab
 
       - name: Commit verified relationship semantics
-        if: success() && github.event_name == 'push' && github.actor != 'github-actions[bot]'
         shell: bash
         run: |
           rm scripts/patch_relationship_progression.py
