@@ -9,8 +9,8 @@ import com.yourname.forest_run.engine.FloraEncounterFlavor
 import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.PersistentMemoryManager
 import com.yourname.forest_run.engine.ReadabilityProfile
-import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SpriteSheet
+import com.yourname.forest_run.engine.SpriteSizing
 import com.yourname.forest_run.engine.SwayComponent
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Entity
@@ -20,23 +20,22 @@ import com.yourname.forest_run.systems.FxPreset
 import com.yourname.forest_run.systems.ParticleManager
 import com.yourname.forest_run.ui.DialogueBubbleManager
 
-/**
- * Cactus — Phase 27: rendered via SpriteSheet. Sprite loaded from assets/sprites/plants/cactus_4frames.png.
- * Falls back to BitmapHelper placeholder automatically if file is missing.
- */
 class Cactus(
     context: Context,
     startX: Float,
     groundY: Float,
     private val sprite: SpriteSheet
 ) : Entity(context) {
-
     private val readability = ReadabilityProfile.entityForGround(EntityType.CACTUS, groundY)
     private val cactusHeight = readability.heightPx
-    private val cactusWidth  = SpriteSizing.widthForHeight(sprite, cactusHeight, minWidth = readability.minWidthPx)
-    private val insetX       = cactusWidth * readability.hitInsetXRatio
-    private val insetY       = cactusHeight * readability.hitInsetYRatio
-    private val drawRect     = RectF()
+    private val cactusWidth = SpriteSizing.widthForHeight(
+        sprite,
+        cactusHeight,
+        minWidth = readability.minWidthPx
+    )
+    private val insetX = cactusWidth * readability.hitInsetXRatio
+    private val insetY = cactusHeight * readability.hitInsetYRatio
+    private val drawRect = RectF()
     private val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(48, 255, 204, 154)
         style = Paint.Style.FILL
@@ -70,8 +69,24 @@ class Cactus(
         val pulse = 0.68f + 0.32f * kotlin.math.sin(warningPulse)
         warningPaint.alpha = (34f + 30f * pulse).toInt().coerceIn(0, 255)
         warningStrokePaint.alpha = (92f + 54f * pulse).toInt().coerceIn(0, 255)
-        canvas.drawRoundRect(x - pad, y + cactusHeight * 0.12f, x + cactusWidth + pad, y + cactusHeight + 4f, 16f, 16f, warningPaint)
-        canvas.drawRoundRect(x - pad, y + cactusHeight * 0.12f, x + cactusWidth + pad, y + cactusHeight + 4f, 16f, 16f, warningStrokePaint)
+        canvas.drawRoundRect(
+            x - pad,
+            y + cactusHeight * 0.12f,
+            x + cactusWidth + pad,
+            y + cactusHeight + 4f,
+            16f,
+            16f,
+            warningPaint
+        )
+        canvas.drawRoundRect(
+            x - pad,
+            y + cactusHeight * 0.12f,
+            x + cactusWidth + pad,
+            y + cactusHeight + 4f,
+            16f,
+            16f,
+            warningStrokePaint
+        )
         drawRect.set(x, y, x + cactusWidth, y + cactusHeight)
         canvas.save()
         canvas.rotate(sway * 1.5f, x + cactusWidth / 2f, y + cactusHeight)
@@ -81,11 +96,15 @@ class Cactus(
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         gameState.addBonus(points = 95)
-        PersistentMemoryManager.recordPass(context, EntityType.CACTUS)
         val encounters = PersistentMemoryManager.getEncounterCount(context, EntityType.CACTUS)
         val hitCount = PersistentMemoryManager.getHitCount(context, EntityType.CACTUS)
-        val cleanPasses = PersistentMemoryManager.getPassCount(context, EntityType.CACTUS)
-        ParticleManager.emit(FxPreset.SEED_COLLECT, x + cactusWidth * 0.5f, y + cactusHeight * 0.42f)
+        // EntityManager records the pass centrally after this callback.
+        val cleanPasses = PersistentMemoryManager.getPassCount(context, EntityType.CACTUS) + 1
+        ParticleManager.emit(
+            FxPreset.SEED_COLLECT,
+            x + cactusWidth * 0.5f,
+            y + cactusHeight * 0.42f
+        )
         DialogueBubbleManager.spawn(
             text = FloraEncounterFlavor.cactusPass(encounters, hitCount, cleanPasses),
             anchorX = x + cactusWidth * 0.5f,
@@ -98,7 +117,12 @@ class Cactus(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
-        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
+        val mercy = RectF(
+            hitbox.left - mercyPad,
+            hitbox.top - mercyPad,
+            hitbox.right + mercyPad,
+            hitbox.bottom + mercyPad
+        )
         if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }
