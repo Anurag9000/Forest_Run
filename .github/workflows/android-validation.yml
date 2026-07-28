@@ -28,6 +28,7 @@ jobs:
         run: |
           python3 scripts/patch_save_integrity_existing.py
           python3 scripts/patch_save_integrity_followups.py
+          python3 scripts/fix_save_integrity_init_order.py
 
       - name: Verify save integrity contracts
         shell: bash
@@ -40,6 +41,7 @@ jobs:
           grep -q 'activeGhostFilenameForTests' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
           grep -q 'context.getSharedPreferences(activePrefsName' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
           grep -q 'File(context.filesDir, activeGhostFilename)' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'private var activeGhostFilename: String = "ghost_run.bin"' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
           grep -q 'requiredLastRunKeys.any' app/src/main/java/com/anurag9000/forestrun/engine/SaveIntegrityManager.kt
           grep -q 'distanceM.takeIf { it.isFinite() }' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
           grep -q 'current == Int.MAX_VALUE' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
