@@ -1,12 +1,12 @@
 package com.yourname.forest_run.engine
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.res.AssetManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.util.Log
-import com.yourname.forest_run.BuildConfig
 import com.yourname.forest_run.utils.BitmapHelper
 import kotlin.math.abs
 
@@ -22,6 +22,8 @@ class SpriteManager(private val context: Context) {
     }
 
     private val assets: AssetManager = context.assets
+    private val isDebuggable: Boolean =
+        (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     val playerRun: SpriteSheet
     val playerJumpStart: SpriteSheet
@@ -206,9 +208,9 @@ class SpriteManager(private val context: Context) {
     }
 
     /**
-     * Debug builds may substitute an unmistakable generated strip so content
-     * iteration can continue. Release builds fail fast: shipping a placeholder
-     * is a release defect, not graceful degradation.
+     * Debuggable builds may substitute an unmistakable generated strip so
+     * content iteration can continue. Non-debuggable builds fail fast:
+     * shipping a placeholder is a release defect, not graceful degradation.
      */
     private fun loadValidated(
         assetPath: String,
@@ -225,7 +227,7 @@ class SpriteManager(private val context: Context) {
             validateDimensions(decoded, assetPath, frameWidth, frameHeight, frames)
             sanitizeBitmap(decoded, assetPath)
         } catch (error: Exception) {
-            if (!BuildConfig.DEBUG) {
+            if (!isDebuggable) {
                 throw IllegalStateException(
                     "Required release sprite is missing, corrupt, or malformed: $assetPath",
                     error
