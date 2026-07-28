@@ -75,6 +75,25 @@ class InputHandler : View.OnTouchListener {
         }
     }
 
+    /**
+     * Clears an in-flight gesture without synthesizing a gameplay action.
+     *
+     * This is used when the top-level screen changes while a pointer is still
+     * down. Menu, Garden, death, pause, and restart transitions must not turn a
+     * stale press into a delayed jump or duck release on the next frame.
+     */
+    fun cancelActiveGesture(notifyDuckRelease: Boolean = false) {
+        if (primaryPointerId == INVALID_POINTER) return
+
+        val wasDucking = isDucking
+        clearGestureState()
+        lastGestureLabel = "RESET"
+
+        if (notifyDuckRelease && wasDucking) {
+            onDuckReleased?.invoke()
+        }
+    }
+
     private fun handleDown(event: MotionEvent): Boolean {
         if (primaryPointerId != INVALID_POINTER) return false
 
@@ -136,13 +155,7 @@ class InputHandler : View.OnTouchListener {
         val hadStartedJump = jumpStarted
         val finalHold = MathUtils.clamp(holdDuration, 0f, 0.6f)
 
-        primaryPointerId = INVALID_POINTER
-        isDucking = false
-        isChargingJump = false
-        jumpStarted = false
-        holdDuration = 0f
-        touchStartX = 0f
-        touchStartY = 0f
+        clearGestureState()
 
         when {
             wasDucking -> {
@@ -167,5 +180,15 @@ class InputHandler : View.OnTouchListener {
                 onJumpReleased?.invoke(finalHold)
             }
         }
+    }
+
+    private fun clearGestureState() {
+        primaryPointerId = INVALID_POINTER
+        isDucking = false
+        isChargingJump = false
+        jumpStarted = false
+        holdDuration = 0f
+        touchStartX = 0f
+        touchStartY = 0f
     }
 }
