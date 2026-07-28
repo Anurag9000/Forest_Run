@@ -1,6 +1,6 @@
 # Forest Run — Release & Validation
 
-Forest Run is a feature-rich alpha with the primary correctness-remediation pass implemented. A release candidate must still pass connected-device, physical-hardware, signed-artifact, performance, accessibility, and store-acceptance gates.
+Forest Run is a feature-rich alpha with the primary correctness-remediation pass implemented. A release candidate must still pass connected-device, physical-hardware, signed-artifact, performance, settings/accessibility, and store-acceptance gates.
 
 ## Canonical Build Commands
 
@@ -19,7 +19,7 @@ bash gradlew lintDebug lintRelease
 # Debug application and instrumentation APKs
 bash gradlew assembleDebug assembleDebugAndroidTest
 
-# Minified, resource-shrunk release bundle
+# Minified, resource-shrunk release bundle and R8 mapping
 bash gradlew bundleRelease
 
 # Requires an emulator or physical device
@@ -31,6 +31,7 @@ Expected outputs:
 - Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 - Android test APK: `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
 - Release AAB: `app/build/outputs/bundle/release/app-release.aab`
+- R8 mapping: `app/build/outputs/mapping/release/mapping.txt`
 
 A checklist item is complete only when the corresponding command or deterministic assertion passes on the audited branch head. Building an instrumentation APK is not the same as executing connected tests.
 
@@ -46,7 +47,8 @@ A checklist item is complete only when the corresponding command or deterministi
 | CI Java runtime | 21 | Required by API 36 Robolectric tests |
 | Source/target bytecode | Java 17 | Supported by current Android toolchain |
 | Manifest orientation | fixed `landscape` | Validate across phones, tablets, cutouts, and rotation lifecycle |
-| Release minification | R8 + resource shrinking enabled | Smoke-test the actual signed artifact |
+| Essential UI safe area | aspect-preserving system-bar/cutout transform | Accept visually and interactively on representative hardware |
+| Release minification | R8 + resource shrinking; renamed app classes verified from mapping | Smoke-test the actual signed artifact |
 | Release signing | external environment/Gradle properties supported | Supply real upload-key credentials securely |
 
 Required signing properties or environment variables:
@@ -56,7 +58,7 @@ Required signing properties or environment variables:
 - `FOREST_RUN_KEY_ALIAS`
 - `FOREST_RUN_KEY_PASSWORD`
 
-The default Play release script now refuses unsigned upload preparation unless `--allow-unsigned` is explicitly used for a non-upload dry run.
+The default Play release script refuses unsigned upload preparation unless `--allow-unsigned` is explicitly used for a non-upload dry run.
 
 ## Correctness Gate
 
@@ -83,6 +85,7 @@ The default Play release script now refuses unsigned upload preparation unless `
 - [x] Unsafe entity pooling remains disabled until complete reset contracts exist
 - [x] Deterministic scenarios cannot write permanent encounter, pass, hit, spare, summary, ghost, best-distance, friendship, or high-score history
 - [x] Persistent clean passes and resolved encounters are recorded centrally and once
+- [x] Relationship familiarity alone is capped at Recognition; Trust and Bond require positive outcomes and hits delay progression
 - [x] Garden spending cannot be overwritten by stale lifetime-seed state
 - [x] Reused `singleTask` intents apply new deterministic scenarios
 - [x] Activity/audio/haptic teardown and recreation paths are bounded
@@ -99,14 +102,16 @@ The default Play release script now refuses unsigned upload preparation unless `
 - [x] `SoundPool` readiness, recreation, and failure diagnostics are explicit
 - [x] Adaptive-music writes are throttled and crossfade ownership is deterministic
 - [x] Garden catalogue, stats, last-run, wardrobe, and run-button regions are non-overlapping at compact, standard, and large landscape sizes
+- [x] Best-run ghost capture detaches in O(1), publishes to playback memory immediately, and persists atomically off the render thread
+- [x] Corrupt, oversized, truncated, trailing, non-finite, invalid-state, or non-monotonic ghost files are rejected safely
+- [x] Menu, Garden, HUD, debug controls, and rest UI share one aspect-preserving safe-content transform with inverse touch mapping
 
 ### Still required before release
 
-- [ ] Rework relationship progression so appearances alone cannot create trust milestones
-- [ ] Add density, safe-area/cutout, reduced-motion, audio, and haptic user settings
-- [ ] Remove or move synchronous ghost serialization/save work away from the death frame
+- [ ] Validate safe-content behavior and density scaling on representative cutout, unusual-aspect, phone, and tablet hardware
+- [ ] Add reduced-motion, audio, and haptic user settings
 - [ ] Profile and remove material per-frame allocations or emitter churn found on hardware
-- [ ] Verify save migration, corrupted-save recovery, and forward compatibility
+- [ ] Verify broader save migration, SharedPreferences corruption recovery, and forward compatibility
 - [ ] Decide whether fixed landscape and the remaining procedural scenic layers are final product choices
 
 ## Automated-Test Gate
@@ -133,12 +138,17 @@ The default Play release script now refuses unsigned upload preparation unless `
 - [x] Dialogue/flavor queue bounds and wrapping
 - [x] Sprite decode, frame divisibility, and sane-dimension contracts
 - [x] Final debug application identity
+- [x] Familiarity-only, hit-only, Trust-recovery, and Bond-depth relationship progression
+- [x] Detached ghost buffers remain stable while a new recording starts
+- [x] Atomic ghost round trips and malformed-file rejection
+- [x] Safe-content identity, asymmetric-cutout, round-trip, edge-clamp, and pathological-inset geometry
+- [x] R8 mapping contains actually renamed Forest Run classes
 
 ### Still needed
 
 - [ ] Execute `connectedDebugAndroidTest` on an emulator and physical device
 - [ ] Add a deterministic interruption test around the real `GameThread`/`GameView` shutdown boundary if feasible without instrumentation
-- [ ] Add save-corruption and migration fixtures
+- [ ] Add broader SharedPreferences save-corruption and migration fixtures
 - [ ] Add signed-release installation and launch smoke tests
 
 ## Asset and Runtime Gate
@@ -152,6 +162,8 @@ The default Play release script now refuses unsigned upload preparation unless `
 - [x] Debug and release Kotlin compilation pass
 - [x] Debug and instrumentation APK assembly pass
 - [x] The minified, resource-shrunk unsigned release AAB builds successfully
+- [x] Unused Gson packaging and package-wide application keep rules are removed
+- [x] CI verifies that release mapping contains obfuscated application classes and uploads the mapping artifact
 - [ ] Install and smoke-test the minified release on hardware
 - [ ] Supply real signing credentials and verify the signed AAB/APK
 - [ ] Profile frame time, memory, GC, audio threads, I/O, and long-run stability
@@ -171,6 +183,7 @@ A feature is not complete until its deterministic scenario and ordinary-play che
 | `GHOST_READABILITY` | Ghost never resembles a broken duplicate, obscures the runner, or hitches on save |
 | `REST_LOOP` | Failure, rest summary, fade, Garden return, currency, and next-run reset remain coherent |
 | Garden ordinary flow | Catalogue, stats, narrative, wardrobe, particles, back gesture, and run button remain readable and tappable |
+| Safe-content flow | Essential UI and mapped tap regions remain inside cutouts/system bars without distorting readability |
 | Lifecycle recovery | Background/resume, process recreation, repeated intents, and surface recreation preserve coherent state |
 
 ### Flora and Trees
@@ -226,7 +239,7 @@ python3 scripts/prepare_play_release.py
 - [x] Mandatory and optional audio resources are distinguished correctly
 - [x] Default upload preparation requires all external signing credentials
 - [x] Java 21 is enforced for the API 36 unit-test gate
-- [x] Release lint, tests, and bundle build are part of the default release command
+- [x] Release lint, tests, bundle build, and effective R8 mapping verification are part of CI
 
 ### Manual/store work still required
 
@@ -241,11 +254,11 @@ python3 scripts/prepare_play_release.py
 
 Forest Run may be called a release candidate only when:
 
-1. the exact candidate commit passes debug/release compile, unit tests, debug/release lint, debug APK, instrumentation APK, and minified AAB gates;
+1. the exact candidate commit passes debug/release compile, unit tests, debug/release lint, debug APK, instrumentation APK, effective R8 mapping, and minified AAB gates;
 2. connected instrumentation tests execute successfully;
 3. no known P0/P1 gameplay, persistence, lifecycle, or packaging defect remains;
 4. the signed, minified artifact passes installation, smoke, and long-run testing;
 5. deterministic scenarios and ordinary play pass on representative physical hardware;
 6. frame-time, memory, I/O, audio, and save behavior meet measured acceptance thresholds;
-7. accessibility/settings and safe-area behavior are accepted;
+7. settings/accessibility and safe-area behavior are accepted;
 8. store screenshots, metadata, policy, privacy, and data-safety requirements are reviewed against current authoritative rules.
