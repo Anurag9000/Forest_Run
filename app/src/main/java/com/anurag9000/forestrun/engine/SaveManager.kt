@@ -1,12 +1,17 @@
 package com.anurag9000.forestrun.engine
 
 import android.content.Context
+import android.util.AtomicFile
 import com.anurag9000.forestrun.entities.CostumeStyle
 import com.anurag9000.forestrun.entities.EntityType
+import com.anurag9000.forestrun.entities.PlayerState
 import com.anurag9000.forestrun.systems.GhostFrame
+import com.anurag9000.forestrun.systems.GhostRecorder
+import java.io.BufferedOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
+import java.io.FileOutputStream
 
 /**
  * Persists game data that spans across multiple runs:
@@ -14,8 +19,8 @@ import java.io.File
  *  - Lifetime seeds (Int) in SharedPreferences.
  *  - Ghost run frames (binary file in filesDir).
  *
- * All disk I/O is synchronous but cheap — called only on run end / run start.
- * High score is also written immediately on HIT (in RunResetManager.triggerDeath).
+ * SharedPreferences writes are lightweight. Ghost serialization is handled by
+ * GhostPersistenceManager on a dedicated worker and committed through AtomicFile.
  */
 object SaveManager {
 
@@ -90,58 +95,106 @@ object SaveManager {
 
     // ── Ghost run ─────────────────────────────────────────────────────────
 
-    /**
-     * Serialize [frames] to a compact binary file.
-     *
-     * Format per frame (28 bytes):
-     *   Float t (4), Float x (4), Float y (4), Int stateOrdinal (4),
-     *   Float scaleX (4), Float scaleY (4), [padding 4] → 24 bytes
-     * Actually: 6 × 4 = 24 bytes per frame.
-     */
-    fun saveGhostRun(context: Context, frames: List<GhostFrame>) {
-        if (frames.isEmpty()) return
-        val file = ghostFile(context)
-        try {
-            DataOutputStream(file.outputStream().buffered()).use { dos ->
-                dos.writeInt(frames.size)
-                for (f in frames) {
-                    dos.writeFloat(f.t)
-                    dos.writeFloat(f.x)
-                    dos.writeFloat(f.y)
-                    dos.writeInt(f.stateOrdinal)
-                    dos.writeFloat(f.scaleX)
-                    dos.writeFloat(f.scaleY)
-                }
+    private const val GHOST_HEADER_BYTES = 4L
+    private const val GHOST_FRAME_BYTES = 24L
+    private val MAX_GHOST_FILE_BYTES =
+        GHOST_HEADER_BYTES + GhostRecorder.MAX_FRAMES.toLong() * GHOST_FRAME_BYTES
+
+    /** Serialize [frames] through [AtomicFile] so interrupted writes preserve the old ghost. */
+    fun saveGhostRun(context: Context, frames: List<GhostFrame>): Boolean {
+        if (frames.isEmpty() || frames.size > GhostRecorder.MAX_FRAMES) return false
+
+        var previousTime = Float.NEGATIVE_INFINITY
+        for (frame in frames) {
+            if (!isValidGhostFrame(frame, previousTime)) return false
+            previousTime = frame.t
+        }
+
+        val atomicFile = AtomicFile(ghostFile(context.applicationContext))
+        var stream: FileOutputStream? = null
+        return try {
+            stream = atomicFile.startWrite()
+            val output = DataOutputStream(BufferedOutputStream(stream))
+            output.writeInt(frames.size)
+            for (frame in frames) {
+                output.writeFloat(frame.t)
+                output.writeFloat(frame.x)
+                output.writeFloat(frame.y)
+                output.writeInt(frame.stateOrdinal)
+                output.writeFloat(frame.scaleX)
+                output.writeFloat(frame.scaleY)
             }
-        } catch (_: Exception) { /* Silently skip on I/O error — ghost is optional */ }
+            output.flush()
+            atomicFile.finishWrite(stream)
+            stream = null
+            true
+        } catch (_: Exception) {
+            stream?.let { atomicFile.failWrite(it) }
+            false
+        }
     }
 
     /**
-     * Load the persisted ghost run. Returns empty list if no file exists or on error.
+     * Load a structurally valid ghost run. Corrupt, truncated, oversized, or
+     * non-finite payloads are rejected before they can allocate unbounded state.
      */
     fun loadGhostRun(context: Context): List<GhostFrame> {
-        val file = ghostFile(context)
-        if (!file.exists()) return emptyList()
+        val atomicFile = AtomicFile(ghostFile(context.applicationContext))
+        if (!atomicFile.baseFile.exists() && !File(atomicFile.baseFile.path + ".bak").exists()) {
+            return emptyList()
+        }
+
         return try {
-            DataInputStream(file.inputStream().buffered()).use { dis ->
-                val count = dis.readInt()
-                val list  = ArrayList<GhostFrame>(count)
-                repeat(count) {
-                    list.add(GhostFrame(
-                        t            = dis.readFloat(),
-                        x            = dis.readFloat(),
-                        y            = dis.readFloat(),
-                        stateOrdinal = dis.readInt(),
-                        scaleX       = dis.readFloat(),
-                        scaleY       = dis.readFloat()
-                    ))
-                }
-                list
+            val input = atomicFile.openRead()
+            val fileSize = input.channel.size()
+            if (fileSize !in GHOST_HEADER_BYTES..MAX_GHOST_FILE_BYTES) {
+                input.close()
+                return emptyList()
             }
-        } catch (_: Exception) { emptyList() }
+
+            DataInputStream(input.buffered()).use { data ->
+                val count = data.readInt()
+                if (count !in 1..GhostRecorder.MAX_FRAMES) return emptyList()
+
+                val expectedBytes = GHOST_HEADER_BYTES + count.toLong() * GHOST_FRAME_BYTES
+                if (fileSize != expectedBytes) return emptyList()
+
+                val frames = ArrayList<GhostFrame>(count)
+                var previousTime = Float.NEGATIVE_INFINITY
+                repeat(count) {
+                    val frame = GhostFrame(
+                        t = data.readFloat(),
+                        x = data.readFloat(),
+                        y = data.readFloat(),
+                        stateOrdinal = data.readInt(),
+                        scaleX = data.readFloat(),
+                        scaleY = data.readFloat()
+                    )
+                    if (!isValidGhostFrame(frame, previousTime)) return emptyList()
+                    previousTime = frame.t
+                    frames.add(frame)
+                }
+                frames
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 
     fun hasGhostRun(context: Context): Boolean = ghostFile(context).exists()
+
+    private fun isValidGhostFrame(frame: GhostFrame, previousTime: Float): Boolean =
+        frame.t.isFinite() &&
+            frame.t >= 0f &&
+            frame.t >= previousTime &&
+            frame.t <= GhostRecorder.MAX_DURATION_S.toFloat() + GhostRecorder.SAMPLE_INTERVAL_S &&
+            frame.x.isFinite() &&
+            frame.y.isFinite() &&
+            frame.stateOrdinal in PlayerState.entries.indices &&
+            frame.scaleX.isFinite() &&
+            frame.scaleY.isFinite() &&
+            frame.scaleX in 0.1f..4f &&
+            frame.scaleY in 0.1f..4f
 
     // ── Garden progress (Phase 23) ─────────────────────────────────────────
 

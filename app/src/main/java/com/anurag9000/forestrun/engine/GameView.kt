@@ -18,6 +18,7 @@ import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.PlayerState
 import com.anurag9000.forestrun.systems.FxPreset
 import com.anurag9000.forestrun.systems.GhostFrame
+import com.anurag9000.forestrun.systems.GhostPersistenceManager
 import com.anurag9000.forestrun.systems.GhostPlayer
 import com.anurag9000.forestrun.systems.GhostRecorder
 import com.anurag9000.forestrun.systems.ParticleManager
@@ -741,7 +742,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                             ::gameState.isInitialized &&
                             gameState.distanceMetres > SaveManager.loadBestDistance(context)
                         ) {
-                            SaveManager.saveGhostRun(context, ghostRecorder.snapshot())
+                            val completedGhost = ghostRecorder.detachSnapshot()
+                            GhostPersistenceManager.saveBestRunAsync(context, completedGhost)
                             SaveManager.saveBestDistance(context, gameState.distanceMetres)
                         }
                         val killerType = entityManager.entityTypeOf(collision.entity)
@@ -1285,7 +1287,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun reloadGhost() {
         ghostPlayer.reset()
-        val frames = SaveManager.loadGhostRun(context)
+        val frames = GhostPersistenceManager.loadLatest(context)
         if (frames.isNotEmpty()) ghostPlayer.load(frames)
     }
 
