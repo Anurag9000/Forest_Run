@@ -57,9 +57,11 @@ jobs:
           test -d app/src/main/java/com/anurag9000/forestrun
           test -d app/src/test/java/com/anurag9000/forestrun
           test ! -d "app/src/main/java/$legacy_path"
-          if grep -R -F --line-number --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle \
+          if grep -R -F --line-number \
+              --exclude=prepare_play_release.py \
+              --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle \
               -e "$legacy_dotted" -e "$legacy_path" .; then
-            echo "Placeholder package identity remains."
+            echo "Placeholder package identity remains outside the intentional release denylist."
             exit 1
           fi
           grep -q 'applicationId = "com.anurag9000.forestrun"' app/build.gradle.kts
