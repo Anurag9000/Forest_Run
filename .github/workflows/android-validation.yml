@@ -33,10 +33,9 @@ jobs:
           grep -q 'FeedbackSettings.reducedMotion' app/src/main/java/com/anurag9000/forestrun/engine/CameraSystem.kt
           grep -q 'feedbackSettingsPanel.onTap' app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt
 
-      - name: Commit production source and restore read-only CI
+      - name: Commit validated production source
         shell: bash
         run: |
-          git show b6afb5d9093429f8e35073028f6bb2c1706f6c27:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
           rm scripts/patch_feedback_settings.py
           rm scripts/fix_feedback_settings_layout_test.py
           git config user.name 'github-actions[bot]'
