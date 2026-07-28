@@ -113,6 +113,7 @@ jobs:
           git add app/src/main/java/com/anurag9000/forestrun/engine/RelationshipArcSystem.kt
           git add app/src/main/java/com/anurag9000/forestrun/engine/PersistentMemoryManager.kt
           git add app/src/test/java/com/anurag9000/forestrun/engine/RelationshipProgressionInvariantTest.kt
+          git add app/src/test/java/com/anurag9000/forestrun/engine/ReturnMomentsSystemTest.kt
           git add -u scripts/patch_relationship_progression.py
           git commit -m "fix: earn relationship trust through positive outcomes"
           git push origin HEAD:agent/fix-core-gameplay-invariants
