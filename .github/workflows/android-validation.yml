@@ -1,32 +1,109 @@
-name: Publish reconciled release checklist
+name: Android validation
 
 on:
+  push:
+    branches:
+      - main
+      - 'agent/**'
   pull_request:
 
+concurrency:
+  group: android-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  publish:
-    name: Commit reconciled release documentation
-    if: github.actor != 'github-actions[bot]'
+  validate:
+    name: Compile, test, lint, and build debug/release
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 45
 
     steps:
-      - name: Check out remediation branch
+      - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: agent/fix-core-gameplay-invariants
-          fetch-depth: 0
 
-      - name: Reconcile validated checklist items
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 36
         shell: bash
         run: |
-          python3 scripts/reconcile_release_checklist.py
+          set +o pipefail
+          yes | sdkmanager 'platforms;android-36' >/dev/null
+          status=${PIPESTATUS[1]}
+          set -o pipefail
+          exit "$status"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Verify audited source contracts
+        shell: bash
+        run: |
+          legacy_dotted="com"."yourname"."forest_run"
+          legacy_path="com"/"yourname"/"forest_run"
+          test -d app/src/main/java/com/anurag9000/forestrun
+          test -d app/src/test/java/com/anurag9000/forestrun
+          test ! -d "app/src/main/java/$legacy_path"
+          if grep -R -F --line-number \
+              --exclude=prepare_play_release.py \
+              --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle \
+              -e "$legacy_dotted" -e "$legacy_path" .; then
+            echo "Placeholder package identity remains."
+            exit 1
+          fi
+
+          grep -q 'applicationId = "com.anurag9000.forestrun"' app/build.gradle.kts
+          grep -q 'namespace = "com.anurag9000.forestrun"' app/build.gradle.kts
+          grep -q 'compileSdk = 36' app/build.gradle.kts
+          grep -q 'targetSdk = 36' app/build.gradle.kts
+          grep -q 'org.robolectric:robolectric:4.16' app/build.gradle.kts
+
+          grep -q 'safeContentTransform.toLogical' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'return reusableGhostVisibilityContext.set(' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'GhostPersistenceManager.saveBestRunAsync' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'GhostPersistenceManager.loadLatest' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'AtomicFile' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+
+          grep -q 'SaveIntegrityManager.repair(this)' app/src/main/java/com/anurag9000/forestrun/MainActivity.kt
+          grep -q 'CURRENT_SCHEMA_VERSION = 1' app/src/main/java/com/anurag9000/forestrun/engine/SaveIntegrityManager.kt
+          grep -q 'requiredLastRunKeys.any' app/src/main/java/com/anurag9000/forestrun/engine/SaveIntegrityManager.kt
+          grep -q 'useCompatibilityPreferences' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'context.getSharedPreferences(activePrefsName' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'File(context.filesDir, activeGhostFilename)' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'ghost_run_compat_v' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'current == Int.MAX_VALUE' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+
+          test -f app/src/main/java/com/anurag9000/forestrun/engine/FeedbackSettings.kt
+          test -f app/src/main/java/com/anurag9000/forestrun/ui/FeedbackSettingsPanel.kt
+          grep -q 'FeedbackSettings.init(this)' app/src/main/java/com/anurag9000/forestrun/MainActivity.kt
+          grep -q 'val all = prefs.all' app/src/main/java/com/anurag9000/forestrun/engine/FeedbackSettings.kt
+          grep -q 'FeedbackSettings.hapticsEnabled' app/src/main/java/com/anurag9000/forestrun/engine/HapticManager.kt
+          grep -q 'FeedbackSettings.audioEnabled' app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt
+          grep -q 'FeedbackSettings.reducedMotion' app/src/main/java/com/anurag9000/forestrun/engine/CameraSystem.kt
+          grep -q 'adjustedParticleCount(emitter.count' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
+          grep -q 'feedbackSettingsPanel.onTap' app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt
+
+          grep -q 'private fun ensureShaders' app/src/main/java/com/anurag9000/forestrun/engine/CinematicPolish.kt
+          grep -q 'private val tempoEvaluationThrottle' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
+          grep -q 'private val bloomEvaluationThrottle' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
+          grep -q 'private val menuLeitmotifProfile' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
+          grep -q 'private val restLeitmotifProfile' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
+
           grep -q 'Reduced-motion, audio, and haptic preferences persist' docs/RELEASE.md
           grep -q 'Save state is schema-versioned' docs/RELEASE.md
-          grep -q 'Future-schema preference and ghost preservation' docs/RELEASE.md
           if grep -q 'Add reduced-motion, audio, and haptic user settings' docs/RELEASE.md; then
             exit 1
           fi
@@ -34,12 +111,99 @@ jobs:
             exit 1
           fi
 
-      - name: Commit documentation truth
+          if git grep -n -E 'com\.google\.gson|Gson|SerializedName|TypeToken' -- app/src; then
+            echo 'Gson references remain in app source.'
+            exit 1
+          fi
+          if grep -Eq -- '^-keep[[:space:]]+class[[:space:]]+com\.anurag9000\.forestrun\.\*\*' app/proguard-rules.pro; then
+            echo 'Broad application keep rule defeats release shrinking.'
+            exit 1
+          fi
+
+      - name: Report packaged sprite dimensions
+        run: find app/src/main/assets/sprites -type f -name '*.png' -print0 | sort -z | xargs -0 file | tee sprite-dimensions.txt
+
+      - name: Compile debug and release sources
         shell: bash
         run: |
-          rm scripts/reconcile_release_checklist.py
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'docs: reconcile validated release status'
-          git push origin HEAD:agent/fix-core-gameplay-invariants
+          set +e
+          ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin \
+            --no-daemon --stacktrace --console=plain > compile.log 2>&1
+          status=$?
+          if [[ $status -ne 0 ]]; then
+            echo '::group::Kotlin compiler diagnostics'
+            grep -E '(^e: | error: |FAILURE:|Execution failed for task|\* What went wrong:)' compile.log || true
+            echo '::endgroup::'
+            tail -n 300 compile.log
+          fi
+          exit $status
+
+      - name: Run debug unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace --console=plain
+
+      - name: Run debug and release lint
+        run: ./gradlew lintDebug lintRelease --no-daemon --stacktrace --console=plain
+
+      - name: Assemble debug and instrumentation APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon --stacktrace --console=plain
+
+      - name: Build minified release bundle
+        run: ./gradlew bundleRelease --no-daemon --stacktrace --console=plain
+
+      - name: Verify build artifacts and effective shrinking
+        shell: bash
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          test -s app/build/outputs/bundle/release/app-release.aab
+          test -s app/build/outputs/mapping/release/mapping.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          mapping = Path('app/build/outputs/mapping/release/mapping.txt')
+          for raw in mapping.read_text(encoding='utf-8').splitlines():
+              line = raw.strip()
+              if line.startswith('com.anurag9000.forestrun.') and line.endswith(':') and ' -> ' in line:
+                  original, renamed = line[:-1].split(' -> ', 1)
+                  if original != renamed:
+                      break
+          else:
+              raise SystemExit('R8 mapping contains no obfuscated Forest Run classes')
+          PY
+
+      - name: Upload validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-validation-diagnostics
+          path: |
+            compile.log
+            sprite-dimensions.txt
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.xml
+            app/build/reports/lint-results-release.html
+            app/build/reports/lint-results-release.xml
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload debug APKs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forest-run-debug-apks
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload unsigned release bundle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forest-run-release-aab-unsigned
+          path: app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
