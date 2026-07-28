@@ -1,67 +1,61 @@
 package com.yourname.forest_run.systems
 
-import com.yourname.forest_run.entities.Player
 import com.yourname.forest_run.engine.RunState
+import com.yourname.forest_run.entities.Player
 
 /**
- * Records a [GhostFrame] every game-loop frame during [RunState.PLAYING].
+ * Records a time-stamped player pose during [RunState.PLAYING].
  *
- * At run end, the full frame list is available via [frames].
- * [SaveManager] decides whether to persist it (only if this was a new best distance).
- *
- * Memory: ~40 bytes per frame × 60 fps × typical 120s run ≈ ~280 KB.
- * We cap at 10,000 frames (~167 seconds at 60 fps) which is more than any
- * realistic run; older frames beyond the cap are never reached in playback.
- *
- * Usage:
- *   // Every PLAYING frame in GameView.update():
- *   ghostRecorder.record(deltaTime, player)
- *
- *   // On run end (HIT):
- *   val frames = ghostRecorder.frames
- *   ghostRecorder.reset()
+ * Sampling is capped at 30 Hz rather than the render rate. This keeps playback
+ * smooth while allowing a 20-minute run within a bounded ~864 KB raw payload
+ * (36,000 frames × 24 bytes) instead of silently ending after ~167 seconds.
  */
 class GhostRecorder {
-
     companion object {
-        const val MAX_FRAMES = 10_000
+        const val SAMPLE_RATE_HZ = 30
+        const val SAMPLE_INTERVAL_S = 1f / SAMPLE_RATE_HZ
+        const val MAX_DURATION_S = 20 * 60
+        const val MAX_FRAMES = SAMPLE_RATE_HZ * MAX_DURATION_S
     }
 
-    /** Accumulated run time since last reset. */
     private var elapsed = 0f
+    private var lastSampleTime = Float.NEGATIVE_INFINITY
 
-    /** All frames recorded this run (reset on each new run). */
-    val frames = ArrayList<GhostFrame>(4096)
+    /** Mutable internally; callers should use [snapshot] at run end. */
+    val frames = ArrayList<GhostFrame>(SAMPLE_RATE_HZ * 180)
 
-    // ── API ───────────────────────────────────────────────────────────────
-
-    /**
-     * Call every PLAYING frame. Records the player's current state.
-     */
     fun record(deltaTime: Float, player: Player) {
-        if (frames.size >= MAX_FRAMES) return
-        elapsed += deltaTime
+        if (!deltaTime.isFinite() || deltaTime <= 0f || frames.size >= MAX_FRAMES) return
+
+        elapsed = (elapsed + deltaTime).coerceAtMost(MAX_DURATION_S.toFloat())
+        if (frames.isNotEmpty() && elapsed - lastSampleTime < SAMPLE_INTERVAL_S) return
+
         frames.add(
             GhostFrame(
-                t            = elapsed,
-                x            = player.x,
-                y            = player.y,
+                t = elapsed,
+                x = player.x,
+                y = player.y,
                 stateOrdinal = player.state.ordinal,
-                scaleX       = player.scaleX,
-                scaleY       = player.scaleY
+                scaleX = player.scaleX,
+                scaleY = player.scaleY
             )
         )
+        lastSampleTime = elapsed
     }
 
-    /** The total run time recorded so far. */
-    val runDuration: Float get() = elapsed
+    val runDuration: Float
+        get() = elapsed
 
-    /** Returns a defensive copy safe to pass to SaveManager / GhostPlayer. */
-    fun snapshot(): List<GhostFrame> = frames.toList()
+    /**
+     * Returns the current frame list without duplicating tens of thousands of
+     * objects. SaveManager consumes it synchronously before GameView resets the
+     * recorder, so this read-only view is safe for the existing call path.
+     */
+    fun snapshot(): List<GhostFrame> = frames
 
-    /** Call at the start of each new run. */
     fun reset() {
         frames.clear()
         elapsed = 0f
+        lastSampleTime = Float.NEGATIVE_INFINITY
     }
 }
