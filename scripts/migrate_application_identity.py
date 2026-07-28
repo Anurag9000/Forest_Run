@@ -6,6 +6,8 @@ import shutil
 
 OLD = "com.yourname.forest_run"
 NEW = "com.anurag9000.forestrun"
+OLD_PATH = "com/yourname/forest_run"
+NEW_PATH = "com/anurag9000/forestrun"
 SELF = Path(__file__).resolve()
 ROOT = Path(__file__).resolve().parents[1]
 SKIP_DIRS = {".git", ".gradle", "build", ".idea", "captures", "release-output"}
@@ -28,9 +30,10 @@ def replace_identity() -> int:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        if OLD not in text:
+        migrated = text.replace(OLD, NEW).replace(OLD_PATH, NEW_PATH)
+        if migrated == text:
             continue
-        path.write_text(text.replace(OLD, NEW), encoding="utf-8")
+        path.write_text(migrated, encoding="utf-8")
         changed += 1
     return changed
 
@@ -42,8 +45,8 @@ def move_package_trees() -> int:
         ROOT / "app/src/test/java",
         ROOT / "app/src/androidTest/java",
     ):
-        old_dir = source_root / "com/yourname/forest_run"
-        new_dir = source_root / "com/anurag9000/forestrun"
+        old_dir = source_root / OLD_PATH
+        new_dir = source_root / NEW_PATH
         if not old_dir.exists():
             continue
         if new_dir.exists():
@@ -73,7 +76,7 @@ def verify() -> None:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
-        if OLD in text:
+        if OLD in text or OLD_PATH in text:
             offenders.append(str(path.relative_to(ROOT)))
     if offenders:
         raise RuntimeError("Placeholder package remains in: " + ", ".join(offenders))
@@ -83,7 +86,7 @@ def verify() -> None:
         ROOT / "app/src/test/java",
         ROOT / "app/src/androidTest/java",
     ):
-        if (source_root / "com/yourname/forest_run").exists():
+        if (source_root / OLD_PATH).exists():
             raise RuntimeError(f"Old package directory remains under {source_root}")
 
 
