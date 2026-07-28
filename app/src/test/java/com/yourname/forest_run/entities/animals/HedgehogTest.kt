@@ -41,6 +41,7 @@ class HedgehogTest {
         val player = Player(1920, 1080, spriteManager)
 
         player.hitbox.set(hedgehog.hitbox)
+        hedgehog.updatePlayerInteraction(player, gameState)
 
         val result = hedgehog.onCollision(player, gameState)
 
