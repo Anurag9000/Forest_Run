@@ -122,7 +122,9 @@ class Cat(
         waving = true
         waveTimer = 2.5f
         waveStartX = x
-        PersistentMemoryManager.recordSpare(context, EntityType.CAT)
+        if (shouldRecordPersistence) {
+            PersistentMemoryManager.recordSpare(context, EntityType.CAT)
+        }
         ParticleManager.emit(FxPreset.MERCY_STARS, x + catW * 0.5f, y + catH * 0.38f)
         DialogueBubbleManager.spawn(
             RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.SPARE),

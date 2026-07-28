@@ -358,7 +358,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     fun pause() {
         stopThread()
         LeitmotifManager.pause()   // Phase 20
-        if (::gameState.isInitialized) gameState.save()   // persist high score
+        if (::gameState.isInitialized && encounterDirector?.isScenarioActive != true) {
+            gameState.save()   // persist ordinary-play high score only
+        }
     }
 
     fun resume() {
@@ -723,6 +725,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             // Collision loop
             val collision = entityManager.checkCollisions(player, gameState)
             if (collision != null) {
+                val persistEncounter = collision.entity.shouldRecordPersistence &&
+                    encounterDirector?.isScenarioActive != true
                 when (collision.result) {
                     CollisionResult.HIT -> {
                         gameState.recordHit()
@@ -733,14 +737,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         LeitmotifManager.playRest()   // Phase 20
                         HapticManager.longPulse()     // Phase 21 — strong death feedback
                         // Phase 19: save ghost if this run is a new best distance
-                        if (::gameState.isInitialized &&
+                        if (persistEncounter &&
+                            ::gameState.isInitialized &&
                             gameState.distanceMetres > SaveManager.loadBestDistance(context)
                         ) {
                             SaveManager.saveGhostRun(context, ghostRecorder.snapshot())
                             SaveManager.saveBestDistance(context, gameState.distanceMetres)
                         }
                         val killerType = entityManager.entityTypeOf(collision.entity)
-                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        if (persistEncounter) {
+                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        }
                         val collisionCue = RunFlavorPresentation.collisionCue(
                             context = context,
                             type = killerType,
@@ -770,10 +777,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                             killer = killerType
                         )
                         currentRunSummary = summaryPreview.copy(restQuote = currentRestQuote)
-                        currentRunSummary?.let {
-                            ForestMoodSystem.recordRun(context, it)
-                            ReturnMomentsSystem.recordRunOutcome(context, it)
-                            SaveManager.saveLastRunSummary(context, it)
+                        if (persistEncounter) {
+                            currentRunSummary?.let {
+                                ForestMoodSystem.recordRun(context, it)
+                                ReturnMomentsSystem.recordRunOutcome(context, it)
+                                SaveManager.saveLastRunSummary(context, it)
+                            }
                         }
                         ghostRecorder.reset()
                         // Transition to DYING
@@ -783,7 +792,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     CollisionResult.STUMBLE -> {
                         gameState.recordHit()
                         val killerType = entityManager.entityTypeOf(collision.entity)
-                        killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        if (persistEncounter) {
+                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        }
                         ghostPlayer.suppress(0.9f)
                         // User Prompt "accompanied by a screen-flash of the forest's dominant color"
                         player.triggerStumble()
@@ -873,7 +884,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             LeitmotifManager.updateTempo(gameState.scrollSpeed)
             gameState.consumePacifistReward()?.let { reward ->
                 gameState.addBonus(points = reward.points, seeds = reward.seeds)
-                reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }
+                if (encounterDirector?.isScenarioActive != true) {
+                    reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }
+                }
                 val rewardCue = PacifistPresentation.rewardCue(reward)
                 ParticleManager.emit(
                     FxPreset.MERCY_STARS,

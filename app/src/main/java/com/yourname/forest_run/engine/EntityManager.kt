@@ -199,7 +199,9 @@ class EntityManager(
         gameState.recordCleanPass()
 
         entityTypeOf(entity)?.let { type ->
-            PersistentMemoryManager.recordPass(context, type)
+            if (entity.shouldRecordPersistence) {
+                PersistentMemoryManager.recordPass(context, type)
+            }
             val passCue = RunFlavorPresentation.passCue(
                 context = context,
                 type = type,
