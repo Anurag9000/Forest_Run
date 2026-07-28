@@ -38,6 +38,10 @@ object RuntimeAssetValidator {
         AssetPaths.Animals.DOG
     )
 
+    /**
+     * Bloom-ready/convert/fade cues are intentionally optional because
+     * SfxManager has authored fallback sounds for those accents.
+     */
     private val requiredRawResources = listOf(
         "sfx_jump",
         "sfx_land",
@@ -46,9 +50,6 @@ object RuntimeAssetValidator {
         "sfx_screech",
         "sfx_howl",
         "sfx_bloom",
-        "sfx_bloom_ready",
-        "sfx_bloom_convert",
-        "sfx_bloom_fade",
         "sfx_mercy_miss",
         "sfx_hit",
         "music_garden",
