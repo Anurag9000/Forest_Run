@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.yourname.forest_run.engine.GameView
 import com.yourname.forest_run.engine.HapticManager
 import com.yourname.forest_run.engine.LeitmotifManager
+import com.yourname.forest_run.engine.RuntimeAssetValidator
 import com.yourname.forest_run.engine.SfxManager
 
 /** Single full-screen Activity hosting the custom SurfaceView game. */
@@ -29,6 +30,7 @@ class MainActivity : AppCompatActivity() {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        RuntimeAssetValidator.validateRelease(this)
         gameView = GameView(this)
         setContentView(gameView)
         gameView.post {
