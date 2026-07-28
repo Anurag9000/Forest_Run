@@ -10,7 +10,7 @@ The player begins beneath a willow, runs through five atmospheric biomes, collec
 
 ## Current Status
 
-**Feature-rich alpha with the primary correctness-remediation pass implemented and automatically validated.** The repair branch now has a production application identity, current Android target, strict debug/release CI, broad invariant coverage, and a successfully generated minified release bundle. It is not yet a release candidate because connected-device, physical-hardware, performance, signed-upload, and store-acceptance work remains.
+**Feature-rich alpha with the primary correctness-remediation pass implemented and automatically validated.** The repair branch now has a production application identity, current Android target, strict debug/release CI, broad invariant coverage, an actually obfuscated/resource-shrunk release bundle, atomic off-thread ghost persistence, and cutout-safe essential UI. It is not yet a release candidate because connected-device, physical-hardware, performance, signed-upload, settings/accessibility, and store-acceptance work remains.
 
 The `agent/fix-core-gameplay-invariants` branch includes:
 
@@ -20,6 +20,7 @@ The `agent/fix-core-gameplay-invariants` branch includes:
 - one terminal outcome per entity with deterministic collision priority
 - pure collision queries and selected-outcome side effects
 - all-entity clean-pass, debug-isolation, and persistence integration coverage
+- outcome-earned relationship Trust and Bond progression
 - collectible Seed Orbs staged ahead of the player
 - distance-based encounter spacing that remains stable as speed changes
 - live Eagle targeting and aligned flora/tree collision geometry
@@ -27,8 +28,10 @@ The `agent/fix-core-gameplay-invariants` branch includes:
 - Garden lifecycle, local-day, particle, layout, and currency corrections
 - bounded/wrapped presentation queues and cached game-over composition
 - strict runtime asset checks and hardened audio/music lifecycle handling
+- atomic, corruption-checked ghost saves away from the render thread
+- one aspect-preserving safe-content transform for menu, Garden, HUD, debug, and rest UI
 - final application ID `com.anurag9000.forestrun`
-- API 36 debug and release validation, including a minified unsigned AAB
+- API 36 debug and release validation, including a genuinely obfuscated unsigned AAB
 
 ## Implemented System Surface
 
@@ -44,12 +47,12 @@ The `agent/fix-core-gameplay-invariants` branch includes:
 ## Remaining Release Blockers
 
 - run connected instrumentation tests and deterministic scenarios on an emulator and representative physical devices
-- validate touch latency, readability, audio, haptics, lifecycle recovery, and long-run stability on hardware
-- profile frame time, allocations, memory, I/O, audio threads, and synchronous save work
-- review safe areas, density behavior, reduced-motion support, and user-facing audio/haptic settings
+- validate touch latency, transformed safe-content readability, audio, haptics, lifecycle recovery, and long-run stability on hardware
+- profile frame time, allocations, memory, I/O, audio threads, and sustained-play behavior
+- validate density behavior and add reduced-motion plus user-facing audio/haptic settings
 - provide real signing credentials and smoke-test the signed, minified artifact
 - capture, curate, and manually approve final store screenshots and metadata
-- verify save migration/corruption recovery and current store-policy requirements
+- verify broader save migration/corruption recovery and current store-policy requirements
 - decide whether the remaining procedural scenic layers and fixed-landscape policy are final art/product choices
 
 See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed checklist.
@@ -80,6 +83,7 @@ Expected outputs:
 - Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 - Instrumentation APK: `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
 - Release bundle: `app/build/outputs/bundle/release/app-release.aab`
+- R8 mapping: `app/build/outputs/mapping/release/mapping.txt`
 
 ## Canonical Runtime Direction
 
