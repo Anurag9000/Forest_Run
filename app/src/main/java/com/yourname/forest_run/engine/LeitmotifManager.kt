@@ -1,11 +1,11 @@
 package com.yourname.forest_run.engine
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.media.MediaPlayer
-import android.media.PlaybackParams
 import android.os.Build
-import android.annotation.SuppressLint
 import android.util.Log
+import kotlin.math.abs
 
 internal data class LeitmotifPlaybackProfile(
     val tempo: Float,
@@ -27,52 +27,32 @@ internal data class LeitmotifSignature(
     val cadenceLift: Float
 )
 
-/**
- * Leitmotif Audio Manager — Phase 20.
- *
- * Music state machine:
- *   MENU      → music_garden     (slow solo piano)
- *   PLAYING_1 → music_run_1      (drum beat only)        0–500m
- *   PLAYING_2 → music_run_2      (bass + flute melody)   500m–1500m
- *   PLAYING_3 → music_run_3      (full orchestral)       1500m+
- *   BLOOM     → music_bloom      (triumphant swell)      Bloom invincibility
- *   REST      → music_rest       (slow music box)
- *
- * Features:
- *  - Smooth crossfade between any two tracks over [CROSS_FADE_MS] ms.
- *  - State-shaped playback profiles: each state resolves to a target volume and tempo.
- *    Run layers scale with scroll speed, Bloom peaks hardest, and menu/rest remain softer.
- *  - Graceful degradation: if an audio file is missing, that state plays silence.
- *
- * All MediaPlayer instances are created lazily and released on destroy().
- * Call [destroy] from MainActivity.onDestroy() and Activity.onPause() to
- * prevent resource leaks.
- */
+/** Thread-safe MediaPlayer state machine for the game's musical layers. */
 @SuppressLint("StaticFieldLeak", "DiscouragedApi")
 object LeitmotifManager {
-
     private const val TAG = "LeitmotifMgr"
-    const val CROSS_FADE_MS = 1500L     // 1.5s crossfade
+    const val CROSS_FADE_MS = 1500L
     private const val FADE_STEP_MS = 50L
     private const val FADE_STEPS = (CROSS_FADE_MS / FADE_STEP_MS).toInt()
+    private const val PARAMETER_UPDATE_INTERVAL_NS = 100_000_000L
+    private const val TEMPO_EPSILON = 0.0125f
+    private const val VOLUME_EPSILON = 0.015f
 
-    // ── Music state ───────────────────────────────────────────────────────
     enum class MusicState { MENU, PLAYING_1, PLAYING_2, PLAYING_3, BLOOM, REST }
+
+    private val audioLock = Any()
 
     private var currentState: MusicState = MusicState.MENU
     private var previousState: MusicState? = null
-
-    // ── Players ───────────────────────────────────────────────────────────
-    private var activePlayer: MediaPlayer?  = null
-    private var fadingPlayer: MediaPlayer?  = null
-
-    // ── Fade thread ───────────────────────────────────────────────────────
+    private var activePlayer: MediaPlayer? = null
+    private var fadingPlayer: MediaPlayer? = null
     private var fadeThread: Thread? = null
+    private var fadeGeneration = 0L
 
-    // ── Tempo ─────────────────────────────────────────────────────────────
-    private var currentSpeed: Float = 1f
-    private var currentScrollSpeed: Float = GameConstants.BASE_SCROLL_SPEED
-    private var currentTargetVolume: Float = 0.48f
+    private var currentSpeed = 1f
+    private var currentScrollSpeed = GameConstants.BASE_SCROLL_SPEED
+    private var currentTargetVolume = 0.48f
+    private var lastParameterUpdateNs = 0L
     private var currentMotifSignature = LeitmotifSignature(
         motifLabel = "Garden Hush",
         leadPresence = 0.34f,
@@ -86,238 +66,298 @@ object LeitmotifManager {
         conversions = 0
     )
 
-    // ── Context (application context, no leak) ───────────────────────────
     private var ctx: Context? = null
 
-    // ── Resource map ─────────────────────────────────────────────────────
-    // Loaded lazily from res/raw/. Keys must match file names without extension.
     private val stateToResName = mapOf(
-        MusicState.MENU      to "music_garden",
+        MusicState.MENU to "music_garden",
         MusicState.PLAYING_1 to "music_run_1",
         MusicState.PLAYING_2 to "music_run_2",
         MusicState.PLAYING_3 to "music_run_3",
-        MusicState.BLOOM     to "music_bloom",
-        MusicState.REST      to "music_rest"
+        MusicState.BLOOM to "music_bloom",
+        MusicState.REST to "music_rest"
     )
 
-    // ── Init ──────────────────────────────────────────────────────────────
-
     fun init(context: Context) {
-        ctx = context.applicationContext
+        synchronized(audioLock) {
+            ctx = context.applicationContext
+        }
+        // currentState starts as MENU, but no MediaPlayer exists yet. The
+        // transition method therefore checks both state and player presence.
+        transitionTo(MusicState.MENU)
     }
 
-    // ── Public API ────────────────────────────────────────────────────────
-
-    /** Transition to a new music state with a crossfade. */
     fun transitionTo(newState: MusicState) {
-        if (newState == currentState) return
-        val oldState = currentState
-        previousState = oldState
-        currentState  = newState
+        synchronized(audioLock) {
+            if (newState == currentState && activePlayer != null) return
 
-        val appCtx = ctx ?: return
-        val resName = stateToResName[newState] ?: return
-        val resId   = appCtx.resources.getIdentifier(resName, "raw", appCtx.packageName)
-        if (resId == 0) {
-            Log.w(TAG, "Audio file not found: $resName — playing silence")
-            stopFade()
-            activePlayer?.release()
-            activePlayer = null
-            return
-        }
-
-        val newPlayer = try {
-            MediaPlayer.create(appCtx, resId)?.apply {
-                isLooping = (newState != MusicState.REST && newState != MusicState.BLOOM)
-                setVolume(0f, 0f)
-                start()
+            val appContext = ctx ?: return
+            val resourceName = stateToResName[newState] ?: return
+            val resourceId = appContext.resources.getIdentifier(
+                resourceName,
+                "raw",
+                appContext.packageName
+            )
+            if (resourceId == 0) {
+                Log.e(TAG, "Required music resource is missing: $resourceName")
+                return
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to create MediaPlayer for $resName", e)
-            null
-        } ?: return
 
-        val oldProfile = buildLeitmotifPlaybackProfile(oldState, currentScrollSpeed)
-        if (newState == MusicState.BLOOM) {
+            val newPlayer = try {
+                MediaPlayer.create(appContext, resourceId)?.apply {
+                    isLooping = newState != MusicState.REST && newState != MusicState.BLOOM
+                    setVolume(0f, 0f)
+                    start()
+                }
+            } catch (error: Exception) {
+                Log.e(TAG, "Failed to create MediaPlayer for $resourceName", error)
+                null
+            } ?: return
+
+            val oldState = currentState
+            val oldPlayer = activePlayer
+            val oldProfile = buildLeitmotifPlaybackProfile(
+                oldState,
+                currentScrollSpeed,
+                bloomMusicSignature
+            )
+
+            if (newState == MusicState.BLOOM) {
+                bloomMusicSignature = BloomMusicSignature(
+                    secondsRemaining = GameConstants.BLOOM_DURATION_S,
+                    conversions = 0
+                )
+            }
+            val newProfile = buildLeitmotifPlaybackProfile(
+                newState,
+                currentScrollSpeed,
+                bloomMusicSignature
+            )
+
+            previousState = oldState
+            currentState = newState
+            currentSpeed = newProfile.tempo
+            currentTargetVolume = newProfile.targetVolume
+            currentMotifSignature = newProfile.motifSignature
+            lastParameterUpdateNs = System.nanoTime()
+            applyTempoToPlayer(newPlayer, newProfile.tempo)
+
+            activePlayer = newPlayer
+            fadingPlayer = oldPlayer
+            startCrossFadeLocked(
+                from = oldPlayer,
+                to = newPlayer,
+                fromVolume = oldProfile.targetVolume,
+                toVolume = newProfile.targetVolume
+            )
+        }
+    }
+
+    fun updateDistance(distanceM: Float) {
+        synchronized(audioLock) {
+            if (currentState == MusicState.BLOOM || currentState == MusicState.REST) return
+        }
+        transitionTo(runStateForDistance(distanceM))
+    }
+
+    /**
+     * Called from the game loop. MediaPlayer parameters are changed at most ten
+     * times per second and only after a meaningful tempo/volume delta.
+     */
+    fun updateTempo(scrollSpeed: Float) {
+        synchronized(audioLock) {
+            currentScrollSpeed = scrollSpeed.coerceAtLeast(1f)
+            val profile = buildLeitmotifPlaybackProfile(
+                currentState,
+                currentScrollSpeed,
+                bloomMusicSignature
+            )
+            currentMotifSignature = profile.motifSignature
+            applyProfileIfNeededLocked(profile, force = false)
+        }
+    }
+
+    fun playRest() = transitionTo(MusicState.REST)
+
+    fun playBloom() {
+        synchronized(audioLock) {
             bloomMusicSignature = BloomMusicSignature(
                 secondsRemaining = GameConstants.BLOOM_DURATION_S,
                 conversions = 0
             )
         }
-        val newProfile = buildLeitmotifPlaybackProfile(newState, currentScrollSpeed, bloomMusicSignature)
-        currentSpeed = newProfile.tempo
-        currentTargetVolume = newProfile.targetVolume
-        currentMotifSignature = newProfile.motifSignature
-        applyTempoToPlayer(newPlayer, newProfile.tempo)
-
-        val oldPlayer = activePlayer
-        fadingPlayer  = oldPlayer
-        activePlayer  = newPlayer
-
-        crossFade(
-            from = oldPlayer,
-            to = newPlayer,
-            fromVolume = oldProfile.targetVolume,
-            toVolume = newProfile.targetVolume
-        )
-    }
-
-    /**
-     * Update music layer based on run distance. Call from GameView.update() every frame.
-     * Distance thresholds: 0..500m → layer 1, 500..1500m → layer 2, 1500m+ → layer 3.
-     */
-    fun updateDistance(distanceM: Float) {
-        val target = when {
-            distanceM < 500f  -> MusicState.PLAYING_1
-            distanceM < 1500f -> MusicState.PLAYING_2
-            else               -> MusicState.PLAYING_3
-        }
-        if (currentState == MusicState.BLOOM || currentState == MusicState.REST) return
-        transitionTo(target)
-    }
-
-    /**
-     * Apply tempo scaling based on scroll speed.
-     * Called every few frames — MediaPlayer.PlaybackParams is cheap to update.
-     */
-    fun updateTempo(scrollSpeed: Float) {
-        currentScrollSpeed = scrollSpeed
-        val profile = buildLeitmotifPlaybackProfile(currentState, scrollSpeed, bloomMusicSignature)
-        if (profile.tempo == currentSpeed && profile.targetVolume == currentTargetVolume) return
-        currentSpeed = profile.tempo
-        currentTargetVolume = profile.targetVolume
-        currentMotifSignature = profile.motifSignature
-        activePlayer?.let {
-            applyTempoToPlayer(it, profile.tempo)
-            if (fadeThread == null) {
-                setPlayerVolume(it, profile.targetVolume)
-            }
-        }
-        fadingPlayer?.let { fading ->
-            val fadeState = previousState ?: return@let
-            val fadeProfile = buildLeitmotifPlaybackProfile(fadeState, scrollSpeed, bloomMusicSignature)
-            applyTempoToPlayer(fading, fadeProfile.tempo)
-        }
-    }
-
-    /** Transition to REST music. Call on HIT / run death. */
-    fun playRest() {
-        transitionTo(MusicState.REST)
-    }
-
-    /** Transition to BLOOM music. Automatically reverts to correct PLAYING layer on Bloom end. */
-    fun playBloom() {
-        bloomMusicSignature = BloomMusicSignature(
-            secondsRemaining = GameConstants.BLOOM_DURATION_S,
-            conversions = 0
-        )
         transitionTo(MusicState.BLOOM)
     }
 
     fun updateBloomSignature(secondsRemaining: Float, conversions: Int) {
-        bloomMusicSignature = BloomMusicSignature(
-            secondsRemaining = secondsRemaining.coerceIn(0f, GameConstants.BLOOM_DURATION_S),
-            conversions = conversions.coerceAtLeast(0)
-        )
-        if (currentState != MusicState.BLOOM) return
-        val profile = buildLeitmotifPlaybackProfile(MusicState.BLOOM, currentScrollSpeed, bloomMusicSignature)
-        currentSpeed = profile.tempo
-        currentTargetVolume = profile.targetVolume
-        currentMotifSignature = profile.motifSignature
-        activePlayer?.let {
-            applyTempoToPlayer(it, profile.tempo)
-            if (fadeThread == null) {
-                setPlayerVolume(it, profile.targetVolume)
-            }
+        synchronized(audioLock) {
+            val previous = bloomMusicSignature
+            bloomMusicSignature = BloomMusicSignature(
+                secondsRemaining = secondsRemaining.coerceIn(
+                    0f,
+                    GameConstants.BLOOM_DURATION_S
+                ),
+                conversions = conversions.coerceAtLeast(0)
+            )
+            if (currentState != MusicState.BLOOM) return
+
+            val profile = buildLeitmotifPlaybackProfile(
+                MusicState.BLOOM,
+                currentScrollSpeed,
+                bloomMusicSignature
+            )
+            currentMotifSignature = profile.motifSignature
+            applyProfileIfNeededLocked(
+                profile,
+                force = previous.conversions != bloomMusicSignature.conversions
+            )
         }
     }
 
-    /** Called when Bloom invincibility ends — reverts to the previous PLAYING layer. */
     fun endBloom(distanceM: Float) {
-        bloomMusicSignature = BloomMusicSignature(
-            secondsRemaining = 0f,
-            conversions = 0
-        )
-        currentState = MusicState.MENU  // force re-evaluate
-        updateDistance(distanceM)
+        synchronized(audioLock) {
+            bloomMusicSignature = BloomMusicSignature(
+                secondsRemaining = 0f,
+                conversions = 0
+            )
+        }
+        transitionTo(runStateForDistance(distanceM))
     }
 
-    /** Called on run reset. */
-    fun playRunStart() {
-        currentState = MusicState.MENU  // force re-evaluate
-        transitionTo(MusicState.PLAYING_1)
-    }
-
-    // ── Lifecycle ─────────────────────────────────────────────────────────
+    fun playRunStart() = transitionTo(MusicState.PLAYING_1)
 
     fun pause() {
-        activePlayer?.pause()
-        fadingPlayer?.pause()
+        synchronized(audioLock) {
+            runCatching { activePlayer?.pause() }
+            runCatching { fadingPlayer?.pause() }
+        }
     }
 
     fun resume() {
-        activePlayer?.start()
+        synchronized(audioLock) {
+            runCatching { activePlayer?.start() }
+            runCatching { fadingPlayer?.start() }
+        }
     }
 
     fun destroy() {
-        stopFade()
-        activePlayer?.release(); activePlayer = null
-        fadingPlayer?.release(); fadingPlayer = null
-        ctx = null
-        currentScrollSpeed = GameConstants.BASE_SCROLL_SPEED
-        currentTargetVolume = 0.48f
-        currentSpeed = 1f
-        currentMotifSignature = buildLeitmotifPlaybackProfile(
-            MusicState.MENU,
-            GameConstants.BASE_SCROLL_SPEED
-        ).motifSignature
-        bloomMusicSignature = BloomMusicSignature(
-            secondsRemaining = GameConstants.BLOOM_DURATION_S,
-            conversions = 0
-        )
-        previousState = null
-        currentState = MusicState.MENU
+        synchronized(audioLock) {
+            stopFadeLocked()
+            releasePlayer(activePlayer)
+            releasePlayer(fadingPlayer)
+            activePlayer = null
+            fadingPlayer = null
+            ctx = null
+            currentScrollSpeed = GameConstants.BASE_SCROLL_SPEED
+            currentTargetVolume = 0.48f
+            currentSpeed = 1f
+            lastParameterUpdateNs = 0L
+            currentMotifSignature = buildLeitmotifPlaybackProfile(
+                MusicState.MENU,
+                GameConstants.BASE_SCROLL_SPEED
+            ).motifSignature
+            bloomMusicSignature = BloomMusicSignature(
+                secondsRemaining = GameConstants.BLOOM_DURATION_S,
+                conversions = 0
+            )
+            previousState = null
+            currentState = MusicState.MENU
+        }
     }
 
-    internal fun currentMotifSignature(): LeitmotifSignature = currentMotifSignature
+    internal fun currentMotifSignature(): LeitmotifSignature =
+        synchronized(audioLock) { currentMotifSignature }
 
-    // ── Internals ─────────────────────────────────────────────────────────
+    private fun runStateForDistance(distanceM: Float): MusicState = when {
+        distanceM < 500f -> MusicState.PLAYING_1
+        distanceM < 1500f -> MusicState.PLAYING_2
+        else -> MusicState.PLAYING_3
+    }
 
-    private fun crossFade(
+    private fun applyProfileIfNeededLocked(
+        profile: LeitmotifPlaybackProfile,
+        force: Boolean
+    ) {
+        val tempoChanged = abs(profile.tempo - currentSpeed) >= TEMPO_EPSILON
+        val volumeChanged = abs(profile.targetVolume - currentTargetVolume) >= VOLUME_EPSILON
+        if (!force && !tempoChanged && !volumeChanged) return
+
+        val now = System.nanoTime()
+        if (!force && now - lastParameterUpdateNs < PARAMETER_UPDATE_INTERVAL_NS) return
+        lastParameterUpdateNs = now
+
+        if (tempoChanged || force) {
+            activePlayer?.let { applyTempoToPlayer(it, profile.tempo) }
+            fadingPlayer?.let { fading ->
+                val fadeState = previousState
+                if (fadeState != null) {
+                    val fadeProfile = buildLeitmotifPlaybackProfile(
+                        fadeState,
+                        currentScrollSpeed,
+                        bloomMusicSignature
+                    )
+                    applyTempoToPlayer(fading, fadeProfile.tempo)
+                }
+            }
+        }
+
+        if ((volumeChanged || force) && fadeThread?.isAlive != true) {
+            activePlayer?.let { setPlayerVolume(it, profile.targetVolume) }
+        }
+
+        currentSpeed = profile.tempo
+        currentTargetVolume = profile.targetVolume
+    }
+
+    private fun startCrossFadeLocked(
         from: MediaPlayer?,
         to: MediaPlayer,
         fromVolume: Float,
         toVolume: Float
     ) {
-        stopFade()
-        val thread = Thread {
+        stopFadeLocked()
+        val generation = ++fadeGeneration
+        val thread = Thread({
             try {
                 for (step in 0..FADE_STEPS) {
-                    val t      = step.toFloat() / FADE_STEPS
-                    val volIn  = toVolume * t
-                    val volOut = fromVolume * (1f - t)
-                    try {
-                        setPlayerVolume(to, volIn)
-                        from?.let { setPlayerVolume(it, volOut) }
-                    } catch (_: IllegalStateException) { break }
+                    if (Thread.currentThread().isInterrupted) return@Thread
+                    val fraction = step.toFloat() / FADE_STEPS
+                    synchronized(audioLock) {
+                        if (generation != fadeGeneration) return@Thread
+                        setPlayerVolume(to, toVolume * fraction)
+                        from?.let { setPlayerVolume(it, fromVolume * (1f - fraction)) }
+                    }
                     Thread.sleep(FADE_STEP_MS)
                 }
             } catch (_: InterruptedException) {
-                // Fade interrupted by a new transition
+                // A newer transition owns the audio state now.
+            } catch (error: Exception) {
+                Log.w(TAG, "Crossfade ended early", error)
+            } finally {
+                synchronized(audioLock) {
+                    releasePlayer(from)
+                    if (fadingPlayer === from) fadingPlayer = null
+                    if (fadeThread === Thread.currentThread()) fadeThread = null
+                    if (generation == fadeGeneration) {
+                        runCatching { setPlayerVolume(to, currentTargetVolume) }
+                    }
+                }
             }
-            try {
-                from?.stop()
-                from?.release()
-            } catch (_: Exception) {}
-            if (fadingPlayer === from) fadingPlayer = null
-            if (fadeThread === Thread.currentThread()) fadeThread = null
-        }
-        fadeThread = thread.also { it.isDaemon = true; it.start() }
+        }, "LeitmotifFade-$generation")
+        thread.isDaemon = true
+        fadeThread = thread
+        thread.start()
     }
 
-    private fun stopFade() {
+    private fun stopFadeLocked() {
+        fadeGeneration++
         fadeThread?.interrupt()
         fadeThread = null
+    }
+
+    private fun releasePlayer(player: MediaPlayer?) {
+        if (player == null) return
+        runCatching { player.stop() }
+        runCatching { player.release() }
     }
 
     private fun setPlayerVolume(player: MediaPlayer, volume: Float) {
@@ -327,11 +367,13 @@ object LeitmotifManager {
 
     @Suppress("DEPRECATION")
     private fun applyTempoToPlayer(player: MediaPlayer, speed: Float) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                val params = player.playbackParams.setSpeed(speed)
-                player.playbackParams = params
-            } catch (_: Exception) { /* unsupported — ignore */ }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        try {
+            val params = player.playbackParams
+            params.speed = speed.coerceIn(0.5f, 2f)
+            player.playbackParams = params
+        } catch (_: Exception) {
+            // Some devices/codecs do not support PlaybackParams.
         }
     }
 }
@@ -362,6 +404,7 @@ internal fun buildLeitmotifPlaybackProfile(
                 cadenceLift = 0.26f
             )
         )
+
         LeitmotifManager.MusicState.REST -> LeitmotifPlaybackProfile(
             tempo = 0.92f,
             targetVolume = 0.44f,
@@ -374,6 +417,7 @@ internal fun buildLeitmotifPlaybackProfile(
                 cadenceLift = 0.18f
             )
         )
+
         LeitmotifManager.MusicState.PLAYING_1 -> LeitmotifPlaybackProfile(
             tempo = runTempo,
             targetVolume = (0.66f + speedLift * 0.05f).coerceIn(0.55f, 0.78f),
@@ -386,6 +430,7 @@ internal fun buildLeitmotifPlaybackProfile(
                 cadenceLift = 0.30f
             )
         )
+
         LeitmotifManager.MusicState.PLAYING_2 -> LeitmotifPlaybackProfile(
             tempo = (runTempo + 0.04f).coerceAtMost(1.8f),
             targetVolume = (0.78f + speedLift * 0.06f).coerceIn(0.68f, 0.90f),
@@ -398,6 +443,7 @@ internal fun buildLeitmotifPlaybackProfile(
                 cadenceLift = 0.42f
             )
         )
+
         LeitmotifManager.MusicState.PLAYING_3 -> LeitmotifPlaybackProfile(
             tempo = (runTempo + 0.08f).coerceAtMost(1.8f),
             targetVolume = (0.90f + speedLift * 0.06f).coerceIn(0.82f, 0.98f),
@@ -410,6 +456,7 @@ internal fun buildLeitmotifPlaybackProfile(
                 cadenceLift = 0.58f
             )
         )
+
         LeitmotifManager.MusicState.BLOOM -> LeitmotifPlaybackProfile(
             tempo = maxOf(
                 1.08f,
@@ -433,20 +480,17 @@ internal fun buildLeitmotifPlaybackProfile(
                         bloomSignature.conversions.coerceAtMost(5) * 0.02f
                     ).coerceIn(0.78f, 0.96f),
                 pulsePresence = (
-                    0.74f +
-                        bloomSignature.conversions.coerceAtMost(5) * 0.035f
+                    0.74f + bloomSignature.conversions.coerceAtMost(5) * 0.035f
                     ).coerceIn(0.74f, 0.96f),
                 warmth = (
                     0.58f +
                         (bloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S) * 0.08f
                     ).coerceIn(0.58f, 0.74f),
                 shimmer = (
-                    0.68f +
-                        bloomSignature.conversions.coerceAtMost(5) * 0.045f
+                    0.68f + bloomSignature.conversions.coerceAtMost(5) * 0.045f
                     ).coerceIn(0.68f, 0.94f),
                 cadenceLift = (
-                    0.66f +
-                        bloomSignature.conversions.coerceAtMost(5) * 0.04f
+                    0.66f + bloomSignature.conversions.coerceAtMost(5) * 0.04f
                     ).coerceIn(0.66f, 0.90f)
             )
         )
