@@ -48,6 +48,7 @@ class DuckTest {
             hitbox.left - 12f,
             hitbox.bottom - 8f
         )
+        duck.updatePlayerInteraction(player, gameState)
         assertTrue(duck.onCollision(player, gameState) != CollisionResult.HIT)
         assertTrue(booleanField(duck, "quackCalled"))
 
@@ -58,6 +59,7 @@ class DuckTest {
             duckLaneRect.right - 18f,
             duckLaneRect.bottom - 4f
         )
+        duck.updatePlayerInteraction(player, gameState)
         assertTrue(duck.onCollision(player, gameState) != CollisionResult.HIT)
 
         assertTrue(booleanField(duck, "answeredQuack"))
