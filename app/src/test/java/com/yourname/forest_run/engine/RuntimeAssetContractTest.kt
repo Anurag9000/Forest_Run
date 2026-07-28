@@ -5,7 +5,6 @@ import android.graphics.BitmapFactory
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -56,9 +55,12 @@ class RuntimeAssetContractTest {
         )
 
         for (contract in contracts) {
-            val bitmap = context.assets.open(contract.path).use(BitmapFactory::decodeStream)
-            assertNotNull("Missing or undecodable ${contract.path}", bitmap)
-            bitmap!!
+            val decoded = context.assets.open(contract.path).use { stream ->
+                BitmapFactory.decodeStream(stream)
+            }
+            val bitmap = requireNotNull(decoded) {
+                "Missing or undecodable ${contract.path}"
+            }
             assertEquals(
                 "Unexpected width for ${contract.path}",
                 contract.frameWidth * contract.frames,
