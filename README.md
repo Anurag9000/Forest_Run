@@ -10,7 +10,7 @@ The player begins beneath a willow, runs through five atmospheric biomes, collec
 
 ## Current Status
 
-**Feature-rich alpha with the primary correctness-remediation pass implemented and automatically validated.** The repair branch now has a production application identity, current Android target, strict debug/release CI, broad invariant coverage, an actually obfuscated/resource-shrunk release bundle, atomic off-thread ghost persistence, and cutout-safe essential UI. It is not yet a release candidate because connected-device, physical-hardware, performance, signed-upload, settings/accessibility, and store-acceptance work remains.
+**Feature-rich alpha with the primary correctness-remediation pass implemented and automatically validated.** The repair branch now has a production application identity, current Android target, strict debug/release CI, broad invariant coverage, an actually obfuscated/resource-shrunk release bundle, atomic off-thread ghost persistence, cutout-safe essential UI, persisted feedback controls, and versioned save repair. It is not yet a release candidate because connected-device, physical-hardware, performance, signed-upload, visual-acceptance, and store-acceptance work remains.
 
 The `agent/fix-core-gameplay-invariants` branch includes:
 
@@ -30,6 +30,8 @@ The `agent/fix-core-gameplay-invariants` branch includes:
 - strict runtime asset checks and hardened audio/music lifecycle handling
 - atomic, corruption-checked ghost saves away from the render thread
 - one aspect-preserving safe-content transform for menu, Garden, HUD, debug, and rest UI
+- persisted reduced-motion, audio, and haptic settings enforced at manager boundaries
+- versioned SharedPreferences repair with future-schema preference and ghost isolation
 - final application ID `com.anurag9000.forestrun`
 - API 36 debug and release validation, including a genuinely obfuscated unsigned AAB
 
@@ -47,12 +49,13 @@ The `agent/fix-core-gameplay-invariants` branch includes:
 ## Remaining Release Blockers
 
 - run connected instrumentation tests and deterministic scenarios on an emulator and representative physical devices
-- validate touch latency, transformed safe-content readability, audio, haptics, lifecycle recovery, and long-run stability on hardware
+- validate touch latency, transformed safe-content readability, feedback settings, audio, haptics, lifecycle recovery, and long-run stability on hardware
 - profile frame time, allocations, memory, I/O, audio threads, and sustained-play behavior
-- validate density behavior and add reduced-motion plus user-facing audio/haptic settings
+- validate density behavior across phones, tablets, cutouts, and unusual aspect ratios
 - provide real signing credentials and smoke-test the signed, minified artifact
 - capture, curate, and manually approve final store screenshots and metadata
-- verify broader save migration/corruption recovery and current store-policy requirements
+- visually verify artwork and animation frame counts, including the Wolf sheet
+- revalidate current store-policy, privacy, data-safety, content-rating, and submission requirements
 - decide whether the remaining procedural scenic layers and fixed-landscape policy are final art/product choices
 
 See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed checklist.
