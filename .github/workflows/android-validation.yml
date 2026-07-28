@@ -52,11 +52,13 @@ jobs:
       - name: Verify production identity and toolchain
         shell: bash
         run: |
+          legacy_dotted="com"."yourname"."forest_run"
+          legacy_path="com"/"yourname"/"forest_run"
           test -d app/src/main/java/com/anurag9000/forestrun
           test -d app/src/test/java/com/anurag9000/forestrun
-          test ! -d app/src/main/java/com/yourname/forest_run
-          if grep -R --line-number --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle \
-              -e 'com\.yourname\.forest_run' -e 'com/yourname/forest_run' .; then
+          test ! -d "app/src/main/java/$legacy_path"
+          if grep -R -F --line-number --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle \
+              -e "$legacy_dotted" -e "$legacy_path" .; then
             echo "Placeholder package identity remains."
             exit 1
           fi
