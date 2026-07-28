@@ -147,11 +147,11 @@ The default Play release script refuses unsigned upload preparation unless `--al
 - [x] Feedback preference defaults, persistence, wrong-type recovery, reduced-motion camera/particle/shimmer behavior, and non-overlapping menu hit regions
 - [x] Legacy save repair, migration idempotence, partial-summary rejection, unknown-key preservation, clamped writes, and saturating counters
 - [x] Future-schema preference and ghost preservation with compatibility-namespace round trips
+- [x] Actual `GameThread` sleep interruption, caller-interrupt restoration, bounded uncooperative-update timeout, and stale-render suppression
 
 ### Still needed
 
 - [ ] Execute `connectedDebugAndroidTest` on an emulator and physical device
-- [ ] Add a deterministic interruption test around the real `GameThread`/`GameView` shutdown boundary if feasible without instrumentation
 - [ ] Add signed-release installation and launch smoke tests
 
 ## Asset and Runtime Gate

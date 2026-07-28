@@ -481,29 +481,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun stopThread() {
-        val thread = gameThread
-        thread.requestStop()
-
-        val deadlineNs = System.nanoTime() + 1_000_000_000L
-        var callerWasInterrupted = false
-        while (thread.isAlive) {
-            val remainingNs = deadlineNs - System.nanoTime()
-            if (remainingNs <= 0L) break
-
-            val waitMs = (remainingNs / 1_000_000L).coerceIn(1L, 250L)
-            try {
-                thread.join(waitMs)
-            } catch (_: InterruptedException) {
-                callerWasInterrupted = true
-                thread.requestStop()
-            }
-        }
-
-        if (thread.isAlive) {
+        if (!gameThread.requestStopAndAwait()) {
             Log.w(TAG, "GameThread did not terminate within the 1 second shutdown bound")
-        }
-        if (callerWasInterrupted) {
-            Thread.currentThread().interrupt()
         }
     }
 
