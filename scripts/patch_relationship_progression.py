@@ -70,11 +70,12 @@ def main() -> None:
 
         // Familiarity alone is capped at Recognition. Trust and Bond must be
         // earned through positive outcomes; repeated hits delay progression.
+        // A deliberate spare is rarer and more meaningful than a clean pass.
         val familiarity = minOf(encounters, config.recognitionScore)
         val positiveOutcomes = cleanPasses.coerceAtLeast(0) + spared.coerceAtLeast(0)
         val earnedScore = familiarity +
             cleanPasses.coerceAtLeast(0) +
-            spared.coerceAtLeast(0) * 3 -
+            spared.coerceAtLeast(0) * 4 -
             hits.coerceAtLeast(0)
 
         return when {
@@ -87,14 +88,16 @@ def main() -> None:
     private fun affinityScore(context: Context, type: EntityType): Int {
         val appContext = context.applicationContext
         val config = thresholds.getValue(type)
+        // Familiarity can distinguish two already-earned bonds, but is bounded
+        // and can never advance the relationship stage by itself.
         val familiarity = minOf(
             SaveManager.loadEncounterCount(appContext, type),
-            config.recognitionScore
+            config.recognitionScore + 3
         )
         val cleanPasses = SaveManager.loadCleanPassCount(appContext, type)
         val spared = SaveManager.loadSparedCount(appContext, type)
         val hits = SaveManager.loadHitCount(appContext, type)
-        return familiarity + cleanPasses * 2 + spared * 3 - hits * 2
+        return familiarity + cleanPasses * 2 + spared * 4 - hits * 2
     }
 ''',
         "outcome-earned stage computation",
