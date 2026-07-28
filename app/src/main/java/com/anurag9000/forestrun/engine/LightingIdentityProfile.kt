@@ -61,34 +61,38 @@ internal fun buildRunLightingIdentity(
     )
 }
 
+private val menuSanctuaryLighting = SanctuaryLightingIdentity(
+    canopyColor = Color.rgb(26, 42, 34),
+    mistColor = Color.rgb(232, 246, 236),
+    fireflyColor = Color.rgb(252, 246, 182),
+    lanternOuterColor = Color.rgb(255, 235, 168),
+    lanternInnerColor = Color.rgb(255, 242, 196),
+    groundGlowColor = Color.rgb(240, 246, 184),
+    bloomPatchColor = Color.rgb(255, 242, 196)
+)
+private val gardenSanctuaryLighting = SanctuaryLightingIdentity(
+    canopyColor = Color.rgb(24, 44, 38),
+    mistColor = Color.rgb(236, 248, 236),
+    fireflyColor = Color.rgb(252, 246, 180),
+    lanternOuterColor = Color.rgb(255, 234, 170),
+    lanternInnerColor = Color.rgb(255, 242, 192),
+    groundGlowColor = Color.rgb(240, 246, 186),
+    bloomPatchColor = Color.rgb(255, 240, 186)
+)
+private val restSanctuaryLighting = SanctuaryLightingIdentity(
+    canopyColor = Color.rgb(20, 28, 34),
+    mistColor = Color.rgb(228, 240, 236),
+    fireflyColor = Color.rgb(230, 242, 196),
+    lanternOuterColor = Color.rgb(255, 236, 170),
+    lanternInnerColor = Color.rgb(255, 242, 192),
+    groundGlowColor = Color.rgb(236, 240, 178),
+    bloomPatchColor = Color.rgb(238, 236, 186)
+)
+
 internal fun buildSanctuaryLightingIdentity(
     scene: SanctuaryLightingScene
 ): SanctuaryLightingIdentity = when (scene) {
-    SanctuaryLightingScene.MENU -> SanctuaryLightingIdentity(
-        canopyColor = Color.rgb(26, 42, 34),
-        mistColor = Color.rgb(232, 246, 236),
-        fireflyColor = Color.rgb(252, 246, 182),
-        lanternOuterColor = Color.rgb(255, 235, 168),
-        lanternInnerColor = Color.rgb(255, 242, 196),
-        groundGlowColor = Color.rgb(240, 246, 184),
-        bloomPatchColor = Color.rgb(255, 242, 196)
-    )
-    SanctuaryLightingScene.GARDEN -> SanctuaryLightingIdentity(
-        canopyColor = Color.rgb(24, 44, 38),
-        mistColor = Color.rgb(236, 248, 236),
-        fireflyColor = Color.rgb(252, 246, 180),
-        lanternOuterColor = Color.rgb(255, 234, 170),
-        lanternInnerColor = Color.rgb(255, 242, 192),
-        groundGlowColor = Color.rgb(240, 246, 186),
-        bloomPatchColor = Color.rgb(255, 240, 186)
-    )
-    SanctuaryLightingScene.REST -> SanctuaryLightingIdentity(
-        canopyColor = Color.rgb(20, 28, 34),
-        mistColor = Color.rgb(228, 240, 236),
-        fireflyColor = Color.rgb(230, 242, 196),
-        lanternOuterColor = Color.rgb(255, 236, 170),
-        lanternInnerColor = Color.rgb(255, 242, 192),
-        groundGlowColor = Color.rgb(236, 240, 178),
-        bloomPatchColor = Color.rgb(238, 236, 186)
-    )
+    SanctuaryLightingScene.MENU -> menuSanctuaryLighting
+    SanctuaryLightingScene.GARDEN -> gardenSanctuaryLighting
+    SanctuaryLightingScene.REST -> restSanctuaryLighting
 }

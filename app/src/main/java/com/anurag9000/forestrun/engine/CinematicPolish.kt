@@ -68,6 +68,22 @@ internal class CinematicOverlayRenderer {
     private val centerLiftPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val letterboxPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val letterboxRect = RectF()
+    private var shaderWidth = Float.NaN
+    private var shaderHeight = Float.NaN
+    private var shaderGlowColor = 0
+    private var shaderCenterYFraction = Float.NaN
+    private val edgeColors = IntArray(3)
+    private val centerColors = IntArray(3)
+    private val vignetteColors = intArrayOf(
+        Color.argb(255, 0, 0, 0),
+        Color.argb(85, 0, 0, 0),
+        Color.argb(255, 0, 0, 0)
+    )
+    private val edgePositions = floatArrayOf(0f, 0.46f, 1f)
+    private val centerPositions = floatArrayOf(0f, 0.5f, 1f)
+    private val vignettePositions = floatArrayOf(0f, 0.52f, 1f)
+    internal var shaderRebuildCountForTest: Int = 0
+        private set
 
     fun draw(
         canvas: Canvas,
@@ -81,6 +97,8 @@ internal class CinematicOverlayRenderer {
         val shimmerPulse = 0.55f + 0.45f * sin(elapsedSeconds * (1.2f + profile.shimmerStrength))
         val topLetterbox = (height * profile.letterboxHeightFraction).coerceAtLeast(0f)
         val bottomLetterboxTop = height - topLetterbox
+        val normalizedCenter = centerYFraction.coerceIn(0.2f, 0.8f)
+        ensureShaders(width, height, glowColor, normalizedCenter)
 
         letterboxPaint.color = Color.argb(profile.letterboxAlpha, 10, 12, 18)
         letterboxRect.set(0f, 0f, width, topLetterbox)
@@ -89,51 +107,74 @@ internal class CinematicOverlayRenderer {
         canvas.drawRect(letterboxRect, letterboxPaint)
 
         val glowAlpha = (profile.edgeGlowAlpha * (0.82f + shimmerPulse * 0.18f)).toInt().coerceIn(0, 255)
+        edgeGlowPaint.alpha = glowAlpha
+        canvas.drawRect(0f, 0f, width, height, edgeGlowPaint)
+
+        val centerAlpha = (profile.centerLiftAlpha * (0.78f + shimmerPulse * 0.22f)).toInt().coerceIn(0, 255)
+        val centerY = height * normalizedCenter
+        centerLiftPaint.alpha = centerAlpha
+        canvas.drawRect(0f, centerY - height * 0.18f, width, centerY + height * 0.22f, centerLiftPaint)
+
+        vignettePaint.alpha = profile.vignetteAlpha
+        canvas.drawRect(0f, 0f, width, height, vignettePaint)
+    }
+
+    private fun ensureShaders(
+        width: Float,
+        height: Float,
+        glowColor: Int,
+        centerYFraction: Float
+    ) {
+        if (width == shaderWidth &&
+            height == shaderHeight &&
+            glowColor == shaderGlowColor &&
+            centerYFraction == shaderCenterYFraction
+        ) return
+
+        val red = Color.red(glowColor)
+        val green = Color.green(glowColor)
+        val blue = Color.blue(glowColor)
+        edgeColors[0] = Color.argb(255, red, green, blue)
+        edgeColors[1] = Color.argb(0, red, green, blue)
+        edgeColors[2] = Color.argb(128, red, green, blue)
+        centerColors[0] = Color.argb(0, red, green, blue)
+        centerColors[1] = Color.argb(255, red, green, blue)
+        centerColors[2] = Color.argb(0, red, green, blue)
+        edgePositions[1] = centerYFraction
+
         edgeGlowPaint.shader = LinearGradient(
             0f,
             0f,
             0f,
             height,
-            intArrayOf(
-                Color.argb(glowAlpha, Color.red(glowColor), Color.green(glowColor), Color.blue(glowColor)),
-                Color.argb(0, Color.red(glowColor), Color.green(glowColor), Color.blue(glowColor)),
-                Color.argb(glowAlpha / 2, Color.red(glowColor), Color.green(glowColor), Color.blue(glowColor))
-            ),
-            floatArrayOf(0f, centerYFraction.coerceIn(0.2f, 0.8f), 1f),
+            edgeColors,
+            edgePositions,
             Shader.TileMode.CLAMP
         )
-        canvas.drawRect(0f, 0f, width, height, edgeGlowPaint)
-
-        val centerAlpha = (profile.centerLiftAlpha * (0.78f + shimmerPulse * 0.22f)).toInt().coerceIn(0, 255)
-        val centerY = height * centerYFraction.coerceIn(0.2f, 0.8f)
+        val centerY = height * centerYFraction
         centerLiftPaint.shader = LinearGradient(
             0f,
             centerY - height * 0.18f,
             0f,
             centerY + height * 0.22f,
-            intArrayOf(
-                Color.argb(0, Color.red(glowColor), Color.green(glowColor), Color.blue(glowColor)),
-                Color.argb(centerAlpha, Color.red(glowColor), Color.green(glowColor), Color.blue(glowColor)),
-                Color.argb(0, Color.red(glowColor), Color.green(glowColor), Color.blue(glowColor))
-            ),
-            floatArrayOf(0f, 0.5f, 1f),
+            centerColors,
+            centerPositions,
             Shader.TileMode.CLAMP
         )
-        canvas.drawRect(0f, centerY - height * 0.18f, width, centerY + height * 0.22f, centerLiftPaint)
-
         vignettePaint.shader = LinearGradient(
             0f,
             0f,
             width,
             height,
-            intArrayOf(
-                Color.argb(profile.vignetteAlpha, 0, 0, 0),
-                Color.argb(profile.vignetteAlpha / 3, 0, 0, 0),
-                Color.argb(profile.vignetteAlpha, 0, 0, 0)
-            ),
-            floatArrayOf(0f, 0.52f, 1f),
+            vignetteColors,
+            vignettePositions,
             Shader.TileMode.CLAMP
         )
-        canvas.drawRect(0f, 0f, width, height, vignettePaint)
+
+        shaderWidth = width
+        shaderHeight = height
+        shaderGlowColor = glowColor
+        shaderCenterYFraction = centerYFraction
+        shaderRebuildCountForTest++
     }
 }
