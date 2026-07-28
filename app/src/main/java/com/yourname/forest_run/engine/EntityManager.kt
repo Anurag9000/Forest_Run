@@ -93,6 +93,9 @@ class EntityManager(
         while (iterator.hasNext()) {
             val entity = iterator.next()
             entity.update(deltaTime, gameState.scrollSpeed)
+            if (entity.isActive && entity.encounterOutcome == EncounterOutcome.PENDING) {
+                entity.updatePlayerInteraction(player, gameState)
+            }
             if (!entity.isActive) iterator.remove()
         }
 
@@ -129,6 +132,7 @@ class EntityManager(
             }
 
             if (selectedEntity != null && selectedResult != CollisionResult.NONE) {
+                selectedEntity.onOutcomeSelected(selectedResult, player, gameState)
                 selectedEntity.encounterOutcome = when (selectedResult) {
                     CollisionResult.HIT -> EncounterOutcome.HIT
                     CollisionResult.STUMBLE -> EncounterOutcome.STUMBLE

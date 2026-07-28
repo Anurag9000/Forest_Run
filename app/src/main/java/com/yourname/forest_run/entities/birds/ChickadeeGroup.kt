@@ -67,6 +67,7 @@ class ChickadeeGroup(
     private var pocketPrompted = false
     private var readPocket = false
     private val flutterPocketRect = RectF()
+    private val pocketApproachRect = RectF()
 
     private val birdRects = Array(birdCount) { i ->
         val bx = startX + i * spacing
@@ -129,13 +130,10 @@ class ChickadeeGroup(
         )
     }
 
-    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+    override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {
         val approachLeft = birdRects.first().left - readability.stagingPaddingPx * 6f
         val approachRight = birdRects.last().right + readability.stagingPaddingPx
-        if (!warned &&
-            player.hitbox.right >= approachLeft &&
-            player.hitbox.left <= approachRight
-        ) {
+        if (!warned && player.hitbox.right >= approachLeft && player.hitbox.left <= approachRight) {
             warned = true
             DialogueBubbleManager.spawn(
                 BirdEncounterFlavor.chickadeeWarning(flutterSpread()),
@@ -145,13 +143,14 @@ class ChickadeeGroup(
                 Color.rgb(170, 128, 84)
             )
         }
-        val pocketApproach = RectF(
+
+        pocketApproachRect.set(
             flutterPocketRect.left - readability.stagingPaddingPx,
             flutterPocketRect.top - readability.stagingPaddingPx,
             flutterPocketRect.right + readability.stagingPaddingPx,
             flutterPocketRect.bottom + readability.stagingPaddingPx
         )
-        if (!pocketPrompted && RectF.intersects(player.hitbox, pocketApproach)) {
+        if (!pocketPrompted && RectF.intersects(player.hitbox, pocketApproachRect)) {
             pocketPrompted = true
             DialogueBubbleManager.spawn(
                 BirdEncounterFlavor.chickadeePocketPrompt(),
@@ -161,13 +160,19 @@ class ChickadeeGroup(
                 Color.rgb(170, 128, 84)
             )
         }
-        if (RectF.intersects(player.hitbox, flutterPocketRect)) {
-            readPocket = true
-        }
+        if (RectF.intersects(player.hitbox, flutterPocketRect)) readPocket = true
+    }
+
+    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         for (rect in birdRects) {
             if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT
             val mercyPad = readability.mercyPaddingPx
-            val mercy = RectF(rect.left - mercyPad, rect.top - mercyPad, rect.right + mercyPad, rect.bottom + mercyPad)
+            val mercy = RectF(
+                rect.left - mercyPad,
+                rect.top - mercyPad,
+                rect.right + mercyPad,
+                rect.bottom + mercyPad
+            )
             if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         }
         return CollisionResult.NONE

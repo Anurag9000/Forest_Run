@@ -238,18 +238,24 @@ class Fox(
         }
     }
 
-    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        // Trigger mirror jump check during every frame while player is nearby
+    override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {
         tryMirrorJump(player)
+    }
 
-        if (RectF.intersects(player.hitbox, hitbox)) {
-            return CollisionResult.STUMBLE
-        }
+    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+        if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.STUMBLE
+
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
-        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (RectF.intersects(player.hitbox, mercy)) {
-            return CollisionResult.MERCY_MISS
+        val mercy = RectF(
+            hitbox.left - mercyPad,
+            hitbox.top - mercyPad,
+            hitbox.right + mercyPad,
+            hitbox.bottom + mercyPad
+        )
+        return if (RectF.intersects(player.hitbox, mercy)) {
+            CollisionResult.MERCY_MISS
+        } else {
+            CollisionResult.NONE
         }
-        return CollisionResult.NONE
     }
 }

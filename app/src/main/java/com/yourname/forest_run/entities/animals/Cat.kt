@@ -134,16 +134,7 @@ class Cat(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        if (RectF.intersects(player.hitbox, hitbox)) {
-            DialogueBubbleManager.spawn(
-                RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.THREAT),
-                x + catW * 0.5f,
-                y - 14f,
-                Color.rgb(255, 226, 226),
-                Color.rgb(180, 60, 60)
-            )
-            return CollisionResult.HIT
-        }
+        if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
 
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
         val mercy = RectF(
@@ -152,23 +143,10 @@ class Cat(
             hitbox.right + mercyPad,
             hitbox.bottom + mercyPad
         )
-        if (RectF.intersects(player.hitbox, mercy)) {
-            if (!playerHasPassed) {
-                DialogueBubbleManager.spawn(
-                    RelationshipArcSystem.encounterCueLine(
-                        context,
-                        EntityType.CAT,
-                        RelationshipArcSystem.EncounterCue.MERCY
-                    ),
-                    player.x + Player.BASE_WIDTH * 0.5f,
-                    player.y - 24f,
-                    Color.rgb(255, 245, 220),
-                    Color.rgb(180, 140, 70)
-                )
-            }
-            return CollisionResult.MERCY_MISS
+        return if (RectF.intersects(player.hitbox, mercy)) {
+            CollisionResult.MERCY_MISS
+        } else {
+            CollisionResult.NONE
         }
-
-        return CollisionResult.NONE
     }
 }

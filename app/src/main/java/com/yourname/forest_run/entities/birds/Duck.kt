@@ -38,6 +38,8 @@ class Duck(
     private val insetY = birdH * readability.hitInsetYRatio
     private val quackCallRect = RectF()
     private val duckLaneRect = RectF()
+    private val quackApproachRect = RectF()
+    private val laneApproachRect = RectF()
     private val quackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(36, 255, 247, 188)
         style = Paint.Style.FILL
@@ -138,14 +140,14 @@ class Duck(
         )
     }
 
-    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        val quackApproach = RectF(
+    override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {
+        quackApproachRect.set(
             hitbox.left - readability.stagingPaddingPx * 7f,
             hitbox.top - readability.stagingPaddingPx * 2.2f,
             hitbox.right,
             hitbox.bottom + readability.stagingPaddingPx
         )
-        if (!quackCalled && RectF.intersects(player.hitbox, quackApproach)) {
+        if (!quackCalled && RectF.intersects(player.hitbox, quackApproachRect)) {
             quackCalled = true
             DialogueBubbleManager.spawn(
                 BirdEncounterFlavor.duckCall(),
@@ -155,13 +157,14 @@ class Duck(
                 Color.rgb(184, 146, 62)
             )
         }
-        val laneApproach = RectF(
+
+        laneApproachRect.set(
             duckLaneRect.left - readability.stagingPaddingPx * 2f,
             duckLaneRect.top - readability.stagingPaddingPx,
             duckLaneRect.right,
             duckLaneRect.bottom + readability.stagingPaddingPx
         )
-        if (!lanePrompted && RectF.intersects(player.hitbox, laneApproach)) {
+        if (!lanePrompted && RectF.intersects(player.hitbox, laneApproachRect)) {
             lanePrompted = true
             DialogueBubbleManager.spawn(
                 BirdEncounterFlavor.duckAnswerPrompt(),
@@ -173,14 +176,23 @@ class Duck(
         }
         if (player.state == PlayerState.DUCKING && RectF.intersects(player.hitbox, duckLaneRect)) {
             stayedLow = true
-            if (quackCalled) {
-                answeredQuack = true
-            }
+            if (quackCalled) answeredQuack = true
         }
+    }
+
+    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
-        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
-        return CollisionResult.NONE
+        val mercy = RectF(
+            hitbox.left - mercyPad,
+            hitbox.top - mercyPad,
+            hitbox.right + mercyPad,
+            hitbox.bottom + mercyPad
+        )
+        return if (RectF.intersects(player.hitbox, mercy)) {
+            CollisionResult.MERCY_MISS
+        } else {
+            CollisionResult.NONE
+        }
     }
 }

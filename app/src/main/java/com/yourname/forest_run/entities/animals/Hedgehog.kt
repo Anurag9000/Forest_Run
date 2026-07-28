@@ -67,6 +67,8 @@ class Hedgehog(
     private var armed = false
     private var warningLeadTimer = 0f
     private var pulse = 0f
+    private val warningRect = RectF()
+    private val mercyRect = RectF()
 
     init {
         x = startX
@@ -141,8 +143,8 @@ class Hedgehog(
         }
     }
 
-    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        val warningRect = RectF(
+    override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {
+        warningRect.set(
             hitbox.left - readability.stagingPaddingPx * 5f,
             hitbox.top - readability.stagingPaddingPx,
             hitbox.right + readability.stagingPaddingPx,
@@ -160,25 +162,24 @@ class Hedgehog(
                 Color.rgb(160, 120, 70)
             )
         }
-        if (RectF.intersects(player.hitbox, hitbox)) {
-            if (warned && !armed) {
-                DialogueBubbleManager.spawn(
-                    "Hop now.",
-                    x + hogW * 0.5f,
-                    y - 14f,
-                    Color.rgb(226, 244, 255),
-                    Color.rgb(94, 144, 178)
-                )
-                return CollisionResult.MERCY_MISS
-            }
-            if (!hasHit) {
+    }
+
+    override fun onOutcomeSelected(
+        result: CollisionResult,
+        player: Player,
+        gameState: GameStateManager
+    ) {
+        when (result) {
+            CollisionResult.STUMBLE -> if (!hasHit) {
                 hasHit = true
-                // Speed debuff: 50% speed for 3 seconds
                 gameState.applySpeedDebuff(0.5f, 3000)
-                // curl — freeze on last sprite frame
                 sprite.isLooping = false
                 sprite.setFrame(sprite.frameCount - 1)
-                ParticleManager.emit(FxPreset.MERCY_STARS, player.x + Player.BASE_WIDTH * 0.5f, player.y + Player.BASE_HEIGHT * 0.5f)
+                ParticleManager.emit(
+                    FxPreset.MERCY_STARS,
+                    player.x + Player.BASE_WIDTH * 0.5f,
+                    player.y + Player.BASE_HEIGHT * 0.5f
+                )
                 DialogueBubbleManager.spawn(
                     AnimalEncounterFlavor.hedgehogHit(repeatHits),
                     player.x + Player.BASE_WIDTH * 0.5f,
@@ -187,17 +188,46 @@ class Hedgehog(
                     Color.rgb(160, 120, 70)
                 )
             }
-            // Hedgehog is NOT a game-over — return NONE so the system doesn't kill the player
-            return CollisionResult.NONE
+
+            CollisionResult.MERCY_MISS -> {
+                val line = if (warned && !armed && RectF.intersects(player.hitbox, hitbox)) {
+                    "Hop now."
+                } else {
+                    "Eep!"
+                }
+                DialogueBubbleManager.spawn(
+                    line,
+                    x + hogW * 0.5f,
+                    y - 14f,
+                    Color.rgb(255, 246, 220),
+                    Color.rgb(160, 120, 70)
+                )
+            }
+
+            else -> Unit
+        }
+    }
+
+    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+        if (RectF.intersects(player.hitbox, hitbox)) {
+            return if (warned && !armed) {
+                CollisionResult.MERCY_MISS
+            } else {
+                CollisionResult.STUMBLE
+            }
         }
 
         val mercyPad = readability.mercyPaddingPx
-        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (RectF.intersects(player.hitbox, mercy)) {
-            DialogueBubbleManager.spawn("Eep!", x + hogW * 0.5f, y - 14f, Color.rgb(255, 246, 220), Color.rgb(160, 120, 70))
-            return CollisionResult.MERCY_MISS
+        mercyRect.set(
+            hitbox.left - mercyPad,
+            hitbox.top - mercyPad,
+            hitbox.right + mercyPad,
+            hitbox.bottom + mercyPad
+        )
+        return if (RectF.intersects(player.hitbox, mercyRect)) {
+            CollisionResult.MERCY_MISS
+        } else {
+            CollisionResult.NONE
         }
-
-        return CollisionResult.NONE
     }
 }

@@ -38,5 +38,19 @@ abstract class Entity(val context: Context) {
 
     open fun performUniqueAction(player: Player, gameState: GameStateManager) = Unit
 
+    /**
+     * Advance telegraphs and player-reactive mechanics once per frame. This is
+     * intentionally separate from [onCollision], which must be a pure query.
+     */
+    open fun updatePlayerInteraction(player: Player, gameState: GameStateManager) = Unit
+
+    /** Apply mechanical or presentation effects only after this entity wins arbitration. */
+    open fun onOutcomeSelected(
+        result: CollisionResult,
+        player: Player,
+        gameState: GameStateManager
+    ) = Unit
+
+    /** Return the current overlap result without mutating state or emitting presentation. */
     abstract fun onCollision(player: Player, gameState: GameStateManager): CollisionResult
 }

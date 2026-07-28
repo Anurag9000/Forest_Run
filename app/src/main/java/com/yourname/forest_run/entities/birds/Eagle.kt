@@ -51,8 +51,11 @@ class Eagle(
     private var isLocked = false
     private var markPrompted = false
     private var heldMark = true
+    private var targetAnnounced = false
+    private var markGraceTimer = 0f
     private val targetZoneRect = RectF()
     private val diveCorridorRect = RectF()
+    private val markApproachRect = RectF()
     private val reticlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(255, 255, 232, 202)
         style = Paint.Style.STROKE
@@ -82,8 +85,9 @@ class Eagle(
         y = -birdH - 20f
         hitbox.set(x + insetX, y + insetY, x + birdW - insetX, y + birdH - insetY)
 
-        // Auto-lock onto the player's typical horizontal running line
-        lockOnTarget(screenWidth * 0.25f, groundY - 50f)
+        // Seed a visible lane. The live player position replaces this
+        // placeholder during the first interaction frame.
+        updateTarget(screenWidth * 0.25f, groundY - 50f)
 
         // Phase 20: play screech SFX on spawn
     }
@@ -92,6 +96,11 @@ class Eagle(
      * Call once after spawning to aim the eagle at the player's current position.
      */
     fun lockOnTarget(targetX: Float, targetY: Float) {
+        updateTarget(targetX, targetY)
+        announceTarget()
+    }
+
+    private fun updateTarget(targetX: Float, targetY: Float) {
         this.targetX = targetX
         this.targetY = targetY
         val dx = targetX - x
@@ -100,9 +109,18 @@ class Eagle(
         velX = dx / dist * diveSpeed
         velY = dy / dist * diveSpeed
         updateCueGeometry()
-        CameraSystem.shakeEagle()  // Phase 15: lock-on tremor
+    }
+
+    private fun announceTarget() {
+        if (targetAnnounced) return
+        targetAnnounced = true
+        CameraSystem.shakeEagle()
         DialogueBubbleManager.spawn(
-            RelationshipArcSystem.encounterCueLine(context, EntityType.EAGLE, RelationshipArcSystem.EncounterCue.EAGLE_LOCK),
+            RelationshipArcSystem.encounterCueLine(
+                context,
+                EntityType.EAGLE,
+                RelationshipArcSystem.EncounterCue.EAGLE_LOCK
+            ),
             targetX,
             targetY - 28f,
             Color.rgb(255, 234, 234),
@@ -115,8 +133,10 @@ class Eagle(
             lockTimer += deltaTime
             if (lockTimer >= lockDuration) {
                 isLocked = true
+                markGraceTimer = 0.18f
             }
         } else {
+            markGraceTimer = (markGraceTimer - deltaTime).coerceAtLeast(0f)
             x += velX * deltaTime
             y += velY * deltaTime
         }
@@ -166,14 +186,19 @@ class Eagle(
         )
     }
 
-    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        val markApproach = RectF(
+    override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {
+        if (!isLocked) {
+            updateTarget(player.hitbox.centerX(), player.hitbox.centerY())
+            announceTarget()
+        }
+
+        markApproachRect.set(
             targetZoneRect.left - readability.stagingPaddingPx,
             targetZoneRect.top - readability.stagingPaddingPx,
             targetZoneRect.right + readability.stagingPaddingPx,
             targetZoneRect.bottom + readability.stagingPaddingPx
         )
-        if (!markPrompted && RectF.intersects(player.hitbox, markApproach)) {
+        if (isLocked && !markPrompted && RectF.intersects(player.hitbox, markApproachRect)) {
             markPrompted = true
             DialogueBubbleManager.spawn(
                 "Clear the mark.",
@@ -183,14 +208,26 @@ class Eagle(
                 Color.rgb(180, 70, 70)
             )
         }
-        if (RectF.intersects(player.hitbox, targetZoneRect)) {
+        if (isLocked && markGraceTimer <= 0f && RectF.intersects(player.hitbox, targetZoneRect)) {
             heldMark = false
         }
+    }
+
+    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
+
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
-        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
-        return CollisionResult.NONE
+        val mercy = RectF(
+            hitbox.left - mercyPad,
+            hitbox.top - mercyPad,
+            hitbox.right + mercyPad,
+            hitbox.bottom + mercyPad
+        )
+        return if (RectF.intersects(player.hitbox, mercy)) {
+            CollisionResult.MERCY_MISS
+        } else {
+            CollisionResult.NONE
+        }
     }
 
     private fun updateCueGeometry() {

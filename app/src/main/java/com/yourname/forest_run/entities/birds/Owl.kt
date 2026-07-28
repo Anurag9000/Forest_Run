@@ -164,8 +164,7 @@ class Owl(
         )
     }
 
-    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        // If player jumps, owl should begin its dive (checked in EntityManager/GameView)
+    override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {
         if (player.state in listOf(
                 com.yourname.forest_run.entities.PlayerState.JUMPING,
                 com.yourname.forest_run.entities.PlayerState.APEX,
@@ -174,11 +173,15 @@ class Owl(
         ) {
             owlState = OwlState.ALERT
             alertTimer = 0f
-            pendingTargetX = player.x
-            pendingTargetY = player.y
+            pendingTargetX = player.hitbox.centerX()
+            pendingTargetY = player.hitbox.centerY()
             if (!hasWarned) {
                 DialogueBubbleManager.spawn(
-                    RelationshipArcSystem.encounterCueLine(context, EntityType.OWL, RelationshipArcSystem.EncounterCue.OWL_ALERT),
+                    RelationshipArcSystem.encounterCueLine(
+                        context,
+                        EntityType.OWL,
+                        RelationshipArcSystem.EncounterCue.OWL_ALERT
+                    ),
                     x + birdW * 0.5f,
                     y - 14f,
                     Color.rgb(255, 242, 220),
@@ -187,16 +190,24 @@ class Owl(
                 hasWarned = true
             }
         }
+    }
 
+    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (owlState == OwlState.DIVING && RectF.intersects(player.hitbox, hitbox)) {
             return CollisionResult.HIT
         }
 
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
-        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (owlState == OwlState.DIVING && RectF.intersects(player.hitbox, mercy)) {
-            return CollisionResult.MERCY_MISS
+        val mercy = RectF(
+            hitbox.left - mercyPad,
+            hitbox.top - mercyPad,
+            hitbox.right + mercyPad,
+            hitbox.bottom + mercyPad
+        )
+        return if (owlState == OwlState.DIVING && RectF.intersects(player.hitbox, mercy)) {
+            CollisionResult.MERCY_MISS
+        } else {
+            CollisionResult.NONE
         }
-        return CollisionResult.NONE
     }
 }

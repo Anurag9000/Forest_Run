@@ -66,6 +66,7 @@ class TitGroup(
     private var throughPrompted = false
     private var keptBeat = false
     private val troughGuideRect = RectF()
+    private val troughApproachRect = RectF()
 
     // Individual rects for collision — all birds share the same wave
     private val birdRects = Array(birdCount) { i ->
@@ -135,13 +136,10 @@ class TitGroup(
         )
     }
 
-    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+    override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {
         val approachLeft = birdRects.first().left - readability.stagingPaddingPx * 6f
         val approachRight = birdRects.last().right + readability.stagingPaddingPx
-        if (!countInPrompted &&
-            player.hitbox.right >= approachLeft &&
-            player.hitbox.left <= approachRight
-        ) {
+        if (!countInPrompted && player.hitbox.right >= approachLeft && player.hitbox.left <= approachRight) {
             countInPrompted = true
             DialogueBubbleManager.spawn(
                 BirdEncounterFlavor.titCountIn(birdCount),
@@ -151,13 +149,14 @@ class TitGroup(
                 Color.rgb(88, 138, 196)
             )
         }
-        val troughApproach = RectF(
+
+        troughApproachRect.set(
             troughGuideRect.left - readability.stagingPaddingPx * 1.6f,
             troughGuideRect.top - readability.stagingPaddingPx,
             troughGuideRect.right,
             troughGuideRect.bottom + readability.stagingPaddingPx
         )
-        if (!throughPrompted && RectF.intersects(player.hitbox, troughApproach)) {
+        if (!throughPrompted && RectF.intersects(player.hitbox, troughApproachRect)) {
             throughPrompted = true
             DialogueBubbleManager.spawn(
                 BirdEncounterFlavor.titThroughPrompt(birdCount),
@@ -167,13 +166,19 @@ class TitGroup(
                 Color.rgb(88, 138, 196)
             )
         }
-        if (RectF.intersects(player.hitbox, troughGuideRect)) {
-            keptBeat = true
-        }
+        if (RectF.intersects(player.hitbox, troughGuideRect)) keptBeat = true
+    }
+
+    override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         for (rect in birdRects) {
             if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT
             val mercyPad = readability.mercyPaddingPx
-            val mercy = RectF(rect.left - mercyPad, rect.top - mercyPad, rect.right + mercyPad, rect.bottom + mercyPad)
+            val mercy = RectF(
+                rect.left - mercyPad,
+                rect.top - mercyPad,
+                rect.right + mercyPad,
+                rect.bottom + mercyPad
+            )
             if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
         }
         return CollisionResult.NONE
