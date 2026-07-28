@@ -3,101 +3,88 @@ package com.yourname.forest_run.systems
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import kotlin.math.sin
 import android.graphics.RectF
 import com.yourname.forest_run.engine.GameStateManager
+import kotlin.math.sin
 
-/**
- * A collectible seed orb that floats above the ground.
- *
- * Visual:
- *  - Pulsing circle with a halo ring (sine-wave radius oscillation).
- *  - Colour shifts from gold → green as Bloom Meter fills.
- *  - Emits a brief sparkle ring (via ParticleManager.emit SEED_COLLECT) on collection.
- *
- * Lifetime:
- *  - Spawned by SeedOrbManager directly above a passed entity.
- *  - Scrolls left at game speed + small upward bob.
- *  - Collected when player rect overlaps the orb rect.
- *  - Despawns after LIFETIME_S seconds if uncollected.
- */
+/** Collectible seed reward staged ahead of the player after a clean pass. */
 class SeedOrb(
     var x: Float,
     var y: Float
 ) {
     companion object {
-        const val RADIUS       = 26f
-        const val BOB_SPEED    = 2.5f   // Hz
-        const val BOB_AMP      = 10f    // px
-        const val LIFETIME_S   = 6f
-        const val HALO_MARGIN  = 12f
+        const val RADIUS = 26f
+        const val BOB_SPEED = 2.5f
+        const val BOB_AMP = 10f
+        const val LIFETIME_S = 6f
+        const val HALO_MARGIN = 12f
+        private const val OFFSCREEN_MARGIN = 24f
     }
 
-    var isActive        = true
-    var isCollected     = false
+    var isActive = true
+    var isCollected = false
     private var elapsed = 0f
     private var bobTime = 0f
 
-    // Bobbing Y offset
-    private val bobRect  = RectF()
+    private val bobRect = RectF()
     private val checkRect = RectF()
-
-    // ── Paints ─────────────────────────────────────────────────────────────
     private val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style       = Paint.Style.STROKE
+        style = Paint.Style.STROKE
         strokeWidth = 3f
     }
 
-    fun update(deltaTime: Float, scrollSpeed: Float, gameState: GameStateManager): Boolean {
+    fun update(
+        deltaTime: Float,
+        scrollSpeed: Float,
+        @Suppress("UNUSED_PARAMETER") gameState: GameStateManager
+    ): Boolean {
         if (!isActive) return false
 
         elapsed += deltaTime
         bobTime += deltaTime
-
-        // Scroll left with the world
         x -= scrollSpeed * deltaTime
-        // Sine bob
-        val bob = sin((bobTime * BOB_SPEED * 2f * Math.PI.toFloat())) * BOB_AMP
 
-        // Recompute rect for this frame
-        val cy = y + bob
-        bobRect.set(x - RADIUS, cy - RADIUS, x + RADIUS, cy + RADIUS)
+        val bob = sin(bobTime * BOB_SPEED * 2f * Math.PI.toFloat()) * BOB_AMP
+        val centreY = y + bob
+        bobRect.set(
+            x - RADIUS,
+            centreY - RADIUS,
+            x + RADIUS,
+            centreY + RADIUS
+        )
 
-        // Check collection — caller passes player hitbox later via SeedOrbManager
-        if (elapsed >= LIFETIME_S) {
+        if (elapsed >= LIFETIME_S || bobRect.right < -OFFSCREEN_MARGIN) {
             isActive = false
         }
-
         return isActive
     }
 
     fun draw(canvas: Canvas, bloomFraction: Float) {
         if (!isActive) return
 
-        // Colour interpolation: gold → spring green as bloom fills
-        val r = MathUtils.lerp(255f, 60f,  bloomFraction).toInt().coerceIn(0, 255)
-        val g = MathUtils.lerp(210f, 220f, bloomFraction).toInt().coerceIn(0, 255)
-        val b = MathUtils.lerp(40f,  80f,  bloomFraction).toInt().coerceIn(0, 255)
-        val col = Color.rgb(r, g, b)
-
-        // Pulsing radius
+        val red = MathUtils.lerp(255f, 60f, bloomFraction).toInt().coerceIn(0, 255)
+        val green = MathUtils.lerp(210f, 220f, bloomFraction).toInt().coerceIn(0, 255)
+        val blue = MathUtils.lerp(40f, 80f, bloomFraction).toInt().coerceIn(0, 255)
+        val colour = Color.rgb(red, green, blue)
         val pulse = 1f + 0.08f * sin(bobTime * 5f)
         val radius = RADIUS * pulse
 
-        // Halo (semi-transparent, slightly larger)
-        haloPaint.color = col
+        haloPaint.color = colour
         haloPaint.alpha = 135
-        canvas.drawCircle(bobRect.centerX(), bobRect.centerY(), radius + HALO_MARGIN, haloPaint)
+        canvas.drawCircle(
+            bobRect.centerX(),
+            bobRect.centerY(),
+            radius + HALO_MARGIN,
+            haloPaint
+        )
 
-        // Core orb
-        corePaint.color = col
+        corePaint.color = colour
         canvas.drawCircle(bobRect.centerX(), bobRect.centerY(), radius, corePaint)
 
         corePaint.color = Color.argb(70, 255, 255, 240)
         canvas.drawCircle(bobRect.centerX(), bobRect.centerY(), radius + 5f, corePaint)
 
-        // Inner bright highlight
         corePaint.color = Color.argb(160, 255, 255, 255)
         canvas.drawCircle(
             bobRect.centerX() - radius * 0.25f,
@@ -107,8 +94,7 @@ class SeedOrb(
         )
     }
 
-    /** Returns true if player hitbox overlaps the orb. */
-    fun checkCollection(playerHitbox: android.graphics.RectF): Boolean {
+    fun checkCollection(playerHitbox: RectF): Boolean {
         if (!isActive || isCollected) return false
         checkRect.set(
             bobRect.centerX() - RADIUS,
@@ -116,11 +102,10 @@ class SeedOrb(
             bobRect.centerX() + RADIUS,
             bobRect.centerY() + RADIUS
         )
-        return android.graphics.RectF.intersects(playerHitbox, checkRect)
+        return RectF.intersects(playerHitbox, checkRect)
     }
 }
 
-/** Alias so SeedOrb can use MathUtils without circular import. */
 private object MathUtils {
-    fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t.coerceIn(0f, 1f)
+    fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t.coerceIn(0f, 1f)
 }
