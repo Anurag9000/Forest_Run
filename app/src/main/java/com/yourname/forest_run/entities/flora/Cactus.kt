@@ -46,6 +46,7 @@ class Cactus(
         strokeWidth = 3f
     }
     private var warningPulse = 0f
+    private var currentSway = 0f
 
     init {
         x = startX
@@ -57,14 +58,14 @@ class Cactus(
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         warningPulse += deltaTime * 2.8f
-        val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + insetX + sway, y + insetY)
+        currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
+        hitbox.offsetTo(x + insetX, y + insetY)
         sprite.update(deltaTime)
         if (x < -cactusWidth - 20f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
-        val sway = swayComponent?.getOffset(0f) ?: 0f
+        val sway = currentSway
         val pad = readability.stagingPaddingPx
         val pulse = 0.68f + 0.32f * kotlin.math.sin(warningPulse)
         warningPaint.alpha = (34f + 30f * pulse).toInt().coerceIn(0, 255)

@@ -65,6 +65,7 @@ class Eucalyptus(
         style = Paint.Style.FILL
     }
     private var gustPulse = 0f
+    private var currentSway = 0f
 
     init {
         x = startX
@@ -76,8 +77,8 @@ class Eucalyptus(
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         gustPulse += deltaTime * 3.5f
-        val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + hitInsetX + sway, y + hitTopY)
+        currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
+        hitbox.offsetTo(x + hitInsetX, y + hitTopY)
         val pad = readability.stagingPaddingPx
         guideRect.set(
             hitbox.left - pad * 1.2f,
@@ -90,7 +91,7 @@ class Eucalyptus(
     }
 
     override fun draw(canvas: Canvas) {
-        val sway = swayComponent?.getOffset(0f) ?: 0f
+        val sway = currentSway
         val whipStartX = x + floraWidth * 0.18f
         val whipTipBaseX = x + floraWidth * 0.88f + sway * 1.6f
         val pulseBase = 0.62f + 0.38f * kotlin.math.sin(gustPulse)

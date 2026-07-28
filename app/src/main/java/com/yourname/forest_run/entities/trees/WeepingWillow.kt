@@ -77,25 +77,26 @@ class WeepingWillow(
         strokeWidth = 4f
     }
     private var curtainPulse = 0f
+    private var currentSway = 0f
 
     init {
         x = startX
         y = groundY - treeHeight
         swayComponent = SwayComponent(speed = 0.5f, intensity = 20f)
-        updateGeometry(sway = 0f)
+        updateGeometry()
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         curtainPulse += deltaTime * 2.2f
-        val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        updateGeometry(sway)
+        currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
+        updateGeometry()
         sprite.update(deltaTime)
         if (x < -treeWidth - 50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
-        val sway = swayComponent?.getOffset(0f) ?: 0f
+        val sway = currentSway
         val pulse = 0.62f + 0.38f * kotlin.math.sin(curtainPulse)
         curtainPaint.alpha = (42f + 24f * pulse).toInt().coerceIn(0, 255)
         curtainStrokePaint.alpha = (84f + 50f * pulse).toInt().coerceIn(0, 255)
@@ -176,7 +177,7 @@ class WeepingWillow(
         return CollisionResult.NONE
     }
 
-    private fun updateGeometry(sway: Float) {
+    private fun updateGeometry() {
         hitbox.set(
             x + treeWidth / 2f - trunkWidth / 2f,
             trunkTop,
@@ -184,9 +185,9 @@ class WeepingWillow(
             groundY
         )
         curtainHitbox.set(
-            x + treeWidth * 0.06f + sway,
+            x + treeWidth * 0.06f,
             curtainTop,
-            x + treeWidth * 0.94f + sway,
+            x + treeWidth * 0.94f,
             curtainBottom
         )
         canopyRect.set(

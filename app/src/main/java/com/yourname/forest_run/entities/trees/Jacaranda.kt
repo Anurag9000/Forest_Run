@@ -70,25 +70,26 @@ class Jacaranda(
         strokeWidth = 4f
     }
     private var canopyPulse = 0f
+    private var currentSway = 0f
 
     init {
         x = startX
         y = groundY - treeHeight
         swayComponent = SwayComponent(speed = 0.8f, intensity = 15f)
-        updateGeometry(sway = 0f)
+        updateGeometry()
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         canopyPulse += deltaTime * 2.6f
-        val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        updateGeometry(sway)
+        currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
+        updateGeometry()
         sprite.update(deltaTime)
         if (x < -treeWidth - 50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
-        val sway = swayComponent?.getOffset(0f) ?: 0f
+        val sway = currentSway
         val pulse = 0.66f + 0.34f * kotlin.math.sin(canopyPulse)
         canopyHaloPaint.alpha = (24f + 26f * pulse).toInt().coerceIn(0, 255)
         canopyBloomPaint.alpha = (20f + 20f * pulse).toInt().coerceIn(0, 255)
@@ -168,7 +169,7 @@ class Jacaranda(
         return CollisionResult.NONE
     }
 
-    private fun updateGeometry(sway: Float) {
+    private fun updateGeometry() {
         hitbox.set(
             x + treeWidth / 2f - trunkWidth / 2f,
             trunkTop,
@@ -176,9 +177,9 @@ class Jacaranda(
             groundY
         )
         branchHitbox.set(
-            x + treeWidth * 0.06f + sway,
+            x + treeWidth * 0.06f,
             branchTop,
-            x + treeWidth * 0.94f + sway,
+            x + treeWidth * 0.94f,
             branchBottom
         )
         canopyCoreRect.set(

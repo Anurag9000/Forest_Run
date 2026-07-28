@@ -43,6 +43,7 @@ class VanillaOrchid(
 
     private val bottomRect   = RectF()
     private val topRect      = RectF()
+    private var currentSway  = 0f
     private val safeGapPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(56, 250, 240, 204)
         style = Paint.Style.FILL
@@ -74,19 +75,19 @@ class VanillaOrchid(
         x = startX
         y = groundY - floraHeight
         swayComponent = SwayComponent(speed = 1.2f, intensity = 8f)
-        updateCollisionGeometry(sway = 0f)
+        updateCollisionGeometry()
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
-        val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        updateCollisionGeometry(sway)
+        currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
+        updateCollisionGeometry()
         sprite.update(deltaTime)
         if (x < -floraWidth - 20f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
-        val sway = swayComponent?.getOffset(0f) ?: 0f
+        val sway = currentSway
         canvas.drawRoundRect(bottomHitbox, 14f, 14f, hazardPaint)
         canvas.drawRoundRect(topHitbox, 14f, 14f, hazardPaint)
         if (!threadRect.isEmpty) {
@@ -160,18 +161,18 @@ class VanillaOrchid(
         return CollisionResult.NONE
     }
 
-    private fun updateCollisionGeometry(sway: Float) {
+    private fun updateCollisionGeometry() {
         hitbox.set(x, y, x + floraWidth, groundY)
         bottomHitbox.set(
-            x + floraWidth * 0.14f + sway * 0.75f,
+            x + floraWidth * 0.14f,
             groundY - floraHeight * 0.22f,
-            x + floraWidth * 0.58f + sway * 0.75f,
+            x + floraWidth * 0.58f,
             groundY
         )
         topHitbox.set(
-            x + floraWidth * 0.38f + sway * 0.35f,
+            x + floraWidth * 0.38f,
             y,
-            x + floraWidth * 0.88f + sway * 0.35f,
+            x + floraWidth * 0.88f,
             groundY - floraHeight * 0.60f
         )
 

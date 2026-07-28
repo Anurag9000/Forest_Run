@@ -60,25 +60,26 @@ class CherryBlossom(
         style = Paint.Style.FILL
     }
     private var gustPulse = 0f
+    private var currentSway = 0f
 
     init {
         x = startX
         y = groundY - treeHeight
         swayComponent = SwayComponent(speed = 0.6f, intensity = 12f)
-        updateGeometry(sway = 0f)
+        updateGeometry()
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         gustPulse += deltaTime * 2.7f
-        val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        updateGeometry(sway)
+        currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
+        updateGeometry()
         sprite.update(deltaTime)
         if (x < -treeWidth - 50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
-        val sway = swayComponent?.getOffset(0f) ?: 0f
+        val sway = currentSway
         val pad = readability.stagingPaddingPx
         val pulse = 0.64f + 0.36f * kotlin.math.sin(gustPulse)
         gustPaint.alpha = (36f + 24f * pulse).toInt().coerceIn(0, 255)
@@ -142,7 +143,7 @@ class CherryBlossom(
         return CollisionResult.NONE
     }
 
-    private fun updateGeometry(sway: Float) {
+    private fun updateGeometry() {
         hitbox.set(
             x + treeWidth / 2f - trunkWidth / 2f,
             trunkTop,
@@ -150,15 +151,15 @@ class CherryBlossom(
             groundY
         )
         branchHitbox.set(
-            x + treeWidth * 0.14f + sway,
+            x + treeWidth * 0.14f,
             branchHeightHigh + treeHeight * 0.04f,
-            x + treeWidth * 0.86f + sway,
+            x + treeWidth * 0.86f,
             branchHeightLow - treeHeight * 0.04f
         )
         stormVeilRect.set(
-            x + treeWidth * 0.06f + sway,
+            x + treeWidth * 0.06f,
             branchHeightHigh - readability.stagingPaddingPx * 0.25f,
-            x + treeWidth * 0.94f + sway,
+            x + treeWidth * 0.94f,
             branchHeightLow + readability.stagingPaddingPx * 0.25f
         )
     }

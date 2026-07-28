@@ -80,6 +80,7 @@ class LilyOfValley(
     }
     private var glowPulse = 0f
     private var trapPulse = 0f
+    private var currentSway = 0f
 
     init {
         x = startX
@@ -92,14 +93,14 @@ class LilyOfValley(
         x -= scrollSpeed * deltaTime
         glowPulse += deltaTime * 3.2f
         trapPulse += deltaTime * 2.4f
-        val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + hitInsetX + sway, y + hitTopY)
+        currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
+        hitbox.offsetTo(x + hitInsetX, y + hitTopY)
         sprite.update(deltaTime)
         if (x < -floraWidth - 20f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
-        val sway = swayComponent?.getOffset(0f) ?: 0f
+        val sway = currentSway
         val pulse = 0.65f + 0.35f * kotlin.math.sin(glowPulse)
         val blossomX = x + floraWidth * 0.52f
         val blossomY = y + floraHeight * 0.28f

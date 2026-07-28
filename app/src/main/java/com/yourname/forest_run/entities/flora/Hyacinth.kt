@@ -70,6 +70,7 @@ class Hyacinth(
         style = Paint.Style.FILL
     }
     private var rhythmPulse = 0f
+    private var currentSway = 0f
 
     init {
         x = startX
@@ -81,8 +82,8 @@ class Hyacinth(
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         rhythmPulse += deltaTime * 3f
-        val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x + hitInsetX + sway, y + hitTopY)
+        currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
+        hitbox.offsetTo(x + hitInsetX, y + hitTopY)
         val pad = readability.stagingPaddingPx
         brushBox.set(hitbox.left - pad, hitbox.top - pad * 2.2f, hitbox.right + pad, hitbox.bottom + pad * 0.35f)
         sprite.update(deltaTime)
@@ -90,7 +91,7 @@ class Hyacinth(
     }
 
     override fun draw(canvas: Canvas) {
-        val sway = swayComponent?.getOffset(0f) ?: 0f
+        val sway = currentSway
         val centerX = x + floraWidth * 0.5f + sway * 0.2f
         val beatTop = y + floraHeight * 0.18f
         val beatMid = y + floraHeight * 0.38f
