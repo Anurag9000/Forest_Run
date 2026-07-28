@@ -64,7 +64,7 @@ class OwlTest {
         val gameState = GameStateManager(context)
 
         player.onJumpPressed()
-        owl.onCollision(player, gameState)
+        owl.updatePlayerInteraction(player, gameState)
 
         assertEquals("ALERT", enumFieldName(owl, "owlState"))
         assertTrue(booleanField(owl, "hasWarned"))
