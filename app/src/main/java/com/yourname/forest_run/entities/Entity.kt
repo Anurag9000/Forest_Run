@@ -25,15 +25,11 @@ abstract class Entity(val context: Context) {
 
     var hitbox = RectF()
     var isActive: Boolean = true
-
-    /** Compatibility flag for entity-specific presentation code. */
     var hasBeenPassed: Boolean = false
-
-    /**
-     * Authoritative encounter-resolution state. EntityManager changes this
-     * from PENDING exactly once and never awards another outcome afterward.
-     */
     var encounterOutcome: EncounterOutcome = EncounterOutcome.PENDING
+
+    /** Debug/showcase entities must never mutate real relationship history. */
+    var shouldRecordPersistence: Boolean = true
 
     var swayComponent: SwayComponent? = null
 
