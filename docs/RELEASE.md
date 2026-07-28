@@ -1,8 +1,6 @@
 # Forest Run — Release & Validation
 
-This is the only file tracking open work. The engine is fully implemented. Everything remaining is hardware validation and store pipeline.
-
----
+Forest Run is a feature-rich alpha. A release candidate must pass code-correctness, automated-test, asset, packaging, performance, and real-device gates. Hardware validation is necessary, but it is not the only work remaining.
 
 ## Build Commands
 
@@ -18,127 +16,186 @@ bash gradlew assembleDebugAndroidTest
 
 # Connected device tests
 bash gradlew connectedDebugAndroidTest
+
+# Static Android checks
+bash gradlew lintDebug
 ```
 
-**Output locations:**
+Expected outputs:
+
 - Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 - Android test APK: `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
 
----
+A checklist item is complete only when the command actually passes on the audited commit. Documentation, source inspection, or a previously passing build is not sufficient evidence.
 
-## Release Asset Pipeline
+## Current Project Settings
 
-```bash
-# Generate Google Play feature art
-python3 scripts/generate_store_assets.py
+| Setting | Current repository value | Release action |
+|---|---:|---|
+| Application ID | `com.yourname.forest_run` | Replace placeholder identity |
+| Min SDK | API 24 | Revalidate against supported-device policy |
+| Compile/Target SDK | API 34 | Revalidate against current Android and store requirements |
+| Java/Kotlin JVM | 17 | Verify clean build on documented toolchain |
+| Manifest orientation | `landscape` | Decide whether fixed or sensor landscape is intended |
+| Release minification | Enabled | Test the actual minified release artifact |
+| Release signing | Not explicitly configured | Add secure release signing outside source control |
 
-# Capture deterministic store screenshots on connected device
-bash scripts/capture_store_screenshots.sh
+## Correctness Gate
 
-# Curate final screenshot set from raw captures
-python3 scripts/curate_store_screenshots.py
+### Core repairs implemented on `agent/fix-core-gameplay-invariants`
 
-# Verify release packaging and emit build summary
-python3 scripts/prepare_play_release.py
-```
+- [x] Quick taps receive upward jump velocity
+- [x] Hold duration controls jump height
+- [x] Swipe-down is classified before any jump starts
+- [x] Bloom no longer replaces airborne locomotion
+- [x] GameStateManager is the authoritative Bloom clock
+- [x] Active-Bloom rewards cannot reset the Bloom timer
+- [x] One terminal outcome is assigned per entity encounter
+- [x] Collision results are resolved before clean-pass rewards
+- [x] Collision severity is deterministic: hit → stumble → mercy
+- [x] Mercy is awarded once per encounter
+- [x] Bloom conversion is exclusive of clean-pass/unique-action/orb rewards
+- [x] Seed Orbs are staged ahead of the player after a clean pass
+- [x] Unsafe entity pooling is disabled pending complete reset contracts
+- [x] Debug scenario spawns do not increment persistent encounter history
+- [x] Persistent clean passes are recorded centrally
+- [x] Cat spare-exit distance logic is valid
+- [x] Garden spending cannot be overwritten by stale lifetime-seed state
+- [x] Reused `singleTask` Activity intents apply the requested debug scenario
+- [x] Activity teardown cancels haptics and avoids an initial duplicate-thread start
 
----
+### Still required before release
 
-## Project Setup Reference
+- [ ] Build the repair branch and fix every compilation or lint failure
+- [ ] Run all unit tests and connected tests on the exact release candidate
+- [ ] Gate gameplay input so Menu, Garden, dying, game-over, and restart states cannot mutate Player or opening-guide state
+- [ ] Replace interrupted infinite-retry thread joining with bounded, interruption-safe shutdown
+- [ ] Ensure collision probing has no presentation side effects for unselected entities
+- [ ] Define complete reset contracts before reconsidering any entity pooling
+- [ ] Audit all 19 entities for telegraph, movement, collision, mercy, pass, spare, Bloom, persistence, debug, and off-screen cleanup invariants
+- [ ] Rework relationship progression so appearances alone cannot create trust milestones
+- [ ] Make Eagle targeting use the live player trajectory and validate mark retention
+- [ ] Align sway visuals and collision geometry for flora and trees
+- [ ] Convert spawn pacing from purely time-based intervals to validated world-space separation
+- [ ] Make Garden unlock particles update while the Garden is active
+- [ ] Prevent Garden return moments from being consumed during hidden preload
+- [ ] Use local calendar dates rather than elapsed UTC-day buckets for daily greetings
+- [ ] Clamp all Garden sanctuary counts to non-negative values
+- [ ] Reset the willow sit/stand menu ritual whenever returning home
+- [ ] Remove per-frame recomputation and persistence reads from GameOver drawing
+- [ ] Bound dialogue/flavor queues and implement measured text wrapping/screen clamping
+- [ ] Add density, safe-area, reduced-motion, audio, and haptic settings
+- [ ] Make ghost recording duration suitable for intended endless runs and remove synchronous death-frame hitch risk
+- [ ] Fix SoundPool load readiness, lifecycle recreation, and missing-asset reporting
+- [ ] Throttle adaptive music parameter writes and make crossfade lifecycle deterministic
 
-| Setting | Value |
-|---|---|
-| Package Name | `com.yourname.forest_run` |
-| Min SDK | API 24 |
-| Target SDK | API 34 |
-| Language | Kotlin |
-| Build System | Gradle |
-| Orientation | `sensorLandscape` |
-| Java | 17 |
+## Automated-Test Gate
 
-**AndroidManifest requirements:** `sensorLandscape`, `configChanges="orientation|screenSize|keyboardHidden"`, immersive full-screen, `keepScreenOn`, `VIBRATE` permission.
+Existing and newly added tests do not yet cover the whole engine. Required invariant tests include:
 
----
+- [x] tap, hold, swipe-down, and cancel gesture arbitration
+- [x] jump-force clamping and monotonic hold scaling
+- [x] active Bloom rewards do not restart Bloom
+- [x] stale GameStateManager cannot refund a Garden purchase
+- [ ] airborne Bloom preserves jump/fall/land behavior in an instantiated Player test
+- [ ] mercy can fire only once for an entity
+- [ ] an entity can receive only one terminal outcome
+- [ ] lethal overlap outranks simultaneous stumble/mercy overlap
+- [ ] collision is evaluated before pass resolution
+- [ ] debug encounters never change persistent counters
+- [ ] clean pass persistence increments exactly once for every entity type
+- [ ] Bloom conversion cannot stack clean-pass, unique-action, and orb rewards
+- [ ] Seed Orb spawn/scroll geometry leaves a reachable collection window
+- [ ] Garden purchase and run-earned currency remain consistent across lifecycle transitions
+- [ ] menu ritual resets after returning from Garden/rest
+- [ ] daily return moments are consumed only when visibly entering Garden
+- [ ] repeated debug launch intents switch scenarios reliably
+- [ ] render-thread shutdown terminates under interruption
+
+## Asset and Runtime Gate
+
+- [ ] Fail release builds when required sprites, audio, or fonts are absent
+- [ ] Validate sprite frame dimensions and frame-count divisibility
+- [ ] Prohibit generated placeholder sprites in release artifacts
+- [ ] Replace remaining procedural/placeholder scenic layers with approved final assets or explicitly accept them as art direction
+- [ ] Verify every sound is loaded before first playback and expose missing assets in debug diagnostics
+- [ ] Exercise the minified release build, not only debug
+- [ ] Profile allocations, frame time, memory, audio threads, and I/O during long runs
+- [ ] Remove known draw/update allocations and unbounded queues
+- [ ] Verify save migration/corruption handling and recovery behavior
 
 ## Device Acceptance Checklist
 
-A feature is not done until both the deterministic scenario and the real-device check pass. Use the exact scenario names listed here when launching via the debug scenario launcher.
-
-### Rules
-
-- Run unit tests and assemble debug before device testing.
-- If a scenario fails on device, retune before marking done.
-- Validate on at least one low-end, one mid-range, and one high-refresh Android device.
-- Long runs must remain readable after repeated Bloom, ghost, and dense-entity sequences.
+A feature is not complete until its deterministic scenario and ordinary-play check pass on physical devices. Validate at least one low-end, one representative mid-range, and one high-refresh Android device.
 
 ### Core Flow
 
-| Scenario | Acceptance Criterion |
+| Scenario | Acceptance criterion |
 |---|---|
-| `OPENING_READABILITY` | First 20–30 seconds teach duck, jump, and spacing without confusion |
-| `BLOOM_SHOWCASE` | First-time player can tell Bloom activated, world changed, HUD entered power state, rewards transformed |
-| `GHOST_READABILITY` | Ghost never reads like a broken duplicate and never obscures the live runner |
-| `REST_LOOP` | Run failure, rest summary, fade, and Garden return feel continuous and readable |
+| `OPENING_READABILITY` | First 20–30 seconds teach duck, tap jump, hold jump, and spacing without gesture conflicts |
+| `BLOOM_SHOWCASE` | Bloom activation, invincibility, preserved locomotion, conversion rules, HUD state, and expiration are unmistakable |
+| `GHOST_READABILITY` | Ghost never resembles a broken duplicate or obscures the live runner |
+| `REST_LOOP` | Failure, rest summary, fade, Garden return, currency, and next-run reset remain coherent |
 
-### Flora
+### Flora and Trees
 
-| Scenario | Acceptance Criterion |
+| Scenario | Acceptance criterion |
 |---|---|
-| `CACTUS_READ` | Cactus silhouette reads instantly and jump timing feels fair |
-| `LILY_GLOW` | Lily glow and seed-lure identity are visible without squinting |
-| `HYACINTH_BRUSH` | Brush-vs-hit difference is obvious in motion |
-| `EUCALYPTUS_WHIP` | Lean/whip read is early enough to feel fair |
-| `ORCHID_WINDOW` | The safe two-window path reads immediately on phone |
+| `CACTUS_READ` | Silhouette and jump timing are immediate and fair |
+| `LILY_GLOW` | Glow and seed-lure identity remain visible on a phone |
+| `HYACINTH_BRUSH` | Brush, stumble/debuff, mercy, and clean pass are distinct |
+| `EUCALYPTUS_WHIP` | Telegraph precedes danger by a fair interval |
+| `ORCHID_WINDOW` | Both safe windows read without trial-and-error |
+| `WILLOW_CURTAIN` | Scenic obstruction remains playable |
+| `JACARANDA_PETALS` | Petal pressure is intentional rather than visual noise |
+| `BAMBOO_GAP` | Precision gap is readable at all supported speeds |
+| `CHERRY_GUST` | Actual mechanic and visual cue agree |
 
-### Trees
+### Birds and Animals
 
-| Scenario | Acceptance Criterion |
+| Scenario | Acceptance criterion |
 |---|---|
-| `WILLOW_CURTAIN` | Willow feels scenic and obscuring without becoming unreadable |
-| `JACARANDA_PETALS` | Petal curtain reads as intentional pressure, not visual mud |
-| `BAMBOO_GAP` | Precision threading is clear and fair |
-| `CHERRY_GUST` | Gust-pressure feel is visible and distinct from other trees |
+| `DUCK_TEACH` | Lane and duck timing are unmistakable |
+| `TIT_WAVE` | Flock reads as a coherent rhythm pattern |
+| `CHICKADEE_SWERVE` | Motion is lively but predictable enough to be fair |
+| `OWL_DIVE` | Alert, glow, trajectory, and collision timing agree |
+| `EAGLE_MARK` | Reticle follows the live target and survives until the intended attack decision |
+| `CAT_KINDNESS` | Pass, mercy, hit, reward, spare, and exit are exclusive and legible |
+| `FOX_MIRROR` | Mirrored motion and outcome feel intentional |
+| `WOLF_CHARGE` | Howl, charge, dust, collision, mercy, and spare remain distinct |
+| `HEDGEHOG_DEBUFF` | Debuff can never later become a clean-pass reward for the same encounter |
+| `DOG_HAZARD` | Projectile lifecycle and collision timing are fair |
+| `DOG_BUDDY` | Buddy mode is clearly harmless and persistent behavior remains correct |
 
-### Birds
+## Store Asset Pipeline
 
-| Scenario | Acceptance Criterion |
-|---|---|
-| `DUCK_TEACH` | Duck-lane cue and duck-through timing are unmistakable |
-| `TIT_WAVE` | Rhythm-wave flock reads as one timing pattern |
-| `CHICKADEE_SWERVE` | Flutter path feels erratic but still readable |
-| `OWL_DIVE` | Owl alert, glow, and dive timing are legible in normal phone play |
-| `EAGLE_MARK` | Eagle reticle and mark cue create clear fear/read timing |
+```bash
+python3 scripts/generate_store_assets.py
+bash scripts/capture_store_screenshots.sh
+python3 scripts/curate_store_screenshots.py
+python3 scripts/prepare_play_release.py
+```
 
-### Animals
+Before relying on these scripts:
 
-| Scenario | Acceptance Criterion |
-|---|---|
-| `CAT_KINDNESS` | Cat kindness reward and spare warmth are obvious in normal play |
-| `FOX_MIRROR` | Fox mirror-jump and landing payoff feel playful, not vague |
-| `WOLF_CHARGE` | Howl, charge, and spare payoff are unmistakable |
-| `HEDGEHOG_DEBUFF` | Hedgehog warning, hit, and debuff are fair and visible |
-| `DOG_HAZARD` | Bark projectile timing is readable on first sight |
-| `DOG_BUDDY` | Buddy mode feels memorable and clearly harmless |
+- [ ] Declare Python dependencies and supported versions
+- [ ] Remove hard-coded local SDK/JDK/ADB paths
+- [ ] Support explicit device serial selection
+- [ ] Force-stop or otherwise reset app state between scenarios
+- [ ] Verify each requested scenario became active before capture
+- [ ] Reject stale, duplicate, blank, portrait, system-bar, and wrong-scenario screenshots
+- [ ] Require a non-empty approved screenshot set
+- [ ] Validate package ID, versioning, signing, bundle contents, required assets, and minified-runtime smoke test
+- [ ] Revalidate all current Play Console requirements at release time
 
----
+## Release Exit Criteria
 
-## Open Items
+Forest Run may be called a release candidate only when:
 
-These are the only remaining open items for the entire project. All engine features are fully implemented.
-
-### Hardware Validation (required before release)
-
-- [ ] Pass every scenario in the checklist above on real hardware (low-end + mid-range + high-refresh)
-- [ ] Validate entity readability and scale on physical phone screens
-- [ ] Validate ghost playback visual fade/overlap tuning on real hardware
-- [ ] Validate Bloom spectacle, Bloom conversion feel, and power-surge escalation on real hardware
-- [ ] Validate forest mood, sanctuary lighting, and cinematic overlay on low/mid/high-end hardware
-- [ ] Validate haptic tuning across device types
-- [ ] Full performance audit — confirm stable 60 FPS across long runs on representative hardware
-
-### Store Release Pipeline (after hardware validation)
-
-- [ ] Capture live screenshots on a connected device using `capture_store_screenshots.sh`
-- [ ] Run `curate_store_screenshots.py` against captured set to produce final Google Play screenshot set
-- [ ] Complete final Play Console upload and release pass using prepared metadata and release bundle
-- [ ] Final release-doc cleanup after Play Console submission is confirmed
+1. the exact candidate commit builds cleanly;
+2. all required automated tests and lint checks pass;
+3. no known P0/P1 gameplay, persistence, lifecycle, or packaging defect remains;
+4. release assets are strict-validated rather than silently replaced;
+5. the signed, minified release artifact passes smoke and long-run tests;
+6. all deterministic scenarios pass on representative physical hardware;
+7. store metadata and policy requirements are verified against current authoritative sources.
