@@ -104,6 +104,41 @@ class InputHandlerTest {
         assertEquals("CANCEL", handler.lastGestureLabel)
     }
 
+    @Test
+    fun `silent reset clears a started jump without synthesizing release`() {
+        var presses = 0
+        var releases = 0
+        handler.onJumpPressed = { presses++ }
+        handler.onJumpReleased = { releases++ }
+
+        dispatch(MotionEvent.ACTION_DOWN, 100f, 100f)
+        handler.tick(0.08f)
+        handler.cancelActiveGesture()
+        handler.tick(0.5f)
+        dispatch(MotionEvent.ACTION_UP, 100f, 100f)
+
+        assertEquals(1, presses)
+        assertEquals(0, releases)
+        assertFalse(handler.isChargingJump)
+        assertFalse(handler.isDucking)
+        assertEquals(0f, handler.holdDuration, 0f)
+        assertEquals("RESET", handler.lastGestureLabel)
+    }
+
+    @Test
+    fun `silent reset can release an active duck when explicitly requested`() {
+        var duckReleases = 0
+        handler.onDuckReleased = { duckReleases++ }
+
+        dispatch(MotionEvent.ACTION_DOWN, 120f, 100f)
+        dispatch(MotionEvent.ACTION_MOVE, 122f, 205f)
+        handler.cancelActiveGesture(notifyDuckRelease = true)
+
+        assertEquals(1, duckReleases)
+        assertFalse(handler.isDucking)
+        assertEquals("RESET", handler.lastGestureLabel)
+    }
+
     private fun dispatch(action: Int, x: Float, y: Float) {
         val event = MotionEvent.obtain(
             0L,
