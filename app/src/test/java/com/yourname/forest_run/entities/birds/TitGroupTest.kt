@@ -49,6 +49,7 @@ class TitGroupTest {
             troughGuideRect.left + 54f,
             troughGuideRect.bottom - 4f
         )
+        titGroup.updatePlayerInteraction(player, gameState)
         assertEquals(CollisionResult.NONE, titGroup.onCollision(player, gameState))
         assertTrue(booleanField(titGroup, "keptBeat"))
 
