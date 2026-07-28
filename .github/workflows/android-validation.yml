@@ -28,7 +28,10 @@ jobs:
           fetch-depth: 0
 
       - name: Apply persisted feedback settings
-        run: python3 scripts/patch_feedback_settings.py
+        shell: bash
+        run: |
+          python3 scripts/patch_feedback_settings.py
+          python3 scripts/fix_feedback_settings_layout_test.py
 
       - name: Verify feedback preference contracts
         shell: bash
@@ -43,6 +46,7 @@ jobs:
           grep -q 'adjustedParticleCount(emitter.count' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
           grep -q 'feedbackSettingsPanel.onTap' app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt
           grep -q 'feedbackSettingsPanel.draw' app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt
+          grep -q 'private fun overlaps' app/src/test/java/com/anurag9000/forestrun/ui/FeedbackSettingsPanelLayoutTest.kt
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -139,6 +143,7 @@ jobs:
         run: |
           git show b6afb5d9093429f8e35073028f6bb2c1706f6c27:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
           rm scripts/patch_feedback_settings.py
+          rm scripts/fix_feedback_settings_layout_test.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
