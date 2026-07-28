@@ -7,7 +7,6 @@ import com.yourname.forest_run.engine.GameStateManager
 import com.yourname.forest_run.engine.SpriteManager
 import com.yourname.forest_run.entities.CollisionResult
 import com.yourname.forest_run.entities.Player
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -54,6 +53,7 @@ class ChickadeeGroupTest {
             pocket.right - 4f,
             pocket.bottom - 4f
         )
+        chickadees.updatePlayerInteraction(player, gameState)
         assertTrue(chickadees.onCollision(player, gameState) != CollisionResult.HIT)
         assertTrue(booleanField(chickadees, "readPocket"))
     }
@@ -76,9 +76,7 @@ class ChickadeeGroupTest {
         val field = ChickadeeGroup::class.java.getDeclaredField(name)
         field.isAccessible = true
         val target = field.get(chickadees) as FloatArray
-        for (index in values.indices) {
-            target[index] = values[index]
-        }
+        for (index in values.indices) target[index] = values[index]
     }
 
     private fun booleanField(chickadees: ChickadeeGroup, name: String): Boolean {
