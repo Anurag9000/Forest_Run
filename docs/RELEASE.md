@@ -1,6 +1,6 @@
 # Forest Run — Release & Validation
 
-Forest Run is a feature-rich alpha with the primary correctness-remediation pass implemented. A release candidate must still pass connected-device, physical-hardware, signed-artifact, performance, settings/accessibility, and store-acceptance gates.
+Forest Run is a feature-rich alpha with the primary correctness-remediation pass implemented. A release candidate must still pass connected-device, physical-hardware, signed-artifact, measured-performance, visual-acceptance, and store-acceptance gates.
 
 ## Canonical Build Commands
 
@@ -105,13 +105,14 @@ The default Play release script refuses unsigned upload preparation unless `--al
 - [x] Best-run ghost capture detaches in O(1), publishes to playback memory immediately, and persists atomically off the render thread
 - [x] Corrupt, oversized, truncated, trailing, non-finite, invalid-state, or non-monotonic ghost files are rejected safely
 - [x] Menu, Garden, HUD, debug controls, and rest UI share one aspect-preserving safe-content transform with inverse touch mapping
+- [x] Reduced-motion, audio, and haptic preferences persist independently of progression and are enforced at camera, particles, cinematic shimmer, music, SFX, and vibration boundaries
+- [x] Save state is schema-versioned, known corrupt values are repaired before runtime reads, incomplete summaries are discarded, and writes are clamped or saturating
+- [x] Newer-schema preferences and ghost files are preserved while the older build uses isolated compatibility storage
 
 ### Still required before release
 
-- [ ] Validate safe-content behavior and density scaling on representative cutout, unusual-aspect, phone, and tablet hardware
-- [ ] Add reduced-motion, audio, and haptic user settings
+- [ ] Validate safe-content behavior, density scaling, and feedback controls on representative cutout, unusual-aspect, phone, and tablet hardware
 - [ ] Profile and remove material per-frame allocations or emitter churn found on hardware
-- [ ] Verify broader save migration, SharedPreferences corruption recovery, and forward compatibility
 - [ ] Decide whether fixed landscape and the remaining procedural scenic layers are final product choices
 
 ## Automated-Test Gate
@@ -143,12 +144,14 @@ The default Play release script refuses unsigned upload preparation unless `--al
 - [x] Atomic ghost round trips and malformed-file rejection
 - [x] Safe-content identity, asymmetric-cutout, round-trip, edge-clamp, and pathological-inset geometry
 - [x] R8 mapping contains actually renamed Forest Run classes
+- [x] Feedback preference defaults, persistence, wrong-type recovery, reduced-motion camera/particle/shimmer behavior, and non-overlapping menu hit regions
+- [x] Legacy save repair, migration idempotence, partial-summary rejection, unknown-key preservation, clamped writes, and saturating counters
+- [x] Future-schema preference and ghost preservation with compatibility-namespace round trips
 
 ### Still needed
 
 - [ ] Execute `connectedDebugAndroidTest` on an emulator and physical device
 - [ ] Add a deterministic interruption test around the real `GameThread`/`GameView` shutdown boundary if feasible without instrumentation
-- [ ] Add broader SharedPreferences save-corruption and migration fixtures
 - [ ] Add signed-release installation and launch smoke tests
 
 ## Asset and Runtime Gate
@@ -184,6 +187,8 @@ A feature is not complete until its deterministic scenario and ordinary-play che
 | `REST_LOOP` | Failure, rest summary, fade, Garden return, currency, and next-run reset remain coherent |
 | Garden ordinary flow | Catalogue, stats, narrative, wardrobe, particles, back gesture, and run button remain readable and tappable |
 | Safe-content flow | Essential UI and mapped tap regions remain inside cutouts/system bars without distorting readability |
+| Feedback controls | Motion, audio, and haptic toggles remain reachable before a run and take effect immediately without altering gameplay physics or hazard telegraphs |
+| Save recovery | Legacy/corrupt saves repair safely, future-version primary data remains untouched, and compatibility storage behaves coherently |
 | Lifecycle recovery | Background/resume, process recreation, repeated intents, and surface recreation preserve coherent state |
 
 ### Flora and Trees
