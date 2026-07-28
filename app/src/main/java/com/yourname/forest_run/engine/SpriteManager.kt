@@ -19,6 +19,9 @@ class SpriteManager(private val context: Context) {
         private const val PLAYER_DUCK_FRAMES = 48
         private const val PLAYER_HIT_FRAMES = 12
         private const val PLAYER_DEATH_FRAMES = 12
+        private const val MIN_FRAME_EDGE_PX = 8
+        private const val MAX_SHEET_WIDTH_PX = 16_384
+        private const val MAX_SHEET_HEIGHT_PX = 4_096
     }
 
     private val assets: AssetManager = context.assets
@@ -65,16 +68,17 @@ class SpriteManager(private val context: Context) {
     val dogSprite: SpriteSheet
 
     init {
-        // The packaged technical runner sheets are 80x100 per frame. They are
-        // still drawn into Player.BASE_WIDTH x BASE_HEIGHT destination bounds.
-        val playerFrameWidth = 80
-        val playerFrameHeight = 100
+        // Fallback dimensions are used only for generated DEBUG placeholders.
+        // Authored source sheets retain their native per-frame dimensions and
+        // are scaled into gameplay destination rectangles by SpriteSheet.
+        val fallbackPlayerFrameWidth = 80
+        val fallbackPlayerFrameHeight = 106
 
         val runBitmap = loadValidated(
             AssetPaths.Char.RUN,
             Color.rgb(70, 160, 255),
-            playerFrameWidth,
-            playerFrameHeight,
+            fallbackPlayerFrameWidth,
+            fallbackPlayerFrameHeight,
             PLAYER_RUN_FRAMES
         )
         playerRun = SpriteSheet(
@@ -87,8 +91,8 @@ class SpriteManager(private val context: Context) {
         val jumpBitmap = loadValidated(
             AssetPaths.Char.JUMP,
             Color.rgb(255, 220, 60),
-            playerFrameWidth,
-            playerFrameHeight,
+            fallbackPlayerFrameWidth,
+            fallbackPlayerFrameHeight,
             PLAYER_JUMP_STRIP_FRAMES
         )
         playerJumpStart = SpriteSheet(
@@ -141,8 +145,8 @@ class SpriteManager(private val context: Context) {
         val duckBitmap = loadValidated(
             AssetPaths.Char.DUCK,
             Color.rgb(80, 220, 180),
-            playerFrameWidth,
-            playerFrameHeight,
+            fallbackPlayerFrameWidth,
+            fallbackPlayerFrameHeight,
             PLAYER_DUCK_FRAMES
         )
         playerDuck = SpriteSheet(
@@ -155,8 +159,8 @@ class SpriteManager(private val context: Context) {
         val hitBitmap = loadValidated(
             AssetPaths.Char.HIT,
             Color.rgb(220, 100, 100),
-            playerFrameWidth,
-            playerFrameHeight,
+            fallbackPlayerFrameWidth,
+            fallbackPlayerFrameHeight,
             PLAYER_HIT_FRAMES
         )
         playerHit = SpriteSheet(
@@ -169,8 +173,8 @@ class SpriteManager(private val context: Context) {
         val deathBitmap = loadValidated(
             AssetPaths.Char.DEATH,
             Color.rgb(100, 100, 100),
-            playerFrameWidth,
-            playerFrameHeight,
+            fallbackPlayerFrameWidth,
+            fallbackPlayerFrameHeight,
             PLAYER_DEATH_FRAMES
         )
         playerDeath = SpriteSheet(
@@ -189,14 +193,25 @@ class SpriteManager(private val context: Context) {
         willowSprite = loadTreeEntity(AssetPaths.Trees.WEEPING_WILLOW, Color.rgb(30, 100, 50))
         jacarandaSprite = loadTreeEntity(AssetPaths.Trees.JACARANDA, Color.rgb(150, 80, 200))
         bambooSprite = loadTreeEntity(AssetPaths.Trees.BAMBOO, Color.rgb(60, 200, 60))
-        cherryBlossomSprite = loadTreeEntity(AssetPaths.Trees.CHERRY_BLOSSOM, Color.rgb(255, 180, 200))
+        cherryBlossomSprite = loadTreeEntity(
+            AssetPaths.Trees.CHERRY_BLOSSOM,
+            Color.rgb(255, 180, 200)
+        )
 
         duckSprite = loadEntity(AssetPaths.Birds.DUCK, Color.rgb(200, 200, 50), 4)
         duckFlying = loadEntity(AssetPaths.Birds.DUCK_FLYING, Color.rgb(200, 200, 50), 4)
         titSprite = loadEntity(AssetPaths.Birds.TIT, Color.rgb(100, 180, 220), 4)
         titFlying = loadEntity(AssetPaths.Birds.TIT_FLYING, Color.rgb(100, 180, 220), 4)
-        chickadeeSprite = loadEntity(AssetPaths.Birds.CHICKADEE, Color.rgb(180, 140, 100), 4)
-        chickadeeFlying = loadEntity(AssetPaths.Birds.CHICKADEE_FLYING, Color.rgb(180, 140, 100), 4)
+        chickadeeSprite = loadEntity(
+            AssetPaths.Birds.CHICKADEE,
+            Color.rgb(180, 140, 100),
+            4
+        )
+        chickadeeFlying = loadEntity(
+            AssetPaths.Birds.CHICKADEE_FLYING,
+            Color.rgb(180, 140, 100),
+            4
+        )
         owlSprite = loadEntity(AssetPaths.Birds.OWL, Color.rgb(100, 80, 60), 4)
         owlFlying = loadEntity(AssetPaths.Birds.OWL_FLYING, Color.rgb(100, 80, 60), 4)
         eagleSprite = loadEntity(AssetPaths.Birds.EAGLE, Color.rgb(160, 120, 60), 4)
@@ -217,8 +232,8 @@ class SpriteManager(private val context: Context) {
     private fun loadValidated(
         assetPath: String,
         fallbackColour: Int,
-        frameWidth: Int,
-        frameHeight: Int,
+        fallbackFrameWidth: Int,
+        fallbackFrameHeight: Int,
         frames: Int
     ): Bitmap {
         return try {
@@ -226,7 +241,13 @@ class SpriteManager(private val context: Context) {
                 BitmapFactory.decodeStream(stream)
                     ?: throw IllegalArgumentException("BitmapFactory returned null")
             }
-            validateDimensions(decoded, assetPath, frameWidth, frameHeight, frames)
+            validateSheet(
+                bitmap = decoded,
+                assetPath = assetPath,
+                fallbackFrameWidth = fallbackFrameWidth,
+                fallbackFrameHeight = fallbackFrameHeight,
+                frames = frames
+            )
             sanitizeBitmap(decoded, assetPath)
         } catch (error: Exception) {
             if (!isDebuggable) {
@@ -241,35 +262,50 @@ class SpriteManager(private val context: Context) {
                 error
             )
             BitmapHelper.buildPlaceholderStrip(
-                frameWidth,
-                frameHeight,
+                fallbackFrameWidth,
+                fallbackFrameHeight,
                 frames,
                 fallbackColour
             )
         }
     }
 
-    private fun validateDimensions(
+    /**
+     * Source sprites have intentionally different native frame sizes. The real
+     * contract is a decodable, bounded horizontal strip whose width divides
+     * exactly by its declared frame count.
+     */
+    private fun validateSheet(
         bitmap: Bitmap,
         assetPath: String,
-        frameWidth: Int,
-        frameHeight: Int,
+        fallbackFrameWidth: Int,
+        fallbackFrameHeight: Int,
         frames: Int
     ) {
-        require(frameWidth > 0 && frameHeight > 0 && frames > 0) {
-            "Invalid expected sprite geometry for $assetPath"
+        require(fallbackFrameWidth > 0 && fallbackFrameHeight > 0 && frames > 0) {
+            "Invalid fallback sprite geometry for $assetPath"
         }
-        val expectedWidth = frameWidth * frames
-        require(bitmap.width == expectedWidth && bitmap.height == frameHeight) {
-            "$assetPath is ${bitmap.width}x${bitmap.height}; expected " +
-                "${expectedWidth}x$frameHeight ($frames frames of ${frameWidth}x$frameHeight)"
+        require(bitmap.width > 0 && bitmap.height > 0) {
+            "$assetPath decoded to an empty bitmap"
+        }
+        require(bitmap.width <= MAX_SHEET_WIDTH_PX && bitmap.height <= MAX_SHEET_HEIGHT_PX) {
+            "$assetPath is unreasonably large: ${bitmap.width}x${bitmap.height}"
+        }
+        require(bitmap.width % frames == 0) {
+            "$assetPath width ${bitmap.width} is not divisible by declared frame count $frames"
+        }
+
+        val actualFrameWidth = bitmap.width / frames
+        require(actualFrameWidth >= MIN_FRAME_EDGE_PX && bitmap.height >= MIN_FRAME_EDGE_PX) {
+            "$assetPath frames are too small: ${actualFrameWidth}x${bitmap.height}"
         }
     }
 
     /** Remove edge-connected opaque source-sheet backgrounds from bird strips. */
     private fun sanitizeBitmap(bitmap: Bitmap, assetPath: String): Bitmap {
         if (!assetPath.startsWith("sprites/birds/")) return bitmap
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
+        if (
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
             bitmap.config == Bitmap.Config.HARDWARE
         ) {
             return sanitizeBitmap(bitmap.copy(Bitmap.Config.ARGB_8888, false), assetPath)
