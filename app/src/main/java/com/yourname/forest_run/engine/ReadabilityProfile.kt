@@ -38,9 +38,6 @@ private data class EntityReadabilityTemplate(
 
 object ReadabilityProfile {
     private const val GROUND_RATIO = 0.82f
-    private const val SPAWN_INTERVAL_MAX = 1.7f
-    private const val SPAWN_INTERVAL_MIN = 0.62f
-    private const val INTERVAL_RAMP_METRES = 2000f
 
     private val templates = mapOf(
         EntityType.CACTUS to EntityReadabilityTemplate(138f, 72f, 0.16f, 0.10f, mercyPaddingPx = 13f, stagingPaddingPx = 14f),
@@ -102,8 +99,14 @@ object ReadabilityProfile {
     fun entityForGround(type: EntityType, groundY: Float): EntityReadability =
         entity(type, estimateScreenHeightFromGround(groundY))
 
-    fun spawnInterval(distanceMetres: Float): Float {
-        val t = (distanceMetres / INTERVAL_RAMP_METRES).coerceIn(0f, 1f)
-        return SPAWN_INTERVAL_MAX - t * (SPAWN_INTERVAL_MAX - SPAWN_INTERVAL_MIN)
+    /**
+     * Required distance between random spawn origins. Pacing becomes denser as
+     * the run progresses, but remains monotonic and bounded independently of
+     * the current scroll speed.
+     */
+    fun spawnGapPx(distanceMetres: Float): Float {
+        val t = (distanceMetres / GameConstants.SPAWN_GAP_RAMP_METRES).coerceIn(0f, 1f)
+        return GameConstants.SPAWN_GAP_MAX_PX -
+            t * (GameConstants.SPAWN_GAP_MAX_PX - GameConstants.SPAWN_GAP_MIN_PX)
     }
 }
