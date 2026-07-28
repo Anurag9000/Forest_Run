@@ -1,0 +1,38 @@
+name: One-shot world-space spawning remediation
+
+on:
+  push:
+    branches:
+      - agent/fix-core-gameplay-invariants
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out remediation branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/fix-core-gameplay-invariants
+          fetch-depth: 0
+
+      - name: Apply world-space spawning patch
+        run: python3 scripts/patch_world_space_spawning.py
+
+      - name: Commit patched source
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "World-space spawning is already applied."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/yourname/forest_run/engine/EntityManager.kt
+          git commit -m "fix: pace random spawns by travelled distance"
+          git push origin HEAD:agent/fix-core-gameplay-invariants
