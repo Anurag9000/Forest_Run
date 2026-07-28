@@ -107,18 +107,21 @@ jobs:
         run: |
           git show 7b4b4e0b67d46d4d0ab2ae29c225b3155e744733:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
           rm scripts/patch_async_ghost_persistence.py
+          rm -f .github/workflows/commit-ghost-remediation.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'perf: persist best-run ghosts off the render thread'
           git push origin HEAD:agent/fix-core-gameplay-invariants
 
-      - name: Upload diagnostics
+      - name: Upload validated source and diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ghost-persistence-remediation-diagnostics
           path: |
+            app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+            app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
             compile.log
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
