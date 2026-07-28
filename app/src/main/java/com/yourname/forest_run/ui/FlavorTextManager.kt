@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import com.yourname.forest_run.engine.AssetPaths
 import com.yourname.forest_run.utils.MathUtils
+import java.util.ArrayDeque
 import kotlin.math.abs
 
 /** Bounded floating flavor-text overlay manager. */
