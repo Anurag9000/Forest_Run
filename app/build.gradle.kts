@@ -82,7 +82,6 @@ android {
 dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.core:core-ktx:1.13.1")
-    implementation("com.google.code.gson:gson:2.10.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.test:core:1.6.1")
