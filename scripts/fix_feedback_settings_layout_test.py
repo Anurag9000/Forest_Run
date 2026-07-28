@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
-"""Replace Android RectF helper calls in the generated layout test with pure arithmetic."""
+"""Replace Android RectF helper calls with pure coordinate arithmetic."""
 
 from pathlib import Path
+
+panel_path = Path("app/src/main/java/com/anurag9000/forestrun/ui/FeedbackSettingsPanel.kt")
+panel = panel_path.read_text(encoding="utf-8")
+old_hit_test = '''    fun hitTest(layout: FeedbackSettingsLayout, x: Float, y: Float): FeedbackToggle? = when {
+        layout.reducedMotion.contains(x, y) -> FeedbackToggle.REDUCED_MOTION
+        layout.audio.contains(x, y) -> FeedbackToggle.AUDIO
+        layout.haptics.contains(x, y) -> FeedbackToggle.HAPTICS
+        else -> null
+    }
+'''
+new_hit_test = '''    fun hitTest(layout: FeedbackSettingsLayout, x: Float, y: Float): FeedbackToggle? = when {
+        contains(layout.reducedMotion, x, y) -> FeedbackToggle.REDUCED_MOTION
+        contains(layout.audio, x, y) -> FeedbackToggle.AUDIO
+        contains(layout.haptics, x, y) -> FeedbackToggle.HAPTICS
+        else -> null
+    }
+
+    private fun contains(rect: RectF, x: Float, y: Float): Boolean =
+        x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom
+'''
+if panel.count(old_hit_test) != 1:
+    raise RuntimeError("FeedbackSettingsPanel hitTest did not match")
+panel_path.write_text(panel.replace(old_hit_test, new_hit_test, 1), encoding="utf-8")
 
 path = Path("app/src/test/java/com/anurag9000/forestrun/ui/FeedbackSettingsPanelLayoutTest.kt")
 text = path.read_text(encoding="utf-8")
