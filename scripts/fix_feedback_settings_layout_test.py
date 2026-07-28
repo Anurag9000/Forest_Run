@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replace Android RectF helper calls with pure coordinate arithmetic."""
+"""Use pure hit arithmetic and Robolectric-backed RectF construction in tests."""
 
 from pathlib import Path
 
@@ -28,6 +28,16 @@ panel_path.write_text(panel.replace(old_hit_test, new_hit_test, 1), encoding="ut
 
 path = Path("app/src/test/java/com/anurag9000/forestrun/ui/FeedbackSettingsPanelLayoutTest.kt")
 text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "import org.junit.Test\n",
+    "import org.junit.Test\nimport org.junit.runner.RunWith\nimport org.robolectric.RobolectricTestRunner\n",
+    1,
+)
+text = text.replace(
+    "class FeedbackSettingsPanelLayoutTest {",
+    "@RunWith(RobolectricTestRunner::class)\nclass FeedbackSettingsPanelLayoutTest {",
+    1,
+)
 text = text.replace(
     "assertFalse(android.graphics.RectF.intersects(layout.all[left], layout.all[right]))",
     "assertFalse(overlaps(layout.all[left], layout.all[right]))",
