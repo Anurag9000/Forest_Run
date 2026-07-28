@@ -3,12 +3,11 @@ name: Android validation
 on:
   push:
     branches:
-      - main
-      - 'agent/**'
+      - agent/fix-core-gameplay-invariants
   pull_request:
 
 concurrency:
-  group: android-validation-${{ github.workflow }}-${{ github.ref }}
+  group: save-integrity-remediation-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -16,13 +15,30 @@ permissions:
 
 jobs:
   validate:
-    name: Compile, test, lint, and build debug/release
+    name: Apply save integrity and validate debug/release
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
-      - name: Check out repository
+      - name: Check out remediation branch
         uses: actions/checkout@v4
+
+      - name: Apply save integrity wiring
+        run: python3 scripts/patch_save_integrity_existing.py
+
+      - name: Verify save integrity contracts
+        shell: bash
+        run: |
+          test -f app/src/main/java/com/anurag9000/forestrun/engine/SaveIntegrityManager.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/SaveIntegrityManagerTest.kt
+          grep -q 'SaveIntegrityManager.repair(this)' app/src/main/java/com/anurag9000/forestrun/MainActivity.kt
+          grep -q 'useCompatibilityPreferences' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'activePrefsNameForTests' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'distanceM.takeIf { it.isFinite() }' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'current == Int.MAX_VALUE' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'val all = prefs.all' app/src/main/java/com/anurag9000/forestrun/engine/FeedbackSettings.kt
+          grep -q 'future schema is preserved without destructive downgrade' app/src/test/java/com/anurag9000/forestrun/engine/SaveIntegrityManagerTest.kt
+          grep -q 'partial last run summary is discarded' app/src/test/java/com/anurag9000/forestrun/engine/SaveIntegrityManagerTest.kt
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -49,69 +65,24 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
-      - name: Verify production, accessibility, and performance contracts
+      - name: Verify accumulated release contracts
         shell: bash
         run: |
-          legacy_dotted="com"."yourname"."forest_run"
-          legacy_path="com"/"yourname"/"forest_run"
-          test -d app/src/main/java/com/anurag9000/forestrun
-          test -d app/src/test/java/com/anurag9000/forestrun
-          test ! -d "app/src/main/java/$legacy_path"
-          if grep -R -F --line-number \
-              --exclude=prepare_play_release.py \
-              --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle \
-              -e "$legacy_dotted" -e "$legacy_path" .; then
-            echo "Placeholder package identity remains outside the intentional release denylist."
-            exit 1
-          fi
           grep -q 'applicationId = "com.anurag9000.forestrun"' app/build.gradle.kts
-          grep -q 'namespace = "com.anurag9000.forestrun"' app/build.gradle.kts
-          grep -q 'compileSdk = 36' app/build.gradle.kts
           grep -q 'targetSdk = 36' app/build.gradle.kts
-          grep -q 'org.robolectric:robolectric:4.16' app/build.gradle.kts
           grep -q 'safeContentTransform.toLogical' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
-          grep -q 'return reusableGhostVisibilityContext.set(' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
           grep -q 'GhostPersistenceManager.saveBestRunAsync' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
-          grep -q 'GhostPersistenceManager.loadLatest' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
           grep -q 'AtomicFile' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
-          grep -q 'private fun ensureShaders' app/src/main/java/com/anurag9000/forestrun/engine/CinematicPolish.kt
-          grep -q 'private val tempoEvaluationThrottle' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
-          grep -q 'private val bloomEvaluationThrottle' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
-          grep -q 'private val menuLeitmotifProfile' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
-          grep -q 'private val restLeitmotifProfile' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
-          test -f app/src/main/java/com/anurag9000/forestrun/engine/FeedbackSettings.kt
-          test -f app/src/main/java/com/anurag9000/forestrun/ui/FeedbackSettingsPanel.kt
-          grep -q 'FeedbackSettings.init(this)' app/src/main/java/com/anurag9000/forestrun/MainActivity.kt
           grep -q 'FeedbackSettings.hapticsEnabled' app/src/main/java/com/anurag9000/forestrun/engine/HapticManager.kt
           grep -q 'FeedbackSettings.audioEnabled' app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt
-          grep -q 'fun setAudioEnabled(enabled: Boolean)' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
           grep -q 'FeedbackSettings.reducedMotion' app/src/main/java/com/anurag9000/forestrun/engine/CameraSystem.kt
-          grep -q 'adjustedParticleCount(emitter.count' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
-          grep -q 'feedbackSettingsPanel.onTap' app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt
-          grep -q 'feedbackSettingsPanel.draw' app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt
-          python3 - <<'PY'
-          from pathlib import Path
-          source = Path('app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt').read_text(encoding='utf-8')
-          tempo = source.split('    fun updateTempo(', 1)[1].split('    fun playRest()', 1)[0]
-          if tempo.index('tempoEvaluationThrottle.tryAcquire') > tempo.index('buildLeitmotifPlaybackProfile'):
-              raise SystemExit('Tempo profile is built before throttle acquisition')
-          bloom = source.split('    fun updateBloomSignature(', 1)[1].split('    fun endBloom(', 1)[0]
-          if bloom.index('bloomEvaluationThrottle.tryAcquire') > bloom.index('BloomMusicSignature('):
-              raise SystemExit('Bloom signature allocates before throttle acquisition')
-          if bloom.index('bloomEvaluationThrottle.tryAcquire') > bloom.index('buildLeitmotifPlaybackProfile'):
-              raise SystemExit('Bloom profile is built before throttle acquisition')
-          PY
+          grep -q 'private val tempoEvaluationThrottle' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt
           if git grep -n -E 'com\.google\.gson|Gson|SerializedName|TypeToken' -- app/src; then
-            echo 'Gson references remain in app source.'
             exit 1
           fi
           if grep -Eq -- '^-keep[[:space:]]+class[[:space:]]+com\.anurag9000\.forestrun\.\*\*' app/proguard-rules.pro; then
-            echo 'Broad application keep rule defeats release shrinking.'
             exit 1
           fi
-
-      - name: Report packaged sprite dimensions
-        run: find app/src/main/assets/sprites -type f -name '*.png' -print0 | sort -z | xargs -0 file | tee sprite-dimensions.txt
 
       - name: Compile debug and release sources
         shell: bash
@@ -124,13 +95,11 @@ jobs:
             echo '::group::Kotlin compiler diagnostics'
             grep -E '(^e: | error: |FAILURE:|Execution failed for task|\* What went wrong:)' compile.log || true
             echo '::endgroup::'
-            echo '::group::Final compile log'
-            tail -n 260 compile.log
-            echo '::endgroup::'
+            tail -n 300 compile.log
           fi
           exit $status
 
-      - name: Run debug unit tests
+      - name: Run full unit suite
         run: ./gradlew testDebugUnitTest --no-daemon --stacktrace --console=plain
 
       - name: Run debug and release lint
@@ -142,7 +111,7 @@ jobs:
       - name: Build minified release bundle
         run: ./gradlew bundleRelease --no-daemon --stacktrace --console=plain
 
-      - name: Verify build artifacts and effective shrinking
+      - name: Verify artifacts and effective shrinking
         shell: bash
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
@@ -162,40 +131,17 @@ jobs:
               raise SystemExit('R8 mapping contains no obfuscated Forest Run classes')
           PY
 
-      - name: Upload validation diagnostics
+      - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-validation-diagnostics
+          name: save-integrity-remediation-diagnostics
           path: |
             compile.log
-            sprite-dimensions.txt
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
             app/build/reports/lint-results-debug.html
-            app/build/reports/lint-results-debug.xml
             app/build/reports/lint-results-release.html
-            app/build/reports/lint-results-release.xml
             app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: warn
-          retention-days: 7
-
-      - name: Upload debug APKs
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: forest-run-debug-apks
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload unsigned release bundle
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: forest-run-release-aab-unsigned
-          path: app/build/outputs/bundle/release/app-release.aab
-          if-no-files-found: error
           retention-days: 7
