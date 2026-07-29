@@ -21,7 +21,45 @@ jobs:
           fetch-depth: 0
 
       - name: Apply collision allocation remediation
-        run: python3 scripts/patch_collision_probe_allocations.py
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/patch_collision_probe_allocations.py')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              'def block(value: str) -> str:\n    return textwrap.dedent(value).lstrip("\\n")\n',
+              'def block(value: str, indent: int = 0) -> str:\n'
+              '    normalized = textwrap.dedent(value).lstrip("\\n")\n'
+              '    return textwrap.indent(normalized, " " * indent) if indent else normalized\n'
+          )
+
+          boundaries = [
+              ('CHERRY_OLD', 4),
+              ('CHERRY_NEW', 8),
+              ('VANILLA_OLD', 8),
+              ('VANILLA_NEW', 8),
+              ('BAMBOO_OLD', 8),
+              ('BAMBOO_NEW', 12),
+              ('JACARANDA_OLD', 12),
+              ('JACARANDA_NEW', 8),
+              ('WILLOW_OLD', 8),
+              ('WILLOW_NEW', 8),
+              ('TEST_CONTENT', 8),
+          ]
+          previous = 'HELPERS'
+          for next_name, indent in boundaries:
+              marker = f'\n)\n\n{next_name} = block('
+              replacement = f'\n, {indent})\n\n{next_name} = block('
+              if text.count(marker) != 1:
+                  raise RuntimeError(f'Could not assign indentation for {previous}')
+              text = text.replace(marker, replacement, 1)
+              previous = next_name
+
+          path.write_text(text, encoding='utf-8')
+          PY
+          python3 scripts/patch_collision_probe_allocations.py
 
       - name: Verify transformed source contracts
         shell: bash
