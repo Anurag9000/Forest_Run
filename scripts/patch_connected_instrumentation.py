@@ -113,6 +113,25 @@ import org.junit.Ignore
     )
     replace_once(
         main_test,
+        '''            val gameView = requireGameView(scenario)
+            tapGameView(gameView, gameView.width * 0.10f, gameView.height * 0.92f)
+
+            waitForCondition("garden opens") {
+''',
+        '''            val gameView = requireGameView(scenario)
+            val menuTransform = getPrivateField(gameView, "safeContentTransform") as SafeContentTransform
+            tapLogical(
+                gameView,
+                menuTransform.logicalWidth * 0.175f,
+                menuTransform.logicalHeight * 0.925f
+            )
+
+            waitForCondition("garden opens") {
+''',
+        "safe logical Garden entry tap",
+    )
+    replace_once(
+        main_test,
         '''            val cardWidth = gameView.width / 10.5f
             val cardGap = cardWidth * 0.12f
             val rowStartX = (gameView.width - (9 * (cardWidth + cardGap) - cardGap)) / 2f
