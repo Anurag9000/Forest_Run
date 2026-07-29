@@ -35,27 +35,32 @@ jobs:
               '    return textwrap.indent(normalized, " " * indent) if indent else normalized\n'
           )
 
-          boundaries = [
-              ('CHERRY_OLD', 4),
+          def assign_indent(source: str, name: str, indent: int) -> str:
+              start_marker = f'{name} = block('
+              start = source.find(start_marker)
+              if start < 0:
+                  raise RuntimeError(f'Missing block assignment {name}')
+              close = source.find('\n)', start)
+              if close < 0:
+                  raise RuntimeError(f'Missing block close for {name}')
+              if source[close + 2:close + 5] == f', {indent}':
+                  return source
+              return source[:close] + f'\n, {indent})' + source[close + 2:]
+
+          for name, indent in (
+              ('HELPERS', 4),
+              ('CHERRY_OLD', 8),
               ('CHERRY_NEW', 8),
               ('VANILLA_OLD', 8),
               ('VANILLA_NEW', 8),
-              ('BAMBOO_OLD', 8),
+              ('BAMBOO_OLD', 12),
               ('BAMBOO_NEW', 12),
-              ('JACARANDA_OLD', 12),
+              ('JACARANDA_OLD', 8),
               ('JACARANDA_NEW', 8),
               ('WILLOW_OLD', 8),
               ('WILLOW_NEW', 8),
-              ('TEST_CONTENT', 8),
-          ]
-          previous = 'HELPERS'
-          for next_name, indent in boundaries:
-              marker = f'\n)\n\n{next_name} = block('
-              replacement = f'\n, {indent})\n\n{next_name} = block('
-              if text.count(marker) != 1:
-                  raise RuntimeError(f'Could not assign indentation for {previous}')
-              text = text.replace(marker, replacement, 1)
-              previous = next_name
+          ):
+              text = assign_indent(text, name, indent)
 
           path.write_text(text, encoding='utf-8')
           PY
