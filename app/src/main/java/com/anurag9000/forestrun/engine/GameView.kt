@@ -49,18 +49,6 @@ private const val TAG = "ForestRun"
  *  - Phase 12: [EntityManager] spawner + collision loop live
  */
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
-    private enum class DebugScriptAction {
-        TAP_JUMP,
-        HOLD_JUMP_START,
-        HOLD_JUMP_END,
-        DUCK_START,
-        DUCK_END
-    }
-
-    private data class DebugScriptStep(
-        val atSeconds: Float,
-        val action: DebugScriptAction
-    )
     @Volatile
     internal var debugFrameCounter: Long = 0
     private val debugToolsEnabled =
@@ -124,8 +112,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var debugEncounterOverlay: DebugEncounterOverlay? = null
     private var pendingDebugLaunchIntent: Intent? = null
     private var debugScenarioVisualsEnabled = true
-    private var debugScenarioScript: List<DebugScriptStep> = emptyList()
-    private var debugScenarioScriptIndex = 0
+    private val debugScenarioScript = DebugScenarioScript()
 
     // Restart fade-to-black overlay
     private val restartFadePaint = Paint().apply { color = Color.BLACK }
@@ -457,8 +444,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             val scenario = EncounterScenario.entries.firstOrNull { it.name == scenarioName } ?: return
             runMode = RunMode.forScenario(requestedRunMode)
             debugScenarioVisualsEnabled = false
-            debugScenarioScript = debugScriptForScenario(scenario)
-            debugScenarioScriptIndex = 0
+            debugScenarioScript.prepare(scenario)
             if (scenario == EncounterScenario.GHOST_READABILITY) {
                 ghostPlayer.load(
                     listOf(
@@ -483,8 +469,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (autoStart) {
             runMode = RunMode.NORMAL
             debugScenarioVisualsEnabled = false
-            debugScenarioScript = emptyList()
-            debugScenarioScriptIndex = 0
+            debugScenarioScript.clear()
             prepareFreshRun()
             appState = AppGameState.PLAYING
             runState = RunState.PLAYING
@@ -1199,8 +1184,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private fun prepareFreshRun() {
         runMode = RunMode.NORMAL
         encounterDirector?.stopScenario()
-        debugScenarioScript = emptyList()
-        debugScenarioScriptIndex = 0
+        debugScenarioScript.clear()
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
@@ -1297,7 +1281,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
         if (runMode == RunMode.NORMAL) runMode = RunMode.DEBUG_SCENARIO
         val scenario = director.selectedScenario
-        debugScenarioScriptIndex = 0
+        debugScenarioScript.prepare(scenario)
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
         entityManager.biomeManager.forceDebugBiome(scenario.forcedBiome)
@@ -1377,56 +1361,24 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun runDebugScenarioScript() {
         if (!debugToolsEnabled ||
-            debugScenarioScriptIndex >= debugScenarioScript.size ||
             !::gameState.isInitialized ||
+            !::player.isInitialized ||
             appState != AppGameState.PLAYING ||
             runState != RunState.PLAYING
         ) return
 
-        val elapsed = gameState.runTimeSeconds
-        while (debugScenarioScriptIndex < debugScenarioScript.size &&
-            debugScenarioScript[debugScenarioScriptIndex].atSeconds <= elapsed
-        ) {
-            when (debugScenarioScript[debugScenarioScriptIndex].action) {
-                DebugScriptAction.TAP_JUMP -> {
+        debugScenarioScript.advance(gameState.runTimeSeconds) { action ->
+            when (action) {
+                DebugScenarioAction.TAP_JUMP -> {
                     player.onJumpPressed()
                     player.onJumpReleased(0f)
                 }
-                DebugScriptAction.HOLD_JUMP_START -> player.onJumpPressed()
-                DebugScriptAction.HOLD_JUMP_END -> player.onJumpReleased(0.35f)
-                DebugScriptAction.DUCK_START -> player.onDuckPressed()
-                DebugScriptAction.DUCK_END -> player.onDuckReleased()
+                DebugScenarioAction.HOLD_JUMP_START -> player.onJumpPressed()
+                DebugScenarioAction.HOLD_JUMP_END -> player.onJumpReleased(0.35f)
+                DebugScenarioAction.DUCK_START -> player.onDuckPressed()
+                DebugScenarioAction.DUCK_END -> player.onDuckReleased()
             }
-            debugScenarioScriptIndex++
         }
-    }
-
-    private fun debugScriptForScenario(scenario: EncounterScenario): List<DebugScriptStep> = when (scenario) {
-        EncounterScenario.CACTUS_READ -> listOf(
-            DebugScriptStep(3.18f, DebugScriptAction.HOLD_JUMP_START),
-            DebugScriptStep(3.48f, DebugScriptAction.HOLD_JUMP_END),
-            DebugScriptStep(5.06f, DebugScriptAction.HOLD_JUMP_START),
-            DebugScriptStep(5.36f, DebugScriptAction.HOLD_JUMP_END)
-        )
-        EncounterScenario.CAT_KINDNESS -> listOf(
-            DebugScriptStep(0.95f, DebugScriptAction.HOLD_JUMP_START),
-            DebugScriptStep(1.22f, DebugScriptAction.HOLD_JUMP_END),
-            DebugScriptStep(3.25f, DebugScriptAction.HOLD_JUMP_START),
-            DebugScriptStep(3.52f, DebugScriptAction.HOLD_JUMP_END)
-        )
-        EncounterScenario.FOX_MIRROR -> listOf(
-            DebugScriptStep(2.10f, DebugScriptAction.HOLD_JUMP_START),
-            DebugScriptStep(2.40f, DebugScriptAction.HOLD_JUMP_END),
-            DebugScriptStep(4.35f, DebugScriptAction.HOLD_JUMP_START),
-            DebugScriptStep(4.64f, DebugScriptAction.HOLD_JUMP_END)
-        )
-        EncounterScenario.EAGLE_MARK -> listOf(
-            DebugScriptStep(1.35f, DebugScriptAction.HOLD_JUMP_START),
-            DebugScriptStep(1.66f, DebugScriptAction.HOLD_JUMP_END),
-            DebugScriptStep(4.30f, DebugScriptAction.HOLD_JUMP_START),
-            DebugScriptStep(4.62f, DebugScriptAction.HOLD_JUMP_END)
-        )
-        else -> emptyList()
     }
 
     private fun shouldDrawGhostPlayback(): Boolean {

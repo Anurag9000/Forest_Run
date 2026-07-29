@@ -63,7 +63,11 @@ class EntityManager(
         gameState: GameStateManager,
         player: Player,
         encounterDirector: EncounterDirector? = null,
-        runMode: RunMode = RunMode.NORMAL
+        runMode: RunMode = if (encounterDirector == null) {
+            RunMode.NORMAL
+        } else {
+            RunMode.DEBUG_SCENARIO
+        }
     ) {
         if (gameState.isBloomActive != bloomWasActive) {
             bloomReactedEntities.clear()
