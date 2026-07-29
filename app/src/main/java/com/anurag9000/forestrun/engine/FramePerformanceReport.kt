@@ -50,7 +50,10 @@ data class FramePerformanceReport(
         value: String,
         trailingComma: Boolean
     ) {
-        append("  ").appendQuoted(key).append(": ").appendQuoted(value)
+        append("  ")
+        appendQuoted(key)
+        append(": ")
+        appendQuoted(value)
         if (trailingComma) append(',')
         append('\n')
     }
