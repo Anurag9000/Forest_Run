@@ -763,6 +763,13 @@ internal fun buildParallaxAtmosphereProfile(
 
     replace_once(
         path,
+        "    private val mistBandPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }\n",
+        "",
+        "remove obsolete per-band mist paint",
+    )
+
+    replace_once(
+        path,
         '''    private val glowMotePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 ''',
         '''    private val glowMotePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -779,7 +786,8 @@ internal fun buildParallaxAtmosphereProfile(
         Color.argb(0, 255, 214, 146),
         Color.argb(255, 255, 206, 132)
     )
-    private val threeStopPositions = floatArrayOf(0f, 0.55f, 1f)
+    private val canopyPositions = floatArrayOf(0f, 0.5f, 1f)
+    private val mistPositions = floatArrayOf(0f, 0.55f, 1f)
     private var staticAtmosphereShadersReady = false
     private var cachedSkyTopShaderColor = Int.MIN_VALUE
     private var cachedSkyBottomShaderColor = Int.MIN_VALUE
@@ -1108,7 +1116,7 @@ internal fun buildParallaxAtmosphereProfile(
                 0f,
                 groundY,
                 canopyShaderColors,
-                threeStopPositions,
+                canopyPositions,
                 Shader.TileMode.CLAMP
             )
             cachedCanopyNearShaderColor = quantizedNear
@@ -1138,7 +1146,7 @@ internal fun buildParallaxAtmosphereProfile(
                     0f,
                     groundY + screenHeight * (0.02f + index * 0.014f),
                     mistShaderColors,
-                    threeStopPositions,
+                    mistPositions,
                     Shader.TileMode.CLAMP
                 )
             }
@@ -1277,7 +1285,14 @@ def patch_game_view() -> None:
 
 
 def patch_ui_cinematic_profiles() -> None:
+    cinematic_import = "import com.anurag9000.forestrun.engine.buildCinematicPolishProfile\n"
+    reusable_imports = (
+        "import com.anurag9000.forestrun.engine.CinematicPolishProfile\n"
+        "import com.anurag9000.forestrun.engine.resolveCinematicPolishProfile\n"
+    )
+
     menu = "app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt"
+    replace_once(menu, cinematic_import, reusable_imports, "menu cinematic imports")
     replace_once(
         menu,
         '''    private val cinematicOverlay = CinematicOverlayRenderer()
@@ -1339,6 +1354,7 @@ def patch_ui_cinematic_profiles() -> None:
     )
 
     garden = "app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt"
+    replace_once(garden, cinematic_import, reusable_imports, "garden cinematic imports")
     replace_once(
         garden,
         '''    private val cinematicOverlay = CinematicOverlayRenderer()
@@ -1374,6 +1390,7 @@ def patch_ui_cinematic_profiles() -> None:
     )
 
     rest = "app/src/main/java/com/anurag9000/forestrun/ui/GameOverScreen.kt"
+    replace_once(rest, cinematic_import, reusable_imports, "rest cinematic imports")
     replace_once(
         rest,
         '''    private val cinematicOverlay = CinematicOverlayRenderer()
