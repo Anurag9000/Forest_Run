@@ -28,7 +28,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply render allocation remediation
-        run: python3 scripts/patch_render_hot_path_allocations.py
+        run: |
+          python3 scripts/patch_render_hot_path_allocations.py
+          python3 scripts/patch_render_hot_path_test_robolectric.py
 
       - name: Verify transformed hot-path contracts
         shell: bash
@@ -123,9 +125,12 @@ jobs:
         shell: bash
         run: |
           rm scripts/patch_render_hot_path_allocations.py
+          rm scripts/patch_render_hot_path_test_robolectric.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java app/src/test/java scripts/patch_render_hot_path_allocations.py
+          git add app/src/main/java app/src/test/java \
+            scripts/patch_render_hot_path_allocations.py \
+            scripts/patch_render_hot_path_test_robolectric.py
           git commit -m 'perf: remove recurring render hot-path allocations'
           git push origin HEAD:agent/fix-core-gameplay-invariants
 
