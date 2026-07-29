@@ -119,6 +119,15 @@ import org.junit.Ignore
             waitForCondition("garden opens") {
 ''',
         '''            val gameView = requireGameView(scenario)
+            waitForCondition("live menu is ready for Garden entry", timeoutMs = 8_000L) {
+                getPrivateField(gameView, "mainMenuScreen") != null &&
+                    getPrivateField(gameView, "appState") == AppGameState.MENU &&
+                    gameView.width > 0 &&
+                    gameView.height > 0 &&
+                    gameView.debugFrameCounter > 10
+            }
+            val menu = getPrivateField(gameView, "mainMenuScreen") as MainMenuScreen
+            org.junit.Assert.assertEquals(MainMenuScreen.Phase.IDLE, menu.phase)
             val menuTransform = getPrivateField(gameView, "safeContentTransform") as SafeContentTransform
             tapLogical(
                 gameView,
@@ -126,9 +135,9 @@ import org.junit.Ignore
                 menuTransform.logicalHeight * 0.925f
             )
 
-            waitForCondition("garden opens") {
+            waitForCondition("garden opens", timeoutMs = 8_000L) {
 ''',
-        "safe logical Garden entry tap",
+        "ready safe logical Garden entry tap",
     )
     replace_once(
         main_test,
