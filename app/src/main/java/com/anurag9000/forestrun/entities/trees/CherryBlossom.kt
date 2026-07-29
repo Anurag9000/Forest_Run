@@ -132,14 +132,14 @@ class CherryBlossom(
         if (RectF.intersects(player.hitbox, hitbox) ||
             RectF.intersects(player.hitbox, branchHitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
-        val bm = RectF(
-            stormVeilRect.left - mercyPad * 0.25f,
-            stormVeilRect.top - mercyPad * 0.45f,
-            stormVeilRect.right + mercyPad * 0.25f,
-            stormVeilRect.bottom + mercyPad * 0.45f
-        )
-        val tm = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (RectF.intersects(player.hitbox, bm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
+        if (
+            intersectsExpanded(
+                player.hitbox,
+                stormVeilRect,
+                horizontalPadding = mercyPad * 0.25f,
+                verticalPadding = mercyPad * 0.45f
+            ) || intersectsExpanded(player.hitbox, hitbox, mercyPad)
+        ) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }
 

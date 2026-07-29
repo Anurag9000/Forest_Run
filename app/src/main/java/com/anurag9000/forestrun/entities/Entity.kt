@@ -51,6 +51,51 @@ abstract class Entity(val context: Context) {
         gameState: GameStateManager
     ) = Unit
 
+    /**
+     * Allocation-free equivalent of intersecting [target] with a symmetrically
+     * expanded copy of [source]. Invalid padding never creates an encounter.
+     */
+    protected fun intersectsExpanded(target: RectF, source: RectF, padding: Float): Boolean =
+        intersectsExpanded(target, source, padding, padding)
+
+    /** Allocation-free expanded-rectangle probe with independent axis padding. */
+    protected fun intersectsExpanded(
+        target: RectF,
+        source: RectF,
+        horizontalPadding: Float,
+        verticalPadding: Float
+    ): Boolean = intersectsExpanded(
+        target = target,
+        source = source,
+        leftPadding = horizontalPadding,
+        topPadding = verticalPadding,
+        rightPadding = horizontalPadding,
+        bottomPadding = verticalPadding
+    )
+
+    /** Allocation-free expanded-rectangle probe with independent per-edge padding. */
+    protected fun intersectsExpanded(
+        target: RectF,
+        source: RectF,
+        leftPadding: Float,
+        topPadding: Float,
+        rightPadding: Float,
+        bottomPadding: Float
+    ): Boolean {
+        if (!leftPadding.isFinite() || !topPadding.isFinite() ||
+            !rightPadding.isFinite() || !bottomPadding.isFinite()
+        ) return false
+
+        val left = leftPadding.coerceAtLeast(0f)
+        val top = topPadding.coerceAtLeast(0f)
+        val right = rightPadding.coerceAtLeast(0f)
+        val bottom = bottomPadding.coerceAtLeast(0f)
+        return target.left < source.right + right &&
+            source.left - left < target.right &&
+            target.top < source.bottom + bottom &&
+            source.top - top < target.bottom
+    }
+
     /** Return the current overlap result without mutating state or emitting presentation. */
     abstract fun onCollision(player: Player, gameState: GameStateManager): CollisionResult
 }

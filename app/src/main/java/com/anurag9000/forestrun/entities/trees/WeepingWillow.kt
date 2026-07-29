@@ -166,14 +166,16 @@ class WeepingWillow(
             return CollisionResult.NONE
         }
         val mercyPad = readability.mercyPaddingPx
-        val cm = RectF(
-            curtainHitbox.left - mercyPad,
-            curtainHitbox.top,
-            curtainHitbox.right + mercyPad,
-            curtainHitbox.bottom + mercyPad * 0.35f
-        )
-        val tm = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (RectF.intersects(player.hitbox, cm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
+        if (
+            intersectsExpanded(
+                player.hitbox,
+                curtainHitbox,
+                leftPadding = mercyPad,
+                topPadding = 0f,
+                rightPadding = mercyPad,
+                bottomPadding = mercyPad * 0.35f
+            ) || intersectsExpanded(player.hitbox, hitbox, mercyPad)
+        ) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }
 

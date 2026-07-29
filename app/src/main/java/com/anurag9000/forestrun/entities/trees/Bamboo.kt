@@ -150,9 +150,23 @@ class Bamboo(
             if (RectF.intersects(player.hitbox, topHitboxes[i]) ||
                 RectF.intersects(player.hitbox, bottomHitboxes[i])) return CollisionResult.HIT
             val mercyPad = readability.mercyPaddingPx * 0.5f
-            val tm = RectF(topHitboxes[i].left - mercyPad, topHitboxes[i].top, topHitboxes[i].right + mercyPad, topHitboxes[i].bottom + mercyPad)
-            val bm = RectF(bottomHitboxes[i].left - mercyPad, bottomHitboxes[i].top - mercyPad, bottomHitboxes[i].right + mercyPad, bottomHitboxes[i].bottom)
-            if (RectF.intersects(player.hitbox, tm) || RectF.intersects(player.hitbox, bm)) nearMiss = true
+            if (
+                intersectsExpanded(
+                    player.hitbox,
+                    topHitboxes[i],
+                    leftPadding = mercyPad,
+                    topPadding = 0f,
+                    rightPadding = mercyPad,
+                    bottomPadding = mercyPad
+                ) || intersectsExpanded(
+                    player.hitbox,
+                    bottomHitboxes[i],
+                    leftPadding = mercyPad,
+                    topPadding = mercyPad,
+                    rightPadding = mercyPad,
+                    bottomPadding = 0f
+                )
+            ) nearMiss = true
         }
         return if (nearMiss) CollisionResult.MERCY_MISS else CollisionResult.NONE
     }

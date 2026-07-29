@@ -290,8 +290,7 @@ class Dog(
             return CollisionResult.HIT
         }
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
-        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (RectF.intersects(player.hitbox, mercy)) {
+        if (intersectsExpanded(player.hitbox, hitbox, mercyPad)) {
             return CollisionResult.MERCY_MISS
         }
         return CollisionResult.NONE

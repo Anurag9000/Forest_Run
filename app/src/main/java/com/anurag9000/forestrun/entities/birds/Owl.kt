@@ -198,13 +198,7 @@ class Owl(
         }
 
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
-        val mercy = RectF(
-            hitbox.left - mercyPad,
-            hitbox.top - mercyPad,
-            hitbox.right + mercyPad,
-            hitbox.bottom + mercyPad
-        )
-        return if (owlState == OwlState.DIVING && RectF.intersects(player.hitbox, mercy)) {
+        return if (owlState == OwlState.DIVING && intersectsExpanded(player.hitbox, hitbox, mercyPad)) {
             CollisionResult.MERCY_MISS
         } else {
             CollisionResult.NONE

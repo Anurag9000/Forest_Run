@@ -167,13 +167,7 @@ class ChickadeeGroup(
         for (rect in birdRects) {
             if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT
             val mercyPad = readability.mercyPaddingPx
-            val mercy = RectF(
-                rect.left - mercyPad,
-                rect.top - mercyPad,
-                rect.right + mercyPad,
-                rect.bottom + mercyPad
-            )
-            if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
+            if (intersectsExpanded(player.hitbox, rect, mercyPad)) return CollisionResult.MERCY_MISS
         }
         return CollisionResult.NONE
     }

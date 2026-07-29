@@ -145,19 +145,23 @@ class VanillaOrchid(
             return CollisionResult.NONE
         }
         val mercyPad = readability.mercyPaddingPx
-        val bm = RectF(
-            bottomHitbox.left - mercyPad,
-            bottomHitbox.top - mercyPad * 0.45f,
-            bottomHitbox.right + mercyPad * 0.50f,
-            bottomHitbox.bottom + mercyPad
-        )
-        val tm = RectF(
-            topHitbox.left - mercyPad * 0.50f,
-            topHitbox.top - mercyPad,
-            topHitbox.right + mercyPad,
-            topHitbox.bottom + mercyPad * 0.45f
-        )
-        if (RectF.intersects(player.hitbox, bm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
+        if (
+            intersectsExpanded(
+                player.hitbox,
+                bottomHitbox,
+                leftPadding = mercyPad,
+                topPadding = mercyPad * 0.45f,
+                rightPadding = mercyPad * 0.50f,
+                bottomPadding = mercyPad
+            ) || intersectsExpanded(
+                player.hitbox,
+                topHitbox,
+                leftPadding = mercyPad * 0.50f,
+                topPadding = mercyPad,
+                rightPadding = mercyPad,
+                bottomPadding = mercyPad * 0.45f
+            )
+        ) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }
 

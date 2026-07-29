@@ -147,8 +147,7 @@ class Hyacinth(
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
         if (RectF.intersects(player.hitbox, brushBox)) return CollisionResult.MERCY_MISS
         val mercyPad = readability.mercyPaddingPx
-        val mercy = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (RectF.intersects(player.hitbox, mercy)) return CollisionResult.MERCY_MISS
+        if (intersectsExpanded(player.hitbox, hitbox, mercyPad)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }
 }

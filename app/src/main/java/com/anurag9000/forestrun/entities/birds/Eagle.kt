@@ -217,13 +217,7 @@ class Eagle(
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
 
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
-        val mercy = RectF(
-            hitbox.left - mercyPad,
-            hitbox.top - mercyPad,
-            hitbox.right + mercyPad,
-            hitbox.bottom + mercyPad
-        )
-        return if (RectF.intersects(player.hitbox, mercy)) {
+        return if (intersectsExpanded(player.hitbox, hitbox, mercyPad)) {
             CollisionResult.MERCY_MISS
         } else {
             CollisionResult.NONE

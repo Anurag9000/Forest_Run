@@ -158,14 +158,16 @@ class Jacaranda(
             return CollisionResult.NONE
         }
         val mercyPad = readability.mercyPaddingPx
-        val bm = RectF(
-            branchHitbox.left - mercyPad,
-            branchHitbox.top,
-            branchHitbox.right + mercyPad,
-            branchHitbox.bottom + mercyPad * 0.40f
-        )
-        val tm = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
-        if (RectF.intersects(player.hitbox, bm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
+        if (
+            intersectsExpanded(
+                player.hitbox,
+                branchHitbox,
+                leftPadding = mercyPad,
+                topPadding = 0f,
+                rightPadding = mercyPad,
+                bottomPadding = mercyPad * 0.40f
+            ) || intersectsExpanded(player.hitbox, hitbox, mercyPad)
+        ) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }
 
