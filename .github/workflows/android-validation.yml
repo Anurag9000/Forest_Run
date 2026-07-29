@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/fix-core-gameplay-invariants
+  pull_request:
 
 concurrency:
   group: render-hot-path-remediation-${{ github.ref }}
@@ -118,6 +119,7 @@ jobs:
           test -s app/build/outputs/mapping/release/mapping.txt
 
       - name: Commit verified source and tests
+        if: github.event_name == 'push'
         shell: bash
         run: |
           rm scripts/patch_render_hot_path_allocations.py
@@ -131,7 +133,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: render-hot-path-remediation-diagnostics
+          name: render-hot-path-remediation-diagnostics-${{ github.event_name }}
           path: |
             compile.log
             app/build/reports/tests/testDebugUnitTest/
