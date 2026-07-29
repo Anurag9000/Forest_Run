@@ -70,7 +70,8 @@ class LifecycleSettingsInstrumentedTest {
         )
         assertEquals(ActivityInfo.LAUNCH_SINGLE_TASK, activityInfo.launchMode)
 
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        val scenario = ActivityScenario.launch(MainActivity::class.java)
+        try {
             val gameView = requireReadyGameView(scenario)
             val originalActivity = AtomicReference<MainActivity>()
             scenario.onActivity(originalActivity::set)
@@ -90,6 +91,15 @@ class LifecycleSettingsInstrumentedTest {
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
 
             scenario.onActivity { activity -> assertSame(originalActivity.get(), activity) }
+        } finally {
+            if (scenario.state != Lifecycle.State.DESTROYED) {
+                scenario.onActivity { activity -> activity.finishAndRemoveTask() }
+                instrumentation.waitForIdleSync()
+                waitForCondition("singleTask Activity is destroyed", timeoutMs = 10_000L) {
+                    scenario.state == Lifecycle.State.DESTROYED
+                }
+            }
+            scenario.close()
         }
     }
 
