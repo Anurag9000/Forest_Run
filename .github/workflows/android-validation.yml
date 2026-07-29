@@ -27,7 +27,7 @@ jobs:
           ref: agent/fix-core-gameplay-invariants
           fetch-depth: 0
 
-      - name: Apply allocation-free one-shot emitter cache
+      - name: Apply allocation-free thread-safe particle remediation
         run: python3 scripts/patch_particle_emitter_cache.py
 
       - name: Verify transformed source contract
@@ -35,7 +35,9 @@ jobs:
         run: |
           grep -q 'oneShotEmitterCache = arrayOfNulls' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
           grep -q 'cachedOneShotEmitterForTest' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
-          grep -q 'continuous preset used one shot is cached' app/src/test/java/com/anurag9000/forestrun/systems/ParticleEmitterCacheTest.kt
+          grep -q 'pendingUnlockParticle = true' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
+          grep -q 'pendingUnlockParticle = false' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
+          grep -q 'defers particles to update' app/src/test/java/com/anurag9000/forestrun/ui/GardenScreenTest.kt
           if grep -q 'val emitter = preset.build(x, y)' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt; then
             echo 'Event-time named emitter allocation remains.'
             exit 1
@@ -102,16 +104,16 @@ jobs:
           test -s app/build/outputs/bundle/release/app-release.aab
           test -s app/build/outputs/mapping/release/mapping.txt
 
-      - name: Commit verified particle cache
+      - name: Commit verified particle remediation
         if: success() && github.event_name == 'push'
         shell: bash
         run: |
-          git show HEAD^:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
+          git show cd76c7eb0f6427c94612ae26f8b8690906aea6a8:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
           rm scripts/patch_particle_emitter_cache.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'perf: reuse one-shot particle emitters'
+          git commit -m 'perf: reuse particle emitters safely'
           git push origin HEAD:agent/fix-core-gameplay-invariants
 
       - name: Upload diagnostics
