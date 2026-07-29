@@ -1,212 +1,181 @@
 # Forest Run — Game Design
 
-**Platform:** Android (native Kotlin, SurfaceView)  
+**Platform:** native Android/Kotlin with a custom `SurfaceView` engine  
 **Package:** `com.anurag9000.forestrun`  
-**Orientation:** `sensorLandscape`  
-**Target FPS:** 60  
-**Tone:** Ghibli × Stardew Valley — cottagecore, intimate, alive
+**Current orientation:** fixed landscape, pending final product/device acceptance  
+**Nominal frame target:** 60 Hz  
+**Tone:** cottagecore, intimate, expressive, and restorative
 
----
+This document states intended player experience and current mechanic truth. Visual identity must not be described as physics unless the runtime actually applies that mechanic.
 
-## 1. Vision & Design Pillars
+## 1. Vision and design pillars
 
-Forest Run is a high-fidelity endless runner for Android. It is not a score-chaser. It is a handcrafted forest journey with a living world, creature personality, mercy mechanics, Bloom power spikes, and a restorative garden meta-loop. The intended feeling is indie game, not prototype.
+Forest Run is an endless runner built around a living forest, creature personality, mercy, Bloom, persistent memory, and a restorative Garden loop. It should feel authored rather than like a generic obstacle stream.
 
-| Pillar | Description |
+| Pillar | Requirement |
 |---|---|
-| Juicy | Every input triggers satisfying visual, haptic, and audio feedback |
-| Alive | The world breathes: wind, petals, fireflies, day/night atmosphere |
-| Readable | Each entity has a unique silhouette, motion, and emotional identity |
-| Rewarding | Seeds → Garden meta-loop gives every run long-term meaning |
-| Behavioural | Animals react to the player; the forest has formed a soft opinion |
+| Responsive | Tap, hold, swipe, cancellation, and state transitions are immediate and predictable |
+| Alive | Wind, particles, animation, dialogue, music, and persistent reactions give the forest presence |
+| Readable | Hazards advertise their true collision geometry and required response before contact |
+| Forgiving | Mercy windows, nonlethal stumbles, and soft failure reward learning rather than surprise |
+| Persistent | Seeds, relationships, Garden state, route history, and return moments give later sessions meaning |
+| Honest | Documentation, telegraphs, hitboxes, and rewards must agree with runtime behavior |
 
-No generic obstacle feeling is acceptable. Every entity must have a distinct personality that the player can learn to love, fear, or trust.
+Every creature should have a recognizable voice and memory, but uniqueness may come from motion, timing, geometry, reward, relationship, or presentation. It does not need invented physics merely to sound distinct.
 
----
+## 2. Art and presentation direction
 
-## 2. Art Style
+- Vibrant pixel-art characters and sprites
+- Deep greens, floral pastels, warm earth, gold, and violet
+- Expressive eyes and secondary motion
+- Strong local contrast in night scenes
+- Charming imperfection over sterile symmetry
+- Motion used to communicate state, not to conceal collision geometry
 
-- **Aesthetic:** high-saturation vibrant pixel art, Ghibli × Stardew Valley
-- **Palette:** deep forest greens, floral pastels, earthy browns, warm gold, deep violet
-- **Rule:** nothing is static. All flora sways. All particles drift. The forest is never still.
-- **Character:** slightly chibi proportions, large expressive eyes, charming imperfection over sterile precision
+Procedural scenic layers currently supplement authored sprites. Replacing or accepting those layers as final art remains a product decision.
 
-### Expressive Eye States
+## 3. Session lifecycle
 
-| State | Eyes |
+### Home ritual
+
+The player begins beneath the willow. The opening establishes home, then deliberately transitions into the run. Returning from the Garden resets this ritual rather than resuming an already-consumed menu state.
+
+### Guided opening
+
+The first portion of the run uses curated guidance, restricted random spawning, and readable early encounters to teach:
+
+- tap for a short jump;
+- hold for a higher jump;
+- swipe down to duck;
+- spacing and clean-pass timing.
+
+### Run progression
+
+Five biome identities cycle through the run:
+
+1. Meadow
+2. Orchard
+3. Ancient Grove
+4. Dusk Canyon
+5. Night Forest
+
+Scroll speed and encounter complexity increase, while world-distance pacing preserves minimum readable separation as speed changes. “Late game” should mean richer decisions and atmosphere, not unavoidable overlap.
+
+### Bloom
+
+Eight Seeds fill the Bloom meter. Bloom lasts six seconds and is orthogonal to locomotion: the player can continue jumping, falling, landing, and ducking while invincible.
+
+Bloom communicates through:
+
+- player aura and trail;
+- HUD active state and remaining time;
+- camera and screen response;
+- music, SFX, and haptics;
+- nearby-world reaction;
+- exclusive conversion rewards for passed entities.
+
+Bloom rewards cannot restart the active timer or stack ordinary pass, unique-action, and Orb rewards on the same entity.
+
+### Soft failure and Rest
+
+A lethal outcome advances through the explicit death/game-over/restart flow. The emotional goal is reflection rather than punishment:
+
+- coherent failure animation;
+- run-kept summary;
+- contextual Rest writing;
+- return to the Garden;
+- no contradictory hit/pass/mercy statistics.
+
+### Garden return
+
+Seeds are persistent Garden currency. The Garden reflects unlocked plants, relationships, route history, recent run tone, and return context. Spending must remain authoritative across run resets.
+
+## 4. Input and locomotion
+
+| Input | Runtime behavior |
 |---|---|
-| Running | `• •` default |
-| Jump | `> <` determined |
-| Apex | `★ ★` excited |
-| Eagle dive | `O O` scared |
-| Close call | `^ ^` smug |
-| Hard landing | `@ @` dizzy |
-| Ducking | `- -` focused |
-| Bloom | `✿ ✿` joyful |
-| Rest | `- u -` peaceful |
+| Tap | Immediate launch followed by an early release cap for a short hop |
+| Hold | Release later, preserving more of the initial ascent for a higher arc |
+| Swipe down | Classified before jump commitment and enters duck while legal |
+| Cancel/interruption | Silently clears the gesture without producing a delayed action |
 
-### Colour Discipline
+The player launches responsively at maximum initial upward velocity. Releasing while rising caps velocity according to hold duration and never adds energy. A quick tap approaches `MIN_JUMP_FORCE`; a full hold preserves the larger arc.
 
-- Max 16 simultaneous colours per entity
-- Strong high-contrast night scenes
-- Lily glow dominates the night scene locally
-- Use dithering instead of smooth gradients within sprites
+Input is accepted only during live gameplay. Menu, Garden, death, game-over, restart, and screen transitions cancel active gameplay gestures.
 
----
+## 5. Score, Seeds, and Bloom economy
 
-## 3. Session Lifecycle
-
-### Cold Start — The Garden
-
-The player opens the app to see the woman sitting under a Weeping Willow in her personal garden. No hard menu buttons. Ambient forest audio plays. First tap: she stands. Second tap: she begins her run. A rhythmic acoustic beat fades in, synced to her footstep cadence.
-
-### Early Game (0–500m)
-
-Biome: Meadow. Simple early hazards. Gentle scroll speed. Seeds begin spawning. Music starts minimal. The first 30 seconds use a curated guided opening: visible tap/hold/duck teaching chips, a brief random-spawn lockout, and a curated early-game pool so the lane teaches itself without a sterile tutorial.
-
-### Mid Game (500m–1500m)
-
-Every 500m a biome transition fires. Background tints shift. Spawn pools change. Speed rises. Music layers deepen. Foxes, Wolves, Ducks, and complex threats are introduced.
-
-### Bloom State
-
-Triggered when the Bloom meter fills (8 seeds). Full invincibility for 6 seconds. Petal trail, full-screen world shift, audiovisual surge. Entities passed during Bloom convert into bonus rewards. Nearby entities react visibly before the pass-conversion line — the lane opens around the player. Conversion-streak escalation swells the player, camera, and screen response as momentum grows.
-
-### Late Game
-
-Dense overlapping threat patterns. Maximum wind and atmosphere. Strong milestone feedback. Fully layered music.
-
-### Soft Fall — Rest
-
-On collision the character does not feel cheaply deleted. She stumbles, slows, and sits tired but peaceful. A staged DYING→REST settle window, an authored recovery panel with a run-kept summary and homeward preview card, and a varied post-run reflection follow. The emotional flow supports returning.
-
-### Meta-Loop — The Garden
-
-Seeds collected during runs unlock new plants. The garden becomes a personalized forest over many sessions. The next locked plant is always visible as motivation.
-
----
-
-## 4. Input System
-
-| Input | Action |
+| Event | Result |
 |---|---|
-| Single tap | Standard jump |
-| Hold / long press | High jump — force proportional to hold duration |
-| Swipe down | Duck / slide |
+| Distance | Score and distance advance from the same captured speed value |
+| Mercy miss | One mercy event, presentation feedback, and bonus |
+| Clean pass | One terminal pass, entity action, persistent outcome, and route progress |
+| Seed Orb | Bloom charge plus persistent Seed currency |
+| Bloom conversion | Exclusive conversion reward; no ordinary pass/action/Orb stacking |
+| Milestone | Bounded authored feedback, camera, audio, and optional haptic response |
 
-Short tap = low hop. Full hold = maximum arc. "Mario abort" mechanic: releasing while rising cuts upward velocity by half.
+Seed Orbs are staged ahead of the player at reachable heights and cleaned up off-screen.
 
----
+## 6. Encounter outcome contract
 
-## 5. Scoring System
+Every entity starts pending and resolves exactly once to one of:
 
-| Event | Reward |
+- `HIT`
+- `STUMBLE`
+- `MERCY`
+- `CLEAN_PASS`
+- `BLOOM_CONVERTED`
+
+Collision arbitration runs before pass resolution. Simultaneous overlaps use:
+
+```text
+HIT > STUMBLE > MERCY
+```
+
+Collision queries must be pure. Only the selected result may emit effects or change state. A Hedgehog stumble, for example, cannot later become a clean pass for the same encounter.
+
+Mercy geometry must agree with visible staging. Expanded collision probes are allocation-free but preserve each entity’s intended asymmetric safe window.
+
+## 7. Mercy and pacifist routes
+
+Mercy rewards close, non-contact avoidance. It is awarded once per encounter, not once per overlapping frame.
+
+Route tiers are derived from actual run outcomes:
+
+| Tier | General intent |
 |---|---|
-| Distance | 1.5 points per metre |
-| Close call (MERCY_MISS) | Score bonus + screen flash + haptic |
-| Seed collected | Bloom meter fill + lifetime seed count |
-| Kindness/pass rewards | Multiplier-weighted bonus points + seeds |
-| 1000-point milestone | Camera nudge + haptic + authored popup |
+| Kind | Some positive conduct despite limited mistakes |
+| Merciful | No lethal mistakes and repeated positive outcomes |
+| Peaceful | Sustained clean, merciful play across a substantial run |
 
-Score and distance advance using the same scroll speed per frame (synchronized in `GameStateManager.update()`).
+The exact thresholds live in `PacifistTracker` and its tests; this document intentionally does not duplicate constants that can drift.
 
----
+Route signals influence Rest, Garden, return moments, world opinion, sanctuary presentation, and persistent history.
 
-## 6. Seeds & Bloom
+## 8. Forest memory
 
-Seeds are vibrant glowing orbs. Some are placed as tempting traps above hazards. Some drop from interactions. Seeds feed two systems simultaneously:
+### Forest mood
 
-1. **In-run:** fill the Bloom meter (8 seeds → 6s invincibility)
-2. **Meta-game:** lifetime garden currency for plant unlocks
+Recent conduct is summarized into a mood such as gentle, reckless, fearful, or steady. It affects sanctuary and post-run presentation.
 
-Bloom meter has three states with distinct HUD/world framing: near-ready charge, active-power, and afterglow settle.
+### Relationships
 
----
+Cat, Fox, Wolf, Dog, Owl, and Eagle can progress through familiarity and meaningful relationship stages. Appearance alone may reach Recognition; Trust and Bond require positive outcomes, while hits delay progress.
 
-## 7. Mercy & Pacifist Systems
+### Return moments
 
-### Close Call Detection
+Return writing considers local day, absence, rough-run streak, route, Bloom use, relationships, repeated kindness, and repeated harm. A return moment is consumed only when visibly shown in the Garden.
 
-Collisions resolve into `HIT`, `STUMBLE`, `MERCY_MISS`, or `NONE`. A MERCY_MISS awards a mercy heart, a border flash in the biome's dominant color, a score bonus, and a haptic pulse.
+### Story and session composition
 
-### Route Tiers
+Story fragments, Rest quotes, menu atmosphere, Garden arrival, and carry-home wording are composed from shared state so the macro loop remains coherent rather than presenting independent random text.
 
-| Tier | Conditions |
-|---|---|
-| `KIND` | ≤1 hit, ≥2 mercy hearts or ≥1 spare or (≥4 kindness chain + ≥4 clean passes) |
-| `MERCIFUL` | 0 hits, ≥2 spared or (≥3 hearts + ≥7 chain + ≥6 clean) |
-| `PEACEFUL` | 0 hits, ≥5 hearts, ≥2 spared, ≥10 clean passes |
+## 9. Garden progression
 
-Route tiers carry through rest, Garden, return moments, sanctuary state, and persisted world-opinion signals. Peaceful biome routes leave named world-state signs visible across startup, rest, and Garden.
+Current plant unlock order and costs:
 
-### Biome Friendship
-
-Completing a biome cleanly (≥3 clean passes, no hit) awards a friendship bonus and leaves a named biome-friendship sign in the sanctuary.
-
----
-
-## 8. Forest Memory Architecture
-
-The world remembers tone, not only totals. Six interlocking systems drive this:
-
-### ForestMoodSystem
-Classifies recent run tone (gentle, reckless, fearful, steady). Drives Garden ambience, sanctuary lighting, carry-home framing, and arrival badge presentation.
-
-### RelationshipArcSystem
-Tracks Cat, Fox, Wolf, Dog, Owl, and Eagle through first-impression, recognition, trust, and milestone stages. Stages persist across sessions and drive dialogue, encounter generosity, spare tuning, Garden keepsakes, named bond rituals, milestone costume rewards, and featured sanctuary home-presence lines.
-
-### ReturnMomentsSystem
-Detects re-entry context: first run of day, long absence, failure streak, milestone bonds, Bloom-heavy runs, repeated kindness, repeated harm, route tier. Surfaces distinct authored return moments instead of generic greetings. Rest previews the likely Garden return beat without consuming the saved state.
-
-### StoryFragmentSystem
-Drives rest quotes, Garden reflections, weather-linked thoughts, creature-thought fragments, and unlockable memory pages. All writing is brief and emotionally suggestive, validated by automated style tests to stay intimate and avoid exposition.
-
-### SessionArcComposer
-Derives menu atmosphere, opening home-sign, launch copy, rest recovery text, carry-home wording, and Garden arrival lines from the same shared emotional state. The macro loop reads as one authored arc.
-
-### GardenSanctuaryPlanner
-Derives visible sanctuary ambience, bond traces, mist bands, lantern glows, arrival badges, ground-light cues, a persistent home-character label, and explicit homecoming consequence chips from mood, route, bond, history, and world state.
-
----
-
-## 9. Audio Design
-
-### Music States
-
-| State | Character |
-|---|---|
-| Garden / Menu | Soft ambient acoustic — slow leitmotif piano |
-| Running — early | Simple drum beat — leitmotif hidden in rhythm |
-| Running — mid | Bass + flute layer |
-| Running — late | Full layered track — heavier leitmotif variant |
-| Bloom | Orchestral triumph — leitmotif peak |
-| Rest | Music-box reflection — leitmotif coda |
-
-Dynamic tempo scales with scroll speed. Each state resolves through an explicit named motif signature that also informs the cinematic overlay finish layer.
-
-### SFX
-
-Jump (whoosh), land (soft thud + grass rustle), seed collect (soft ping), bark, screech, howl, Bloom chime, Bloom convert, rest exhale, mercy miss, milestone.
-
----
-
-## 10. Haptic Feedback
-
-| Event | Haptic |
-|---|---|
-| Jump | Short pulse |
-| Landing | — |
-| Bloom activates | Long surge |
-| Collision / game over | Long strong pulse |
-| Close call | Double-tap |
-| 1000-point milestone | Medium pulse |
-
----
-
-## 11. Garden Progression — Plant Unlocks
-
-| Plant | Seed Cost |
-|---|---|
+| Plant | Seed cost |
+|---|---:|
 | Cactus | 5 |
 | Lily of the Valley | 10 |
 | Hyacinth | 15 |
@@ -217,68 +186,99 @@ Jump (whoosh), land (soft thud + grass rustle), seed collect (soft ping), bark, 
 | Weeping Willow | 50 |
 | Jacaranda | 60 |
 
-Animals and birds are not v1.0 garden unlockables. Unlocking a plant also equips it as a possible Garden background presence.
+Catalogue, statistics, last-run, wardrobe, and run controls share one tested layout plan. Hardware acceptance is still required for density, cutouts, unusual aspect ratios, text size, and touch comfort.
 
----
+## 10. Audio, haptics, and accessibility
 
-## 12. Entity Reference
+Music transitions through menu/Garden, early/mid/late run, Bloom, and Rest identities. Crossfade ownership is deterministic and frequent parameter writes are throttled.
 
-Every entity has a distinct silhouette, distinct motion, distinct gameplay role, and distinct emotional personality. Generic obstacle feeling is not acceptable.
+SFX loading is explicit. Mandatory missing assets fail non-debug validation; optional Bloom sounds have defined fallbacks.
 
-### Ground Flora
+Persistent controls independently manage:
 
-**Lily of the Valley** — tiny low hazard, ghost-flower lure. Glows at night. Distracts near the player's feet. Creates tricky low seed-traps. Glow dominates the night scene locally. Strong lure descent → low trap band → clear pass reward.
+- reduced motion;
+- music/SFX;
+- haptics.
 
-**Hyacinth** — clustered rhythm hazard. Three-beat identity, pollen, partial-brush punishment. Brush-vs-hit band is explicit. Rhythm payoff is authored.
+Reduced motion may suppress decorative intensity but must not erase hazard telegraphs or alter gameplay physics.
 
-**Eucalyptus** — forward-leaning whip plant. Fast whip sway, trapezoid feel. Earlier whip read, clearer lean lane, layered gust guides. Punishes late reads.
+## 11. Entity reference: mechanic truth
 
-**Vanilla Orchid** — vertical-window obstacle. Safe thread between low and high colliders. Two explicit hazard zones with a narrower true safe window.
+The descriptions below separate current collision/behavior from visual identity. Final fairness and readability require ordinary play and physical-device acceptance.
 
-**Cactus** — classic runner baseline. Rigid, harsh silhouette, history-aware payoff text. Persistent clean-pass memory. Named `Needle Bloom` Garden trace. Carried-home sign.
+### Ground flora
+
+**Cactus** — baseline rigid ground obstacle. Its value is immediate silhouette, fair jump timing, and history-aware clean-pass presentation.
+
+**Lily of the Valley** — small low hazard with strong glow/lure identity. The glow and nearby Seed staging must remain visible without masking the low collision band.
+
+**Hyacinth** — low clustered threat with a nonlethal brush/stumble identity. Hit, stumble, mercy, and clean pass must read as separate outcomes.
+
+**Eucalyptus** — leaning flora hazard with fast sway and gust/whip telegraph presentation. Current gameplay danger is its collision geometry; no external force should be claimed unless an explicit timed strike or player force is implemented later.
+
+**Vanilla Orchid** — two separated collision bands with an intentionally asymmetric safe thread. Telegraphs must reveal both danger zones before contact.
 
 ### Trees
 
-**Weeping Willow** — curtain hazard, core game icon. Forces ducking. Denser canopy silhouette, clearer curtain read, explicit duck lane. Obscures what comes next.
+**Weeping Willow** — canopy/curtain obstruction with a readable low response lane. Obstruction must not hide an unavoidable following encounter.
 
-**Jacaranda** — purple-canopy atmosphere tree. Layered canopy halo, cascading petal veil, clearer underside lane. Petal curtain reads as intentional pressure.
+**Jacaranda** — canopy and petal-pressure presentation around a branch/trunk collision structure. Petals currently communicate atmosphere and staging rather than independent projectile physics.
 
-**Bamboo** — vertical-barrier precision hazard. Narrow gap threading, jitter sway. Featured seam, tighter secondary gaps, clearer precision-line staging.
+**Bamboo** — repeated top/bottom barriers forming precision gaps. Gap placement and one-sided mercy windows must remain readable at every supported speed.
 
-**Cherry Blossom** — wind-making environmental modifier. Gust pressure band, broader storm veil, crosswind staging. Petal storm reads as distinct from other trees.
+**Cherry Blossom** — branch/trunk obstacle with a broad gust/storm visual identity. The gust currently communicates pressure and lane occupation; it does not push the player. Documentation must change only after a real force mechanic is added and tested.
 
 ### Birds
 
-**Owl** — night watcher, punishes reckless jumping. Sleeping perch → reactive dive → eerie glow. Stronger same-shadow alert cueing, visible memory ring, familiar-night clean pass, night-glow mood.
+**Duck** — low flyer used to teach ducking through a clear lane and timing cue.
 
-**Duck** — low flyer, teaches ducking. Staged quack call, explicit low-lane answer, stronger answered-the-quack pass reward. Unmistakable head-height obstruction.
+**Tit group** — coherent wave/rhythm flock. Motion should remain learnable rather than becoming overlapping visual noise.
 
-**Eagle** — hunter dive threat. Screech cue, target lock, diagonal punishment. Clearer dive corridor, held-mark prompt, stronger clean-line pass reward.
+**Chickadee group** — lively altitude variation with a predictable enough safe pocket to remain fair.
 
-**TitGroup** — rhythm-wave flock. Group sine motion, timing-based reads. Staged beat count-in, visible trough guide, stronger kept-the-beat reward.
+**Owl** — alert-to-dive night threat. Alert, trajectory, glow, and collision timing must agree.
 
-**ChickadeeGroup** — erratic aerial chaos. Unpredictable altitude shifts, cute panic energy. Featured lead-bird charm cue, clearer flutter pocket, warmer clean-read reward.
+**Eagle** — live-targeting dive threat with a visible mark, lock point, and escape grace window.
 
 ### Animals
 
-**Wolf** — sprinter/charger. Howl → charge; intimidating but readable. Relationship-aware charge cueing, respectful spare-history lines, visible stand-down aura/trail, earned-respect spare reward.
+**Cat** — optional kindness-oriented encounter. Hit, mercy, pass, spare/reward, and exit are mutually exclusive.
 
-**Cat** — kindness-rewarding decoy. Tiny optional reward hazard, kindness bonus, spare-like warmth. Relationship-aware near-miss cueing, personal repeated-friend lines, shared-quiet aura, familiar pass reward.
+**Fox** — mirror/counter-jump trickster whose movement and outcome should feel playful rather than arbitrary.
 
-**Fox** — mirror-jump trickster. Sly counter-jump, playful line delivery, mercy-based wave-off. Knowingly playful repeat-memory lines, brighter trail aura, stronger remembered-the-trick reward.
+**Wolf** — howl/charge encounter with relationship-aware presentation. Sprite frames, charge timing, collision, mercy, and stand-down state require visual hardware acceptance.
 
-**Hedgehog** — small friction threat. Debuffs scroll speed instead of killing. Fair-hop arming window, visible low-lane read, clearer warning staging, clean-clear reward.
+**Hedgehog** — nonlethal friction threat. Contact resolves terminally as stumble/debuff and cannot later award a pass.
 
-**Dog** — barker and running buddy. 20% chance of harmless buddy mode: runs beside the player for 3–5 seconds, barks rhythmically, departs with a line. Fuller escort dialogue sequence, visible celebration trail, distinct bonded finale burst and reward.
+**Dog** — hazard mode and harmless buddy mode. Projectile lifecycle, buddy harmlessness, departure, dialogue, and persistent behavior must remain mode-consistent.
 
----
+## 12. Debug scenarios and acceptance
 
-## 13. Design Mantras
+Deterministic scenarios exist for the opening, Bloom, ghost, Rest, every entity family, Garden, safe content, lifecycle, and persistence flows. They are isolated from permanent progression.
 
-Every implementation decision should pass these five checks:
+A deterministic scenario proves repeatability, not product acceptance. Each scenario still requires ordinary-play checks on representative physical hardware.
 
-1. Does it have a voice?
-2. Does it remember?
-3. Is it forgiving?
-4. Is it imperfect in a charming way?
-5. Is the leitmotif in there?
+## 13. Performance and release honesty
+
+The engine records update/render/processing timing with a fixed-buffer monitor and exposes percentile/heap snapshots outside the frame hot path. Known iterator, emitter, collision-rectangle, and presentation churn has been reduced.
+
+The following statements remain prohibited until measured:
+
+- “allocation free” for the complete frame;
+- “locked 60 FPS” on supported devices;
+- “release ready”;
+- “all art final”;
+- “all entities physically validated.”
+
+Release acceptance still requires profiling, representative devices, signed installation, store-path testing, final artwork/screenshots/metadata, and current policy review.
+
+## 14. Design mantras
+
+Every implementation decision should answer:
+
+1. Does it have a recognizable voice?
+2. Does meaningful conduct change future response?
+3. Is failure readable and recoverable?
+4. Does presentation agree with collision and reward semantics?
+5. Does it remain charming without sacrificing clarity?
+6. Is audio identity present where it adds information or emotion?
