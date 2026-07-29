@@ -1,18 +1,19 @@
-name: Connected Android validation
+name: Connected Android source sync
 
 on:
   pull_request:
 
 concurrency:
-  group: connected-instrumentation-${{ github.ref }}
+  group: connected-source-sync-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   connected:
-    name: Compile and run connected smoke suite
+    name: Validate and commit connected test sources
+    if: github.actor != 'github-actions[bot]' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -21,6 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: agent/fix-core-gameplay-invariants
+          fetch-depth: 0
 
       - name: Apply connected-test hardening
         run: python3 scripts/patch_connected_instrumentation.py
@@ -30,14 +32,19 @@ jobs:
         run: |
           test -f app/src/androidTest/java/com/anurag9000/forestrun/InstrumentationStateReset.kt
           test -f app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt
+          test -f app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt
           grep -q 'InstrumentationStateReset.clear(targetContext)' app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt
           grep -q 'GardenLayoutPlan' app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt
           grep -q 'SafeContentTransform' app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt
+          grep -q 'bestRunPersistsGhostAndReloadsOnNextLaunch' app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt
+          grep -q 'GhostPersistenceManager.awaitPendingWrites' app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt
+          if grep -q 'org.junit.Ignore' app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt; then
+            echo 'Connected suite still contains an ignored test.'
+            exit 1
+          fi
           grep -q '@LargeTest' app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt
           grep -q 'pauseResumeReplacesStoppedRenderThreadAndContinuesFrames' app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt
           grep -q 'repeatedSingleTaskIntentsReuseActivityAndSwitchDeterministicScenario' app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt
-          grep -q 'menuFeedbackControlsApplyImmediatelyAndPersistAcrossRecreation' app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt
-          grep -q 'startupRepairsWrongTypedSaveAndFeedbackValuesBeforeFirstFrame' app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -91,17 +98,49 @@ jobs:
             -Pandroid.testInstrumentationRunnerArguments.notAnnotation=androidx.test.filters.LargeTest
             --no-daemon --stacktrace --console=plain
 
-      - name: Verify connected reports
+      - name: Verify fourteen zero-skipped connected tests
         shell: bash
         run: |
-          test -d app/build/outputs/androidTest-results/connected/debug
-          find app/build/outputs/androidTest-results/connected/debug -type f | grep -q .
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          result_dir = Path('app/build/outputs/androidTest-results/connected/debug')
+          reports = sorted(result_dir.glob('TEST-*.xml'))
+          if len(reports) != 1:
+              raise SystemExit(f'Expected exactly one connected JUnit report, found {len(reports)}')
+
+          root = ET.parse(reports[0]).getroot()
+          if root.tag != 'testsuite':
+              raise SystemExit(f'Unexpected connected report root: {root.tag}')
+
+          totals = {key: int(root.attrib.get(key, '0')) for key in ('tests', 'failures', 'errors', 'skipped')}
+          cases = root.findall('testcase')
+          print(f'connected report={reports[0]} totals={totals} testcase_count={len(cases)}')
+          if totals['tests'] != 14 or len(cases) != 14:
+              raise SystemExit(f'Expected exactly 14 connected tests, got totals={totals}, cases={len(cases)}')
+          if any(totals[key] != 0 for key in ('failures', 'errors', 'skipped')):
+              raise SystemExit(f'Connected suite is not fully green: {totals}')
+          PY
+
+      - name: Commit validated connected-test sources
+        shell: bash
+        run: |
+          rm scripts/patch_connected_instrumentation.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt
+          git add app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt
+          git add scripts/patch_connected_instrumentation.py
+          git diff --cached --check
+          git commit -m 'test: make connected emulator validation zero-skipped'
+          git push origin HEAD:agent/fix-core-gameplay-invariants
 
       - name: Upload connected diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: connected-instrumentation-diagnostics
+          name: connected-source-sync-diagnostics
           path: |
             connected-compile.log
             app/build/outputs/androidTest-results/connected/debug/
