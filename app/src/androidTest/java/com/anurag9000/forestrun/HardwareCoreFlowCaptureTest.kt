@@ -12,6 +12,7 @@ import android.provider.MediaStore
 import android.view.PixelCopy
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.anurag9000.forestrun.engine.AppGameState
 import com.anurag9000.forestrun.engine.EncounterDirector
@@ -29,6 +30,7 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
+@LargeTest
 @RunWith(AndroidJUnit4::class)
 class HardwareCoreFlowCaptureTest {
 
@@ -38,10 +40,12 @@ class HardwareCoreFlowCaptureTest {
 
     @Before
     fun setUp() {
-        targetContext.getSharedPreferences("forest_run_prefs", android.content.Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
+        InstrumentationStateReset.clear(targetContext)
+        targetContext.contentResolver.delete(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            "${MediaStore.Images.Media.RELATIVE_PATH}=?",
+            arrayOf("$captureRelativeDir/")
+        )
         runShell("rm -rf /sdcard/Pictures/forest_run_hardware/core_flow && mkdir -p /sdcard/Pictures/forest_run_hardware/core_flow")
     }
 
