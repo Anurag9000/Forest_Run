@@ -7,6 +7,7 @@ import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.PlayerState
 import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.systems.GhostRecorder
+import com.anurag9000.forestrun.systems.GhostStateCodec
 import java.io.BufferedOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -120,10 +121,13 @@ object SaveManager {
 
     // ── Ghost run ─────────────────────────────────────────────────────────
 
-    private const val GHOST_HEADER_BYTES = 4L
+    internal const val GHOST_FILE_MAGIC = 0x46524748 // "FRGH"
+    internal const val GHOST_FILE_VERSION = 2
+    private const val LEGACY_GHOST_HEADER_BYTES = 4L
+    private const val VERSIONED_GHOST_HEADER_BYTES = 12L
     private const val GHOST_FRAME_BYTES = 24L
     private val MAX_GHOST_FILE_BYTES =
-        GHOST_HEADER_BYTES + GhostRecorder.MAX_FRAMES.toLong() * GHOST_FRAME_BYTES
+        VERSIONED_GHOST_HEADER_BYTES + GhostRecorder.MAX_FRAMES.toLong() * GHOST_FRAME_BYTES
 
     /** Serialize [frames] through [AtomicFile] so interrupted writes preserve the old ghost. */
     fun saveGhostRun(context: Context, frames: List<GhostFrame>): Boolean {
@@ -140,12 +144,14 @@ object SaveManager {
         return try {
             stream = atomicFile.startWrite()
             val output = DataOutputStream(BufferedOutputStream(stream))
+            output.writeInt(GHOST_FILE_MAGIC)
+            output.writeInt(GHOST_FILE_VERSION)
             output.writeInt(frames.size)
             for (frame in frames) {
                 output.writeFloat(frame.t)
                 output.writeFloat(frame.x)
                 output.writeFloat(frame.y)
-                output.writeInt(frame.stateOrdinal)
+                output.writeInt(requireNotNull(GhostStateCodec.encodeOrdinal(frame.stateOrdinal)))
                 output.writeFloat(frame.scaleX)
                 output.writeFloat(frame.scaleY)
             }
@@ -172,26 +178,48 @@ object SaveManager {
         return try {
             val input = atomicFile.openRead()
             val fileSize = input.channel.size()
-            if (fileSize !in GHOST_HEADER_BYTES..MAX_GHOST_FILE_BYTES) {
+            if (fileSize !in LEGACY_GHOST_HEADER_BYTES..MAX_GHOST_FILE_BYTES) {
                 input.close()
                 return emptyList()
             }
 
             DataInputStream(input.buffered()).use { data ->
-                val count = data.readInt()
+                val firstWord = data.readInt()
+                val isVersioned = firstWord == GHOST_FILE_MAGIC
+                val headerBytes: Long
+                val count: Int
+                if (isVersioned) {
+                    val version = data.readInt()
+                    if (version != GHOST_FILE_VERSION) return emptyList()
+                    count = data.readInt()
+                    headerBytes = VERSIONED_GHOST_HEADER_BYTES
+                } else {
+                    // Legacy v1 files stored only count + raw enum ordinals.
+                    count = firstWord
+                    headerBytes = LEGACY_GHOST_HEADER_BYTES
+                }
                 if (count !in 1..GhostRecorder.MAX_FRAMES) return emptyList()
 
-                val expectedBytes = GHOST_HEADER_BYTES + count.toLong() * GHOST_FRAME_BYTES
+                val expectedBytes = headerBytes + count.toLong() * GHOST_FRAME_BYTES
                 if (fileSize != expectedBytes) return emptyList()
 
                 val frames = ArrayList<GhostFrame>(count)
                 var previousTime = Float.NEGATIVE_INFINITY
                 repeat(count) {
+                    val t = data.readFloat()
+                    val x = data.readFloat()
+                    val y = data.readFloat()
+                    val storedState = data.readInt()
+                    val stateOrdinal = if (isVersioned) {
+                        GhostStateCodec.decodeToOrdinal(storedState) ?: return emptyList()
+                    } else {
+                        storedState
+                    }
                     val frame = GhostFrame(
-                        t = data.readFloat(),
-                        x = data.readFloat(),
-                        y = data.readFloat(),
-                        stateOrdinal = data.readInt(),
+                        t = t,
+                        x = x,
+                        y = y,
+                        stateOrdinal = stateOrdinal,
                         scaleX = data.readFloat(),
                         scaleY = data.readFloat()
                     )
