@@ -1,80 +1,39 @@
-name: Publish collision-probe allocation remediation
+name: Android validation
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
 
+concurrency:
+  group: android-validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  publish:
-    name: Validate and publish allocation-free collision probes
-    if: github.actor != 'github-actions[bot]'
+  host:
+    name: Compile, test, lint, and build exact source
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
 
     steps:
-      - name: Check out remediation branch
+      - name: Check out exact candidate SHA
         uses: actions/checkout@v4
         with:
-          ref: agent/fix-core-gameplay-invariants
-          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
-      - name: Apply collision allocation remediation
+      - name: Record and verify candidate identity
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('scripts/patch_collision_probe_allocations.py')
-          text = path.read_text(encoding='utf-8')
-          text = text.replace(
-              'def block(value: str) -> str:\n    return textwrap.dedent(value).lstrip("\\n")\n',
-              'def block(value: str, indent: int = 0) -> str:\n'
-              '    normalized = textwrap.dedent(value).lstrip("\\n")\n'
-              '    return textwrap.indent(normalized, " " * indent) if indent else normalized\n'
-          )
-
-          def assign_indent(source: str, name: str, indent: int) -> str:
-              start_marker = f'{name} = block('
-              start = source.find(start_marker)
-              if start < 0:
-                  raise RuntimeError(f'Missing block assignment {name}')
-              close = source.find('\n)', start)
-              if close < 0:
-                  raise RuntimeError(f'Missing block close for {name}')
-              if source[close + 2:close + 5] == f', {indent}':
-                  return source
-              return source[:close] + f'\n, {indent})' + source[close + 2:]
-
-          for name, indent in (
-              ('HELPERS', 4),
-              ('CHERRY_OLD', 8),
-              ('CHERRY_NEW', 8),
-              ('VANILLA_OLD', 8),
-              ('VANILLA_NEW', 8),
-              ('BAMBOO_OLD', 12),
-              ('BAMBOO_NEW', 12),
-              ('JACARANDA_OLD', 8),
-              ('JACARANDA_NEW', 8),
-              ('WILLOW_OLD', 8),
-              ('WILLOW_NEW', 8),
-          ):
-              text = assign_indent(text, name, indent)
-
-          path.write_text(text, encoding='utf-8')
-          PY
-          python3 scripts/patch_collision_probe_allocations.py
-
-      - name: Verify transformed source contracts
-        shell: bash
-        run: |
-          grep -q 'protected fun intersectsExpanded' app/src/main/java/com/anurag9000/forestrun/entities/Entity.kt
-          grep -q 'per edge helper is equivalent' app/src/test/java/com/anurag9000/forestrun/entities/EntityCollisionGeometryTest.kt
-          if grep -R -n -E 'val (mercy|bm|tm|cm) = RectF' app/src/main/java/com/anurag9000/forestrun/entities; then
-            echo 'Temporary collision rectangles remain.'
-            exit 1
-          fi
+          expected='${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}'
+          actual="$(git rev-parse HEAD)"
+          echo "candidate_sha=$actual" | tee candidate-sha.txt
+          test "$actual" = "$expected"
+          test -z "$(git status --porcelain)"
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -101,28 +60,287 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
-      - name: Compile and run invariant suite
-        run: >-
-          ./gradlew
-          compileDebugKotlin
-          compileDebugUnitTestKotlin
-          testDebugUnitTest
-          lintDebug
-          --no-daemon
-          --stacktrace
-          --console=plain
-
-      - name: Commit validated source
+      - name: Verify immutable repository contracts
         shell: bash
         run: |
-          rm scripts/patch_collision_probe_allocations.py
-          rm -f scripts/collision_probe_publish_trigger.txt
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            app/src/main/java/com/anurag9000/forestrun/entities \
-            app/src/test/java/com/anurag9000/forestrun/entities/EntityCollisionGeometryTest.kt \
-            scripts/patch_collision_probe_allocations.py \
-            scripts/collision_probe_publish_trigger.txt
-          git commit -m 'perf: remove collision probe RectF allocations'
-          git push origin HEAD:agent/fix-core-gameplay-invariants
+          legacy_dotted="com"."yourname"."forest_run"
+          legacy_path="com"/"yourname"/"forest_run"
+
+          test -d app/src/main/java/com/anurag9000/forestrun
+          test -d app/src/test/java/com/anurag9000/forestrun
+          test -d app/src/androidTest/java/com/anurag9000/forestrun
+          test ! -d "app/src/main/java/$legacy_path"
+
+          test ! -e scripts/patch_particle_emitter_cache.py
+          test ! -e scripts/patch_hot_path_traversals.py
+          test ! -e scripts/patch_collision_probe_allocations.py
+          test ! -e scripts/patch_connected_instrumentation.py
+          test ! -e scripts/collision_probe_publish_trigger.txt
+          test ! -e compile.log
+
+          if grep -R -F --line-number \
+              --exclude=prepare_play_release.py \
+              --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle \
+              -e "$legacy_dotted" -e "$legacy_path" .; then
+            echo 'Placeholder package identity remains.'
+            exit 1
+          fi
+
+          grep -q 'applicationId = "com.anurag9000.forestrun"' app/build.gradle.kts
+          grep -q 'namespace = "com.anurag9000.forestrun"' app/build.gradle.kts
+          grep -q 'compileSdk = 36' app/build.gradle.kts
+          grep -q 'targetSdk = 36' app/build.gradle.kts
+
+          grep -q 'oneShotEmitterCache = arrayOfNulls' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
+          grep -q 'var emitterIndex = 0' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
+          grep -q 'var entityIndex = 0' app/src/main/java/com/anurag9000/forestrun/engine/EntityManager.kt
+          grep -q 'var orbIndex = 0' app/src/main/java/com/anurag9000/forestrun/systems/SeedOrbManager.kt
+          grep -q 'ArrayList<FlavorText>(MAX_ACTIVE)' app/src/main/java/com/anurag9000/forestrun/ui/FlavorTextManager.kt
+          grep -q 'val widestLine: Float' app/src/main/java/com/anurag9000/forestrun/ui/DialogueBubbleManager.kt
+
+          grep -q 'protected fun intersectsExpanded' app/src/main/java/com/anurag9000/forestrun/entities/Entity.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/entities/EntityCollisionGeometryTest.kt
+          if grep -R -n -E 'val (mercy|bm|tm|cm) = RectF' app/src/main/java/com/anurag9000/forestrun/entities; then
+            echo 'Temporary collision-probe RectF allocations remain.'
+            exit 1
+          fi
+
+          grep -q 'safeContentTransform.toLogical' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'GhostPersistenceManager.saveBestRunAsync' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'GhostPersistenceManager.loadLatest' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'AtomicFile' app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt
+          grep -q 'SaveIntegrityManager.repair(this)' app/src/main/java/com/anurag9000/forestrun/MainActivity.kt
+          grep -q 'FeedbackSettings.init(this)' app/src/main/java/com/anurag9000/forestrun/MainActivity.kt
+          grep -q 'internal fun requestStopAndAwait' app/src/main/java/com/anurag9000/forestrun/engine/GameThread.kt
+
+          if grep -R -n 'org.junit.Ignore' app/src/androidTest; then
+            echo 'Connected test source contains an ignored test.'
+            exit 1
+          fi
+          if git grep -n -E 'com\.google\.gson|Gson|SerializedName|TypeToken' -- app/src; then
+            echo 'Unused Gson references remain.'
+            exit 1
+          fi
+          if grep -Eq -- '^-keep[[:space:]]+class[[:space:]]+com\.anurag9000\.forestrun\.\*\*' app/proguard-rules.pro; then
+            echo 'Broad application keep rule defeats release shrinking.'
+            exit 1
+          fi
+
+          test -z "$(git status --porcelain)"
+
+      - name: Report packaged sprite dimensions
+        run: find app/src/main/assets/sprites -type f -name '*.png' -print0 | sort -z | xargs -0 file | tee sprite-dimensions.txt
+
+      - name: Compile debug, release, unit-test, and instrumentation sources
+        shell: bash
+        run: |
+          set +e
+          ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin \
+            compileDebugAndroidTestKotlin --no-daemon --stacktrace --console=plain \
+            > compile.log 2>&1
+          status=$?
+          if [[ $status -ne 0 ]]; then
+            echo '::group::Compiler diagnostics'
+            grep -E '(^e: | error: |FAILURE:|Execution failed for task|\* What went wrong:)' compile.log || true
+            echo '::endgroup::'
+            tail -n 300 compile.log
+          fi
+          exit $status
+
+      - name: Run full JVM and Robolectric suite
+        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace --console=plain
+
+      - name: Run debug and release lint
+        run: ./gradlew lintDebug lintRelease --no-daemon --stacktrace --console=plain
+
+      - name: Assemble debug and instrumentation APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon --stacktrace --console=plain
+
+      - name: Build minified resource-shrunk release bundle
+        run: ./gradlew bundleRelease --no-daemon --stacktrace --console=plain
+
+      - name: Verify artifacts and effective R8 obfuscation
+        shell: bash
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          test -s app/build/outputs/bundle/release/app-release.aab
+          test -s app/build/outputs/mapping/release/mapping.txt
+          python3 - <<'PY'
+          from pathlib import Path
+
+          mapping = Path('app/build/outputs/mapping/release/mapping.txt')
+          for raw in mapping.read_text(encoding='utf-8').splitlines():
+              line = raw.strip()
+              if line.startswith('com.anurag9000.forestrun.') and line.endswith(':') and ' -> ' in line:
+                  original, renamed = line[:-1].split(' -> ', 1)
+                  if original != renamed:
+                      break
+          else:
+              raise SystemExit('R8 mapping contains no obfuscated Forest Run classes')
+          PY
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Upload host diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-host-validation-${{ github.run_id }}
+          path: |
+            candidate-sha.txt
+            compile.log
+            sprite-dimensions.txt
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.xml
+            app/build/reports/lint-results-release.html
+            app/build/reports/lint-results-release.xml
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload validated build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forest-run-builds-${{ github.run_id }}
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
+
+  connected:
+    name: Run fourteen zero-skipped connected tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out exact candidate SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify candidate and connected-test source
+        shell: bash
+        run: |
+          expected='${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}'
+          test "$(git rev-parse HEAD)" = "$expected"
+          test ! -e scripts/patch_connected_instrumentation.py
+          test -f app/src/androidTest/java/com/anurag9000/forestrun/InstrumentationStateReset.kt
+          test -f app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt
+          test -f app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt
+          test -f app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt
+          grep -q 'GhostPersistenceManager.awaitPendingWrites' app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt
+          grep -q '@LargeTest' app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt
+          if grep -R -n 'org.junit.Ignore' app/src/androidTest; then
+            echo 'Connected test source contains an ignored test.'
+            exit 1
+          fi
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 36
+        shell: bash
+        run: |
+          set +o pipefail
+          yes | sdkmanager 'platforms;android-36' >/dev/null
+          status=${PIPESTATUS[1]}
+          set -o pipefail
+          exit "$status"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Compile instrumentation artifacts
+        shell: bash
+        run: |
+          set +e
+          ./gradlew compileDebugKotlin compileDebugAndroidTestKotlin \
+            assembleDebug assembleDebugAndroidTest lintDebug \
+            --no-daemon --stacktrace --console=plain > connected-compile.log 2>&1
+          status=$?
+          if [[ $status -ne 0 ]]; then
+            echo '::group::Connected compiler diagnostics'
+            grep -E '(^e: | error: |FAILURE:|Execution failed for task|\* What went wrong:)' connected-compile.log || true
+            echo '::endgroup::'
+            tail -n 320 connected-compile.log
+          fi
+          exit $status
+
+      - name: Enable KVM access
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run connected tests on API 35 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: >-
+            ./gradlew connectedDebugAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.notAnnotation=androidx.test.filters.LargeTest
+            --no-daemon --stacktrace --console=plain
+
+      - name: Verify fourteen zero-skipped connected tests
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          result_dir = Path('app/build/outputs/androidTest-results/connected/debug')
+          reports = sorted(result_dir.glob('TEST-*.xml'))
+          if len(reports) != 1:
+              raise SystemExit(f'Expected exactly one connected JUnit report, found {len(reports)}')
+
+          root = ET.parse(reports[0]).getroot()
+          if root.tag != 'testsuite':
+              raise SystemExit(f'Unexpected connected report root: {root.tag}')
+
+          totals = {key: int(root.attrib.get(key, '0')) for key in ('tests', 'failures', 'errors', 'skipped')}
+          cases = root.findall('testcase')
+          print(f'connected report={reports[0]} totals={totals} testcase_count={len(cases)}')
+          if totals['tests'] != 14 or len(cases) != 14:
+              raise SystemExit(f'Expected exactly 14 connected tests, got totals={totals}, cases={len(cases)}')
+          if any(totals[key] != 0 for key in ('failures', 'errors', 'skipped')):
+              raise SystemExit(f'Connected suite is not fully green: {totals}')
+          PY
+
+      - name: Upload connected diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connected-instrumentation-${{ github.run_id }}
+          path: |
+            connected-compile.log
+            app/build/outputs/androidTest-results/connected/debug/
+            app/build/reports/androidTests/connected/debug/
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.xml
+          if-no-files-found: warn
+          retention-days: 7
