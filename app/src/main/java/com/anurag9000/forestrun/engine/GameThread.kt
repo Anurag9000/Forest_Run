@@ -8,14 +8,16 @@ import java.util.concurrent.TimeUnit
 class GameThread internal constructor(
     private val updateFrame: (Float) -> Unit,
     private val renderFrame: () -> Unit = {},
-    targetFrameTimeNs: Long = DEFAULT_TARGET_FRAME_TIME_NS
+    targetFrameTimeNs: Long = DEFAULT_TARGET_FRAME_TIME_NS,
+    private val performanceMonitor: FramePerformanceMonitor? = null
 ) : Thread("GameThread") {
     private val targetFrameTimeNs = targetFrameTimeNs.coerceAtLeast(0L)
 
     constructor(surfaceHolder: SurfaceHolder, gameView: GameView) : this(
         updateFrame = { deltaTime -> gameView.update(deltaTime) },
         renderFrame = { renderSurfaceFrame(surfaceHolder, gameView) },
-        targetFrameTimeNs = DEFAULT_TARGET_FRAME_TIME_NS
+        targetFrameTimeNs = DEFAULT_TARGET_FRAME_TIME_NS,
+        performanceMonitor = FramePerformanceTelemetry.monitor
     )
 
     @Volatile
@@ -68,19 +70,36 @@ class GameThread internal constructor(
         var lastTimeNs = System.nanoTime()
         try {
             while (running) {
-                val nowNs = System.nanoTime()
-                val deltaTime = ((nowNs - lastTimeNs) / 1_000_000_000.0).toFloat()
+                val frameStartedAtNs = System.nanoTime()
+                val deltaTime = ((frameStartedAtNs - lastTimeNs) / 1_000_000_000.0).toFloat()
                     .coerceIn(0f, MAX_DELTA_SECONDS)
-                lastTimeNs = nowNs
+                lastTimeNs = frameStartedAtNs
 
+                val updateStartedAtNs = System.nanoTime()
                 updateFrame(deltaTime)
-                if (!running) break
+                val updateFinishedAtNs = System.nanoTime()
+                val updateDurationNs = updateFinishedAtNs - updateStartedAtNs
 
+                if (!running) {
+                    performanceMonitor?.record(
+                        updateNs = updateDurationNs,
+                        renderNs = 0L,
+                        processingNs = updateFinishedAtNs - frameStartedAtNs
+                    )
+                    break
+                }
+
+                val renderStartedAtNs = System.nanoTime()
                 renderFrame()
+                val renderFinishedAtNs = System.nanoTime()
+                performanceMonitor?.record(
+                    updateNs = updateDurationNs,
+                    renderNs = renderFinishedAtNs - renderStartedAtNs,
+                    processingNs = renderFinishedAtNs - frameStartedAtNs
+                )
                 if (!running) break
 
-                val elapsedNs = System.nanoTime() - nowNs
-                val sleepNs = targetFrameTimeNs - elapsedNs
+                val sleepNs = targetFrameTimeNs - (renderFinishedAtNs - frameStartedAtNs)
                 if (sleepNs > 0L) {
                     try {
                         sleep(
