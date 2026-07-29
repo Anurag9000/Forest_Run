@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remove event-time ParticleEmitter allocation from named one-shot effects."""
+"""Cache named one-shot emitters and keep particle mutation on the game thread."""
 
 from pathlib import Path
 
@@ -13,12 +13,12 @@ def replace_once(path: Path, old: str, new: str, label: str) -> None:
 
 
 def main() -> None:
-    path = Path(
+    particle_manager = Path(
         "app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt"
     )
 
     replace_once(
-        path,
+        particle_manager,
         """    private val continuousEmitters = mutableListOf<ParticleEmitter>()
 
     // ── Update ────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ def main() -> None:
     )
 
     replace_once(
-        path,
+        particle_manager,
         """    /** Emit a burst from a named preset at screen position (x, y). */
     fun emit(preset: FxPreset, x: Float, y: Float) {
         val emitter = preset.build(x, y)
@@ -81,6 +81,60 @@ def main() -> None:
     /** Register a continuous emitter (e.g. Bloom aura). Returns a handle to stop it. */
 """,
         "allocation-free named one-shot emission",
+    )
+
+    garden = Path(
+        "app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt"
+    )
+    replace_once(
+        garden,
+        """    private var unlockAnim: Float = -1f   // -1 = none; 0..1 = progress
+    private var unlockIdx:  Int   = -1
+
+    private var elapsed = 0f
+""",
+        """    private var unlockAnim: Float = -1f   // -1 = none; 0..1 = progress
+    private var unlockIdx:  Int   = -1
+    @Volatile private var pendingUnlockParticle = false
+    private var pendingUnlockParticleX = 0f
+    private var pendingUnlockParticleY = 0f
+
+    private var elapsed = 0f
+""",
+        "Garden pending particle state",
+    )
+    replace_once(
+        garden,
+        """        catalogueSprites.forEach { it.update(deltaTime) }
+        returnVisitorSprite?.update(deltaTime)
+        ParticleManager.update(deltaTime)
+""",
+        """        catalogueSprites.forEach { it.update(deltaTime) }
+        returnVisitorSprite?.update(deltaTime)
+        if (pendingUnlockParticle) {
+            val effectX = pendingUnlockParticleX
+            val effectY = pendingUnlockParticleY
+            pendingUnlockParticle = false
+            ParticleManager.emit(FxPreset.SEED_COLLECT, effectX, effectY)
+        }
+        ParticleManager.update(deltaTime)
+""",
+        "Garden game-thread particle flush",
+    )
+    replace_once(
+        garden,
+        """                    // Bloom burst (using SEED_COLLECT preset for a nice golden unlock pop)
+                    ParticleManager.emit(FxPreset.SEED_COLLECT, cx, cy)
+                    // Persist
+""",
+        """                    // Touch callbacks run on the Android UI thread. Queue the
+                    // visual burst for update(), which owns the particle pool.
+                    pendingUnlockParticleX = cx
+                    pendingUnlockParticleY = cy
+                    pendingUnlockParticle = true
+                    // Persist
+""",
+        "Garden UI-thread particle deferral",
     )
 
 
