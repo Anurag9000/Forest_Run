@@ -4,16 +4,21 @@ on:
   push:
     branches:
       - agent/fix-core-gameplay-invariants
+  pull_request:
+
+concurrency:
+  group: particle-command-queue-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  commit:
-    name: Publish validated particle remediation
+  validate:
+    name: Apply particle queue patch and validate debug/release
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 45
 
     steps:
       - name: Check out remediation branch
@@ -22,24 +27,94 @@ jobs:
           ref: agent/fix-core-gameplay-invariants
           fetch-depth: 0
 
-      - name: Apply already-validated source transform
+      - name: Apply centralized particle command queue
         run: python3 scripts/patch_particle_emitter_cache.py
 
-      - name: Verify production source
+      - name: Verify transformed source contract
         shell: bash
         run: |
           grep -q 'oneShotEmitterCache = arrayOfNulls' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
-          grep -q 'pendingUnlockParticle = true' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
-          grep -q 'pendingUnlockParticle = false' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
+          grep -q 'MAX_PENDING_ONE_SHOTS = 32' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
+          grep -q 'flushPendingOneShots()' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
+          grep -q 'foreign thread request is queued until owner update' app/src/test/java/com/anurag9000/forestrun/systems/ParticleEmitterCacheTest.kt
+          grep -q 'defers particles to update' app/src/test/java/com/anurag9000/forestrun/ui/GardenScreenTest.kt
+          if grep -q 'val emitter = preset.build(x, y)' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt; then
+            echo 'Event-time named emitter allocation remains.'
+            exit 1
+          fi
 
-      - name: Restore permanent CI and commit
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 36
         shell: bash
         run: |
-          git show cd76c7eb0f6427c94612ae26f8b8690906aea6a8:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
-          rm scripts/patch_particle_emitter_cache.py
-          rm -f .github/workflows/commit-particle-remediation.yml
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'perf: reuse particle emitters safely'
-          git push origin HEAD:agent/fix-core-gameplay-invariants
+          set +o pipefail
+          yes | sdkmanager 'platforms;android-36' >/dev/null
+          status=${PIPESTATUS[1]}
+          set -o pipefail
+          exit "$status"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Compile debug, release, and instrumentation sources
+        shell: bash
+        run: |
+          set +e
+          ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin \
+            compileDebugAndroidTestKotlin --no-daemon --stacktrace --console=plain \
+            > compile.log 2>&1
+          status=$?
+          if [[ $status -ne 0 ]]; then
+            echo '::group::Compiler diagnostics'
+            grep -E '(^e: | error: |FAILURE:|Execution failed for task|\* What went wrong:)' compile.log || true
+            echo '::endgroup::'
+            tail -n 300 compile.log
+          fi
+          exit $status
+
+      - name: Run full unit suite
+        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace --console=plain
+
+      - name: Run debug and release lint
+        run: ./gradlew lintDebug lintRelease --no-daemon --stacktrace --console=plain
+
+      - name: Assemble debug and instrumentation APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon --stacktrace --console=plain
+
+      - name: Build minified release bundle
+        run: ./gradlew bundleRelease --no-daemon --stacktrace --console=plain
+
+      - name: Verify build artifacts
+        shell: bash
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          test -s app/build/outputs/bundle/release/app-release.aab
+          test -s app/build/outputs/mapping/release/mapping.txt
+
+      - name: Upload validated source and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: particle-command-queue-diagnostics
+          path: |
+            app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
+            compile.log
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-release.html
+          if-no-files-found: warn
+          retention-days: 7
