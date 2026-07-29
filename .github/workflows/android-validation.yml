@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/fix-core-gameplay-invariants
+  pull_request:
 
 permissions:
   contents: write
