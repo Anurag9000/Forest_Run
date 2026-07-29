@@ -1,21 +1,22 @@
 package com.anurag9000.forestrun.engine
 
 /**
- * Top-level application game state — Phase 22.
+ * Top-level screen/lifecycle state.
  *
- * MENU     — Main menu / Garden idle scene.
- * PLAYING  — Active run (all physics, entities, HUD live).
- * BLOOM    — 6-second invincibility window (character glows, pulls in seeds, converts passed encounters).
- * REST     — Death / run-end summary before fading back into the Garden hub.
- *
- * Note: The per-run death cycle (DYING → GAME_OVER → RESTARTING) is handled
- * separately by [RunState] and [RunResetManager]. AppGameState wraps the larger
- * lifecycle: Garden/Menu -> Playing -> [Bloom ->] Playing -> Rest -> Garden.
+ * The active runtime uses [MENU], [GARDEN], and [PLAYING]. Bloom is owned by
+ * [GameStateManager] as an orthogonal run-power flag, while death/rest/restart
+ * progression is owned by [RunState] and [RunResetManager]. [BLOOM] and [REST]
+ * remain reserved compatibility values for older debug integrations; new code
+ * must not route ordinary runtime flow through them.
  */
 enum class AppGameState {
     MENU,
     GARDEN,
     PLAYING,
+
+    @Deprecated("Bloom is owned by GameStateManager and is orthogonal to app state")
     BLOOM,
+
+    @Deprecated("Rest/death flow is owned by RunState and RunResetManager")
     REST
 }
