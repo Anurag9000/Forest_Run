@@ -17,6 +17,7 @@ local.properties
 
 # Generated local/CI diagnostics
 /candidate-sha.txt
+/performance-profiles/
 
 # Python helper-script artefacts
 __pycache__/
