@@ -70,13 +70,19 @@ class EntityManager(
         }
         bloomWasActive = gameState.isBloomActive
 
-        encounterDirector?.advance(deltaTime)?.forEach { directive ->
-            spawn(
-                type = directive.type,
-                variant = directive.variant,
-                startX = screenWidth + directive.xOffset,
-                recordPersistence = false
-            )
+        val directives = encounterDirector?.advance(deltaTime)
+        if (directives != null) {
+            var directiveIndex = 0
+            while (directiveIndex < directives.size) {
+                val directive = directives[directiveIndex]
+                spawn(
+                    type = directive.type,
+                    variant = directive.variant,
+                    startX = screenWidth + directive.xOffset,
+                    recordPersistence = false
+                )
+                directiveIndex++
+            }
         }
 
         if (encounterDirector?.isScenarioActive != true) {
@@ -95,14 +101,18 @@ class EntityManager(
             }
         }
 
-        val iterator = activeEntities.iterator()
-        while (iterator.hasNext()) {
-            val entity = iterator.next()
+        var entityIndex = 0
+        while (entityIndex < activeEntities.size) {
+            val entity = activeEntities[entityIndex]
             entity.update(deltaTime, gameState.scrollSpeed)
             if (entity.isActive && entity.encounterOutcome == EncounterOutcome.PENDING) {
                 entity.updatePlayerInteraction(player, gameState)
             }
-            if (!entity.isActive) iterator.remove()
+            if (!entity.isActive) {
+                activeEntities.removeAt(entityIndex)
+            } else {
+                entityIndex++
+            }
         }
 
         if (gameState.isBloomActive) {
@@ -124,17 +134,20 @@ class EntityManager(
             var selectedResult = CollisionResult.NONE
             var selectedPriority = 0
 
-            for (entity in activeEntities) {
-                if (!entity.isActive || entity.encounterOutcome != EncounterOutcome.PENDING) continue
-
-                val result = entity.onCollision(player, gameState)
-                val priority = collisionPriority(result)
-                if (priority > selectedPriority) {
-                    selectedEntity = entity
-                    selectedResult = result
-                    selectedPriority = priority
-                    if (result == CollisionResult.HIT) break
+            var collisionIndex = 0
+            while (collisionIndex < activeEntities.size) {
+                val entity = activeEntities[collisionIndex]
+                if (entity.isActive && entity.encounterOutcome == EncounterOutcome.PENDING) {
+                    val result = entity.onCollision(player, gameState)
+                    val priority = collisionPriority(result)
+                    if (priority > selectedPriority) {
+                        selectedEntity = entity
+                        selectedResult = result
+                        selectedPriority = priority
+                        if (result == CollisionResult.HIT) break
+                    }
                 }
+                collisionIndex++
             }
 
             if (selectedEntity != null && selectedResult != CollisionResult.NONE) {
@@ -166,16 +179,22 @@ class EntityManager(
     }
 
     private fun resolvePassedEntities(player: Player, gameState: GameStateManager) {
-        for (entity in activeEntities) {
-            if (!entity.isActive || entity.encounterOutcome != EncounterOutcome.PENDING) continue
-            if (entity.hitbox.right >= player.hitbox.left) continue
-
-            entity.hasBeenPassed = true
-            if (gameState.isBloomActive) {
-                resolveBloomConversion(entity, gameState)
-            } else {
-                resolveCleanPass(entity, player, gameState)
+        var entityIndex = 0
+        while (entityIndex < activeEntities.size) {
+            val entity = activeEntities[entityIndex]
+            if (
+                entity.isActive &&
+                entity.encounterOutcome == EncounterOutcome.PENDING &&
+                entity.hitbox.right < player.hitbox.left
+            ) {
+                entity.hasBeenPassed = true
+                if (gameState.isBloomActive) {
+                    resolveBloomConversion(entity, gameState)
+                } else {
+                    resolveCleanPass(entity, player, gameState)
+                }
             }
+            entityIndex++
         }
     }
 
@@ -249,7 +268,11 @@ class EntityManager(
     }
 
     fun draw(canvas: android.graphics.Canvas) {
-        for (entity in activeEntities) entity.draw(canvas)
+        var entityIndex = 0
+        while (entityIndex < activeEntities.size) {
+            activeEntities[entityIndex].draw(canvas)
+            entityIndex++
+        }
     }
 
     fun drawOrbs(canvas: android.graphics.Canvas, bloomFraction: Float) {
@@ -291,43 +314,48 @@ class EntityManager(
         val playerCenterX = player.hitbox.centerX()
         val playerCenterY = player.hitbox.centerY()
 
-        for (entity in activeEntities) {
+        var entityIndex = 0
+        while (entityIndex < activeEntities.size) {
+            val entity = activeEntities[entityIndex]
             if (
-                !entity.isActive ||
-                entity.encounterOutcome != EncounterOutcome.PENDING ||
-                entity.hitbox.isEmpty
-            ) continue
-
-            val type = entityTypeOf(entity) ?: continue
-            val reactionKey = System.identityHashCode(entity)
-            if (!BloomWorldReaction.shouldReact(
-                    playerCenterX = playerCenterX,
-                    playerCenterY = playerCenterY,
-                    entityCenterX = entity.hitbox.centerX(),
-                    entityCenterY = entity.hitbox.centerY(),
-                    alreadyReacted = reactionKey in bloomReactedEntities
-                )
-            ) continue
-
-            bloomReactedEntities.add(reactionKey)
-            emitBloomProximityReaction(entity, type)
-            if (bloomReactionCooldown <= 0f) {
-                val cue = BloomWorldReaction.cueFor(type)
-                FlavorTextManager.spawn(
-                    text = cue.text,
-                    x = entity.hitbox.left,
-                    y = entity.hitbox.top - 12f,
-                    colour = when (cue.family) {
-                        BloomReactionFamily.FLORA -> android.graphics.Color.rgb(255, 226, 168)
-                        BloomReactionFamily.TREE -> android.graphics.Color.rgb(255, 214, 178)
-                        BloomReactionFamily.BIRD -> android.graphics.Color.rgb(226, 214, 255)
-                        BloomReactionFamily.ANIMAL -> android.graphics.Color.rgb(255, 236, 190)
-                    },
-                    lifetime = 0.85f,
-                    size = 25f
-                )
-                bloomReactionCooldown = 0.18f
+                entity.isActive &&
+                entity.encounterOutcome == EncounterOutcome.PENDING &&
+                !entity.hitbox.isEmpty
+            ) {
+                val type = entityTypeOf(entity)
+                if (type != null) {
+                    val reactionKey = System.identityHashCode(entity)
+                    if (BloomWorldReaction.shouldReact(
+                            playerCenterX = playerCenterX,
+                            playerCenterY = playerCenterY,
+                            entityCenterX = entity.hitbox.centerX(),
+                            entityCenterY = entity.hitbox.centerY(),
+                            alreadyReacted = reactionKey in bloomReactedEntities
+                        )
+                    ) {
+                        bloomReactedEntities.add(reactionKey)
+                        emitBloomProximityReaction(entity, type)
+                        if (bloomReactionCooldown <= 0f) {
+                            val cue = BloomWorldReaction.cueFor(type)
+                            FlavorTextManager.spawn(
+                                text = cue.text,
+                                x = entity.hitbox.left,
+                                y = entity.hitbox.top - 12f,
+                                colour = when (cue.family) {
+                                    BloomReactionFamily.FLORA -> android.graphics.Color.rgb(255, 226, 168)
+                                    BloomReactionFamily.TREE -> android.graphics.Color.rgb(255, 214, 178)
+                                    BloomReactionFamily.BIRD -> android.graphics.Color.rgb(226, 214, 255)
+                                    BloomReactionFamily.ANIMAL -> android.graphics.Color.rgb(255, 236, 190)
+                                },
+                                lifetime = 0.85f,
+                                size = 25f
+                            )
+                            bloomReactionCooldown = 0.18f
+                        }
+                    }
+                }
             }
+            entityIndex++
         }
     }
 

@@ -39,9 +39,9 @@ class SeedOrbManager {
     }
 
     fun update(deltaTime: Float, gameState: GameStateManager, player: Player) {
-        val iterator = orbs.iterator()
-        while (iterator.hasNext()) {
-            val orb = iterator.next()
+        var orbIndex = 0
+        while (orbIndex < orbs.size) {
+            val orb = orbs[orbIndex]
             orb.update(deltaTime, gameState.scrollSpeed, gameState)
 
             if (orb.checkCollection(player.hitbox)) {
@@ -53,12 +53,20 @@ class SeedOrbManager {
                 HapticManager.shortPulse()
             }
 
-            if (!orb.isActive) iterator.remove()
+            if (!orb.isActive) {
+                orbs.removeAt(orbIndex)
+            } else {
+                orbIndex++
+            }
         }
     }
 
     fun draw(canvas: Canvas, bloomFraction: Float) {
-        for (orb in orbs) orb.draw(canvas, bloomFraction)
+        var orbIndex = 0
+        while (orbIndex < orbs.size) {
+            orbs[orbIndex].draw(canvas, bloomFraction)
+            orbIndex++
+        }
     }
 
     fun reset() = orbs.clear()

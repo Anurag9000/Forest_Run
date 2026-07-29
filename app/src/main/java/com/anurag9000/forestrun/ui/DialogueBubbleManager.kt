@@ -32,6 +32,7 @@ object DialogueBubbleManager {
     data class Bubble(
         val text: String,
         val lines: List<String>,
+        val widestLine: Float,
         var x: Float,
         var y: Float,
         val fillColor: Int,
@@ -51,6 +52,8 @@ object DialogueBubbleManager {
     }
 
     private val active = mutableListOf<Bubble>()
+    internal var lineMeasurementCountForTest: Int = 0
+        private set
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(28, 28, 28)
         textAlign = Paint.Align.CENTER
@@ -88,10 +91,19 @@ object DialogueBubbleManager {
         if (normalized.isEmpty() || !anchorX.isFinite() || !anchorY.isFinite()) return
 
         if (active.size >= MAX_BUBBLES) active.removeAt(0)
+        val lines = wrapText(normalized, MAX_TEXT_WIDTH, textPaint, MAX_LINES)
+        var widestLine = 0f
+        var lineIndex = 0
+        while (lineIndex < lines.size) {
+            widestLine = maxOf(widestLine, textPaint.measureText(lines[lineIndex]))
+            lineMeasurementCountForTest++
+            lineIndex++
+        }
         active.add(
             Bubble(
                 text = normalized,
-                lines = wrapText(normalized, MAX_TEXT_WIDTH, textPaint, MAX_LINES),
+                lines = lines,
+                widestLine = widestLine,
                 x = anchorX,
                 y = anchorY,
                 fillColor = fillColor,
@@ -122,88 +134,102 @@ object DialogueBubbleManager {
 
     fun update(deltaTime: Float) {
         if (!deltaTime.isFinite() || deltaTime <= 0f) return
-        val iterator = active.iterator()
-        while (iterator.hasNext()) {
-            val bubble = iterator.next()
+        var bubbleIndex = 0
+        while (bubbleIndex < active.size) {
+            val bubble = active[bubbleIndex]
             bubble.elapsed += deltaTime
             bubble.y -= FLOAT_SPEED * deltaTime
-            if (bubble.isDead) iterator.remove()
+            if (bubble.isDead) {
+                active.removeAt(bubbleIndex)
+            } else {
+                bubbleIndex++
+            }
         }
     }
 
     fun draw(canvas: Canvas) {
         val lineHeight = TEXT_SIZE + LINE_SPACING
-        for (bubble in active) {
+        var bubbleIndex = 0
+        while (bubbleIndex < active.size) {
+            val bubble = active[bubbleIndex]
             val alpha = bubble.alpha
-            if (alpha <= 0) continue
+            if (alpha > 0) {
+                textPaint.alpha = alpha
+                fillPaint.color = bubble.fillColor
+                fillPaint.alpha = (alpha * 0.96f).toInt().coerceIn(0, 255)
+                borderPaint.color = bubble.borderColor
+                borderPaint.alpha = alpha
+                shadowPaint.alpha = (alpha * 0.33f).toInt().coerceIn(0, 255)
 
-            textPaint.alpha = alpha
-            fillPaint.color = bubble.fillColor
-            fillPaint.alpha = (alpha * 0.96f).toInt().coerceIn(0, 255)
-            borderPaint.color = bubble.borderColor
-            borderPaint.alpha = alpha
-            shadowPaint.alpha = (alpha * 0.33f).toInt().coerceIn(0, 255)
+                val bubbleWidth = (bubble.widestLine + PADDING_X * 2f)
+                    .coerceAtMost(canvas.width - SCREEN_MARGIN * 2f)
+                    .coerceAtLeast(PADDING_X * 2f + 1f)
+                val textBlockHeight = bubble.lines.size * lineHeight - LINE_SPACING
+                val bubbleHeight = textBlockHeight + PADDING_Y * 2f
 
-            val widestLine = bubble.lines.maxOfOrNull(textPaint::measureText) ?: 0f
-            val bubbleWidth = (widestLine + PADDING_X * 2f)
-                .coerceAtMost(canvas.width - SCREEN_MARGIN * 2f)
-                .coerceAtLeast(PADDING_X * 2f + 1f)
-            val textBlockHeight = bubble.lines.size * lineHeight - LINE_SPACING
-            val bubbleHeight = textBlockHeight + PADDING_Y * 2f
+                val unclampedLeft = bubble.x - bubbleWidth / 2f
+                val maxLeft = (canvas.width - bubbleWidth - SCREEN_MARGIN)
+                    .coerceAtLeast(SCREEN_MARGIN)
+                val left = unclampedLeft.coerceIn(SCREEN_MARGIN, maxLeft)
+                val desiredTop = bubble.y - bubbleHeight - POINTER_H
+                val maxTop = (canvas.height - bubbleHeight - POINTER_H - SCREEN_MARGIN)
+                    .coerceAtLeast(SCREEN_MARGIN)
+                val top = desiredTop.coerceIn(SCREEN_MARGIN, maxTop)
+                bubbleRect.set(left, top, left + bubbleWidth, top + bubbleHeight)
+                shadowRect.set(
+                    bubbleRect.left + 4f,
+                    bubbleRect.top + 5f,
+                    bubbleRect.right + 4f,
+                    bubbleRect.bottom + 5f
+                )
 
-            val unclampedLeft = bubble.x - bubbleWidth / 2f
-            val maxLeft = (canvas.width - bubbleWidth - SCREEN_MARGIN)
-                .coerceAtLeast(SCREEN_MARGIN)
-            val left = unclampedLeft.coerceIn(SCREEN_MARGIN, maxLeft)
-            val desiredTop = bubble.y - bubbleHeight - POINTER_H
-            val maxTop = (canvas.height - bubbleHeight - POINTER_H - SCREEN_MARGIN)
-                .coerceAtLeast(SCREEN_MARGIN)
-            val top = desiredTop.coerceIn(SCREEN_MARGIN, maxTop)
-            bubbleRect.set(left, top, left + bubbleWidth, top + bubbleHeight)
-            shadowRect.set(
-                bubbleRect.left + 4f,
-                bubbleRect.top + 5f,
-                bubbleRect.right + 4f,
-                bubbleRect.bottom + 5f
-            )
+                val pointerX = bubble.x.coerceIn(
+                    bubbleRect.left + MIN_POINTER_INSET,
+                    bubbleRect.right - MIN_POINTER_INSET
+                )
+                val pointerTipY = (bubbleRect.bottom + POINTER_H)
+                    .coerceAtMost(canvas.height - SCREEN_MARGIN)
 
-            val pointerX = bubble.x.coerceIn(
-                bubbleRect.left + MIN_POINTER_INSET,
-                bubbleRect.right - MIN_POINTER_INSET
-            )
-            val pointerTipY = (bubbleRect.bottom + POINTER_H)
-                .coerceAtMost(canvas.height - SCREEN_MARGIN)
+                pointerPath.reset()
+                pointerPath.moveTo(pointerX - 12f, bubbleRect.bottom - 1f)
+                pointerPath.lineTo(pointerX, pointerTipY)
+                pointerPath.lineTo(pointerX + 12f, bubbleRect.bottom - 1f)
+                pointerPath.close()
 
-            pointerPath.reset()
-            pointerPath.moveTo(pointerX - 12f, bubbleRect.bottom - 1f)
-            pointerPath.lineTo(pointerX, pointerTipY)
-            pointerPath.lineTo(pointerX + 12f, bubbleRect.bottom - 1f)
-            pointerPath.close()
+                shadowPath.reset()
+                shadowPath.moveTo(pointerX - 8f, bubbleRect.bottom + 4f)
+                shadowPath.lineTo(pointerX + 4f, pointerTipY + 5f)
+                shadowPath.lineTo(pointerX + 16f, bubbleRect.bottom + 4f)
+                shadowPath.close()
 
-            shadowPath.reset()
-            shadowPath.moveTo(pointerX - 8f, bubbleRect.bottom + 4f)
-            shadowPath.lineTo(pointerX + 4f, pointerTipY + 5f)
-            shadowPath.lineTo(pointerX + 16f, bubbleRect.bottom + 4f)
-            shadowPath.close()
+                canvas.drawRoundRect(shadowRect, CORNER_R, CORNER_R, shadowPaint)
+                canvas.drawPath(shadowPath, shadowPaint)
+                canvas.drawRoundRect(bubbleRect, CORNER_R, CORNER_R, fillPaint)
+                canvas.drawPath(pointerPath, fillPaint)
+                canvas.drawRoundRect(bubbleRect, CORNER_R, CORNER_R, borderPaint)
+                canvas.drawPath(pointerPath, borderPaint)
 
-            canvas.drawRoundRect(shadowRect, CORNER_R, CORNER_R, shadowPaint)
-            canvas.drawPath(shadowPath, shadowPaint)
-            canvas.drawRoundRect(bubbleRect, CORNER_R, CORNER_R, fillPaint)
-            canvas.drawPath(pointerPath, fillPaint)
-            canvas.drawRoundRect(bubbleRect, CORNER_R, CORNER_R, borderPaint)
-            canvas.drawPath(pointerPath, borderPaint)
-
-            var baseline = bubbleRect.top + PADDING_Y - textPaint.ascent()
-            for (line in bubble.lines) {
-                canvas.drawText(line, bubbleRect.centerX(), baseline, textPaint)
-                baseline += lineHeight
+                var baseline = bubbleRect.top + PADDING_Y - textPaint.ascent()
+                var lineIndex = 0
+                while (lineIndex < bubble.lines.size) {
+                    canvas.drawText(
+                        bubble.lines[lineIndex],
+                        bubbleRect.centerX(),
+                        baseline,
+                        textPaint
+                    )
+                    baseline += lineHeight
+                    lineIndex++
+                }
             }
+            bubbleIndex++
         }
     }
 
     fun clear() {
         active.clear()
         variantCounts.clear()
+        lineMeasurementCountForTest = 0
     }
 
     internal fun activeTextsForTest(): List<String> = active.map { it.text }

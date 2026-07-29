@@ -7,7 +7,6 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import com.anurag9000.forestrun.engine.AssetPaths
 import com.anurag9000.forestrun.utils.MathUtils
-import java.util.ArrayDeque
 import kotlin.math.abs
 
 /** Bounded floating flavor-text overlay manager. */
@@ -56,7 +55,7 @@ object FlavorTextManager {
             get() = elapsed >= lifetime
     }
 
-    private val active = ArrayDeque<FlavorText>(MAX_ACTIVE)
+    private val active = ArrayList<FlavorText>(MAX_ACTIVE)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(180, 0, 0, 0)
@@ -89,8 +88,8 @@ object FlavorTextManager {
             return
         }
 
-        while (active.size >= MAX_ACTIVE) active.removeFirst()
-        active.addLast(
+        while (active.size >= MAX_ACTIVE) active.removeAt(0)
+        active.add(
             FlavorText(
                 text = normalizedText,
                 x = x,
@@ -104,38 +103,45 @@ object FlavorTextManager {
 
     fun update(deltaTime: Float) {
         if (!deltaTime.isFinite() || deltaTime <= 0f) return
-        val iterator = active.iterator()
-        while (iterator.hasNext()) {
-            val flavorText = iterator.next()
+        var textIndex = 0
+        while (textIndex < active.size) {
+            val flavorText = active[textIndex]
             flavorText.elapsed += deltaTime
             flavorText.y -= FLOAT_SPEED * deltaTime
-            if (flavorText.isDead) iterator.remove()
+            if (flavorText.isDead) {
+                active.removeAt(textIndex)
+            } else {
+                textIndex++
+            }
         }
     }
 
     fun draw(canvas: Canvas) {
         val font = pixelFont ?: Typeface.MONOSPACE
-        for (flavorText in active) {
+        var textIndex = 0
+        while (textIndex < active.size) {
+            val flavorText = active[textIndex]
             val size = flavorText.currentSize
             val alpha = flavorText.alpha
-            if (alpha <= 0) continue
+            if (alpha > 0) {
+                textPaint.typeface = font
+                textPaint.textSize = size
+                textPaint.color = flavorText.colour
+                textPaint.alpha = alpha
 
-            textPaint.typeface = font
-            textPaint.textSize = size
-            textPaint.color = flavorText.colour
-            textPaint.alpha = alpha
+                shadowPaint.typeface = font
+                shadowPaint.textSize = size
+                shadowPaint.alpha = (alpha * 0.6f).toInt().coerceIn(0, 255)
 
-            shadowPaint.typeface = font
-            shadowPaint.textSize = size
-            shadowPaint.alpha = (alpha * 0.6f).toInt().coerceIn(0, 255)
-
-            canvas.drawText(
-                flavorText.text,
-                flavorText.x + SHADOW_DX,
-                flavorText.y + SHADOW_DY,
-                shadowPaint
-            )
-            canvas.drawText(flavorText.text, flavorText.x, flavorText.y, textPaint)
+                canvas.drawText(
+                    flavorText.text,
+                    flavorText.x + SHADOW_DX,
+                    flavorText.y + SHADOW_DY,
+                    shadowPaint
+                )
+                canvas.drawText(flavorText.text, flavorText.x, flavorText.y, textPaint)
+            }
+            textIndex++
         }
     }
 

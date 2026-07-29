@@ -62,10 +62,13 @@ object ParticleManager {
         ownerThreadId = Thread.currentThread().id
         flushPendingOneShots()
 
-        // Update continuous emitters
-        for (emitter in continuousEmitters) {
+        // Update continuous emitters without allocating a MutableList iterator.
+        var emitterIndex = 0
+        while (emitterIndex < continuousEmitters.size) {
+            val emitter = continuousEmitters[emitterIndex]
             val n = emitter.updateContinuous(deltaTime)
             repeat(n) { emit(emitter) }
+            emitterIndex++
         }
 
         // Update all particles
