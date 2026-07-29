@@ -1,380 +1,308 @@
 # Forest Run — Technical Architecture
 
-**Language:** Kotlin  
-**Rendering:** `SurfaceView` — custom 2D game loop  
-**Build:** Gradle, `com.anurag9000.forestrun`, Min SDK 24, Target SDK 34, Java 17  
-**Persistence:** local `SharedPreferences` only, no cloud sync in v1.0
+This document describes the current remediation branch. It distinguishes implemented contracts from release claims that still require physical-device evidence.
 
----
+## 1. Platform and build
 
-## 1. Project Structure
+- Language: Kotlin
+- Rendering: custom `SurfaceView`/`Canvas` engine; no Compose
+- Namespace/application ID: `com.anurag9000.forestrun`
+- Debug application ID: `com.anurag9000.forestrun.debug`
+- Min SDK: 24
+- Compile/target SDK: 36
+- Android bytecode target: Java 17
+- CI runtime: Java 21
+- Orientation: fixed landscape, pending final product/device acceptance
+- Release build: R8 minification plus resource shrinking
+- Signing: optional external Gradle/environment credentials; no key material is committed
 
-```
+Source layout:
+
+```text
 app/src/main/java/com/anurag9000/forestrun/
 ├── MainActivity.kt
-├── engine/          — game loop, state, input, systems, audio, haptics
-├── entities/        — Player, Entity base, flora/, trees/, birds/, animals/
-├── systems/         — particles, ghost, seed orbs
-├── ui/              — HUD, GameOverScreen, GardenScreen, MainMenuScreen, dialogs
-└── utils/           — math, asset helpers
+├── engine/      lifecycle, game loop, state, persistence, audio, haptics
+├── entities/    Player, Entity base, flora, trees, birds, animals
+├── systems/     particles, seed orbs, ghost recording/playback/persistence
+├── ui/          menu, HUD, Garden, rest/game-over, dialogue, debug tools
+└── utils/       bitmap and math helpers
 ```
 
-Assets live in `app/src/main/assets/sprites/`. Audio in `res/raw/`.
+Sprites are packaged under `app/src/main/assets/sprites/`; audio is packaged under `app/src/main/res/raw/`.
 
-### AndroidManifest Requirements
+## 2. Activity and surface lifecycle
 
-- `screenOrientation="sensorLandscape"`
-- `configChanges="orientation|screenSize|keyboardHidden"`
-- Immersive full-screen (no action bar, no status bar)
-- `keepScreenOn`
+`MainActivity` owns Android lifecycle integration, safe-area insets, feedback settings initialization, save repair, repeated `singleTask` intents, and creation/teardown of `GameView`.
+
+The manifest currently uses:
+
+- `launchMode="singleTask"`
+- `screenOrientation="landscape"`
+- `configChanges="orientation|screenSize|keyboardHidden|screenLayout"`
+- immersive/keep-screen-on behavior
 - `VIBRATE` permission
 
----
+Repeated launch intents are handled through `onNewIntent` rather than relying on Activity recreation. Audio and haptic managers have explicit teardown/recreation paths.
 
-## 2. Game Loop — GameThread & GameView
+## 3. Game thread
 
-`GameThread` drives a 60 FPS loop on a dedicated background thread:
+`GameThread` drives update and rendering on one dedicated thread:
 
-1. Compute `deltaTime` (nanoseconds → seconds, capped at 0.05s to prevent physics explosion on resume)
-2. Call `GameView.update(deltaTime)`
-3. Lock canvas → `GameView.draw(canvas)` → unlock/post
-4. Sleep for remaining 16.67ms budget
+1. compute a bounded `deltaTime`;
+2. invoke `GameView.update(deltaTime)`;
+3. render through a locked `Canvas`;
+4. record update, render, and total processing durations;
+5. sleep for the remainder of the nominal 60 Hz budget.
 
-`GameView` extends `SurfaceView` and implements `SurfaceHolder.Callback`. All game systems only initialize after `surfaceCreated()` fires, when screen dimensions are known.
+Shutdown uses interruption plus a bounded join. It restores caller interruption and refuses to render a stale frame after a stop request.
 
-**Performance rules (enforced in code):**
-- No bitmap decoding inside the draw loop
-- No `Paint` allocation inside the draw loop — all Paint objects created once at construction
-- Entities are object-pooled via `EntityManager.recyclePool` (max 3 instances per type)
-- Particle count is capped per emitter
+### Frame telemetry
 
----
+`FramePerformanceMonitor` records primitive nanosecond samples into fixed-size ring buffers without allocating per frame. `FramePerformanceTelemetry` exposes a process-wide context-free monitor so measurements survive Activity and Surface recreation.
 
-## 3. App State Machine
+Out-of-band snapshots report:
 
+- sampled and cumulative frame counts;
+- mean update/render/processing duration;
+- p50/p95/p99 processing duration;
+- maximum processing duration;
+- frames exceeding the 60 Hz processing budget;
+- current/max Java heap observations.
+
+This instrumentation enables profiling; it does **not** prove performance acceptance. Representative-device frame time, allocation, GC, I/O, audio-thread, thermal, memory, and long-run measurements remain release gates.
+
+## 4. Runtime state ownership
+
+Three different concerns are intentionally separate.
+
+### Active application screen
+
+`AppGameState` actively uses:
+
+- `MENU`
+- `GARDEN`
+- `PLAYING`
+
+Legacy `BLOOM` and `REST` enum entries are retained only for compatibility and must not drive new runtime flow.
+
+### Death/restart flow
+
+`RunState` owns:
+
+- `PLAYING`
+- `DYING`
+- `GAME_OVER`
+- `RESTARTING`
+
+`RunResetManager` advances death timing, restart fade, reset execution, and return to the Garden.
+
+### Bloom
+
+Bloom is an orthogonal power flag owned by `GameStateManager`. It does not replace locomotion state. Gravity, jumping, falling, landing, and ducking continue while Bloom is active.
+
+## 5. Player locomotion and input
+
+`InputHandler` arbitrates tap, hold, swipe-down, cancellation, and silent reset before mutating player locomotion. Gameplay callbacks are accepted only while both application and run states permit live input.
+
+Player jump behavior:
+
+1. press starts an immediate full-force ascent for responsiveness;
+2. release caps upward velocity according to hold duration;
+3. quick taps approach `MIN_JUMP_FORCE`;
+4. longer holds preserve more of the initial `MAX_JUMP_FORCE`;
+5. release never adds upward energy;
+6. apex gravity and landing transitions remain deterministic.
+
+Current locomotion states are running, jump start, jumping, apex, falling, landing, ducking, stumble, and rest. `PlayerState.BLOOM` is a reserved legacy ordinal because old ghost frames store enum ordinals; current Bloom uses `Player.isInvincible` instead.
+
+## 6. Game-state and economy ownership
+
+`GameStateManager` owns mutable per-run values such as:
+
+- scroll speed, time, distance, and score;
+- run and lifetime Seed views;
+- Bloom meter, active flag, timer, and conversion count;
+- opening input discovery;
+- debuffs and score multipliers;
+- run-level mercy/pacifist statistics.
+
+Persistent currency remains loaded through save infrastructure. Run resets reload externally changed lifetime Seeds so Garden spending cannot be overwritten by stale in-memory state.
+
+## 7. Entity lifecycle and encounter arbitration
+
+`EntityManager` owns spawning, updates, player-reactive mechanics, collision arbitration, terminal outcomes, pass resolution, Bloom conversion, and Seed Orbs.
+
+Entity pooling is deliberately disabled. Concrete entities contain incompatible timers, projectiles, movement modes, dialogue state, and reward state; reuse is unsafe until every class has a complete reset contract.
+
+Random spawning is distance-based. `SpawnPacing.requiredGapPx` keeps world-space separation stable as scroll speed changes. Deterministic `EncounterDirector` scenarios bypass ordinary random persistence.
+
+Every entity begins with `EncounterOutcome.PENDING` and may resolve once to exactly one terminal outcome:
+
+- `HIT`
+- `STUMBLE`
+- `MERCY`
+- `CLEAN_PASS`
+- `BLOOM_CONVERTED`
+
+Collision queries are pure. `EntityManager` selects one overlap with deterministic severity:
+
+```text
+HIT > STUMBLE > MERCY
 ```
-MENU ──tap──► PLAYING ──hit──► DYING ──1.2s──► GAME_OVER ──tap──► RESTARTING ──fade──► GARDEN
-  ▲                                                                                         │
-  └─────────────────────────────────────────────────────────────────────────────────────────┘
 
-MENU ──garden tap──► GARDEN ──run tap──► PLAYING
-```
+Only the selected entity receives effects. Collision arbitration precedes pass processing. Resolved encounters and ordinary clean passes are persisted centrally and once.
 
-**`AppGameState`:** `MENU`, `GARDEN`, `PLAYING`  
-**`RunState`:** `PLAYING`, `DYING`, `GAME_OVER`, `RESTARTING`
+### Allocation-free mercy geometry
 
-Both states live in `GameView` as `@Volatile` fields. The `DYING` state lasts 1.2s (rest animation plays), `RESTARTING` performs a 0.5s fade-to-black before routing back to Garden.
+The `Entity` base provides allocation-free expanded-rectangle probes with symmetric, axis-specific, or per-edge padding. Entity-specific safe windows—including Vanilla Orchid, Bamboo, Cherry Blossom, Jacaranda, and Weeping Willow—retain their original geometry without constructing temporary `RectF` objects during collision queries.
 
----
+## 8. Seed Orbs and Bloom conversion
 
-## 4. Player State Machine
+`SeedOrbManager` stages collectible Orbs ahead of the player and removes missed Orbs after they leave the screen.
 
-**States:** `RUNNING`, `JUMP_START`, `JUMPING`, `APEX`, `FALLING`, `LANDING`, `DUCKING`, `BLOOM`, `STUMBLE`, `REST`
+During Bloom, a passed pending entity resolves as `BLOOM_CONVERTED`. Conversion is exclusive: it cannot also award ordinary clean-pass, entity unique-action, or Orb rewards.
 
-### Physics Constants
+Bloom presentation coordinates:
 
-| Constant | Value |
-|---|---|
-| `GRAVITY` | 3000 px/s² |
-| `MIN_JUMP_FORCE` | −900 px/s (quick tap) |
-| `MAX_JUMP_FORCE` | −1800 px/s (full hold) |
-| `MAX_HOLD_DURATION_S` | 0.6s |
-| `APEX_GRAVITY_FACTOR` | 0.60× |
-| `APEX_GRAVITY_DURATION_S` | 0.20s |
-| `JUMP_START_DURATION_S` | 0.05s (squash hold before launch) |
-| `LANDING_DURATION_S` | 0.07s |
-| `DUCK_HEIGHT_FACTOR` | 0.55× |
+- player invincibility and continuous aura/trail emitters;
+- world and conversion bursts;
+- HUD readiness/active/afterglow states;
+- camera feedback;
+- SFX, music, and haptics;
+- environment response.
 
-### Jump Mechanics
+`GameStateManager` owns the only authoritative Bloom timer. Rewards earned while Bloom is already active do not restart it.
 
-`JUMP_START` holds for 0.05s (squash), then applies `MAX_JUMP_FORCE` unconditionally. Variable height is achieved via the "Mario abort": if `onJumpReleased()` fires while `velocityY < 0` during `JUMPING`, upward velocity is halved.
+## 9. Biomes and background
 
-`APEX` is detected when `velocityY ≥ 0` during `JUMPING`. Reduced gravity applies for 0.20s for floaty feel.
+`BiomeManager` selects and blends five biome identities:
 
-### Squash & Stretch
+- Meadow
+- Orchard
+- Ancient Grove
+- Dusk Canyon
+- Night Forest
 
-| State | scaleX | scaleY |
-|---|---|---|
-| `JUMP_START` | 1.25 | 0.80 |
-| `JUMPING` | 0.85 | 1.20 |
-| `FALLING` | 0.90 | 1.15 |
-| `LANDING` | 1.30 | 0.75 |
-| `DUCKING` | 1.15 | 0.55 |
+`ParallaxBackground` owns authored/cached scene composition, parallax layers, sky/ground/foliage transitions, mist, leaves, petals, fireflies, horizon light, speed response, and Bloom response.
 
-Run animation FPS is velocity-synced: mapped from base speed (24 fps) to max speed (32 fps).
+Some scenic layers remain procedural. Final art-direction acceptance or replacement is explicitly unresolved.
 
-### Hitbox
+## 10. Rendering and safe content
 
-All four sides inset by `HITBOX_INSET = 10f` from the scaled sprite rect. Keeps collision forgiving while remaining physically honest.
+Essential menu, Garden, HUD, rest, and debug content share one `SafeContentTransform`:
 
----
+- preserves aspect ratio;
+- maps physical cutout/system-bar bounds into logical coordinates;
+- clips essential content to the safe logical rectangle;
+- inversely maps touch coordinates back into that logical space.
 
-## 5. Input Handler
+Geometry is covered by host tests, but phone/tablet/cutout/unusual-aspect acceptance remains a physical-device gate.
 
-`InputHandler` implements `View.OnTouchListener` and translates raw `MotionEvent`s into game callbacks:
+Paints, reusable rectangles, cinematic profiles, Bloom presentation objects, hot-path traversals, and one-shot particle emitters are cached or reused where currently audited. These safeguards reduce known churn; they are not a substitute for allocation profiling.
 
-- `onJumpPressed` — finger down (starts charge)
-- `onJumpHeld(holdSec)` — called every game frame via `tick(deltaTime)` while held, after 0.05s threshold
-- `onJumpReleased(holdSec)` — finger up (commits jump or Mario abort)
-- `onDuckPressed` — swipe-down detected (80px threshold)
-- `onDuckReleased` — finger lifted after duck
+## 11. Particle system
 
-Multi-touch: only the primary pointer drives game input. Subsequent fingers are ignored.
+`ParticleManager` owns a fixed-capacity particle pool and continuous emitters. Named one-shot presets reuse cached `ParticleEmitter` instances rather than constructing an emitter for every event. Active particle traversal uses indexed loops to avoid iterator churn.
 
-`inputHandler.tick(deltaTime)` is called once per frame from `GameView.update()` to accumulate `holdDuration`.
+Reduced-motion settings are applied at the particle-count boundary. Continuous Bloom emitters are attached to the player and explicitly removed on Bloom exit, rest, or reset.
 
----
+## 12. Ghost recording, playback, and persistence
 
-## 6. GameStateManager
+`GhostRecorder` samples player pose at 30 Hz for up to twenty minutes. A completed best-run buffer is detached in O(1), published immediately to playback memory, and handed to `GhostPersistenceManager` for dedicated-worker persistence.
 
-Single source of truth for all mutable per-run state. `GameView` owns one instance and passes it to every subsystem.
+Ghost files are written atomically and reject malformed inputs including oversized, truncated, trailing, non-finite, invalid-state, and non-monotonic data. Newer-schema ghost data is preserved rather than destructively rewritten by an older build.
 
-**Manages:**
-- `scrollSpeed` — current px/s (ramped from `BASE_SCROLL_SPEED` to `MAX_SCROLL_SPEED` over distance)
-- `distanceMetres` — total metres run
-- `runTimeSeconds` — elapsed run time
-- `score` / `exactScore` — fractional accumulation to prevent rounding loss
-- `highScore` — loaded from `SaveManager`, updated when beaten
-- `bloomMeter` / `isBloomActive` / `bloomTimer` — Bloom progression
-- `seedsThisRun` / `lifetimeSeeds` — seed counts
-- `speedDebuffMultiplier` / `speedDebuffTimer` — Hedgehog debuff
-- `scoreMultiplier` — boosted by kindness/mercy rewards
-- `openingInputState` — tracks first-30s input discovery for guidance chips
+`GhostPlayer` provides context-aware visibility around the live player and hazards. Ghosts have no gameplay hitbox.
 
-**Speed & score sync (Bug 2, fixed):** Both `distanceMetres` and the score `distanceDelta` use the same captured `speedThisFrame` value before the speed ramp is recalculated, ensuring score and distance are always frame-coherent.
+Legacy ghost frames store `PlayerState.ordinal`; therefore PlayerState entries must not be removed or reordered without a schema migration.
 
-### Bloom Lifecycle
+## 13. Save integrity and persistent memory
 
-`collectSeed()` increments `bloomMeter`. At 8 seeds: `bloomMeter = 0`, `isBloomActive = true`. After 6 seconds: `isBloomActive = false`. Player's `activateBloom()` / `deactivateBloom()` are triggered by `GameView` detecting the state change.
+Persistence is split by responsibility:
 
----
+- `SaveManager`: scores, Seeds, run summaries, Garden/costume values, ghost compatibility paths;
+- `PersistentMemoryManager`: encounters, hits, passes, spares, relationships, return/history signals;
+- `SaveIntegrityManager`: schema migration, type repair, bounds, saturating counters, incomplete-summary rejection, and compatibility storage.
 
-## 7. Entity System
+Deterministic scenarios are isolated from permanent score, encounter, relationship, Garden, summary, and ghost history.
 
-### Base Class: `Entity`
+Relationship familiarity from appearances is capped at Recognition. Trust and Bond require meaningful positive outcomes; hits delay progression.
 
-All entities share `x`, `y`, `hitbox`, `isActive`, `hasBeenPassed`. `update(deltaTime, scrollSpeed)` scrolls left. `draw(canvas)` renders. `onCollision(player, gameState)` returns `CollisionResult`.
+## 14. Garden, return moments, and menu ritual
 
-### EntityManager
+The Garden uses a shared `GardenLayoutPlanner` for visual panels and touch targets. Catalogue, statistics, last-run, wardrobe, and run regions are tested at multiple landscape sizes.
 
-Manages the full entity lifecycle:
-- `activeEntities: MutableList<Entity>` — all current on-screen entities
-- `recyclePool: Map<EntityType, MutableList<Entity>>` — up to 3 instances per type
-- Spawn timer driven by `DifficultyScaler.getSpawnInterval(distance)` → `ReadabilityProfile`
-- Pass detection: `entity.hitbox.right < playerPassX` (25% of screen width)
-- On pass: `performUniqueAction()`, `recordCleanPass()`, authored dialogue bubble, optional Bloom conversion
-- Collision: `checkCollisions()` skipped entirely during `isBloomActive`
+Garden spending writes through persistent currency and cannot be refunded by stale game state. Sanctuary counts are clamped non-negative. Garden particles update only while the screen is active.
 
-**Bloom conversion on pass:** entity is despawned (`isActive = false`), `recordBloomConversion()` fires (awards 140 pts + 1 seed), world burst particles emit.
+Return moments are consumed on visible Garden entry rather than hidden construction. Day boundaries use the local calendar date. Returning home resets the willow menu ritual.
 
-### SeedOrbManager
+## 15. Text and authored presentation
 
-Separate manager for floating seed orbs. Spawns above entities on pass (60% base rate, higher for Lily/Dog/Wolf). Scrolls left, detects player overlap for collection.
+`DialogueBubbleManager` and `FlavorTextManager` use bounded, wrapped, deduplicated, screen-clamped presentation queues. Their hot-path collections are pre-sized/reused.
 
----
+Run-level text is coordinated by `RunFlavorPresentation`; family-specific writing is separated into flora, tree, bird, and animal flavor modules.
 
-## 8. BiomeManager
+Game-over composition and persistence reads are cached rather than rebuilt every draw frame.
 
-5 biomes cycle every 500 metres:
+## 16. Audio, haptics, and feedback settings
 
-| Distance | Biome |
-|---|---|
-| 0–500m | `MEADOW` |
-| 500–1000m | `ORCHARD` |
-| 1000–1500m | `ANCIENT_GROVE` |
-| 1500–2000m | `DUSK_CANYON` |
-| 2000m+ | `NIGHT_FOREST` |
+`SfxManager` explicitly tracks `SoundPool` sample readiness and failures. Mandatory assets fail non-debug runtime validation; optional Bloom sounds have explicit fallback behavior.
 
-Each biome defines: sky gradient (top + bottom), ground colour, foliage colour, ambient darkness alpha, entity spawn pool, and a cached authored scene composition for the parallax background. Transitions apply smooth colour blending. Night Forest adds firefly density and enables `Owl` spawns.
+`LeitmotifManager` owns music-state transitions and deterministic crossfade ownership. Repeated parameter writes are throttled.
 
----
+Persistent independent settings control:
 
-## 9. Collision Classification
+- reduced motion;
+- music/SFX;
+- haptics.
 
-`Entity.onCollision()` returns one of:
+They are enforced at camera, particle, cinematic, music, SFX, and vibration boundaries. Actual loudness, latency, vibration intensity, and lifecycle behavior still require hardware acceptance.
 
-- `NONE` — no overlap
-- `MERCY_MISS` — hitboxes nearly overlapping but within `MERCY_WINDOW_FRAC` (18%) margin
-- `STUMBLE` — non-lethal hit (entity-specific threshold — e.g. Hyacinth brush, some animal secondary states)
-- `HIT` — lethal collision → triggers `DYING`
+## 17. Assets and release contracts
 
-`MERCY_MISS` awards mercy heart + kindness chain increment + score bonus.  
-`STUMBLE` triggers brief player stumble animation + brief invincibility window + entity despawn.  
-`HIT` saves ghost if new best distance, records run summary, triggers rest scene.
+`RuntimeAssetValidator` checks required sprites, mandatory audio, and fonts outside debug execution. Sprite sheets must decode, divide cleanly by frame count, and remain within sane dimensions. Generated placeholder sprites are rejected for non-debug runtime.
 
----
+Release signing values are accepted only from external properties/environment variables:
 
-## 10. Parallax Background System
+- `FOREST_RUN_KEYSTORE`
+- `FOREST_RUN_STORE_PASSWORD`
+- `FOREST_RUN_KEY_ALIAS`
+- `FOREST_RUN_KEY_PASSWORD`
 
-4 scroll layers at different speed ratios. `ParallaxBackground` additionally renders:
+The unsigned minified bundle is an automated build artifact, not proof that a signed upload artifact works.
 
-- Biome sky gradient (top to bottom)
-- Canopy shade band
-- Layered mist bands (density scaled by distance/biome)
-- Drifting leaves (primary + backfill)
-- Drifting petals (primary + trail)
-- Fireflies and glow motes (dense in Night Forest)
-- Horizon glow
-- Gust-strength-driven world sway (visible wind ribbons)
-- Subtle world-scale response to scroll speed and Bloom state
-- Cached authored biome scene compositions (Meadow, Orchard, Ancient Grove, Dusk Canyon, Night Forest)
-- Shared cinematic overlay finish (via `CinematicPolish`)
+## 18. Testing and CI
 
-Menu, rest, and Garden use sanctuary-derived mist, lantern glow, ground-light bloom, and arrival badge presentation via `GardenSanctuaryPlanner`.
+Permanent CI is read-only and validates the exact event SHA. It performs:
 
----
+- repository/source contract checks;
+- debug/release/unit/instrumentation compilation;
+- full JVM/Robolectric suite;
+- debug and release lint;
+- debug and instrumentation APK assembly;
+- minified/resource-shrunk AAB build;
+- effective R8-renaming verification;
+- API 35 connected instrumentation;
+- exact assertion of fourteen tests with zero failures, errors, or skips.
 
-## 11. Sprite System
+The test suite covers input arbitration, physics, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, thread shutdown, collision geometry, hot-path reuse, and frame telemetry.
 
-`SpriteSheet` plays animations from a single horizontally-packed bitmap strip. Supports:
-- Variable `framesPerSec` (modified at runtime for velocity sync)
-- Looping or one-shot playback
-- `startFrame` offset for shared atlas bitmaps
-- `copy()` so multiple entities share one bitmap without duplication
+## 19. Debug scenarios
 
-All entity animation instances are created once at `Player`/entity construction. No bitmap decoding inside the game loop.
+Debug-only `EncounterDirector` scenarios mirror the device-acceptance checklist and can be selected through repeated launch intents or the in-game overlay. Scenario entities use persistence-disabled context.
 
----
+Debug scenarios are deterministic test aids, not substitutes for ordinary-play and physical-device acceptance.
 
-## 12. Ghost System
+## 20. Known architectural debt and unresolved release evidence
 
-`GhostRecorder` records `GhostFrame` (time, x, y, state, scaleX, scaleY) every frame. On new best distance, the snapshot is serialized and saved via `SaveManager`.
+The following remain intentionally open:
 
-`GhostPlayer` replays the saved run with a context-aware visibility policy:
-- Delays reveal at run start (avoids immediate visual confusion)
-- Suppresses after player collisions (ghost doesn't crowd recovery)
-- Fades by overlap when live player and ghost occupancy are close
-- Suppresses during dense hazard windows
-- Re-enters smoothly after suppression
+- `GameView` is still a large coordinator and should be decomposed incrementally after behavioral stability;
+- persistence ownership is safer but still distributed across managers;
+- entity mechanic/readability claims need ordinary-play and hardware acceptance;
+- frame, allocation, GC, memory, I/O, audio-thread, thermal, and long-run metrics need measured thresholds on representative hardware;
+- fixed landscape and procedural scenic layers need final product decisions;
+- artwork and animation sheets, including Wolf, need visual inspection;
+- real upload credentials, signed artifact installation, store-path testing, screenshots, metadata, privacy/data-safety, content rating, and current Play-policy review remain release gates.
 
-Ghost has no gameplay hitbox. Rendered in white-blue at 40% opacity.
-
----
-
-## 13. Camera System
-
-`CameraSystem` (singleton) implements trauma-based screen shake:
-- `addTrauma(amount)` accumulates shake intensity
-- `update(deltaTime)` decays trauma each frame
-- `applyTo(canvas, block)` translates/rotates canvas before drawing the gameplay layer
-- HUD and screen overlays are drawn **after** the camera scope — they never shake
-
-Shake triggers: `shakeHit()`, `shakeBloom()`, `shakeBloomChain(tier)`, `shakeMercyMiss()`, `addTrauma(0.3f)` on milestones.
-
-**Bug 1 (fixed):** `CameraSystem.update()` was previously called twice per frame during the `DYING` state (once unconditionally at the top of `GameView.update()`, once inside the `DYING` branch). The duplicate call was removed — shake now decays at the designed rate.
-
----
-
-## 14. Particle System
-
-`ParticleManager` manages both one-shot emit pools and continuous emitters. All particle types are defined as `FxPreset` enum entries and built via `FxPreset.build(x, y)`.
-
-**Presets include:** `JUMP_DUST`, `LAND_THUD`, `SLIDE_GRASS`, `DEATH_EXPLOSION`, `BLOOM_ACTIVATE`, `BLOOM_AURA`, `BLOOM_TRAIL`, `BLOOM_CONVERT`, `BLOOM_WORLD_BURST`, `MERCY_STARS`, `HIT_BURST`, `SEED_COLLECT`, `PETAL_DRIFT`, `POLLEN_BURST`.
-
-Continuous emitters (`addContinuous`) are attached to the player during Bloom and removed on `deactivateBloom()` or `reset()`.
-
----
-
-## 15. HUD
-
-`HUD` draws: score (pixel font), distance, seed count, Bloom meter, mercy hearts.
-
-Bloom meter has three visual states driven by `BloomPresentation.hudPresentation()`:
-- Near-ready: distinct charge indicator
-- Active: power-state framing with remaining time
-- Afterglow: settling fade after the window
-
-Opening guidance chips for the first 30 seconds are driven by `OpeningReadabilityGuide` and `OpeningInputState`.
-
----
-
-## 16. Flavor Text & Dialogue System
-
-`FlavorTextManager` spawns short floating world-space text labels that drift upward and fade.
-
-`DialogueBubbleManager` spawns anchored speech bubbles above entities or the player. Supports deterministic trigger-keyed short-line variation so ordinary clean-pass moments have authored breadth instead of one fixed label.
-
-All in-run authored text (collision, mercy-miss, clean-pass, milestone, progress) is centralized in `RunFlavorPresentation`. Entity-family flavor (flora, trees, birds, animals) is centralized in `FloraEncounterFlavor`, `TreeEncounterFlavor`, `BirdEncounterFlavor`, `AnimalEncounterFlavor`.
-
----
-
-## 17. Mercy & Pacifist Systems
-
-`MercySystem` tracks: `mercyHearts`, `nearMisses`, `kindnessChain` per run.  
-`PacifistTracker` tracks: `cleanPassesThisRun`, `sparedThisRun`, `hitsThisRun`, per-biome state, biome friendship.
-
-Both reset on `resetRun()`. `PacifistTracker.currentRouteTier()` computes the canonical tier from live run stats. Pending rewards (`PacifistReward`) are queued and consumed once per frame via `consumeReward()`.
-
----
-
-## 18. Persistence — SaveManager
-
-All persistence is local `SharedPreferences` + JSON serialization:
-
-| Key | Type |
-|---|---|
-| High score | Int |
-| Lifetime seeds | Int |
-| Garden unlocks | BitSet / Int flags |
-| Active costume | String key |
-| Ghost run | JSON (`List<GhostFrame>`) |
-| Best distance | Float |
-| Last run summary | JSON (`RunSummary`) |
-| Relationship stages | JSON per creature |
-| Encounter memory | JSON (hit/spare/encounter counts) |
-| Repeated-history snapshot | JSON (kindness streak, repeat-killer, biome friendship, route tier) |
-| Fragment unlock marks | JSON |
-| Return state | JSON |
-
-`SaveManager.save()` is called immediately on death (`RunResetManager.triggerDeath()`) to survive process kill.
-
----
-
-## 19. Audio System
-
-`LeitmotifManager` manages music state transitions with explicit named motif signatures:
-
-| State | Signature |
-|---|---|
-| `MENU` | Soft ambient, slow |
-| `RUN_EARLY` | Minimal rhythm |
-| `RUN_MID` | Flute layer in |
-| `RUN_LATE` | Full layered, faster |
-| `BLOOM` | Orchestral peak |
-| `REST` | Music-box coda |
-
-Bloom has distinct `ready` / `convert` / `sustain` / `fade` audio handling. Tempo scales with `scrollSpeed`.
-
-`SfxManager` manages pooled one-shot SFX playback. All audio is fire-and-forget from game logic.
-
----
-
-## 20. Haptic Manager
-
-`HapticManager` wraps `VibrationEffect` with four patterns:
-- `shortPulse()` — jump
-- `mediumPulse()` — milestone, stumble
-- `longPulse()` — death/HIT
-- `doubleTap()` — MERCY_MISS close call
-- `bloomSurge()` — Bloom activation
-
----
-
-## 21. Difficulty Scaling
-
-`DifficultyScaler` is stateless. `getSpawnInterval(distance)` delegates to `ReadabilityProfile.spawnInterval()` which is the central source of truth for pacing.
-
-`getSpawnPool(distance, biomeManager)` returns the biome-specific pool when a `BiomeManager` is available. Falls back to distance-tiered pools (`POOL_EARLY`, `POOL_MID`, `POOL_LATE`) for test contexts.
-
-`openingSpawnInterval()`, `openingSpawnPool()`, `shouldLockRandomOpeningSpawns()` apply the first-30-second guided layer via `OpeningReadabilityGuide`.
-
----
-
-## 22. Debug Tools (Debug Build Only)
-
-`EncounterDirector` manages deterministic scenario playback when `FLAG_DEBUGGABLE` is set.
-
-**Scenarios mirror the device acceptance checklist exactly:**  
-`OPENING_READABILITY`, `BLOOM_SHOWCASE`, `GHOST_READABILITY`, `REST_LOOP`, `CACTUS_READ`, `LILY_GLOW`, `HYACINTH_BRUSH`, `EUCALYPTUS_WHIP`, `ORCHID_WINDOW`, `WILLOW_CURTAIN`, `JACARANDA_PETALS`, `BAMBOO_GAP`, `CHERRY_GUST`, `DUCK_TEACH`, `TIT_WAVE`, `CHICKADEE_SWERVE`, `OWL_DIVE`, `EAGLE_MARK`, `CAT_KINDNESS`, `FOX_MIRROR`, `WOLF_CHARGE`, `HEDGEHOG_DEBUFF`, `DOG_HAZARD`, `DOG_BUDDY`
-
-`DebugEncounterOverlay` renders a HUD panel in-game for scenario cycling. `DebugScenario` scripts inject timed input events for deterministic scenario replay.
+See `docs/RELEASE.md` for the evidence checklist. No documentation statement should promote the project beyond a feature-rich alpha until those gates are complete.
