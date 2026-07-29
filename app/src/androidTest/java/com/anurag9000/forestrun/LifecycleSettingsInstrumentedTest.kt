@@ -18,11 +18,9 @@ import com.anurag9000.forestrun.engine.FeedbackSettings
 import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.SafeContentTransform
 import com.anurag9000.forestrun.engine.SaveManager
-import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -70,36 +68,40 @@ class LifecycleSettingsInstrumentedTest {
         )
         assertEquals(ActivityInfo.LAUNCH_SINGLE_TASK, activityInfo.launchMode)
 
-        val scenario = ActivityScenario.launch(MainActivity::class.java)
+        val activity = instrumentation.startActivitySync(
+            Intent(targetContext, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
+        ) as MainActivity
         try {
-            val gameView = requireReadyGameView(scenario)
-            val originalActivity = AtomicReference<MainActivity>()
-            scenario.onActivity(originalActivity::set)
+            val gameView = requireReadyGameView(activity)
 
-            deliverScenarioIntent(scenario, EncounterScenario.BLOOM_SHOWCASE)
+            launchScenarioIntent(activity, EncounterScenario.BLOOM_SHOWCASE)
             waitForCondition("Bloom scenario is applied") {
                 val director = getPrivateField(gameView, "encounterDirector") as EncounterDirector
-                director.activeScenario == EncounterScenario.BLOOM_SHOWCASE
+                director.activeScenario == EncounterScenario.BLOOM_SHOWCASE &&
+                    activity.intent.getStringExtra(MainActivity.EXTRA_DEBUG_SCENARIO) ==
+                    EncounterScenario.BLOOM_SHOWCASE.name
             }
-            assertEquals(Lifecycle.State.RESUMED, scenario.state)
+            assertFalse(activity.isFinishing)
+            assertFalse(activity.isDestroyed)
 
-            deliverScenarioIntent(scenario, EncounterScenario.GHOST_READABILITY)
+            launchScenarioIntent(activity, EncounterScenario.GHOST_READABILITY)
             waitForCondition("second scenario replaces the first") {
                 val director = getPrivateField(gameView, "encounterDirector") as EncounterDirector
-                director.activeScenario == EncounterScenario.GHOST_READABILITY
+                director.activeScenario == EncounterScenario.GHOST_READABILITY &&
+                    activity.intent.getStringExtra(MainActivity.EXTRA_DEBUG_SCENARIO) ==
+                    EncounterScenario.GHOST_READABILITY.name
             }
-            assertEquals(Lifecycle.State.RESUMED, scenario.state)
-
-            scenario.onActivity { activity -> assertSame(originalActivity.get(), activity) }
+            assertFalse(activity.isFinishing)
+            assertFalse(activity.isDestroyed)
+            assertTrue(gameView.context === activity)
         } finally {
-            if (scenario.state != Lifecycle.State.DESTROYED) {
-                scenario.onActivity { activity -> activity.finishAndRemoveTask() }
-                instrumentation.waitForIdleSync()
-                waitForCondition("singleTask Activity is destroyed", timeoutMs = 10_000L) {
-                    scenario.state == Lifecycle.State.DESTROYED
-                }
+            instrumentation.runOnMainSync { activity.finish() }
+            instrumentation.waitForIdleSync()
+            waitForCondition("singleTask Activity is destroyed", timeoutMs = 10_000L) {
+                activity.isDestroyed
             }
-            scenario.close()
         }
     }
 
@@ -175,20 +177,32 @@ class LifecycleSettingsInstrumentedTest {
         }
     }
 
-    private fun deliverScenarioIntent(
-        scenario: ActivityScenario<MainActivity>,
+    private fun launchScenarioIntent(
+        activity: MainActivity,
         requestedScenario: EncounterScenario
     ) {
-        scenario.onActivity { activity ->
-            instrumentation.callActivityOnNewIntent(
-                activity,
+        instrumentation.runOnMainSync {
+            activity.startActivity(
                 Intent(activity, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     putExtra(MainActivity.EXTRA_DEBUG_SCENARIO, requestedScenario.name)
                     putExtra(MainActivity.EXTRA_DEBUG_AUTOSTART, true)
                 }
             )
         }
         instrumentation.waitForIdleSync()
+    }
+
+    private fun requireReadyGameView(activity: MainActivity): GameView {
+        lateinit var gameView: GameView
+        instrumentation.runOnMainSync {
+            val content = activity.findViewById<ViewGroup>(android.R.id.content)
+            gameView = content.getChildAt(0) as GameView
+        }
+        waitForCondition("GameView lays out and renders", timeoutMs = 10_000L) {
+            gameView.width > 0 && gameView.height > 0 && gameView.debugFrameCounter > 10
+        }
+        return gameView
     }
 
     private fun requireReadyGameView(scenario: ActivityScenario<MainActivity>): GameView {
