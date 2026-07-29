@@ -1,7 +1,9 @@
 package com.anurag9000.forestrun
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.graphics.RectF
 import android.os.SystemClock
 import android.view.MotionEvent
@@ -62,22 +64,30 @@ class LifecycleSettingsInstrumentedTest {
 
     @Test
     fun repeatedSingleTaskIntentsReuseActivityAndSwitchDeterministicScenario() {
+        val activityInfo = targetContext.packageManager.getActivityInfo(
+            ComponentName(targetContext, MainActivity::class.java),
+            0
+        )
+        assertEquals(ActivityInfo.LAUNCH_SINGLE_TASK, activityInfo.launchMode)
+
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val gameView = requireReadyGameView(scenario)
             val originalActivity = AtomicReference<MainActivity>()
             scenario.onActivity(originalActivity::set)
 
-            launchScenarioIntent(scenario, EncounterScenario.BLOOM_SHOWCASE)
+            deliverScenarioIntent(scenario, EncounterScenario.BLOOM_SHOWCASE)
             waitForCondition("Bloom scenario is applied") {
                 val director = getPrivateField(gameView, "encounterDirector") as EncounterDirector
                 director.activeScenario == EncounterScenario.BLOOM_SHOWCASE
             }
+            assertEquals(Lifecycle.State.RESUMED, scenario.state)
 
-            launchScenarioIntent(scenario, EncounterScenario.GHOST_READABILITY)
+            deliverScenarioIntent(scenario, EncounterScenario.GHOST_READABILITY)
             waitForCondition("second scenario replaces the first") {
                 val director = getPrivateField(gameView, "encounterDirector") as EncounterDirector
                 director.activeScenario == EncounterScenario.GHOST_READABILITY
             }
+            assertEquals(Lifecycle.State.RESUMED, scenario.state)
 
             scenario.onActivity { activity -> assertSame(originalActivity.get(), activity) }
         }
@@ -155,14 +165,14 @@ class LifecycleSettingsInstrumentedTest {
         }
     }
 
-    private fun launchScenarioIntent(
+    private fun deliverScenarioIntent(
         scenario: ActivityScenario<MainActivity>,
         requestedScenario: EncounterScenario
     ) {
         scenario.onActivity { activity ->
-            activity.startActivity(
+            instrumentation.callActivityOnNewIntent(
+                activity,
                 Intent(activity, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     putExtra(MainActivity.EXTRA_DEBUG_SCENARIO, requestedScenario.name)
                     putExtra(MainActivity.EXTRA_DEBUG_AUTOSTART, true)
                 }
