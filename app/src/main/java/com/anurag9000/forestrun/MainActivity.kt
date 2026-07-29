@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_DEBUG_AUTOSTART = "debug_autostart"
         const val EXTRA_DEBUG_SCENARIO = "debug_scenario"
+        const val EXTRA_RUN_MODE = "run_mode"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
