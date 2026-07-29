@@ -27,17 +27,17 @@ jobs:
           ref: agent/fix-core-gameplay-invariants
           fetch-depth: 0
 
-      - name: Apply allocation-free burst emitter cache
+      - name: Apply allocation-free one-shot emitter cache
         run: python3 scripts/patch_particle_emitter_cache.py
 
       - name: Verify transformed source contract
         shell: bash
         run: |
-          grep -q 'burstEmitterCache = arrayOfNulls' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
-          grep -q 'cachedBurstEmitterForTest' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
-          grep -q 'continuous presets are never retained' app/src/test/java/com/anurag9000/forestrun/systems/ParticleEmitterCacheTest.kt
+          grep -q 'oneShotEmitterCache = arrayOfNulls' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
+          grep -q 'cachedOneShotEmitterForTest' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
+          grep -q 'continuous preset used one shot is cached' app/src/test/java/com/anurag9000/forestrun/systems/ParticleEmitterCacheTest.kt
           if grep -q 'val emitter = preset.build(x, y)' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt; then
-            echo 'Event-time burst emitter allocation remains.'
+            echo 'Event-time named emitter allocation remains.'
             exit 1
           fi
 
@@ -111,7 +111,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'perf: reuse burst particle emitters'
+          git commit -m 'perf: reuse one-shot particle emitters'
           git push origin HEAD:agent/fix-core-gameplay-invariants
 
       - name: Upload diagnostics
