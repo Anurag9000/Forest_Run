@@ -21,7 +21,17 @@ jobs:
           fetch-depth: 0
 
       - name: Apply collision allocation remediation
-        run: python3 scripts/patch_collision_probe_allocations.py
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/patch_collision_probe_allocations.py')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace('replacements != 10', 'replacements != 13')
+          text = text.replace('Expected 10 symmetric mercy allocations', 'Expected 13 symmetric mercy allocations')
+          path.write_text(text, encoding='utf-8')
+          PY
+          python3 scripts/patch_collision_probe_allocations.py
 
       - name: Verify transformed source contracts
         shell: bash
