@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remove event-time ParticleEmitter allocation for burst presets."""
+"""Remove event-time ParticleEmitter allocation from named one-shot effects."""
 
 from pathlib import Path
 
@@ -25,15 +25,16 @@ def main() -> None:
 """,
         """    private val continuousEmitters = mutableListOf<ParticleEmitter>()
 
-    // Burst effects are stateless after configure() returns, so one emitter per
-    // preset can be reused safely on the single gameplay thread. Continuous
-    // emitters keep independent timers and are therefore never cached here.
-    private val burstEmitterCache = arrayOfNulls<ParticleEmitter>(FxPreset.entries.size)
-    private var burstEmitterBuildCount = 0
+    // Calls through emit(FxPreset, x, y) are immediate one-shot effects, even
+    // when the preset can also describe a continuous stream. Reuse one emitter
+    // per named one-shot preset; continuous owners still call preset.build(...)
+    // and retain their own independent emission timers.
+    private val oneShotEmitterCache = arrayOfNulls<ParticleEmitter>(FxPreset.entries.size)
+    private var oneShotEmitterBuildCount = 0
 
     // ── Update ────────────────────────────────────────────────────────────
 """,
-        "burst emitter cache fields",
+        "one-shot emitter cache fields",
     )
 
     replace_once(
@@ -47,45 +48,39 @@ def main() -> None:
     /** Register a continuous emitter (e.g. Bloom aura). Returns a handle to stop it. */
 """,
         """    /**
-     * Emit a named preset at screen position (x, y).
+     * Emit a named one-shot effect at screen position (x, y).
      *
-     * Burst presets reuse one emitter instance after first use. Continuous
-     * presets deliberately bypass the cache because their emission timer is
-     * mutable and must remain private to the owning effect.
+     * The emitter is cached after first use because configure() copies every
+     * particle property into the fixed pool before this method returns. A
+     * continuous owner must instead call [FxPreset.build] and [addContinuous]
+     * so its mutable timer is never shared.
      */
     fun emit(preset: FxPreset, x: Float, y: Float) {
         val index = preset.ordinal
-        val cached = burstEmitterCache[index]
-        if (cached != null) {
-            cached.x = x
-            cached.y = y
-            emit(cached)
-            return
+        val emitter = oneShotEmitterCache[index] ?: preset.build(x, y).also {
+            oneShotEmitterCache[index] = it
+            oneShotEmitterBuildCount++
         }
-
-        val created = preset.build(x, y)
-        if (created.isBurst) {
-            burstEmitterCache[index] = created
-            burstEmitterBuildCount++
-        }
-        emit(created)
+        emitter.x = x
+        emitter.y = y
+        emit(emitter)
     }
 
-    internal fun cachedBurstEmitterForTest(preset: FxPreset): ParticleEmitter? =
-        burstEmitterCache[preset.ordinal]
+    internal fun cachedOneShotEmitterForTest(preset: FxPreset): ParticleEmitter? =
+        oneShotEmitterCache[preset.ordinal]
 
-    internal val burstEmitterBuildCountForTest: Int
-        get() = burstEmitterBuildCount
+    internal val oneShotEmitterBuildCountForTest: Int
+        get() = oneShotEmitterBuildCount
 
-    internal fun resetBurstEmitterCacheForTests() {
-        burstEmitterCache.fill(null)
-        burstEmitterBuildCount = 0
+    internal fun resetOneShotEmitterCacheForTests() {
+        oneShotEmitterCache.fill(null)
+        oneShotEmitterBuildCount = 0
         clear()
     }
 
     /** Register a continuous emitter (e.g. Bloom aura). Returns a handle to stop it. */
 """,
-        "allocation-free named burst emission",
+        "allocation-free named one-shot emission",
     )
 
 
