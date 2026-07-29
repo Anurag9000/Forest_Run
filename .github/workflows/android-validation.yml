@@ -29,16 +29,214 @@ jobs:
           text = path.read_text(encoding='utf-8')
           text = text.replace('replacements != 10', 'replacements != 13')
           text = text.replace('Expected 10 symmetric mercy allocations', 'Expected 13 symmetric mercy allocations')
+          text = text.replace(
+              'if "val mercy = RectF" in text or "val bm = RectF" in text or "val tm = RectF" in text:',
+              'if "val mercy = RectF" in text:'
+          )
           path.write_text(text, encoding='utf-8')
           PY
           python3 scripts/patch_collision_probe_allocations.py
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str, label: str) -> None:
+              text = path.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f'{path}: {label}: expected one match, found {count}')
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          entity = Path('app/src/main/java/com/anurag9000/forestrun/entities/Entity.kt')
+          anchor = '    /** Return the current overlap result without mutating state or emitting presentation. */\n'
+          helper = '''    /** Allocation-free expanded-rectangle probe with independent per-edge padding. */
+              protected fun intersectsExpanded(
+                  target: RectF,
+                  source: RectF,
+                  leftPadding: Float,
+                  topPadding: Float,
+                  rightPadding: Float,
+                  bottomPadding: Float
+              ): Boolean {
+                  if (!leftPadding.isFinite() || !topPadding.isFinite() ||
+                      !rightPadding.isFinite() || !bottomPadding.isFinite()
+                  ) return false
+                  val left = leftPadding.coerceAtLeast(0f)
+                  val top = topPadding.coerceAtLeast(0f)
+                  val right = rightPadding.coerceAtLeast(0f)
+                  val bottom = bottomPadding.coerceAtLeast(0f)
+                  return target.left < source.right + right &&
+                      source.left - left < target.right &&
+                      target.top < source.bottom + bottom &&
+                      source.top - top < target.bottom
+              }
+
+          '''
+          replace_once(entity, anchor, helper + anchor, 'per-edge helper')
+
+          vanilla = Path('app/src/main/java/com/anurag9000/forestrun/entities/flora/VanillaOrchid.kt')
+          replace_once(vanilla, '''        val mercyPad = readability.mercyPaddingPx
+              val bm = RectF(
+                  bottomHitbox.left - mercyPad,
+                  bottomHitbox.top - mercyPad * 0.45f,
+                  bottomHitbox.right + mercyPad * 0.50f,
+                  bottomHitbox.bottom + mercyPad
+              )
+              val tm = RectF(
+                  topHitbox.left - mercyPad * 0.50f,
+                  topHitbox.top - mercyPad,
+                  topHitbox.right + mercyPad,
+                  topHitbox.bottom + mercyPad * 0.45f
+              )
+              if (RectF.intersects(player.hitbox, bm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
+          ''', '''        val mercyPad = readability.mercyPaddingPx
+              if (
+                  intersectsExpanded(
+                      player.hitbox,
+                      bottomHitbox,
+                      leftPadding = mercyPad,
+                      topPadding = mercyPad * 0.45f,
+                      rightPadding = mercyPad * 0.50f,
+                      bottomPadding = mercyPad
+                  ) || intersectsExpanded(
+                      player.hitbox,
+                      topHitbox,
+                      leftPadding = mercyPad * 0.50f,
+                      topPadding = mercyPad,
+                      rightPadding = mercyPad,
+                      bottomPadding = mercyPad * 0.45f
+                  )
+              ) return CollisionResult.MERCY_MISS
+          ''', 'Vanilla asymmetric mercy probes')
+
+          bamboo = Path('app/src/main/java/com/anurag9000/forestrun/entities/trees/Bamboo.kt')
+          replace_once(bamboo, '''            val mercyPad = readability.mercyPaddingPx * 0.5f
+                  val tm = RectF(topHitboxes[i].left - mercyPad, topHitboxes[i].top, topHitboxes[i].right + mercyPad, topHitboxes[i].bottom + mercyPad)
+                  val bm = RectF(bottomHitboxes[i].left - mercyPad, bottomHitboxes[i].top - mercyPad, bottomHitboxes[i].right + mercyPad, bottomHitboxes[i].bottom)
+                  if (RectF.intersects(player.hitbox, tm) || RectF.intersects(player.hitbox, bm)) nearMiss = true
+          ''', '''            val mercyPad = readability.mercyPaddingPx * 0.5f
+                  if (
+                      intersectsExpanded(
+                          player.hitbox,
+                          topHitboxes[i],
+                          leftPadding = mercyPad,
+                          topPadding = 0f,
+                          rightPadding = mercyPad,
+                          bottomPadding = mercyPad
+                      ) || intersectsExpanded(
+                          player.hitbox,
+                          bottomHitboxes[i],
+                          leftPadding = mercyPad,
+                          topPadding = mercyPad,
+                          rightPadding = mercyPad,
+                          bottomPadding = 0f
+                      )
+                  ) nearMiss = true
+          ''', 'Bamboo one-sided mercy probes')
+
+          jacaranda = Path('app/src/main/java/com/anurag9000/forestrun/entities/trees/Jacaranda.kt')
+          replace_once(jacaranda, '''        val mercyPad = readability.mercyPaddingPx
+              val bm = RectF(
+                  branchHitbox.left - mercyPad,
+                  branchHitbox.top,
+                  branchHitbox.right + mercyPad,
+                  branchHitbox.bottom + mercyPad * 0.40f
+              )
+              val tm = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
+              if (RectF.intersects(player.hitbox, bm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
+          ''', '''        val mercyPad = readability.mercyPaddingPx
+              if (
+                  intersectsExpanded(
+                      player.hitbox,
+                      branchHitbox,
+                      leftPadding = mercyPad,
+                      topPadding = 0f,
+                      rightPadding = mercyPad,
+                      bottomPadding = mercyPad * 0.40f
+                  ) || intersectsExpanded(player.hitbox, hitbox, mercyPad)
+              ) return CollisionResult.MERCY_MISS
+          ''', 'Jacaranda branch mercy probe')
+
+          willow = Path('app/src/main/java/com/anurag9000/forestrun/entities/trees/WeepingWillow.kt')
+          replace_once(willow, '''        val mercyPad = readability.mercyPaddingPx
+              val cm = RectF(
+                  curtainHitbox.left - mercyPad,
+                  curtainHitbox.top,
+                  curtainHitbox.right + mercyPad,
+                  curtainHitbox.bottom + mercyPad * 0.35f
+              )
+              val tm = RectF(hitbox.left - mercyPad, hitbox.top - mercyPad, hitbox.right + mercyPad, hitbox.bottom + mercyPad)
+              if (RectF.intersects(player.hitbox, cm) || RectF.intersects(player.hitbox, tm)) return CollisionResult.MERCY_MISS
+          ''', '''        val mercyPad = readability.mercyPaddingPx
+              if (
+                  intersectsExpanded(
+                      player.hitbox,
+                      curtainHitbox,
+                      leftPadding = mercyPad,
+                      topPadding = 0f,
+                      rightPadding = mercyPad,
+                      bottomPadding = mercyPad * 0.35f
+                  ) || intersectsExpanded(player.hitbox, hitbox, mercyPad)
+              ) return CollisionResult.MERCY_MISS
+          ''', 'Willow curtain mercy probe')
+
+          test = Path('app/src/test/java/com/anurag9000/forestrun/entities/EntityCollisionGeometryTest.kt')
+          replace_once(test, '''        fun intersects(
+                  target: RectF,
+                  source: RectF,
+                  horizontalPadding: Float,
+                  verticalPadding: Float
+              ): Boolean = intersectsExpanded(target, source, horizontalPadding, verticalPadding)
+          ''', '''        fun intersects(
+                  target: RectF,
+                  source: RectF,
+                  horizontalPadding: Float,
+                  verticalPadding: Float
+              ): Boolean = intersectsExpanded(target, source, horizontalPadding, verticalPadding)
+
+              fun intersects(
+                  target: RectF,
+                  source: RectF,
+                  leftPadding: Float,
+                  topPadding: Float,
+                  rightPadding: Float,
+                  bottomPadding: Float
+              ): Boolean = intersectsExpanded(
+                  target,
+                  source,
+                  leftPadding,
+                  topPadding,
+                  rightPadding,
+                  bottomPadding
+              )
+          ''', 'expose per-edge helper')
+          replace_once(test, '''    @Test
+              fun `asymmetric expansion preserves Cherry gust geometry`() {
+                  val verticalNearMiss = RectF(25f, 12f, 35f, 18f)
+                  assertFalse(probe.intersects(verticalNearMiss, source, 3f, 1f))
+                  assertTrue(probe.intersects(verticalNearMiss, source, 3f, 3f))
+              }
+          ''', '''    @Test
+              fun `asymmetric expansion preserves Cherry gust geometry`() {
+                  val verticalNearMiss = RectF(25f, 12f, 35f, 18f)
+                  assertFalse(probe.intersects(verticalNearMiss, source, 3f, 1f))
+                  assertTrue(probe.intersects(verticalNearMiss, source, 3f, 3f))
+              }
+
+              @Test
+              fun `per edge expansion preserves one sided safe windows`() {
+                  val targetAbove = RectF(25f, 14f, 35f, 19f)
+                  assertFalse(probe.intersects(targetAbove, source, 5f, 0f, 5f, 5f))
+                  assertTrue(probe.intersects(targetAbove, source, 5f, 2f, 5f, 5f))
+              }
+          ''', 'per-edge regression test')
+          PY
 
       - name: Verify transformed source contracts
         shell: bash
         run: |
           grep -q 'protected fun intersectsExpanded' app/src/main/java/com/anurag9000/forestrun/entities/Entity.kt
-          grep -q 'asymmetric expansion preserves Cherry gust geometry' app/src/test/java/com/anurag9000/forestrun/entities/EntityCollisionGeometryTest.kt
-          if grep -R -n -E 'val (mercy|bm|tm) = RectF' app/src/main/java/com/anurag9000/forestrun/entities; then
+          grep -q 'per edge expansion preserves one sided safe windows' app/src/test/java/com/anurag9000/forestrun/entities/EntityCollisionGeometryTest.kt
+          if grep -R -n -E 'val (mercy|bm|tm|cm) = RectF' app/src/main/java/com/anurag9000/forestrun/entities; then
             echo 'Temporary collision rectangles remain.'
             exit 1
           fi
