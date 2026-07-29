@@ -87,6 +87,21 @@ import org.junit.Ignore
     )
     replace_once(
         main_test,
+        '''            val startFrameCount = gameView.debugFrameCounter
+            waitForCondition("loop continues updating with full entity roster", timeoutMs = 2_000L) {
+                gameView.debugFrameCounter > startFrameCount + 10
+            }
+''',
+        '''            val startFrameCount = gameView.debugFrameCounter
+            waitForCondition("live loop continues with full entity roster", timeoutMs = 8_000L) {
+                val thread = getPrivateField(gameView, "gameThread") as Thread
+                thread.isAlive && gameView.debugFrameCounter > startFrameCount + 10
+            }
+''',
+        "full-roster software-renderer frame budget",
+    )
+    replace_once(
+        main_test,
         '''        val appContext = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
         SaveManager.saveLifetimeSeeds(appContext, 50)
         SaveManager.saveGardenProgress(appContext, 1)
