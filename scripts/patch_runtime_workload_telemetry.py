@@ -35,12 +35,14 @@ def patch_entity_manager() -> None:
     )
     text = replace_once(
         text,
-        '''        debugActiveEntityCount = 0
-        seedOrbManager.reset()
+        '''        bloomReactedEntities.clear()
+        debugActiveEntityCount = 0
+    }
 ''',
-        '''        debugActiveEntityCount = 0
+        '''        bloomReactedEntities.clear()
+        debugActiveEntityCount = 0
         RuntimeWorkloadTelemetry.publishEntities(0)
-        seedOrbManager.reset()
+    }
 ''',
         "entity workload reset",
     )
