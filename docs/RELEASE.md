@@ -1,227 +1,379 @@
-# Forest Run — Release & Validation
+# Forest Run — Release and Validation
 
-Forest Run is a feature-rich alpha with the primary correctness-remediation pass implemented. A release candidate must still pass connected-device, physical-hardware, signed-artifact, measured-performance, visual-acceptance, and store-acceptance gates.
+Forest Run is a **feature-rich alpha**. Primary gameplay, encounter, persistence, lifecycle, UI, asset, build, and automated-validation defects have been remediated, but a release candidate requires one frozen SHA with complete automated, physical-device, performance, signed-artifact, visual, and store evidence.
 
-## Canonical Build Commands
+A feature is not complete merely because code exists. A gate is complete only when its evidence is tied to the exact candidate commit.
 
-CI runs with Java 21 because the API 36 Robolectric test runtime requires it. Android source and target compatibility remain Java 17.
+## 1. Candidate discipline
+
+For every release-candidate attempt:
+
+1. Freeze one commit SHA.
+2. Run permanent read-only CI on that SHA.
+3. Archive host and connected-test artifacts.
+4. Build the signed minified artifact from that SHA.
+5. Install and smoke-test the signed artifact.
+6. Run deterministic and ordinary-play acceptance on representative hardware.
+7. Capture performance evidence and compare it with written thresholds.
+8. Approve artwork, screenshots, metadata, and policy declarations.
+9. Perform a final independent code/diff audit.
+10. Only then mark the PR ready, merge, and tag.
+
+Any source, asset, dependency, build, or documentation change invalidates candidate evidence and starts this sequence again.
+
+## 2. Canonical commands
+
+CI uses Java 21 because the API 36 Robolectric runtime requires it. Android source/target bytecode remains Java 17.
 
 ```bash
-# Compile debug and release variants
-bash gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin
+# Compile all relevant source sets
+bash gradlew \
+  compileDebugKotlin \
+  compileDebugUnitTestKotlin \
+  compileReleaseKotlin \
+  compileDebugAndroidTestKotlin
 
-# JVM/Robolectric invariant suite
+# JVM/Robolectric invariants
 bash gradlew testDebugUnitTest
 
-# Static Android checks
+# Android static analysis
 bash gradlew lintDebug lintRelease
 
-# Debug application and instrumentation APKs
+# Debug app and instrumentation APKs
 bash gradlew assembleDebug assembleDebugAndroidTest
 
-# Minified, resource-shrunk release bundle and R8 mapping
+# Minified/resource-shrunk unsigned release bundle and R8 mapping
 bash gradlew bundleRelease
 
-# Requires an emulator or physical device
+# Emulator or device required
 bash gradlew connectedDebugAndroidTest
+
+# Representative physical-device profiling
+bash scripts/collect_performance_profiles.sh
 ```
 
-Expected outputs:
+Expected build outputs:
 
-- Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
-- Android test APK: `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
-- Release AAB: `app/build/outputs/bundle/release/app-release.aab`
-- R8 mapping: `app/build/outputs/mapping/release/mapping.txt`
+- `app/build/outputs/apk/debug/app-debug.apk`
+- `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
+- `app/build/outputs/bundle/release/app-release.aab`
+- `app/build/outputs/mapping/release/mapping.txt`
 
-A checklist item is complete only when the corresponding command or deterministic assertion passes on the audited branch head. Building an instrumentation APK is not the same as executing connected tests.
+## 3. Current project settings
 
-## Current Project Settings
-
-| Setting | Current repository value | Remaining release action |
+| Setting | Repository value | Remaining release action |
 |---|---:|---|
 | Application ID / namespace | `com.anurag9000.forestrun` | Preserve permanently after first store upload |
+| Debug application ID | `com.anurag9000.forestrun.debug` | Keep isolated from release data |
 | Min SDK | API 24 | Confirm supported-device policy |
-| Compile / target SDK | API 36 | Reverify immediately before upload |
+| Compile / target SDK | API 36 | Reverify against current Play requirements before upload |
 | Android Gradle Plugin | 8.13.2 | Keep wrapper/toolchain compatibility pinned |
-| Gradle wrapper | 8.13 | Wrapper validation runs in CI |
-| CI Java runtime | 21 | Required by API 36 Robolectric tests |
-| Source/target bytecode | Java 17 | Supported by current Android toolchain |
-| Manifest orientation | fixed `landscape` | Validate across phones, tablets, cutouts, and rotation lifecycle |
-| Essential UI safe area | aspect-preserving system-bar/cutout transform | Accept visually and interactively on representative hardware |
-| Release minification | R8 + resource shrinking; renamed app classes verified from mapping | Smoke-test the actual signed artifact |
-| Release signing | external environment/Gradle properties supported | Supply real upload-key credentials securely |
+| Gradle wrapper | 8.13 | Validate wrapper on every candidate |
+| CI Java runtime | 21 | Preserve while API 36 Robolectric requires it |
+| Android bytecode | Java 17 | Preserve current toolchain compatibility |
+| Orientation | Fixed landscape | Accept across phones/tablets/cutouts or change product policy |
+| Release optimization | R8 minification + resource shrinking | Smoke-test actual signed artifact |
+| Release signing | External credentials supported | Supply upload-key credentials and verify certificates |
+| Store Python dependency | `Pillow==11.3.0` | Revalidate only when intentionally updating the pipeline |
+| Ghost binary format | v2 magic/version + stable state codes | Preserve legacy reader and version before future format changes |
 
-Required signing properties or environment variables:
+Release-signing inputs:
 
 - `FOREST_RUN_KEYSTORE`
 - `FOREST_RUN_STORE_PASSWORD`
 - `FOREST_RUN_KEY_ALIAS`
 - `FOREST_RUN_KEY_PASSWORD`
 
-The default Play release script refuses unsigned upload preparation unless `--allow-unsigned` is explicitly used for a non-upload dry run.
+No key material belongs in source control.
 
-## Correctness Gate
+## 4. Permanent CI contract
 
-### Implemented and automatically validated
+Permanent CI must remain:
 
-- [x] Quick taps receive upward jump velocity
-- [x] Hold duration controls jump height monotonically
-- [x] Swipe-down is classified before a jump begins
-- [x] Cancelled gestures cannot create phantom actions
-- [x] Menu, Garden, dying, game-over, and restart input cannot mutate gameplay state
-- [x] Render-thread shutdown is bounded and interruption-safe
-- [x] Bloom is orthogonal to locomotion and preserves airborne physics
-- [x] `GameStateManager` owns the authoritative Bloom clock
-- [x] Active-Bloom rewards cannot reset the Bloom timer
-- [x] Every entity receives at most one terminal encounter outcome
-- [x] Collision arbitration precedes pass rewards
-- [x] Collision severity is deterministic: hit → stumble → mercy
-- [x] Collision queries are presentation- and mutation-free
-- [x] Only the selected overlap receives terminal effects
-- [x] Mercy is awarded once per encounter
-- [x] Bloom conversion excludes clean-pass, unique-action, and orb rewards
-- [x] Hedgehog contact resolves terminally as a nonlethal stumble
-- [x] Seed Orbs are staged ahead of the player and cleaned up off-screen
-- [x] Unsafe entity pooling remains disabled until complete reset contracts exist
-- [x] Deterministic scenarios cannot write permanent encounter, pass, hit, spare, summary, ghost, best-distance, friendship, or high-score history
-- [x] Persistent clean passes and resolved encounters are recorded centrally and once
-- [x] Relationship familiarity alone is capped at Recognition; Trust and Bond require positive outcomes and hits delay progression
-- [x] Garden spending cannot be overwritten by stale lifetime-seed state
-- [x] Reused `singleTask` intents apply new deterministic scenarios
-- [x] Activity/audio/haptic teardown and recreation paths are bounded
-- [x] Eagle targeting follows the live player before lock and preserves an escape grace window
-- [x] Decorative flora/tree sway no longer shifts invisible collision geometry
-- [x] Random encounter pacing uses world-space separation rather than elapsed time
-- [x] Garden particles advance while Garden is active
-- [x] Return moments are consumed on visible Garden entry, not hidden preload
-- [x] Daily return logic uses the local calendar day
-- [x] Sanctuary-derived counts are clamped non-negative
-- [x] The willow menu ritual resets on return home
-- [x] Game-over composition and persistence reads are not rebuilt every draw frame
-- [x] Dialogue/flavor queues are bounded, wrapped, deduplicated, and screen-clamped
-- [x] `SoundPool` readiness, recreation, and failure diagnostics are explicit
-- [x] Adaptive-music writes are throttled and crossfade ownership is deterministic
-- [x] Garden catalogue, stats, last-run, wardrobe, and run-button regions are non-overlapping at compact, standard, and large landscape sizes
-- [x] Best-run ghost capture detaches in O(1), publishes to playback memory immediately, and persists atomically off the render thread
-- [x] Corrupt, oversized, truncated, trailing, non-finite, invalid-state, or non-monotonic ghost files are rejected safely
-- [x] Menu, Garden, HUD, debug controls, and rest UI share one aspect-preserving safe-content transform with inverse touch mapping
-- [x] Reduced-motion, audio, and haptic preferences persist independently of progression and are enforced at camera, particles, cinematic shimmer, music, SFX, and vibration boundaries
-- [x] Save state is schema-versioned, known corrupt values are repaired before runtime reads, incomplete summaries are discarded, and writes are clamped or saturating
-- [x] Newer-schema preferences and ghost files are preserved while the older build uses isolated compatibility storage
+- read-only (`contents: read`);
+- checked out at the exact event SHA;
+- without persisted Git credentials;
+- free of source-transform/bootstrap scripts;
+- free of commit/push steps;
+- split into host/release and connected-emulator jobs.
 
-### Still required before release
+### Host/release job
 
-- [ ] Validate safe-content behavior, density scaling, and feedback controls on representative cutout, unusual-aspect, phone, and tablet hardware
-- [ ] Profile and remove material per-frame allocations or emitter churn found on hardware
-- [ ] Decide whether fixed landscape and the remaining procedural scenic layers are final product choices
+The exact candidate must pass:
 
-## Automated-Test Gate
+- [x] package and source-layout contract checks;
+- [x] absence of temporary patch scripts and tracked diagnostics;
+- [x] debug/release/unit/instrumentation compilation;
+- [x] complete JVM/Robolectric suite;
+- [x] debug and release lint;
+- [x] debug application APK assembly;
+- [x] instrumentation APK assembly;
+- [x] minified/resource-shrunk unsigned AAB build;
+- [x] non-empty R8 mapping;
+- [x] proof that application classes are actually renamed;
+- [x] strict sprite/audio/font runtime contracts;
+- [x] source contracts for collision, telemetry, save repair, ghost persistence, and settings.
 
-### Covered
+### Connected emulator job
 
-- [x] Tap, hold, swipe-down, cancellation, and silent-reset gesture arbitration
-- [x] Jump-force clamping and monotonic hold scaling
-- [x] Instantiated airborne Player preserves ascent, gravity, fall, landing, and state through Bloom
-- [x] Active Bloom rewards do not restart Bloom
-- [x] Mercy resolves once even when collision checks repeat
-- [x] One selected terminal result per entity
-- [x] Lethal overlap outranks simultaneous stumble and mercy
-- [x] Collision resolves before pass detection
-- [x] Debug entities do not write permanent counters
-- [x] All 19 concrete entity types record exactly one ordinary clean pass and encounter
-- [x] Bloom conversion cannot stack pass, unique-action, and orb rewards
-- [x] Stale game state cannot refund Garden spending
-- [x] Run reset reloads externally changed seed currency
-- [x] Garden card and wardrobe hit targets use the production layout plan
-- [x] Garden layout regions do not overlap at 1280×720, 1920×1080, or 2560×1440
-- [x] Local-day and visible-entry return-moment behavior
-- [x] Menu ritual reset behavior
-- [x] Dialogue/flavor queue bounds and wrapping
-- [x] Sprite decode, frame divisibility, and sane-dimension contracts
-- [x] Final debug application identity
-- [x] Familiarity-only, hit-only, Trust-recovery, and Bond-depth relationship progression
-- [x] Detached ghost buffers remain stable while a new recording starts
-- [x] Atomic ghost round trips and malformed-file rejection
-- [x] Safe-content identity, asymmetric-cutout, round-trip, edge-clamp, and pathological-inset geometry
-- [x] R8 mapping contains actually renamed Forest Run classes
-- [x] Feedback preference defaults, persistence, wrong-type recovery, reduced-motion camera/particle/shimmer behavior, and non-overlapping menu hit regions
-- [x] Legacy save repair, migration idempotence, partial-summary rejection, unknown-key preservation, clamped writes, and saturating counters
-- [x] Future-schema preference and ghost preservation with compatibility-namespace round trips
-- [x] Actual `GameThread` sleep interruption, caller-interrupt restoration, bounded uncooperative-update timeout, and stale-render suppression
+The exact candidate must execute—not merely assemble—the connected suite:
 
-### Still needed
+- [x] API 35 emulator boot and installation;
+- [x] exactly fourteen ordinary connected tests;
+- [x] zero failures;
+- [x] zero errors;
+- [x] zero skips;
+- [x] lifecycle pause/resume and Surface recreation;
+- [x] repeated `singleTask` intents;
+- [x] settings recreation;
+- [x] corrupt-save recovery;
+- [x] gameplay input;
+- [x] Garden transactions;
+- [x] entity, biome, Bloom, collision, and safe-content flows;
+- [x] asynchronous ghost disk reload.
 
-- [ ] Execute `connectedDebugAndroidTest` on an emulator and physical device
-- [ ] Add signed-release installation and launch smoke tests
+`@LargeTest` hardware capture/profile suites are compiled but intentionally excluded from ordinary emulator CI.
 
-## Asset and Runtime Gate
+## 5. Gameplay correctness gate
 
-- [x] Non-debug runtime validation fails when required sprites, mandatory audio, or fonts are absent
-- [x] Sprite sheets must decode, divide by frame count, and remain within sane source dimensions
-- [x] Generated placeholder sprites are prohibited in non-debug execution
-- [x] Optional Bloom-ready/convert/fade sounds use explicit fallback behavior and do not masquerade as mandatory assets
-- [x] Sound playback waits for successful sample loading
-- [x] Debug and release lint pass
-- [x] Debug and release Kotlin compilation pass
-- [x] Debug and instrumentation APK assembly pass
-- [x] The minified, resource-shrunk unsigned release AAB builds successfully
-- [x] Unused Gson packaging and package-wide application keep rules are removed
-- [x] CI verifies that release mapping contains obfuscated application classes and uploads the mapping artifact
-- [ ] Install and smoke-test the minified release on hardware
-- [ ] Supply real signing credentials and verify the signed AAB/APK
-- [ ] Profile frame time, memory, GC, audio threads, I/O, and long-run stability
-- [ ] Validate all artwork and animation frame counts visually, including the Wolf sheet
-- [ ] Approve procedural scenic layers as final art direction or replace them
+Implemented and automatically covered:
 
-## Device Acceptance Checklist
+- [x] quick taps receive upward velocity;
+- [x] hold duration monotonically controls retained jump height;
+- [x] swipe-down is classified before jump commitment;
+- [x] gesture cancellation cannot produce phantom actions;
+- [x] inactive screens/states cannot mutate gameplay input;
+- [x] Bloom is orthogonal to locomotion;
+- [x] `GameStateManager` owns one authoritative Bloom clock;
+- [x] active Bloom rewards do not restart the timer;
+- [x] one terminal outcome per entity;
+- [x] collision arbitration precedes pass resolution;
+- [x] deterministic severity `HIT > STUMBLE > MERCY`;
+- [x] collision probes are mutation/presentation-free;
+- [x] only the selected overlap receives effects;
+- [x] mercy resolves once;
+- [x] Hedgehog resolves terminally as a nonlethal stumble;
+- [x] Bloom conversion excludes ordinary pass, unique-action, and Orb rewards;
+- [x] Seed Orbs are staged ahead and cleaned up off-screen;
+- [x] unsafe entity pooling remains disabled;
+- [x] Eagle follows the live player before lock and preserves escape grace;
+- [x] Cat exit/outcome paths are mutually coherent;
+- [x] flora/tree sway no longer displaces invisible collision geometry;
+- [x] mercy safe windows preserve custom asymmetric geometry without temporary `RectF` allocations;
+- [x] encounter pacing uses world-space separation rather than elapsed time.
 
-A feature is not complete until its deterministic scenario and ordinary-play check pass on representative hardware. Validate at least one constrained/older device, one current mid-range device, and one high-refresh device; include a cutout or unusual-aspect device where possible.
+Still requiring physical/ordinary-play acceptance:
 
-### Core Flow
+- [ ] touch latency and gesture comfort;
+- [ ] high-refresh input behavior;
+- [ ] high-speed encounter combinations;
+- [ ] fairness after sustained difficulty growth;
+- [ ] every entity telegraph/hitbox/outcome agreement;
+- [ ] Bloom audiovisual clarity without obscuring hazards.
 
-| Scenario | Acceptance criterion |
-|---|---|
-| `OPENING_READABILITY` | First 20–30 seconds teach duck, tap jump, hold jump, and spacing without gesture conflicts |
-| `BLOOM_SHOWCASE` | Activation, invincibility, preserved locomotion, conversion rules, HUD state, audio, haptics, and expiration are unmistakable |
-| `GHOST_READABILITY` | Ghost never resembles a broken duplicate, obscures the runner, or hitches on save |
-| `REST_LOOP` | Failure, rest summary, fade, Garden return, currency, and next-run reset remain coherent |
-| Garden ordinary flow | Catalogue, stats, narrative, wardrobe, particles, back gesture, and run button remain readable and tappable |
-| Safe-content flow | Essential UI and mapped tap regions remain inside cutouts/system bars without distorting readability |
-| Feedback controls | Motion, audio, and haptic toggles remain reachable before a run and take effect immediately without altering gameplay physics or hazard telegraphs |
-| Save recovery | Legacy/corrupt saves repair safely, future-version primary data remains untouched, and compatibility storage behaves coherently |
-| Lifecycle recovery | Background/resume, process recreation, repeated intents, and surface recreation preserve coherent state |
+## 6. Persistence, progression, and Garden gate
 
-### Flora and Trees
+Implemented and automatically covered:
 
-| Scenario | Acceptance criterion |
-|---|---|
-| `CACTUS_READ` | Silhouette and jump timing are immediate and fair |
-| `LILY_GLOW` | Glow and seed-lure identity remain visible on a phone |
-| `HYACINTH_BRUSH` | Brush, stumble/debuff, mercy, and clean pass are distinct |
-| `EUCALYPTUS_WHIP` | Telegraph precedes danger by a fair interval |
-| `ORCHID_WINDOW` | Both safe windows read without trial-and-error |
-| `WILLOW_CURTAIN` | Scenic obstruction remains playable |
-| `JACARANDA_PETALS` | Petal pressure is intentional rather than visual noise |
-| `BAMBOO_GAP` | Precision gap is readable at all supported speeds |
-| `CHERRY_GUST` | Actual mechanic and visual cue agree |
+- [x] deterministic scenarios cannot contaminate permanent score, encounter, relationship, summary, Garden, best-distance, or ghost history;
+- [x] clean passes and resolved encounters are recorded centrally and once;
+- [x] familiarity alone cannot reach Trust/Bond;
+- [x] positive outcomes advance relationships and hits delay them;
+- [x] Garden spending cannot be overwritten by stale run state;
+- [x] run reset reloads externally changed Seed currency;
+- [x] sanctuary counts are clamped non-negative;
+- [x] return moments are consumed on visible Garden entry;
+- [x] daily return logic uses local calendar day;
+- [x] willow ritual resets on returning home;
+- [x] Garden particles advance while Garden is active;
+- [x] Garden visual and touch regions share one tested layout plan;
+- [x] save data is schema-versioned;
+- [x] known corrupt values are repaired;
+- [x] incomplete summaries are rejected;
+- [x] counters/writes are clamped or saturating;
+- [x] unknown preference keys are preserved;
+- [x] newer-schema primary data is preserved through compatibility storage.
 
-### Birds and Animals
+Still requiring physical/ordinary-play acceptance:
 
-| Scenario | Acceptance criterion |
-|---|---|
-| `DUCK_TEACH` | Lane and duck timing are unmistakable |
-| `TIT_WAVE` | Flock reads as a coherent rhythm pattern |
-| `CHICKADEE_SWERVE` | Motion is lively but predictable enough to be fair |
-| `OWL_DIVE` | Alert, glow, trajectory, and collision timing agree |
-| `EAGLE_MARK` | Reticle follows the live target, locks clearly, and preserves the intended escape window |
-| `CAT_KINDNESS` | Pass, mercy, hit, reward, spare, and exit are exclusive and legible |
-| `FOX_MIRROR` | Mirrored motion and outcome feel intentional |
-| `WOLF_CHARGE` | Howl, charge, dust, collision, mercy, spare, and sprite frames remain distinct |
-| `HEDGEHOG_DEBUFF` | Debuff never later becomes a clean-pass reward for the same encounter |
-| `DOG_HAZARD` | Projectile lifecycle and collision timing are fair |
-| `DOG_BUDDY` | Buddy mode is clearly harmless and persistent behavior remains correct |
+- [ ] Garden density/readability on phones and tablets;
+- [ ] touch-target comfort;
+- [ ] long-session currency/progression balance;
+- [ ] return-moment emotional repetition and cadence;
+- [ ] wardrobe and visitor presentation.
 
-## Store Asset Pipeline
+## 7. Ghost gate
+
+Implemented and automatically covered:
+
+- [x] 30 Hz recording instead of render-rate recording;
+- [x] twenty-minute bounded recording capacity;
+- [x] O(1) detached best-run snapshot;
+- [x] immediate in-memory publication;
+- [x] dedicated-worker disk persistence;
+- [x] atomic writes;
+- [x] corrupt, truncated, trailing, oversized, non-finite, invalid-state, and non-monotonic rejection;
+- [x] binary format v2 magic and version headers;
+- [x] stable persisted state codes independent of enum order;
+- [x] legacy count/raw-ordinal file reads;
+- [x] unknown future-version rejection without destructive rewrite;
+- [x] Activity-recreation disk reload.
+
+Still requiring physical/ordinary-play acceptance:
+
+- [ ] save latency under sustained device load;
+- [ ] playback readability near dense hazards;
+- [ ] long-best-run disk size and I/O behavior;
+- [ ] process-death/relaunch behavior on representative OEM devices.
+
+## 8. Lifecycle, UI, accessibility, audio, and haptic gate
+
+Implemented and automatically covered:
+
+- [x] bounded interruption-safe render-thread shutdown;
+- [x] caller interruption restoration;
+- [x] stale-render suppression after stop;
+- [x] repeated launch-intent handling;
+- [x] explicit audio/haptic teardown;
+- [x] cached game-over composition;
+- [x] bounded/wrapped/deduplicated/clamped dialogue and flavour queues;
+- [x] aspect-preserving safe-content transform;
+- [x] inverse touch mapping;
+- [x] persistent reduced-motion setting;
+- [x] persistent audio setting;
+- [x] persistent haptic setting;
+- [x] manager-boundary enforcement of those settings;
+- [x] explicit `SoundPool` readiness/failure handling;
+- [x] deterministic adaptive-music crossfade ownership;
+- [x] throttled repeated music parameter writes.
+
+Still requiring hardware acceptance:
+
+- [ ] cutouts/system bars/unusual aspect ratios;
+- [ ] phone/tablet density and typography;
+- [ ] reduced-motion adequacy without losing telegraphs;
+- [ ] SFX/music loudness and latency;
+- [ ] crossfade behavior on lifecycle transitions;
+- [ ] haptic intensity/differentiation across OEMs;
+- [ ] toggles remain reachable and immediate before/within a run.
+
+## 9. Performance gate
+
+Implemented instrumentation:
+
+- [x] fixed primitive timing ring buffers;
+- [x] update/render/processing duration recording in the real game thread;
+- [x] mean, p50, p95, p99, maximum, and slow-frame ratio snapshots;
+- [x] Java heap observations;
+- [x] deterministic JSON reports;
+- [x] physical `OPENING_READABILITY` profiling scenario;
+- [x] physical `BLOOM_SHOWCASE` profiling scenario;
+- [x] device/build metadata collection;
+- [x] `gfxinfo`, `meminfo`, and display diagnostics collector;
+- [x] local generated evidence excluded from source control.
+
+Evidence still required:
+
+- [ ] constrained/older supported phone;
+- [ ] current mid-range phone;
+- [ ] high-refresh phone;
+- [ ] cutout/unusual-aspect device;
+- [ ] tablet if supported;
+- [ ] ordinary-play long-run profile;
+- [ ] allocation/GC trace beyond heap snapshots;
+- [ ] audio-thread trace;
+- [ ] ghost-save I/O duration evidence;
+- [ ] thermal/battery degradation evidence;
+- [ ] written p95/p99/slow-frame/memory thresholds;
+- [ ] remediation and remeasurement of every material hotspot.
+
+See `docs/PERFORMANCE.md`.
+
+## 10. Asset and runtime gate
+
+Implemented programmatic contracts:
+
+- [x] required sprites, mandatory audio, and fonts must exist outside debug;
+- [x] sprite sheets must decode;
+- [x] dimensions must be sane;
+- [x] atlas width must divide by declared frame count;
+- [x] generated placeholder sprites are prohibited outside debug;
+- [x] optional Bloom sounds have explicit fallback behavior;
+- [x] mandatory and optional audio are distinguished;
+- [x] playback waits for successful sample loading.
+
+Manual visual/audio work still required:
+
+- [ ] inspect every sprite and atlas frame;
+- [ ] verify transparent edges and scaling;
+- [ ] verify animation cadence;
+- [ ] verify collision silhouette agreement;
+- [ ] inspect Wolf sheet and charge sequence;
+- [ ] inspect costume overlays and ghost visuals;
+- [ ] approve procedural scenic layers or replace them;
+- [ ] verify all mandatory/optional audio on hardware.
+
+## 11. Device acceptance scenarios
+
+A deterministic scenario is accepted only after both the scripted path and ordinary play succeed on representative hardware.
+
+### Core flows
+
+- [ ] `OPENING_READABILITY`: tap, hold, duck, cancellation, spacing, text, and first encounters are self-explanatory;
+- [ ] `BLOOM_SHOWCASE`: activation, locomotion, conversion, expiry, HUD, audio, haptics, and visual intensity agree;
+- [ ] `GHOST_READABILITY`: ghost remains legible without obscuring the runner/hazards or hitching on save;
+- [ ] `REST_LOOP`: death, summary, fade, Garden, currency, and reset remain coherent;
+- [ ] Garden ordinary flow: catalogue, stats, narrative, wardrobe, back, particles, and run button;
+- [ ] safe-content flow: UI and mapped touches remain inside safe bounds;
+- [ ] feedback controls: settings take effect immediately without altering physics/telegraphs;
+- [ ] save recovery: legacy/corrupt/future data behavior remains coherent;
+- [ ] lifecycle recovery: background/resume, process recreation, repeated intents, and Surface recreation.
+
+### Flora and trees
+
+- [ ] `CACTUS_READ`
+- [ ] `LILY_GLOW`
+- [ ] `HYACINTH_BRUSH`
+- [ ] `EUCALYPTUS_WHIP`
+- [ ] `ORCHID_WINDOW`
+- [ ] `WILLOW_CURTAIN`
+- [ ] `JACARANDA_PETALS`
+- [ ] `BAMBOO_GAP`
+- [ ] `CHERRY_GUST`
+
+The Eucalyptus whip and Cherry gust are currently telegraph/presentation identities around collision geometry; they must not be accepted as external-force mechanics unless real force/timing behavior is implemented and tested.
+
+### Birds and animals
+
+- [ ] `DUCK_TEACH`
+- [ ] `TIT_WAVE`
+- [ ] `CHICKADEE_SWERVE`
+- [ ] `OWL_DIVE`
+- [ ] `EAGLE_MARK`
+- [ ] `CAT_KINDNESS`
+- [ ] `FOX_MIRROR`
+- [ ] `WOLF_CHARGE`
+- [ ] `HEDGEHOG_DEBUFF`
+- [ ] `DOG_HAZARD`
+- [ ] `DOG_BUDDY`
+
+## 12. Signed-artifact gate
+
+Still required:
+
+- [ ] provision real upload key securely;
+- [ ] build signed, minified release artifact;
+- [ ] verify package ID/version/signing certificate;
+- [ ] install the signed artifact directly;
+- [ ] launch and complete core smoke flow;
+- [ ] verify R8/resource shrinking did not break runtime lookups;
+- [ ] run lifecycle and persistence smoke tests;
+- [ ] run long-session stability test;
+- [ ] upload to internal testing track;
+- [ ] install through the store delivery path;
+- [ ] compare store-delivered certificate/package/version with expected values.
+
+## 13. Store asset pipeline
 
 ```bash
 python3 -m pip install -r scripts/requirements.txt
@@ -231,39 +383,71 @@ python3 scripts/curate_store_screenshots.py
 python3 scripts/prepare_play_release.py
 ```
 
-### Automated pipeline protections
+Automated safeguards implemented:
 
-- [x] Python dependencies are declared
-- [x] Screenshot capture does not use hard-coded local SDK/JDK/ADB paths
-- [x] Explicit device serial selection is supported
-- [x] App state is force-stopped/reset between deterministic captures
-- [x] Empty, invalid, portrait, stale, exact-duplicate, near-duplicate, low-variance, and suspicious edge-band screenshots are rejected
-- [x] Generated graphics dimensions and manifest hashes are verified
-- [x] Metadata files are non-empty and screened for placeholders
-- [x] Final application ID is accepted; known placeholder IDs are rejected
-- [x] Mandatory and optional audio resources are distinguished correctly
-- [x] Default upload preparation requires all external signing credentials
-- [x] Java 21 is enforced for the API 36 unit-test gate
-- [x] Release lint, tests, bundle build, and effective R8 mapping verification are part of CI
+- [x] dependency version is pinned;
+- [x] no hard-coded local SDK/JDK/ADB paths;
+- [x] explicit device serial selection;
+- [x] application reset between deterministic captures;
+- [x] rejection of empty/invalid/portrait/stale screenshots;
+- [x] rejection of exact and near duplicates;
+- [x] rejection of low-variance/suspicious edge-band captures;
+- [x] generated graphic dimensions and hashes verified;
+- [x] metadata non-empty and placeholder-screened;
+- [x] final application ID accepted and known placeholders rejected;
+- [x] signing inputs required by default for upload preparation;
+- [x] Java/toolchain and Gradle release gates invoked by preparation.
 
-### Manual/store work still required
+Manual/store work still required:
 
-- [ ] Capture and curate at least four final screenshots on accepted hardware
-- [ ] Manually verify that every screenshot depicts the intended scenario and contains no system overlays
-- [ ] Finalize title, descriptions, icon/graphics, privacy/data-safety answers, content rating, and store declarations
-- [ ] Build with the real upload key and verify signing certificates
-- [ ] Upload to an internal testing track and install through the store path
-- [ ] Revalidate current Android and Play requirements immediately before submission
+- [ ] capture at least four final screenshots on accepted hardware;
+- [ ] verify each screenshot depicts the intended scenario;
+- [ ] verify no system/debug overlay appears;
+- [ ] approve icon, feature graphic, and promotional graphics;
+- [ ] finalize title, short description, and full description;
+- [ ] finalize privacy policy decision;
+- [ ] complete Play data-safety answers;
+- [ ] complete content rating and target-audience declarations;
+- [ ] revalidate permissions;
+- [ ] revalidate current Android/Play requirements immediately before submission.
 
-## Release Exit Criteria
+## 14. Architecture and final audit gate
 
-Forest Run may be called a release candidate only when:
+Still required before declaring the original exhaustive mission complete:
 
-1. the exact candidate commit passes debug/release compile, unit tests, debug/release lint, debug APK, instrumentation APK, effective R8 mapping, and minified AAB gates;
-2. connected instrumentation tests execute successfully;
-3. no known P0/P1 gameplay, persistence, lifecycle, or packaging defect remains;
-4. the signed, minified artifact passes installation, smoke, and long-run testing;
-5. deterministic scenarios and ordinary play pass on representative physical hardware;
-6. frame-time, memory, I/O, audio, and save behavior meet measured acceptance thresholds;
-7. settings/accessibility and safe-area behavior are accepted;
-8. store screenshots, metadata, policy, privacy, and data-safety requirements are reviewed against current authoritative rules.
+- [ ] independently re-audit every changed file on the frozen candidate;
+- [ ] inspect unchanged files reachable from changed code;
+- [ ] verify tests are not reproducing implementation mistakes;
+- [ ] verify every documentation statement against code and evidence;
+- [ ] verify no temporary workflow/script/artifact remains;
+- [ ] inspect all persistence reads/writes and migrations;
+- [ ] inspect every entity state/outcome/reward path;
+- [ ] inspect all lifecycle and thread transitions;
+- [ ] inspect build/signing/R8/store scripts;
+- [ ] review the complete final PR diff;
+- [ ] record any accepted architectural debt.
+
+Known debt that may remain for a post-release-candidate refactor if behavior is stable:
+
+- `GameView` is still a large coordinator;
+- persistence ownership remains distributed across several managers;
+- some entity uniqueness is presentation rather than additional physics.
+
+These debts must be documented and bounded; they must not be falsely called resolved.
+
+## 15. Release exit criteria
+
+Forest Run may be called a release candidate only when all are true:
+
+1. The exact frozen SHA passes host/release CI.
+2. The exact frozen SHA passes the fourteen-test emulator gate with zero skips.
+3. No known P0/P1 gameplay, persistence, lifecycle, packaging, or data-loss defect remains.
+4. Representative physical-device deterministic and ordinary-play scenarios pass.
+5. Written performance thresholds are met with archived evidence.
+6. The signed minified artifact passes install, smoke, lifecycle, persistence, and long-run testing.
+7. Safe-content, settings, audio, haptics, and reduced motion are accepted on hardware.
+8. Artwork/animation/scenic direction is manually approved.
+9. Screenshots, metadata, privacy, data safety, content rating, and current policy requirements are approved.
+10. The final independent exhaustive audit and full PR-diff review are complete.
+
+Until then, keep the PR draft and describe the project as a feature-rich alpha.
