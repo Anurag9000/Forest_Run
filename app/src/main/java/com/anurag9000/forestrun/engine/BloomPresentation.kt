@@ -1,7 +1,5 @@
 package com.anurag9000.forestrun.engine
 
-import java.util.Locale
-
 enum class BloomPresentationMode {
     CHARGING,
     READY,
@@ -10,15 +8,23 @@ enum class BloomPresentationMode {
 }
 
 data class BloomHudPresentation(
-    val mode: BloomPresentationMode,
-    val labelText: String,
-    val statusText: String,
-    val emphasis: Float
-)
+    var mode: BloomPresentationMode = BloomPresentationMode.CHARGING,
+    var labelText: String = "bloom",
+    var statusText: String = "0/1",
+    var emphasis: Float = 0f
+) {
+    internal var cachedModeOrdinal: Int = -1
+    internal var cachedMeter: Int = Int.MIN_VALUE
+    internal var cachedTarget: Int = Int.MIN_VALUE
+    internal var cachedSecondsTenths: Int = Int.MIN_VALUE
+    internal var cachedTotalConversions: Int = Int.MIN_VALUE
+    internal var cachedBurstConversions: Int = Int.MIN_VALUE
+}
 
 object BloomPresentation {
 
-    fun hudPresentation(
+    fun resolveInto(
+        target: BloomHudPresentation,
         bloomMeter: Int,
         seedTarget: Int,
         isActive: Boolean,
@@ -32,55 +38,89 @@ object BloomPresentation {
         val safeAfterglow = recentAfterglow.coerceIn(0f, 1f)
         val safeBurstConversions = burstConversions.coerceAtLeast(0)
         val safeTotalConversions = totalConversions.coerceAtLeast(0)
-
-        return when {
-            isActive -> {
-                val timeFraction = (secondsRemaining / GameConstants.BLOOM_DURATION_S).coerceIn(0f, 1f)
-                BloomHudPresentation(
-                    mode = BloomPresentationMode.ACTIVE,
-                    labelText = "BLOOM",
-                    statusText = when {
-                        safeTotalConversions > 0 ->
-                            "${formatSeconds(secondsRemaining)}  •  $safeTotalConversions converts  •  hold the light"
-                        else -> "${formatSeconds(secondsRemaining)}  •  world open"
-                    },
-                    emphasis = 0.72f + timeFraction * 0.28f
-                )
-            }
-
-            safeAfterglow > 0.01f -> {
-                BloomHudPresentation(
-                    mode = BloomPresentationMode.AFTERGLOW,
-                    labelText = "AFTERGLOW",
-                    statusText = when {
-                        safeBurstConversions > 0 ->
-                            "$safeBurstConversions converts  •  the light is still hanging here"
-                        else -> "Bloom has eased, but the light has not fully left"
-                    },
-                    emphasis = safeAfterglow
-                )
-            }
-
-            safeMeter >= safeTarget - 1 -> {
-                BloomHudPresentation(
-                    mode = BloomPresentationMode.READY,
-                    labelText = "READY",
-                    statusText = "1 more seed  •  Bloom is waiting",
-                    emphasis = 0.76f
-                )
-            }
-
-            else -> {
-                BloomHudPresentation(
-                    mode = BloomPresentationMode.CHARGING,
-                    labelText = "bloom",
-                    statusText = "$safeMeter/$safeTarget",
-                    emphasis = safeMeter / safeTarget.toFloat()
-                )
-            }
+        val secondsTenths = (secondsRemaining.coerceAtLeast(0f) * 10f + 0.5f).toInt()
+        val mode = when {
+            isActive -> BloomPresentationMode.ACTIVE
+            safeAfterglow > 0.01f -> BloomPresentationMode.AFTERGLOW
+            safeMeter >= safeTarget - 1 -> BloomPresentationMode.READY
+            else -> BloomPresentationMode.CHARGING
         }
+        val textChanged =
+            target.cachedModeOrdinal != mode.ordinal ||
+                target.cachedMeter != safeMeter ||
+                target.cachedTarget != safeTarget ||
+                target.cachedSecondsTenths != secondsTenths ||
+                target.cachedTotalConversions != safeTotalConversions ||
+                target.cachedBurstConversions != safeBurstConversions
+
+        if (textChanged) {
+            when (mode) {
+                BloomPresentationMode.ACTIVE -> {
+                    target.labelText = "BLOOM"
+                    target.statusText = if (safeTotalConversions > 0) {
+                        "${formatTenths(secondsTenths)}  •  $safeTotalConversions converts  •  hold the light"
+                    } else {
+                        "${formatTenths(secondsTenths)}  •  world open"
+                    }
+                }
+                BloomPresentationMode.AFTERGLOW -> {
+                    target.labelText = "AFTERGLOW"
+                    target.statusText = if (safeBurstConversions > 0) {
+                        "$safeBurstConversions converts  •  the light is still hanging here"
+                    } else {
+                        "Bloom has eased, but the light has not fully left"
+                    }
+                }
+                BloomPresentationMode.READY -> {
+                    target.labelText = "READY"
+                    target.statusText = "1 more seed  •  Bloom is waiting"
+                }
+                BloomPresentationMode.CHARGING -> {
+                    target.labelText = "bloom"
+                    target.statusText = "$safeMeter/$safeTarget"
+                }
+            }
+            target.cachedModeOrdinal = mode.ordinal
+            target.cachedMeter = safeMeter
+            target.cachedTarget = safeTarget
+            target.cachedSecondsTenths = secondsTenths
+            target.cachedTotalConversions = safeTotalConversions
+            target.cachedBurstConversions = safeBurstConversions
+        }
+
+        target.mode = mode
+        target.emphasis = when (mode) {
+            BloomPresentationMode.ACTIVE -> {
+                val timeFraction =
+                    (secondsRemaining / GameConstants.BLOOM_DURATION_S).coerceIn(0f, 1f)
+                0.72f + timeFraction * 0.28f
+            }
+            BloomPresentationMode.AFTERGLOW -> safeAfterglow
+            BloomPresentationMode.READY -> 0.76f
+            BloomPresentationMode.CHARGING -> safeMeter / safeTarget.toFloat()
+        }
+        return target
     }
 
-    private fun formatSeconds(secondsRemaining: Float): String =
-        String.format(Locale.US, "%.1fs", secondsRemaining.coerceAtLeast(0f))
+    fun hudPresentation(
+        bloomMeter: Int,
+        seedTarget: Int,
+        isActive: Boolean,
+        secondsRemaining: Float,
+        totalConversions: Int,
+        burstConversions: Int,
+        recentAfterglow: Float
+    ): BloomHudPresentation = resolveInto(
+        target = BloomHudPresentation(),
+        bloomMeter = bloomMeter,
+        seedTarget = seedTarget,
+        isActive = isActive,
+        secondsRemaining = secondsRemaining,
+        totalConversions = totalConversions,
+        burstConversions = burstConversions,
+        recentAfterglow = recentAfterglow
+    )
+
+    private fun formatTenths(tenths: Int): String =
+        "${tenths / 10}.${tenths % 10}s"
 }

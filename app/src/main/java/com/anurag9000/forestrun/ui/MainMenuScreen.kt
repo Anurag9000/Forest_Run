@@ -19,7 +19,8 @@ import com.anurag9000.forestrun.engine.SessionArcComposer
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.engine.SpriteSizing
 import com.anurag9000.forestrun.engine.SpriteSheet
-import com.anurag9000.forestrun.engine.buildCinematicPolishProfile
+import com.anurag9000.forestrun.engine.CinematicPolishProfile
+import com.anurag9000.forestrun.engine.resolveCinematicPolishProfile
 import com.anurag9000.forestrun.engine.buildSanctuaryLightingIdentity
 import kotlin.math.sin
 
@@ -215,6 +216,9 @@ class MainMenuScreen(
         textAlign = Paint.Align.CENTER
     }
     private val cinematicOverlay = CinematicOverlayRenderer()
+    private val cinematicProfile = CinematicPolishProfile()
+    private val menuLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.MENU)
+    private val launchCueRect = RectF()
     private val feedbackSettingsPanel = FeedbackSettingsPanel(context, screenW, screenH)
 
     init {
@@ -290,12 +294,12 @@ class MainMenuScreen(
         drawAmbientBird(canvas, cw, ch)
         drawWillow(canvas, cw * 0.35f, groundY)
         drawCharacter(canvas, cw * 0.62f, groundY)
-        val menuLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.MENU)
         cinematicOverlay.draw(
             canvas = canvas,
             width = cw,
             height = ch,
-            profile = buildCinematicPolishProfile(
+            profile = resolveCinematicPolishProfile(
+                target = cinematicProfile,
                 scene = CinematicScene.MENU,
                 emphasis = when (phase) {
                     Phase.IDLE -> 0.36f
@@ -361,7 +365,7 @@ class MainMenuScreen(
     }
 
     private fun drawMenuSanctuaryAtmosphere(canvas: Canvas, cw: Float, ch: Float, groundY: Float) {
-        val lighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.MENU)
+        val lighting = menuLighting
         canopyShadePaint.color = Color.argb(
             sanctuaryState.canopyShadeAlpha.coerceAtMost(72),
             Color.red(lighting.canopyColor),
@@ -445,10 +449,11 @@ class MainMenuScreen(
             val laneBottom = groundY + ch * 0.02f
             val laneLeft = cw * 0.58f
             val laneRight = cw * (0.58f + 0.22f * phaseT)
+            launchCueRect.set(laneLeft, laneTop, laneRight, laneBottom)
             launchCuePaint.color = Color.argb((70 + phaseT * 54).toInt(), 244, 238, 172)
-            canvas.drawRoundRect(RectF(laneLeft, laneTop, laneRight, laneBottom), 20f, 20f, launchCuePaint)
+            canvas.drawRoundRect(launchCueRect, 20f, 20f, launchCuePaint)
             launchCueBorderPaint.color = Color.argb((96 + phaseT * 64).toInt(), 252, 244, 208)
-            canvas.drawRoundRect(RectF(laneLeft, laneTop, laneRight, laneBottom), 20f, 20f, launchCueBorderPaint)
+            canvas.drawRoundRect(launchCueRect, 20f, 20f, launchCueBorderPaint)
 
             repeat(4) { index ->
                 val footstepT = ((elapsedT * (0.7f + index * 0.12f)) + index * 0.24f) % 1f

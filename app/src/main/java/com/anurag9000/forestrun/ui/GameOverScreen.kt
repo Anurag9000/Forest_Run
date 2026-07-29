@@ -20,7 +20,8 @@ import com.anurag9000.forestrun.engine.RestSceneCopy
 import com.anurag9000.forestrun.engine.RunSummary
 import com.anurag9000.forestrun.engine.SanctuaryLightingScene
 import com.anurag9000.forestrun.engine.SessionArcComposer
-import com.anurag9000.forestrun.engine.buildCinematicPolishProfile
+import com.anurag9000.forestrun.engine.CinematicPolishProfile
+import com.anurag9000.forestrun.engine.resolveCinematicPolishProfile
 import com.anurag9000.forestrun.engine.buildSanctuaryLightingIdentity
 import kotlin.math.sin
 
@@ -204,6 +205,11 @@ class GameOverScreen(
     private val panelRect  = RectF(panelLeft, panelTop, panelLeft + panelW, panelTop + panelH)
     private val cx         = screenWidth / 2f
     private val cinematicOverlay = CinematicOverlayRenderer()
+    private val cinematicProfile = CinematicPolishProfile()
+    private val restLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.REST)
+    private val restChipRect = RectF()
+    private val arrivalBadgeRect = RectF()
+    private val homeCharacterRect = RectF()
 
     private data class RestComposition(
         val summary: RunSummary,
@@ -260,7 +266,6 @@ class GameOverScreen(
         panelBorderPaint.alpha = (255f * stageAlpha).toInt().coerceIn(0, 255)
         canvas.drawRect(0f, 0f, w, h, scrimPaint)
         drawRecoveryAtmosphere(canvas, w, h, sanctuaryState, stageAlpha)
-        val restLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.REST)
         val restEmphasis = (
             0.38f +
                 sanctuaryState.lanternGlowCount * 0.05f +
@@ -270,7 +275,8 @@ class GameOverScreen(
             canvas = canvas,
             width = w,
             height = h,
-            profile = buildCinematicPolishProfile(
+            profile = resolveCinematicPolishProfile(
+                target = cinematicProfile,
                 scene = CinematicScene.REST,
                 emphasis = restEmphasis
             ),
@@ -286,12 +292,18 @@ class GameOverScreen(
         var ty = panelTop + 70f
 
         // 3. Rest chip + title
-        val chipRect = RectF(cx - 58f, ty - 26f, cx + 58f, ty - 2f)
+        restChipRect.set(cx - 58f, ty - 26f, cx + 58f, ty - 2f)
         restChipPaint.alpha = (216f * stageAlpha).toInt().coerceIn(0, 255)
         restChipBorderPaint.alpha = (196f * stageAlpha).toInt().coerceIn(0, 255)
-        canvas.drawRoundRect(chipRect, 12f, 12f, restChipPaint)
-        canvas.drawRoundRect(chipRect, 12f, 12f, restChipBorderPaint)
-        canvas.drawText("REST", cx, chipRect.centerY() - (restChipTextPaint.descent() + restChipTextPaint.ascent()) / 2f, restChipTextPaint)
+        canvas.drawRoundRect(restChipRect, 12f, 12f, restChipPaint)
+        canvas.drawRoundRect(restChipRect, 12f, 12f, restChipBorderPaint)
+        canvas.drawText(
+            "REST",
+            cx,
+            restChipRect.centerY() -
+                (restChipTextPaint.descent() + restChipTextPaint.ascent()) / 2f,
+            restChipTextPaint
+        )
         canvas.drawText(sceneCopy.recoveryTitle, cx, ty + 24f, titlePaint)
         ty += 56f
 
@@ -302,20 +314,32 @@ class GameOverScreen(
 
         if (sanctuaryState.arrivalBadge.isNotBlank()) {
             val badgeWidth = panelW * 0.34f
-            val badgeRect = RectF(cx - badgeWidth / 2f, ty - 16f, cx + badgeWidth / 2f, ty + 10f)
-            canvas.drawRoundRect(badgeRect, 16f, 16f, badgePaint)
-            canvas.drawRoundRect(badgeRect, 16f, 16f, badgeBorderPaint)
-            val labelY = badgeRect.centerY() - (badgeTextPaint.descent() + badgeTextPaint.ascent()) / 2f
+            arrivalBadgeRect.set(
+                cx - badgeWidth / 2f,
+                ty - 16f,
+                cx + badgeWidth / 2f,
+                ty + 10f
+            )
+            canvas.drawRoundRect(arrivalBadgeRect, 16f, 16f, badgePaint)
+            canvas.drawRoundRect(arrivalBadgeRect, 16f, 16f, badgeBorderPaint)
+            val labelY = arrivalBadgeRect.centerY() -
+                (badgeTextPaint.descent() + badgeTextPaint.ascent()) / 2f
             canvas.drawText(sanctuaryState.arrivalBadge, cx, labelY, badgeTextPaint)
             ty += 28f
         }
 
         if (sanctuaryState.homeCharacterLabel.isNotBlank()) {
             val homeWidth = panelW * 0.36f
-            val homeRect = RectF(cx - homeWidth / 2f, ty - 14f, cx + homeWidth / 2f, ty + 10f)
-            canvas.drawRoundRect(homeRect, 14f, 14f, restChipPaint)
-            canvas.drawRoundRect(homeRect, 14f, 14f, restChipBorderPaint)
-            val labelY = homeRect.centerY() - (restChipTextPaint.descent() + restChipTextPaint.ascent()) / 2f
+            homeCharacterRect.set(
+                cx - homeWidth / 2f,
+                ty - 14f,
+                cx + homeWidth / 2f,
+                ty + 10f
+            )
+            canvas.drawRoundRect(homeCharacterRect, 14f, 14f, restChipPaint)
+            canvas.drawRoundRect(homeCharacterRect, 14f, 14f, restChipBorderPaint)
+            val labelY = homeCharacterRect.centerY() -
+                (restChipTextPaint.descent() + restChipTextPaint.ascent()) / 2f
             canvas.drawText(sanctuaryState.homeCharacterLabel, cx, labelY, restChipTextPaint)
             ty += 26f
             drawWrappedCenteredText(canvas, sanctuaryState.homeCharacterLine, cx, ty, panelW * 0.80f, carryHomePaint)

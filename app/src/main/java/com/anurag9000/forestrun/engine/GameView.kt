@@ -205,6 +205,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         color = Color.BLACK; style = Paint.Style.FILL
     }
     private val cinematicOverlay = CinematicOverlayRenderer()
+    private val reusableRunLighting = RunLightingIdentity()
+    private val reusableRunCinematicProfile = CinematicPolishProfile()
+    private val reusableBloomPowerState = BloomPowerPresentationState()
+    private val reusableBloomHudPresentation = BloomHudPresentation()
 
     // -----------------------------------------------------------------------
     // Screen dimensions
@@ -696,7 +700,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (gameState.isBloomActive) {
             val liveBurstConversions =
                 (gameState.bloomConversionsThisRun - bloomSessionConversionBase).coerceAtLeast(0)
-            val powerState = BloomPowerPresentation.resolve(
+            val powerState = BloomPowerPresentation.resolveInto(
+                target = reusableBloomPowerState,
                 secondsRemaining = gameState.bloomSecondsRemaining,
                 conversionsInBurst = liveBurstConversions,
                 recentSurgeFraction = bloomPowerSurgeFraction()
@@ -1089,7 +1094,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             } else {
                 0f
             }
-            val runLighting = buildRunLightingIdentity(
+            val runLighting = resolveRunLightingIdentity(
+                target = reusableRunLighting,
                 nightFactor = nightFactor,
                 bloomStrength = if (gameState.isBloomActive) 1f else bloomAfterglow * 0.55f
             )
@@ -1097,7 +1103,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 canvas = canvas,
                 width = width.toFloat(),
                 height = height.toFloat(),
-                profile = buildCinematicPolishProfile(
+                profile = resolveCinematicPolishProfile(
+                    target = reusableRunCinematicProfile,
                     scene = CinematicScene.RUN,
                     emphasis = ((motif.cadenceLift + motif.shimmer) * 0.5f).coerceIn(0f, 1f),
                     bloomStrength = if (gameState.isBloomActive) 1f else bloomAfterglow * 0.55f
@@ -1119,7 +1126,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 hud.draw(
                     canvas = canvas,
                     state = gameState,
-                    bloomPresentation = BloomPresentation.hudPresentation(
+                    bloomPresentation = BloomPresentation.resolveInto(
+                        target = reusableBloomHudPresentation,
                         bloomMeter = gameState.bloomMeter,
                         seedTarget = gameState.bloomSeedTarget,
                         isActive = gameState.isBloomActive,
@@ -1203,7 +1211,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!::gameState.isInitialized || !::player.isInitialized) return
         if (encounterDirector?.isScenarioActive == true) return
 
-        val mercyTier = progressTier(gameState.mercyHearts, intArrayOf(2, 4, 6))
+        val mercyTier = progressTier(gameState.mercyHearts, 2, 4, 6)
         if (mercyTier > surfacedMercyTier) {
             surfacedMercyTier = mercyTier
             spawnOrdinaryProgressCue(
@@ -1215,7 +1223,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             )
         }
 
-        val kindnessTier = progressTier(gameState.kindnessChain, intArrayOf(3, 5, 8))
+        val kindnessTier = progressTier(gameState.kindnessChain, 3, 5, 8)
         if (kindnessTier > surfacedKindnessTier) {
             surfacedKindnessTier = kindnessTier
             spawnOrdinaryProgressCue(
@@ -1227,7 +1235,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             )
         }
 
-        val cleanTier = progressTier(gameState.cleanPassesThisRun, intArrayOf(4, 8, 12))
+        val cleanTier = progressTier(gameState.cleanPassesThisRun, 4, 8, 12)
         if (cleanTier > surfacedCleanTier) {
             surfacedCleanTier = cleanTier
             spawnOrdinaryProgressCue(
@@ -1264,8 +1272,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         surfacedCleanTier = 0
     }
 
-    private fun progressTier(value: Int, thresholds: IntArray): Int =
-        thresholds.count { value >= it }
+    private fun progressTier(
+        value: Int,
+        firstThreshold: Int,
+        secondThreshold: Int,
+        thirdThreshold: Int
+    ): Int = when {
+        value >= thirdThreshold -> 3
+        value >= secondThreshold -> 2
+        value >= firstThreshold -> 1
+        else -> 0
+    }
 
     private fun prepareEncounterScenario() {
         val director = encounterDirector ?: return

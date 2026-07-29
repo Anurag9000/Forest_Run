@@ -3,11 +3,11 @@ package com.anurag9000.forestrun.engine
 import android.graphics.Color
 
 data class RunLightingIdentity(
-    val canopyNearColor: Int,
-    val canopyFarColor: Int,
-    val mistColor: Int,
-    val horizonGlowColor: Int,
-    val glowMoteColor: Int
+    var canopyNearColor: Int = 0,
+    var canopyFarColor: Int = 0,
+    var mistColor: Int = 0,
+    var horizonGlowColor: Int = 0,
+    var glowMoteColor: Int = 0
 )
 
 enum class SanctuaryLightingScene {
@@ -26,40 +26,49 @@ data class SanctuaryLightingIdentity(
     val bloomPatchColor: Int
 )
 
-internal fun buildRunLightingIdentity(
+internal fun resolveRunLightingIdentity(
+    target: RunLightingIdentity,
     nightFactor: Float,
     bloomStrength: Float
 ): RunLightingIdentity {
     val night = nightFactor.coerceIn(0f, 1f)
     val bloom = bloomStrength.coerceIn(0f, 1f)
-    return RunLightingIdentity(
-        canopyNearColor = Color.rgb(
-            (18f + bloom * 16f).toInt().coerceAtMost(255),
-            (28f + night * 24f + bloom * 10f).toInt().coerceAtMost(255),
-            (24f + night * 18f + bloom * 8f).toInt().coerceAtMost(255)
-        ),
-        canopyFarColor = Color.rgb(
-            (10f + bloom * 10f).toInt().coerceAtMost(255),
-            (16f + night * 14f + bloom * 8f).toInt().coerceAtMost(255),
-            (14f + night * 12f + bloom * 8f).toInt().coerceAtMost(255)
-        ),
-        mistColor = Color.rgb(
-            (214f + bloom * 24f).toInt().coerceAtMost(255),
-            (226f + night * 10f + bloom * 18f).toInt().coerceAtMost(255),
-            (228f + night * 8f + bloom * 10f).toInt().coerceAtMost(255)
-        ),
-        horizonGlowColor = Color.rgb(
-            (236f + bloom * 18f).toInt().coerceAtMost(255),
-            (186f + night * 22f + bloom * 28f).toInt().coerceAtMost(255),
-            (118f + bloom * 34f).toInt().coerceAtMost(255)
-        ),
-        glowMoteColor = Color.rgb(
-            (236f + bloom * 18f).toInt().coerceAtMost(255),
-            (226f + bloom * 20f).toInt().coerceAtMost(255),
-            (164f + night * 12f + bloom * 44f).toInt().coerceAtMost(255)
-        )
+    target.canopyNearColor = Color.rgb(
+        (18f + bloom * 16f).toInt().coerceAtMost(255),
+        (28f + night * 24f + bloom * 10f).toInt().coerceAtMost(255),
+        (24f + night * 18f + bloom * 8f).toInt().coerceAtMost(255)
     )
+    target.canopyFarColor = Color.rgb(
+        (10f + bloom * 10f).toInt().coerceAtMost(255),
+        (16f + night * 14f + bloom * 8f).toInt().coerceAtMost(255),
+        (14f + night * 12f + bloom * 8f).toInt().coerceAtMost(255)
+    )
+    target.mistColor = Color.rgb(
+        (214f + bloom * 24f).toInt().coerceAtMost(255),
+        (226f + night * 10f + bloom * 18f).toInt().coerceAtMost(255),
+        (228f + night * 8f + bloom * 10f).toInt().coerceAtMost(255)
+    )
+    target.horizonGlowColor = Color.rgb(
+        (236f + bloom * 18f).toInt().coerceAtMost(255),
+        (186f + night * 22f + bloom * 28f).toInt().coerceAtMost(255),
+        (118f + bloom * 34f).toInt().coerceAtMost(255)
+    )
+    target.glowMoteColor = Color.rgb(
+        (236f + bloom * 18f).toInt().coerceAtMost(255),
+        (226f + bloom * 20f).toInt().coerceAtMost(255),
+        (164f + night * 12f + bloom * 44f).toInt().coerceAtMost(255)
+    )
+    return target
 }
+
+internal fun buildRunLightingIdentity(
+    nightFactor: Float,
+    bloomStrength: Float
+): RunLightingIdentity = resolveRunLightingIdentity(
+    target = RunLightingIdentity(),
+    nightFactor = nightFactor,
+    bloomStrength = bloomStrength
+)
 
 private val menuSanctuaryLighting = SanctuaryLightingIdentity(
     canopyColor = Color.rgb(26, 42, 34),

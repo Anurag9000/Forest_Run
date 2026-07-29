@@ -37,7 +37,8 @@ import com.anurag9000.forestrun.entities.CostumeStyle
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.systems.FxPreset
 import com.anurag9000.forestrun.systems.ParticleManager
-import com.anurag9000.forestrun.engine.buildCinematicPolishProfile
+import com.anurag9000.forestrun.engine.CinematicPolishProfile
+import com.anurag9000.forestrun.engine.resolveCinematicPolishProfile
 import com.anurag9000.forestrun.engine.buildSanctuaryLightingIdentity
 import kotlin.math.sin
 
@@ -290,6 +291,8 @@ class GardenScreen(
         color = Color.argb(180, 220, 220, 220); textSize = 16f; typeface = pixelFont; textAlign = Paint.Align.CENTER
     }
     private val cinematicOverlay = CinematicOverlayRenderer()
+    private val cinematicProfile = CinematicPolishProfile()
+    private val gardenLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.GARDEN)
     private val statsPanelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(145, 20, 40, 30)
         style = Paint.Style.FILL
@@ -450,14 +453,14 @@ class GardenScreen(
         canvas.drawRect(0f, 0f, cw, ch, skyPaint)
         canvas.drawRect(0f, groundY, cw, ch, groundPaint)
         drawSanctuaryAtmosphere(canvas, cw, ch, groundY)
-        val gardenLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.GARDEN)
         val traceEmphasis = (0.34f + sanctuaryState.traces.size * 0.06f + sanctuaryState.bloomPatchCount * 0.04f)
             .coerceIn(0f, 1f)
         cinematicOverlay.draw(
             canvas = canvas,
             width = cw,
             height = ch,
-            profile = buildCinematicPolishProfile(
+            profile = resolveCinematicPolishProfile(
+                target = cinematicProfile,
                 scene = CinematicScene.GARDEN,
                 emphasis = traceEmphasis
             ),
@@ -941,7 +944,7 @@ class GardenScreen(
     }
 
     private fun drawSanctuaryAtmosphere(canvas: Canvas, cw: Float, ch: Float, groundY: Float) {
-        val lighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.GARDEN)
+        val lighting = gardenLighting
         canopyShadePaint.color = Color.argb(
             sanctuaryState.canopyShadeAlpha,
             Color.red(lighting.canopyColor),

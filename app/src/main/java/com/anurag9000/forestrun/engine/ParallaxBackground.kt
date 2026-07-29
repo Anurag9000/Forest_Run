@@ -87,28 +87,29 @@ internal fun buildBiomeSceneArtProfile(biome: Biome): BiomeSceneArtProfile = whe
 }
 
 internal data class ParallaxAtmosphereProfile(
-    val worldScale: Float,
-    val driftScale: Float,
-    val gustStrength: Float,
-    val worldSwayAmplitude: Float,
-    val leafCount: Int,
-    val leafBackfillCount: Int,
-    val petalCount: Int,
-    val petalTrailCount: Int,
-    val fireflyCount: Int,
-    val glowMoteCount: Int,
-    val ribbonCount: Int,
-    val mistBandCount: Int,
-    val windRibbonAlpha: Int,
-    val mistBandAlpha: Int,
-    val canopyShadowAlpha: Int,
-    val horizonGlowAlpha: Int,
-    val biomeSkyAlpha: Int,
-    val foliageWashAlpha: Int,
-    val nightFactor: Float
+    var worldScale: Float = 1f,
+    var driftScale: Float = 1f,
+    var gustStrength: Float = 0f,
+    var worldSwayAmplitude: Float = 4f,
+    var leafCount: Int = 0,
+    var leafBackfillCount: Int = 0,
+    var petalCount: Int = 0,
+    var petalTrailCount: Int = 0,
+    var fireflyCount: Int = 0,
+    var glowMoteCount: Int = 0,
+    var ribbonCount: Int = 0,
+    var mistBandCount: Int = 0,
+    var windRibbonAlpha: Int = 0,
+    var mistBandAlpha: Int = 0,
+    var canopyShadowAlpha: Int = 0,
+    var horizonGlowAlpha: Int = 0,
+    var biomeSkyAlpha: Int = 0,
+    var foliageWashAlpha: Int = 0,
+    var nightFactor: Float = 0f
 )
 
-internal fun buildParallaxAtmosphereProfile(
+internal fun resolveParallaxAtmosphereProfile(
+    target: ParallaxAtmosphereProfile,
     scrollSpeed: Float,
     bloomStrength: Float,
     skyTop: Int,
@@ -123,28 +124,50 @@ internal fun buildParallaxAtmosphereProfile(
     val bloom = bloomStrength.coerceIn(0f, 1f)
     val speedLift = (speedRatio - 1f).coerceAtLeast(0f)
 
-    return ParallaxAtmosphereProfile(
-        worldScale = (1f + speedLift * 0.012f + bloom * 0.026f + nightFactor * 0.008f).coerceAtMost(1.065f),
-        driftScale = (1f + speedLift * 0.28f + bloom * 0.18f + nightFactor * 0.10f).coerceAtMost(1.65f),
-        gustStrength = (0.18f + speedLift * 0.24f + bloom * 0.16f + nightFactor * 0.12f).coerceIn(0f, 0.75f),
-        worldSwayAmplitude = (4f + speedLift * 4.5f + bloom * 4f + nightFactor * 2.2f).coerceIn(4f, 16f),
-        leafCount = (5 + speedLift * 6f + bloom * 4f).toInt().coerceAtLeast(4),
-        leafBackfillCount = (3 + speedLift * 4f + nightFactor * 3f + bloom * 2f).toInt().coerceAtLeast(3),
-        petalCount = (3 + bloom * 7f + nightFactor * 2f).toInt().coerceAtLeast(2),
-        petalTrailCount = (2 + bloom * 5f + speedLift * 2.5f).toInt().coerceAtLeast(2),
-        fireflyCount = (nightFactor * 8f + bloom * 4f).toInt().coerceAtLeast(if (nightFactor > 0.45f) 3 else 0),
-        glowMoteCount = (2 + nightFactor * 5f + bloom * 5f).toInt().coerceAtLeast(if (bloom > 0.2f || nightFactor > 0.4f) 3 else 1),
-        ribbonCount = (3 + speedLift * 2f + bloom * 1.5f).toInt().coerceIn(3, 6),
-        mistBandCount = (2 + nightFactor * 2.2f + bloom * 1.4f).toInt().coerceIn(2, 5),
-        windRibbonAlpha = (18f + speedLift * 34f + bloom * 24f).toInt().coerceIn(0, 110),
-        mistBandAlpha = (16f + nightFactor * 38f + bloom * 20f).toInt().coerceIn(0, 120),
-        canopyShadowAlpha = (22f + nightFactor * 48f + speedLift * 12f).toInt().coerceIn(0, 120),
-        horizonGlowAlpha = (36f + bloom * 92f + speedLift * 22f).toInt().coerceIn(0, 180),
-        biomeSkyAlpha = (28f + nightFactor * 42f).toInt().coerceIn(0, 120),
-        foliageWashAlpha = (20f + nightFactor * 35f + bloom * 18f).toInt().coerceIn(0, 96),
-        nightFactor = nightFactor
-    )
+    target.worldScale =
+        (1f + speedLift * 0.012f + bloom * 0.026f + nightFactor * 0.008f).coerceAtMost(1.065f)
+    target.driftScale =
+        (1f + speedLift * 0.28f + bloom * 0.18f + nightFactor * 0.10f).coerceAtMost(1.65f)
+    target.gustStrength =
+        (0.18f + speedLift * 0.24f + bloom * 0.16f + nightFactor * 0.12f).coerceIn(0f, 0.75f)
+    target.worldSwayAmplitude =
+        (4f + speedLift * 4.5f + bloom * 4f + nightFactor * 2.2f).coerceIn(4f, 16f)
+    target.leafCount = (5 + speedLift * 6f + bloom * 4f).toInt().coerceAtLeast(4)
+    target.leafBackfillCount =
+        (3 + speedLift * 4f + nightFactor * 3f + bloom * 2f).toInt().coerceAtLeast(3)
+    target.petalCount = (3 + bloom * 7f + nightFactor * 2f).toInt().coerceAtLeast(2)
+    target.petalTrailCount = (2 + bloom * 5f + speedLift * 2.5f).toInt().coerceAtLeast(2)
+    target.fireflyCount =
+        (nightFactor * 8f + bloom * 4f).toInt().coerceAtLeast(if (nightFactor > 0.45f) 3 else 0)
+    target.glowMoteCount =
+        (2 + nightFactor * 5f + bloom * 5f).toInt().coerceAtLeast(
+            if (bloom > 0.2f || nightFactor > 0.4f) 3 else 1
+        )
+    target.ribbonCount = (3 + speedLift * 2f + bloom * 1.5f).toInt().coerceIn(3, 6)
+    target.mistBandCount = (2 + nightFactor * 2.2f + bloom * 1.4f).toInt().coerceIn(2, 5)
+    target.windRibbonAlpha = (18f + speedLift * 34f + bloom * 24f).toInt().coerceIn(0, 110)
+    target.mistBandAlpha = (16f + nightFactor * 38f + bloom * 20f).toInt().coerceIn(0, 120)
+    target.canopyShadowAlpha =
+        (22f + nightFactor * 48f + speedLift * 12f).toInt().coerceIn(0, 120)
+    target.horizonGlowAlpha = (36f + bloom * 92f + speedLift * 22f).toInt().coerceIn(0, 180)
+    target.biomeSkyAlpha = (28f + nightFactor * 42f).toInt().coerceIn(0, 120)
+    target.foliageWashAlpha = (20f + nightFactor * 35f + bloom * 18f).toInt().coerceIn(0, 96)
+    target.nightFactor = nightFactor
+    return target
 }
+
+internal fun buildParallaxAtmosphereProfile(
+    scrollSpeed: Float,
+    bloomStrength: Float,
+    skyTop: Int,
+    skyBottom: Int
+): ParallaxAtmosphereProfile = resolveParallaxAtmosphereProfile(
+    target = ParallaxAtmosphereProfile(),
+    scrollSpeed = scrollSpeed,
+    bloomStrength = bloomStrength,
+    skyTop = skyTop,
+    skyBottom = skyBottom
+)
 
 /**
  * Manages 4 parallax layers that together create the illusion of a deep,
@@ -272,12 +295,24 @@ class ParallaxBackground(
     }
 
     fun draw(canvas: Canvas) {
-        val atmosphere = buildParallaxAtmosphereProfile(
+        val topColor =
+            skyOverlayTop.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+        val bottomColor =
+            skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+        val bloomStrength = maxOf(bloomLevel, bloomAfterglowLevel * 0.48f)
+        val atmosphere = resolveParallaxAtmosphereProfile(
+            target = reusableAtmosphere,
             scrollSpeed = currentScrollSpeed,
-            bloomStrength = maxOf(bloomLevel, bloomAfterglowLevel * 0.48f),
-            skyTop = skyOverlayTop.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0],
-            skyBottom = skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+            bloomStrength = bloomStrength,
+            skyTop = topColor,
+            skyBottom = bottomColor
         )
+        val lighting = resolveRunLightingIdentity(
+            target = reusableLighting,
+            nightFactor = atmosphere.nightFactor,
+            bloomStrength = bloomStrength
+        )
+        ensureDynamicAtmosphereShaders(topColor, bottomColor, lighting)
         val gustPulse = 0.55f + 0.45f * sin(ambienceTime * (0.78f + atmosphere.gustStrength * 0.55f))
         val worldSwayX = sin(ambienceTime * 0.92f) * atmosphere.worldSwayAmplitude * gustPulse
         val worldSwayY = cos(ambienceTime * 0.64f) * atmosphere.worldSwayAmplitude * 0.18f * gustPulse
@@ -297,9 +332,9 @@ class ParallaxBackground(
         // Draw the floor band on top of layer 2/3 (solid, not scrolled)
         canvas.drawRect(floorRect, floorPaint)
         canvas.restore()
-        drawBiomeOverlays(canvas, atmosphere)
-        drawAmbientLife(canvas, atmosphere)
-        drawBloomTransformation(canvas)
+        drawBiomeOverlays(canvas, atmosphere, lighting)
+        drawAmbientLife(canvas, atmosphere, lighting)
+        drawBloomTransformation(canvas, lighting)
     }
 
     /**
@@ -359,32 +394,42 @@ class ParallaxBackground(
         style = Paint.Style.STROKE
         strokeWidth = 6f
     }
-    private val mistBandPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val canopyShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val leafPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val petalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val fireflyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val glowMotePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val reusableAtmosphere = ParallaxAtmosphereProfile()
+    private val reusableLighting = RunLightingIdentity()
+    private val horizonGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val mistBandPaints = Array(5) {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    }
+    private val skyShaderColors = IntArray(2)
+    private val canopyShaderColors = IntArray(3)
+    private val mistShaderColors = IntArray(3)
+    private val horizonShaderColors = intArrayOf(
+        Color.argb(0, 255, 214, 146),
+        Color.argb(255, 255, 206, 132)
+    )
+    private val canopyPositions = floatArrayOf(0f, 0.5f, 1f)
+    private val mistPositions = floatArrayOf(0f, 0.55f, 1f)
+    private var staticAtmosphereShadersReady = false
+    private var cachedSkyTopShaderColor = Int.MIN_VALUE
+    private var cachedSkyBottomShaderColor = Int.MIN_VALUE
+    private var cachedCanopyNearShaderColor = Int.MIN_VALUE
+    private var cachedCanopyFarShaderColor = Int.MIN_VALUE
+    private var cachedMistShaderColor = Int.MIN_VALUE
+    internal var dynamicShaderRebuildCountForTest: Int = 0
+        private set
 
-    private fun drawBiomeOverlays(canvas: Canvas, atmosphere: ParallaxAtmosphereProfile) {
-        val top = skyOverlayTop.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
-        val bottom = skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
-        val lighting = buildRunLightingIdentity(
-            nightFactor = atmosphere.nightFactor,
-            bloomStrength = maxOf(bloomLevel, bloomAfterglowLevel * 0.48f)
-        )
-        skyOverlayPaint.shader = LinearGradient(
-            0f,
-            0f,
-            0f,
-            groundY,
-            intArrayOf(
-                Color.argb(atmosphere.biomeSkyAlpha, Color.red(top), Color.green(top), Color.blue(top)),
-                Color.argb((atmosphere.biomeSkyAlpha * 1.35f).toInt().coerceAtMost(180), Color.red(bottom), Color.green(bottom), Color.blue(bottom))
-            ),
-            null,
-            Shader.TileMode.CLAMP
-        )
+    private fun drawBiomeOverlays(
+        canvas: Canvas,
+        atmosphere: ParallaxAtmosphereProfile,
+        lighting: RunLightingIdentity
+    ) {
+        skyOverlayPaint.alpha =
+            (atmosphere.biomeSkyAlpha * 1.35f).toInt().coerceIn(0, 180)
         canvas.drawRect(skyRect, skyOverlayPaint)
 
         val foliage = foliageOverlay.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[1]
@@ -396,44 +441,23 @@ class ParallaxBackground(
         )
         canvas.drawRect(0f, groundY - screenHeight * 0.28f, screenWidth.toFloat(), groundY + screenHeight * 0.02f, foliageWashPaint)
 
-        canopyShadowPaint.shader = LinearGradient(
+        canopyShadowPaint.alpha = atmosphere.canopyShadowAlpha
+        canvas.drawRect(
             0f,
             groundY - screenHeight * 0.42f,
-            0f,
+            screenWidth.toFloat(),
             groundY,
-            intArrayOf(
-                Color.argb(
-                    (atmosphere.canopyShadowAlpha * 0.55f).toInt().coerceIn(0, 100),
-                    Color.red(lighting.canopyFarColor),
-                    Color.green(lighting.canopyFarColor),
-                    Color.blue(lighting.canopyFarColor)
-                ),
-                Color.argb(
-                    atmosphere.canopyShadowAlpha,
-                    Color.red(lighting.canopyNearColor),
-                    Color.green(lighting.canopyNearColor),
-                    Color.blue(lighting.canopyNearColor)
-                ),
-                Color.argb(
-                    0,
-                    Color.red(lighting.canopyNearColor),
-                    Color.green(lighting.canopyNearColor),
-                    Color.blue(lighting.canopyNearColor)
-                )
-            ),
-            null,
-            Shader.TileMode.CLAMP
+            canopyShadowPaint
         )
-        canvas.drawRect(0f, groundY - screenHeight * 0.42f, screenWidth.toFloat(), groundY, canopyShadowPaint)
     }
 
-    private fun drawAmbientLife(canvas: Canvas, atmosphere: ParallaxAtmosphereProfile) {
+    private fun drawAmbientLife(
+        canvas: Canvas,
+        atmosphere: ParallaxAtmosphereProfile,
+        lighting: RunLightingIdentity
+    ) {
         val foliage = foliageOverlay.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[1]
         val skyBottom = skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
-        val lighting = buildRunLightingIdentity(
-            nightFactor = atmosphere.nightFactor,
-            bloomStrength = maxOf(bloomLevel, bloomAfterglowLevel * 0.48f)
-        )
         val ribbonY = groundY - screenHeight * 0.22f
         val gustPulse = 0.55f + 0.45f * sin(ambienceTime * (0.78f + atmosphere.gustStrength * 0.55f))
         repeat(atmosphere.ribbonCount) { index ->
@@ -517,42 +541,20 @@ class ParallaxBackground(
         }
 
         if (atmosphere.horizonGlowAlpha > 0) {
-            val glowPaint = Paint().apply {
-                shader = LinearGradient(
-                    0f,
-                    groundY - screenHeight * 0.14f,
-                    0f,
-                    groundY + screenHeight * 0.02f,
-                    intArrayOf(
-                        Color.argb(0, 255, 214, 146),
-                        Color.argb(atmosphere.horizonGlowAlpha, 255, 206, 132)
-                    ),
-                    null,
-                    Shader.TileMode.CLAMP
-                )
-            }
-            canvas.drawRect(0f, groundY - screenHeight * 0.14f, screenWidth.toFloat(), groundY + screenHeight * 0.02f, glowPaint)
+            horizonGlowPaint.alpha = atmosphere.horizonGlowAlpha
+            canvas.drawRect(
+                0f,
+                groundY - screenHeight * 0.14f,
+                screenWidth.toFloat(),
+                groundY + screenHeight * 0.02f,
+                horizonGlowPaint
+            )
         }
 
         repeat(atmosphere.mistBandCount) { index ->
-            mistBandPaint.shader = LinearGradient(
-                0f,
-                groundY - screenHeight * (0.16f - index * 0.028f),
-                0f,
-                groundY + screenHeight * (0.02f + index * 0.014f),
-                intArrayOf(
-                    Color.argb(0, 255, 255, 255),
-                    Color.argb(
-                        (atmosphere.mistBandAlpha * (1f - index * 0.14f)).toInt().coerceIn(0, 110),
-                        Color.red(lighting.mistColor),
-                        Color.green(lighting.mistColor),
-                        Color.blue(lighting.mistColor)
-                    ),
-                    Color.argb(0, 255, 255, 255)
-                ),
-                floatArrayOf(0f, 0.55f, 1f),
-                Shader.TileMode.CLAMP
-            )
+            val mistPaint = mistBandPaints[index]
+            mistPaint.alpha =
+                (atmosphere.mistBandAlpha * (1f - index * 0.14f)).toInt().coerceIn(0, 110)
             val offset = sin(ambienceTime * (0.42f + index * 0.11f)) *
                 (18f + index * 5f + atmosphere.gustStrength * 16f) * atmosphere.driftScale
             canvas.drawRect(
@@ -560,7 +562,7 @@ class ParallaxBackground(
                 groundY - screenHeight * (0.15f - index * 0.028f),
                 screenWidth + 40f + offset,
                 groundY + screenHeight * (0.012f + index * 0.022f),
-                mistBandPaint
+                mistPaint
             )
         }
 
@@ -606,20 +608,14 @@ class ParallaxBackground(
         }
     }
 
-    private fun drawBloomTransformation(canvas: Canvas) {
+    private fun drawBloomTransformation(
+        canvas: Canvas,
+        lighting: RunLightingIdentity
+    ) {
         val bloomStrength = bloomLevel.coerceIn(0f, 1f)
         val activationBoost = bloomActivationLevel.coerceIn(0f, 1f)
         val afterglowStrength = bloomAfterglowLevel.coerceIn(0f, 1f)
         if (bloomStrength <= 0.01f && activationBoost <= 0.01f && afterglowStrength <= 0.01f) return
-        val lighting = buildRunLightingIdentity(
-            nightFactor = buildParallaxAtmosphereProfile(
-                scrollSpeed = currentScrollSpeed,
-                bloomStrength = maxOf(bloomLevel, bloomAfterglowLevel * 0.48f),
-                skyTop = skyOverlayTop.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0],
-                skyBottom = skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
-            ).nightFactor,
-            bloomStrength = maxOf(bloomStrength, afterglowStrength * 0.48f)
-        )
 
         val pulse = 0.62f + 0.38f * sin(bloomPulse)
         val worldStrength = (
@@ -676,6 +672,148 @@ class ParallaxBackground(
         canvas.drawLine(screenWidth * 0.62f, rayTop - 20f, screenWidth * 0.68f, rayBottom, bloomRayPaint)
         canvas.drawLine(screenWidth * 0.84f, rayTop, screenWidth * 0.90f, rayBottom, bloomRayPaint)
     }
+
+    private fun ensureDynamicAtmosphereShaders(
+        skyTop: Int,
+        skyBottom: Int,
+        lighting: RunLightingIdentity
+    ) {
+        var rebuilt = false
+        if (!staticAtmosphereShadersReady) {
+            horizonGlowPaint.shader = LinearGradient(
+                0f,
+                groundY - screenHeight * 0.14f,
+                0f,
+                groundY + screenHeight * 0.02f,
+                horizonShaderColors,
+                null,
+                Shader.TileMode.CLAMP
+            )
+            staticAtmosphereShadersReady = true
+            rebuilt = true
+        }
+
+        val quantizedTop = quantizedRgb(skyTop)
+        val quantizedBottom = quantizedRgb(skyBottom)
+        if (quantizedTop != cachedSkyTopShaderColor ||
+            quantizedBottom != cachedSkyBottomShaderColor
+        ) {
+            skyShaderColors[0] = Color.argb(
+                189,
+                Color.red(quantizedTop),
+                Color.green(quantizedTop),
+                Color.blue(quantizedTop)
+            )
+            skyShaderColors[1] = Color.argb(
+                255,
+                Color.red(quantizedBottom),
+                Color.green(quantizedBottom),
+                Color.blue(quantizedBottom)
+            )
+            skyOverlayPaint.shader = LinearGradient(
+                0f,
+                0f,
+                0f,
+                groundY,
+                skyShaderColors,
+                null,
+                Shader.TileMode.CLAMP
+            )
+            cachedSkyTopShaderColor = quantizedTop
+            cachedSkyBottomShaderColor = quantizedBottom
+            rebuilt = true
+        }
+
+        val quantizedNear = quantizedRgb(lighting.canopyNearColor)
+        val quantizedFar = quantizedRgb(lighting.canopyFarColor)
+        if (quantizedNear != cachedCanopyNearShaderColor ||
+            quantizedFar != cachedCanopyFarShaderColor
+        ) {
+            canopyShaderColors[0] = Color.argb(
+                140,
+                Color.red(quantizedFar),
+                Color.green(quantizedFar),
+                Color.blue(quantizedFar)
+            )
+            canopyShaderColors[1] = Color.argb(
+                255,
+                Color.red(quantizedNear),
+                Color.green(quantizedNear),
+                Color.blue(quantizedNear)
+            )
+            canopyShaderColors[2] = Color.argb(
+                0,
+                Color.red(quantizedNear),
+                Color.green(quantizedNear),
+                Color.blue(quantizedNear)
+            )
+            canopyShadowPaint.shader = LinearGradient(
+                0f,
+                groundY - screenHeight * 0.42f,
+                0f,
+                groundY,
+                canopyShaderColors,
+                canopyPositions,
+                Shader.TileMode.CLAMP
+            )
+            cachedCanopyNearShaderColor = quantizedNear
+            cachedCanopyFarShaderColor = quantizedFar
+            rebuilt = true
+        }
+
+        val quantizedMist = quantizedRgb(lighting.mistColor)
+        if (quantizedMist != cachedMistShaderColor) {
+            mistShaderColors[0] = Color.argb(
+                0,
+                Color.red(quantizedMist),
+                Color.green(quantizedMist),
+                Color.blue(quantizedMist)
+            )
+            mistShaderColors[1] = Color.argb(
+                255,
+                Color.red(quantizedMist),
+                Color.green(quantizedMist),
+                Color.blue(quantizedMist)
+            )
+            mistShaderColors[2] = mistShaderColors[0]
+            for (index in mistBandPaints.indices) {
+                mistBandPaints[index].shader = LinearGradient(
+                    0f,
+                    groundY - screenHeight * (0.16f - index * 0.028f),
+                    0f,
+                    groundY + screenHeight * (0.02f + index * 0.014f),
+                    mistShaderColors,
+                    mistPositions,
+                    Shader.TileMode.CLAMP
+                )
+            }
+            cachedMistShaderColor = quantizedMist
+            rebuilt = true
+        }
+
+        if (rebuilt) dynamicShaderRebuildCountForTest++
+    }
+
+    /** Exercise the production shader cache without rasterizing Parallax bitmaps. */
+    internal fun refreshDynamicShadersForTest(
+        skyTop: Int,
+        skyBottom: Int,
+        nightFactor: Float,
+        bloomStrength: Float
+    ) {
+        val lighting = resolveRunLightingIdentity(
+            target = reusableLighting,
+            nightFactor = nightFactor,
+            bloomStrength = bloomStrength
+        )
+        ensureDynamicAtmosphereShaders(skyTop, skyBottom, lighting)
+    }
+
+    private fun quantizedRgb(color: Int): Int = Color.rgb(
+        Color.red(color) and 0xF8,
+        Color.green(color) and 0xF8,
+        Color.blue(color) and 0xF8
+    )
 
     // ── Phase 24: Rich bitmap builder ─────────────────────────────────────
 

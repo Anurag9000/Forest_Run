@@ -10,56 +10,69 @@ import android.graphics.Shader
 internal enum class CinematicScene { MENU, RUN, GARDEN, REST }
 
 internal data class CinematicPolishProfile(
-    val vignetteAlpha: Int,
-    val edgeGlowAlpha: Int,
-    val letterboxAlpha: Int,
-    val letterboxHeightFraction: Float,
-    val centerLiftAlpha: Int,
-    val shimmerStrength: Float
+    var vignetteAlpha: Int = 0,
+    var edgeGlowAlpha: Int = 0,
+    var letterboxAlpha: Int = 0,
+    var letterboxHeightFraction: Float = 0f,
+    var centerLiftAlpha: Int = 0,
+    var shimmerStrength: Float = 0f
 )
 
-internal fun buildCinematicPolishProfile(
+internal fun resolveCinematicPolishProfile(
+    target: CinematicPolishProfile,
     scene: CinematicScene,
     emphasis: Float = 0f,
     bloomStrength: Float = 0f
 ): CinematicPolishProfile {
     val sceneEmphasis = emphasis.coerceIn(0f, 1f)
     val bloom = bloomStrength.coerceIn(0f, 1f)
-    return when (scene) {
-        CinematicScene.MENU -> CinematicPolishProfile(
-            vignetteAlpha = (66 + sceneEmphasis * 18f).toInt().coerceIn(0, 140),
-            edgeGlowAlpha = (34 + sceneEmphasis * 22f).toInt().coerceIn(0, 120),
-            letterboxAlpha = (44 + sceneEmphasis * 20f).toInt().coerceIn(0, 120),
-            letterboxHeightFraction = 0.062f,
-            centerLiftAlpha = (18 + sceneEmphasis * 14f).toInt().coerceIn(0, 80),
-            shimmerStrength = 0.42f + sceneEmphasis * 0.18f
-        )
-        CinematicScene.RUN -> CinematicPolishProfile(
-            vignetteAlpha = (34 + sceneEmphasis * 14f + bloom * 22f).toInt().coerceIn(0, 120),
-            edgeGlowAlpha = (16 + sceneEmphasis * 12f + bloom * 20f).toInt().coerceIn(0, 92),
-            letterboxAlpha = (18 + sceneEmphasis * 16f + bloom * 10f).toInt().coerceIn(0, 72),
-            letterboxHeightFraction = 0.036f + bloom * 0.008f,
-            centerLiftAlpha = (10 + sceneEmphasis * 8f + bloom * 16f).toInt().coerceIn(0, 64),
-            shimmerStrength = 0.22f + sceneEmphasis * 0.16f + bloom * 0.20f
-        )
-        CinematicScene.GARDEN -> CinematicPolishProfile(
-            vignetteAlpha = (58 + sceneEmphasis * 20f).toInt().coerceIn(0, 140),
-            edgeGlowAlpha = (30 + sceneEmphasis * 24f).toInt().coerceIn(0, 120),
-            letterboxAlpha = (40 + sceneEmphasis * 20f).toInt().coerceIn(0, 120),
-            letterboxHeightFraction = 0.058f,
-            centerLiftAlpha = (20 + sceneEmphasis * 16f).toInt().coerceIn(0, 84),
-            shimmerStrength = 0.40f + sceneEmphasis * 0.20f
-        )
-        CinematicScene.REST -> CinematicPolishProfile(
-            vignetteAlpha = (72 + sceneEmphasis * 22f).toInt().coerceIn(0, 156),
-            edgeGlowAlpha = (28 + sceneEmphasis * 16f).toInt().coerceIn(0, 96),
-            letterboxAlpha = (54 + sceneEmphasis * 18f).toInt().coerceIn(0, 120),
-            letterboxHeightFraction = 0.07f,
-            centerLiftAlpha = (26 + sceneEmphasis * 18f).toInt().coerceIn(0, 90),
-            shimmerStrength = 0.30f + sceneEmphasis * 0.16f
-        )
+    when (scene) {
+        CinematicScene.MENU -> {
+            target.vignetteAlpha = (66 + sceneEmphasis * 18f).toInt().coerceIn(0, 140)
+            target.edgeGlowAlpha = (34 + sceneEmphasis * 22f).toInt().coerceIn(0, 120)
+            target.letterboxAlpha = (44 + sceneEmphasis * 20f).toInt().coerceIn(0, 120)
+            target.letterboxHeightFraction = 0.062f
+            target.centerLiftAlpha = (18 + sceneEmphasis * 14f).toInt().coerceIn(0, 80)
+            target.shimmerStrength = 0.42f + sceneEmphasis * 0.18f
+        }
+        CinematicScene.RUN -> {
+            target.vignetteAlpha = (34 + sceneEmphasis * 14f + bloom * 22f).toInt().coerceIn(0, 120)
+            target.edgeGlowAlpha = (16 + sceneEmphasis * 12f + bloom * 20f).toInt().coerceIn(0, 92)
+            target.letterboxAlpha = (18 + sceneEmphasis * 16f + bloom * 10f).toInt().coerceIn(0, 72)
+            target.letterboxHeightFraction = 0.036f + bloom * 0.008f
+            target.centerLiftAlpha = (10 + sceneEmphasis * 8f + bloom * 16f).toInt().coerceIn(0, 64)
+            target.shimmerStrength = 0.22f + sceneEmphasis * 0.16f + bloom * 0.20f
+        }
+        CinematicScene.GARDEN -> {
+            target.vignetteAlpha = (58 + sceneEmphasis * 20f).toInt().coerceIn(0, 140)
+            target.edgeGlowAlpha = (30 + sceneEmphasis * 24f).toInt().coerceIn(0, 120)
+            target.letterboxAlpha = (40 + sceneEmphasis * 20f).toInt().coerceIn(0, 120)
+            target.letterboxHeightFraction = 0.058f
+            target.centerLiftAlpha = (20 + sceneEmphasis * 16f).toInt().coerceIn(0, 84)
+            target.shimmerStrength = 0.40f + sceneEmphasis * 0.20f
+        }
+        CinematicScene.REST -> {
+            target.vignetteAlpha = (72 + sceneEmphasis * 22f).toInt().coerceIn(0, 156)
+            target.edgeGlowAlpha = (28 + sceneEmphasis * 16f).toInt().coerceIn(0, 96)
+            target.letterboxAlpha = (54 + sceneEmphasis * 18f).toInt().coerceIn(0, 120)
+            target.letterboxHeightFraction = 0.07f
+            target.centerLiftAlpha = (26 + sceneEmphasis * 18f).toInt().coerceIn(0, 90)
+            target.shimmerStrength = 0.30f + sceneEmphasis * 0.16f
+        }
     }
+    return target
 }
+
+internal fun buildCinematicPolishProfile(
+    scene: CinematicScene,
+    emphasis: Float = 0f,
+    bloomStrength: Float = 0f
+): CinematicPolishProfile = resolveCinematicPolishProfile(
+    target = CinematicPolishProfile(),
+    scene = scene,
+    emphasis = emphasis,
+    bloomStrength = bloomStrength
+)
 
 internal class CinematicOverlayRenderer {
     private val vignettePaint = Paint(Paint.ANTI_ALIAS_FLAG)
