@@ -1,4 +1,4 @@
-name: Publish explicit run-mode integration
+name: Publish debug scenario script extraction
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   publish:
-    name: Validate and publish run-mode architecture
+    name: Validate and publish debug script controller
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -20,20 +20,19 @@ jobs:
           ref: agent/fix-core-gameplay-invariants
           fetch-depth: 0
 
-      - name: Apply explicit run-mode integration
-        run: python3 scripts/patch_explicit_run_mode.py
+      - name: Apply debug script controller integration
+        run: python3 scripts/patch_debug_scenario_script_controller.py
 
       - name: Verify transformed source contracts
         shell: bash
         run: |
-          grep -q 'internal var runMode: RunMode' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
-          grep -q 'runMode.persistsProgress' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
-          grep -q 'runMode.recordsGhost' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
-          grep -q 'runMode.allowsRandomSpawns' app/src/main/java/com/anurag9000/forestrun/engine/EntityManager.kt
-          grep -q 'RunMode.PERFORMANCE_PROFILE' app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt
-          grep -q 'RunMode.SCREENSHOT_CAPTURE' app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt
-          if grep -R -n 'encounterDirector?.isScenarioActive != true' app/src/main/java; then
-            echo 'Indirect deterministic side-effect gate remains.'
+          grep -q 'private val debugScenarioScript = DebugScenarioScript()' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'debugScenarioScript.prepare(scenario)' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'debugScenarioScript.advance(gameState.runTimeSeconds)' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'runMode: RunMode = if (encounterDirector == null)' app/src/main/java/com/anurag9000/forestrun/engine/EntityManager.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/DebugScenarioScriptTest.kt
+          if grep -q -E 'DebugScriptAction|DebugScriptStep|debugScenarioScriptIndex|debugScriptForScenario' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt; then
+            echo 'GameView still owns deterministic script internals.'
             exit 1
           fi
 
@@ -78,17 +77,15 @@ jobs:
           --stacktrace
           --console=plain
 
-      - name: Commit validated integration
+      - name: Commit validated extraction
         shell: bash
         run: |
-          rm scripts/patch_explicit_run_mode.py
+          rm scripts/patch_debug_scenario_script_controller.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
             app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt \
             app/src/main/java/com/anurag9000/forestrun/engine/EntityManager.kt \
-            app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt \
-            app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt \
-            scripts/patch_explicit_run_mode.py
-          git commit -m 'arch: route deterministic runs through explicit modes'
+            scripts/patch_debug_scenario_script_controller.py
+          git commit -m 'arch: extract deterministic debug script controller'
           git push origin HEAD:agent/fix-core-gameplay-invariants
