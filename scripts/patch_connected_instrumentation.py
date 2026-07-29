@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Make connected tests isolated, production-coordinate-driven, and CI-sized."""
+"""Make connected tests isolated, production-coordinate-driven, and zero-skipped."""
 
 from pathlib import Path
 
@@ -36,12 +36,21 @@ import com.anurag9000.forestrun.ui.MainMenuScreen
     )
     replace_once(
         main_test,
+        '''import com.anurag9000.forestrun.systems.GhostPlayer
+''',
+        '''import com.anurag9000.forestrun.systems.GhostPersistenceManager
+import com.anurag9000.forestrun.systems.GhostPlayer
+import com.anurag9000.forestrun.systems.GhostRecorder
+''',
+        "ghost persistence imports",
+    )
+    replace_once(
+        main_test,
         '''import org.junit.Ignore
 ''',
         '''import org.junit.Before
-import org.junit.Ignore
 ''',
-        "Before import",
+        "remove ignored-test import",
     )
     replace_once(
         main_test,
@@ -55,6 +64,7 @@ import org.junit.Ignore
 
     @Before
     fun setUp() {
+        GhostPersistenceManager.clearMemoryForTests()
         InstrumentationStateReset.clear(targetContext)
     }
 
@@ -178,6 +188,99 @@ import org.junit.Ignore
             )
 ''',
         "production Garden and safe-content coordinates",
+    )
+    replace_once(
+        main_test,
+        '''    @Ignore("On-device best-run persistence visibility remains flaky; covered by host SaveManager roundtrip tests.")
+    @Test
+    fun bestRunPersistsGhostAndReloadsOnNextLaunch() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val gameView = requireGameView(scenario)
+            scenario.onActivity { activity ->
+                SaveManager.saveBestDistance(activity, 0f)
+                File(activity.filesDir, "ghost_run.bin").delete()
+            }
+            enterPlayingState(gameView)
+
+            scenario.onActivity {
+                val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
+                setPrivateField(gameState, "distanceMetres", 25f)
+                val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
+                val player = getPrivateField(gameView, "player") as Player
+                entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 10f)
+            }
+
+            waitForCondition("run enters dying for best run") {
+                getPrivateField(gameView, "runState") == RunState.DYING
+            }
+            waitForCondition("best distance saved", timeoutMs = 4_000L) {
+                val saved = AtomicReference(0f)
+                val hasGhost = AtomicBoolean(false)
+                scenario.onActivity { activity ->
+                    saved.set(SaveManager.loadBestDistance(activity))
+                    hasGhost.set(SaveManager.hasGhostRun(activity))
+                }
+                saved.get() > 0f && hasGhost.get()
+            }
+        }
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val gameView = requireGameView(scenario)
+            waitForCondition("ghost reloads on next launch") {
+                val ghostPlayer = getPrivateField(gameView, "ghostPlayer") as GhostPlayer
+                ghostPlayer.hasGhost
+            }
+        }
+    }
+''',
+        '''    @Test
+    fun bestRunPersistsGhostAndReloadsOnNextLaunch() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val gameView = requireGameView(scenario)
+            scenario.onActivity { activity ->
+                SaveManager.saveBestDistance(activity, 0f)
+                File(activity.filesDir, "ghost_run.bin").delete()
+                File(activity.filesDir, "ghost_run.bin.bak").delete()
+                File(activity.filesDir, "ghost_run.bin.new").delete()
+            }
+            enterPlayingState(gameView)
+
+            waitForCondition("ghost recorder captures live frames", timeoutMs = 8_000L) {
+                val recorder = getPrivateField(gameView, "ghostRecorder") as GhostRecorder
+                recorder.frames.size >= 5
+            }
+
+            scenario.onActivity {
+                val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
+                setPrivateField(gameState, "distanceMetres", 25f)
+                val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
+                val player = getPrivateField(gameView, "player") as Player
+                entityManager.reset()
+                entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 500f)
+                val cactus = entityManager.activeEntities.last()
+                cactus.shouldRecordPersistence = true
+                cactus.x = player.x + 10f
+            }
+
+            waitForCondition("run enters dying for persistent best run", timeoutMs = 8_000L) {
+                getPrivateField(gameView, "runState") == RunState.DYING
+            }
+            assertTrue(GhostPersistenceManager.awaitPendingWrites(10_000L))
+            assertTrue(SaveManager.loadBestDistance(targetContext) >= 25f)
+            assertTrue(SaveManager.loadGhostRun(targetContext).isNotEmpty())
+        }
+
+        GhostPersistenceManager.clearMemoryForTests()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val gameView = requireGameView(scenario)
+            waitForCondition("ghost reloads from disk on next launch", timeoutMs = 8_000L) {
+                val ghostPlayer = getPrivateField(gameView, "ghostPlayer") as GhostPlayer
+                ghostPlayer.hasGhost
+            }
+        }
+    }
+''',
+        "persistent async ghost disk reload test",
     )
     replace_once(
         main_test,
