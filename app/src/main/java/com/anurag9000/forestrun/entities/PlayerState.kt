@@ -1,18 +1,20 @@
 package com.anurag9000.forestrun.entities
 
 /**
- * Every state the player character can be in.
+ * Every locomotion/animation state the player character can occupy.
  * The state machine lives in [Player].
+ *
+ * Enum order is persistence-sensitive because legacy ghost frames store
+ * [Enum.ordinal]. Do not remove or reorder entries without a ghost-schema
+ * migration. [BLOOM] is therefore retained as a reserved legacy ordinal even
+ * though current Bloom power is an orthogonal flag.
  */
 enum class PlayerState {
 
     /** Running normally on the ground. Loop animation plays. */
     RUNNING,
 
-    /**
-     * 2-frame "windup" squash immediately before launch.
-     * The character compresses downward (scaleY 0.8) to build tension.
-     */
+    /** Short launch squash while the already-applied jump velocity begins ascent. */
     JUMP_START,
 
     /** Ascending after a jump. Y-velocity is negative (moving up). */
@@ -20,42 +22,31 @@ enum class PlayerState {
 
     /**
      * Peak of the arc. Y-velocity is near zero.
-     * Gravity is reduced for [Player.APEX_GRAVITY_DURATION_S] to give a
-     * floaty, Ghibli-like feel.
+     * Gravity is reduced for [Player.APEX_GRAVITY_DURATION_S] to give a floaty
+     * but deterministic apex.
      */
     APEX,
 
     /** Descending. Full gravity applies again. */
     FALLING,
 
-    /**
-     * 3-frame landing squash after touching the ground.
-     * Transitions automatically back to [RUNNING].
-     */
+    /** Brief landing squash before transitioning automatically to [RUNNING]. */
     LANDING,
 
-    /**
-     * Player is sliding/ducking under a hazard.
-     * Hitbox is compressed vertically.
-     * Sustained by holding the duck input.
-     */
+    /** Player is ducking under a hazard with a compressed vertical hitbox. */
     DUCKING,
 
     /**
-     * Bloom State – 6-second invincibility power-up.
-     * Transitions back to [RUNNING] after the timer expires.
+     * Reserved legacy ghost/debug ordinal. Current Bloom never transitions the
+     * player into this state; [Player.isInvincible] is orthogonal to locomotion.
+     * Legacy forced values are migrated back to RUNNING/FALLING by [Player].
      */
+    @Deprecated("Bloom is an orthogonal power flag; retained for ghost ordinal compatibility")
     BLOOM,
 
-    /**
-     * Stumble – character hits an obstacle but recovers (e.g., non-lethal).
-     * Character flails briefly, then returns to RUNNING.
-     */
+    /** Non-lethal impact recovery before returning to [RUNNING]. */
     STUMBLE,
 
-    /**
-     * Game-over / rest state.
-     * Character sits on the ground; game loop is still running (background scrolls).
-     */
+    /** Game-over/rest animation state. */
     REST
 }
