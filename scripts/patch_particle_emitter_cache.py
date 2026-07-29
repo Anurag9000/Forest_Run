@@ -74,7 +74,8 @@ def main() -> None:
     internal fun cachedBurstEmitterForTest(preset: FxPreset): ParticleEmitter? =
         burstEmitterCache[preset.ordinal]
 
-    internal fun burstEmitterBuildCountForTest(): Int = burstEmitterBuildCount
+    internal val burstEmitterBuildCountForTest: Int
+        get() = burstEmitterBuildCount
 
     internal fun resetBurstEmitterCacheForTests() {
         burstEmitterCache.fill(null)
