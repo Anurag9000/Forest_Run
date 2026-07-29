@@ -18,6 +18,7 @@ import com.anurag9000.forestrun.engine.AppGameState
 import com.anurag9000.forestrun.engine.EncounterDirector
 import com.anurag9000.forestrun.engine.EncounterScenario
 import com.anurag9000.forestrun.engine.GameView
+import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.RunState
 import com.anurag9000.forestrun.engine.SaveManager
 import com.anurag9000.forestrun.entities.PlayerState
@@ -118,6 +119,7 @@ class HardwareCoreFlowCaptureTest {
     private fun prepareScenario(gameView: GameView, scenario: EncounterScenario) {
         enterPlayingState(gameView)
         instrumentation.runOnMainSync {
+            setPrivateField(gameView, "runMode", RunMode.SCREENSHOT_CAPTURE)
             val director = getPrivateField(gameView, "encounterDirector") as EncounterDirector
             setPrivateField(director, "selectedIndex", EncounterScenario.entries.indexOf(scenario))
             invokePrivate(gameView, "prepareEncounterScenario")

@@ -62,7 +62,8 @@ class EntityManager(
         deltaTime: Float,
         gameState: GameStateManager,
         player: Player,
-        encounterDirector: EncounterDirector? = null
+        encounterDirector: EncounterDirector? = null,
+        runMode: RunMode = RunMode.NORMAL
     ) {
         if (gameState.isBloomActive != bloomWasActive) {
             bloomReactedEntities.clear()
@@ -85,7 +86,7 @@ class EntityManager(
             }
         }
 
-        if (encounterDirector?.isScenarioActive != true) {
+        if (runMode.allowsRandomSpawns) {
             distanceSinceRandomSpawnPx +=
                 (gameState.scrollSpeed * deltaTime.coerceAtLeast(0f)).coerceAtLeast(0f)
             val requiredGapPx = SpawnPacing.requiredGapPx(

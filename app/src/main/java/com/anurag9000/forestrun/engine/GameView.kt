@@ -105,8 +105,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var runState: RunState = RunState.PLAYING
     private val runResetManager    = RunResetManager()
 
+    @Volatile
+    internal var runMode: RunMode = RunMode.NORMAL
+        private set
+
     // ── App Game State (Phase 22) ─────────────────────────────────────────
-    /** Top-level lifecycle state — MENU, GARDEN, PLAYING, BLOOM, REST. */
+    /** Active screen state; Bloom and rest/death have separate owners. */
     @Volatile
     private var appState: AppGameState = AppGameState.MENU
     private lateinit var mainMenuScreen: MainMenuScreen
@@ -409,7 +413,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     fun pause() {
         stopThread()
         LeitmotifManager.pause()   // Phase 20
-        if (::gameState.isInitialized && encounterDirector?.isScenarioActive != true) {
+        if (::gameState.isInitialized && runMode.persistsProgress) {
             gameState.save()   // persist ordinary-play high score only
         }
     }
@@ -433,6 +437,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!debugToolsEnabled || intent == null) return
 
         val scenarioName = intent.getStringExtra(com.anurag9000.forestrun.MainActivity.EXTRA_DEBUG_SCENARIO)
+        val requestedRunMode = intent.getStringExtra(com.anurag9000.forestrun.MainActivity.EXTRA_RUN_MODE)
         val autoStart = intent.getBooleanExtra(com.anurag9000.forestrun.MainActivity.EXTRA_DEBUG_AUTOSTART, false)
         if (scenarioName.isNullOrBlank() && !autoStart) return
 
@@ -450,6 +455,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!scenarioName.isNullOrBlank()) {
             val director = encounterDirector ?: return
             val scenario = EncounterScenario.entries.firstOrNull { it.name == scenarioName } ?: return
+            runMode = RunMode.forScenario(requestedRunMode)
             debugScenarioVisualsEnabled = false
             debugScenarioScript = debugScriptForScenario(scenario)
             debugScenarioScriptIndex = 0
@@ -475,6 +481,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         if (autoStart) {
+            runMode = RunMode.NORMAL
             debugScenarioVisualsEnabled = false
             debugScenarioScript = emptyList()
             debugScenarioScriptIndex = 0
@@ -751,13 +758,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 12: EntityManager update (spawn, scroll, pass-detection)
         if (::entityManager.isInitialized) {
-            entityManager.update(deltaTime, gameState, player, encounterDirector)
+            entityManager.update(deltaTime, gameState, player, encounterDirector, runMode)
 
             // Collision loop
             val collision = entityManager.checkCollisions(player, gameState)
             if (collision != null) {
                 val persistEncounter = collision.entity.shouldRecordPersistence &&
-                    encounterDirector?.isScenarioActive != true
+                    runMode.persistsProgress
                 when (collision.result) {
                     CollisionResult.HIT -> {
                         gameState.recordHit()
@@ -902,7 +909,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         // Phase 19: Record ghost frame + advance ghost playback
-        if (::player.isInitialized && encounterDirector?.isScenarioActive != true) {
+        if (::player.isInitialized && runMode.recordsGhost) {
             ghostRecorder.record(deltaTime, player)
         }
         if (shouldDrawGhostPlayback()) {
@@ -916,7 +923,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             LeitmotifManager.updateTempo(gameState.scrollSpeed)
             gameState.consumePacifistReward()?.let { reward ->
                 gameState.addBonus(points = reward.points, seeds = reward.seeds)
-                if (encounterDirector?.isScenarioActive != true) {
+                if (runMode.persistsProgress) {
                     reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }
                 }
                 val rewardCue = PacifistPresentation.rewardCue(reward)
@@ -1190,6 +1197,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun prepareFreshRun() {
+        runMode = RunMode.NORMAL
         encounterDirector?.stopScenario()
         debugScenarioScript = emptyList()
         debugScenarioScriptIndex = 0
@@ -1209,7 +1217,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun emitOrdinaryProgressCues() {
         if (!::gameState.isInitialized || !::player.isInitialized) return
-        if (encounterDirector?.isScenarioActive == true) return
+        if (!runMode.allowsOrdinaryProgressCues) return
 
         val mercyTier = progressTier(gameState.mercyHearts, 2, 4, 6)
         if (mercyTier > surfacedMercyTier) {
@@ -1287,6 +1295,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private fun prepareEncounterScenario() {
         val director = encounterDirector ?: return
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
+        if (runMode == RunMode.NORMAL) runMode = RunMode.DEBUG_SCENARIO
         val scenario = director.selectedScenario
         debugScenarioScriptIndex = 0
         player.setCostume(CostumeManager.activeCostume(context))
@@ -1421,11 +1430,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun shouldDrawGhostPlayback(): Boolean {
-        val director = encounterDirector
-        if (director?.isScenarioActive == true) {
-            return director.activeScenario?.allowGhostPlayback == true
-        }
-        return true
+        if (!runMode.isDeterministic) return runMode.allowsDefaultGhostPlayback
+        return encounterDirector?.activeScenario?.allowGhostPlayback == true
     }
 
     private fun ghostVisibilityContext(): GhostPlayer.VisibilityContext? {

@@ -13,6 +13,7 @@ import com.anurag9000.forestrun.engine.EncounterScenario
 import com.anurag9000.forestrun.engine.FramePerformanceReport
 import com.anurag9000.forestrun.engine.FramePerformanceTelemetry
 import com.anurag9000.forestrun.engine.GameView
+import com.anurag9000.forestrun.engine.RunMode
 import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -50,6 +51,7 @@ class HardwarePerformanceProfileTest {
         FramePerformanceTelemetry.beginSession(windowSize = 1_800)
         val launchIntent = Intent(targetContext, MainActivity::class.java).apply {
             putExtra(MainActivity.EXTRA_DEBUG_SCENARIO, scenario.name)
+            putExtra(MainActivity.EXTRA_RUN_MODE, RunMode.PERFORMANCE_PROFILE.name)
             putExtra(MainActivity.EXTRA_DEBUG_AUTOSTART, true)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
