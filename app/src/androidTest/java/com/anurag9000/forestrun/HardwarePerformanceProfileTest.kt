@@ -1,6 +1,5 @@
 package com.anurag9000.forestrun
 
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -60,7 +59,8 @@ class HardwarePerformanceProfileTest {
         ActivityScenario.launch<MainActivity>(launchIntent).use { activityScenario ->
             val gameView = requireGameView(activityScenario)
             activityScenario.onActivity { activity ->
-                refreshRateHz = activity.display?.refreshRate ?: 0f
+                @Suppress("DEPRECATION")
+                refreshRateHz = activity.windowManager.defaultDisplay.refreshRate
             }
 
             waitForCondition("render thread enters deterministic ${scenario.name}") {
