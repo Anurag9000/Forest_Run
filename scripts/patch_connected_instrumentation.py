@@ -64,6 +64,29 @@ import org.junit.Ignore
     )
     replace_once(
         main_test,
+        '''            val startFrameCount = gameView.debugFrameCounter
+            waitForCondition("game loop advances after entering play", timeoutMs = 2_000L) {
+                gameView.debugFrameCounter > startFrameCount + 10
+            }
+            val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
+            waitForCondition("opening entities appear", timeoutMs = 2_000L) {
+                entityManager.debugActiveEntityCount > 0
+            }
+''',
+        '''            val startFrameCount = gameView.debugFrameCounter
+            waitForCondition("live game thread advances after entering play", timeoutMs = 8_000L) {
+                val thread = getPrivateField(gameView, "gameThread") as Thread
+                thread.isAlive && gameView.debugFrameCounter > startFrameCount + 10
+            }
+            val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
+            waitForCondition("opening entities appear", timeoutMs = 5_000L) {
+                entityManager.debugActiveEntityCount > 0
+            }
+''',
+        "connected software-renderer frame budget",
+    )
+    replace_once(
+        main_test,
         '''        val appContext = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
         SaveManager.saveLifetimeSeeds(appContext, 50)
         SaveManager.saveGardenProgress(appContext, 1)
