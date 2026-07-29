@@ -4,76 +4,97 @@ Native Android endless runner in Kotlin using a custom `SurfaceView` game loop. 
 
 ## Product Vision
 
-The player begins beneath a willow, runs through five atmospheric biomes, collects seeds, enters Bloom, practices mercy toward forest creatures, rests after failure, and returns to a persistent Garden. Repeated encounters change dialogue, sanctuary details, relationship history, and the emotional shape of later runs.
+The player begins beneath a willow, runs through five atmospheric biomes, collects Seeds, enters Bloom, practices mercy toward forest creatures, rests after failure, and returns to a persistent Garden. Repeated encounters change dialogue, sanctuary details, relationship history, and the emotional shape of later runs.
 
 **Core loop:** willow ritual → run → soft failure/rest → Garden return → run again
 
 ## Current Status
 
-**Feature-rich alpha with the primary correctness-remediation pass implemented and automatically validated.** The repair branch now has a production application identity, current Android target, strict debug/release CI, broad invariant coverage, an actually obfuscated/resource-shrunk release bundle, atomic off-thread ghost persistence, cutout-safe essential UI, persisted feedback controls, and versioned save repair. It is not yet a release candidate because connected-device, physical-hardware, performance, signed-upload, visual-acceptance, and store-acceptance work remains.
+**Feature-rich alpha with the primary correctness-remediation pass implemented and automatically validated.** The remediation branch has a permanent application identity, current Android target, immutable exact-SHA host/emulator CI, broad invariant coverage, an actually obfuscated/resource-shrunk release bundle, versioned atomic ghost persistence, cutout-safe essential UI, persistent feedback controls, and a physical performance-evidence harness.
+
+It is not yet a release candidate because representative physical-device acceptance, measured performance thresholds, signed-artifact installation, final visual approval, and store/policy work remain.
 
 The `agent/fix-core-gameplay-invariants` branch includes:
 
-- responsive tap/hold jumping and swipe-down arbitration
-- Bloom as an orthogonal power state, preserving airborne physics
-- one authoritative Bloom timer and exclusive conversion rewards
-- one terminal outcome per entity with deterministic collision priority
-- pure collision queries and selected-outcome side effects
-- all-entity clean-pass, debug-isolation, and persistence integration coverage
-- outcome-earned relationship Trust and Bond progression
-- collectible Seed Orbs staged ahead of the player
-- distance-based encounter spacing that remains stable as speed changes
-- live Eagle targeting and aligned flora/tree collision geometry
-- bounded gameplay input routing and interruption-safe render-thread shutdown
-- Garden lifecycle, local-day, particle, layout, and currency corrections
-- bounded/wrapped presentation queues and cached game-over composition
-- strict runtime asset checks and hardened audio/music lifecycle handling
-- atomic, corruption-checked ghost saves away from the render thread
-- one aspect-preserving safe-content transform for menu, Garden, HUD, debug, and rest UI
-- persisted reduced-motion, audio, and haptic settings enforced at manager boundaries
-- versioned SharedPreferences repair with future-schema preference and ghost isolation
-- final application ID `com.anurag9000.forestrun`
-- API 36 debug and release validation, including a genuinely obfuscated unsigned AAB
+- responsive tap/hold jumping and swipe-down arbitration;
+- Bloom as an orthogonal power state, preserving airborne physics;
+- one authoritative Bloom timer and exclusive conversion rewards;
+- one terminal outcome per entity with deterministic collision priority;
+- pure collision queries and selected-outcome side effects;
+- allocation-free expanded mercy probes preserving custom safe-window geometry;
+- all-entity clean-pass, debug-isolation, and persistence integration coverage;
+- outcome-earned relationship Trust and Bond progression;
+- collectible Seed Orbs staged ahead of the player;
+- distance-based encounter spacing that remains stable as speed changes;
+- live Eagle targeting and aligned flora/tree collision geometry;
+- bounded gameplay input routing and interruption-safe render-thread shutdown;
+- Garden lifecycle, local-day, particle, layout, and currency corrections;
+- bounded/wrapped presentation queues and cached game-over composition;
+- strict runtime asset checks and hardened audio/music lifecycle handling;
+- 30 Hz, twenty-minute ghost capture with atomic off-thread persistence;
+- ghost binary format v2 with magic/version headers, stable state codes, and legacy-file reads;
+- one aspect-preserving safe-content transform for menu, Garden, HUD, debug, and rest UI;
+- persistent reduced-motion, audio, and haptic settings enforced at manager boundaries;
+- versioned SharedPreferences repair with future-schema compatibility storage;
+- allocation-free frame timing capture and a physical-device JSON profiling harness;
+- final application ID `com.anurag9000.forestrun`;
+- API 36 host/release validation and API 35 connected validation on the exact candidate SHA.
 
 ## Implemented System Surface
 
-- custom `SurfaceView` render loop and frame-time-based simulation
-- player run, jump, duck, fall, land, stumble, rest, and Bloom presentation
-- 19 entity classes across flora, trees, birds, and animals
-- five-biome cycle: Meadow, Orchard, Ancient Grove, Dusk Canyon, Night Forest
-- score, distance, seeds, Bloom, mercy, pacifist route, and run-summary systems
-- persistent Garden, plants, wardrobe, relationships, forest mood, return moments, and story fragments
-- ghost replay, particles, camera feedback, dialogue, flavor text, audio, and haptics
-- deterministic encounter scenarios and store-support scripts
+- custom `SurfaceView` render loop and frame-time-based simulation;
+- player run, jump, duck, fall, land, stumble, rest, and Bloom presentation;
+- 19 entity classes across flora, trees, birds, and animals;
+- five-biome cycle: Meadow, Orchard, Ancient Grove, Dusk Canyon, Night Forest;
+- score, distance, Seeds, Bloom, mercy, pacifist route, and run-summary systems;
+- persistent Garden, plants, wardrobe, relationships, forest mood, return moments, and story fragments;
+- ghost replay, particles, camera feedback, dialogue, flavour text, audio, and haptics;
+- deterministic encounter scenarios, store-support scripts, and physical profiling tools.
+
+## Automated Evidence
+
+Permanent read-only CI checks out and records the exact event SHA, then runs:
+
+- debug, release, unit-test, and instrumentation Kotlin compilation;
+- the complete JVM/Robolectric invariant suite;
+- debug and release lint;
+- debug application and instrumentation APK assembly;
+- minified/resource-shrunk unsigned AAB construction;
+- effective R8 application-class renaming verification;
+- fourteen API 35 connected tests with zero failures, errors, or skips.
+
+The large hardware-capture and performance-profile tests are compiled but intentionally excluded from ordinary emulator CI. They must be run on representative physical devices.
 
 ## Remaining Release Blockers
 
-- run connected instrumentation tests and deterministic scenarios on an emulator and representative physical devices
-- validate touch latency, transformed safe-content readability, feedback settings, audio, haptics, lifecycle recovery, and long-run stability on hardware
-- profile frame time, allocations, memory, I/O, audio threads, and sustained-play behavior
-- validate density behavior across phones, tablets, cutouts, and unusual aspect ratios
-- provide real signing credentials and smoke-test the signed, minified artifact
-- capture, curate, and manually approve final store screenshots and metadata
-- visually verify artwork and animation frame counts, including the Wolf sheet
-- revalidate current store-policy, privacy, data-safety, content-rating, and submission requirements
-- decide whether the remaining procedural scenic layers and fixed-landscape policy are final art/product choices
+- run deterministic scenarios and ordinary play on representative physical devices;
+- capture and review frame-time, allocation/GC, memory, I/O, audio-thread, thermal, and long-run evidence;
+- establish evidence-based performance thresholds and repair any material hotspots found;
+- validate touch latency, transformed safe-content readability, feedback settings, audio, haptics, lifecycle recovery, and density behavior on phones/tablets/cutouts/unusual aspects;
+- provide real signing credentials and smoke-test the signed, minified artifact;
+- install through an internal store track and verify the store delivery path;
+- capture, curate, and manually approve final store screenshots and metadata;
+- visually verify artwork and animation frame counts, including the Wolf sheet;
+- revalidate current store-policy, privacy, data-safety, content-rating, and submission requirements;
+- decide whether the remaining procedural scenic layers and fixed-landscape policy are final art/product choices.
 
-See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed checklist.
+See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist.
 
 ## Documentation
 
 | File | Contents |
 |---|---|
-| [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) | Product vision, session lifecycle, systems, and entity intent |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Runtime structure and implementation notes; treat unmeasured performance claims as targets |
-| [`docs/RELEASE.md`](docs/RELEASE.md) | Correctness, validation, packaging, hardware, and store checklist |
+| [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) | Product vision, runtime-honest entity mechanics, session lifecycle, and design rules |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Current runtime structure, ownership, persistence, CI, and architectural debt |
+| [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Physical-device profiling protocol, report collection, and threshold procedure |
+| [`docs/RELEASE.md`](docs/RELEASE.md) | Correctness, validation, packaging, hardware, signing, and store checklist |
 
-## Build & Test
+## Build and Test
 
-CI runs on Java 21 while the Android source remains compiled to Java 17 bytecode. Android API 36 must be installed.
+CI runs on Java 21 while Android source remains compiled to Java 17 bytecode. Android API 36 must be installed.
 
 ```bash
-bash gradlew compileDebugKotlin compileReleaseKotlin
+bash gradlew compileDebugKotlin compileReleaseKotlin compileDebugAndroidTestKotlin
 bash gradlew testDebugUnitTest
 bash gradlew lintDebug lintRelease
 bash gradlew assembleDebug assembleDebugAndroidTest
@@ -81,7 +102,13 @@ bash gradlew bundleRelease
 bash gradlew connectedDebugAndroidTest   # requires an emulator/device
 ```
 
-Expected outputs:
+Physical performance evidence on one authorized device:
+
+```bash
+bash scripts/collect_performance_profiles.sh
+```
+
+Expected build outputs:
 
 - Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 - Instrumentation APK: `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
@@ -92,8 +119,10 @@ Expected outputs:
 
 - **Application ID:** `com.anurag9000.forestrun`
 - **Biomes:** five runtime biomes
-- **Bloom target:** eight seeds and a six-second active window
+- **Bloom target:** eight Seeds and a six-second active window
 - **Input intent:** tap for a short jump, hold for a higher jump, swipe down to duck
+- **Encounter invariant:** exactly one terminal outcome per entity
 - **Failure flow:** run → rest summary → fade → Garden → next run
+- **Ghost format:** v2 stable state codes, with read compatibility for legacy ordinal files
 - **Manifest orientation:** fixed landscape pending final device/product acceptance
 - **Release signing:** external Gradle properties or environment variables; credentials are never committed
