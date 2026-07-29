@@ -1,9 +1,6 @@
 name: Android validation
 
 on:
-  push:
-    branches:
-      - agent/fix-core-gameplay-invariants
   pull_request:
 
 permissions:
@@ -11,7 +8,7 @@ permissions:
 
 jobs:
   publish:
-    name: Publish validated hot-path remediation
+    name: Publish validated hot-path source
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -35,10 +32,9 @@ jobs:
           grep -q 'ArrayList<FlavorText>(MAX_ACTIVE)' app/src/main/java/com/anurag9000/forestrun/ui/FlavorTextManager.kt
           grep -q 'val widestLine: Float' app/src/main/java/com/anurag9000/forestrun/ui/DialogueBubbleManager.kt
 
-      - name: Restore permanent CI and commit
+      - name: Commit validated production source
         shell: bash
         run: |
-          git show fa7dd42136e2a6b4d1efa52e8cfb17245c711b45:.github/workflows/android-validation.yml > .github/workflows/android-validation.yml
           rm scripts/patch_hot_path_traversals.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
