@@ -3,7 +3,10 @@ package com.anurag9000.forestrun.engine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class DebugScenarioScriptTest {
     @Test
     fun `due actions dispatch in order exactly once`() {
