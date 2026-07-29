@@ -1,6 +1,8 @@
 package com.anurag9000.forestrun.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -11,12 +13,12 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class DialogueBubbleManagerTest {
-    @Suppress("unused")
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Before
     fun setUp() {
         DialogueBubbleManager.clear()
+        DialogueBubbleManager.init(context)
     }
 
     @Test
@@ -92,5 +94,25 @@ class DialogueBubbleManagerTest {
         assertTrue(lines.isNotEmpty())
         assertTrue(lines.size <= 3)
         assertTrue(lines.all { it.isNotBlank() })
+    }
+
+    @Test
+    fun `draw reuses the line width measured at spawn`() {
+        DialogueBubbleManager.spawn(
+            text = "A gentle crossing remembered by the whole forest",
+            anchorX = 320f,
+            anchorY = 220f
+        )
+        val measurementsAfterSpawn = DialogueBubbleManager.lineMeasurementCountForTest
+        assertTrue(measurementsAfterSpawn > 0)
+
+        val bitmap = Bitmap.createBitmap(640, 360, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        repeat(12) { DialogueBubbleManager.draw(canvas) }
+
+        assertEquals(
+            measurementsAfterSpawn,
+            DialogueBubbleManager.lineMeasurementCountForTest
+        )
     }
 }
