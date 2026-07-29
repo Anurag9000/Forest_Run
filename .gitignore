@@ -15,6 +15,9 @@
 .cxx/
 local.properties
 
+# Generated local/CI diagnostics
+/candidate-sha.txt
+
 # Python helper-script artefacts
 __pycache__/
 *.py[cod]
