@@ -7,7 +7,12 @@ import com.anurag9000.forestrun.engine.SaveManager
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CostumeStyle
 import com.anurag9000.forestrun.entities.EntityType
+import com.anurag9000.forestrun.systems.FxPreset
+import com.anurag9000.forestrun.systems.ParticleManager
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -28,10 +33,16 @@ class GardenScreenTest {
             .edit()
             .clear()
             .commit()
+        ParticleManager.resetOneShotEmitterCacheForTests()
+    }
+
+    @After
+    fun tearDown() {
+        ParticleManager.resetOneShotEmitterCacheForTests()
     }
 
     @Test
-    fun `unlocking next plant spends seeds and persists progress`() {
+    fun `unlocking next plant spends seeds and defers particles to update`() {
         SaveManager.saveLifetimeSeeds(context, 50)
         SaveManager.saveGardenProgress(context, 1)
         val screen = GardenScreen(context, spriteManager, 1_920, 1_080)
@@ -49,6 +60,11 @@ class GardenScreenTest {
         assertTrue(screen.onTap(tapX, tapY))
         assertEquals(2, SaveManager.loadGardenProgress(context))
         assertEquals(30, SaveManager.loadLifetimeSeeds(context))
+        assertNull(ParticleManager.cachedOneShotEmitterForTest(FxPreset.SEED_COLLECT))
+
+        screen.update(1f / 60f)
+
+        assertNotNull(ParticleManager.cachedOneShotEmitterForTest(FxPreset.SEED_COLLECT))
     }
 
     @Test
