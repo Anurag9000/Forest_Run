@@ -22,7 +22,9 @@ class SeedOrb(
     }
 
     var isActive = true
+        private set
     var isCollected = false
+        private set
     private var elapsed = 0f
     private var bobTime = 0f
 
@@ -34,25 +36,30 @@ class SeedOrb(
         strokeWidth = 3f
     }
 
+    init {
+        require(x.isFinite() && y.isFinite()) { "Seed Orb coordinates must be finite." }
+        updateGeometry()
+    }
+
+    val centreX: Float
+        get() = bobRect.centerX()
+
+    val centreY: Float
+        get() = bobRect.centerY()
+
     fun update(
         deltaTime: Float,
         scrollSpeed: Float,
         @Suppress("UNUSED_PARAMETER") gameState: GameStateManager
     ): Boolean {
         if (!isActive) return false
+        if (!deltaTime.isFinite() || deltaTime < 0f) return true
+        if (!scrollSpeed.isFinite() || scrollSpeed < 0f) return true
 
-        elapsed += deltaTime
-        bobTime += deltaTime
-        x -= scrollSpeed * deltaTime
-
-        val bob = sin(bobTime * BOB_SPEED * 2f * Math.PI.toFloat()) * BOB_AMP
-        val centreY = y + bob
-        bobRect.set(
-            x - RADIUS,
-            centreY - RADIUS,
-            x + RADIUS,
-            centreY + RADIUS
-        )
+        elapsed = finiteSaturatingAdd(elapsed, deltaTime)
+        bobTime = finiteSaturatingAdd(bobTime, deltaTime)
+        x = finiteSaturatingSubtract(x, scrollSpeed * deltaTime)
+        updateGeometry()
 
         if (elapsed >= LIFETIME_S || bobRect.right < -OFFSCREEN_MARGIN) {
             isActive = false
@@ -63,9 +70,10 @@ class SeedOrb(
     fun draw(canvas: Canvas, bloomFraction: Float) {
         if (!isActive) return
 
-        val red = MathUtils.lerp(255f, 60f, bloomFraction).toInt().coerceIn(0, 255)
-        val green = MathUtils.lerp(210f, 220f, bloomFraction).toInt().coerceIn(0, 255)
-        val blue = MathUtils.lerp(40f, 80f, bloomFraction).toInt().coerceIn(0, 255)
+        val safeBloomFraction = bloomFraction.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+        val red = MathUtils.lerp(255f, 60f, safeBloomFraction).toInt().coerceIn(0, 255)
+        val green = MathUtils.lerp(210f, 220f, safeBloomFraction).toInt().coerceIn(0, 255)
+        val blue = MathUtils.lerp(40f, 80f, safeBloomFraction).toInt().coerceIn(0, 255)
         val colour = Color.rgb(red, green, blue)
         val pulse = 1f + 0.08f * sin(bobTime * 5f)
         val radius = RADIUS * pulse
@@ -94,15 +102,49 @@ class SeedOrb(
         )
     }
 
+    /**
+     * Atomically claims this Orb. A collected Orb becomes inactive immediately,
+     * so repeated collision checks can never grant duplicate Seeds.
+     */
     fun checkCollection(playerHitbox: RectF): Boolean {
-        if (!isActive || isCollected) return false
+        if (!isActive || isCollected || playerHitbox.isEmpty) return false
         checkRect.set(
             bobRect.centerX() - RADIUS,
             bobRect.centerY() - RADIUS,
             bobRect.centerX() + RADIUS,
             bobRect.centerY() + RADIUS
         )
-        return RectF.intersects(playerHitbox, checkRect)
+        if (!RectF.intersects(playerHitbox, checkRect)) return false
+        isCollected = true
+        isActive = false
+        return true
+    }
+
+    private fun updateGeometry() {
+        val bob = sin(bobTime * BOB_SPEED * 2f * Math.PI.toFloat()) * BOB_AMP
+        val centreY = y + bob
+        bobRect.set(
+            x - RADIUS,
+            centreY - RADIUS,
+            x + RADIUS,
+            centreY + RADIUS
+        )
+    }
+
+    private fun finiteSaturatingAdd(value: Float, delta: Float): Float {
+        if (!value.isFinite()) return 0f
+        if (!delta.isFinite() || delta <= 0f) return value
+        return (value.toDouble() + delta.toDouble())
+            .coerceAtMost(Float.MAX_VALUE.toDouble())
+            .toFloat()
+    }
+
+    private fun finiteSaturatingSubtract(value: Float, delta: Float): Float {
+        if (!value.isFinite()) return 0f
+        if (!delta.isFinite() || delta <= 0f) return value
+        return (value.toDouble() - delta.toDouble())
+            .coerceIn(-Float.MAX_VALUE.toDouble(), Float.MAX_VALUE.toDouble())
+            .toFloat()
     }
 }
 
