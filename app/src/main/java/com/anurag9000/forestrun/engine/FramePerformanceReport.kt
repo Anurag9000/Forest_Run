@@ -9,7 +9,8 @@ data class FramePerformanceReport(
     val apiLevel: Int,
     val refreshRateHz: Float,
     val snapshot: FramePerformanceSnapshot,
-    val workload: RuntimeWorkloadSnapshot = RuntimeWorkloadSnapshot.EMPTY
+    val workload: RuntimeWorkloadSnapshot = RuntimeWorkloadSnapshot.EMPTY,
+    val ghostIo: GhostIoTelemetrySnapshot = GhostIoTelemetrySnapshot.EMPTY
 ) {
     init {
         require(scenario.isNotBlank()) { "scenario must not be blank" }
@@ -21,7 +22,7 @@ data class FramePerformanceReport(
     }
 
     /** Dependency-free deterministic JSON for adb/CI artifact collection. */
-    fun toJson(): String = buildString(768) {
+    fun toJson(): String = buildString(1_024) {
         append("{\n")
         appendJsonString("scenario", scenario, trailingComma = true)
         append("  \"durationMs\": ").append(durationMs).append(",\n")
@@ -52,7 +53,14 @@ data class FramePerformanceReport(
         append("  \"currentDialogueBubbles\": ").append(workload.currentDialogueBubbles).append(",\n")
         append("  \"peakDialogueBubbles\": ").append(workload.peakDialogueBubbles).append(",\n")
         append("  \"currentFlavorTexts\": ").append(workload.currentFlavorTexts).append(",\n")
-        append("  \"peakFlavorTexts\": ").append(workload.peakFlavorTexts).append("\n")
+        append("  \"peakFlavorTexts\": ").append(workload.peakFlavorTexts).append(",\n")
+        append("  \"ghostWritesStarted\": ").append(ghostIo.writesStarted).append(",\n")
+        append("  \"ghostWritesCompleted\": ").append(ghostIo.writesCompleted).append(",\n")
+        append("  \"ghostWritesFailed\": ").append(ghostIo.writesFailed).append(",\n")
+        append("  \"latestGhostFrameCount\": ").append(ghostIo.latestFrameCount).append(",\n")
+        append("  \"maximumGhostFrameCount\": ").append(ghostIo.maximumFrameCount).append(",\n")
+        append("  \"latestGhostWriteDurationNs\": ").append(ghostIo.latestWriteDurationNs).append(",\n")
+        append("  \"maximumGhostWriteDurationNs\": ").append(ghostIo.maximumWriteDurationNs).append("\n")
         append("}\n")
     }
 
