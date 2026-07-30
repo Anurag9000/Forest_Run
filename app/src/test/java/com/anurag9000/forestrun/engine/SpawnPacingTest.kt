@@ -21,16 +21,8 @@ class SpawnPacingTest {
 
     @Test
     fun `post tutorial gap is independent of scroll speed`() {
-        val slow = SpawnPacing.requiredGapPx(
-            distanceMetres = 1_250f,
-            runTimeSeconds = 30f,
-            scrollSpeedPxPerSec = 650f
-        )
-        val fast = SpawnPacing.requiredGapPx(
-            distanceMetres = 1_250f,
-            runTimeSeconds = 30f,
-            scrollSpeedPxPerSec = 2_000f
-        )
+        val slow = SpawnPacing.requiredGapPx(1_250f, 30f, 650f)
+        val fast = SpawnPacing.requiredGapPx(1_250f, 30f, 2_000f)
 
         assertEquals(slow, fast, 0.0001f)
         assertEquals(ReadabilityProfile.spawnGapPx(1_250f), fast, 0.0001f)
@@ -39,25 +31,47 @@ class SpawnPacingTest {
     @Test
     fun `opening reaction time overrides become equivalent distance`() {
         val speed = 700f
-        val gap = SpawnPacing.requiredGapPx(
-            distanceMetres = 0f,
-            runTimeSeconds = 8f,
-            scrollSpeedPxPerSec = speed
-        )
+        val gap = SpawnPacing.requiredGapPx(0f, 8f, speed)
 
         assertTrue(gap / speed >= 1.95f)
         assertTrue(gap >= ReadabilityProfile.spawnGapPx(0f))
     }
 
     @Test
-    fun `zero or invalidly low speed still returns finite safe gap`() {
-        val gap = SpawnPacing.requiredGapPx(
-            distanceMetres = 500f,
-            runTimeSeconds = 40f,
-            scrollSpeedPxPerSec = 0f
-        )
+    fun `zero negative and non finite speed return finite safe gaps`() {
+        listOf(
+            0f,
+            -100f,
+            Float.NaN,
+            Float.POSITIVE_INFINITY,
+            Float.NEGATIVE_INFINITY
+        ).forEach { speed ->
+            val gap = SpawnPacing.requiredGapPx(
+                distanceMetres = 500f,
+                runTimeSeconds = 40f,
+                scrollSpeedPxPerSec = speed
+            )
+            assertTrue(gap.isFinite())
+            assertEquals(ReadabilityProfile.spawnGapPx(500f), gap, 0.0001f)
+        }
+    }
+
+    @Test
+    fun `invalid time and distance return opening-safe finite pacing`() {
+        val expected = SpawnPacing.requiredGapPx(0f, 0f, 700f)
+
+        listOf(Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, -1f).forEach { invalid ->
+            val gap = SpawnPacing.requiredGapPx(invalid, invalid, 700f)
+            assertTrue(gap.isFinite())
+            assertEquals(expected, gap, 0.0001f)
+        }
+    }
+
+    @Test
+    fun `extreme finite speed saturates equivalent opening distance`() {
+        val gap = SpawnPacing.requiredGapPx(0f, 8f, Float.MAX_VALUE)
 
         assertTrue(gap.isFinite())
-        assertEquals(ReadabilityProfile.spawnGapPx(500f), gap, 0.0001f)
+        assertEquals(Float.MAX_VALUE, gap, 0f)
     }
 }
