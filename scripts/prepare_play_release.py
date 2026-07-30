@@ -19,6 +19,10 @@ from release_artifact_verifier import (
     verify_bundle_signature,
     verify_bundle_structure,
 )
+from verify_curated_screenshot_set import (
+    CuratedScreenshotError,
+    verify_curated_set,
+)
 
 try:
     from PIL import Image, UnidentifiedImageError
@@ -31,7 +35,8 @@ ROOT = Path(__file__).resolve().parent.parent
 RELEASE_ROOT = ROOT / "release" / "google-play"
 GRAPHICS_DIR = RELEASE_ROOT / "graphics"
 METADATA_DIR = RELEASE_ROOT / "metadata" / "en-US"
-FINAL_SCREENSHOTS_DIR = RELEASE_ROOT / "screenshots" / "final"
+SCREENSHOTS_ROOT = RELEASE_ROOT / "screenshots"
+FINAL_SCREENSHOTS_DIR = SCREENSHOTS_ROOT / "final"
 SUMMARY_PATH = RELEASE_ROOT / "BUILD_SUMMARY.md"
 MACHINE_SUMMARY_PATH = RELEASE_ROOT / "build_summary.json"
 BUILD_FILE = ROOT / "app" / "build.gradle.kts"
@@ -347,16 +352,25 @@ def verify_metadata() -> list[dict]:
     return results
 
 
-def verify_screenshots() -> list[dict]:
+def verify_screenshots(candidate_sha: str) -> dict:
     if not FINAL_SCREENSHOTS_DIR.is_dir():
         fail(
             "Curated screenshot directory is missing. Run capture_store_screenshots.sh and "
             "curate_store_screenshots.py first."
         )
 
+    try:
+        evidence = verify_curated_set(SCREENSHOTS_ROOT, candidate_sha)
+    except CuratedScreenshotError as exc:
+        fail(str(exc))
+
     paths = sorted(FINAL_SCREENSHOTS_DIR.glob("*.png"))
     if len(paths) < 4:
         fail(f"At least 4 curated screenshots are required; found {len(paths)}")
+    if len(paths) != evidence.count:
+        fail(
+            f"Screenshot evidence count mismatch: verified {evidence.count}, found {len(paths)} PNGs"
+        )
 
     results = [inspect_png(path) for path in paths]
     dimensions = {(item["width"], item["height"]) for item in results}
@@ -369,12 +383,21 @@ def verify_screenshots() -> list[dict]:
     hashes = [item["sha256"] for item in results]
     if len(hashes) != len(set(hashes)):
         fail("Curated screenshot set contains exact duplicates")
+    if tuple(hashes) != evidence.image_sha256:
+        fail("Curated screenshot ordering or image hashes differ from verified sidecars")
 
     require_file(
-        RELEASE_ROOT / "screenshots" / "CURATED_SET.md",
+        SCREENSHOTS_ROOT / "CURATED_SET.md",
         "curated screenshot report",
     )
-    return results
+    return {
+        "images": results,
+        "candidate_sha": evidence.candidate_sha,
+        "apk_sha256": evidence.apk_sha256,
+        "device_serial": evidence.device_serial,
+        "package_name": evidence.package_name,
+        "activity_name": evidence.activity_name,
+    }
 
 
 def verify_audio_assets() -> list[str]:
@@ -484,6 +507,7 @@ def write_summaries(payload: dict) -> None:
 
     candidate = payload["candidate"]
     identity = payload["identity"]
+    screenshots = payload["screenshots"]
     bundle = payload.get("bundle")
     mapping = payload.get("r8_mapping")
     lines = [
@@ -495,7 +519,10 @@ def write_summaries(payload: dict) -> None:
         f"- Version: `{identity['version_name']}` (`{identity['version_code']}`)",
         f"- SDKs: min `{identity['min_sdk']}`, target `{identity['target_sdk']}`, compile `{identity['compile_sdk']}`",
         f"- Graphics verified: `{len(payload['graphics'])}`",
-        f"- Curated screenshots verified: `{len(payload['screenshots'])}`",
+        f"- Curated screenshots verified: `{len(screenshots['images'])}`",
+        f"- Screenshot candidate SHA: `{screenshots['candidate_sha']}`",
+        f"- Screenshot APK SHA-256: `{screenshots['apk_sha256']}`",
+        f"- Screenshot device: `{screenshots['device_serial']}`",
         f"- Required audio assets verified: `{len(payload['audio'])}`",
     ]
     if bundle:
@@ -530,7 +557,8 @@ def write_summaries(payload: dict) -> None:
             "- explicit external release-signing configuration unless dry-run override used",
             "- generated graphic dimensions and manifest hashes",
             "- non-empty metadata without obvious placeholders",
-            "- non-empty, uniform, unique curated screenshot set",
+            "- exact curated screenshot manifest set with verified scenario-ready sidecars",
+            "- screenshot image hashes, dimensions, candidate SHA, APK, package, and device identity",
             "- required runtime audio resources",
             "- clean unit tests, release lint, and release bundle build unless --skip-build",
             "- AAB ZIP integrity, module manifest, BundleConfig, and DEX presence",
@@ -543,7 +571,7 @@ def write_summaries(payload: dict) -> None:
             "",
             "- gameplay correctness and long-run performance on representative devices",
             "- install and smoke-test APKs generated from this exact AAB through bundletool or Play internal testing",
-            "- visual review that each screenshot shows the intended scenario",
+            "- visual and marketing review of every evidence-backed screenshot",
             "- accessibility, audio, haptic, privacy, policy, data-safety, and store-listing review",
             "- verification of current Android and Play requirements immediately before upload",
         ]
@@ -580,7 +608,7 @@ def main() -> int:
         "identity": identity,
         "graphics": verify_graphics(),
         "metadata": verify_metadata(),
-        "screenshots": verify_screenshots(),
+        "screenshots": verify_screenshots(candidate["sha"]),
         "audio": verify_audio_assets(),
         "bundle": None,
         "r8_mapping": None,
