@@ -41,18 +41,25 @@ object OpeningReadabilityGuide {
     )
 
     fun isRandomSpawnLocked(runTimeSeconds: Float): Boolean =
-        runTimeSeconds < RANDOM_SPAWN_LOCKOUT_SEC
+        safeTime(runTimeSeconds) < RANDOM_SPAWN_LOCKOUT_SEC
 
-    fun adjustedSpawnInterval(runTimeSeconds: Float, defaultInterval: Float): Float = when {
-        runTimeSeconds < RANDOM_SPAWN_LOCKOUT_SEC -> defaultInterval
-        runTimeSeconds < 12f -> maxOf(defaultInterval, 1.95f)
-        runTimeSeconds < 20f -> maxOf(defaultInterval, 1.78f)
-        runTimeSeconds < GUIDED_WINDOW_SEC -> maxOf(defaultInterval, 1.58f)
-        else -> defaultInterval
+    fun adjustedSpawnInterval(runTimeSeconds: Float, defaultInterval: Float): Float {
+        val time = safeTime(runTimeSeconds)
+        val fallback = defaultInterval.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        return when {
+            time < RANDOM_SPAWN_LOCKOUT_SEC -> fallback
+            time < 12f -> maxOf(fallback, 1.95f)
+            time < 20f -> maxOf(fallback, 1.78f)
+            time < GUIDED_WINDOW_SEC -> maxOf(fallback, 1.58f)
+            else -> fallback
+        }
     }
 
-    fun spawnPoolFor(runTimeSeconds: Float, defaultPool: List<EntityType>): List<EntityType> =
-        if (runTimeSeconds < GUIDED_WINDOW_SEC) guidedOpeningPool else defaultPool
+    fun spawnPoolFor(
+        runTimeSeconds: Float,
+        defaultPool: List<EntityType>
+    ): List<EntityType> =
+        if (safeTime(runTimeSeconds) < GUIDED_WINDOW_SEC) guidedOpeningPool else defaultPool
 
     fun cueFor(
         runTimeSeconds: Float,
@@ -61,7 +68,8 @@ object OpeningReadabilityGuide {
         mercyHearts: Int,
         kindnessChain: Int
     ): OpeningGuidanceCue? {
-        if (runTimeSeconds >= GUIDED_WINDOW_SEC) return null
+        val time = safeTime(runTimeSeconds)
+        if (time >= GUIDED_WINDOW_SEC) return null
 
         val chips = listOf(
             OpeningGuidanceChip("Tap", inputState.jumpSeen),
@@ -69,8 +77,8 @@ object OpeningReadabilityGuide {
             OpeningGuidanceChip("Duck", inputState.duckSeen)
         )
 
-        val cue = when {
-            runTimeSeconds < 3.2f && !inputState.jumpSeen -> OpeningGuidanceCue(
+        return when {
+            time < 3.2f && !inputState.jumpSeen -> OpeningGuidanceCue(
                 title = "Find The Stride",
                 line = "Tap to clear the first low lane.",
                 accentColor = ACCENT_SOFT,
@@ -82,13 +90,13 @@ object OpeningReadabilityGuide {
                 accentColor = ACCENT_SOFT,
                 chips = chips
             )
-            !inputState.holdSeen && runTimeSeconds >= 4.5f -> OpeningGuidanceCue(
+            !inputState.holdSeen && time >= 4.5f -> OpeningGuidanceCue(
                 title = "Hold For Height",
                 line = "Longer presses carry you over taller shapes.",
                 accentColor = ACCENT_SOFT,
                 chips = chips
             )
-            !inputState.duckSeen && runTimeSeconds >= 10.5f -> OpeningGuidanceCue(
+            !inputState.duckSeen && time >= 10.5f -> OpeningGuidanceCue(
                 title = "Duck The Low Lane",
                 line = "Swipe down when wings or petals stay low.",
                 accentColor = ACCENT_ROUTE,
@@ -113,6 +121,8 @@ object OpeningReadabilityGuide {
                 chips = chips
             )
         }
-        return cue
     }
+
+    private fun safeTime(runTimeSeconds: Float): Float =
+        runTimeSeconds.takeIf { it.isFinite() && it >= 0f } ?: 0f
 }
