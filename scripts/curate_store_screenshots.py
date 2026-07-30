@@ -8,6 +8,13 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from screenshot_capture_evidence import (
+    CaptureEvidence,
+    CaptureEvidenceError,
+    load_capture_evidence,
+    require_same_capture_identity,
+)
+
 try:
     from PIL import Image, ImageStat, UnidentifiedImageError
 except ImportError as exc:
@@ -193,14 +200,31 @@ def clear_final_directory() -> None:
     FINAL_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def curate(items: list[dict]) -> list[tuple[dict, ImageFacts]]:
+def curate(items: list[dict]) -> list[tuple[dict, ImageFacts, CaptureEvidence]]:
     clear_final_directory()
-    copied: list[tuple[dict, ImageFacts]] = []
+    copied: list[tuple[dict, ImageFacts, CaptureEvidence]] = []
     expected_dimensions: tuple[int, int] | None = None
+    baseline_evidence: CaptureEvidence | None = None
 
     for item in items:
         raw_path = RAW_DIR / item["raw_file"]
         facts = inspect_image(raw_path, allow_dark_bars=bool(item.get("allow_dark_bars", False)))
+        evidence_path = raw_path.with_suffix(".capture.json")
+        try:
+            evidence = load_capture_evidence(
+                evidence_path,
+                expected_raw_file=item["raw_file"],
+                expected_scenario=item["scenario"],
+                expected_image_sha256=facts.sha256,
+                expected_width=facts.width,
+                expected_height=facts.height,
+            )
+            if baseline_evidence is None:
+                baseline_evidence = evidence
+            else:
+                require_same_capture_identity(baseline_evidence, evidence, evidence_path)
+        except CaptureEvidenceError as exc:
+            raise SystemExit(str(exc)) from exc
 
         if expected_dimensions is None:
             expected_dimensions = (facts.width, facts.height)
@@ -211,7 +235,7 @@ def curate(items: list[dict]) -> list[tuple[dict, ImageFacts]]:
                 f"{expected_dimensions[0]}x{expected_dimensions[1]}"
             )
 
-        for previous_item, previous_facts in copied:
+        for previous_item, previous_facts, _ in copied:
             if facts.sha256 == previous_facts.sha256:
                 raise SystemExit(
                     f"Exact duplicate screenshots: {item['raw_file']} and "
@@ -234,15 +258,18 @@ def curate(items: list[dict]) -> list[tuple[dict, ImageFacts]]:
             )
 
         target_path = FINAL_DIR / item["final_file"]
+        target_evidence_path = target_path.with_suffix(".capture.json")
         shutil.copy2(raw_path, target_path)
-        copied.append((item, facts))
+        shutil.copy2(evidence_path, target_evidence_path)
+        copied.append((item, facts, evidence))
 
     if not copied:
         raise SystemExit("No screenshots were curated")
     return copied
 
 
-def write_summary(copied: list[tuple[dict, ImageFacts]]) -> None:
+def write_summary(copied: list[tuple[dict, ImageFacts, CaptureEvidence]]) -> None:
+    baseline = copied[0][2]
     lines = [
         "# Curated Screenshot Set",
         "",
@@ -250,23 +277,33 @@ def write_summary(copied: list[tuple[dict, ImageFacts]]) -> None:
         f"- Raw source directory: `{RAW_DIR.relative_to(ROOT_DIR)}`",
         f"- Final output directory: `{FINAL_DIR.relative_to(ROOT_DIR)}`",
         f"- Curated screenshots: `{len(copied)}`",
+        f"- Candidate SHA: `{baseline.candidate_sha}`",
+        f"- Debug APK SHA-256: `{baseline.apk_sha256}`",
+        f"- Capture device: `{baseline.device_serial}`",
+        f"- Package: `{baseline.package_name}`",
         "",
         "Automated checks cover PNG integrity, dimensions, orientation, blank images, "
-        "uniform black edge bands, exact duplicates, and near duplicates. Scenario "
-        "correctness and marketing quality still require human review.",
+        "uniform black edge bands, exact duplicates, near duplicates, verified scenario-ready "
+        "markers, image hashes, candidate/APK identity, run mode, package, and device consistency. "
+        "Marketing quality and truthful visual interpretation still require human review.",
         "",
         "## Final Set",
         "",
     ]
 
-    for item, facts in copied:
+    for item, facts, evidence in copied:
         lines.extend(
             [
                 f"### {item['order']}. {item['title']}",
                 "",
                 f"- Scenario: `{item['scenario']}`",
+                f"- Run mode: `{evidence.run_mode}`",
+                f"- Readiness marker: `{evidence.readiness_marker}`",
+                f"- Captured at: `{evidence.captured_at_utc}`",
+                f"- Settle time after readiness: `{evidence.settle_seconds:.2f}s`",
                 f"- Raw file: `{item['raw_file']}`",
                 f"- Final file: `{item['final_file']}`",
+                f"- Evidence file: `{Path(item['final_file']).with_suffix('.capture.json').name}`",
                 f"- Size: `{facts.width}x{facts.height}`",
                 f"- SHA-256: `{facts.sha256}`",
                 f"- Luma standard deviation: `{facts.luma_stddev:.2f}`",
