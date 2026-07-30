@@ -4,9 +4,8 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import android.util.Log
-import java.util.concurrent.ConcurrentHashMap
 
-/** Low-latency short-effect playback with explicit load readiness. */
+/** Low-latency short-effect playback with explicit generation-safe load readiness. */
 object SfxManager {
     internal enum class BloomSfxEvent { READY, CONVERT, FADE }
 
@@ -21,8 +20,9 @@ object SfxManager {
     private const val NO_LOOP = 0
     private const val RATE_1X = 1f
 
+    @Volatile
     private var pool: SoundPool? = null
-    private val readySamples = ConcurrentHashMap.newKeySet<Int>()
+    private val sampleReadiness = SoundSampleReadiness()
 
     private var idJump = 0
     private var idLand = 0
@@ -54,13 +54,17 @@ object SfxManager {
             .setMaxStreams(MAX_STREAMS)
             .setAudioAttributes(attributes)
             .build()
+        val generation = sampleReadiness.beginGeneration()
 
-        newPool.setOnLoadCompleteListener { _, sampleId, status ->
-            if (status == 0) {
-                readySamples.add(sampleId)
-            } else {
-                readySamples.remove(sampleId)
-                Log.e(TAG, "SFX sample failed to load: id=$sampleId status=$status")
+        newPool.setOnLoadCompleteListener { callbackPool, sampleId, status ->
+            // The callback may arrive after destroy/reinitialization. Both the
+            // captured pool identity and generation must still own readiness.
+            if (pool !== callbackPool) return@setOnLoadCompleteListener
+            when (sampleReadiness.complete(generation, sampleId, status)) {
+                SoundSampleReadiness.CompletionResult.READY -> Unit
+                SoundSampleReadiness.CompletionResult.FAILED ->
+                    Log.e(TAG, "SFX sample failed to load: id=$sampleId status=$status")
+                SoundSampleReadiness.CompletionResult.STALE -> Unit
             }
         }
         pool = newPool
@@ -94,15 +98,20 @@ object SfxManager {
     }
 
     private fun play(id: Int, volume: Float = 1f, rate: Float = RATE_1X) {
-        if (!FeedbackSettings.audioEnabled || id == 0 || id !in readySamples) return
-        pool?.play(
-            id,
-            volume.coerceIn(0f, 1f),
-            volume.coerceIn(0f, 1f),
-            PRIORITY,
-            NO_LOOP,
-            rate.coerceIn(0.5f, 2f)
-        )
+        if (!FeedbackSettings.audioEnabled || !sampleReadiness.isReady(id)) return
+        val activePool = pool ?: return
+        runCatching {
+            activePool.play(
+                id,
+                volume.coerceIn(0f, 1f),
+                volume.coerceIn(0f, 1f),
+                PRIORITY,
+                NO_LOOP,
+                rate.coerceIn(0.5f, 2f)
+            )
+        }.onFailure { error ->
+            Log.w(TAG, "SFX playback failed for sample id=$id", error)
+        }
     }
 
     fun playJump() = play(idJump, 0.7f)
@@ -137,9 +146,13 @@ object SfxManager {
 
     @Synchronized
     fun destroy() {
-        pool?.release()
+        // Invalidate callbacks before releasing the native pool so no delayed
+        // completion can repopulate readiness for this or a replacement pool.
+        sampleReadiness.invalidate()
+        val oldPool = pool
         pool = null
-        readySamples.clear()
+        runCatching { oldPool?.setOnLoadCompleteListener(null) }
+        runCatching { oldPool?.release() }
         idJump = 0
         idLand = 0
         idSeedPing = 0
