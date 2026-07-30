@@ -77,6 +77,47 @@ class PerformanceProfileEvaluatorTest(unittest.TestCase):
         self.assertTrue(any("usedHeapBytes" in item for item in result.violations))
         self.assertTrue(any("maximumProcessingNs" in item for item in result.violations))
 
+    def test_ghost_persistence_limits_are_evaluated_independently(self):
+        report = dict(
+            self.report,
+            scenario="GHOST_PERSISTENCE_MAX",
+            ghostWritesCompleted=1,
+            ghostWritesFailed=0,
+            maximumGhostFrameCount=36_000,
+            maximumGhostWriteDurationNs=18_000_000,
+        )
+        profile = self.profile(
+            name="ghost-max",
+            scenario="GHOST_PERSISTENCE_MAX",
+            min_ghost_writes_completed=1,
+            max_ghost_write_failures=0,
+            min_maximum_ghost_frame_count=36_000,
+            max_ghost_write_duration_ns=20_000_000,
+        )
+
+        self.assertTrue(evaluate_report(Path("ghost.json"), report, (profile,)).passed)
+
+        report["ghostWritesCompleted"] = 0
+        report["ghostWritesFailed"] = 1
+        report["maximumGhostFrameCount"] = 1_000
+        report["maximumGhostWriteDurationNs"] = 40_000_000
+        result = evaluate_report(Path("ghost.json"), report, (profile,))
+
+        self.assertFalse(result.passed)
+        self.assertEqual(4, len(result.violations))
+        self.assertTrue(any("ghostWritesCompleted" in item for item in result.violations))
+        self.assertTrue(any("ghostWritesFailed" in item for item in result.violations))
+        self.assertTrue(any("maximumGhostFrameCount" in item for item in result.violations))
+        self.assertTrue(any("maximumGhostWriteDurationNs" in item for item in result.violations))
+
+    def test_missing_ghost_metric_is_configuration_error_when_required(self):
+        profile = self.profile(
+            min_ghost_writes_completed=1,
+        )
+
+        with self.assertRaisesRegex(ConfigurationError, "ghostWritesCompleted"):
+            evaluate_report(Path("opening.json"), self.report, (profile,))
+
     def test_exact_device_profile_outranks_wildcard_profile(self):
         wildcard = self.profile(
             name="fallback",
