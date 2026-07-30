@@ -137,22 +137,28 @@ object SaveManager {
         synchronized(gardenWriteLock) {
             val pending = pendingGardenSeedFollowUp
             val now = System.nanoTime()
-            val isImmediateLegacyFollowUp = pending != null &&
+            val ageNanos = pending?.let { now - it.createdAtNanos } ?: Long.MAX_VALUE
+            val isFreshPending = pending != null &&
                 pending.prefsName == activePrefsName &&
-                pending.threadId == Thread.currentThread().id &&
-                now - pending.createdAtNanos in 0..LEGACY_GARDEN_FOLLOW_UP_WINDOW_NS
+                ageNanos in 0..LEGACY_GARDEN_FOLLOW_UP_WINDOW_NS
 
-            pendingGardenSeedFollowUp = null
-            if (isImmediateLegacyFollowUp) {
-                // GardenScreen historically saves progress and Seeds separately.
-                // The first call now commits both atomically; this second call is
-                // normalized to the canonical committed balance so stale UI state
-                // cannot overwrite the transaction.
-                prefs(context).edit()
-                    .putInt(KEY_LIFETIME_SEEDS, requireNotNull(pending).canonicalSeeds)
-                    .apply()
+            if (isFreshPending && pending!!.threadId == Thread.currentThread().id) {
+                // The progress call already committed both values atomically.
+                // The historical same-thread Seed call is only a stale follow-up.
+                pendingGardenSeedFollowUp = null
                 return
             }
+
+            if (isFreshPending) {
+                // A legitimate concurrent Seed mutation must survive the later
+                // stale screen follow-up. Persist it and carry its canonical value
+                // forward without consuming the marker.
+                pendingGardenSeedFollowUp = pending!!.copy(canonicalSeeds = safeSeeds)
+                prefs(context).edit().putInt(KEY_LIFETIME_SEEDS, safeSeeds).apply()
+                return
+            }
+
+            pendingGardenSeedFollowUp = null
             prefs(context).edit().putInt(KEY_LIFETIME_SEEDS, safeSeeds).apply()
         }
     }
@@ -235,7 +241,6 @@ object SaveManager {
                     count = data.readInt()
                     headerBytes = VERSIONED_GHOST_HEADER_BYTES
                 } else {
-                    // Legacy v1 files stored only count + raw enum ordinals.
                     count = firstWord
                     headerBytes = LEGACY_GHOST_HEADER_BYTES
                 }
@@ -521,19 +526,26 @@ object SaveManager {
     }
 
     fun saveReturnMomentState(context: Context, state: ReturnMomentState) {
-        prefs(context).edit()
+        val statePrefs = prefs(context)
+        val previousRoughStreak = statePrefs.getInt(KEY_ROUGH_RUN_STREAK, 0).coerceAtLeast(0)
+        val safeRoughStreak = when {
+            state.roughRunStreak >= 0 -> state.roughRunStreak
+            previousRoughStreak == Int.MAX_VALUE -> Int.MAX_VALUE
+            else -> 0
+        }
+        statePrefs.edit()
             .putLong(KEY_LAST_ACTIVE_AT_MS, state.lastActiveAtMs.coerceAtLeast(0L))
             .putLong(KEY_LAST_GARDEN_GREETING_DAY, state.lastGardenGreetingDay.coerceAtLeast(-1L))
-            .putInt(KEY_ROUGH_RUN_STREAK, state.roughRunStreak.coerceAtLeast(0))
+            .putInt(KEY_ROUGH_RUN_STREAK, safeRoughStreak)
             .apply()
     }
 
     fun loadReturnMomentState(context: Context): ReturnMomentState {
-        val prefs = prefs(context)
+        val statePrefs = prefs(context)
         return ReturnMomentState(
-            lastActiveAtMs = prefs.getLong(KEY_LAST_ACTIVE_AT_MS, 0L),
-            lastGardenGreetingDay = prefs.getLong(KEY_LAST_GARDEN_GREETING_DAY, -1L),
-            roughRunStreak = prefs.getInt(KEY_ROUGH_RUN_STREAK, 0)
+            lastActiveAtMs = statePrefs.getLong(KEY_LAST_ACTIVE_AT_MS, 0L).coerceAtLeast(0L),
+            lastGardenGreetingDay = statePrefs.getLong(KEY_LAST_GARDEN_GREETING_DAY, -1L).coerceAtLeast(-1L),
+            roughRunStreak = statePrefs.getInt(KEY_ROUGH_RUN_STREAK, 0).coerceAtLeast(0)
         )
     }
 
@@ -569,8 +581,6 @@ object SaveManager {
 
     fun loadUnlockedHistoryMarks(context: Context): Set<String> =
         prefs(context).getStringSet(KEY_UNLOCKED_HISTORY_MARKS, emptySet()).orEmpty()
-
-    // ── Helpers ───────────────────────────────────────────────────────────
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(activePrefsName, Context.MODE_PRIVATE)
