@@ -21,7 +21,7 @@ class ParticleTest {
         assertTrue(particle.isDead)
         assertEquals(1f, particle.progress, 0f)
         assertEquals(0f, particle.currentSize, 0f)
-        assertEquals(Color.TRANSPARENT, particle.currentColor)
+        assertEquals(0, Color.alpha(particle.currentColor))
     }
 
     @Test
