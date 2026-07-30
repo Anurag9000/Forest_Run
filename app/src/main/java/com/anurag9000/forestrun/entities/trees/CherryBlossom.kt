@@ -22,6 +22,8 @@ import com.anurag9000.forestrun.ui.DialogueBubbleManager
 
 /**
  * Cherry Blossom — Phase 27: mid-height branch hitbox, sprite rendered with gentle sway.
+ * The public encounter hitbox encloses branch and trunk so pass resolution
+ * cannot terminate while the branch is still in front of the player.
  */
 class CherryBlossom(
     context: Context,
@@ -38,6 +40,7 @@ class CherryBlossom(
     private val branchHeightLow  = groundY - treeHeight * 0.26f
     private val branchHeightHigh = groundY - treeHeight * 0.58f
     private val trunkTop         = groundY - treeHeight * 0.34f
+    private val trunkHitbox     = RectF()
     private val branchHitbox    = RectF()
     private val stormVeilRect   = RectF()
     private val drawRect        = RectF()
@@ -75,7 +78,7 @@ class CherryBlossom(
         currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
         updateGeometry()
         sprite.update(deltaTime)
-        if (x < -treeWidth - 50f) isActive = false
+        if (hitbox.right < -50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
@@ -129,7 +132,7 @@ class CherryBlossom(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        if (RectF.intersects(player.hitbox, hitbox) ||
+        if (RectF.intersects(player.hitbox, trunkHitbox) ||
             RectF.intersects(player.hitbox, branchHitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
         if (
@@ -138,13 +141,13 @@ class CherryBlossom(
                 stormVeilRect,
                 horizontalPadding = mercyPad * 0.25f,
                 verticalPadding = mercyPad * 0.45f
-            ) || intersectsExpanded(player.hitbox, hitbox, mercyPad)
+            ) || intersectsExpanded(player.hitbox, trunkHitbox, mercyPad)
         ) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }
 
     private fun updateGeometry() {
-        hitbox.set(
+        trunkHitbox.set(
             x + treeWidth / 2f - trunkWidth / 2f,
             trunkTop,
             x + treeWidth / 2f + trunkWidth / 2f,
@@ -155,6 +158,12 @@ class CherryBlossom(
             branchHeightHigh + treeHeight * 0.04f,
             x + treeWidth * 0.86f,
             branchHeightLow - treeHeight * 0.04f
+        )
+        hitbox.set(
+            minOf(trunkHitbox.left, branchHitbox.left),
+            minOf(trunkHitbox.top, branchHitbox.top),
+            maxOf(trunkHitbox.right, branchHitbox.right),
+            maxOf(trunkHitbox.bottom, branchHitbox.bottom)
         )
         stormVeilRect.set(
             x + treeWidth * 0.06f,
