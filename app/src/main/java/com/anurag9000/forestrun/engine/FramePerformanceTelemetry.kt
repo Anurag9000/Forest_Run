@@ -23,6 +23,7 @@ object FramePerformanceTelemetry {
     ) {
         monitor = FramePerformanceMonitor(windowSize, frameBudgetNs)
         RuntimeWorkloadTelemetry.reset()
+        GhostIoTelemetry.reset()
     }
 
     /**
@@ -33,6 +34,7 @@ object FramePerformanceTelemetry {
     fun resetStoppedSession() {
         monitor.reset()
         RuntimeWorkloadTelemetry.reset()
+        GhostIoTelemetry.reset()
     }
 
     /** Capture an out-of-band profiling snapshot; never call this every frame. */
