@@ -25,14 +25,27 @@ import java.io.FileOutputStream
  */
 object SaveManager {
 
-    internal const val PREFS_NAME     = "forest_run_prefs"
+    internal const val PREFS_NAME = "forest_run_prefs"
     private const val COMPAT_PREFS_PREFIX = "forest_run_prefs_compat_v"
+    private const val LEGACY_GARDEN_FOLLOW_UP_WINDOW_NS = 1_000_000_000L
 
     @Volatile
     private var activePrefsName: String = PREFS_NAME
 
     @Volatile
     private var activeGhostFilename: String = "ghost_run.bin"
+
+    private val gardenWriteLock = Any()
+
+    private data class PendingGardenSeedFollowUp(
+        val prefsName: String,
+        val threadId: Long,
+        val createdAtNanos: Long,
+        val canonicalSeeds: Int
+    )
+
+    @Volatile
+    private var pendingGardenSeedFollowUp: PendingGardenSeedFollowUp? = null
 
     internal val activePrefsNameForTests: String
         get() = activePrefsName
@@ -41,18 +54,25 @@ object SaveManager {
         get() = activeGhostFilename
 
     internal fun usePrimaryPreferences() {
-        activePrefsName = PREFS_NAME
-        activeGhostFilename = GHOST_FILENAME
+        synchronized(gardenWriteLock) {
+            activePrefsName = PREFS_NAME
+            activeGhostFilename = GHOST_FILENAME
+            pendingGardenSeedFollowUp = null
+        }
     }
 
     internal fun useCompatibilityPreferences(schemaVersion: Int) {
         val safeVersion = schemaVersion.coerceAtLeast(0)
-        activePrefsName = "$COMPAT_PREFS_PREFIX$safeVersion"
-        activeGhostFilename = "ghost_run_compat_v$safeVersion.bin"
+        synchronized(gardenWriteLock) {
+            activePrefsName = "$COMPAT_PREFS_PREFIX$safeVersion"
+            activeGhostFilename = "ghost_run_compat_v$safeVersion.bin"
+            pendingGardenSeedFollowUp = null
+        }
     }
+
     private const val KEY_HIGH_SCORE = "high_score"
     private const val KEY_LIFETIME_SEEDS = "lifetime_seeds"
-    private const val KEY_BEST_DIST  = "best_distance"
+    private const val KEY_BEST_DIST = "best_distance"
     private const val KEY_LAST_KILLER = "last_killer"
     private const val KEY_LAST_RUN_SCORE = "last_run_score"
     private const val KEY_LAST_RUN_DISTANCE = "last_run_distance"
@@ -113,7 +133,28 @@ object SaveManager {
     // ── Lifetime seeds ────────────────────────────────────────────────────
 
     fun saveLifetimeSeeds(context: Context, seeds: Int) {
-        prefs(context).edit().putInt(KEY_LIFETIME_SEEDS, seeds.coerceAtLeast(0)).apply()
+        val safeSeeds = seeds.coerceAtLeast(0)
+        synchronized(gardenWriteLock) {
+            val pending = pendingGardenSeedFollowUp
+            val now = System.nanoTime()
+            val isImmediateLegacyFollowUp = pending != null &&
+                pending.prefsName == activePrefsName &&
+                pending.threadId == Thread.currentThread().id &&
+                now - pending.createdAtNanos in 0..LEGACY_GARDEN_FOLLOW_UP_WINDOW_NS
+
+            pendingGardenSeedFollowUp = null
+            if (isImmediateLegacyFollowUp) {
+                // GardenScreen historically saves progress and Seeds separately.
+                // The first call now commits both atomically; this second call is
+                // normalized to the canonical committed balance so stale UI state
+                // cannot overwrite the transaction.
+                prefs(context).edit()
+                    .putInt(KEY_LIFETIME_SEEDS, requireNotNull(pending).canonicalSeeds)
+                    .apply()
+                return
+            }
+            prefs(context).edit().putInt(KEY_LIFETIME_SEEDS, safeSeeds).apply()
+        }
     }
 
     fun loadLifetimeSeeds(context: Context): Int =
@@ -254,7 +295,31 @@ object SaveManager {
     private const val KEY_GARDEN = "garden_unlocked"
 
     fun saveGardenProgress(context: Context, unlockedCount: Int) {
-        prefs(context).edit().putInt(KEY_GARDEN, unlockedCount.coerceIn(1, 9)).apply()
+        val requested = unlockedCount.coerceIn(1, GardenEconomy.catalogueSize)
+        synchronized(gardenWriteLock) {
+            val stored = loadGardenProgress(context).coerceIn(1, GardenEconomy.catalogueSize)
+            if (requested == stored + 1) {
+                val seedCost = GardenEconomy.seedCostForIndex(stored)
+                if (seedCost != null) {
+                    val result = GardenPurchaseManager.purchaseNext(
+                        context = context,
+                        requestedIndex = stored,
+                        seedCost = seedCost,
+                        catalogueSize = GardenEconomy.catalogueSize
+                    )
+                    pendingGardenSeedFollowUp = PendingGardenSeedFollowUp(
+                        prefsName = activePrefsName,
+                        threadId = Thread.currentThread().id,
+                        createdAtNanos = System.nanoTime(),
+                        canonicalSeeds = result.remainingSeeds
+                    )
+                    return
+                }
+            }
+
+            pendingGardenSeedFollowUp = null
+            prefs(context).edit().putInt(KEY_GARDEN, requested).apply()
+        }
     }
 
     fun loadGardenProgress(context: Context): Int =
