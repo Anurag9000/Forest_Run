@@ -39,6 +39,49 @@ class DialogueBubbleManagerTest {
     }
 
     @Test
+    fun `variant options are trimmed and blank options are ignored`() {
+        DialogueBubbleManager.spawnVariant(
+            triggerKey = "  pass_cat  ",
+            textOptions = listOf("  Quiet step  ", "   ", "Home again"),
+            anchorX = 100f,
+            anchorY = 100f
+        )
+        DialogueBubbleManager.spawnVariant(
+            triggerKey = "pass_cat",
+            textOptions = listOf("  Quiet step  ", "   ", "Home again"),
+            anchorX = 100f,
+            anchorY = 100f
+        )
+
+        assertEquals(listOf("Quiet step", "Home again"), DialogueBubbleManager.activeTextsForTest())
+        assertEquals(1, DialogueBubbleManager.variantKeyCountForTest())
+    }
+
+    @Test
+    fun `blank variant keys and empty options create no state`() {
+        DialogueBubbleManager.spawnVariant("   ", listOf("Text"), 100f, 100f)
+        DialogueBubbleManager.spawnVariant("valid", listOf("", "   "), 100f, 100f)
+
+        assertTrue(DialogueBubbleManager.activeTextsForTest().isEmpty())
+        assertEquals(0, DialogueBubbleManager.variantKeyCountForTest())
+    }
+
+    @Test
+    fun `variant key history evicts oldest entries at a fixed cap`() {
+        repeat(160) { index ->
+            DialogueBubbleManager.spawnVariant(
+                triggerKey = "dynamic_$index",
+                textOptions = listOf("Line $index"),
+                anchorX = 100f,
+                anchorY = 100f
+            )
+        }
+
+        assertEquals(128, DialogueBubbleManager.variantKeyCountForTest())
+        assertEquals(5, DialogueBubbleManager.activeTextsForTest().size)
+    }
+
+    @Test
     fun `clear resets active bubbles and variant counters`() {
         DialogueBubbleManager.spawnVariant(
             triggerKey = "pass_line",
@@ -55,6 +98,7 @@ class DialogueBubbleManagerTest {
         )
 
         assertEquals(listOf("Held the line"), DialogueBubbleManager.activeTextsForTest())
+        assertEquals(1, DialogueBubbleManager.variantKeyCountForTest())
     }
 
     @Test
@@ -73,15 +117,16 @@ class DialogueBubbleManagerTest {
     }
 
     @Test
-    fun `long dialogue wraps to no more than three lines`() {
+    fun `long dialogue wraps to no more than three lines and marks truncation`() {
         val lines = DialogueBubbleManager.wrapTextForTest(
-            text = "The forest remembers every gentle crossing and every hurried mistake you bring home.",
-            maxWidth = 120f
+            text = "The forest remembers every gentle crossing and every hurried mistake you bring home after another long impossible evening.",
+            maxWidth = 90f
         )
 
         assertTrue(lines.isNotEmpty())
         assertTrue(lines.size <= 3)
         assertTrue(lines.all { it.isNotBlank() })
+        assertTrue(lines.last().endsWith("…"))
     }
 
     @Test
@@ -94,6 +139,26 @@ class DialogueBubbleManagerTest {
         assertTrue(lines.isNotEmpty())
         assertTrue(lines.size <= 3)
         assertTrue(lines.all { it.isNotBlank() })
+        assertTrue(lines.last().endsWith("…"))
+    }
+
+    @Test
+    fun `invalid wrap width still returns a bounded nonblank result`() {
+        listOf(-1f, 0f, Float.NaN, Float.POSITIVE_INFINITY).forEach { invalid ->
+            val lines = DialogueBubbleManager.wrapTextForTest("A very long forest sentence", invalid)
+            assertTrue(lines.isNotEmpty())
+            assertTrue(lines.size <= 3)
+            assertTrue(lines.all { it.isNotBlank() })
+        }
+    }
+
+    @Test
+    fun `huge finite update expires all bubbles without nonfinite residue`() {
+        DialogueBubbleManager.spawn("Transient", 100f, 100f)
+
+        DialogueBubbleManager.update(Float.MAX_VALUE)
+
+        assertTrue(DialogueBubbleManager.activeTextsForTest().isEmpty())
     }
 
     @Test
@@ -114,5 +179,19 @@ class DialogueBubbleManagerTest {
             measurementsAfterSpawn,
             DialogueBubbleManager.lineMeasurementCountForTest
         )
+    }
+
+    @Test
+    fun `tiny canvas draw remains bounded and does not throw`() {
+        DialogueBubbleManager.spawn(
+            text = "Tiny viewport",
+            anchorX = 1_000f,
+            anchorY = -1_000f
+        )
+        val bitmap = Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888)
+
+        DialogueBubbleManager.draw(Canvas(bitmap))
+
+        assertEquals(1, DialogueBubbleManager.activeTextsForTest().size)
     }
 }
