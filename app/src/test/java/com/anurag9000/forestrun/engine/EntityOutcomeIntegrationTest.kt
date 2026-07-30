@@ -2,6 +2,7 @@ package com.anurag9000.forestrun.engine
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.RectF
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.EncounterOutcome
@@ -105,6 +106,31 @@ class EntityOutcomeIntegrationTest {
         assertEquals(CollisionResult.HIT, frame.result)
         assertEquals(EncounterOutcome.HIT, lethalBehindPlayer.encounterOutcome)
         assertEquals(0, lethalBehindPlayer.uniqueActionCount)
+    }
+
+    @Test
+    fun `complete encounter bounds delay terminal pass after collision body clears`() {
+        val manager = manager()
+        val gameState = GameStateManager(context)
+        val composite = ProbeEntity(
+            context = context,
+            collisionResult = CollisionResult.NONE,
+            right = player.hitbox.left - 20f,
+            encounterRight = player.hitbox.right + 80f
+        )
+        manager.activeEntities += composite
+
+        assertNull(manager.checkCollisions(player, gameState))
+        assertEquals(EncounterOutcome.PENDING, composite.encounterOutcome)
+        assertEquals(0, composite.uniqueActionCount)
+
+        composite.encounterBounds.offsetTo(
+            player.hitbox.left - composite.encounterBounds.width() - 20f,
+            composite.encounterBounds.top
+        )
+        assertNull(manager.checkCollisions(player, gameState))
+        assertEquals(EncounterOutcome.CLEAN_PASS, composite.encounterOutcome)
+        assertEquals(1, composite.uniqueActionCount)
     }
 
     @Test
@@ -219,13 +245,19 @@ class EntityOutcomeIntegrationTest {
     private class ProbeEntity(
         context: Context,
         private val collisionResult: CollisionResult,
-        right: Float = 600f
+        right: Float = 600f,
+        encounterRight: Float = right
     ) : Entity(context) {
         var selectedCount = 0
         var uniqueActionCount = 0
+        private val completeBounds = RectF()
+
+        override val encounterBounds: RectF
+            get() = completeBounds
 
         init {
             hitbox.set(right - 100f, 600f, right, 700f)
+            completeBounds.set(hitbox.left, hitbox.top, encounterRight, hitbox.bottom)
         }
 
         override fun update(deltaTime: Float, scrollSpeed: Float) = Unit
