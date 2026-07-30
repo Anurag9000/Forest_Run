@@ -53,10 +53,13 @@ class PacifistTrackerTest {
         repeat(2) { tracker.recordCleanPass() }
         tracker.updateRouteReward(mercyHearts = 3, kindnessChain = 8)
         val spareReward = tracker.consumeReward()
+        val cleanReward = tracker.consumeReward()
         val mercifulReward = tracker.consumeReward()
 
         requireNotNull(spareReward)
         assertEquals(PacifistRewardKind.SPARE_STREAK, spareReward.kind)
+        requireNotNull(cleanReward)
+        assertEquals(PacifistRewardKind.CLEAN_STREAK, cleanReward.kind)
         requireNotNull(mercifulReward)
         assertEquals(PacifistRouteTier.MERCIFUL, mercifulReward.routeTier)
         assertEquals(PacifistRewardKind.ROUTE_MERCIFUL, mercifulReward.kind)
