@@ -2,7 +2,6 @@ package com.anurag9000.forestrun.engine
 
 import android.view.MotionEvent
 import android.view.View
-import com.anurag9000.forestrun.utils.MathUtils
 
 /**
  * Translates touch events into jump and duck callbacks.
@@ -39,6 +38,7 @@ class InputHandler : View.OnTouchListener {
     companion object {
         private const val INVALID_POINTER = -1
         private const val SWIPE_DOWN_THRESHOLD_PX = 80f
+        private const val MAX_REPORTED_HOLD_S = 0.6f
 
         /**
          * Small delay used only to distinguish a swipe from a hold. Quick taps
@@ -47,26 +47,28 @@ class InputHandler : View.OnTouchListener {
         private const val JUMP_DECISION_DELAY_S = 0.075f
     }
 
-    override fun onTouch(v: View, event: MotionEvent): Boolean {
-        return when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> handleDown(event)
-            MotionEvent.ACTION_POINTER_DOWN -> false
-            MotionEvent.ACTION_MOVE -> handleMove(event)
-            MotionEvent.ACTION_UP -> {
-                v.performClick()
-                handleUp(event)
-            }
-            MotionEvent.ACTION_POINTER_UP -> handlePointerUp(event)
-            MotionEvent.ACTION_CANCEL -> handleCancel()
-            else -> false
+    override fun onTouch(v: View, event: MotionEvent): Boolean = when (event.actionMasked) {
+        MotionEvent.ACTION_DOWN -> handleDown(event)
+        // Keep ownership of the sequence while deliberately ignoring extra fingers.
+        MotionEvent.ACTION_POINTER_DOWN -> primaryPointerId != INVALID_POINTER
+        MotionEvent.ACTION_MOVE -> handleMove(event)
+        MotionEvent.ACTION_UP -> {
+            v.performClick()
+            handleUp(event)
         }
+        MotionEvent.ACTION_POINTER_UP -> handlePointerUp(event)
+        MotionEvent.ACTION_CANCEL -> handleCancel()
+        else -> false
     }
 
     /** Called once per game frame while a primary pointer is active. */
     fun tick(deltaTime: Float) {
         if (primaryPointerId == INVALID_POINTER || !isChargingJump || isDucking) return
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return
 
-        holdDuration += deltaTime.coerceAtLeast(0f)
+        holdDuration = (holdDuration.toDouble() + deltaTime.toDouble())
+            .coerceIn(0.0, MAX_REPORTED_HOLD_S.toDouble())
+            .toFloat()
         if (!jumpStarted && holdDuration >= JUMP_DECISION_DELAY_S) {
             startJump()
         }
@@ -98,9 +100,18 @@ class InputHandler : View.OnTouchListener {
         if (primaryPointerId != INVALID_POINTER) return false
 
         val index = event.actionIndex
-        primaryPointerId = event.getPointerId(index)
-        touchStartX = event.getX(index)
-        touchStartY = event.getY(index)
+        if (index !in 0 until event.pointerCount) return false
+        val pointerId = event.getPointerId(index)
+        val startX = event.getX(index)
+        val startY = event.getY(index)
+        if (pointerId == INVALID_POINTER || !startX.isFinite() || !startY.isFinite()) {
+            lastGestureLabel = "INVALID"
+            return false
+        }
+
+        primaryPointerId = pointerId
+        touchStartX = startX
+        touchStartY = startY
         holdDuration = 0f
         isDucking = false
         isChargingJump = true
@@ -113,8 +124,10 @@ class InputHandler : View.OnTouchListener {
         val index = event.findPointerIndex(primaryPointerId)
         if (index < 0) return false
 
-        val dy = event.getY(index) - touchStartY
-        if (!isDucking && !jumpStarted && dy > SWIPE_DOWN_THRESHOLD_PX) {
+        val currentY = event.getY(index)
+        if (!currentY.isFinite()) return true
+        val dy = currentY - touchStartY
+        if (!isDucking && !jumpStarted && dy.isFinite() && dy > SWIPE_DOWN_THRESHOLD_PX) {
             isDucking = true
             isChargingJump = false
             holdDuration = 0f
@@ -125,13 +138,18 @@ class InputHandler : View.OnTouchListener {
     }
 
     private fun handleUp(event: MotionEvent): Boolean {
-        if (event.getPointerId(event.actionIndex) != primaryPointerId) return false
+        val index = event.actionIndex
+        if (index !in 0 until event.pointerCount ||
+            event.getPointerId(index) != primaryPointerId
+        ) return false
         commitRelease(cancelled = false)
         return true
     }
 
     private fun handlePointerUp(event: MotionEvent): Boolean {
-        if (event.getPointerId(event.actionIndex) != primaryPointerId) return false
+        val index = event.actionIndex
+        if (index !in 0 until event.pointerCount) return false
+        if (event.getPointerId(index) != primaryPointerId) return true
         commitRelease(cancelled = false)
         return true
     }
@@ -153,7 +171,9 @@ class InputHandler : View.OnTouchListener {
         val wasDucking = isDucking
         val wasCharging = isChargingJump
         val hadStartedJump = jumpStarted
-        val finalHold = MathUtils.clamp(holdDuration, 0f, 0.6f)
+        val finalHold = holdDuration.takeIf { it.isFinite() }
+            ?.coerceIn(0f, MAX_REPORTED_HOLD_S)
+            ?: 0f
 
         clearGestureState()
 
