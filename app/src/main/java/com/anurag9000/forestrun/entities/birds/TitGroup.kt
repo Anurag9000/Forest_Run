@@ -77,8 +77,7 @@ class TitGroup(
     init {
         x = startX
         y = baseLine
-        // Main hitbox covers full group width
-        hitbox.set(x, baseLine - birdH, x + birdCount * spacing, baseLine + birdH)
+        updateAggregateHitbox()
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
@@ -92,14 +91,14 @@ class TitGroup(
             val bx = x + i * spacing
             birdRects[i].offsetTo(bx + 3f, baseLine + waveY - birdH / 2f + 3f)
         }
-        hitbox.offsetTo(x, baseLine + waveY - birdH)
+        updateAggregateHitbox()
         val guideWidth = birdCount * spacing + birdW * 0.4f
         val guideLeft = x - readability.stagingPaddingPx
         val guideTop = baseLine + waveY + birdH * 0.78f
         val guideBottom = guideTop + birdH * 0.42f
         troughGuideRect.set(guideLeft, guideTop, guideLeft + guideWidth, guideBottom)
 
-        if (x < -(birdCount * spacing) - 50f) isActive = false
+        if (hitbox.right < -50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
@@ -129,7 +128,7 @@ class TitGroup(
         )
         DialogueBubbleManager.spawn(
             text = BirdEncounterFlavor.titPass(birdCount, keptBeat),
-            anchorX = x + birdCount * spacing * 0.45f,
+            anchorX = hitbox.centerX(),
             anchorY = troughGuideRect.top - 18f,
             fillColor = Color.rgb(230, 244, 255),
             borderColor = Color.rgb(88, 138, 196)
@@ -143,7 +142,7 @@ class TitGroup(
             countInPrompted = true
             DialogueBubbleManager.spawn(
                 BirdEncounterFlavor.titCountIn(birdCount),
-                x + birdCount * spacing * 0.45f,
+                hitbox.centerX(),
                 baseLine - waveAmplitude - 18f,
                 Color.rgb(232, 246, 255),
                 Color.rgb(88, 138, 196)
@@ -176,5 +175,21 @@ class TitGroup(
             if (intersectsExpanded(player.hitbox, rect, mercyPad)) return CollisionResult.MERCY_MISS
         }
         return CollisionResult.NONE
+    }
+
+    private fun updateAggregateHitbox() {
+        val first = birdRects.first()
+        var left = first.left
+        var top = first.top
+        var right = first.right
+        var bottom = first.bottom
+        for (index in 1 until birdRects.size) {
+            val rect = birdRects[index]
+            if (rect.left < left) left = rect.left
+            if (rect.top < top) top = rect.top
+            if (rect.right > right) right = rect.right
+            if (rect.bottom > bottom) bottom = rect.bottom
+        }
+        hitbox.set(left, top, right, bottom)
     }
 }
