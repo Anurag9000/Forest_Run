@@ -7,6 +7,7 @@ import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Player
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -27,13 +28,7 @@ class ChickadeeGroupTest {
 
     @Test
     fun `chickadee group exposes a readable flutter pocket around the lead bird`() {
-        val chickadees = ChickadeeGroup(
-            context = context,
-            startX = 520f,
-            groundY = 885.6f,
-            sprite = spriteManager.chickadeeSprite.copy(),
-            count = 3
-        )
+        val chickadees = chickadees()
         val player = Player(1920, 1080, spriteManager)
         val gameState = GameStateManager(context)
 
@@ -57,6 +52,29 @@ class ChickadeeGroupTest {
         assertTrue(chickadees.onCollision(player, gameState) != CollisionResult.HIT)
         assertTrue(booleanField(chickadees, "readPocket"))
     }
+
+    @Test
+    fun `chickadee aggregate bounds equal independently moving flock`() {
+        val chickadees = chickadees()
+        setFloatArray(chickadees, "altitudes", floatArrayOf(210f, 410f, 285f))
+        setFloatArray(chickadees, "targetAltitudes", floatArrayOf(210f, 410f, 285f))
+
+        chickadees.update(deltaTime = 0.25f, scrollSpeed = 300f)
+
+        val birds = rectArrayField(chickadees, "birdRects")
+        assertEquals(birds.minOf { it.left }, chickadees.hitbox.left, 0.001f)
+        assertEquals(birds.minOf { it.top }, chickadees.hitbox.top, 0.001f)
+        assertEquals(birds.maxOf { it.right }, chickadees.hitbox.right, 0.001f)
+        assertEquals(birds.maxOf { it.bottom }, chickadees.hitbox.bottom, 0.001f)
+    }
+
+    private fun chickadees() = ChickadeeGroup(
+        context = context,
+        startX = 520f,
+        groundY = 885.6f,
+        sprite = spriteManager.chickadeeSprite.copy(),
+        count = 3
+    )
 
     private fun rectField(chickadees: ChickadeeGroup, name: String): RectF {
         val field = ChickadeeGroup::class.java.getDeclaredField(name)
