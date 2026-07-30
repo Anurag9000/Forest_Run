@@ -2,6 +2,7 @@ package com.anurag9000.forestrun
 
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -19,11 +20,14 @@ import com.anurag9000.forestrun.engine.LeitmotifManager
 import com.anurag9000.forestrun.engine.RuntimeAssetValidator
 import com.anurag9000.forestrun.engine.SaveIntegrityManager
 import com.anurag9000.forestrun.engine.SfxManager
+import com.anurag9000.forestrun.engine.SurfaceResizePolicy
 
 /** Single full-screen Activity hosting the custom SurfaceView game. */
 class MainActivity : AppCompatActivity() {
     private lateinit var gameView: GameView
     private var hasPaused = false
+    private var configurationWidthDp = 0
+    private var configurationHeightDp = 0
 
     companion object {
         const val EXTRA_DEBUG_AUTOSTART = "debug_autostart"
@@ -36,6 +40,8 @@ class MainActivity : AppCompatActivity() {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        configurationWidthDp = resources.configuration.screenWidthDp
+        configurationHeightDp = resources.configuration.screenHeightDp
 
         SaveIntegrityManager.repair(this)
         FeedbackSettings.init(this)
@@ -46,6 +52,28 @@ class MainActivity : AppCompatActivity() {
         gameView.post {
             hideSystemUI()
             gameView.applyDebugLaunchIntent(intent)
+        }
+    }
+
+    /**
+     * The manifest routes screen-size changes here instead of allowing Android to
+     * recreate the Activity automatically. The engine's world and screen systems
+     * are dimension-bound, so a genuine size change must still rebuild them as a
+     * coherent new GameView rather than retaining stale hitboxes and layouts.
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        val shouldRecreate = SurfaceResizePolicy.requiresActivityRecreation(
+            previousWidth = configurationWidthDp,
+            previousHeight = configurationHeightDp,
+            newWidth = newConfig.screenWidthDp,
+            newHeight = newConfig.screenHeightDp,
+            dimensionBoundSystemsInitialized = ::gameView.isInitialized
+        )
+        configurationWidthDp = newConfig.screenWidthDp
+        configurationHeightDp = newConfig.screenHeightDp
+        super.onConfigurationChanged(newConfig)
+        if (shouldRecreate && !isFinishing && !isDestroyed) {
+            recreate()
         }
     }
 
