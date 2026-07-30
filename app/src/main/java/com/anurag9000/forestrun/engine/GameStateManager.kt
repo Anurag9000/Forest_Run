@@ -69,14 +69,14 @@ class GameStateManager(context: Context) {
 
     val bloomTimeFractionRemaining: Float
         get() = if (!isBloomActive) 0f else {
-            bloomSecondsRemaining / GameConstants.BLOOM_DURATION_S
+            (bloomSecondsRemaining / GameConstants.BLOOM_DURATION_S).coerceIn(0f, 1f)
         }
 
     val bloomSeedTarget: Int
         get() = GameConstants.BLOOM_SEED_COUNT
 
     val bloomMeterFraction: Float
-        get() = bloomMeter / GameConstants.BLOOM_SEED_COUNT.toFloat()
+        get() = (bloomMeter / GameConstants.BLOOM_SEED_COUNT.toFloat()).coerceIn(0f, 1f)
 
     var bloomConversionsThisRun: Int = 0
         private set
@@ -117,34 +117,47 @@ class GameStateManager(context: Context) {
     private var speedDebuffTimer: Float = 0f
 
     fun update(deltaTime: Float) {
-        runTimeSeconds += deltaTime
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return
+
+        runTimeSeconds = finiteSaturatingAdd(runTimeSeconds, deltaTime)
 
         // Capture one speed for both distance and score so acceleration cannot
         // introduce a one-frame drift between the two quantities.
-        val speedThisFrame = scrollSpeed
-        distanceMetres += speedThisFrame / 1000f * deltaTime
+        val speedThisFrame = scrollSpeed.takeIf { it.isFinite() && it >= 0f }
+            ?: GameConstants.BASE_SCROLL_SPEED
+        scrollSpeed = speedThisFrame
+        val distanceDelta = safeNonNegativeProduct(speedThisFrame / 1000f, deltaTime)
+        distanceMetres = finiteSaturatingAdd(distanceMetres, distanceDelta)
 
         val baseSpeed = MathUtils.clamp(
             GameConstants.BASE_SCROLL_SPEED + distanceMetres * GameConstants.SPEED_PER_METRE,
             GameConstants.BASE_SCROLL_SPEED,
             GameConstants.MAX_SCROLL_SPEED
         )
-        scrollSpeed = baseSpeed * speedDebuffMultiplier
+        val safeDebuff = speedDebuffMultiplier.takeIf { it.isFinite() && it > 0f }
+            ?.coerceAtMost(1f)
+            ?: 1f
+        speedDebuffMultiplier = safeDebuff
+        scrollSpeed = safeNonNegativeProduct(baseSpeed, safeDebuff)
+            .coerceAtMost(GameConstants.MAX_SCROLL_SPEED)
 
         if (speedDebuffTimer > 0f) {
-            speedDebuffTimer -= deltaTime
+            speedDebuffTimer = (speedDebuffTimer - deltaTime).coerceAtLeast(0f)
             if (speedDebuffTimer <= 0f) {
-                speedDebuffTimer = 0f
                 speedDebuffMultiplier = 1f
             }
         }
 
-        val distanceDelta = speedThisFrame / 1000f * deltaTime
-        exactScore += GameConstants.POINTS_PER_METRE * scoreMultiplier * distanceDelta
-        val deltaInt = exactScore.toInt()
+        val safeScoreMultiplier = normalizedScoreMultiplier()
+        val scoreDelta = safeNonNegativeProduct(
+            GameConstants.POINTS_PER_METRE * safeScoreMultiplier,
+            distanceDelta
+        )
+        exactScore = finiteSaturatingAdd(exactScore, scoreDelta)
+        val deltaInt = exactScore.coerceAtMost(Int.MAX_VALUE.toFloat()).toInt()
         if (deltaInt > 0) {
-            score += deltaInt
-            exactScore -= deltaInt
+            score = saturatingAdd(score, deltaInt)
+            exactScore = (exactScore - deltaInt).coerceAtLeast(0f)
             updateHighScore()
         }
 
@@ -155,7 +168,7 @@ class GameStateManager(context: Context) {
         }
 
         if (isBloomActive) {
-            bloomTimer += deltaTime
+            bloomTimer = finiteSaturatingAdd(bloomTimer, deltaTime)
             if (bloomTimer >= GameConstants.BLOOM_DURATION_S) {
                 isBloomActive = false
                 bloomTimer = 0f
@@ -171,15 +184,16 @@ class GameStateManager(context: Context) {
      * only after the current power window has ended.
      */
     fun collectSeed() {
-        seedsThisRun++
+        seedsThisRun = saturatingIncrement(seedsThisRun)
 
         // Reload before incrementing: Garden may have spent seeds while this
-        // long-lived manager was inactive.
-        lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext) + 1
+        // long-lived manager was inactive. Saturation prevents corrupted or
+        // long-lived profiles from wrapping their currency negative.
+        lifetimeSeeds = saturatingIncrement(SaveManager.loadLifetimeSeeds(appContext))
         SaveManager.saveLifetimeSeeds(appContext, lifetimeSeeds)
 
         if (!isBloomActive) {
-            bloomMeter++
+            bloomMeter = saturatingIncrement(bloomMeter)
             if (bloomMeter >= GameConstants.BLOOM_SEED_COUNT) {
                 bloomMeter = 0
                 isBloomActive = true
@@ -189,18 +203,25 @@ class GameStateManager(context: Context) {
     }
 
     fun addBonus(points: Int = 0, seeds: Int = 0, multiplierBoost: Float = 0f) {
-        score += (points * scoreMultiplier).toInt()
-        updateHighScore()
+        val safePoints = points.coerceAtLeast(0)
+        if (safePoints > 0) {
+            val weightedPoints = safePoints.toDouble() * normalizedScoreMultiplier().toDouble()
+            val scoreDelta = weightedPoints
+                .coerceAtMost(Int.MAX_VALUE.toDouble())
+                .toInt()
+            score = saturatingAdd(score, scoreDelta)
+            updateHighScore()
+        }
 
         repeat(seeds.coerceAtLeast(0)) { collectSeed() }
 
-        if (multiplierBoost > 0f) {
+        if (multiplierBoost.isFinite() && multiplierBoost > 0f) {
             scoreMultiplier = multiplierBoost
         }
     }
 
     fun recordBloomConversion() {
-        bloomConversionsThisRun++
+        bloomConversionsThisRun = saturatingIncrement(bloomConversionsThisRun)
         addBonus(points = 140, seeds = 1)
     }
 
@@ -247,7 +268,8 @@ class GameStateManager(context: Context) {
         )
 
     fun applySpeedDebuff(multiplier: Float, durationMs: Int) {
-        speedDebuffMultiplier = multiplier
+        if (!multiplier.isFinite() || multiplier <= 0f || durationMs <= 0) return
+        speedDebuffMultiplier = multiplier.coerceAtMost(1f)
         speedDebuffTimer = durationMs / 1000f
     }
 
@@ -337,5 +359,32 @@ class GameStateManager(context: Context) {
             highScore = score
             isNewHighScore = true
         }
+    }
+
+    private fun normalizedScoreMultiplier(): Float {
+        val safeMultiplier = scoreMultiplier.takeIf { it.isFinite() && it > 0f } ?: 1f
+        scoreMultiplier = safeMultiplier
+        return safeMultiplier
+    }
+
+    private fun saturatingIncrement(value: Int): Int =
+        if (value >= Int.MAX_VALUE) Int.MAX_VALUE else value + 1
+
+    private fun saturatingAdd(value: Int, delta: Int): Int {
+        if (delta <= 0) return value.coerceAtLeast(0)
+        return if (value >= Int.MAX_VALUE - delta) Int.MAX_VALUE else value + delta
+    }
+
+    private fun finiteSaturatingAdd(value: Float, delta: Float): Float {
+        if (!value.isFinite() || value < 0f) return 0f
+        if (!delta.isFinite() || delta <= 0f) return value
+        val sum = value.toDouble() + delta.toDouble()
+        return sum.coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
+    }
+
+    private fun safeNonNegativeProduct(first: Float, second: Float): Float {
+        if (!first.isFinite() || !second.isFinite() || first <= 0f || second <= 0f) return 0f
+        val product = first.toDouble() * second.toDouble()
+        return product.coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
     }
 }
