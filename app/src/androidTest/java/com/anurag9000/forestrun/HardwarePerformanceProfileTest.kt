@@ -14,6 +14,7 @@ import com.anurag9000.forestrun.engine.FramePerformanceReport
 import com.anurag9000.forestrun.engine.FramePerformanceTelemetry
 import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.RunMode
+import com.anurag9000.forestrun.engine.RuntimeWorkloadTelemetry
 import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -91,7 +92,8 @@ class HardwarePerformanceProfileTest {
                 model = Build.MODEL.orEmpty(),
                 apiLevel = Build.VERSION.SDK_INT,
                 refreshRateHz = refreshRateHz.coerceAtLeast(0f),
-                snapshot = snapshot
+                snapshot = snapshot,
+                workload = RuntimeWorkloadTelemetry.snapshot()
             )
             val output = writeReport(report)
             val status = Bundle().apply {

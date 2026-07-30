@@ -126,6 +126,7 @@ class EntityManager(
 
         seedOrbManager.update(deltaTime, gameState, player)
         debugActiveEntityCount = activeEntities.size
+        RuntimeWorkloadTelemetry.publishEntities(activeEntities.size)
     }
 
     /**
@@ -465,6 +466,7 @@ class EntityManager(
         bloomWasActive = false
         bloomReactedEntities.clear()
         debugActiveEntityCount = 0
+        RuntimeWorkloadTelemetry.publishEntities(0)
     }
 
     private fun orbSpawnRateFor(entity: Entity): Float = when (entity) {

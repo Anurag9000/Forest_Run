@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import com.anurag9000.forestrun.engine.AssetPaths
+import com.anurag9000.forestrun.engine.RuntimeWorkloadTelemetry
 import com.anurag9000.forestrun.utils.MathUtils
 import kotlin.math.abs
 
@@ -114,6 +115,7 @@ object FlavorTextManager {
                 textIndex++
             }
         }
+        RuntimeWorkloadTelemetry.publishFlavorTexts(active.size)
     }
 
     fun draw(canvas: Canvas) {
@@ -145,7 +147,10 @@ object FlavorTextManager {
         }
     }
 
-    fun clear() = active.clear()
+    fun clear() {
+        active.clear()
+        RuntimeWorkloadTelemetry.publishFlavorTexts(0)
+    }
 
     internal fun activeCountForTest(): Int = active.size
     internal fun activeTextsForTest(): List<String> = active.map { it.text }

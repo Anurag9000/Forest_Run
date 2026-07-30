@@ -8,6 +8,7 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import com.anurag9000.forestrun.engine.AssetPaths
+import com.anurag9000.forestrun.engine.RuntimeWorkloadTelemetry
 import com.anurag9000.forestrun.utils.MathUtils
 
 /** Screen-readable, bounded world-space dialogue bubbles. */
@@ -145,6 +146,7 @@ object DialogueBubbleManager {
                 bubbleIndex++
             }
         }
+        RuntimeWorkloadTelemetry.publishDialogueBubbles(active.size)
     }
 
     fun draw(canvas: Canvas) {
@@ -230,6 +232,7 @@ object DialogueBubbleManager {
         active.clear()
         variantCounts.clear()
         lineMeasurementCountForTest = 0
+        RuntimeWorkloadTelemetry.publishDialogueBubbles(0)
     }
 
     internal fun activeTextsForTest(): List<String> = active.map { it.text }

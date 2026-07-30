@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.anurag9000.forestrun.engine.FeedbackSettings
+import com.anurag9000.forestrun.engine.RuntimeWorkloadTelemetry
 import com.anurag9000.forestrun.engine.adjustedParticleCount
 
 /**
@@ -71,13 +72,19 @@ object ParticleManager {
             emitterIndex++
         }
 
-        // Update all particles
+        // Update all particles and publish pressure without a second scan.
+        var activeParticleCount = 0
         for (p in pool) {
             if (p.isActive) {
                 p.update(deltaTime)
-                if (p.isDead) p.isActive = false
+                if (p.isDead) {
+                    p.isActive = false
+                } else {
+                    activeParticleCount++
+                }
             }
         }
+        RuntimeWorkloadTelemetry.publishParticles(activeParticleCount)
     }
 
     // ── Draw ──────────────────────────────────────────────────────────────
@@ -214,6 +221,7 @@ object ParticleManager {
             pendingSize = 0
         }
         poolHead = 0
+        RuntimeWorkloadTelemetry.publishParticles(0)
     }
 
     // ── Pool management ────────────────────────────────────────────────────

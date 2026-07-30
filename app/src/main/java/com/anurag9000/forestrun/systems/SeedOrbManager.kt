@@ -4,6 +4,7 @@ import android.graphics.Canvas
 import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.HapticManager
 import com.anurag9000.forestrun.engine.SfxManager
+import com.anurag9000.forestrun.engine.RuntimeWorkloadTelemetry
 import com.anurag9000.forestrun.entities.Player
 import kotlin.random.Random
 
@@ -59,6 +60,7 @@ class SeedOrbManager {
                 orbIndex++
             }
         }
+        RuntimeWorkloadTelemetry.publishSeedOrbs(orbs.size)
     }
 
     fun draw(canvas: Canvas, bloomFraction: Float) {
@@ -69,5 +71,8 @@ class SeedOrbManager {
         }
     }
 
-    fun reset() = orbs.clear()
+    fun reset() {
+        orbs.clear()
+        RuntimeWorkloadTelemetry.publishSeedOrbs(0)
+    }
 }

@@ -8,7 +8,8 @@ data class FramePerformanceReport(
     val model: String,
     val apiLevel: Int,
     val refreshRateHz: Float,
-    val snapshot: FramePerformanceSnapshot
+    val snapshot: FramePerformanceSnapshot,
+    val workload: RuntimeWorkloadSnapshot = RuntimeWorkloadSnapshot.EMPTY
 ) {
     init {
         require(scenario.isNotBlank()) { "scenario must not be blank" }
@@ -41,7 +42,17 @@ data class FramePerformanceReport(
         append("  \"p99ProcessingNs\": ").append(snapshot.p99ProcessingNs).append(",\n")
         append("  \"maximumProcessingNs\": ").append(snapshot.maximumProcessingNs).append(",\n")
         append("  \"usedHeapBytes\": ").append(snapshot.usedHeapBytes).append(",\n")
-        append("  \"maxHeapBytes\": ").append(snapshot.maxHeapBytes).append("\n")
+        append("  \"maxHeapBytes\": ").append(snapshot.maxHeapBytes).append(",\n")
+        append("  \"currentEntities\": ").append(workload.currentEntities).append(",\n")
+        append("  \"peakEntities\": ").append(workload.peakEntities).append(",\n")
+        append("  \"currentSeedOrbs\": ").append(workload.currentSeedOrbs).append(",\n")
+        append("  \"peakSeedOrbs\": ").append(workload.peakSeedOrbs).append(",\n")
+        append("  \"currentParticles\": ").append(workload.currentParticles).append(",\n")
+        append("  \"peakParticles\": ").append(workload.peakParticles).append(",\n")
+        append("  \"currentDialogueBubbles\": ").append(workload.currentDialogueBubbles).append(",\n")
+        append("  \"peakDialogueBubbles\": ").append(workload.peakDialogueBubbles).append(",\n")
+        append("  \"currentFlavorTexts\": ").append(workload.currentFlavorTexts).append(",\n")
+        append("  \"peakFlavorTexts\": ").append(workload.peakFlavorTexts).append("\n")
         append("}\n")
     }
 

@@ -22,6 +22,7 @@ object FramePerformanceTelemetry {
         frameBudgetNs: Long = FramePerformanceMonitor.DEFAULT_FRAME_BUDGET_NS
     ) {
         monitor = FramePerformanceMonitor(windowSize, frameBudgetNs)
+        RuntimeWorkloadTelemetry.reset()
     }
 
     /** Capture an out-of-band profiling snapshot; never call this every frame. */
