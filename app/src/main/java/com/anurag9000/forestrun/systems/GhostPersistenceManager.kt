@@ -1,6 +1,7 @@
 package com.anurag9000.forestrun.systems
 
 import android.content.Context
+import com.anurag9000.forestrun.engine.GhostIoTelemetry
 import com.anurag9000.forestrun.engine.SaveManager
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -35,10 +36,25 @@ object GhostPersistenceManager {
 
         val appContext = context.applicationContext
         latestFrames = frames
-        pendingWrite = executor.submit {
-            SaveManager.saveGhostRun(appContext, frames)
+        GhostIoTelemetry.recordWriteStarted(frames.size)
+        return try {
+            pendingWrite = executor.submit {
+                val startedAtNs = System.nanoTime()
+                val succeeded = try {
+                    SaveManager.saveGhostRun(appContext, frames)
+                } catch (_: Exception) {
+                    false
+                }
+                GhostIoTelemetry.recordWriteCompleted(
+                    durationNs = System.nanoTime() - startedAtNs,
+                    succeeded = succeeded
+                )
+            }
+            true
+        } catch (_: RuntimeException) {
+            GhostIoTelemetry.recordWriteCompleted(durationNs = 0L, succeeded = false)
+            false
         }
-        return true
     }
 
     /** Returns the latest in-memory run, falling back to validated disk state. */
@@ -72,5 +88,6 @@ object GhostPersistenceManager {
             latestFrames = null
             pendingWrite = null
         }
+        GhostIoTelemetry.reset()
     }
 }
