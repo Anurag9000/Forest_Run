@@ -2,6 +2,7 @@ package com.anurag9000.forestrun.engine
 
 import android.content.Context
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /** Persisted comfort and feedback preferences, independent of game progression. */
 data class FeedbackPreferences(
@@ -104,7 +105,8 @@ object FeedbackSettings {
 internal fun adjustedParticleCount(baseCount: Int, reducedMotion: Boolean): Int {
     if (baseCount <= 0) return 0
     if (!reducedMotion) return baseCount
-    return (baseCount * 0.35f).roundToInt().coerceIn(1, baseCount)
+    val adjusted = (baseCount.toDouble() * 0.35).roundToInt()
+    return adjusted.coerceIn(1, baseCount)
 }
 
 internal fun cinematicShimmerPulse(
@@ -113,5 +115,13 @@ internal fun cinematicShimmerPulse(
     reducedMotion: Boolean
 ): Float {
     if (reducedMotion) return 0.55f
-    return 0.55f + 0.45f * kotlin.math.sin(elapsedSeconds * (1.2f + shimmerStrength))
+    val safeElapsed = elapsedSeconds.takeIf { it.isFinite() } ?: 0f
+    val safeStrength = shimmerStrength.takeIf { it.isFinite() }
+        ?.coerceIn(0f, 4f)
+        ?: 0f
+    val phase = (safeElapsed.toDouble() * (1.2 + safeStrength.toDouble())) %
+        (Math.PI * 2.0)
+    return (0.55 + 0.45 * sin(phase))
+        .coerceIn(0.0, 1.0)
+        .toFloat()
 }
