@@ -28,13 +28,7 @@ class TitGroupTest {
 
     @Test
     fun `tit group tracks the trough guide as a separate rhythm reward lane`() {
-        val titGroup = TitGroup(
-            context = context,
-            startX = 520f,
-            groundY = 885.6f,
-            sprite = spriteManager.titSprite.copy(),
-            count = 5
-        )
+        val titGroup = titGroup()
         val player = Player(1920, 1080, spriteManager)
         val gameState = GameStateManager(context)
 
@@ -60,6 +54,30 @@ class TitGroupTest {
             birdRects[2].bottom - 4f
         )
         assertEquals(CollisionResult.HIT, titGroup.onCollision(player, gameState))
+    }
+
+    @Test
+    fun `tit aggregate bounds equal the live flock after wave and scroll movement`() {
+        val titGroup = titGroup()
+
+        titGroup.update(deltaTime = 0.37f, scrollSpeed = 280f)
+
+        assertAggregateMatchesBirds(titGroup.hitbox, rectArrayField(titGroup, "birdRects"))
+    }
+
+    private fun titGroup() = TitGroup(
+        context = context,
+        startX = 520f,
+        groundY = 885.6f,
+        sprite = spriteManager.titSprite.copy(),
+        count = 5
+    )
+
+    private fun assertAggregateMatchesBirds(aggregate: RectF, birds: Array<RectF>) {
+        assertEquals(birds.minOf { it.left }, aggregate.left, 0.001f)
+        assertEquals(birds.minOf { it.top }, aggregate.top, 0.001f)
+        assertEquals(birds.maxOf { it.right }, aggregate.right, 0.001f)
+        assertEquals(birds.maxOf { it.bottom }, aggregate.bottom, 0.001f)
     }
 
     private fun rectField(titGroup: TitGroup, name: String): RectF {
