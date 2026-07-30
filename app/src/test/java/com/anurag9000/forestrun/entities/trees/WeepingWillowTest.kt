@@ -8,6 +8,7 @@ import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Player
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,13 +28,7 @@ class WeepingWillowTest {
 
     @Test
     fun `willow keeps an explicit duck lane below the curtain`() {
-        val willow = WeepingWillow(
-            context = context,
-            startX = 680f,
-            screenHeight = 1080f,
-            groundY = 885.6f,
-            sprite = spriteManager.willowSprite.copy()
-        )
+        val willow = willow()
         val player = Player(1920, 1080, spriteManager)
         val gameState = GameStateManager(context)
 
@@ -63,6 +58,44 @@ class WeepingWillowTest {
             duckLaneRect.top - 2f
         )
         assertEquals(CollisionResult.MERCY_MISS, willow.onCollision(player, gameState))
+    }
+
+    @Test
+    fun `willow encounter bounds enclose trunk and curtain without making duck lane solid`() {
+        val willow = willow()
+        val player = Player(1920, 1080, spriteManager)
+        val gameState = GameStateManager(context)
+        val trunk = rectField(willow, "trunkHitbox")
+        val curtain = rectField(willow, "curtainHitbox")
+        val lane = rectField(willow, "duckLaneRect")
+
+        assertEncloses(willow.hitbox, trunk)
+        assertEncloses(willow.hitbox, curtain)
+        assertTrue(willow.hitbox.right > trunk.right)
+
+        player.hitbox.set(
+            lane.left + 8f,
+            lane.top + 4f,
+            lane.right - 8f,
+            lane.bottom - 4f
+        )
+        assertTrue(RectF.intersects(player.hitbox, willow.hitbox))
+        assertEquals(CollisionResult.NONE, willow.onCollision(player, gameState))
+    }
+
+    private fun willow() = WeepingWillow(
+        context = context,
+        startX = 680f,
+        screenHeight = 1080f,
+        groundY = 885.6f,
+        sprite = spriteManager.willowSprite.copy()
+    )
+
+    private fun assertEncloses(outer: RectF, inner: RectF) {
+        assertTrue(outer.left <= inner.left)
+        assertTrue(outer.top <= inner.top)
+        assertTrue(outer.right >= inner.right)
+        assertTrue(outer.bottom >= inner.bottom)
     }
 
     private fun rectField(willow: WeepingWillow, name: String): RectF {
