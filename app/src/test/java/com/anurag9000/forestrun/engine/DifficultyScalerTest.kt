@@ -31,4 +31,32 @@ class DifficultyScalerTest {
         assertTrue(EntityType.WOLF in mid)
         assertEquals(EntityType.entries.toSet(), late.toSet())
     }
+
+    @Test
+    fun `invalid distance uses opening gap and encounter pool`() {
+        val openingPool = DifficultyScaler.getSpawnPool(0f, null)
+        listOf(
+            -1f,
+            Float.NaN,
+            Float.POSITIVE_INFINITY,
+            Float.NEGATIVE_INFINITY
+        ).forEach { invalid ->
+            assertEquals(openingPool, DifficultyScaler.getSpawnPool(invalid, null))
+            assertEquals(
+                GameConstants.SPAWN_GAP_MAX_PX,
+                DifficultyScaler.getSpawnGapPx(invalid),
+                0.0001f
+            )
+        }
+    }
+
+    @Test
+    fun `explicit biome manager remains authoritative`() {
+        val manager = BiomeManager().apply { forceDebugBiome(Biome.NIGHT_FOREST) }
+
+        assertEquals(
+            Biome.NIGHT_FOREST.preferredPool,
+            DifficultyScaler.getSpawnPool(Float.NaN, manager)
+        )
+    }
 }
