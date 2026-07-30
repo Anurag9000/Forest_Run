@@ -39,6 +39,10 @@ class ThresholdProfile:
     max_slow_frame_ratio: float
     max_used_heap_bytes: int
     max_maximum_processing_ns: int | None
+    min_ghost_writes_completed: int | None = None
+    max_ghost_write_failures: int | None = None
+    min_maximum_ghost_frame_count: int | None = None
+    max_ghost_write_duration_ns: int | None = None
 
     @property
     def specificity(self) -> int:
@@ -95,6 +99,16 @@ def _non_negative_int(source: dict[str, Any], key: str, label: str) -> int:
     return value
 
 
+def _optional_non_negative_int(
+    source: dict[str, Any],
+    key: str,
+    label: str,
+) -> int | None:
+    if key not in source or source[key] is None:
+        return None
+    return _non_negative_int(source, key, label)
+
+
 def _optional_non_negative_number(
     source: dict[str, Any],
     key: str,
@@ -125,10 +139,6 @@ def _parse_profile(raw: Any, index: int) -> ThresholdProfile:
     if min_refresh is not None and max_refresh is not None and min_refresh > max_refresh:
         raise ConfigurationError(f"{label} refresh-rate bounds are reversed")
 
-    maximum_limit = None
-    if "maxMaximumProcessingNs" in raw and raw["maxMaximumProcessingNs"] is not None:
-        maximum_limit = _non_negative_int(raw, "maxMaximumProcessingNs", label)
-
     profile = ThresholdProfile(
         name=_required_string(raw, "name", label),
         manufacturer=_required_string(raw, "manufacturer", label),
@@ -141,7 +151,21 @@ def _parse_profile(raw: Any, index: int) -> ThresholdProfile:
         max_p99_processing_ns=_non_negative_int(raw, "maxP99ProcessingNs", label),
         max_slow_frame_ratio=max_slow_frame_ratio,
         max_used_heap_bytes=_non_negative_int(raw, "maxUsedHeapBytes", label),
-        max_maximum_processing_ns=maximum_limit,
+        max_maximum_processing_ns=_optional_non_negative_int(
+            raw, "maxMaximumProcessingNs", label
+        ),
+        min_ghost_writes_completed=_optional_non_negative_int(
+            raw, "minGhostWritesCompleted", label
+        ),
+        max_ghost_write_failures=_optional_non_negative_int(
+            raw, "maxGhostWriteFailures", label
+        ),
+        min_maximum_ghost_frame_count=_optional_non_negative_int(
+            raw, "minMaximumGhostFrameCount", label
+        ),
+        max_ghost_write_duration_ns=_optional_non_negative_int(
+            raw, "maxGhostWriteDurationNs", label
+        ),
     )
     if profile.max_p95_processing_ns > profile.max_p99_processing_ns:
         raise ConfigurationError(f"{label} p95 limit cannot exceed p99 limit")
@@ -209,6 +233,20 @@ def select_profile(
     return best[0]
 
 
+def _read_optional_metric(
+    report: dict[str, Any],
+    key: str,
+    required_by_limit: int | None,
+) -> int | None:
+    if required_by_limit is None:
+        return None
+    if key not in report:
+        raise ConfigurationError(
+            f"report.{key} is required by the selected threshold profile"
+        )
+    return _non_negative_int(report, key, "report")
+
+
 def evaluate_report(
     report_path: Path,
     report: dict[str, Any],
@@ -225,6 +263,19 @@ def evaluate_report(
         raise ConfigurationError("report.slowFrameRatio must be between 0 and 1")
     if p95 > p99 or p99 > maximum:
         raise ConfigurationError("report processing percentiles are not ordered")
+
+    ghost_writes_completed = _read_optional_metric(
+        report, "ghostWritesCompleted", profile.min_ghost_writes_completed
+    )
+    ghost_write_failures = _read_optional_metric(
+        report, "ghostWritesFailed", profile.max_ghost_write_failures
+    )
+    maximum_ghost_frame_count = _read_optional_metric(
+        report, "maximumGhostFrameCount", profile.min_maximum_ghost_frame_count
+    )
+    maximum_ghost_write_duration_ns = _read_optional_metric(
+        report, "maximumGhostWriteDurationNs", profile.max_ghost_write_duration_ns
+    )
 
     violations: list[str] = []
     if sampled_frames < profile.min_sampled_frames:
@@ -254,6 +305,42 @@ def evaluate_report(
         violations.append(
             "maximumProcessingNs "
             f"{maximum} > limit {profile.max_maximum_processing_ns}"
+        )
+    if (
+        profile.min_ghost_writes_completed is not None
+        and ghost_writes_completed is not None
+        and ghost_writes_completed < profile.min_ghost_writes_completed
+    ):
+        violations.append(
+            "ghostWritesCompleted "
+            f"{ghost_writes_completed} < minimum {profile.min_ghost_writes_completed}"
+        )
+    if (
+        profile.max_ghost_write_failures is not None
+        and ghost_write_failures is not None
+        and ghost_write_failures > profile.max_ghost_write_failures
+    ):
+        violations.append(
+            "ghostWritesFailed "
+            f"{ghost_write_failures} > limit {profile.max_ghost_write_failures}"
+        )
+    if (
+        profile.min_maximum_ghost_frame_count is not None
+        and maximum_ghost_frame_count is not None
+        and maximum_ghost_frame_count < profile.min_maximum_ghost_frame_count
+    ):
+        violations.append(
+            "maximumGhostFrameCount "
+            f"{maximum_ghost_frame_count} < minimum {profile.min_maximum_ghost_frame_count}"
+        )
+    if (
+        profile.max_ghost_write_duration_ns is not None
+        and maximum_ghost_write_duration_ns is not None
+        and maximum_ghost_write_duration_ns > profile.max_ghost_write_duration_ns
+    ):
+        violations.append(
+            "maximumGhostWriteDurationNs "
+            f"{maximum_ghost_write_duration_ns} > limit {profile.max_ghost_write_duration_ns}"
         )
 
     return EvaluationResult(report_path, profile.name, tuple(violations))
