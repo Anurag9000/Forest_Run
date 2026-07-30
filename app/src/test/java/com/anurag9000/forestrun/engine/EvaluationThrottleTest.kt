@@ -17,6 +17,16 @@ class EvaluationThrottleTest {
     }
 
     @Test
+    fun `actual minimum timestamp is not confused with uninitialized state`() {
+        val throttle = EvaluationThrottle(intervalNs = 100L)
+
+        assertTrue(throttle.tryAcquire(Long.MIN_VALUE))
+        assertFalse(throttle.tryAcquire(Long.MIN_VALUE))
+        assertFalse(throttle.tryAcquire(Long.MIN_VALUE + 99L))
+        assertTrue(throttle.tryAcquire(Long.MIN_VALUE + 100L))
+    }
+
+    @Test
     fun `forced evaluation advances the gate`() {
         val throttle = EvaluationThrottle(intervalNs = 100L)
 
@@ -36,6 +46,15 @@ class EvaluationThrottleTest {
 
         throttle.reset()
         assertTrue(throttle.tryAcquire(950L))
+    }
+
+    @Test
+    fun `zero interval permits every call including identical timestamps`() {
+        val throttle = EvaluationThrottle(intervalNs = 0L)
+
+        assertTrue(throttle.tryAcquire(42L))
+        assertTrue(throttle.tryAcquire(42L))
+        assertTrue(throttle.tryAcquire(42L))
     }
 
     @Test(expected = IllegalArgumentException::class)
