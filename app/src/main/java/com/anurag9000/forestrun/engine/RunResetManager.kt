@@ -8,7 +8,7 @@ import com.anurag9000.forestrun.ui.FlavorTextManager
  * Orchestrates the DYING → GAME_OVER → RESTARTING transition.
  *
  * GameView owns one instance. On HIT:
- *   runResetManager.triggerDeath(gameState, player, entityManager)
+ *   runResetManager.triggerDeath(gameState)
  *
  * Each frame in GameView.update():
  *   val newState = runResetManager.update(deltaTime, currentState)
@@ -18,9 +18,9 @@ class RunResetManager {
 
     companion object {
         /** Seconds the player sits in REST state before GameOverScreen appears. */
-        const val DYING_DURATION_S  = 1.2f
+        const val DYING_DURATION_S = 1.2f
         /** Seconds of fade-out before handing control back to the Garden. */
-        const val RESTART_FADE_S    = 0.5f
+        const val RESTART_FADE_S = 0.5f
     }
 
     private var timer = 0f
@@ -28,31 +28,27 @@ class RunResetManager {
     // Fade alpha for the restart fade-out (0 = transparent, 255 = black)
     var restartFadeAlpha: Int = 0
         private set
+
     val dyingFraction: Float
-        get() = (timer / DYING_DURATION_S).coerceIn(0f, 1f)
+        get() = (timer / DYING_DURATION_S).takeIf { it.isFinite() }
+            ?.coerceIn(0f, 1f)
+            ?: 0f
 
-    // ── Death trigger ─────────────────────────────────────────────────────
-
-    /**
-     * Call this the moment a HIT collision is detected.
-     * Saves high-score immediately to survive process kill.
-     */
+    /** Call this the moment a HIT collision is detected. */
     fun triggerDeath(gameState: GameStateManager) {
         timer = 0f
         restartFadeAlpha = 0
-        gameState.save()    // Persist high score immediately
+        gameState.save()
     }
 
-    // ── Frame update ─────────────────────────────────────────────────────
-
-    /**
-     * Advance the state machine. Returns the new [RunState].
-     *
-     * Call from GameView.update() only when [currentState] is DYING, GAME_OVER, or RESTARTING.
-     */
+    /** Advance only the timed DYING and RESTARTING states. */
     fun update(deltaTime: Float, currentState: RunState): RunState {
-        timer += deltaTime
+        if (currentState != RunState.DYING && currentState != RunState.RESTARTING) {
+            return currentState
+        }
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return currentState
 
+        timer = finiteSaturatingAdd(timer, deltaTime)
         return when (currentState) {
             RunState.DYING -> {
                 if (timer >= DYING_DURATION_S) {
@@ -64,45 +60,29 @@ class RunResetManager {
             }
 
             RunState.RESTARTING -> {
-                // Drive the fade-to-black alpha
                 val t = (timer / RESTART_FADE_S).coerceIn(0f, 1f)
-                restartFadeAlpha = (t * 255f).toInt()
-
-                if (timer >= RESTART_FADE_S) {
-                    // Full fade reached — reset happens in GameView after this returns
-                    RunState.PLAYING  // GameView checks alpha==255 to actually execute reset
-                } else {
-                    RunState.RESTARTING
-                }
+                restartFadeAlpha = (t * 255f).toInt().coerceIn(0, 255)
+                if (timer >= RESTART_FADE_S) RunState.PLAYING else RunState.RESTARTING
             }
 
-            // PLAYING and GAME_OVER are handled entirely by GameView
             else -> currentState
         }
     }
 
-    /**
-     * Signal that a tap was registered on the rest screen.
-     * Begins the fade back to the Garden.
-     */
+    /** Begin the fade back to the Garden. */
     fun beginRestart(): RunState {
         timer = 0f
         restartFadeAlpha = 0
         return RunState.RESTARTING
     }
 
-    /**
-     * Full reset of all live systems. Call once fade completes (restartFadeAlpha >= 255).
-     *
-     * GameView must also:
-     * GameView decides where to route next (Garden in the canonical flow).
-     */
+    /** Full reset of all live systems after the fade completes. */
     fun executeReset(
-        gameState:     GameStateManager,
+        gameState: GameStateManager,
         entityManager: EntityManager,
-        player:        com.anurag9000.forestrun.entities.Player
+        player: com.anurag9000.forestrun.entities.Player
     ) {
-        timer            = 0f
+        timer = 0f
         restartFadeAlpha = 0
 
         gameState.resetRun()
@@ -113,5 +93,11 @@ class RunResetManager {
         DialogueBubbleManager.clear()
         ParticleManager.clear()
         CameraSystem.reset()
+    }
+
+    private fun finiteSaturatingAdd(value: Float, delta: Float): Float {
+        if (!value.isFinite() || value < 0f) return 0f
+        val sum = value.toDouble() + delta.toDouble()
+        return sum.coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
     }
 }
