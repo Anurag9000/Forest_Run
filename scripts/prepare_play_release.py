@@ -9,7 +9,16 @@ import re
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import NoReturn
+
+from release_artifact_verifier import (
+    ArtifactVerificationError,
+    inspect_bundle_identity,
+    verify_bundle_signature,
+    verify_bundle_structure,
+)
 
 try:
     from PIL import Image, UnidentifiedImageError
@@ -27,6 +36,8 @@ SUMMARY_PATH = RELEASE_ROOT / "BUILD_SUMMARY.md"
 MACHINE_SUMMARY_PATH = RELEASE_ROOT / "build_summary.json"
 BUILD_FILE = ROOT / "app" / "build.gradle.kts"
 MANIFEST_FILE = ROOT / "app" / "src" / "main" / "AndroidManifest.xml"
+BUNDLE_PATH = ROOT / "app" / "build" / "outputs" / "bundle" / "release" / "app-release.aab"
+MAPPING_PATH = ROOT / "app" / "build" / "outputs" / "mapping" / "release" / "mapping.txt"
 
 PLACEHOLDER_APPLICATION_IDS = {
     "com.yourname.forest_run",
@@ -53,15 +64,30 @@ REQUIRED_AUDIO = (
 )
 
 
-def fail(message: str) -> "NoReturn":
+@dataclass(frozen=True)
+class SigningMaterial:
+    keystore: Path
+    alias: str
+    store_password: str
+
+
+def fail(message: str) -> NoReturn:
     raise SystemExit(message)
 
 
 def require_file(path: Path, label: str = "required file") -> Path:
     if not path.is_file():
-        fail(f"Missing {label}: {path.relative_to(ROOT)}")
+        try:
+            display_path = path.relative_to(ROOT)
+        except ValueError:
+            display_path = path
+        fail(f"Missing {label}: {display_path}")
     if path.stat().st_size == 0:
-        fail(f"Empty {label}: {path.relative_to(ROOT)}")
+        try:
+            display_path = path.relative_to(ROOT)
+        except ValueError:
+            display_path = path
+        fail(f"Empty {label}: {display_path}")
     return path
 
 
@@ -71,6 +97,57 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def run_text(command: list[str], label: str) -> str:
+    result = subprocess.run(
+        command,
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=os.environ.copy(),
+    )
+    if result.returncode != 0:
+        details = (result.stderr or result.stdout).strip()
+        fail(f"{label} failed with exit code {result.returncode}: {details or '(no output)'}")
+    return (result.stdout or result.stderr).strip()
+
+
+def verify_candidate_tree(expected_sha: str | None = None) -> dict[str, str]:
+    git = shutil.which("git")
+    if git is None:
+        fail("git is required to bind release evidence to an immutable candidate commit")
+
+    status = run_text(
+        [git, "status", "--porcelain", "--untracked-files=all"],
+        "git status",
+    )
+    if status:
+        fail(
+            "Release preparation requires a clean candidate tree. Commit, remove, or ignore:\n"
+            + status
+        )
+
+    candidate_sha = run_text([git, "rev-parse", "HEAD"], "candidate SHA lookup")
+    if not re.fullmatch(r"[0-9a-fA-F]{40}", candidate_sha):
+        fail(f"git returned an invalid candidate SHA: {candidate_sha!r}")
+    candidate_sha = candidate_sha.lower()
+    if expected_sha is not None and candidate_sha != expected_sha:
+        fail(
+            "Candidate commit changed during release preparation: "
+            f"started at {expected_sha}, now at {candidate_sha}"
+        )
+
+    branch_result = subprocess.run(
+        [git, "symbolic-ref", "--quiet", "--short", "HEAD"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    branch = branch_result.stdout.strip() if branch_result.returncode == 0 else "(detached HEAD)"
+    return {"sha": candidate_sha, "branch": branch}
 
 
 def parse_assignment(build_text: str, key: str) -> str:
@@ -158,16 +235,28 @@ def read_external_gradle_properties() -> dict[str, str]:
     return values
 
 
-def verify_release_signing(build_text: str, allow_unsigned: bool) -> None:
+def resolve_external_value(name: str, properties: dict[str, str]) -> str | None:
+    value = os.environ.get(name) or properties.get(name)
+    return value if value and value.strip() else None
+
+
+def resolve_keystore_path(raw_path: str) -> Path:
+    path = Path(raw_path).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    # Gradle's file(...) is evaluated in the app module project directory.
+    return (ROOT / "app" / path).resolve()
+
+
+def verify_release_signing(build_text: str, allow_unsigned: bool) -> SigningMaterial | None:
     release_block = re.search(r"release\s*\{(?P<body>.*?)\n\s*\}", build_text, re.DOTALL)
     has_signing_reference = bool(
-        release_block
-        and re.search(r"\bsigningConfig\b", release_block.group("body"))
+        release_block and re.search(r"\bsigningConfig\b", release_block.group("body"))
     )
     has_signing_declaration = "signingConfigs" in build_text
     if not (has_signing_reference and has_signing_declaration):
         if allow_unsigned:
-            return
+            return None
         fail(
             "No explicit release signing configuration was found. Configure an upload/release key "
             "outside source control, or pass --allow-unsigned for a non-upload dry run."
@@ -180,14 +269,25 @@ def verify_release_signing(build_text: str, allow_unsigned: bool) -> None:
         "FOREST_RUN_KEY_ALIAS",
         "FOREST_RUN_KEY_PASSWORD",
     )
-    missing = [name for name in required if not (os.environ.get(name) or properties.get(name))]
-    if missing and not allow_unsigned:
+    values = {name: resolve_external_value(name, properties) for name in required}
+    missing = [name for name, value in values.items() if value is None]
+    if missing:
+        if allow_unsigned:
+            return None
         fail(
             "Release signing is configured, but credentials are missing:\n- "
             + "\n- ".join(missing)
             + "\nProvide them as environment variables or external Gradle properties, "
             "or pass --allow-unsigned for a non-upload dry run."
         )
+
+    keystore = resolve_keystore_path(str(values["FOREST_RUN_KEYSTORE"]))
+    require_file(keystore, "release keystore")
+    return SigningMaterial(
+        keystore=keystore,
+        alias=str(values["FOREST_RUN_KEY_ALIAS"]),
+        store_password=str(values["FOREST_RUN_STORE_PASSWORD"]),
+    )
 
 
 def verify_graphics() -> list[dict]:
@@ -305,22 +405,76 @@ def run_gradle(tasks: list[str]) -> None:
     version_text = version_result.stderr or version_result.stdout
     version_match = re.search(r'version "(?:1\.)?(\d+)', version_text)
     if not version_match or int(version_match.group(1)) < 21:
-        fail(f"Java 21 or newer is required for the API 36 test gate; found: {version_text.splitlines()[0] if version_text else 'unknown'}")
+        first_line = version_text.splitlines()[0] if version_text else "unknown"
+        fail(f"Java 21 or newer is required for the API 36 release gate; found: {first_line}")
 
-    command = ["bash", str(wrapper), *tasks, "--no-daemon", "--stacktrace"]
+    command = ["bash", str(wrapper), *tasks, "--no-daemon", "--stacktrace", "--console=plain"]
     print("Running:", " ".join(command))
-    subprocess.run(command, cwd=ROOT, env=os.environ.copy(), check=True)
+    result = subprocess.run(command, cwd=ROOT, env=os.environ.copy(), check=False)
+    if result.returncode != 0:
+        fail(f"Gradle release gate failed with exit code {result.returncode}")
 
 
-def verify_bundle() -> dict:
-    bundle = require_file(
-        ROOT / "app" / "build" / "outputs" / "bundle" / "release" / "app-release.aab",
-        "release bundle",
-    )
+def verify_r8_mapping() -> dict:
+    mapping = require_file(MAPPING_PATH, "R8 mapping")
+    renamed_classes = 0
+    application_classes = 0
+    class_pattern = re.compile(r"^(com\.anurag9000\.forestrun\.[^ ]+) -> ([^:]+):$")
+    for line in mapping.read_text(encoding="utf-8", errors="replace").splitlines():
+        match = class_pattern.match(line)
+        if not match:
+            continue
+        application_classes += 1
+        if not match.group(2).startswith("com.anurag9000.forestrun."):
+            renamed_classes += 1
+    if application_classes == 0:
+        fail("R8 mapping contains no Forest Run application classes")
+    if renamed_classes == 0:
+        fail("R8 mapping does not show any renamed Forest Run application classes")
+    return {
+        "path": str(mapping.relative_to(ROOT)),
+        "bytes": mapping.stat().st_size,
+        "sha256": sha256(mapping),
+        "application_classes": application_classes,
+        "renamed_classes": renamed_classes,
+    }
+
+
+def verify_bundle(
+    identity: dict,
+    signing_material: SigningMaterial | None,
+    allow_unsigned: bool,
+) -> dict:
+    bundle = require_file(BUNDLE_PATH, "release bundle")
+    try:
+        structure = verify_bundle_structure(bundle)
+        actual_identity = inspect_bundle_identity(
+            bundle,
+            expected_application_id=identity["application_id"],
+            expected_version_code=identity["version_code"],
+            expected_version_name=identity["version_name"],
+        )
+        signature = verify_bundle_signature(
+            bundle,
+            keystore=signing_material.keystore if signing_material else None,
+            alias=signing_material.alias if signing_material else None,
+            store_password=signing_material.store_password if signing_material else None,
+            allow_unsigned=allow_unsigned,
+        )
+    except ArtifactVerificationError as exc:
+        fail(str(exc))
+
     return {
         "path": str(bundle.relative_to(ROOT)),
         "bytes": bundle.stat().st_size,
         "sha256": sha256(bundle),
+        "entries": structure["entries"],
+        "dex_files": structure["dex_files"],
+        "application_id": actual_identity.application_id,
+        "version_code": actual_identity.version_code,
+        "version_name": actual_identity.version_name,
+        "signature_verified": signature.verified,
+        "signer_sha256": signature.signer_sha256,
     }
 
 
@@ -328,11 +482,15 @@ def write_summaries(payload: dict) -> None:
     MACHINE_SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     MACHINE_SUMMARY_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
+    candidate = payload["candidate"]
     identity = payload["identity"]
     bundle = payload.get("bundle")
+    mapping = payload.get("r8_mapping")
     lines = [
         "# Play Release Build Summary",
         "",
+        f"- Candidate SHA: `{candidate['sha']}`",
+        f"- Candidate branch: `{candidate['branch']}`",
         f"- Application ID: `{identity['application_id']}`",
         f"- Version: `{identity['version_name']}` (`{identity['version_code']}`)",
         f"- SDKs: min `{identity['min_sdk']}`, target `{identity['target_sdk']}`, compile `{identity['compile_sdk']}`",
@@ -346,8 +504,19 @@ def write_summaries(payload: dict) -> None:
                 f"- Release bundle: `{bundle['path']}`",
                 f"- Bundle size: `{bundle['bytes']}` bytes",
                 f"- Bundle SHA-256: `{bundle['sha256']}`",
+                f"- Artifact identity: `{bundle['application_id']}` `{bundle['version_name']}` (`{bundle['version_code']}`)",
+                f"- Bundle signature verified: `{bundle['signature_verified']}`",
+                f"- Bundle signer SHA-256: `{bundle['signer_sha256'] or '(unsigned dry run)'}`",
+                f"- Bundle DEX files: `{len(bundle['dex_files'])}`",
             ]
         )
+        if mapping:
+            lines.extend(
+                [
+                    f"- R8 mapping SHA-256: `{mapping['sha256']}`",
+                    f"- Renamed application classes: `{mapping['renamed_classes']}` / `{mapping['application_classes']}`",
+                ]
+            )
     else:
         lines.append("- Release bundle: build skipped (asset-validation dry run)")
 
@@ -356,17 +525,24 @@ def write_summaries(payload: dict) -> None:
             "",
             "## Automated Checks Passed",
             "",
-            "- project identity and version structure",
-            "- explicit release-signing configuration (unless dry-run override used)",
+            "- clean Git tree and immutable candidate SHA",
+            "- source identity, version structure, and SDK ordering",
+            "- explicit external release-signing configuration unless dry-run override used",
             "- generated graphic dimensions and manifest hashes",
             "- non-empty metadata without obvious placeholders",
             "- non-empty, uniform, unique curated screenshot set",
             "- required runtime audio resources",
-            "- unit tests, release lint, and release bundle build (unless --skip-build)",
+            "- clean unit tests, release lint, and release bundle build unless --skip-build",
+            "- AAB ZIP integrity, module manifest, BundleConfig, and DEX presence",
+            "- built AAB application ID, version code, and version name",
+            "- JAR signature integrity and configured upload-certificate match unless unsigned dry run",
+            "- R8 mapping existence and actual application-class renaming",
+            "- tracked tree unchanged after release build",
             "",
             "## Manual Checks Still Required",
             "",
             "- gameplay correctness and long-run performance on representative devices",
+            "- install and smoke-test APKs generated from this exact AAB through bundletool or Play internal testing",
             "- visual review that each screenshot shows the intended scenario",
             "- accessibility, audio, haptic, privacy, policy, data-safety, and store-listing review",
             "- verification of current Android and Play requirements immediately before upload",
@@ -394,17 +570,20 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    candidate = verify_candidate_tree()
     build_text = require_file(BUILD_FILE, "Android build file").read_text(encoding="utf-8")
     identity = verify_project_identity(build_text, args.allow_placeholder_id)
-    verify_release_signing(build_text, args.allow_unsigned)
+    signing_material = verify_release_signing(build_text, args.allow_unsigned)
 
     payload = {
+        "candidate": candidate,
         "identity": identity,
         "graphics": verify_graphics(),
         "metadata": verify_metadata(),
         "screenshots": verify_screenshots(),
         "audio": verify_audio_assets(),
         "bundle": None,
+        "r8_mapping": None,
         "dry_run_overrides": {
             "allow_placeholder_id": args.allow_placeholder_id,
             "allow_unsigned": args.allow_unsigned,
@@ -413,11 +592,14 @@ def main() -> int:
     }
 
     if not args.skip_build:
-        run_gradle(["testDebugUnitTest", "lintRelease", "bundleRelease"])
-        payload["bundle"] = verify_bundle()
+        run_gradle(["clean", "testDebugUnitTest", "lintRelease", "bundleRelease"])
+        verify_candidate_tree(expected_sha=candidate["sha"])
+        payload["bundle"] = verify_bundle(identity, signing_material, args.allow_unsigned)
+        payload["r8_mapping"] = verify_r8_mapping()
+        verify_candidate_tree(expected_sha=candidate["sha"])
 
     write_summaries(payload)
-    print(f"Release validation passed. Summary: {SUMMARY_PATH}")
+    print(f"Release validation passed for {candidate['sha']}. Summary: {SUMMARY_PATH}")
     return 0
 
 
