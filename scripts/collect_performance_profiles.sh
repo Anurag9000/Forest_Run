@@ -59,6 +59,14 @@ OUTPUT_DIR="${1:-performance-profiles/${SERIAL}/${TIMESTAMP}}"
 TEST_SELECTOR="${FOREST_RUN_PROFILE_TEST:-com.anurag9000.forestrun.HardwarePerformanceProfileTest}"
 CANDIDATE_SHA="$(git rev-parse HEAD)"
 THRESHOLDS="${FOREST_RUN_PERFORMANCE_THRESHOLDS:-}"
+THRESHOLDS_ABS=""
+if [[ -n "$THRESHOLDS" ]]; then
+  if [[ ! -f "$THRESHOLDS" ]]; then
+    echo "Threshold manifest does not exist: $THRESHOLDS" >&2
+    exit 1
+  fi
+  THRESHOLDS_ABS="$(cd "$(dirname "$THRESHOLDS")" && pwd)/$(basename "$THRESHOLDS")"
+fi
 
 mkdir -p "$OUTPUT_DIR"
 "${ADB_DEVICE[@]}" shell rm -rf "$REMOTE_DIR"
@@ -74,9 +82,9 @@ mkdir -p "$OUTPUT_DIR"
   echo "device=$("${ADB_DEVICE[@]}" shell getprop ro.product.device | tr -d '\r')"
   echo "sdk=$("${ADB_DEVICE[@]}" shell getprop ro.build.version.sdk | tr -d '\r')"
   echo "build_fingerprint=$("${ADB_DEVICE[@]}" shell getprop ro.build.fingerprint | tr -d '\r')"
-  if [[ -n "$THRESHOLDS" ]]; then
-    echo "threshold_manifest=$(cd "$(dirname "$THRESHOLDS")" && pwd)/$(basename "$THRESHOLDS")"
-    echo "threshold_manifest_sha256=$(sha256sum "$THRESHOLDS" | awk '{print $1}')"
+  if [[ -n "$THRESHOLDS_ABS" ]]; then
+    echo "threshold_manifest=$THRESHOLDS_ABS"
+    echo "threshold_manifest_sha256=$(sha256sum "$THRESHOLDS_ABS" | awk '{print $1}')"
   else
     echo "threshold_manifest=(not supplied)"
   fi
@@ -104,13 +112,9 @@ fi
 "${ADB_DEVICE[@]}" shell dumpsys meminfo "$APP_ID" > "${OUTPUT_DIR}/meminfo.txt" || true
 "${ADB_DEVICE[@]}" shell dumpsys display > "${OUTPUT_DIR}/display.txt" || true
 
-if [[ -n "$THRESHOLDS" ]]; then
-  if [[ ! -f "$THRESHOLDS" ]]; then
-    echo "Threshold manifest does not exist: $THRESHOLDS" >&2
-    exit 1
-  fi
+if [[ -n "$THRESHOLDS_ABS" ]]; then
   "$PYTHON" scripts/evaluate_performance_profiles.py \
-    --thresholds "$THRESHOLDS" \
+    --thresholds "$THRESHOLDS_ABS" \
     "${REPORT_PATHS[@]}" \
     | tee "${OUTPUT_DIR}/acceptance.txt"
 else
