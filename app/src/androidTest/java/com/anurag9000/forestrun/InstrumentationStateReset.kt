@@ -1,6 +1,7 @@
 package com.anurag9000.forestrun
 
 import android.content.Context
+import com.anurag9000.forestrun.systems.GhostPersistenceManager
 
 /** Clears every persistent namespace that can influence connected-test ordering. */
 object InstrumentationStateReset {
@@ -12,6 +13,7 @@ object InstrumentationStateReset {
 
     fun clear(context: Context) {
         val appContext = context.applicationContext
+        GhostPersistenceManager.clearMemoryForTests()
         preferenceFiles.forEach { name ->
             check(
                 appContext.getSharedPreferences(name, Context.MODE_PRIVATE)
