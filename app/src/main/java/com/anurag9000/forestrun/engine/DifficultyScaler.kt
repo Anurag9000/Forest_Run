@@ -42,9 +42,10 @@ object DifficultyScaler {
         biomeManager: BiomeManager? = null
     ): List<EntityType> {
         if (biomeManager != null) return biomeManager.entityPool
-        return when (safeDistance(distanceMetres)) {
-            in 0f..<500f -> POOL_EARLY
-            in 500f..<1_500f -> POOL_MID
+        val distance = safeDistance(distanceMetres)
+        return when {
+            distance < 500f -> POOL_EARLY
+            distance < 1_500f -> POOL_MID
             else -> POOL_LATE
         }
     }
