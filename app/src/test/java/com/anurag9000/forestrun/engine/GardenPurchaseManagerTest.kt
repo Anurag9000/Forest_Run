@@ -34,12 +34,7 @@ class GardenPurchaseManagerTest {
         SaveManager.saveGardenProgress(context, 1)
         SaveManager.saveLifetimeSeeds(context, 50)
 
-        val result = GardenPurchaseManager.purchaseNext(
-            context = context,
-            requestedIndex = 1,
-            seedCost = 20,
-            catalogueSize = 9
-        )
+        val result = GardenPurchaseManager.purchaseNext(context, requestedIndex = 1)
 
         assertTrue(result.purchased)
         assertEquals(2, result.unlockedCount)
@@ -53,8 +48,8 @@ class GardenPurchaseManagerTest {
         SaveManager.saveGardenProgress(context, 1)
         SaveManager.saveLifetimeSeeds(context, 50)
 
-        val first = GardenPurchaseManager.purchaseNext(context, 1, 20, 9)
-        val second = GardenPurchaseManager.purchaseNext(context, 1, 20, 9)
+        val first = GardenPurchaseManager.purchaseNext(context, 1)
+        val second = GardenPurchaseManager.purchaseNext(context, 1)
 
         assertTrue(first.purchased)
         assertFalse(second.purchased)
@@ -68,7 +63,7 @@ class GardenPurchaseManagerTest {
         SaveManager.saveGardenProgress(context, 3)
         SaveManager.saveLifetimeSeeds(context, 7)
 
-        val result = GardenPurchaseManager.purchaseNext(context, 3, 25, 9)
+        val result = GardenPurchaseManager.purchaseNext(context, 3)
 
         assertEquals(GardenPurchaseStatus.INSUFFICIENT_SEEDS, result.status)
         assertEquals(3, result.unlockedCount)
@@ -82,8 +77,8 @@ class GardenPurchaseManagerTest {
         SaveManager.saveGardenProgress(context, 4)
         SaveManager.saveLifetimeSeeds(context, 100)
 
-        val staleIndexResult = GardenPurchaseManager.purchaseNext(context, 2, 10, 9)
-        val canonicalResult = GardenPurchaseManager.purchaseNext(context, 4, 40, 9)
+        val staleIndexResult = GardenPurchaseManager.purchaseNext(context, 2)
+        val canonicalResult = GardenPurchaseManager.purchaseNext(context, 4)
 
         assertEquals(GardenPurchaseStatus.NOT_NEXT_UNLOCK, staleIndexResult.status)
         assertTrue(canonicalResult.purchased)
@@ -98,14 +93,28 @@ class GardenPurchaseManagerTest {
         SaveManager.saveGardenProgress(context, 1)
         SaveManager.saveLifetimeSeeds(context, 35)
 
-        val result = GardenPurchaseManager.purchaseNext(context, 1, 15, 9)
+        val result = GardenPurchaseManager.purchaseNext(context, 1)
 
         assertTrue(result.purchased)
         assertEquals(2, SaveManager.loadGardenProgress(context))
-        assertEquals(20, SaveManager.loadLifetimeSeeds(context))
+        assertEquals(15, SaveManager.loadLifetimeSeeds(context))
         val primary = context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
         assertEquals(1, primary.getInt("garden_unlocked", 1))
         assertEquals(0, primary.getInt("lifetime_seeds", 0))
+    }
+
+    @Test
+    fun `compatibility overload rejects undercharge and oversized catalogue`() {
+        SaveManager.saveGardenProgress(context, 1)
+        SaveManager.saveLifetimeSeeds(context, 100)
+
+        val undercharged = GardenPurchaseManager.purchaseNext(context, 1, 0, 9)
+        val oversized = GardenPurchaseManager.purchaseNext(context, 1, 20, 99)
+
+        assertEquals(GardenPurchaseStatus.INVALID_REQUEST, undercharged.status)
+        assertEquals(GardenPurchaseStatus.INVALID_REQUEST, oversized.status)
+        assertEquals(1, SaveManager.loadGardenProgress(context))
+        assertEquals(100, SaveManager.loadLifetimeSeeds(context))
     }
 
     @Test
@@ -115,15 +124,15 @@ class GardenPurchaseManagerTest {
 
         assertEquals(
             GardenPurchaseStatus.CATALOGUE_COMPLETE,
-            GardenPurchaseManager.purchaseNext(context, 9, 100, 9).status
+            GardenPurchaseManager.purchaseNext(context, 8).status
         )
         assertEquals(
             GardenPurchaseStatus.INVALID_REQUEST,
-            GardenPurchaseManager.purchaseNext(context, -1, 10, 9).status
+            GardenPurchaseManager.purchaseNext(context, -1).status
         )
         assertEquals(
             GardenPurchaseStatus.INVALID_REQUEST,
-            GardenPurchaseManager.purchaseNext(context, 0, -1, 9).status
+            GardenPurchaseManager.purchaseNext(context, 0).status
         )
     }
 
