@@ -16,6 +16,7 @@ import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.RuntimeWorkloadTelemetry
 import java.io.File
+import kotlin.math.min
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -48,7 +49,25 @@ class HardwarePerformanceProfileTest {
         profileScenario(EncounterScenario.BLOOM_SHOWCASE, measurementMs = 20_000L)
     }
 
+    @Test
+    fun profileAllEntityFamiliesOnHardware() {
+        listOf(
+            EncounterScenario.FLORA_SHOWCASE,
+            EncounterScenario.TREE_SHOWCASE,
+            EncounterScenario.BIRD_SHOWCASE,
+            EncounterScenario.ANIMAL_SHOWCASE
+        ).forEach { scenario ->
+            profileScenario(scenario, measurementMs = 15_000L)
+        }
+    }
+
+    @Test
+    fun profileGhostReadabilityOnHardware() {
+        profileScenario(EncounterScenario.GHOST_READABILITY, measurementMs = 20_000L)
+    }
+
     private fun profileScenario(scenario: EncounterScenario, measurementMs: Long) {
+        InstrumentationStateReset.clear(targetContext)
         FramePerformanceTelemetry.beginSession(windowSize = 1_800)
         val launchIntent = Intent(targetContext, MainActivity::class.java).apply {
             putExtra(MainActivity.EXTRA_DEBUG_SCENARIO, scenario.name)
@@ -69,13 +88,40 @@ class HardwarePerformanceProfileTest {
             waitForCondition("render thread enters deterministic ${scenario.name}") {
                 gameView.debugFrameCounter >= MIN_WARMUP_FRAMES
             }
-
-            // Startup, shader/cache warmup, and scenario initialization happen
-            // before the measured sleep. The 1,800-frame ring retains the latest
-            // sustained-play window rather than only launch frames.
             SystemClock.sleep(WARMUP_MS)
+
+            // The GameThread retains the monitor object captured at construction.
+            // Stop its producer, clear startup/cache samples in place, restart the
+            // requested scenario, and resume with the same monitor reference.
+            activityScenario.onActivity {
+                gameView.pause()
+                FramePerformanceTelemetry.resetStoppedSession()
+                gameView.applyDebugLaunchIntent(launchIntent)
+                gameView.resume()
+            }
+
+            val cycleMs = scenarioReplayIntervalMs(scenario)
             val measurementStartedAtMs = SystemClock.elapsedRealtime()
-            SystemClock.sleep(measurementMs)
+            val measurementEndsAtMs = measurementStartedAtMs + measurementMs
+            var nextReplayAtMs = measurementStartedAtMs + cycleMs
+            var replayCount = 1
+            while (SystemClock.elapsedRealtime() < measurementEndsAtMs) {
+                val now = SystemClock.elapsedRealtime()
+                if (now >= nextReplayAtMs) {
+                    activityScenario.onActivity {
+                        gameView.applyDebugLaunchIntent(launchIntent)
+                    }
+                    replayCount++
+                    nextReplayAtMs += cycleMs
+                }
+                val remainingToEnd = measurementEndsAtMs - SystemClock.elapsedRealtime()
+                val remainingToReplay = nextReplayAtMs - SystemClock.elapsedRealtime()
+                val sleepMs = min(
+                    PROFILE_POLL_MS,
+                    min(remainingToEnd, remainingToReplay).coerceAtLeast(1L)
+                )
+                SystemClock.sleep(sleepMs)
+            }
             val measuredDurationMs = SystemClock.elapsedRealtime() - measurementStartedAtMs
 
             val snapshot = FramePerformanceTelemetry.snapshot()
@@ -84,6 +130,7 @@ class HardwarePerformanceProfileTest {
             assertTrue("processing percentiles are ordered", snapshot.p99ProcessingNs >= snapshot.p50ProcessingNs)
             assertTrue("maximum processing time covers p99", snapshot.maximumProcessingNs >= snapshot.p99ProcessingNs)
             assertTrue("heap values are coherent", snapshot.maxHeapBytes >= snapshot.usedHeapBytes)
+            assertTrue("scenario was replayed during measurement", replayCount >= 2)
 
             val report = FramePerformanceReport(
                 scenario = scenario.name,
@@ -98,10 +145,16 @@ class HardwarePerformanceProfileTest {
             val output = writeReport(report)
             val status = Bundle().apply {
                 putString("forest_run_profile", output.absolutePath)
+                putInt("forest_run_profile_replays", replayCount)
                 putLong("forest_run_profile_total_elapsed_ms", SystemClock.elapsedRealtime() - startedAtMs)
             }
             instrumentation.sendStatus(0, status)
         }
+    }
+
+    private fun scenarioReplayIntervalMs(scenario: EncounterScenario): Long {
+        val finalSpawnMs = ((scenario.steps.maxOfOrNull { it.atSeconds } ?: 0f) * 1_000f).toLong()
+        return (finalSpawnMs + SCENARIO_TAIL_MS).coerceIn(MIN_REPLAY_INTERVAL_MS, MAX_REPLAY_INTERVAL_MS)
     }
 
     private fun writeReport(report: FramePerformanceReport): File {
@@ -143,5 +196,9 @@ class HardwarePerformanceProfileTest {
     companion object {
         private const val MIN_WARMUP_FRAMES = 60L
         private const val WARMUP_MS = 5_000L
+        private const val SCENARIO_TAIL_MS = 2_500L
+        private const val MIN_REPLAY_INTERVAL_MS = 4_000L
+        private const val MAX_REPLAY_INTERVAL_MS = 8_000L
+        private const val PROFILE_POLL_MS = 100L
     }
 }
