@@ -7,7 +7,14 @@ data class EncounterStep(
     val type: EntityType,
     val xOffset: Float,
     val variant: EncounterVariant = EncounterVariant.DEFAULT
-)
+) {
+    init {
+        require(atSeconds.isFinite() && atSeconds >= 0f) {
+            "Encounter step time must be finite and non-negative."
+        }
+        require(xOffset.isFinite()) { "Encounter step offset must be finite." }
+    }
+}
 
 enum class EncounterScenario(
     val title: String,
@@ -286,6 +293,15 @@ enum class EncounterScenario(
             EncounterStep(1.90f, EntityType.WOLF, 900f)
         )
     );
+
+    init {
+        require(title.isNotBlank()) { "Encounter scenario title cannot be blank." }
+        require(summary.isNotBlank()) { "Encounter scenario summary cannot be blank." }
+        require(steps.isNotEmpty()) { "Encounter scenario must contain at least one step." }
+        require(steps.zipWithNext().all { (first, second) -> first.atSeconds <= second.atSeconds }) {
+            "Encounter scenario steps must be ordered by time."
+        }
+    }
 }
 
 data class EncounterSpawnDirective(
@@ -341,13 +357,22 @@ class EncounterDirector {
 
     fun advance(deltaTime: Float): List<EncounterSpawnDirective> {
         val scenario = activeScenario ?: return emptyList()
-        elapsedSeconds += deltaTime
-        if (nextStepIndex >= scenario.steps.size) return emptyList()
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return emptyList()
+        elapsedSeconds = (elapsedSeconds.toDouble() + deltaTime.toDouble())
+            .coerceAtMost(Float.MAX_VALUE.toDouble())
+            .toFloat()
+        if (nextStepIndex >= scenario.steps.size ||
+            scenario.steps[nextStepIndex].atSeconds > elapsedSeconds
+        ) {
+            return emptyList()
+        }
 
-        val due = mutableListOf<EncounterSpawnDirective>()
-        while (nextStepIndex < scenario.steps.size && scenario.steps[nextStepIndex].atSeconds <= elapsedSeconds) {
+        val due = ArrayList<EncounterSpawnDirective>()
+        while (nextStepIndex < scenario.steps.size &&
+            scenario.steps[nextStepIndex].atSeconds <= elapsedSeconds
+        ) {
             val step = scenario.steps[nextStepIndex++]
-            due += EncounterSpawnDirective(step.type, step.xOffset, step.variant)
+            due.add(EncounterSpawnDirective(step.type, step.xOffset, step.variant))
         }
         return due
     }
