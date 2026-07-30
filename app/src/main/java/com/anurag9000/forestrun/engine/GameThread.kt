@@ -1,6 +1,7 @@
 package com.anurag9000.forestrun.engine
 
 import android.graphics.Canvas
+import android.util.Log
 import android.view.SurfaceHolder
 import java.util.concurrent.TimeUnit
 
@@ -9,19 +10,41 @@ class GameThread internal constructor(
     private val updateFrame: (Float) -> Unit,
     private val renderFrame: () -> Unit = {},
     targetFrameTimeNs: Long = DEFAULT_TARGET_FRAME_TIME_NS,
-    private val performanceMonitor: FramePerformanceMonitor? = null
+    private val performanceMonitor: FramePerformanceMonitor? = null,
+    private val failureHandler: (FrameFailure) -> Unit = {}
 ) : Thread("GameThread") {
+    enum class FrameStage {
+        UPDATE,
+        RENDER
+    }
+
+    data class FrameFailure(
+        val stage: FrameStage,
+        val cause: Exception
+    )
+
     private val targetFrameTimeNs = targetFrameTimeNs.coerceAtLeast(0L)
 
     constructor(surfaceHolder: SurfaceHolder, gameView: GameView) : this(
         updateFrame = { deltaTime -> gameView.update(deltaTime) },
         renderFrame = { renderSurfaceFrame(surfaceHolder, gameView) },
         targetFrameTimeNs = DEFAULT_TARGET_FRAME_TIME_NS,
-        performanceMonitor = FramePerformanceTelemetry.monitor
+        performanceMonitor = FramePerformanceTelemetry.monitor,
+        failureHandler = { failure ->
+            Log.e(
+                TAG,
+                "Game loop stopped during ${failure.stage.name.lowercase()}",
+                failure.cause
+            )
+        }
     )
 
     @Volatile
     private var running: Boolean = false
+
+    @Volatile
+    var lastFailure: FrameFailure? = null
+        private set
 
     var isRunning: Boolean
         get() = running
@@ -76,7 +99,18 @@ class GameThread internal constructor(
                 lastTimeNs = frameStartedAtNs
 
                 val updateStartedAtNs = System.nanoTime()
-                updateFrame(deltaTime)
+                try {
+                    updateFrame(deltaTime)
+                } catch (failure: Exception) {
+                    val updateFailedAtNs = System.nanoTime()
+                    performanceMonitor?.record(
+                        updateNs = updateFailedAtNs - updateStartedAtNs,
+                        renderNs = 0L,
+                        processingNs = updateFailedAtNs - frameStartedAtNs
+                    )
+                    reportFailure(FrameStage.UPDATE, failure)
+                    break
+                }
                 val updateFinishedAtNs = System.nanoTime()
                 val updateDurationNs = updateFinishedAtNs - updateStartedAtNs
 
@@ -90,7 +124,18 @@ class GameThread internal constructor(
                 }
 
                 val renderStartedAtNs = System.nanoTime()
-                renderFrame()
+                try {
+                    renderFrame()
+                } catch (failure: Exception) {
+                    val renderFailedAtNs = System.nanoTime()
+                    performanceMonitor?.record(
+                        updateNs = updateDurationNs,
+                        renderNs = renderFailedAtNs - renderStartedAtNs,
+                        processingNs = renderFailedAtNs - frameStartedAtNs
+                    )
+                    reportFailure(FrameStage.RENDER, failure)
+                    break
+                }
                 val renderFinishedAtNs = System.nanoTime()
                 performanceMonitor?.record(
                     updateNs = updateDurationNs,
@@ -117,7 +162,18 @@ class GameThread internal constructor(
         }
     }
 
+    private fun reportFailure(stage: FrameStage, cause: Exception) {
+        val failure = FrameFailure(stage, cause)
+        lastFailure = failure
+        try {
+            failureHandler(failure)
+        } catch (handlerFailure: Exception) {
+            cause.addSuppressed(handlerFailure)
+        }
+    }
+
     companion object {
+        private const val TAG = "ForestRunGameThread"
         private const val DEFAULT_TARGET_FRAME_TIME_NS = 1_000_000_000L / 60L
         private const val DEFAULT_STOP_TIMEOUT_MS = 1_000L
         private const val MAX_JOIN_SLICE_MS = 250L
