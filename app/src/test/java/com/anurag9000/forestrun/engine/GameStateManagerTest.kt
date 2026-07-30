@@ -46,6 +46,78 @@ class GameStateManagerTest {
     }
 
     @Test
+    fun `invalid frame deltas cannot corrupt or rewind run state`() {
+        val state = GameStateManager(context)
+        state.update(1f)
+        val time = state.runTimeSeconds
+        val distance = state.distanceMetres
+        val score = state.score
+        val speed = state.scrollSpeed
+
+        state.update(-1f)
+        state.update(Float.NaN)
+        state.update(Float.POSITIVE_INFINITY)
+
+        assertEquals(time, state.runTimeSeconds, 0f)
+        assertEquals(distance, state.distanceMetres, 0f)
+        assertEquals(score, state.score)
+        assertEquals(speed, state.scrollSpeed, 0f)
+    }
+
+    @Test
+    fun `score additions saturate instead of wrapping negative`() {
+        val state = GameStateManager(context)
+
+        state.addBonus(points = Int.MAX_VALUE)
+        state.addBonus(points = Int.MAX_VALUE)
+
+        assertEquals(Int.MAX_VALUE, state.score)
+        assertEquals(Int.MAX_VALUE, state.highScore)
+        assertTrue(state.isNewHighScore)
+    }
+
+    @Test
+    fun `lifetime seed currency saturates instead of wrapping negative`() {
+        SaveManager.saveLifetimeSeeds(context, Int.MAX_VALUE)
+        val state = GameStateManager(context)
+
+        state.collectSeed()
+
+        assertEquals(1, state.seedsThisRun)
+        assertEquals(Int.MAX_VALUE, state.lifetimeSeeds)
+        assertEquals(Int.MAX_VALUE, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
+    fun `non finite score multiplier normalizes before rewards`() {
+        val state = GameStateManager(context)
+        state.scoreMultiplier = Float.POSITIVE_INFINITY
+
+        state.addBonus(points = 100)
+
+        assertEquals(100, state.score)
+        assertEquals(1f, state.scoreMultiplier, 0f)
+    }
+
+    @Test
+    fun `invalid speed debuffs are ignored and boosts are capped`() {
+        val state = GameStateManager(context)
+
+        state.applySpeedDebuff(Float.NaN, 1_000)
+        state.applySpeedDebuff(-1f, 1_000)
+        state.applySpeedDebuff(0.5f, 0)
+        assertEquals(1f, state.speedDebuffMultiplier, 0f)
+
+        state.applySpeedDebuff(3f, 1_000)
+        assertEquals(1f, state.speedDebuffMultiplier, 0f)
+
+        state.applySpeedDebuff(0.5f, 1_000)
+        assertEquals(0.5f, state.speedDebuffMultiplier, 0f)
+        state.update(1f)
+        assertEquals(1f, state.speedDebuffMultiplier, 0f)
+    }
+
+    @Test
     fun `reset run clears transient state and milestone carryover`() {
         val state = GameStateManager(context)
 
