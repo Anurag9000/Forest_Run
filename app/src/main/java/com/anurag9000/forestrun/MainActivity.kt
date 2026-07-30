@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         if (::gameView.isInitialized) gameView.pause()
-        HapticManager.cancel()
+        HapticManager.release()
         LeitmotifManager.destroy()
         SfxManager.destroy()
         super.onDestroy()
