@@ -29,10 +29,10 @@ object GhostPersistenceManager {
     @Volatile
     private var pendingWrite: Future<*>? = null
 
-    /** Publishes [frames] immediately and schedules their atomic disk write. */
+    /** Publishes a validated [frames] list immediately and schedules its atomic disk write. */
     @Synchronized
     fun saveBestRunAsync(context: Context, frames: List<GhostFrame>): Boolean {
-        if (frames.isEmpty()) return false
+        if (!GhostRunValidator.isValid(frames)) return false
 
         val appContext = context.applicationContext
         latestFrames = frames
