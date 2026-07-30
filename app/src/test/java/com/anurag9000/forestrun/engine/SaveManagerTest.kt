@@ -22,11 +22,63 @@ class SaveManagerTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        SaveManager.usePrimaryPreferences()
         context.getSharedPreferences("forest_run_prefs", Context.MODE_PRIVATE)
             .edit()
             .clear()
             .commit()
         File(context.filesDir, "ghost_run.bin").delete()
+    }
+
+    @Test
+    fun `legacy Garden write sequence commits progress and Seeds atomically`() {
+        SaveManager.saveLifetimeSeeds(context, 50)
+        SaveManager.saveGardenProgress(context, 1)
+
+        SaveManager.saveGardenProgress(context, 2)
+
+        // Both values are already durable before the historical second call.
+        assertEquals(2, SaveManager.loadGardenProgress(context))
+        assertEquals(30, SaveManager.loadLifetimeSeeds(context))
+
+        SaveManager.saveLifetimeSeeds(context, 30)
+        assertEquals(2, SaveManager.loadGardenProgress(context))
+        assertEquals(30, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
+    fun `stale high Garden cache cannot overwrite canonical transaction balance`() {
+        SaveManager.saveLifetimeSeeds(context, 50)
+        SaveManager.saveGardenProgress(context, 1)
+
+        SaveManager.saveGardenProgress(context, 2)
+        // A stale screen believed it held 100 Seeds and tries to persist 80.
+        SaveManager.saveLifetimeSeeds(context, 80)
+
+        assertEquals(2, SaveManager.loadGardenProgress(context))
+        assertEquals(30, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
+    fun `rejected Garden purchase absorbs stale follow up without charging`() {
+        SaveManager.saveLifetimeSeeds(context, 10)
+        SaveManager.saveGardenProgress(context, 1)
+
+        SaveManager.saveGardenProgress(context, 2)
+        SaveManager.saveLifetimeSeeds(context, 0)
+
+        assertEquals(1, SaveManager.loadGardenProgress(context))
+        assertEquals(10, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
+    fun `non sequential administrative progress remains a direct clamped write`() {
+        SaveManager.saveLifetimeSeeds(context, 12)
+
+        SaveManager.saveGardenProgress(context, 7)
+
+        assertEquals(7, SaveManager.loadGardenProgress(context))
+        assertEquals(12, SaveManager.loadLifetimeSeeds(context))
     }
 
     @Test
