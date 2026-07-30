@@ -23,7 +23,8 @@ import com.anurag9000.forestrun.ui.DialogueBubbleManager
 /**
  * Weeping Willow — Phase 27: sprite rendered at 2× height, sway applied via canvas rotation.
  * Player must duck under the curtain of leaves (lower curtainHitbox).
- * Trunk hitbox remains full-height.
+ * The public encounter hitbox encloses trunk and curtain so pass resolution
+ * cannot become terminal before the complete hazard clears the player.
  */
 class WeepingWillow(
     context: Context,
@@ -41,6 +42,7 @@ class WeepingWillow(
     private val curtainTop    = groundY - treeHeight * 0.78f
     private val curtainBottom = groundY - treeHeight * 0.16f
 
+    private val trunkHitbox   = RectF()
     private val curtainHitbox = RectF()
     private val canopyRect    = RectF()
     private val duckLaneRect  = RectF()
@@ -92,7 +94,7 @@ class WeepingWillow(
         currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
         updateGeometry()
         sprite.update(deltaTime)
-        if (x < -treeWidth - 50f) isActive = false
+        if (hitbox.right < -50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
@@ -158,7 +160,7 @@ class WeepingWillow(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        if (RectF.intersects(player.hitbox, hitbox) ||
+        if (RectF.intersects(player.hitbox, trunkHitbox) ||
             RectF.intersects(player.hitbox, curtainHitbox)) return CollisionResult.HIT
         if (!duckLaneRect.isEmpty &&
             duckLaneRect.contains(player.hitbox.left, player.hitbox.top, player.hitbox.right, player.hitbox.bottom)
@@ -174,13 +176,13 @@ class WeepingWillow(
                 topPadding = 0f,
                 rightPadding = mercyPad,
                 bottomPadding = mercyPad * 0.35f
-            ) || intersectsExpanded(player.hitbox, hitbox, mercyPad)
+            ) || intersectsExpanded(player.hitbox, trunkHitbox, mercyPad)
         ) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
     }
 
     private fun updateGeometry() {
-        hitbox.set(
+        trunkHitbox.set(
             x + treeWidth / 2f - trunkWidth / 2f,
             trunkTop,
             x + treeWidth / 2f + trunkWidth / 2f,
@@ -192,6 +194,12 @@ class WeepingWillow(
             x + treeWidth * 0.94f,
             curtainBottom
         )
+        hitbox.set(
+            minOf(trunkHitbox.left, curtainHitbox.left),
+            minOf(trunkHitbox.top, curtainHitbox.top),
+            maxOf(trunkHitbox.right, curtainHitbox.right),
+            maxOf(trunkHitbox.bottom, curtainHitbox.bottom)
+        )
         canopyRect.set(
             x - treeWidth * 0.08f,
             y + treeHeight * 0.06f,
@@ -200,7 +208,7 @@ class WeepingWillow(
         )
         val laneInset = readability.stagingPaddingPx * 0.55f
         duckLaneRect.set(
-            maxOf(curtainHitbox.left + laneInset, hitbox.right + readability.stagingPaddingPx * 0.35f),
+            maxOf(curtainHitbox.left + laneInset, trunkHitbox.right + readability.stagingPaddingPx * 0.35f),
             curtainBottom + readability.stagingPaddingPx * 0.18f,
             curtainHitbox.right - laneInset,
             groundY - readability.stagingPaddingPx * 0.28f
