@@ -29,6 +29,52 @@ class EncounterDirectorTest {
     }
 
     @Test
+    fun `invalid deltas cannot rewind or poison active scenario`() {
+        val director = EncounterDirector()
+        director.startSelectedScenario()
+
+        assertTrue(director.advance(Float.NaN).isEmpty())
+        assertTrue(director.advance(-10f).isEmpty())
+        assertTrue(director.advance(Float.POSITIVE_INFINITY).isEmpty())
+        assertEquals(4, director.remainingSteps)
+
+        val firstWave = director.advance(0.15f)
+        assertEquals(EntityType.DUCK, firstWave.single().type)
+        assertEquals(3, director.remainingSteps)
+    }
+
+    @Test
+    fun `large finite delta emits every remaining step exactly once`() {
+        val director = EncounterDirector()
+        director.startSelectedScenario()
+
+        val all = director.advance(Float.MAX_VALUE)
+        val repeated = director.advance(1f)
+
+        assertEquals(EncounterScenario.OPENING_READABILITY.steps.size, all.size)
+        assertEquals(
+            EncounterScenario.OPENING_READABILITY.steps.map { it.type },
+            all.map { it.type }
+        )
+        assertTrue(repeated.isEmpty())
+        assertEquals(0, director.remainingSteps)
+    }
+
+    @Test
+    fun `restarting selected scenario resets elapsed time and cursor`() {
+        val director = EncounterDirector()
+        director.startSelectedScenario()
+        director.advance(10f)
+        assertEquals(0, director.remainingSteps)
+
+        director.startSelectedScenario()
+
+        assertEquals(EncounterScenario.OPENING_READABILITY.steps.size, director.remainingSteps)
+        assertTrue(director.advance(0.10f).isEmpty())
+        assertEquals(EntityType.DUCK, director.advance(0.05f).single().type)
+    }
+
+    @Test
     fun `scenario selection wraps in both directions`() {
         val director = EncounterDirector()
         val first = director.selectedScenario
@@ -50,6 +96,32 @@ class EncounterDirectorTest {
 
         assertFalse(director.isScenarioActive)
         assertEquals(0, director.remainingSteps)
+        assertTrue(director.advance(100f).isEmpty())
+    }
+
+    @Test
+    fun `every authored scenario has finite ordered steps and metadata`() {
+        EncounterScenario.entries.forEach { scenario ->
+            assertTrue(scenario.title.isNotBlank())
+            assertTrue(scenario.summary.isNotBlank())
+            assertTrue(scenario.steps.isNotEmpty())
+            assertTrue(scenario.steps.all { it.atSeconds.isFinite() && it.atSeconds >= 0f })
+            assertTrue(scenario.steps.all { it.xOffset.isFinite() })
+            assertEquals(
+                scenario.steps.sortedBy { it.atSeconds },
+                scenario.steps
+            )
+        }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `encounter step rejects negative time`() {
+        EncounterStep(-1f, EntityType.CACTUS, 100f)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `encounter step rejects non finite offset`() {
+        EncounterStep(1f, EntityType.CACTUS, Float.NaN)
     }
 
     @Test
