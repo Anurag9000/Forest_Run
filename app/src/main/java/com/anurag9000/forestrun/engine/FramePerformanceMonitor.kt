@@ -54,6 +54,22 @@ class FramePerformanceMonitor(
     }
 
     /**
+     * Clear one profiling session without replacing this monitor object.
+     *
+     * The producer GameThread retains the monitor reference passed at
+     * construction, so instrumentation cannot swap in a new monitor after the
+     * Activity starts. Callers must stop that producer before invoking reset.
+     */
+    fun reset() {
+        publishedFrameCount = 0L
+        updateSamplesNs.fill(0L)
+        renderSamplesNs.fill(0L)
+        processingSamplesNs.fill(0L)
+        slowFrameCount = 0L
+        maximumProcessingNs = 0L
+    }
+
+    /**
      * Capture a coherent best-effort view of the latest timing window.
      *
      * If the render thread advances while the arrays are copied, the copy is
