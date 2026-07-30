@@ -77,6 +77,7 @@ class HardwarePerformanceProfileTest {
         val frames = buildMaximumGhostRun()
         profileScenario(
             scenario = EncounterScenario.GHOST_READABILITY,
+            reportScenario = MAXIMUM_GHOST_PERSISTENCE_REPORT,
             measurementMs = 20_000L,
             onMeasurementStarted = {
                 assertTrue(
@@ -91,6 +92,7 @@ class HardwarePerformanceProfileTest {
     private fun profileScenario(
         scenario: EncounterScenario,
         measurementMs: Long,
+        reportScenario: String = scenario.name,
         onMeasurementStarted: (() -> Unit)? = null,
         expectGhostWrite: Boolean = false
     ) {
@@ -176,7 +178,7 @@ class HardwarePerformanceProfileTest {
             }
 
             val report = FramePerformanceReport(
-                scenario = scenario.name,
+                scenario = reportScenario,
                 durationMs = measuredDurationMs,
                 manufacturer = Build.MANUFACTURER.orEmpty(),
                 model = Build.MODEL.orEmpty(),
@@ -256,6 +258,7 @@ class HardwarePerformanceProfileTest {
     }
 
     companion object {
+        private const val MAXIMUM_GHOST_PERSISTENCE_REPORT = "GHOST_PERSISTENCE_MAX"
         private const val MIN_WARMUP_FRAMES = 60L
         private const val WARMUP_MS = 5_000L
         private const val SCENARIO_TAIL_MS = 2_500L
