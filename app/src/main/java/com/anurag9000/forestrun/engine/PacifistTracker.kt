@@ -9,10 +9,36 @@ data class PacifistReward(
     val routeTier: PacifistRouteTier? = null
 )
 
-/**
- * Tracks clean-play and mercy-oriented progress within a run.
- */
+/** Tracks clean-play and mercy-oriented progress within a run. */
 class PacifistTracker {
+
+    companion object {
+        private const val MAX_PENDING_REWARDS = 16
+
+        fun routeTierFor(
+            mercyHearts: Int,
+            kindnessChain: Int,
+            cleanPasses: Int,
+            sparedCount: Int,
+            hitsTaken: Int
+        ): PacifistRouteTier = when {
+            hitsTaken == 0 && mercyHearts >= 5 && sparedCount >= 2 && cleanPasses >= 10 ->
+                PacifistRouteTier.PEACEFUL
+            hitsTaken == 0 &&
+                (sparedCount >= 2 ||
+                    (mercyHearts >= 3 && kindnessChain >= 7 && cleanPasses >= 6)) ->
+                PacifistRouteTier.MERCIFUL
+            hitsTaken <= 1 &&
+                (mercyHearts >= 2 ||
+                    sparedCount >= 1 ||
+                    (kindnessChain >= 4 && cleanPasses >= 4)) ->
+                PacifistRouteTier.KIND
+            else -> PacifistRouteTier.NONE
+        }
+
+        private fun saturatingIncrement(value: Int): Int =
+            if (value >= Int.MAX_VALUE) Int.MAX_VALUE else value.coerceAtLeast(0) + 1
+    }
 
     var cleanPassesThisRun: Int = 0
         private set
@@ -25,7 +51,7 @@ class PacifistTracker {
     private var cleanPassesThisBiome: Int = 0
     private var sparedThisBiome: Int = 0
     private var wasHitThisBiome: Boolean = false
-    private var pendingReward: PacifistReward? = null
+    private val pendingRewards = ArrayDeque<PacifistReward>(MAX_PENDING_REWARDS)
     private var highestRewardedRouteTier: PacifistRouteTier = PacifistRouteTier.NONE
 
     fun reset() {
@@ -36,27 +62,30 @@ class PacifistTracker {
         cleanPassesThisBiome = 0
         sparedThisBiome = 0
         wasHitThisBiome = false
-        pendingReward = null
+        pendingRewards.clear()
         highestRewardedRouteTier = PacifistRouteTier.NONE
     }
 
     fun updateBiome(biome: Biome) {
-        if (currentBiome == null) {
+        val previousBiome = currentBiome
+        if (previousBiome == null) {
             currentBiome = biome
             return
         }
 
-        if (currentBiome != biome) {
+        if (previousBiome != biome) {
             if (!wasHitThisBiome && cleanPassesThisBiome >= 3) {
-                val biomeName = currentBiome!!.name.lowercase().replace('_', ' ')
+                val biomeName = previousBiome.name.lowercase().replace('_', ' ')
                     .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-                pendingReward = PacifistReward(
-                    kind = PacifistRewardKind.BIOME_FRIENDSHIP,
-                    message = "$biomeName at peace",
-                    points = 380,
-                    seeds = 2,
-                    friendBiome = currentBiome,
-                    routeTier = currentRouteTier(0, 0)
+                enqueueReward(
+                    PacifistReward(
+                        kind = PacifistRewardKind.BIOME_FRIENDSHIP,
+                        message = "$biomeName at peace",
+                        points = 380,
+                        seeds = 2,
+                        friendBiome = previousBiome,
+                        routeTier = currentRouteTier(0, 0)
+                    )
                 )
             }
 
@@ -68,43 +97,47 @@ class PacifistTracker {
     }
 
     fun recordCleanPass() {
-        cleanPassesThisRun++
-        cleanPassesThisBiome++
+        cleanPassesThisRun = saturatingIncrement(cleanPassesThisRun)
+        cleanPassesThisBiome = saturatingIncrement(cleanPassesThisBiome)
         if (cleanPassesThisRun % 5 == 0) {
-            pendingReward = PacifistReward(
-                kind = PacifistRewardKind.CLEAN_STREAK,
-                message = "Kindness carries",
-                points = 150,
-                seeds = 1
+            enqueueReward(
+                PacifistReward(
+                    kind = PacifistRewardKind.CLEAN_STREAK,
+                    message = "Kindness carries",
+                    points = 150,
+                    seeds = 1
+                )
             )
         }
     }
 
     fun recordSpare() {
-        sparedThisRun++
-        sparedThisBiome++
+        sparedThisRun = saturatingIncrement(sparedThisRun)
+        sparedThisBiome = saturatingIncrement(sparedThisBiome)
         if (sparedThisRun % 2 == 0) {
-            pendingReward = PacifistReward(
-                kind = PacifistRewardKind.SPARE_STREAK,
-                message = "Mercy kept",
-                points = 240,
-                seeds = 1
+            enqueueReward(
+                PacifistReward(
+                    kind = PacifistRewardKind.SPARE_STREAK,
+                    message = "Mercy kept",
+                    points = 240,
+                    seeds = 1
+                )
             )
         }
     }
 
     fun recordHit() {
-        hitsThisRun++
+        hitsThisRun = saturatingIncrement(hitsThisRun)
         wasHitThisBiome = true
     }
 
     fun updateRouteReward(mercyHearts: Int, kindnessChain: Int) {
         val tier = currentRouteTier(mercyHearts, kindnessChain)
-        if (tier == PacifistRouteTier.NONE || tier.ordinal <= highestRewardedRouteTier.ordinal || pendingReward != null) {
+        if (tier == PacifistRouteTier.NONE || tier.ordinal <= highestRewardedRouteTier.ordinal) {
             return
         }
-        highestRewardedRouteTier = tier
-        pendingReward = when (tier) {
+
+        val reward = when (tier) {
             PacifistRouteTier.KIND -> PacifistReward(
                 kind = PacifistRewardKind.ROUTE_KIND,
                 message = "Mercy noticed",
@@ -126,7 +159,10 @@ class PacifistTracker {
                 seeds = 3,
                 routeTier = tier
             )
-            PacifistRouteTier.NONE -> null
+            PacifistRouteTier.NONE -> return
+        }
+        if (enqueueReward(reward)) {
+            highestRewardedRouteTier = tier
         }
     }
 
@@ -140,23 +176,11 @@ class PacifistTracker {
         )
 
     fun consumeReward(): PacifistReward? =
-        pendingReward.also { pendingReward = null }
+        if (pendingRewards.isEmpty()) null else pendingRewards.removeFirst()
 
-    companion object {
-        fun routeTierFor(
-            mercyHearts: Int,
-            kindnessChain: Int,
-            cleanPasses: Int,
-            sparedCount: Int,
-            hitsTaken: Int
-        ): PacifistRouteTier = when {
-            hitsTaken == 0 && mercyHearts >= 5 && sparedCount >= 2 && cleanPasses >= 10 ->
-                PacifistRouteTier.PEACEFUL
-            hitsTaken == 0 && (sparedCount >= 2 || (mercyHearts >= 3 && kindnessChain >= 7 && cleanPasses >= 6)) ->
-                PacifistRouteTier.MERCIFUL
-            hitsTaken <= 1 && (mercyHearts >= 2 || sparedCount >= 1 || (kindnessChain >= 4 && cleanPasses >= 4)) ->
-                PacifistRouteTier.KIND
-            else -> PacifistRouteTier.NONE
-        }
+    private fun enqueueReward(reward: PacifistReward): Boolean {
+        if (pendingRewards.size >= MAX_PENDING_REWARDS) return false
+        pendingRewards.addLast(reward)
+        return true
     }
 }
