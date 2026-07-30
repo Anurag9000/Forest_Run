@@ -23,8 +23,8 @@ enum class GardenPurchaseStatus {
 
 /**
  * Serializes Garden progression and Seed spending through one SharedPreferences
- * commit. The active compatibility namespace selected by [SaveIntegrityManager]
- * is respected, and cached UI state is never trusted as the source of truth.
+ * commit. Prices and catalogue bounds are always derived from [GardenEconomy];
+ * callers cannot choose a cheaper cost or a larger catalogue.
  */
 object GardenPurchaseManager {
     private const val KEY_GARDEN_UNLOCKED = "garden_unlocked"
@@ -33,15 +33,13 @@ object GardenPurchaseManager {
     @Synchronized
     fun purchaseNext(
         context: Context,
-        requestedIndex: Int,
-        seedCost: Int,
-        catalogueSize: Int
+        requestedIndex: Int
     ): GardenPurchaseResult {
-        if (catalogueSize <= 0 || requestedIndex < 0 || seedCost < 0) {
-            return GardenPurchaseResult(
-                status = GardenPurchaseStatus.INVALID_REQUEST,
-                unlockedCount = 1,
-                remainingSeeds = 0
+        val seedCost = GardenEconomy.seedCostForIndex(requestedIndex)
+        if (seedCost == null || requestedIndex <= 0) {
+            return currentResult(
+                context = context,
+                status = GardenPurchaseStatus.INVALID_REQUEST
             )
         }
 
@@ -51,12 +49,12 @@ object GardenPurchaseManager {
             Context.MODE_PRIVATE
         )
         val unlocked = prefs.getInt(KEY_GARDEN_UNLOCKED, 1)
-            .coerceIn(1, catalogueSize)
+            .coerceIn(1, GardenEconomy.catalogueSize)
         val seeds = prefs.getInt(KEY_LIFETIME_SEEDS, 0)
             .coerceAtLeast(0)
 
         val rejection = when {
-            unlocked >= catalogueSize -> GardenPurchaseStatus.CATALOGUE_COMPLETE
+            unlocked >= GardenEconomy.catalogueSize -> GardenPurchaseStatus.CATALOGUE_COMPLETE
             requestedIndex != unlocked -> GardenPurchaseStatus.NOT_NEXT_UNLOCK
             seeds < seedCost -> GardenPurchaseStatus.INSUFFICIENT_SEEDS
             else -> null
@@ -85,5 +83,22 @@ object GardenPurchaseManager {
                 remainingSeeds = seeds
             )
         }
+    }
+
+    private fun currentResult(
+        context: Context,
+        status: GardenPurchaseStatus
+    ): GardenPurchaseResult {
+        val prefs = context.applicationContext.getSharedPreferences(
+            SaveManager.activePrefsNameForTests,
+            Context.MODE_PRIVATE
+        )
+        return GardenPurchaseResult(
+            status = status,
+            unlockedCount = prefs.getInt(KEY_GARDEN_UNLOCKED, 1)
+                .coerceIn(1, GardenEconomy.catalogueSize),
+            remainingSeeds = prefs.getInt(KEY_LIFETIME_SEEDS, 0)
+                .coerceAtLeast(0)
+        )
     }
 }
