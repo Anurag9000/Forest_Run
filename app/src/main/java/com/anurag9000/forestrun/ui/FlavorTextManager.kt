@@ -19,6 +19,12 @@ object FlavorTextManager {
     private const val MAX_ACTIVE = 16
     private const val DUPLICATE_RADIUS_PX = 44f
     private const val MAX_TEXT_CHARS = 72
+    private const val DEFAULT_LIFETIME_S = 1.4f
+    private const val DEFAULT_SIZE_PX = 30f
+    private const val MIN_LIFETIME_S = 0.15f
+    private const val MAX_LIFETIME_S = 8f
+    private const val MIN_SIZE_PX = 8f
+    private const val MAX_SIZE_PX = 72f
 
     private var pixelFont: Typeface? = null
 
@@ -32,13 +38,17 @@ object FlavorTextManager {
         val text: String,
         var x: Float,
         var y: Float,
-        val colour: Int = Color.WHITE,
-        val lifetime: Float = 1.4f,
-        val baseSize: Float = 30f,
+        var colour: Int = Color.WHITE,
+        var lifetime: Float = DEFAULT_LIFETIME_S,
+        var baseSize: Float = DEFAULT_SIZE_PX,
         var elapsed: Float = 0f
     ) {
         val progress: Float
-            get() = (elapsed / lifetime).coerceIn(0f, 1f)
+            get() = if (!elapsed.isFinite() || !lifetime.isFinite() || lifetime <= 0f) {
+                1f
+            } else {
+                (elapsed / lifetime).coerceIn(0f, 1f)
+            }
 
         val alpha: Int
             get() {
@@ -53,7 +63,7 @@ object FlavorTextManager {
             }
 
         val isDead: Boolean
-            get() = elapsed >= lifetime
+            get() = !elapsed.isFinite() || !lifetime.isFinite() || lifetime <= 0f || elapsed >= lifetime
     }
 
     private val active = ArrayList<FlavorText>(MAX_ACTIVE)
@@ -67,14 +77,18 @@ object FlavorTextManager {
         x: Float,
         y: Float,
         colour: Int = Color.WHITE,
-        lifetime: Float = 1.4f,
-        size: Float = 30f
+        lifetime: Float = DEFAULT_LIFETIME_S,
+        size: Float = DEFAULT_SIZE_PX
     ) {
         val normalizedText = text.trim().take(MAX_TEXT_CHARS)
         if (normalizedText.isEmpty() || !x.isFinite() || !y.isFinite()) return
 
-        val safeLifetime = lifetime.coerceIn(0.15f, 8f)
-        val safeSize = size.coerceIn(8f, 72f)
+        val safeLifetime = lifetime.takeIf { it.isFinite() }
+            ?.coerceIn(MIN_LIFETIME_S, MAX_LIFETIME_S)
+            ?: DEFAULT_LIFETIME_S
+        val safeSize = size.takeIf { it.isFinite() }
+            ?.coerceIn(MIN_SIZE_PX, MAX_SIZE_PX)
+            ?: DEFAULT_SIZE_PX
 
         // Repeated callbacks should not flood the screen with the same message.
         val duplicate = active.lastOrNull { existing ->
@@ -85,7 +99,11 @@ object FlavorTextManager {
         if (duplicate != null) {
             duplicate.x = x
             duplicate.y = y
+            duplicate.colour = colour
+            duplicate.lifetime = safeLifetime
+            duplicate.baseSize = safeSize
             duplicate.elapsed = 0f
+            RuntimeWorkloadTelemetry.publishFlavorTexts(active.size)
             return
         }
 
@@ -100,6 +118,7 @@ object FlavorTextManager {
                 baseSize = safeSize
             )
         )
+        RuntimeWorkloadTelemetry.publishFlavorTexts(active.size)
     }
 
     fun update(deltaTime: Float) {
@@ -107,8 +126,12 @@ object FlavorTextManager {
         var textIndex = 0
         while (textIndex < active.size) {
             val flavorText = active[textIndex]
-            flavorText.elapsed += deltaTime
-            flavorText.y -= FLOAT_SPEED * deltaTime
+            flavorText.elapsed = (flavorText.elapsed.toDouble() + deltaTime.toDouble())
+                .coerceAtMost(Float.MAX_VALUE.toDouble())
+                .toFloat()
+            flavorText.y = (flavorText.y.toDouble() - FLOAT_SPEED.toDouble() * deltaTime.toDouble())
+                .coerceIn(-Float.MAX_VALUE.toDouble(), Float.MAX_VALUE.toDouble())
+                .toFloat()
             if (flavorText.isDead) {
                 active.removeAt(textIndex)
             } else {
@@ -125,7 +148,7 @@ object FlavorTextManager {
             val flavorText = active[textIndex]
             val size = flavorText.currentSize
             val alpha = flavorText.alpha
-            if (alpha > 0) {
+            if (alpha > 0 && size.isFinite() && size > 0f) {
                 textPaint.typeface = font
                 textPaint.textSize = size
                 textPaint.color = flavorText.colour
@@ -154,4 +177,7 @@ object FlavorTextManager {
 
     internal fun activeCountForTest(): Int = active.size
     internal fun activeTextsForTest(): List<String> = active.map { it.text }
+    internal fun activeLifetimesForTest(): List<Float> = active.map { it.lifetime }
+    internal fun activeSizesForTest(): List<Float> = active.map { it.baseSize }
+    internal fun activeColoursForTest(): List<Int> = active.map { it.colour }
 }
