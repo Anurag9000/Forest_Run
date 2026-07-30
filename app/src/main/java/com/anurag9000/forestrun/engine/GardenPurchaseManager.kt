@@ -85,6 +85,27 @@ object GardenPurchaseManager {
         }
     }
 
+    /**
+     * Compatibility entrypoint for older call sites. Noncanonical values are
+     * rejected rather than trusted, so this overload cannot undercharge.
+     */
+    @Synchronized
+    fun purchaseNext(
+        context: Context,
+        requestedIndex: Int,
+        seedCost: Int,
+        catalogueSize: Int
+    ): GardenPurchaseResult {
+        val canonicalCost = GardenEconomy.seedCostForIndex(requestedIndex)
+        if (canonicalCost == null ||
+            seedCost != canonicalCost ||
+            catalogueSize != GardenEconomy.catalogueSize
+        ) {
+            return currentResult(context, GardenPurchaseStatus.INVALID_REQUEST)
+        }
+        return purchaseNext(context, requestedIndex)
+    }
+
     private fun currentResult(
         context: Context,
         status: GardenPurchaseStatus
