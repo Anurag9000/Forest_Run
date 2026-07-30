@@ -4,128 +4,103 @@ import android.graphics.Color
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.utils.MathUtils
 
-/**
- * Drives biome transitions and day/night tinting.
- *
- * - Tracks the current [Biome] and the next one.
- * - Calculates a smooth [crossfadeAlpha] (0→1) over the last 20% of each biome segment.
- * - Provides [currentSkyTop], [currentSkyBottom], [currentGroundColour] as live blended values.
- * - Provides [ambientAlpha]: an alpha value (0..200) for a dark overlay drawn in GameView
- *   that darkens the scene progressively for DUSK and NIGHT biomes.
- * - Provides [entityPool]: the spawn pool for the current moment (blended between biomes
- *   — at >80% through a biome the next biome's pool starts mixing in at 50/50).
- *
- * All colour blending uses component-wise integer lerp so no garbage is created per frame.
- */
+/** Drives biome transitions, blended palettes, and biome-specific encounter pools. */
 class BiomeManager {
 
-    private val CROSSFADE_START_FRACTION = 0.80f  // Crossfade begins when 80% through a biome
-    private val BIOME_LEN = GameConstants.BIOME_LENGTH_METRES
+    companion object {
+        private const val CROSSFADE_START_FRACTION = 0.80f
+    }
 
-    /** Current fully-resolved biome (at start of this biome segment). */
+    private val biomeLength = GameConstants.BIOME_LENGTH_METRES
+
     var currentBiome: Biome = Biome.MEADOW
         private set
 
     private var nextBiome: Biome = Biome.next(currentBiome)
     private var forcedDebugBiome: Biome? = null
 
-    /**
-     * Crossfade progress 0..1 within the transition window.
-     * 0 = fully in [currentBiome], 1 = fully in [nextBiome].
-     */
     var crossfadeAlpha: Float = 0f
         private set
 
-    // ── Live blended colours ─────────────────────────────────────────────
+    var currentSkyTop: Int = currentBiome.skyTopColour
+        private set
+    var currentSkyBottom: Int = currentBiome.skyBottomColour
+        private set
+    var currentGround: Int = currentBiome.groundColour
+        private set
+    var currentFoliage: Int = currentBiome.midFoliageColour
+        private set
 
-    var currentSkyTop:    Int = currentBiome.skyTopColour;    private set
-    var currentSkyBottom: Int = currentBiome.skyBottomColour; private set
-    var currentGround:    Int = currentBiome.groundColour;    private set
-    var currentFoliage:   Int = currentBiome.midFoliageColour; private set
+    val ambientAlpha: Int
+        get() {
+            val base = ((1f - currentBiome.ambientLightFactor) * 200f).toInt()
+            val next = ((1f - nextBiome.ambientLightFactor) * 200f).toInt()
+            return lerpInt(base, next, crossfadeAlpha)
+        }
 
-    /**
-     * Additional dark overlay alpha (0 = bright midday, 200 = deep night).
-     * GameView draws a semi-transparent black rect on top of everything except HUD.
-     */
-    val ambientAlpha: Int get() {
-        val base = ((1f - currentBiome.ambientLightFactor) * 200f).toInt()
-        val next = ((1f - nextBiome.ambientLightFactor) * 200f).toInt()
-        return lerpInt(base, next, crossfadeAlpha)
-    }
-
-    // ── Entity pool ───────────────────────────────────────────────────────
-
-    /**
-     * Combined spawn pool for the current moment.
-     * In the crossfade window the next biome's pool is included.
-     */
-    val entityPool: List<EntityType> get() {
-        return if (crossfadeAlpha > 0f) {
+    val entityPool: List<EntityType>
+        get() = if (crossfadeAlpha > 0f) {
             (currentBiome.preferredPool + nextBiome.preferredPool).distinct()
         } else {
             currentBiome.preferredPool
         }
-    }
 
-    // ── Main update ───────────────────────────────────────────────────────
-
-    /**
-     * Call every frame from GameView.update() with current total distance.
-     */
     fun update(distanceMetres: Float) {
         forcedDebugBiome?.let { forced ->
-            currentBiome = forced
-            nextBiome = Biome.next(forced)
-            crossfadeAlpha = 0f
-            currentSkyTop = currentBiome.skyTopColour
-            currentSkyBottom = currentBiome.skyBottomColour
-            currentGround = currentBiome.groundColour
-            currentFoliage = currentBiome.midFoliageColour
+            applyBiome(forced, crossfade = 0f)
             return
         }
 
-        val progressInBiome  = (distanceMetres % BIOME_LEN) / BIOME_LEN  // 0..1
-
-        val newCurrent = Biome.at(distanceMetres)
-        if (newCurrent != currentBiome) {
-            currentBiome = newCurrent
-            nextBiome    = Biome.next(currentBiome)
-        }
-
-        // Crossfade window starts at CROSSFADE_START_FRACTION of the biome
-        crossfadeAlpha = if (progressInBiome >= CROSSFADE_START_FRACTION) {
-            MathUtils.normalise(progressInBiome, CROSSFADE_START_FRACTION, 1f)
+        val safeDistance = distanceMetres.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        val progressInBiome = if (biomeLength.isFinite() && biomeLength > 0f) {
+            ((safeDistance % biomeLength) / biomeLength).coerceIn(0f, 1f)
         } else {
             0f
         }
 
-        // Blend colours
-        currentSkyTop    = blendColour(currentBiome.skyTopColour,        nextBiome.skyTopColour,        crossfadeAlpha)
-        currentSkyBottom = blendColour(currentBiome.skyBottomColour,     nextBiome.skyBottomColour,     crossfadeAlpha)
-        currentGround    = blendColour(currentBiome.groundColour,        nextBiome.groundColour,        crossfadeAlpha)
-        currentFoliage   = blendColour(currentBiome.midFoliageColour,    nextBiome.midFoliageColour,    crossfadeAlpha)
+        val resolvedBiome = Biome.at(safeDistance)
+        if (resolvedBiome != currentBiome) {
+            currentBiome = resolvedBiome
+            nextBiome = Biome.next(resolvedBiome)
+        }
+
+        crossfadeAlpha = if (progressInBiome >= CROSSFADE_START_FRACTION) {
+            MathUtils.normalise(progressInBiome, CROSSFADE_START_FRACTION, 1f)
+                .takeIf { it.isFinite() }
+                ?.coerceIn(0f, 1f)
+                ?: 0f
+        } else {
+            0f
+        }
+
+        updateBlendedColours()
     }
 
     fun forceDebugBiome(biome: Biome?) {
         forcedDebugBiome = biome
-        if (biome != null) {
-            currentBiome = biome
-            nextBiome = Biome.next(biome)
-            crossfadeAlpha = 0f
-            currentSkyTop = biome.skyTopColour
-            currentSkyBottom = biome.skyBottomColour
-            currentGround = biome.groundColour
-            currentFoliage = biome.midFoliageColour
-        }
+        if (biome != null) applyBiome(biome, crossfade = 0f)
     }
 
-    // ── Colour helpers ────────────────────────────────────────────────────
+    private fun applyBiome(biome: Biome, crossfade: Float) {
+        currentBiome = biome
+        nextBiome = Biome.next(biome)
+        crossfadeAlpha = crossfade.coerceIn(0f, 1f)
+        updateBlendedColours()
+    }
+
+    private fun updateBlendedColours() {
+        currentSkyTop = blendColour(currentBiome.skyTopColour, nextBiome.skyTopColour, crossfadeAlpha)
+        currentSkyBottom = blendColour(currentBiome.skyBottomColour, nextBiome.skyBottomColour, crossfadeAlpha)
+        currentGround = blendColour(currentBiome.groundColour, nextBiome.groundColour, crossfadeAlpha)
+        currentFoliage = blendColour(currentBiome.midFoliageColour, nextBiome.midFoliageColour, crossfadeAlpha)
+    }
 
     private fun blendColour(from: Int, to: Int, t: Float): Int {
-        val a = lerpInt(Color.alpha(from), Color.alpha(to), t)
-        val r = lerpInt(Color.red(from),   Color.red(to),   t)
-        val g = lerpInt(Color.green(from), Color.green(to), t)
-        val b = lerpInt(Color.blue(from),  Color.blue(to),  t)
+        val safeT = t.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+        val a = lerpInt(Color.alpha(from), Color.alpha(to), safeT)
+        val r = lerpInt(Color.red(from), Color.red(to), safeT)
+        val g = lerpInt(Color.green(from), Color.green(to), safeT)
+        val b = lerpInt(Color.blue(from), Color.blue(to), safeT)
         return Color.argb(a, r, g, b)
     }
 
