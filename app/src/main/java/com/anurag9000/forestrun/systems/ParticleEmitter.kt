@@ -2,100 +2,133 @@ package com.anurag9000.forestrun.systems
 
 import android.graphics.Color
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.random.Random
 
-/**
- * Describes a burst or continuous stream of particles.
- *
- * An emitter does NOT own particles — it is a configuration + spawn helper
- * that submits particle config to [ParticleManager]. This keeps management
- * centralised in the pool.
- *
- * Use the builder DSL via [ParticleManager.emit].
- */
+/** Configuration and spawn helper for the fixed-capacity particle pool. */
 class ParticleEmitter(
-    var x: Float,
-    var y: Float,
-
-    // ── Emission mode ──────────────────────────────────────────────────────
-    /** true = all particles at once then done; false = continuous until [stop] */
+    x: Float,
+    y: Float,
     val isBurst: Boolean = true,
-    /** Number of particles per burst, or per second in continuous mode. */
     val count: Int = 8,
-
-    // ── Spread ────────────────────────────────────────────────────────────
-    /** Angle of travel in degrees (0 = right, 90 = down, 270 = up). */
     val angleMin: Float = 200f,
     val angleMax: Float = 340f,
-
-    // ── Speed ─────────────────────────────────────────────────────────────
     val speedMin: Float = 80f,
     val speedMax: Float = 220f,
-
-    // ── Particle shape ────────────────────────────────────────────────────
-    val startColor: Int  = Color.WHITE,
-    val endColor:   Int  = Color.TRANSPARENT,
-    val startSize:  Float = 8f,
-    val endSize:    Float = 0f,
-    val isCircle:   Boolean = true,
+    val startColor: Int = Color.WHITE,
+    val endColor: Int = Color.TRANSPARENT,
+    val startSize: Float = 8f,
+    val endSize: Float = 0f,
+    val isCircle: Boolean = true,
     val spinRateMin: Float = 0f,
     val spinRateMax: Float = 0f,
-
-    // ── Physics ───────────────────────────────────────────────────────────
-    val gravity:  Float = 800f,
-    val drag:     Float = 0.88f,
-
-    // ── Lifetime ──────────────────────────────────────────────────────────
+    val gravity: Float = 800f,
+    val drag: Float = 0.88f,
     val lifetimeMin: Float = 0.4f,
     val lifetimeMax: Float = 0.9f,
-
-    // ── Position jitter ───────────────────────────────────────────────────
     val spawnRadiusX: Float = 0f,
     val spawnRadiusY: Float = 0f
 ) {
+    companion object {
+        const val MAX_CONFIGURED_COUNT = 512
+        const val MAX_CONTINUOUS_SPAWN_PER_UPDATE = 512
+    }
+
+    var x: Float = x
+        set(value) {
+            if (value.isFinite()) field = value
+        }
+    var y: Float = y
+        set(value) {
+            if (value.isFinite()) field = value
+        }
+
     private var continuousTimer = 0f
     private var continuousActive = !isBurst
 
-    /** Fill [particle] with randomised values from this emitter's config. */
-    fun configure(particle: Particle) {
-        val angleRad = (angleMin + Random.nextFloat() * (angleMax - angleMin)) * kotlin.math.PI.toFloat() / 180f
-        val speed  = speedMin + Random.nextFloat() * (speedMax - speedMin)
+    init {
+        require(x.isFinite() && y.isFinite()) { "Particle emitter origin must be finite." }
+        require(count in 1..MAX_CONFIGURED_COUNT) {
+            "Particle emitter count must be between 1 and $MAX_CONFIGURED_COUNT."
+        }
+        require(angleMin.isFinite() && angleMax.isFinite()) { "Particle angles must be finite." }
+        require(speedMin.isFinite() && speedMax.isFinite() && speedMin >= 0f && speedMax >= speedMin) {
+            "Particle speed range must be finite, non-negative, and ordered."
+        }
+        require(startSize.isFinite() && endSize.isFinite() && startSize >= 0f && endSize >= 0f) {
+            "Particle sizes must be finite and non-negative."
+        }
+        require(spinRateMin.isFinite() && spinRateMax.isFinite() && spinRateMax >= spinRateMin) {
+            "Particle spin range must be finite and ordered."
+        }
+        require(gravity.isFinite()) { "Particle gravity must be finite." }
+        require(drag.isFinite() && drag in 0f..1f) { "Particle drag must be between 0 and 1." }
+        require(
+            lifetimeMin.isFinite() && lifetimeMax.isFinite() &&
+                lifetimeMin > 0f && lifetimeMax >= lifetimeMin
+        ) {
+            "Particle lifetime range must be finite, positive, and ordered."
+        }
+        require(
+            spawnRadiusX.isFinite() && spawnRadiusY.isFinite() &&
+                spawnRadiusX >= 0f && spawnRadiusY >= 0f
+        ) {
+            "Particle spawn radii must be finite and non-negative."
+        }
+    }
 
-        particle.x          = x + (Random.nextFloat() - 0.5f) * 2f * spawnRadiusX
-        particle.y          = y + (Random.nextFloat() - 0.5f) * 2f * spawnRadiusY
-        particle.velX       = cos(angleRad) * speed
-        particle.velY       = sin(angleRad) * speed
-        particle.gravity    = gravity
-        particle.drag       = drag
-        particle.lifetime   = lifetimeMin + Random.nextFloat() * (lifetimeMax - lifetimeMin)
-        particle.elapsed    = 0f
+    /** Fill [particle] with randomized, validated values from this emitter. */
+    fun configure(particle: Particle) {
+        val angle = angleMin + Random.nextFloat() * (angleMax - angleMin)
+        val angleRad = angle * kotlin.math.PI.toFloat() / 180f
+        val speed = speedMin + Random.nextFloat() * (speedMax - speedMin)
+        val jitterX = (Random.nextFloat() - 0.5f) * 2f * spawnRadiusX
+        val jitterY = (Random.nextFloat() - 0.5f) * 2f * spawnRadiusY
+
+        particle.x = finiteCoordinate(x.toDouble() + jitterX.toDouble())
+        particle.y = finiteCoordinate(y.toDouble() + jitterY.toDouble())
+        particle.velX = finiteCoordinate(cos(angleRad).toDouble() * speed.toDouble())
+        particle.velY = finiteCoordinate(sin(angleRad).toDouble() * speed.toDouble())
+        particle.gravity = gravity
+        particle.drag = drag
+        particle.lifetime = lifetimeMin + Random.nextFloat() * (lifetimeMax - lifetimeMin)
+        particle.elapsed = 0f
         particle.startColor = startColor
-        particle.endColor   = endColor
-        particle.startSize  = startSize
-        particle.endSize    = endSize
-        particle.isCircle   = isCircle
-        particle.spinRate   = spinRateMin + Random.nextFloat() * (spinRateMax - spinRateMin)
-        particle.rotation   = Random.nextFloat() * 360f
-        particle.isActive   = true
+        particle.endColor = endColor
+        particle.startSize = startSize
+        particle.endSize = endSize
+        particle.isCircle = isCircle
+        particle.spinRate = spinRateMin + Random.nextFloat() * (spinRateMax - spinRateMin)
+        particle.rotation = Random.nextFloat() * 360f
+        particle.isActive = true
     }
 
     /**
-     * Call every frame for continuous emitters.
-     * Returns the number of new particles to spawn this frame.
+     * Advance a continuous emitter in O(1). Excess catch-up particles are
+     * deliberately dropped rather than creating a multi-frame backlog.
      */
     fun updateContinuous(deltaTime: Float): Int {
-        if (!continuousActive || isBurst) return 0
-        continuousTimer += deltaTime
-        val interval = 1f / count
-        var spawned = 0
-        while (continuousTimer >= interval) {
-            continuousTimer -= interval
-            spawned++
-        }
-        return spawned
+        if (!continuousActive || isBurst || !deltaTime.isFinite() || deltaTime <= 0f) return 0
+
+        val accumulated = (continuousTimer.toDouble() + deltaTime.toDouble())
+            .coerceAtMost(Float.MAX_VALUE.toDouble())
+        val due = floor(accumulated * count.toDouble())
+        val wholeDue = due.coerceAtMost(Int.MAX_VALUE.toDouble()).toInt()
+        continuousTimer = (accumulated - due / count.toDouble())
+            .coerceIn(0.0, (1.0 / count.toDouble()))
+            .toFloat()
+        return wholeDue.coerceAtMost(MAX_CONTINUOUS_SPAWN_PER_UPDATE)
     }
 
-    fun stop() { continuousActive = false }
-    fun resume() { continuousActive = true }
+    fun stop() {
+        continuousActive = false
+    }
+
+    fun resume() {
+        continuousActive = true
+    }
+
+    private fun finiteCoordinate(value: Double): Float =
+        value.coerceIn(-Float.MAX_VALUE.toDouble(), Float.MAX_VALUE.toDouble()).toFloat()
 }
