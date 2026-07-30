@@ -82,19 +82,20 @@ class Bamboo(
         val gapYCenter = Random.nextFloat() * (groundY - gapHeight * 2f) + gapHeight
 
         updateGeometry(x, gapYCenter, gapHeight)
-        hitbox.set(x, 0f, x + totalWidth, groundY)
+        updateAggregateHitbox(x)
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         guidePulse += deltaTime * 3f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
-        hitbox.offsetTo(x, 0f)
         val gapHeight = bottomHitboxes[0].top - topHitboxes[0].bottom
         val gapYCenter = topHitboxes[0].bottom + gapHeight / 2f
-        updateGeometry(x + sway, gapYCenter, gapHeight)
+        val geometryX = x + sway
+        updateGeometry(geometryX, gapYCenter, gapHeight)
+        updateAggregateHitbox(geometryX)
         sprite.update(deltaTime)
-        if (x < -totalWidth - 50f) isActive = false
+        if (hitbox.right < -50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
@@ -188,5 +189,14 @@ class Bamboo(
                 currentX += stalkWidth + gapSizes[i]
             }
         }
+    }
+
+    /**
+     * Base Entity pass/despawn logic consumes [hitbox]. It must enclose the
+     * current swayed stalk geometry rather than the unswayed world anchor, or a
+     * clean pass can become terminal while a stalk still extends past Player.
+     */
+    private fun updateAggregateHitbox(geometryX: Float) {
+        hitbox.set(geometryX, 0f, geometryX + totalWidth, groundY)
     }
 }
