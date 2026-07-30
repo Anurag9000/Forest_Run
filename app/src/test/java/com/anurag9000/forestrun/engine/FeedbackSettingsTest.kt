@@ -84,6 +84,7 @@ class FeedbackSettingsTest {
         assertEquals(10, adjustedParticleCount(28, reducedMotion = true))
         assertEquals(1, adjustedParticleCount(1, reducedMotion = true))
         assertEquals(0, adjustedParticleCount(0, reducedMotion = true))
+        assertTrue(adjustedParticleCount(Int.MAX_VALUE, reducedMotion = true) in 1..Int.MAX_VALUE)
     }
 
     @Test
@@ -93,5 +94,30 @@ class FeedbackSettingsTest {
         assertEquals(stillA, stillB, 0f)
         assertFalse(cinematicShimmerPulse(0f, 0.5f, false) == cinematicShimmerPulse(1f, 0.5f, false))
         assertTrue(stillA in 0f..1f)
+    }
+
+    @Test
+    fun `cinematic shimmer remains finite for invalid and extreme inputs`() {
+        val baseline = cinematicShimmerPulse(0f, 0f, reducedMotion = false)
+        listOf(
+            Float.NaN,
+            Float.POSITIVE_INFINITY,
+            Float.NEGATIVE_INFINITY
+        ).forEach { invalid ->
+            assertEquals(baseline, cinematicShimmerPulse(invalid, invalid, false), 0f)
+        }
+
+        val extreme = cinematicShimmerPulse(Float.MAX_VALUE, Float.MAX_VALUE, false)
+        assertTrue(extreme.isFinite())
+        assertTrue(extreme in 0f..1f)
+    }
+
+    @Test
+    fun `negative shimmer strength is normalized without changing elapsed timing`() {
+        assertEquals(
+            cinematicShimmerPulse(2f, 0f, false),
+            cinematicShimmerPulse(2f, -10f, false),
+            0f
+        )
     }
 }
