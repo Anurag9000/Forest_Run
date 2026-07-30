@@ -77,7 +77,8 @@ class ChickadeeGroup(
     init {
         x = startX
         y = groundY * 0.4f
-        hitbox.set(x, y, x + birdCount * spacing, y + birdH)
+        updateAggregateHitbox()
+        updateFlutterPocket()
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
@@ -97,9 +98,9 @@ class ChickadeeGroup(
             birdRects[i].offsetTo(bx + 3f, altitudes[i] - birdH / 2f + 3f)
         }
 
-        hitbox.offsetTo(x, altitudes.min() - birdH)
+        updateAggregateHitbox()
         updateFlutterPocket()
-        if (x < -(birdCount * spacing) - 50f) isActive = false
+        if (hitbox.right < -50f) isActive = false
     }
 
     override fun draw(canvas: Canvas) {
@@ -123,8 +124,8 @@ class ChickadeeGroup(
         )
         DialogueBubbleManager.spawn(
             text = BirdEncounterFlavor.chickadeePass(flutterSpread(), readPocket),
-            anchorX = x + birdCount * spacing * 0.42f,
-            anchorY = altitudes.min() - 24f,
+            anchorX = hitbox.centerX(),
+            anchorY = hitbox.top - 24f,
             fillColor = Color.rgb(255, 246, 224),
             borderColor = Color.rgb(170, 128, 84)
         )
@@ -137,8 +138,8 @@ class ChickadeeGroup(
             warned = true
             DialogueBubbleManager.spawn(
                 BirdEncounterFlavor.chickadeeWarning(flutterSpread()),
-                x + birdCount * spacing * 0.42f,
-                altitudes.min() - 24f,
+                hitbox.centerX(),
+                hitbox.top - 24f,
                 Color.rgb(255, 246, 224),
                 Color.rgb(170, 128, 84)
             )
@@ -195,5 +196,21 @@ class ChickadeeGroup(
             leadRect.centerX() + birdW * 0.95f,
             pocketBottom
         )
+    }
+
+    private fun updateAggregateHitbox() {
+        val first = birdRects.first()
+        var left = first.left
+        var top = first.top
+        var right = first.right
+        var bottom = first.bottom
+        for (index in 1 until birdRects.size) {
+            val rect = birdRects[index]
+            if (rect.left < left) left = rect.left
+            if (rect.top < top) top = rect.top
+            if (rect.right > right) right = rect.right
+            if (rect.bottom > bottom) bottom = rect.bottom
+        }
+        hitbox.set(left, top, right, bottom)
     }
 }
