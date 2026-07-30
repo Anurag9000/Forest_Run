@@ -89,6 +89,50 @@ class InputHandlerTest {
     }
 
     @Test
+    fun `hold duration saturates at gameplay maximum`() {
+        var held = -1f
+        var released = -1f
+        handler.onJumpHeld = { held = it }
+        handler.onJumpReleased = { released = it }
+
+        dispatch(MotionEvent.ACTION_DOWN, 100f, 100f)
+        handler.tick(Float.MAX_VALUE)
+        dispatch(MotionEvent.ACTION_UP, 100f, 100f)
+
+        assertEquals(0.6f, held, 0f)
+        assertEquals(0.6f, released, 0f)
+        assertTrue(handler.lastGestureLabel.startsWith("JUMP:HOLD"))
+    }
+
+    @Test
+    fun `invalid tick deltas cannot poison a pending tap`() {
+        var released = -1f
+        handler.onJumpReleased = { released = it }
+
+        dispatch(MotionEvent.ACTION_DOWN, 100f, 100f)
+        handler.tick(Float.NaN)
+        handler.tick(Float.POSITIVE_INFINITY)
+        handler.tick(-1f)
+        dispatch(MotionEvent.ACTION_UP, 100f, 100f)
+
+        assertEquals(0f, released, 0f)
+        assertEquals("JUMP:TAP", handler.lastGestureLabel)
+        assertFalse(handler.isChargingJump)
+    }
+
+    @Test
+    fun `malformed initial coordinates are rejected without creating gesture state`() {
+        assertFalse(dispatch(MotionEvent.ACTION_DOWN, Float.NaN, 100f))
+        assertEquals("INVALID", handler.lastGestureLabel)
+        assertFalse(handler.isChargingJump)
+        assertFalse(handler.isDucking)
+        assertEquals(0f, handler.holdDuration, 0f)
+
+        assertFalse(dispatch(MotionEvent.ACTION_DOWN, 100f, Float.POSITIVE_INFINITY))
+        assertFalse(handler.isChargingJump)
+    }
+
+    @Test
     fun `cancel before gesture decision does not create a jump`() {
         var presses = 0
         var releases = 0
@@ -139,7 +183,7 @@ class InputHandlerTest {
         assertEquals("RESET", handler.lastGestureLabel)
     }
 
-    private fun dispatch(action: Int, x: Float, y: Float) {
+    private fun dispatch(action: Int, x: Float, y: Float): Boolean {
         val event = MotionEvent.obtain(
             0L,
             16L,
@@ -148,7 +192,7 @@ class InputHandlerTest {
             y,
             0
         )
-        try {
+        return try {
             handler.onTouch(view, event)
         } finally {
             event.recycle()
