@@ -33,7 +33,7 @@ jobs:
           grep -q 'RuntimeWorkloadTelemetry.publishFlavorTexts' app/src/main/java/com/anurag9000/forestrun/ui/FlavorTextManager.kt
           grep -q 'RuntimeWorkloadTelemetry.reset()' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceTelemetry.kt
           grep -q 'val workload: RuntimeWorkloadSnapshot' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceReport.kt
-          grep -q '"peakParticles"' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceReport.kt
+          grep -q 'peakParticles' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceReport.kt
           grep -q 'workload = RuntimeWorkloadTelemetry.snapshot()' app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt
           test -f app/src/test/java/com/anurag9000/forestrun/engine/RuntimeWorkloadTelemetryTest.kt
 
