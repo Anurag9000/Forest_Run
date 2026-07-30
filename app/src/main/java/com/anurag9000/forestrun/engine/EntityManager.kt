@@ -1,6 +1,7 @@
 package com.anurag9000.forestrun.engine
 
 import android.content.Context
+import android.graphics.RectF
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Entity
@@ -69,6 +70,13 @@ class EntityManager(
             RunMode.DEBUG_SCENARIO
         }
     ) {
+        if (!deltaTime.isFinite() || deltaTime < 0f) {
+            debugActiveEntityCount = activeEntities.size
+            RuntimeWorkloadTelemetry.publishEntities(activeEntities.size)
+            RuntimeWorkloadTelemetry.publishSeedOrbs(seedOrbManager.activeOrbCount)
+            return
+        }
+
         if (gameState.isBloomActive != bloomWasActive) {
             bloomReactedEntities.clear()
             bloomReactionCooldown = 0f
@@ -91,8 +99,13 @@ class EntityManager(
         }
 
         if (runMode.allowsRandomSpawns) {
-            distanceSinceRandomSpawnPx +=
-                (gameState.scrollSpeed * deltaTime.coerceAtLeast(0f)).coerceAtLeast(0f)
+            val distanceDelta = gameState.scrollSpeed * deltaTime
+            if (distanceDelta.isFinite() && distanceDelta > 0f) {
+                distanceSinceRandomSpawnPx =
+                    (distanceSinceRandomSpawnPx.toDouble() + distanceDelta.toDouble())
+                        .coerceAtMost(Float.MAX_VALUE.toDouble())
+                        .toFloat()
+            }
             val requiredGapPx = SpawnPacing.requiredGapPx(
                 distanceMetres = gameState.distanceMetres,
                 runTimeSeconds = gameState.runTimeSeconds,
@@ -188,16 +201,17 @@ class EntityManager(
         var entityIndex = 0
         while (entityIndex < activeEntities.size) {
             val entity = activeEntities[entityIndex]
+            val bounds = liveBounds(entity)
             if (
                 entity.isActive &&
                 entity.encounterOutcome == EncounterOutcome.PENDING &&
-                entity.hitbox.right < player.hitbox.left
+                bounds.right < player.hitbox.left
             ) {
                 entity.hasBeenPassed = true
                 if (gameState.isBloomActive) {
                     resolveBloomConversion(entity, gameState)
                 } else {
-                    resolveCleanPass(entity, player, gameState)
+                    resolveCleanPass(entity, bounds, player, gameState)
                 }
             }
             entityIndex++
@@ -205,19 +219,25 @@ class EntityManager(
     }
 
     private fun resolveBloomConversion(entity: Entity, gameState: GameStateManager) {
+        val bounds = liveBounds(entity)
         entity.encounterOutcome = EncounterOutcome.BLOOM_CONVERTED
         recordResolvedEncounter(entity)
         gameState.recordBloomConversion()
         ParticleManager.emit(
             FxPreset.BLOOM_CONVERT,
-            entity.hitbox.centerX(),
-            entity.hitbox.centerY()
+            bounds.centerX(),
+            bounds.centerY()
         )
-        emitBloomEnvironmentReaction(entity)
+        emitBloomEnvironmentReaction(entity, bounds)
         entity.isActive = false
     }
 
-    private fun resolveCleanPass(entity: Entity, player: Player, gameState: GameStateManager) {
+    private fun resolveCleanPass(
+        entity: Entity,
+        bounds: RectF,
+        player: Player,
+        gameState: GameStateManager
+    ) {
         entity.encounterOutcome = EncounterOutcome.CLEAN_PASS
         recordResolvedEncounter(entity)
         entity.performUniqueAction(player, gameState)
@@ -239,29 +259,31 @@ class EntityManager(
                     type = type,
                     routeTier = gameState.pacifistRouteTier
                 ),
-                anchorX = entity.hitbox.centerX(),
-                anchorY = entity.hitbox.top - 18f,
+                anchorX = bounds.centerX(),
+                anchorY = bounds.top - 18f,
                 fillColor = passCue.fillColor,
                 borderColor = passCue.borderColor
             )
             FlavorTextManager.spawn(
                 text = passCue.flavorText,
-                x = entity.hitbox.left,
-                y = entity.hitbox.top - 10f,
+                x = bounds.left,
+                y = bounds.top - 10f,
                 colour = passCue.flavorColor,
                 lifetime = 0.95f,
                 size = passCue.flavorSize
             )
         }
 
-        val reachableX = maxOf(
-            entity.hitbox.centerX(),
-            player.hitbox.right + maxOf(120f, screenWidth * 0.08f)
+        val stagingPoint = SeedOrbSpawnPolicy.forCleanPass(
+            encounterBounds = bounds,
+            playerBounds = player.hitbox,
+            playerGroundY = player.groundY,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight
         )
-        val reachableTopY = minOf(entity.hitbox.top, player.hitbox.top - 24f)
         seedOrbManager.trySpawn(
-            centreX = reachableX,
-            topY = reachableTopY,
+            centreX = stagingPoint.centreX,
+            topY = stagingPoint.topY,
             spawnRate = orbSpawnRateFor(entity)
         )
     }
@@ -285,9 +307,9 @@ class EntityManager(
         seedOrbManager.draw(canvas, bloomFraction)
     }
 
-    private fun emitBloomEnvironmentReaction(entity: Entity) {
-        val x = entity.hitbox.centerX()
-        val y = entity.hitbox.centerY()
+    private fun emitBloomEnvironmentReaction(entity: Entity, bounds: RectF = liveBounds(entity)) {
+        val x = bounds.centerX()
+        val y = bounds.centerY()
         ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, x, y)
         when (entity) {
             is LilyOfValley, is Hyacinth, is VanillaOrchid -> {
@@ -323,10 +345,11 @@ class EntityManager(
         var entityIndex = 0
         while (entityIndex < activeEntities.size) {
             val entity = activeEntities[entityIndex]
+            val bounds = liveBounds(entity)
             if (
                 entity.isActive &&
                 entity.encounterOutcome == EncounterOutcome.PENDING &&
-                !entity.hitbox.isEmpty
+                !bounds.isEmpty
             ) {
                 val type = entityTypeOf(entity)
                 if (type != null) {
@@ -334,19 +357,19 @@ class EntityManager(
                     if (BloomWorldReaction.shouldReact(
                             playerCenterX = playerCenterX,
                             playerCenterY = playerCenterY,
-                            entityCenterX = entity.hitbox.centerX(),
-                            entityCenterY = entity.hitbox.centerY(),
+                            entityCenterX = bounds.centerX(),
+                            entityCenterY = bounds.centerY(),
                             alreadyReacted = reactionKey in bloomReactedEntities
                         )
                     ) {
                         bloomReactedEntities.add(reactionKey)
-                        emitBloomProximityReaction(entity, type)
+                        emitBloomProximityReaction(entity, type, bounds)
                         if (bloomReactionCooldown <= 0f) {
                             val cue = BloomWorldReaction.cueFor(type)
                             FlavorTextManager.spawn(
                                 text = cue.text,
-                                x = entity.hitbox.left,
-                                y = entity.hitbox.top - 12f,
+                                x = bounds.left,
+                                y = bounds.top - 12f,
                                 colour = when (cue.family) {
                                     BloomReactionFamily.FLORA -> android.graphics.Color.rgb(255, 226, 168)
                                     BloomReactionFamily.TREE -> android.graphics.Color.rgb(255, 214, 178)
@@ -365,9 +388,13 @@ class EntityManager(
         }
     }
 
-    private fun emitBloomProximityReaction(entity: Entity, type: EntityType) {
-        val x = entity.hitbox.centerX()
-        val y = entity.hitbox.centerY()
+    private fun emitBloomProximityReaction(
+        entity: Entity,
+        type: EntityType,
+        bounds: RectF = liveBounds(entity)
+    ) {
+        val x = bounds.centerX()
+        val y = bounds.centerY()
         ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, x, y)
         when (BloomWorldReaction.cueFor(type).family) {
             BloomReactionFamily.FLORA -> {
@@ -396,7 +423,9 @@ class EntityManager(
         val pool = gameState.openingSpawnPool(
             DifficultyScaler.getSpawnPool(gameState.distanceMetres, biomeManager)
         )
-        spawn(pool[Random.nextInt(pool.size)])
+        if (pool.isNotEmpty()) {
+            spawn(pool[Random.nextInt(pool.size)])
+        }
     }
 
     fun spawn(
@@ -405,10 +434,11 @@ class EntityManager(
         startX: Float = spawnX,
         recordPersistence: Boolean = true
     ) {
+        val safeStartX = startX.takeIf { it.isFinite() } ?: spawnX
         val entity = EntityFactory.create(
             context,
             type,
-            startX,
+            safeStartX,
             screenWidth,
             screenHeight,
             spriteManager,
@@ -468,6 +498,18 @@ class EntityManager(
         debugActiveEntityCount = 0
         RuntimeWorkloadTelemetry.publishEntities(0)
     }
+
+    private fun liveBounds(entity: Entity): RectF {
+        val candidate = entity.encounterBounds
+        return if (isFiniteNonEmpty(candidate)) candidate else entity.hitbox
+    }
+
+    private fun isFiniteNonEmpty(bounds: RectF): Boolean =
+        !bounds.isEmpty &&
+            bounds.left.isFinite() &&
+            bounds.top.isFinite() &&
+            bounds.right.isFinite() &&
+            bounds.bottom.isFinite()
 
     private fun orbSpawnRateFor(entity: Entity): Float = when (entity) {
         is LilyOfValley -> 1.35f
