@@ -47,6 +47,11 @@ jobs:
           grep -q 'val workload: RuntimeWorkloadSnapshot' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceReport.kt
           grep -q 'workload = RuntimeWorkloadTelemetry.snapshot()' app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt
           test -f app/src/test/java/com/anurag9000/forestrun/engine/RuntimeWorkloadTelemetryTest.kt
+          test -f scripts/evaluate_performance_profiles.py
+          test -f scripts/test_evaluate_performance_profiles.py
+
+      - name: Test performance evidence tooling
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
