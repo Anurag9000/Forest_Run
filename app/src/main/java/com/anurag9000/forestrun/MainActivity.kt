@@ -5,6 +5,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -13,10 +14,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import com.anurag9000.forestrun.engine.EncounterScenario
 import com.anurag9000.forestrun.engine.FeedbackSettings
 import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.HapticManager
 import com.anurag9000.forestrun.engine.LeitmotifManager
+import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.RuntimeAssetValidator
 import com.anurag9000.forestrun.engine.SaveIntegrityManager
 import com.anurag9000.forestrun.engine.SfxManager
@@ -30,6 +33,10 @@ class MainActivity : AppCompatActivity() {
     private var configurationHeightDp = 0
 
     companion object {
+        private const val TAG = "ForestRunLaunch"
+        private const val DEBUG_LAUNCH_RETRY_MS = 100L
+        private const val MAX_DEBUG_LAUNCH_ATTEMPTS = 150
+        const val DEBUG_SCENARIO_READY_PREFIX = "FOREST_RUN_SCENARIO_READY"
         const val EXTRA_DEBUG_AUTOSTART = "debug_autostart"
         const val EXTRA_DEBUG_SCENARIO = "debug_scenario"
         const val EXTRA_RUN_MODE = "run_mode"
@@ -51,7 +58,7 @@ class MainActivity : AppCompatActivity() {
         configureSafeAreaInsets()
         gameView.post {
             hideSystemUI()
-            gameView.applyDebugLaunchIntent(intent)
+            applyDebugLaunchWhenReady(Intent(intent))
         }
     }
 
@@ -86,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (::gameView.isInitialized) {
-            gameView.post { gameView.applyDebugLaunchIntent(intent) }
+            gameView.post { applyDebugLaunchWhenReady(Intent(intent)) }
         }
     }
 
@@ -118,6 +125,55 @@ class MainActivity : AppCompatActivity() {
         LeitmotifManager.destroy()
         SfxManager.destroy()
         super.onDestroy()
+    }
+
+    private fun applyDebugLaunchWhenReady(
+        launchIntent: Intent,
+        attemptsRemaining: Int = MAX_DEBUG_LAUNCH_ATTEMPTS
+    ) {
+        if (!::gameView.isInitialized) return
+        val scenarioName = launchIntent.getStringExtra(EXTRA_DEBUG_SCENARIO)
+        val autoStart = launchIntent.getBooleanExtra(EXTRA_DEBUG_AUTOSTART, false)
+        if (scenarioName.isNullOrBlank() && !autoStart) return
+
+        val scenario = scenarioName?.let { raw ->
+            EncounterScenario.entries.firstOrNull { it.name == raw }
+        }
+        if (!scenarioName.isNullOrBlank() && scenario == null) {
+            Log.e(TAG, "FOREST_RUN_SCENARIO_REJECTED scenario=$scenarioName reason=unknown")
+            return
+        }
+
+        val surfaceReady = gameView.width > 0 &&
+            gameView.height > 0 &&
+            gameView.holder.surface?.isValid == true &&
+            gameView.debugFrameCounter > 0L
+        if (!surfaceReady) {
+            if (attemptsRemaining <= 0) {
+                Log.e(
+                    TAG,
+                    "FOREST_RUN_SCENARIO_REJECTED scenario=${scenarioName ?: "NORMAL"} reason=timeout"
+                )
+                return
+            }
+            gameView.postDelayed(
+                { applyDebugLaunchWhenReady(launchIntent, attemptsRemaining - 1) },
+                DEBUG_LAUNCH_RETRY_MS
+            )
+            return
+        }
+
+        gameView.applyDebugLaunchIntent(launchIntent)
+        val effectiveMode = if (scenario != null) {
+            RunMode.forScenario(launchIntent.getStringExtra(EXTRA_RUN_MODE))
+        } else {
+            RunMode.NORMAL
+        }
+        Log.i(
+            TAG,
+            "$DEBUG_SCENARIO_READY_PREFIX scenario=${scenario?.name ?: "NORMAL"} " +
+                "mode=${effectiveMode.name} frame=${gameView.debugFrameCounter}"
+        )
     }
 
     private fun configureSafeAreaInsets() {
