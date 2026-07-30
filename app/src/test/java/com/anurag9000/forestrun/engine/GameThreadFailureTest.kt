@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,7 +29,7 @@ class GameThreadFailureTest {
         assertFalse(thread.isAlive)
         assertFalse(thread.isRunning)
         assertEquals(0, renderCalls.get())
-        val failure = assertNotNull(thread.lastFailure)
+        val failure = requireNotNull(thread.lastFailure)
         assertEquals(GameThread.FrameStage.UPDATE, failure.stage)
         assertSame(expected, failure.cause)
         assertSame(failure, reported.get())
@@ -55,7 +54,7 @@ class GameThreadFailureTest {
         assertFalse(thread.isAlive)
         assertFalse(thread.isRunning)
         assertEquals(1, updateCalls.get())
-        val failure = assertNotNull(thread.lastFailure)
+        val failure = requireNotNull(thread.lastFailure)
         assertEquals(GameThread.FrameStage.RENDER, failure.stage)
         assertSame(expected, failure.cause)
         assertSame(failure, reported.get())
