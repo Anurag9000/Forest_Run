@@ -25,6 +25,16 @@ object FramePerformanceTelemetry {
         RuntimeWorkloadTelemetry.reset()
     }
 
+    /**
+     * Clear the existing monitor after its producer GameThread has stopped.
+     * This preserves the monitor reference already captured by the next thread.
+     */
+    @Synchronized
+    fun resetStoppedSession() {
+        monitor.reset()
+        RuntimeWorkloadTelemetry.reset()
+    }
+
     /** Capture an out-of-band profiling snapshot; never call this every frame. */
     fun snapshot(): FramePerformanceSnapshot = monitor.snapshot()
 }
