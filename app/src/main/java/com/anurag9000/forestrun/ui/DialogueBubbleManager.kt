@@ -22,13 +22,15 @@ object DialogueBubbleManager {
     private const val TEXT_SIZE = 18f
     private const val LINE_SPACING = 6f
     private const val MAX_BUBBLES = 5
+    private const val MAX_VARIANT_KEYS = 128
     private const val MAX_TEXT_WIDTH = 240f
     private const val MAX_LINES = 3
     private const val SCREEN_MARGIN = 8f
     private const val MIN_POINTER_INSET = 16f
 
+    private val whitespace = Regex("\\s+")
     private var pixelFont: Typeface? = null
-    private val variantCounts = mutableMapOf<String, Int>()
+    private val variantIndices = LinkedHashMap<String, Int>()
 
     data class Bubble(
         val text: String,
@@ -41,15 +43,17 @@ object DialogueBubbleManager {
         var elapsed: Float = 0f
     ) {
         val progress: Float
-            get() = (elapsed / LIFETIME_S).coerceIn(0f, 1f)
+            get() = (elapsed / LIFETIME_S).takeIf { it.isFinite() }
+                ?.coerceIn(0f, 1f)
+                ?: 1f
 
         val alpha: Int
-            get() = (
-                (1f - MathUtils.normalise(progress, 0.65f, 1f)) * 255f
-            ).toInt().coerceIn(0, 255)
+            get() = ((1f - MathUtils.normalise(progress, 0.65f, 1f)) * 255f)
+                .toInt()
+                .coerceIn(0, 255)
 
         val isDead: Boolean
-            get() = elapsed >= LIFETIME_S
+            get() = !elapsed.isFinite() || elapsed >= LIFETIME_S
     }
 
     private val active = mutableListOf<Bubble>()
@@ -111,6 +115,7 @@ object DialogueBubbleManager {
                 borderColor = borderColor
             )
         )
+        RuntimeWorkloadTelemetry.publishDialogueBubbles(active.size)
     }
 
     fun spawnVariant(
@@ -121,11 +126,18 @@ object DialogueBubbleManager {
         fillColor: Int = Color.rgb(250, 246, 228),
         borderColor: Int = Color.rgb(40, 40, 40)
     ) {
-        if (textOptions.isEmpty()) return
-        val nextIndex = variantCounts.getOrDefault(triggerKey, 0)
-        variantCounts[triggerKey] = nextIndex + 1
+        val key = triggerKey.trim()
+        val options = textOptions.map(String::trim).filter(String::isNotEmpty)
+        if (key.isEmpty() || options.isEmpty()) return
+
+        if (key !in variantIndices && variantIndices.size >= MAX_VARIANT_KEYS) {
+            val eldest = variantIndices.entries.firstOrNull()?.key
+            if (eldest != null) variantIndices.remove(eldest)
+        }
+        val index = variantIndices.getOrDefault(key, 0).coerceIn(0, options.lastIndex)
+        variantIndices[key] = (index + 1) % options.size
         spawn(
-            text = textOptions[nextIndex % textOptions.size],
+            text = options[index],
             anchorX = anchorX,
             anchorY = anchorY,
             fillColor = fillColor,
@@ -138,8 +150,12 @@ object DialogueBubbleManager {
         var bubbleIndex = 0
         while (bubbleIndex < active.size) {
             val bubble = active[bubbleIndex]
-            bubble.elapsed += deltaTime
-            bubble.y -= FLOAT_SPEED * deltaTime
+            bubble.elapsed = (bubble.elapsed.toDouble() + deltaTime.toDouble())
+                .coerceAtMost(Float.MAX_VALUE.toDouble())
+                .toFloat()
+            bubble.y = (bubble.y.toDouble() - FLOAT_SPEED.toDouble() * deltaTime.toDouble())
+                .coerceIn(-Float.MAX_VALUE.toDouble(), Float.MAX_VALUE.toDouble())
+                .toFloat()
             if (bubble.isDead) {
                 active.removeAt(bubbleIndex)
             } else {
@@ -163,9 +179,10 @@ object DialogueBubbleManager {
                 borderPaint.alpha = alpha
                 shadowPaint.alpha = (alpha * 0.33f).toInt().coerceIn(0, 255)
 
+                val availableWidth = (canvas.width - SCREEN_MARGIN * 2f).coerceAtLeast(1f)
                 val bubbleWidth = (bubble.widestLine + PADDING_X * 2f)
-                    .coerceAtMost(canvas.width - SCREEN_MARGIN * 2f)
-                    .coerceAtLeast(PADDING_X * 2f + 1f)
+                    .coerceAtMost(availableWidth)
+                    .coerceAtLeast(minOf(PADDING_X * 2f + 1f, availableWidth))
                 val textBlockHeight = bubble.lines.size * lineHeight - LINE_SPACING
                 val bubbleHeight = textBlockHeight + PADDING_Y * 2f
 
@@ -185,10 +202,9 @@ object DialogueBubbleManager {
                     bubbleRect.bottom + 5f
                 )
 
-                val pointerX = bubble.x.coerceIn(
-                    bubbleRect.left + MIN_POINTER_INSET,
-                    bubbleRect.right - MIN_POINTER_INSET
-                )
+                val pointerMin = bubbleRect.left + minOf(MIN_POINTER_INSET, bubbleRect.width() / 2f)
+                val pointerMax = bubbleRect.right - minOf(MIN_POINTER_INSET, bubbleRect.width() / 2f)
+                val pointerX = bubble.x.coerceIn(pointerMin, maxOf(pointerMin, pointerMax))
                 val pointerTipY = (bubbleRect.bottom + POINTER_H)
                     .coerceAtMost(canvas.height - SCREEN_MARGIN)
 
@@ -230,12 +246,14 @@ object DialogueBubbleManager {
 
     fun clear() {
         active.clear()
-        variantCounts.clear()
+        variantIndices.clear()
         lineMeasurementCountForTest = 0
         RuntimeWorkloadTelemetry.publishDialogueBubbles(0)
     }
 
     internal fun activeTextsForTest(): List<String> = active.map { it.text }
+
+    internal fun variantKeyCountForTest(): Int = variantIndices.size
 
     internal fun wrapTextForTest(text: String, maxWidth: Float): List<String> =
         wrapText(text.trim(), maxWidth, textPaint, MAX_LINES)
@@ -247,39 +265,53 @@ object DialogueBubbleManager {
         maxLines: Int
     ): List<String> {
         if (text.isBlank()) return emptyList()
-        val safeWidth = maxWidth.coerceAtLeast(1f)
-        val tokens = splitOversizedWords(text.split(Regex("\\s+")).filter(String::isNotBlank), safeWidth, paint)
+        val safeWidth = maxWidth.takeIf { it.isFinite() && it > 0f } ?: 1f
+        val lineLimit = maxLines.coerceAtLeast(1)
+        val tokens = splitOversizedWords(
+            text.split(whitespace).filter(String::isNotBlank),
+            safeWidth,
+            paint
+        )
         val lines = mutableListOf<String>()
         val current = StringBuilder()
+        var tokenIndex = 0
+        var truncated = false
 
-        for (token in tokens) {
+        while (tokenIndex < tokens.size) {
+            val token = tokens[tokenIndex]
             val candidate = if (current.isEmpty()) token else "$current $token"
             if (paint.measureText(candidate) <= safeWidth) {
                 current.clear()
                 current.append(candidate)
+                tokenIndex++
                 continue
             }
 
             if (current.isNotEmpty()) {
                 lines.add(current.toString())
                 current.clear()
+                if (lines.size >= lineLimit) {
+                    truncated = true
+                    break
+                }
             }
             current.append(token)
-
-            if (lines.size == maxLines - 1) break
+            tokenIndex++
         }
 
-        if (current.isNotEmpty() && lines.size < maxLines) lines.add(current.toString())
-
-        val consumed = lines.joinToString(" ").length
-        if (consumed < text.length && lines.isNotEmpty()) {
-            val lastIndex = lines.lastIndex
-            lines[lastIndex] = ellipsize(lines[lastIndex], safeWidth, paint)
+        if (current.isNotEmpty() && lines.size < lineLimit) lines.add(current.toString())
+        if (tokenIndex < tokens.size) truncated = true
+        if (truncated && lines.isNotEmpty()) {
+            lines[lines.lastIndex] = appendEllipsis(lines.last(), safeWidth, paint)
         }
-        return lines.ifEmpty { listOf(ellipsize(text, safeWidth, paint)) }
+        return lines.ifEmpty { listOf(appendEllipsis(text, safeWidth, paint)) }
     }
 
-    private fun splitOversizedWords(words: List<String>, maxWidth: Float, paint: Paint): List<String> {
+    private fun splitOversizedWords(
+        words: List<String>,
+        maxWidth: Float,
+        paint: Paint
+    ): List<String> {
         val result = mutableListOf<String>()
         for (word in words) {
             if (paint.measureText(word) <= maxWidth) {
@@ -301,10 +333,9 @@ object DialogueBubbleManager {
         return result
     }
 
-    private fun ellipsize(text: String, maxWidth: Float, paint: Paint): String {
+    private fun appendEllipsis(text: String, maxWidth: Float, paint: Paint): String {
         val ellipsis = "…"
-        if (paint.measureText(text) <= maxWidth) return text
-        val result = StringBuilder(text)
+        val result = StringBuilder(text.removeSuffix(ellipsis))
         while (result.isNotEmpty() && paint.measureText("$result$ellipsis") > maxWidth) {
             result.deleteCharAt(result.lastIndex)
         }
