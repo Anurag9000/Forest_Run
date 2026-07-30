@@ -93,4 +93,40 @@ class OpeningReadabilityGuideTest {
         )
         assertEquals(listOf(EntityType.WOLF, EntityType.BAMBOO), defaultPool)
     }
+
+    @Test
+    fun `invalid time behaves as the safe beginning of the opening`() {
+        listOf(-1f, Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY).forEach { invalid ->
+            assertTrue(OpeningReadabilityGuide.isRandomSpawnLocked(invalid))
+            assertEquals(
+                listOf(
+                    EntityType.DUCK,
+                    EntityType.LILY_OF_VALLEY,
+                    EntityType.CAT,
+                    EntityType.TIT,
+                    EntityType.CACTUS
+                ),
+                OpeningReadabilityGuide.spawnPoolFor(invalid, listOf(EntityType.WOLF))
+            )
+            assertEquals(
+                "Find The Stride",
+                OpeningReadabilityGuide.cueFor(
+                    runTimeSeconds = invalid,
+                    inputState = OpeningInputState(),
+                    routeTier = PacifistRouteTier.NONE,
+                    mercyHearts = 0,
+                    kindnessChain = 0
+                )?.title
+            )
+        }
+    }
+
+    @Test
+    fun `invalid default intervals never escape as NaN or negative`() {
+        listOf(-1f, Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY).forEach { invalid ->
+            val adjusted = OpeningReadabilityGuide.adjustedSpawnInterval(8f, invalid)
+            assertTrue(adjusted.isFinite())
+            assertEquals(1.95f, adjusted, 0.0001f)
+        }
+    }
 }
