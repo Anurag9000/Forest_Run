@@ -1,6 +1,6 @@
 # Forest Run — Performance Evidence Protocol
 
-Performance is a release-evidence task, not a documentation adjective. The engine contains low-overhead telemetry, deterministic physical-device scenarios, a clean-SHA collector, and a candidate-specific acceptance evaluator. No device class is accepted until its measurements are captured, reviewed, converted into explicit limits, and re-evaluated against those limits.
+Performance is a release-evidence task, not a documentation adjective. The engine contains low-overhead telemetry, repeated deterministic physical-device workloads, a clean-SHA collector, and a candidate-specific acceptance evaluator. No device class is accepted until its measurements are captured, reviewed, converted into explicit limits, and re-evaluated against those limits.
 
 ## What the engine records
 
@@ -28,26 +28,42 @@ An out-of-band snapshot calculates:
 - dialogue bubbles;
 - flavour texts.
 
-Recording does not allocate per frame. Snapshotting copies and sorts timing arrays and must not be called from the frame loop.
+`GhostIoTelemetry` records asynchronous best-run persistence pressure:
+
+- writes started, completed, and failed;
+- latest and maximum ghost frame count;
+- latest and maximum write duration.
+
+Per-frame recording does not allocate. Snapshotting copies and sorts timing arrays and must not be called from the frame loop. Ghost I/O timing is published by the dedicated serialized worker, not by the render thread.
 
 ## Physical profiling scenarios
 
 `HardwarePerformanceProfileTest` is marked `@LargeTest`, so permanent emulator CI compiles it but does not execute it. It currently profiles:
 
 - `OPENING_READABILITY`;
-- `BLOOM_SHOWCASE`.
+- `BLOOM_SHOWCASE`;
+- `FLORA_SHOWCASE`;
+- `TREE_SHOWCASE`;
+- `BIRD_SHOWCASE`;
+- `ANIMAL_SHOWCASE`;
+- `GHOST_READABILITY`;
+- `GHOST_PERSISTENCE_MAX`, which writes the full 36,000-frame, twenty-minute-capacity ghost while rendering continues.
 
-Each test:
+Each scenario profile:
 
-1. clears deterministic state;
+1. clears deterministic disk and in-memory state;
 2. starts a fresh telemetry monitor before Activity creation;
 3. launches the requested deterministic scenario in `PERFORMANCE_PROFILE` mode;
-4. allows startup/warmup frames;
-5. records a sustained twenty-second interval;
-6. verifies structural metric sanity;
-7. writes a JSON report to the debug app’s external files directory.
+4. warms the Activity, render thread, assets, and caches;
+5. stops the producer thread and resets the existing monitor in place, excluding warmup samples;
+6. restarts the requested scenario with the same monitor reference;
+7. repeatedly replays the encounter script throughout the measured interval instead of measuring an idle post-script screen;
+8. verifies structural metric sanity and replay count;
+9. writes a JSON report to the debug app’s external files directory.
 
-The instrumentation test does not impose universal timing limits. Hardware classes require measured, candidate-specific interpretation.
+The maximum ghost-persistence profile additionally schedules a validated 36,000-frame run through `GhostPersistenceManager`, waits for the asynchronous worker, rejects write failure, and records exact latency while gameplay rendering remains active.
+
+The instrumentation tests do not impose universal timing limits. Hardware classes require measured, candidate-specific interpretation.
 
 ## Run and collect profiles
 
@@ -104,6 +120,24 @@ Thresholds must be derived from representative evidence, not guessed before prof
       "maxSlowFrameRatio": 0.02,
       "maxUsedHeapBytes": 64000000,
       "maxMaximumProcessingNs": 30000000
+    },
+    {
+      "name": "midrange-one-maximum-ghost-write",
+      "manufacturer": "Example",
+      "model": "Midrange One",
+      "scenario": "GHOST_PERSISTENCE_MAX",
+      "minRefreshRateHz": 59.0,
+      "maxRefreshRateHz": 61.0,
+      "minSampledFrames": 300,
+      "maxP95ProcessingNs": 13000000,
+      "maxP99ProcessingNs": 16000000,
+      "maxSlowFrameRatio": 0.02,
+      "maxUsedHeapBytes": 96000000,
+      "maxMaximumProcessingNs": 30000000,
+      "minGhostWritesCompleted": 1,
+      "maxGhostWriteFailures": 0,
+      "minMaximumGhostFrameCount": 36000,
+      "maxGhostWriteDurationNs": 100000000
     }
   ]
 }
@@ -111,7 +145,7 @@ Thresholds must be derived from representative evidence, not guessed before prof
 
 The numbers above illustrate the schema only. They are not Forest Run release limits.
 
-`manufacturer`, `model`, and `scenario` may use `"*"` as a fallback. Exact matches outrank wildcards. Equal-specificity matches are rejected as ambiguous rather than selected by file order. Core measured limits are mandatory; maximum single-frame processing time is optional.
+`manufacturer`, `model`, and `scenario` may use `"*"` as a fallback. Exact matches outrank wildcards. Equal-specificity matches are rejected as ambiguous rather than selected by file order. Core frame and heap limits are mandatory. Maximum single-frame processing time and ghost-persistence limits are optional. When a selected profile declares a ghost limit, the corresponding report metric becomes mandatory.
 
 Evaluate existing reports directly:
 
@@ -125,9 +159,9 @@ The evaluator exits:
 
 - `0` when every supplied report passes;
 - `1` when one or more measured limits are violated;
-- `2` for malformed reports, malformed manifests, missing matches, or ambiguous matches.
+- `2` for malformed reports, malformed manifests, missing metrics, missing matches, or ambiguous matches.
 
-The evaluator validates percentile ordering, finite ratios, non-negative integer metrics, required limits, refresh bounds, and unique profile names before comparing results.
+The evaluator validates percentile ordering, finite ratios, non-negative integer metrics, required limits, refresh bounds, unique profile names, and declared ghost I/O metrics before comparing results.
 
 ## Collect and enforce in one command
 
@@ -168,7 +202,7 @@ At minimum capture:
 4. cutout or unusual-aspect device;
 5. tablet if tablets remain supported.
 
-Run both deterministic scenarios on each class. Add longer ordinary-play captures when deterministic results are stable.
+Run the complete deterministic workload set on each class. Add longer ordinary-play captures after deterministic results are stable.
 
 ## Review checklist
 
@@ -180,13 +214,15 @@ For each report and accompanying diagnostics, review:
 - update versus render contribution;
 - workload peaks correlated with timing spikes;
 - heap growth across repeated scenarios;
+- maximum ghost-write duration and frame capacity;
+- ghost-write failures;
 - `gfxinfo` jank/frame histograms;
 - `meminfo` growth and retained memory;
 - visible GC or allocation spikes;
-- audio-thread and I/O behaviour around Bloom and ghost saves;
+- audio-thread behaviour around Bloom and transitions;
 - thermal degradation during extended play.
 
-A low mean does not excuse a damaging p99. A low p99 during a deterministic lane does not prove long-run stability.
+A low mean does not excuse a damaging p99. A low p99 during deterministic lanes does not prove long-run stability. A fast ghost write does not prove process-death recovery or playback readability.
 
 ## Threshold derivation procedure
 
@@ -198,9 +234,9 @@ A low mean does not excuse a damaging p99. A low p99 during a deterministic lane
 6. Record exact device/scenario limits in the versioned manifest.
 7. Re-run collection with the manifest enabled.
 8. Archive reports, diagnostics, manifest, manifest hash, and `acceptance.txt` together.
-9. Repeat whenever code, assets, target SDK, rendering policy, or accepted device scope changes materially.
+9. Repeat whenever code, assets, target SDK, rendering policy, persistence format, or accepted device scope changes materially.
 
-Do not mark a device/scenario row accepted merely because instrumentation completed. Instrumentation proves that evidence was collected; the evaluator proves only that it met the approved measured manifest; human review still covers visual smoothness, thermal behaviour, audio, and input feel.
+Do not mark a device/scenario row accepted merely because instrumentation completed. Instrumentation proves that evidence was collected; the evaluator proves only that it met the approved measured manifest; human review still covers visual smoothness, thermal behaviour, audio, input feel, and ghost readability.
 
 ## Remaining physical performance work
 
@@ -211,6 +247,6 @@ The repository still requires:
 - long ordinary-play scenarios;
 - allocation and GC tracing beyond heap snapshots;
 - audio-thread tracing;
-- ghost-save I/O duration evidence;
+- captured maximum ghost-save evidence on the physical device matrix;
 - thermal and battery behaviour;
 - remediation and repeated measurement of any material hotspots found.
