@@ -88,7 +88,7 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
             with self.assertRaisesRegex(CaptureEvidenceError, "imageSha256 mismatch"):
                 self.load(wrong_hash)
 
-    def test_debug_package_activity_and_timezone_are mandatory(self):
+    def test_debug_package_activity_and_timezone_are_mandatory(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             wrong_package = self.write(
