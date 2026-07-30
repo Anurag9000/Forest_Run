@@ -24,6 +24,19 @@ abstract class Entity(val context: Context) {
     var velocityY: Float = 0f
 
     var hitbox = RectF()
+
+    /**
+     * Bounds of the complete live encounter used for terminal pass/conversion
+     * decisions and presentation anchors.
+     *
+     * Most entities have one collision rectangle, so [hitbox] is the default.
+     * Multi-part hazards must override this with the union of every part that
+     * can still affect the player. Collision queries remain free to use their
+     * precise component rectangles instead of treating this aggregate as solid.
+     */
+    open val encounterBounds: RectF
+        get() = hitbox
+
     var isActive: Boolean = true
     var hasBeenPassed: Boolean = false
     var encounterOutcome: EncounterOutcome = EncounterOutcome.PENDING
