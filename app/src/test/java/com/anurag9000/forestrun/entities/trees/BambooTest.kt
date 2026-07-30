@@ -28,13 +28,7 @@ class BambooTest {
 
     @Test
     fun `bamboo keeps a featured seam wider than the surrounding gaps`() {
-        val bamboo = Bamboo(
-            context = context,
-            startX = 560f,
-            screenHeight = 1080f,
-            groundY = 885.6f,
-            sprite = spriteManager.bambooSprite.copy()
-        )
+        val bamboo = bamboo()
         val player = Player(1920, 1080, spriteManager)
         val gameState = GameStateManager(context)
 
@@ -59,6 +53,43 @@ class BambooTest {
         )
         assertEquals(CollisionResult.HIT, bamboo.onCollision(player, gameState))
     }
+
+    @Test
+    fun `aggregate pass bounds enclose live stalk geometry through both sway directions`() {
+        val bamboo = bamboo()
+
+        // time = 1.5 radians: positive sway
+        bamboo.update(deltaTime = 0.5f, scrollSpeed = 0f)
+        assertAggregateMatchesStalks(bamboo)
+
+        // time = 4.5 radians: negative sway
+        bamboo.update(deltaTime = 0.5f, scrollSpeed = 0f)
+        bamboo.update(deltaTime = 0.5f, scrollSpeed = 0f)
+        assertAggregateMatchesStalks(bamboo)
+    }
+
+    private fun assertAggregateMatchesStalks(bamboo: Bamboo) {
+        val topHitboxes = rectArrayField(bamboo, "topHitboxes")
+        val bottomHitboxes = rectArrayField(bamboo, "bottomHitboxes")
+        val allSegments = topHitboxes.asList() + bottomHitboxes.asList()
+        val minimumLeft = allSegments.minOf { it.left }
+        val maximumRight = allSegments.maxOf { it.right }
+        val minimumTop = allSegments.minOf { it.top }
+        val maximumBottom = allSegments.maxOf { it.bottom }
+
+        assertEquals(minimumLeft, bamboo.hitbox.left, 0.001f)
+        assertEquals(maximumRight, bamboo.hitbox.right, 0.001f)
+        assertEquals(minimumTop, bamboo.hitbox.top, 0.001f)
+        assertEquals(maximumBottom, bamboo.hitbox.bottom, 0.001f)
+    }
+
+    private fun bamboo() = Bamboo(
+        context = context,
+        startX = 560f,
+        screenHeight = 1080f,
+        groundY = 885.6f,
+        sprite = spriteManager.bambooSprite.copy()
+    )
 
     private fun rectArrayField(bamboo: Bamboo, name: String): Array<RectF> {
         val field = Bamboo::class.java.getDeclaredField(name)
