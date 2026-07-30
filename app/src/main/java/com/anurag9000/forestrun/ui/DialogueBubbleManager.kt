@@ -127,7 +127,7 @@ object DialogueBubbleManager {
         borderColor: Int = Color.rgb(40, 40, 40)
     ) {
         val key = triggerKey.trim()
-        val options = textOptions.map(String::trim).filter(String::isNotEmpty)
+        val options = textOptions.map { it.trim() }.filter { it.isNotEmpty() }
         if (key.isEmpty() || options.isEmpty()) return
 
         if (key !in variantIndices && variantIndices.size >= MAX_VARIANT_KEYS) {
@@ -202,8 +202,9 @@ object DialogueBubbleManager {
                     bubbleRect.bottom + 5f
                 )
 
-                val pointerMin = bubbleRect.left + minOf(MIN_POINTER_INSET, bubbleRect.width() / 2f)
-                val pointerMax = bubbleRect.right - minOf(MIN_POINTER_INSET, bubbleRect.width() / 2f)
+                val pointerInset = minOf(MIN_POINTER_INSET, bubbleRect.width() / 2f)
+                val pointerMin = bubbleRect.left + pointerInset
+                val pointerMax = bubbleRect.right - pointerInset
                 val pointerX = bubble.x.coerceIn(pointerMin, maxOf(pointerMin, pointerMax))
                 val pointerTipY = (bubbleRect.bottom + POINTER_H)
                     .coerceAtMost(canvas.height - SCREEN_MARGIN)
@@ -268,7 +269,7 @@ object DialogueBubbleManager {
         val safeWidth = maxWidth.takeIf { it.isFinite() && it > 0f } ?: 1f
         val lineLimit = maxLines.coerceAtLeast(1)
         val tokens = splitOversizedWords(
-            text.split(whitespace).filter(String::isNotBlank),
+            text.split(whitespace).filter { it.isNotBlank() },
             safeWidth,
             paint
         )
