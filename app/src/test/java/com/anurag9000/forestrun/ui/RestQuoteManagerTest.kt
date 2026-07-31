@@ -143,4 +143,56 @@ class RestQuoteManagerTest {
                 quote.contains("careful", ignoreCase = true)
         )
     }
+
+    @Test
+    fun `minimum integer seed cannot produce a negative quote index`() {
+        val summary = RunSummary(
+            score = Int.MIN_VALUE,
+            distanceM = 0f,
+            isNewHighScore = false,
+            highScore = 0,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 0,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 0,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.NONE
+        )
+
+        val quote = RestQuoteManager.quoteFor(context, summary, Biome.MEADOW, null)
+
+        assertTrue(quote.isNotBlank())
+    }
+
+    @Test
+    fun `extreme weighted summary remains inside a valid quote pool`() {
+        val summary = RunSummary(
+            score = Int.MAX_VALUE,
+            distanceM = Float.MAX_VALUE,
+            isNewHighScore = true,
+            highScore = Int.MAX_VALUE,
+            mercyHearts = Int.MAX_VALUE,
+            mercyMisses = Int.MAX_VALUE,
+            kindnessChain = Int.MAX_VALUE,
+            cleanPasses = Int.MAX_VALUE,
+            sparedCount = Int.MAX_VALUE,
+            hitsTaken = Int.MAX_VALUE,
+            seedsCollected = Int.MAX_VALUE,
+            bloomConversions = Int.MAX_VALUE,
+            lastKiller = EntityType.WOLF,
+            restQuote = "",
+            forestMood = ForestMood.RECKLESS,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val quote = RestQuoteManager.quoteFor(context, summary, Biome.NIGHT_FOREST, EntityType.WOLF)
+
+        assertTrue(quote.isNotBlank())
+    }
 }
