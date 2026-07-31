@@ -103,9 +103,10 @@ class GhostPlayer {
         colorFilter = GHOST_FILTER
     }
 
-    // Reusable draw rects
+    // Reusable draw geometry
     private val drawRect = RectF()
     private val spriteRect = RectF()
+    private var drawPivotX = 0f
 
     // ── API ───────────────────────────────────────────────────────────────
 
@@ -130,6 +131,7 @@ class GhostPlayer {
         denseSuppressedFor = 0f
         visibilityAlpha = 0f
         revealImmediately = false
+        drawPivotX = 0f
         lastX = 0f
         lastY = 0f
     }
@@ -194,17 +196,15 @@ class GhostPlayer {
         }
         alphaMulti *= visibilityAlpha
         if (!alphaMulti.isFinite() || alphaMulti <= 0.02f) return
+        if (!prepareFiniteDrawGeometry(frame)) return
 
-        val geometry = finiteDrawGeometry(frame) ?: return
         ghostPaint.alpha = (GHOST_ALPHA * alphaMulti).toInt().coerceIn(0, GHOST_ALPHA)
-        drawRect.set(frame.x, frame.y, geometry.drawRight, geometry.drawBottom)
-        spriteRect.set(frame.x, frame.y, geometry.spriteRight, geometry.spriteBottom)
 
         // Pick sprite that matches the ghost's recorded state.
         val sprite = spriteForState(frame.stateOrdinal, spriteManager)
         val saveCount = canvas.save()
         try {
-            canvas.scale(frame.scaleX, frame.scaleY, geometry.pivotX, geometry.drawBottom)
+            canvas.scale(frame.scaleX, frame.scaleY, drawPivotX, drawRect.bottom)
             sprite.draw(canvas, spriteRect, ghostPaint)
         } finally {
             canvas.restoreToCount(saveCount)
@@ -223,14 +223,6 @@ class GhostPlayer {
     internal val frameIndexForTest: Int get() = frameIdx
     internal val isWavingForTest: Boolean get() = isWaving
     internal val elapsedForTest: Float get() = elapsed
-
-    private data class DrawGeometry(
-        val drawRight: Float,
-        val drawBottom: Float,
-        val spriteRight: Float,
-        val spriteBottom: Float,
-        val pivotX: Float
-    )
 
     private fun spriteForState(ordinal: Int, sm: SpriteManager): SpriteSheet {
         val state = PlayerState.entries.getOrElse(ordinal) { PlayerState.RUNNING }
@@ -361,20 +353,27 @@ class GhostPlayer {
         return result
     }
 
-    private fun finiteDrawGeometry(frame: GhostFrame): DrawGeometry? {
+    private fun prepareFiniteDrawGeometry(frame: GhostFrame): Boolean {
         val drawRight = frame.x.toDouble() + Player.BASE_WIDTH.toDouble() * frame.scaleX.toDouble()
         val drawBottom = frame.y.toDouble() + Player.BASE_HEIGHT.toDouble() * frame.scaleY.toDouble()
         val spriteRight = frame.x.toDouble() + Player.BASE_WIDTH.toDouble()
         val spriteBottom = frame.y.toDouble() + Player.BASE_HEIGHT.toDouble()
         val pivotX = (frame.x.toDouble() + drawRight) * 0.5
-        val values = doubleArrayOf(drawRight, drawBottom, spriteRight, spriteBottom, pivotX)
-        if (values.any { !it.isFinite() || it < -Float.MAX_VALUE || it > Float.MAX_VALUE }) return null
-        return DrawGeometry(
-            drawRight = drawRight.toFloat(),
-            drawBottom = drawBottom.toFloat(),
-            spriteRight = spriteRight.toFloat(),
-            spriteBottom = spriteBottom.toFloat(),
-            pivotX = pivotX.toFloat()
-        )
+        if (!isRepresentableFloat(drawRight) ||
+            !isRepresentableFloat(drawBottom) ||
+            !isRepresentableFloat(spriteRight) ||
+            !isRepresentableFloat(spriteBottom) ||
+            !isRepresentableFloat(pivotX)
+        ) {
+            return false
+        }
+
+        drawRect.set(frame.x, frame.y, drawRight.toFloat(), drawBottom.toFloat())
+        spriteRect.set(frame.x, frame.y, spriteRight.toFloat(), spriteBottom.toFloat())
+        drawPivotX = pivotX.toFloat()
+        return true
     }
+
+    private fun isRepresentableFloat(value: Double): Boolean =
+        value.isFinite() && value >= -Float.MAX_VALUE.toDouble() && value <= Float.MAX_VALUE.toDouble()
 }
