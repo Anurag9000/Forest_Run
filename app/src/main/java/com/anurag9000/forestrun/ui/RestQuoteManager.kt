@@ -7,7 +7,6 @@ import com.anurag9000.forestrun.engine.PacifistRouteTier
 import com.anurag9000.forestrun.engine.RunSummary
 import com.anurag9000.forestrun.engine.StoryFragmentSystem
 import com.anurag9000.forestrun.entities.EntityType
-import kotlin.math.abs
 
 /**
  * Builds short reflective quotes for the post-run rest beat.
@@ -132,15 +131,16 @@ object RestQuoteManager {
     )
 
     private fun variantIndex(summary: RunSummary, biome: Biome, killer: EntityType?, size: Int): Int {
-        val seed = summary.score +
-            summary.cleanPasses * 7 +
-            summary.sparedCount * 11 +
-            summary.bloomConversions * 13 +
-            summary.forestMood.ordinal * 17 +
-            biome.ordinal * 19 +
-            (killer?.ordinal ?: 0) * 23 +
-            summary.pacifistRouteTier.ordinal * 29
-        return abs(seed) % size
+        require(size > 0) { "Rest quote variant pool must not be empty." }
+        val seed = summary.score.toLong() +
+            summary.cleanPasses.toLong() * 7L +
+            summary.sparedCount.toLong() * 11L +
+            summary.bloomConversions.toLong() * 13L +
+            summary.forestMood.ordinal.toLong() * 17L +
+            biome.ordinal.toLong() * 19L +
+            (killer?.ordinal ?: 0).toLong() * 23L +
+            summary.pacifistRouteTier.ordinal.toLong() * 29L
+        return Math.floorMod(seed, size.toLong()).toInt()
     }
 
     private fun readableName(type: EntityType): String =
