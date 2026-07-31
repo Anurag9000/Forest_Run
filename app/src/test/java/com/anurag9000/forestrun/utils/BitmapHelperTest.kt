@@ -2,7 +2,7 @@ package com.anurag9000.forestrun.utils
 
 import android.graphics.Color
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFailsWith
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -45,7 +45,7 @@ class BitmapHelperTest {
             Triple(32, 24, 0),
             Triple(32, 24, -1)
         ).forEach { (width, height, count) ->
-            assertFailsWith<IllegalArgumentException> {
+            assertThrows(IllegalArgumentException::class.java) {
                 BitmapHelper.buildPlaceholderStrip(width, height, count, Color.RED)
             }
         }
@@ -53,7 +53,7 @@ class BitmapHelperTest {
 
     @Test
     fun `strip width multiplication cannot overflow`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             BitmapHelper.buildPlaceholderStrip(
                 frameW = Int.MAX_VALUE,
                 frameH = 13,
@@ -65,7 +65,7 @@ class BitmapHelperTest {
 
     @Test
     fun `extreme but integer representable allocation is rejected`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             BitmapHelper.buildPlaceholderStrip(
                 frameW = 8_192,
                 frameH = 8_192,
