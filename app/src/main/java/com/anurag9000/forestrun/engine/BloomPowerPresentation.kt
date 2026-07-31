@@ -16,8 +16,10 @@ object BloomPowerPresentation {
         recentSurgeFraction: Float
     ): BloomPowerPresentationState {
         val burst = conversionsInBurst.coerceAtLeast(0)
-        val timeFraction = (secondsRemaining / GameConstants.BLOOM_DURATION_S).coerceIn(0f, 1f)
-        val surge = recentSurgeFraction.coerceIn(0f, 1f)
+        val safeSeconds = secondsRemaining.takeIf { it.isFinite() } ?: 0f
+        val safeSurge = recentSurgeFraction.takeIf { it.isFinite() } ?: 0f
+        val timeFraction = (safeSeconds / GameConstants.BLOOM_DURATION_S).coerceIn(0f, 1f)
+        val surge = safeSurge.coerceIn(0f, 1f)
         val tier = when {
             burst >= 6 -> 3
             burst >= 3 -> 2
