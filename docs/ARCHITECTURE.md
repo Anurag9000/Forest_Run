@@ -1,6 +1,6 @@
 # Forest Run — Technical Architecture
 
-This document describes the current remediation branch. It distinguishes implemented contracts from release claims that still require physical-device evidence.
+This document describes the canonical `main` branch. It distinguishes implemented contracts from release claims that still require physical-device evidence.
 
 ## 1. Platform and build
 
@@ -15,6 +15,7 @@ This document describes the current remediation branch. It distinguishes impleme
 - Orientation: fixed landscape, pending final product/device acceptance
 - Release build: R8 minification plus resource shrinking
 - Signing: optional external Gradle/environment credentials; no key material is committed
+- Repository workflow: coherent direct commits to `main`; no active development branches or pull requests
 
 Source layout:
 
@@ -42,7 +43,7 @@ The manifest currently uses:
 - immersive/keep-screen-on behavior
 - `VIBRATE` permission
 
-Repeated launch intents are handled through `onNewIntent` rather than relying on Activity recreation. Audio and haptic managers have explicit teardown/recreation paths.
+Repeated launch intents are handled through `onNewIntent` rather than relying on Activity recreation. Every asynchronous debug-launch retry carries an identity token from `LatestRequestGate`; a newer intent or Activity destruction invalidates all older retries before they can reach `GameView`. Audio and haptic managers have explicit teardown/recreation paths.
 
 ## 3. Game thread
 
@@ -113,6 +114,8 @@ Player jump behavior:
 5. release never adds upward energy;
 6. apex gravity and landing transitions remain deterministic.
 
+The public Player update boundary rejects non-finite/non-positive deltas, caps lifecycle catch-up to one 50 ms render budget, repairs poisoned kinematics/timers on the next valid frame, normalizes run speed, and keeps Bloom presentation inputs finite.
+
 Current locomotion states are running, jump start, jumping, apex, falling, landing, ducking, stumble, and rest. `PlayerState.BLOOM` is a reserved legacy ordinal because old ghost frames store enum ordinals; current Bloom uses `Player.isInvincible` instead.
 
 ## 6. Game-state and economy ownership
@@ -126,7 +129,7 @@ Current locomotion states are running, jump start, jumping, apex, falling, landi
 - debuffs and score multipliers;
 - run-level mercy/pacifist statistics.
 
-Persistent currency remains loaded through save infrastructure. Run resets reload externally changed lifetime Seeds so Garden spending cannot be overwritten by stale in-memory state.
+Persistent currency remains loaded through save infrastructure. Run resets reload externally changed lifetime Seeds so Garden spending cannot be overwritten by stale in-memory state. Non-finite onboarding hold durations cannot falsely complete input discovery.
 
 ## 7. Entity lifecycle and encounter arbitration
 
@@ -196,7 +199,7 @@ Essential menu, Garden, HUD, rest, and debug content share one `SafeContentTrans
 - clips essential content to the safe logical rectangle;
 - inversely maps touch coordinates back into that logical space.
 
-Geometry is covered by host tests, but phone/tablet/cutout/unusual-aspect acceptance remains a physical-device gate.
+Menu, HUD, and Rest presentation clocks reject malformed deltas, cap lifecycle catch-up to 50 ms, and repair previously poisoned local animation state. Geometry is covered by host tests, but phone/tablet/cutout/unusual-aspect acceptance remains a physical-device gate.
 
 Paints, reusable rectangles, cinematic profiles, Bloom presentation objects, hot-path traversals, and one-shot particle emitters are cached or reused where currently audited. These safeguards reduce known churn; they are not a substitute for allocation profiling.
 
@@ -260,7 +263,9 @@ They are enforced at camera, particle, cinematic, music, SFX, and vibration boun
 
 ## 17. Assets and release contracts
 
-`RuntimeAssetValidator` checks required sprites, mandatory audio, and fonts outside debug execution. Sprite sheets must decode, divide cleanly by frame count, and remain within sane dimensions. Generated placeholder sprites are rejected for non-debug runtime.
+`RuntimeAssetValidator` checks required sprites, mandatory audio, and fonts outside debug execution. Sprite sheets must decode, divide cleanly by frame count, and remain within sane dimensions. Mandatory raw resources must resolve and contain readable data.
+
+Generated placeholder sprites are rejected for non-debug runtime. Debug placeholder construction validates frame geometry, detects multiplication overflow, enforces a sixteen-megapixel allocation budget, and reuses paints across frames.
 
 Release signing values are accepted only from external properties/environment variables:
 
@@ -285,7 +290,7 @@ Permanent CI is read-only and validates the exact event SHA. It performs:
 - API 35 connected instrumentation;
 - exact assertion of fourteen tests with zero failures, errors, or skips.
 
-The test suite covers input arbitration, physics, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, thread shutdown, collision geometry, hot-path reuse, and frame telemetry.
+The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, and frame telemetry.
 
 ## 19. Debug scenarios
 
