@@ -10,11 +10,11 @@ The player begins beneath a willow, runs through five atmospheric biomes, collec
 
 ## Current Status
 
-**Feature-rich alpha with the primary correctness-remediation pass implemented and automatically validated.** The remediation branch has a permanent application identity, current Android target, immutable exact-SHA host/emulator CI, broad invariant coverage, an actually obfuscated/resource-shrunk release bundle, versioned atomic ghost persistence, cutout-safe essential UI, persistent feedback controls, and a physical performance-evidence harness.
+**Feature-rich alpha with the primary correctness-remediation history consolidated on `main`.** The repository has a permanent application identity, current Android target, immutable exact-SHA host/emulator CI, broad invariant coverage, an obfuscated/resource-shrunk release bundle, versioned atomic ghost persistence, cutout-safe essential UI, persistent feedback controls, and a physical performance-evidence harness.
 
 It is not yet a release candidate because representative physical-device acceptance, measured performance thresholds, signed-artifact installation, final visual approval, and store/policy work remain.
 
-The `agent/fix-core-gameplay-invariants` branch includes:
+The canonical `main` branch includes:
 
 - responsive tap/hold jumping and swipe-down arbitration;
 - Bloom as an orthogonal power state, preserving airborne physics;
@@ -30,6 +30,7 @@ The `agent/fix-core-gameplay-invariants` branch includes:
 - bounded gameplay input routing and interruption-safe render-thread shutdown;
 - Garden lifecycle, local-day, particle, layout, and currency corrections;
 - bounded/wrapped presentation queues and cached game-over composition;
+- finite, capped Menu, HUD, and Rest presentation clocks;
 - strict runtime asset checks and hardened audio/music lifecycle handling;
 - 30 Hz, twenty-minute ghost capture with atomic off-thread persistence;
 - ghost binary format v2 with magic/version headers, stable state codes, and legacy-file reads;
@@ -38,7 +39,19 @@ The `agent/fix-core-gameplay-invariants` branch includes:
 - versioned SharedPreferences repair with future-schema compatibility storage;
 - allocation-free frame timing capture and a physical-device JSON profiling harness;
 - final application ID `com.anurag9000.forestrun`;
-- API 36 host/release validation and API 35 connected validation on the exact candidate SHA.
+- API 36 host/release validation and API 35 connected validation on exact candidate SHAs.
+
+## Development Workflow
+
+`main` is the only active branch and the sole source of repository truth.
+
+- Routine work is committed directly to `main`; no development branches or pull requests are created.
+- Each commit must be coherent and include the relevant code, tests, configuration, specifications, and documentation.
+- Existing history is preserved. Do not force-push, rewrite, squash away, or otherwise replace published history.
+- Read the exact current blob before replacing a file and use optimistic-lock SHAs for repository writes.
+- Add focused regression coverage for each corrected invariant.
+- Permanent validation workflows are read-only and must never modify or push source.
+- Historical closed or merged pull-request pages may remain in GitHub, but they are not active development surfaces and have no surviving source branches.
 
 ## Implemented System Surface
 
@@ -61,7 +74,9 @@ Permanent read-only CI checks out and records the exact event SHA, then runs:
 - debug application and instrumentation APK assembly;
 - minified/resource-shrunk unsigned AAB construction;
 - effective R8 application-class renaming verification;
-- fourteen API 35 connected tests with zero failures, errors, or skips.
+- API 35 connected behavioural tests.
+
+A successful host job proves compilation, JVM/Robolectric correctness, lint, packaging, R8, and source immutability for that exact SHA. Connected-emulator evidence is tracked separately because runner boot or ADB failures can occur before application tests start. Neither automated result substitutes for representative physical-device acceptance.
 
 The large hardware-capture and performance-profile tests are compiled but intentionally excluded from ordinary emulator CI. They must be run on representative physical devices.
 
@@ -118,6 +133,7 @@ Expected build outputs:
 ## Canonical Runtime Direction
 
 - **Application ID:** `com.anurag9000.forestrun`
+- **Canonical branch:** `main`
 - **Biomes:** five runtime biomes
 - **Bloom target:** eight Seeds and a six-second active window
 - **Input intent:** tap for a short jump, hold for a higher jump, swipe down to duck
