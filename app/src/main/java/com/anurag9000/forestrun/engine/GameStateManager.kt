@@ -184,22 +184,7 @@ class GameStateManager(context: Context) {
      * only after the current power window has ended.
      */
     fun collectSeed() {
-        seedsThisRun = saturatingIncrement(seedsThisRun)
-
-        // Reload before incrementing: Garden may have spent seeds while this
-        // long-lived manager was inactive. Saturation prevents corrupted or
-        // long-lived profiles from wrapping their currency negative.
-        lifetimeSeeds = saturatingIncrement(SaveManager.loadLifetimeSeeds(appContext))
-        SaveManager.saveLifetimeSeeds(appContext, lifetimeSeeds)
-
-        if (!isBloomActive) {
-            bloomMeter = saturatingIncrement(bloomMeter)
-            if (bloomMeter >= GameConstants.BLOOM_SEED_COUNT) {
-                bloomMeter = 0
-                isBloomActive = true
-                bloomTimer = 0f
-            }
-        }
+        addSeeds(1)
     }
 
     fun addBonus(points: Int = 0, seeds: Int = 0, multiplierBoost: Float = 0f) {
@@ -213,7 +198,7 @@ class GameStateManager(context: Context) {
             updateHighScore()
         }
 
-        repeat(seeds.coerceAtLeast(0)) { collectSeed() }
+        addSeeds(seeds)
 
         if (multiplierBoost.isFinite() && multiplierBoost > 0f) {
             scoreMultiplier = multiplierBoost
@@ -352,6 +337,34 @@ class GameStateManager(context: Context) {
     fun save() {
         SaveManager.saveHighScore(appContext, highScore)
         lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext)
+    }
+
+    private fun addSeeds(seedCount: Int) {
+        val safeSeedCount = seedCount.coerceAtLeast(0)
+        if (safeSeedCount == 0) return
+
+        seedsThisRun = saturatingAdd(seedsThisRun, safeSeedCount)
+
+        // Reload once before the atomic-sized award: Garden may have spent
+        // seeds while this long-lived manager was inactive. Persisting once
+        // avoids O(n) disk writes for large bonuses.
+        lifetimeSeeds = saturatingAdd(
+            SaveManager.loadLifetimeSeeds(appContext),
+            safeSeedCount
+        )
+        SaveManager.saveLifetimeSeeds(appContext, lifetimeSeeds)
+
+        if (isBloomActive) return
+
+        val safeMeter = bloomMeter.coerceIn(0, GameConstants.BLOOM_SEED_COUNT - 1)
+        val seedsUntilBloom = GameConstants.BLOOM_SEED_COUNT - safeMeter
+        if (safeSeedCount >= seedsUntilBloom) {
+            bloomMeter = 0
+            isBloomActive = true
+            bloomTimer = 0f
+        } else {
+            bloomMeter = safeMeter + safeSeedCount
+        }
     }
 
     private fun updateHighScore() {
