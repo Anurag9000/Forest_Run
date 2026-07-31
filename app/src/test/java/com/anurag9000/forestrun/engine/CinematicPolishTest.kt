@@ -1,5 +1,6 @@
 package com.anurag9000.forestrun.engine
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -39,5 +40,40 @@ class CinematicPolishTest {
         assertTrue(profile.letterboxHeightFraction in 0f..0.1f)
         assertTrue(profile.centerLiftAlpha in 0..90)
         assertTrue(profile.shimmerStrength in 0f..1f)
+    }
+
+    @Test
+    fun `non finite profile inputs resolve to calm scene baseline`() {
+        CinematicScene.entries.forEach { scene ->
+            val baseline = buildCinematicPolishProfile(scene, emphasis = 0f, bloomStrength = 0f)
+            listOf(Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY).forEach { invalid ->
+                assertEquals(
+                    baseline,
+                    buildCinematicPolishProfile(scene, emphasis = invalid, bloomStrength = invalid)
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `extreme finite profile inputs clamp to authored endpoints`() {
+        CinematicScene.entries.forEach { scene ->
+            assertEquals(
+                buildCinematicPolishProfile(scene, emphasis = 0f, bloomStrength = 0f),
+                buildCinematicPolishProfile(
+                    scene,
+                    emphasis = -Float.MAX_VALUE,
+                    bloomStrength = -Float.MAX_VALUE
+                )
+            )
+            val maximum = buildCinematicPolishProfile(
+                scene,
+                emphasis = Float.MAX_VALUE,
+                bloomStrength = Float.MAX_VALUE
+            )
+            assertTrue(maximum.letterboxHeightFraction.isFinite())
+            assertTrue(maximum.shimmerStrength.isFinite())
+            assertTrue(maximum.shimmerStrength in 0f..1f)
+        }
     }
 }
