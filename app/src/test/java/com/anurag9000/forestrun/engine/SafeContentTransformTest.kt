@@ -64,6 +64,40 @@ class SafeContentTransformTest {
     }
 
     @Test
+    fun `non finite physical coordinates resolve to deterministic logical edges`() {
+        val transform = SafeContentTransform.create(1920, 1080)
+
+        val nan = transform.toLogical(Float.NaN, Float.NaN)
+        val positive = transform.toLogical(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+        val negative = transform.toLogical(Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY)
+
+        assertEquals(LogicalUiPoint(0f, 0f), nan)
+        assertEquals(LogicalUiPoint(1920f, 1080f), positive)
+        assertEquals(LogicalUiPoint(0f, 0f), negative)
+    }
+
+    @Test
+    fun `non finite logical coordinates resolve inside safe content`() {
+        val transform = SafeContentTransform.create(
+            1920,
+            1080,
+            SafeAreaInsets(left = 120, right = 40, top = 20, bottom = 10)
+        )
+
+        val nan = transform.toPhysical(Float.NaN, Float.NaN)
+        val positive = transform.toPhysical(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+        val negative = transform.toPhysical(Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY)
+
+        assertEquals(transform.contentLeft, nan.x, 0f)
+        assertEquals(transform.contentTop, nan.y, 0f)
+        assertEquals(transform.contentLeft + transform.contentWidth, positive.x, 0.001f)
+        assertEquals(transform.contentTop + transform.contentHeight, positive.y, 0.001f)
+        assertEquals(transform.contentLeft, negative.x, 0f)
+        assertEquals(transform.contentTop, negative.y, 0f)
+        assertTrue(listOf(nan, positive, negative).all { it.x.isFinite() && it.y.isFinite() })
+    }
+
+    @Test
     fun `pathological insets still produce finite positive content`() {
         val transform = SafeContentTransform.create(
             10,
