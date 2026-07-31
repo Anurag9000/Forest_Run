@@ -16,7 +16,7 @@ enum class DebugOverlayAction {
 class DebugEncounterOverlay(
     screenWidth: Int
 ) {
-    private val layoutWidth = screenWidth.coerceIn(1, MAX_LAYOUT_WIDTH_PX).toFloat()
+    private val layoutWidth = screenWidth.coerceIn(MIN_LAYOUT_WIDTH_PX, MAX_LAYOUT_WIDTH_PX).toFloat()
     private val panelRect = RectF()
     private val prevRect = RectF()
     private val toggleRect = RectF()
@@ -130,6 +130,7 @@ class DebugEncounterOverlay(
     }
 
     private companion object {
+        const val MIN_LAYOUT_WIDTH_PX = 320
         const val MAX_LAYOUT_WIDTH_PX = 16_384
     }
 }
