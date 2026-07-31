@@ -243,18 +243,23 @@ class MainMenuScreen(
     }
 
     fun update(deltaTime: Float) {
-        elapsedT += deltaTime
-        willowSprite.update(deltaTime)
-        birdSprite.update(deltaTime)
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return
+        val dt = deltaTime.coerceAtMost(0.05f)
+
+        val safeElapsed = elapsedT.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        elapsedT = (safeElapsed + dt).coerceAtMost(Float.MAX_VALUE)
+        willowSprite.update(dt)
+        birdSprite.update(dt)
 
         if (phase == Phase.STANDING_UP) {
-            standTimer += deltaTime
-            standPlayerSprite.update(deltaTime)
+            val safeStandTimer = standTimer.takeIf { it.isFinite() && it >= 0f } ?: 0f
+            standTimer = (safeStandTimer + dt).coerceAtMost(STAND_DURATION)
+            standPlayerSprite.update(dt)
             if (standTimer >= STAND_DURATION || standPlayerSprite.isFinished) {
                 phase = Phase.READY
             }
         }
-        if (phase == Phase.READY) readyPlayerSprite.update(deltaTime)
+        if (phase == Phase.READY) readyPlayerSprite.update(dt)
     }
 
     fun refreshCopy() {
