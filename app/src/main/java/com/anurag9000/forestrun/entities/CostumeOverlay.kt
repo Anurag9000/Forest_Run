@@ -9,7 +9,14 @@ import kotlin.math.sin
 
 class CostumeOverlay {
 
+    companion object {
+        private const val ELAPSED_WRAP_SECONDS = 60f
+    }
+
     private var elapsed = 0f
+    internal val elapsedForTest: Float
+        get() = elapsed
+
     private val capePath = Path()
 
     private val flowerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -37,7 +44,9 @@ class CostumeOverlay {
     }
 
     fun update(deltaTime: Float) {
-        elapsed += deltaTime
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return
+        elapsed = ((elapsed.toDouble() + deltaTime.toDouble()) % ELAPSED_WRAP_SECONDS.toDouble())
+            .toFloat()
     }
 
     fun draw(
@@ -48,18 +57,36 @@ class CostumeOverlay {
         isInvincible: Boolean,
         motion: PlayerSecondaryMotionState
     ) {
-        if (style == CostumeStyle.NONE) return
+        if (style == CostumeStyle.NONE || !isValidBodyRect(bodyRect)) return
+        val safeMotion = sanitizeMotion(motion)
         when (style) {
             CostumeStyle.NONE -> Unit
-            CostumeStyle.FLOWER_CROWN -> drawFlowerCrown(canvas, bodyRect, isInvincible, motion)
-            CostumeStyle.VINE_SCARF -> drawVineScarf(canvas, bodyRect, state, isInvincible, motion)
-            CostumeStyle.MOON_CAPE -> drawMoonCape(canvas, bodyRect, state, isInvincible, motion)
-            CostumeStyle.BELL_CHARM -> drawBellCharm(canvas, bodyRect, isInvincible, motion)
-            CostumeStyle.LANTERN_PIN -> drawLanternPin(canvas, bodyRect, isInvincible, motion)
-            CostumeStyle.SKY_SASH -> drawSkySash(canvas, bodyRect, state, isInvincible, motion)
-            CostumeStyle.BLOOM_RIBBON -> drawBloomRibbon(canvas, bodyRect, isInvincible, motion)
+            CostumeStyle.FLOWER_CROWN -> drawFlowerCrown(canvas, bodyRect, isInvincible, safeMotion)
+            CostumeStyle.VINE_SCARF -> drawVineScarf(canvas, bodyRect, state, isInvincible, safeMotion)
+            CostumeStyle.MOON_CAPE -> drawMoonCape(canvas, bodyRect, state, isInvincible, safeMotion)
+            CostumeStyle.BELL_CHARM -> drawBellCharm(canvas, bodyRect, isInvincible, safeMotion)
+            CostumeStyle.LANTERN_PIN -> drawLanternPin(canvas, bodyRect, isInvincible, safeMotion)
+            CostumeStyle.SKY_SASH -> drawSkySash(canvas, bodyRect, state, isInvincible, safeMotion)
+            CostumeStyle.BLOOM_RIBBON -> drawBloomRibbon(canvas, bodyRect, isInvincible, safeMotion)
         }
     }
+
+    private fun isValidBodyRect(bodyRect: RectF): Boolean =
+        bodyRect.left.isFinite() &&
+            bodyRect.top.isFinite() &&
+            bodyRect.right.isFinite() &&
+            bodyRect.bottom.isFinite() &&
+            bodyRect.width() > 0f &&
+            bodyRect.height() > 0f
+
+    private fun sanitizeMotion(motion: PlayerSecondaryMotionState): PlayerSecondaryMotionState =
+        PlayerSecondaryMotionState(
+            bodyTiltDegrees = motion.bodyTiltDegrees.takeIf { it.isFinite() } ?: 0f,
+            bodyLiftPx = motion.bodyLiftPx.takeIf { it.isFinite() } ?: 0f,
+            costumeSwingPx = motion.costumeSwingPx.takeIf { it.isFinite() } ?: 0f,
+            costumeTrailLiftPx = motion.costumeTrailLiftPx.takeIf { it.isFinite() } ?: 0f,
+            headOffsetPx = motion.headOffsetPx.takeIf { it.isFinite() } ?: 0f
+        )
 
     private fun drawFlowerCrown(canvas: Canvas, bodyRect: RectF, isInvincible: Boolean, motion: PlayerSecondaryMotionState) {
         val crownY = bodyRect.top + bodyRect.height() * 0.13f + motion.headOffsetPx
