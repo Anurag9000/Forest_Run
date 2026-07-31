@@ -205,11 +205,12 @@ class EntityManager(
             if (
                 entity.isActive &&
                 entity.encounterOutcome == EncounterOutcome.PENDING &&
+                bounds != null &&
                 bounds.right < player.hitbox.left
             ) {
                 entity.hasBeenPassed = true
                 if (gameState.isBloomActive) {
-                    resolveBloomConversion(entity, gameState)
+                    resolveBloomConversion(entity, bounds, gameState)
                 } else {
                     resolveCleanPass(entity, bounds, player, gameState)
                 }
@@ -218,8 +219,11 @@ class EntityManager(
         }
     }
 
-    private fun resolveBloomConversion(entity: Entity, gameState: GameStateManager) {
-        val bounds = liveBounds(entity)
+    private fun resolveBloomConversion(
+        entity: Entity,
+        bounds: RectF,
+        gameState: GameStateManager
+    ) {
         entity.encounterOutcome = EncounterOutcome.BLOOM_CONVERTED
         recordResolvedEncounter(entity)
         gameState.recordBloomConversion()
@@ -307,7 +311,7 @@ class EntityManager(
         seedOrbManager.draw(canvas, bloomFraction)
     }
 
-    private fun emitBloomEnvironmentReaction(entity: Entity, bounds: RectF = liveBounds(entity)) {
+    private fun emitBloomEnvironmentReaction(entity: Entity, bounds: RectF) {
         val x = bounds.centerX()
         val y = bounds.centerY()
         ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, x, y)
@@ -349,7 +353,7 @@ class EntityManager(
             if (
                 entity.isActive &&
                 entity.encounterOutcome == EncounterOutcome.PENDING &&
-                !bounds.isEmpty
+                bounds != null
             ) {
                 val type = entityTypeOf(entity)
                 if (type != null) {
@@ -363,7 +367,7 @@ class EntityManager(
                         )
                     ) {
                         bloomReactedEntities.add(reactionKey)
-                        emitBloomProximityReaction(entity, type, bounds)
+                        emitBloomProximityReaction(type, bounds)
                         if (bloomReactionCooldown <= 0f) {
                             val cue = BloomWorldReaction.cueFor(type)
                             FlavorTextManager.spawn(
@@ -389,9 +393,8 @@ class EntityManager(
     }
 
     private fun emitBloomProximityReaction(
-        entity: Entity,
         type: EntityType,
-        bounds: RectF = liveBounds(entity)
+        bounds: RectF
     ) {
         val x = bounds.centerX()
         val y = bounds.centerY()
@@ -499,17 +502,21 @@ class EntityManager(
         RuntimeWorkloadTelemetry.publishEntities(0)
     }
 
-    private fun liveBounds(entity: Entity): RectF {
+    private fun liveBounds(entity: Entity): RectF? {
         val candidate = entity.encounterBounds
-        return if (isFiniteNonEmpty(candidate)) candidate else entity.hitbox
+        if (isFiniteNonEmpty(candidate)) return candidate
+
+        val fallback = entity.hitbox
+        return if (isFiniteNonEmpty(fallback)) fallback else null
     }
 
     private fun isFiniteNonEmpty(bounds: RectF): Boolean =
-        !bounds.isEmpty &&
-            bounds.left.isFinite() &&
+        bounds.left.isFinite() &&
             bounds.top.isFinite() &&
             bounds.right.isFinite() &&
-            bounds.bottom.isFinite()
+            bounds.bottom.isFinite() &&
+            bounds.left < bounds.right &&
+            bounds.top < bounds.bottom
 
     private fun orbSpawnRateFor(entity: Entity): Float = when (entity) {
         is LilyOfValley -> 1.35f
