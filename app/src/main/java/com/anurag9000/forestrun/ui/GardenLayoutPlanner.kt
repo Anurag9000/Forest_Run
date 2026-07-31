@@ -11,11 +11,29 @@ data class LayoutBox(
     val width: Float get() = right - left
     val height: Float get() = bottom - top
 
+    private val isValid: Boolean
+        get() = left.isFinite() &&
+            top.isFinite() &&
+            right.isFinite() &&
+            bottom.isFinite() &&
+            left < right &&
+            top < bottom
+
     fun intersects(other: LayoutBox): Boolean =
-        left < other.right && right > other.left && top < other.bottom && bottom > other.top
+        isValid &&
+            other.isValid &&
+            left < other.right &&
+            right > other.left &&
+            top < other.bottom &&
+            bottom > other.top
 
     fun contains(other: LayoutBox): Boolean =
-        other.left >= left && other.top >= top && other.right <= right && other.bottom <= bottom
+        isValid &&
+            other.isValid &&
+            other.left >= left &&
+            other.top >= top &&
+            other.right <= right &&
+            other.bottom <= bottom
 }
 
 data class GardenLayoutPlan(
@@ -36,9 +54,10 @@ object GardenLayoutPlanner {
         plantCount: Int,
         costumeCount: Int
     ): GardenLayoutPlan {
-        require(width > 0f && height > 0f)
-        require(plantCount > 0)
-        require(costumeCount > 0)
+        require(width.isFinite() && width > 0f) { "Garden width must be finite and positive." }
+        require(height.isFinite() && height > 0f) { "Garden height must be finite and positive." }
+        require(plantCount > 0) { "Garden plant count must be positive." }
+        require(costumeCount > 0) { "Garden costume count must be positive." }
 
         val marginX = width * 0.03f
         val catalogueBand = LayoutBox(
@@ -75,6 +94,9 @@ object GardenLayoutPlanner {
         val plantGap = width * 0.006f
         val plantCardWidth =
             (catalogueBand.width - plantGap * (plantCount - 1)) / plantCount
+        require(plantCardWidth.isFinite() && plantCardWidth > 0f) {
+            "Garden plant count does not fit the catalogue band."
+        }
         val plantCards = List(plantCount) { index ->
             val left = catalogueBand.left + index * (plantCardWidth + plantGap)
             LayoutBox(left, catalogueBand.top, left + plantCardWidth, catalogueBand.bottom)
@@ -93,6 +115,9 @@ object GardenLayoutPlanner {
         val cardHeight = (
             wardrobePanel.height - topInset - bottomInset - cardGapY * (rows - 1)
         ) / rows
+        require(cardWidth.isFinite() && cardWidth > 0f && cardHeight.isFinite() && cardHeight > 0f) {
+            "Garden costume count does not fit the wardrobe panel."
+        }
         val wardrobeCards = List(costumeCount) { index ->
             val row = index / columns
             val column = index % columns
