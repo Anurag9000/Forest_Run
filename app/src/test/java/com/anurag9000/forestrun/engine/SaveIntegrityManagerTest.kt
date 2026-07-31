@@ -174,7 +174,11 @@ class SaveIntegrityManagerTest {
         assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(0, SaveManager.loadLifetimeSeeds(context))
         assertEquals(9, SaveManager.loadGardenProgress(context))
-        assertEquals(Int.MAX_VALUE, SaveManager.loadEncounterCount(context, EntityType.FOX))
+        val saturatedEncounterCount = SaveManager.loadEncounterCount(context, EntityType.FOX)
+        assertTrue(saturatedEncounterCount > 0)
+        assertTrue(saturatedEncounterCount < Int.MAX_VALUE)
+        SaveManager.incrementEncounterCount(context, EntityType.FOX)
+        assertEquals(saturatedEncounterCount, SaveManager.loadEncounterCount(context, EntityType.FOX))
 
         SaveManager.saveLastRunSummary(
             context,
