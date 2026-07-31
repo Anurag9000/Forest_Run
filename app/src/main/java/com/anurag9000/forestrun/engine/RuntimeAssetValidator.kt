@@ -2,11 +2,15 @@ package com.anurag9000.forestrun.engine
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.graphics.BitmapFactory
 
-/** Fails release startup when a required packaged asset is absent or empty. */
+/** Fails release startup when a required packaged asset is absent, empty, or unsafe to decode. */
 object RuntimeAssetValidator {
-    private val requiredAssetPaths = listOf(
-        AssetPaths.PIXEL_FONT,
+    private const val MAX_SPRITE_WIDTH_PX = 16_384
+    private const val MAX_SPRITE_HEIGHT_PX = 4_096
+    private const val MAX_SPRITE_PIXELS = 4L * 1_024L * 1_024L
+
+    private val requiredSpritePaths = listOf(
         AssetPaths.Char.RUN,
         AssetPaths.Char.JUMP,
         AssetPaths.Char.DUCK,
@@ -37,6 +41,8 @@ object RuntimeAssetValidator {
         AssetPaths.Animals.HEDGEHOG,
         AssetPaths.Animals.DOG
     )
+
+    private val requiredAssetPaths = listOf(AssetPaths.PIXEL_FONT) + requiredSpritePaths
 
     /**
      * Bloom-ready/convert/fade cues are intentionally optional because
@@ -71,6 +77,14 @@ object RuntimeAssetValidator {
                 appContext.assets.open(path).use { stream -> stream.read() >= 0 }
             }.getOrDefault(false)
         }
+        val missingAssetSet = missingAssets.toHashSet()
+
+        // Decode bounds only. A malicious or accidentally gigantic sheet must
+        // fail before SpriteManager allocates the bitmap, mutable bird copy,
+        // pixel array, and flood-fill queue together.
+        val unsafeSprites = requiredSpritePaths.filter { path ->
+            path !in missingAssetSet && !hasSafeSpriteBounds(appContext, path)
+        }
 
         val resources = appContext.resources
         val missingRaw = requiredRawResources.filter { name ->
@@ -80,12 +94,17 @@ object RuntimeAssetValidator {
             }.getOrDefault(false)
         }
 
-        check(missingAssets.isEmpty() && missingRaw.isEmpty()) {
+        check(missingAssets.isEmpty() && unsafeSprites.isEmpty() && missingRaw.isEmpty()) {
             buildString {
-                append("Forest Run release assets are incomplete.")
+                append("Forest Run release assets are incomplete or unsafe.")
                 if (missingAssets.isNotEmpty()) {
-                    append(" Missing assets: ")
+                    append(" Missing or empty assets: ")
                     append(missingAssets.joinToString())
+                    append('.')
+                }
+                if (unsafeSprites.isNotEmpty()) {
+                    append(" Undecodable or oversized sprites: ")
+                    append(unsafeSprites.joinToString())
                     append('.')
                 }
                 if (missingRaw.isNotEmpty()) {
@@ -96,4 +115,20 @@ object RuntimeAssetValidator {
             }
         }
     }
+
+    private fun hasSafeSpriteBounds(context: Context, path: String): Boolean =
+        runCatching {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.assets.open(path).use { stream ->
+                BitmapFactory.decodeStream(stream, null, options)
+            }
+            val width = options.outWidth
+            val height = options.outHeight
+            val pixels = width.toLong() * height.toLong()
+            width > 0 &&
+                height > 0 &&
+                width <= MAX_SPRITE_WIDTH_PX &&
+                height <= MAX_SPRITE_HEIGHT_PX &&
+                pixels in 1L..MAX_SPRITE_PIXELS
+        }.getOrDefault(false)
 }
