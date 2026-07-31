@@ -143,9 +143,9 @@ class GhostPlayerTest {
     fun `malformed visibility context hides ghost without poisoning alpha`() {
         val ghost = GhostPlayer()
         ghost.load(sampleFrames(), revealImmediately = true)
-        repeat(4) { ghost.update(0.1f, clearContext()) }
+        repeat(7) { ghost.update(0.1f, clearContext()) }
         val visibleAlpha = ghost.visibilityAlphaForTest
-        assertTrue(visibleAlpha > 0.8f)
+        assertTrue(visibleAlpha > 0.95f)
 
         val malformed = GhostPlayer.VisibilityContext(
             livePlayerX = Float.NaN,
