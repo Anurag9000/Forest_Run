@@ -40,8 +40,6 @@ object SfxManager {
     @android.annotation.SuppressLint("DiscouragedApi")
     @Synchronized
     fun init(context: Context) {
-        // Surface recreation must not leak the previous native SoundPool or
-        // start loading the same samples a second time.
         if (pool != null) return
 
         val appContext = context.applicationContext
@@ -57,8 +55,6 @@ object SfxManager {
         val generation = sampleReadiness.beginGeneration()
 
         newPool.setOnLoadCompleteListener { callbackPool, sampleId, status ->
-            // The callback may arrive after destroy/reinitialization. Both the
-            // captured pool identity and generation must still own readiness.
             if (pool !== callbackPool) return@setOnLoadCompleteListener
             when (sampleReadiness.complete(generation, sampleId, status)) {
                 SoundSampleReadiness.CompletionResult.READY -> Unit
@@ -72,14 +68,24 @@ object SfxManager {
         val resources = appContext.resources
         val packageName = appContext.packageName
 
-        fun load(name: String): Int {
+        fun load(name: String, required: Boolean = true): Int {
             val resourceId = resources.getIdentifier(name, "raw", packageName)
             if (resourceId == 0) {
-                Log.e(TAG, "Required SFX resource missing: res/raw/$name")
+                if (required) {
+                    Log.e(TAG, "Required SFX resource missing: res/raw/$name")
+                } else {
+                    Log.i(TAG, "Optional SFX resource unavailable; authored fallback will be used: res/raw/$name")
+                }
                 return 0
             }
             val sampleId = newPool.load(appContext, resourceId, PRIORITY)
-            if (sampleId == 0) Log.e(TAG, "SoundPool rejected SFX resource: $name")
+            if (sampleId == 0) {
+                if (required) {
+                    Log.e(TAG, "SoundPool rejected required SFX resource: $name")
+                } else {
+                    Log.w(TAG, "SoundPool rejected optional SFX resource; fallback will be used: $name")
+                }
+            }
             return sampleId
         }
 
@@ -90,9 +96,9 @@ object SfxManager {
         idScreech = load("sfx_screech")
         idHowl = load("sfx_howl")
         idBloomActivate = load("sfx_bloom")
-        idBloomReady = load("sfx_bloom_ready")
-        idBloomConvert = load("sfx_bloom_convert")
-        idBloomFade = load("sfx_bloom_fade")
+        idBloomReady = load("sfx_bloom_ready", required = false)
+        idBloomConvert = load("sfx_bloom_convert", required = false)
+        idBloomFade = load("sfx_bloom_fade", required = false)
         idMercyMiss = load("sfx_mercy_miss")
         idHit = load("sfx_hit")
     }
@@ -103,14 +109,7 @@ object SfxManager {
         val safeVolume = volume.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
         val safeRate = rate.takeIf { it.isFinite() }?.coerceIn(0.5f, 2f) ?: RATE_1X
         runCatching {
-            activePool.play(
-                id,
-                safeVolume,
-                safeVolume,
-                PRIORITY,
-                NO_LOOP,
-                safeRate
-            )
+            activePool.play(id, safeVolume, safeVolume, PRIORITY, NO_LOOP, safeRate)
         }.onFailure { error ->
             Log.w(TAG, "SFX playback failed for sample id=$id", error)
         }
@@ -156,8 +155,6 @@ object SfxManager {
 
     @Synchronized
     fun destroy() {
-        // Invalidate callbacks before releasing the native pool so no delayed
-        // completion can repopulate readiness for this or a replacement pool.
         sampleReadiness.invalidate()
         val oldPool = pool
         pool = null
