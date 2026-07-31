@@ -25,6 +25,10 @@ class FramePerformanceMonitor(
     private val renderSamplesNs = LongArray(windowSize)
     private val processingSamplesNs = LongArray(windowSize)
 
+    /** Even when idle, odd while the single render-thread producer is mutating. */
+    @Volatile
+    private var publicationSequence = 0L
+
     /** Published only after the corresponding ring-buffer entry is complete. */
     @Volatile
     private var publishedFrameCount = 0L
@@ -38,19 +42,20 @@ class FramePerformanceMonitor(
      */
     fun record(updateNs: Long, renderNs: Long, processingNs: Long) {
         if (updateNs < 0L || renderNs < 0L || processingNs < 0L) return
+        if (publishedFrameCount == Long.MAX_VALUE) return
 
-        val sequence = publishedFrameCount
-        val index = (sequence % windowSize).toInt()
-        updateSamplesNs[index] = updateNs
-        renderSamplesNs[index] = renderNs
-        processingSamplesNs[index] = processingNs
+        publishMutation {
+            val sequence = publishedFrameCount
+            val index = (sequence % windowSize).toInt()
+            updateSamplesNs[index] = updateNs
+            renderSamplesNs[index] = renderNs
+            processingSamplesNs[index] = processingNs
 
-        if (processingNs > frameBudgetNs) slowFrameCount++
-        if (processingNs > maximumProcessingNs) maximumProcessingNs = processingNs
+            if (processingNs > frameBudgetNs) slowFrameCount++
+            if (processingNs > maximumProcessingNs) maximumProcessingNs = processingNs
 
-        // Volatile publication makes the completed primitive writes visible to
-        // a snapshot reader without locking every frame.
-        publishedFrameCount = sequence + 1L
+            publishedFrameCount = sequence + 1L
+        }
     }
 
     /**
@@ -61,26 +66,36 @@ class FramePerformanceMonitor(
      * Activity starts. Callers must stop that producer before invoking reset.
      */
     fun reset() {
-        publishedFrameCount = 0L
-        updateSamplesNs.fill(0L)
-        renderSamplesNs.fill(0L)
-        processingSamplesNs.fill(0L)
-        slowFrameCount = 0L
-        maximumProcessingNs = 0L
+        publishMutation {
+            publishedFrameCount = 0L
+            updateSamplesNs.fill(0L)
+            renderSamplesNs.fill(0L)
+            processingSamplesNs.fill(0L)
+            slowFrameCount = 0L
+            maximumProcessingNs = 0L
+        }
     }
 
     /**
      * Capture a coherent best-effort view of the latest timing window.
      *
-     * If the render thread advances while the arrays are copied, the copy is
-     * retried. The final fallback remains safe and may only omit the newest
-     * frame; it can never expose partially initialized object state because the
-     * hot path stores primitives only.
+     * A primitive sequence lock covers the ring entries and their cumulative
+     * slow-frame/maximum counters as one publication. If the render thread
+     * advances during a copy, the copy is retried. The bounded fallback may mix
+     * adjacent frames but normalizes every public invariant before returning.
      */
     fun snapshot(): FramePerformanceSnapshot {
         var attempt = 0
         while (true) {
+            val before = publicationSequence
+            if (before and 1L != 0L) {
+                Thread.yield()
+                continue
+            }
+
             val endSequence = publishedFrameCount
+            val capturedSlowFrames = slowFrameCount
+            val capturedMaximumProcessingNs = maximumProcessingNs
             val sampleCount = min(endSequence, windowSize.toLong()).toInt()
             val startSequence = endSequence - sampleCount
             val updateCopy = LongArray(sampleCount)
@@ -95,10 +110,13 @@ class FramePerformanceMonitor(
                 processingCopy[offset] = processingSamplesNs[index]
             }
 
-            val confirmedEndSequence = publishedFrameCount
-            if (confirmedEndSequence == endSequence || attempt >= MAX_SNAPSHOT_RETRIES) {
+            val after = publicationSequence
+            val stable = before == after && after and 1L == 0L
+            if (stable || attempt >= MAX_SNAPSHOT_RETRIES) {
                 return buildSnapshot(
                     totalFrames = endSequence,
+                    slowFrames = capturedSlowFrames,
+                    maximumProcessingNs = capturedMaximumProcessingNs,
                     updateSamples = updateCopy,
                     renderSamples = renderCopy,
                     processingSamples = processingCopy
@@ -110,16 +128,20 @@ class FramePerformanceMonitor(
 
     private fun buildSnapshot(
         totalFrames: Long,
+        slowFrames: Long,
+        maximumProcessingNs: Long,
         updateSamples: LongArray,
         renderSamples: LongArray,
         processingSamples: LongArray
     ): FramePerformanceSnapshot {
         val sortedProcessing = processingSamples.copyOf().apply { sort() }
+        val observedMaximum = sortedProcessing.lastOrNull() ?: 0L
         val usedHeapBytes = (runtime.totalMemory() - runtime.freeMemory()).coerceAtLeast(0L)
+        val maxHeapBytes = runtime.maxMemory().coerceAtLeast(usedHeapBytes)
         return FramePerformanceSnapshot(
             sampledFrames = processingSamples.size,
-            totalFrames = totalFrames,
-            slowFrames = slowFrameCount,
+            totalFrames = totalFrames.coerceAtLeast(processingSamples.size.toLong()),
+            slowFrames = slowFrames.coerceIn(0L, totalFrames.coerceAtLeast(0L)),
             frameBudgetNs = frameBudgetNs,
             meanUpdateNs = updateSamples.meanAsLong(),
             meanRenderNs = renderSamples.meanAsLong(),
@@ -127,10 +149,20 @@ class FramePerformanceMonitor(
             p50ProcessingNs = sortedProcessing.percentile(0.50),
             p95ProcessingNs = sortedProcessing.percentile(0.95),
             p99ProcessingNs = sortedProcessing.percentile(0.99),
-            maximumProcessingNs = maximumProcessingNs,
+            maximumProcessingNs = maxOf(maximumProcessingNs.coerceAtLeast(0L), observedMaximum),
             usedHeapBytes = usedHeapBytes,
-            maxHeapBytes = runtime.maxMemory().coerceAtLeast(0L)
+            maxHeapBytes = maxHeapBytes
         )
+    }
+
+    private inline fun publishMutation(update: () -> Unit) {
+        val start = publicationSequence
+        publicationSequence = start + 1L
+        try {
+            update()
+        } finally {
+            publicationSequence = start + 2L
+        }
     }
 
     private fun LongArray.meanAsLong(): Long {
@@ -152,7 +184,7 @@ class FramePerformanceMonitor(
     companion object {
         const val DEFAULT_WINDOW_SIZE = 600
         const val DEFAULT_FRAME_BUDGET_NS = 1_000_000_000L / 60L
-        private const val MAX_SNAPSHOT_RETRIES = 2
+        private const val MAX_SNAPSHOT_RETRIES = 4
     }
 }
 
