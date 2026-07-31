@@ -32,11 +32,14 @@ data class RuntimeWorkloadSnapshot(
 /**
  * Primitive workload counters published from existing manager update loops.
  *
- * Publication allocates nothing and executes on the game thread. Snapshots are
- * intended for out-of-band profiling and may observe adjacent manager updates,
- * which is acceptable for pressure correlation rather than game logic.
+ * Publication allocates nothing and executes on the single game thread. A
+ * lightweight sequence lock prevents an out-of-band snapshot from observing a
+ * new current count before its matching peak update. Different workload
+ * categories may still represent adjacent manager updates, which is acceptable
+ * for pressure correlation rather than gameplay logic.
  */
 object RuntimeWorkloadTelemetry {
+    @Volatile private var publicationSequence = 0L
     @Volatile private var currentEntities = 0
     @Volatile private var peakEntities = 0
     @Volatile private var currentSeedOrbs = 0
@@ -48,33 +51,35 @@ object RuntimeWorkloadTelemetry {
     @Volatile private var currentFlavorTexts = 0
     @Volatile private var peakFlavorTexts = 0
 
-    fun publishEntities(count: Int) {
+    fun publishEntities(count: Int) = publish {
         currentEntities = count.coerceAtLeast(0)
         if (currentEntities > peakEntities) peakEntities = currentEntities
     }
 
-    fun publishSeedOrbs(count: Int) {
+    fun publishSeedOrbs(count: Int) = publish {
         currentSeedOrbs = count.coerceAtLeast(0)
         if (currentSeedOrbs > peakSeedOrbs) peakSeedOrbs = currentSeedOrbs
     }
 
-    fun publishParticles(count: Int) {
+    fun publishParticles(count: Int) = publish {
         currentParticles = count.coerceAtLeast(0)
         if (currentParticles > peakParticles) peakParticles = currentParticles
     }
 
-    fun publishDialogueBubbles(count: Int) {
+    fun publishDialogueBubbles(count: Int) = publish {
         currentDialogueBubbles = count.coerceAtLeast(0)
-        if (currentDialogueBubbles > peakDialogueBubbles) peakDialogueBubbles = currentDialogueBubbles
+        if (currentDialogueBubbles > peakDialogueBubbles) {
+            peakDialogueBubbles = currentDialogueBubbles
+        }
     }
 
-    fun publishFlavorTexts(count: Int) {
+    fun publishFlavorTexts(count: Int) = publish {
         currentFlavorTexts = count.coerceAtLeast(0)
         if (currentFlavorTexts > peakFlavorTexts) peakFlavorTexts = currentFlavorTexts
     }
 
-    @Synchronized
-    fun reset() {
+    /** Call only while the game-thread producer is stopped. */
+    fun reset() = publish {
         currentEntities = 0
         peakEntities = 0
         currentSeedOrbs = 0
@@ -87,7 +92,32 @@ object RuntimeWorkloadTelemetry {
         peakFlavorTexts = 0
     }
 
-    fun snapshot(): RuntimeWorkloadSnapshot = RuntimeWorkloadSnapshot(
+    fun snapshot(): RuntimeWorkloadSnapshot {
+        repeat(MAX_SNAPSHOT_RETRIES) {
+            val before = publicationSequence
+            if (before and 1L != 0L) return@repeat
+
+            val snapshot = readSnapshot()
+            val after = publicationSequence
+            if (before == after && after and 1L == 0L) return snapshot
+        }
+
+        // A continuously publishing producer may exhaust the small retry budget.
+        // Preserve pair invariants in the best-effort fallback publication.
+        return normalizePairs(readSnapshot())
+    }
+
+    private inline fun publish(update: () -> Unit) {
+        val start = publicationSequence
+        publicationSequence = start + 1L
+        try {
+            update()
+        } finally {
+            publicationSequence = start + 2L
+        }
+    }
+
+    private fun readSnapshot(): RuntimeWorkloadSnapshot = RuntimeWorkloadSnapshot(
         currentEntities = currentEntities,
         peakEntities = peakEntities,
         currentSeedOrbs = currentSeedOrbs,
@@ -99,4 +129,18 @@ object RuntimeWorkloadTelemetry {
         currentFlavorTexts = currentFlavorTexts,
         peakFlavorTexts = peakFlavorTexts
     )
+
+    private fun normalizePairs(snapshot: RuntimeWorkloadSnapshot): RuntimeWorkloadSnapshot =
+        snapshot.copy(
+            peakEntities = maxOf(snapshot.currentEntities, snapshot.peakEntities),
+            peakSeedOrbs = maxOf(snapshot.currentSeedOrbs, snapshot.peakSeedOrbs),
+            peakParticles = maxOf(snapshot.currentParticles, snapshot.peakParticles),
+            peakDialogueBubbles = maxOf(
+                snapshot.currentDialogueBubbles,
+                snapshot.peakDialogueBubbles
+            ),
+            peakFlavorTexts = maxOf(snapshot.currentFlavorTexts, snapshot.peakFlavorTexts)
+        )
+
+    private const val MAX_SNAPSHOT_RETRIES = 3
 }
