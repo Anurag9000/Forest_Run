@@ -48,7 +48,7 @@ class SanctuaryAtmosphereTest {
 
         assertEquals(9, atmosphere.petalCount)
         assertEquals(11, atmosphere.bloomPatchCount)
-        assertEquals(12, atmosphere.lanternGlowCount)
+        assertEquals(11, atmosphere.lanternGlowCount)
         assertEquals(158, atmosphere.groundGlowAlpha)
     }
 
