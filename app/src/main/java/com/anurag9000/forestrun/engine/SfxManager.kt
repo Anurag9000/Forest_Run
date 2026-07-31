@@ -23,6 +23,7 @@ object SfxManager {
     @Volatile
     private var pool: SoundPool? = null
     private val sampleReadiness = SoundSampleReadiness()
+    private val optionalSampleIds = mutableSetOf<Int>()
 
     private var idJump = 0
     private var idLand = 0
@@ -53,13 +54,19 @@ object SfxManager {
             .setAudioAttributes(attributes)
             .build()
         val generation = sampleReadiness.beginGeneration()
+        optionalSampleIds.clear()
 
         newPool.setOnLoadCompleteListener { callbackPool, sampleId, status ->
             if (pool !== callbackPool) return@setOnLoadCompleteListener
             when (sampleReadiness.complete(generation, sampleId, status)) {
                 SoundSampleReadiness.CompletionResult.READY -> Unit
-                SoundSampleReadiness.CompletionResult.FAILED ->
-                    Log.e(TAG, "SFX sample failed to load: id=$sampleId status=$status")
+                SoundSampleReadiness.CompletionResult.FAILED -> {
+                    if (sampleId in optionalSampleIds) {
+                        Log.w(TAG, "Optional SFX sample failed to load; fallback will be used: id=$sampleId status=$status")
+                    } else {
+                        Log.e(TAG, "Required SFX sample failed to load: id=$sampleId status=$status")
+                    }
+                }
                 SoundSampleReadiness.CompletionResult.STALE -> Unit
             }
         }
@@ -85,6 +92,8 @@ object SfxManager {
                 } else {
                     Log.w(TAG, "SoundPool rejected optional SFX resource; fallback will be used: $name")
                 }
+            } else if (!required) {
+                optionalSampleIds += sampleId
             }
             return sampleId
         }
@@ -156,6 +165,7 @@ object SfxManager {
     @Synchronized
     fun destroy() {
         sampleReadiness.invalidate()
+        optionalSampleIds.clear()
         val oldPool = pool
         pool = null
         runCatching { oldPool?.setOnLoadCompleteListener(null) }
