@@ -33,6 +33,7 @@ class ParticleEmitter(
     companion object {
         const val MAX_CONFIGURED_COUNT = 512
         const val MAX_CONTINUOUS_SPAWN_PER_UPDATE = 512
+        private const val EMISSION_EPSILON_PARTICLES = 1e-6
     }
 
     var x: Float = x
@@ -44,7 +45,8 @@ class ParticleEmitter(
             if (value.isFinite()) field = value
         }
 
-    private var continuousTimer = 0f
+    /** Fractional seconds retained toward the next continuous particle. */
+    private var continuousTimer = 0.0
     private var continuousActive = !isBurst
 
     init {
@@ -111,13 +113,16 @@ class ParticleEmitter(
     fun updateContinuous(deltaTime: Float): Int {
         if (!continuousActive || isBurst || !deltaTime.isFinite() || deltaTime <= 0f) return 0
 
-        val accumulated = (continuousTimer.toDouble() + deltaTime.toDouble())
+        val accumulatedSeconds = (continuousTimer + deltaTime.toDouble())
             .coerceAtMost(Float.MAX_VALUE.toDouble())
-        val due = floor(accumulated * count.toDouble())
+        val particleCredit = accumulatedSeconds * count.toDouble()
+        val due = floor(particleCredit + EMISSION_EPSILON_PARTICLES)
         val wholeDue = due.coerceAtMost(Int.MAX_VALUE.toDouble()).toInt()
-        continuousTimer = (accumulated - due / count.toDouble())
-            .coerceIn(0.0, (1.0 / count.toDouble()))
-            .toFloat()
+
+        // Preserve only the fractional credit. If catch-up was capped, the
+        // unbounded whole-particle backlog is intentionally discarded.
+        val fractionalCredit = (particleCredit - due).coerceIn(0.0, 1.0)
+        continuousTimer = fractionalCredit / count.toDouble()
         return wholeDue.coerceAtMost(MAX_CONTINUOUS_SPAWN_PER_UPDATE)
     }
 
