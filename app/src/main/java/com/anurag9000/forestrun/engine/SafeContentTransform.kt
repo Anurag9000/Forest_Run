@@ -29,15 +29,28 @@ data class SafeContentTransform private constructor(
 ) {
     fun toLogical(physicalX: Float, physicalY: Float): LogicalUiPoint =
         LogicalUiPoint(
-            x = ((physicalX - contentLeft) / scale).coerceIn(0f, logicalWidth.toFloat()),
-            y = ((physicalY - contentTop) / scale).coerceIn(0f, logicalHeight.toFloat())
+            x = clampCoordinate(
+                value = (physicalX - contentLeft) / scale,
+                maximum = logicalWidth.toFloat()
+            ),
+            y = clampCoordinate(
+                value = (physicalY - contentTop) / scale,
+                maximum = logicalHeight.toFloat()
+            )
         )
 
     fun toPhysical(logicalX: Float, logicalY: Float): LogicalUiPoint =
         LogicalUiPoint(
-            x = contentLeft + logicalX.coerceIn(0f, logicalWidth.toFloat()) * scale,
-            y = contentTop + logicalY.coerceIn(0f, logicalHeight.toFloat()) * scale
+            x = contentLeft + clampCoordinate(logicalX, logicalWidth.toFloat()) * scale,
+            y = contentTop + clampCoordinate(logicalY, logicalHeight.toFloat()) * scale
         )
+
+    private fun clampCoordinate(value: Float, maximum: Float): Float = when {
+        value.isNaN() -> 0f
+        value == Float.POSITIVE_INFINITY -> maximum
+        value == Float.NEGATIVE_INFINITY -> 0f
+        else -> value.coerceIn(0f, maximum)
+    }
 
     companion object {
         fun create(
