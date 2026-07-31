@@ -50,7 +50,9 @@ class GhostIoTelemetryTest {
                     assertTrue(snapshot.writesFailed <= snapshot.writesCompleted)
                     assertTrue(snapshot.latestFrameCount <= snapshot.maximumFrameCount)
                     assertTrue(snapshot.latestWriteDurationNs <= snapshot.maximumWriteDurationNs)
-                }.onFailure(failure::compareAndSetNull)
+                }.onFailure { error ->
+                    failure.compareAndSet(null, error)
+                }
             }
         }
 
@@ -74,9 +76,5 @@ class GhostIoTelemetryTest {
         GhostIoTelemetry.reset()
 
         assertEquals(GhostIoTelemetrySnapshot.EMPTY, GhostIoTelemetry.snapshot())
-    }
-
-    private fun <T> AtomicReference<T?>.compareAndSetNull(value: T) {
-        compareAndSet(null, value)
     }
 }
