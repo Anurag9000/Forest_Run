@@ -43,10 +43,12 @@ class Player(
         const val JUMP_START_DURATION_S = 0.05f
         const val LANDING_DURATION_S = 0.07f
         const val HITBOX_INSET = 10f
+        private const val MAX_FRAME_DELTA_S = 0.05f
 
         /** Desired upward velocity after release for a given hold duration. */
         fun jumpVelocityForHold(holdSeconds: Float): Float {
-            val fraction = (holdSeconds / MAX_HOLD_DURATION_S).coerceIn(0f, 1f)
+            val safeHold = holdSeconds.takeIf { it.isFinite() && it > 0f } ?: 0f
+            val fraction = (safeHold / MAX_HOLD_DURATION_S).coerceIn(0f, 1f)
             return MIN_JUMP_FORCE + (MAX_JUMP_FORCE - MIN_JUMP_FORCE) * fraction
         }
     }
@@ -55,7 +57,11 @@ class Player(
     var y: Float
     var velocityY: Float = 0f
 
-    var groundY: Float = if (groundYOverride > 0f) groundYOverride else screenHeight * 0.82f
+    var groundY: Float = if (groundYOverride.isFinite() && groundYOverride > 0f) {
+        groundYOverride
+    } else {
+        screenHeight * 0.82f
+    }
         private set
 
     val isGrounded: Boolean
@@ -184,6 +190,7 @@ class Player(
 
     fun activateBloom() {
         if (isInvincible) return
+        normalizeKinematics()
         isInvincible = true
 
         val centerX = x + BASE_WIDTH / 2f
@@ -239,27 +246,34 @@ class Player(
     }
 
     fun update(deltaTime: Float, scrollSpeed: Float = 400f) {
-        presentationElapsed += deltaTime
-        stateTimer += deltaTime
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return
+        val dt = deltaTime.coerceAtMost(MAX_FRAME_DELTA_S)
+        normalizeKinematics()
+
+        presentationElapsed = finiteTimerAdd(presentationElapsed, dt)
+        stateTimer = finiteTimerAdd(stateTimer, dt)
 
         when (state) {
             PlayerState.REST -> Unit
             PlayerState.DUCKING -> updateDucking()
-            PlayerState.STUMBLE -> updateStumble(deltaTime)
+            PlayerState.STUMBLE -> updateStumble(dt)
             PlayerState.BLOOM -> {
                 // Migrate any legacy forced BLOOM state back to locomotion.
                 transitionTo(if (isGrounded) PlayerState.RUNNING else PlayerState.FALLING)
-                updatePhysics(deltaTime)
+                updatePhysics(dt)
             }
-            else -> updatePhysics(deltaTime)
+            else -> updatePhysics(dt)
         }
 
         if (isInvincible) syncBloomEffects()
         updateHitbox()
 
         if (state == PlayerState.RUNNING) {
+            val safeScrollSpeed = scrollSpeed.takeIf { it.isFinite() }
+                ?.coerceIn(GameConstants.BASE_SCROLL_SPEED, GameConstants.MAX_SCROLL_SPEED)
+                ?: GameConstants.BASE_SCROLL_SPEED
             animRun.framesPerSec = MathUtils.map(
-                scrollSpeed,
+                safeScrollSpeed,
                 GameConstants.BASE_SCROLL_SPEED,
                 GameConstants.MAX_SCROLL_SPEED,
                 24f,
@@ -267,9 +281,9 @@ class Player(
             )
         }
 
-        currentAnimation.update(deltaTime)
-        faceManager.update(deltaTime)
-        costumeOverlay.update(deltaTime)
+        currentAnimation.update(dt)
+        faceManager.update(dt)
+        costumeOverlay.update(dt)
     }
 
     private fun updateStumble(deltaTime: Float) {
@@ -302,7 +316,7 @@ class Player(
             }
 
             PlayerState.APEX -> {
-                apexTimer += deltaTime
+                apexTimer = finiteTimerAdd(apexTimer, deltaTime)
                 velocityY += GRAVITY * APEX_GRAVITY_FACTOR * deltaTime
                 y += velocityY * deltaTime
                 if (apexTimer >= APEX_GRAVITY_DURATION_S || velocityY > 100f) {
@@ -376,7 +390,9 @@ class Player(
     }
 
     fun setBloomPowerPresentation(scaleBoost: Float, auraAlpha: Int) {
-        bloomPowerScaleBoost = scaleBoost.coerceIn(0f, 0.12f)
+        bloomPowerScaleBoost = scaleBoost.takeIf { it.isFinite() }
+            ?.coerceIn(0f, 0.12f)
+            ?: 0f
         bloomPowerAuraAlpha = auraAlpha.coerceIn(0, 255)
     }
 
@@ -419,7 +435,24 @@ class Player(
         hitbox.set(left, top, right, bottom)
     }
 
+    private fun normalizeKinematics() {
+        if (!groundY.isFinite()) groundY = BASE_HEIGHT
+        if (!x.isFinite()) x = 0f
+        if (!y.isFinite()) y = groundY - BASE_HEIGHT
+        if (!velocityY.isFinite()) velocityY = 0f
+        if (!stateTimer.isFinite() || stateTimer < 0f) stateTimer = 0f
+        if (!apexTimer.isFinite() || apexTimer < 0f) apexTimer = 0f
+        if (!presentationElapsed.isFinite() || presentationElapsed < 0f) presentationElapsed = 0f
+    }
+
+    private fun finiteTimerAdd(value: Float, delta: Float): Float {
+        val safeValue = value.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        val sum = safeValue.toDouble() + delta.toDouble()
+        return sum.coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
+    }
+
     fun draw(canvas: Canvas) {
+        normalizeKinematics()
         val cx = x + BASE_WIDTH / 2f
         val feetY = y + BASE_HEIGHT
         val bloomScale = if (isInvincible || bloomPowerScaleBoost > 0f) {
