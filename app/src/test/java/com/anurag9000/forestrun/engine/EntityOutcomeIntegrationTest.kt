@@ -15,6 +15,7 @@ import com.anurag9000.forestrun.ui.DialogueBubbleManager
 import com.anurag9000.forestrun.ui.FlavorTextManager
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -134,6 +135,64 @@ class EntityOutcomeIntegrationTest {
     }
 
     @Test
+    fun `valid hitbox remains the fallback when aggregate encounter bounds are unavailable`() {
+        val manager = manager()
+        val gameState = GameStateManager(context)
+        val entity = ProbeEntity(
+            context = context,
+            collisionResult = CollisionResult.NONE,
+            right = player.hitbox.left - 20f
+        ).apply {
+            setEncounterBounds(RectF())
+        }
+        manager.activeEntities += entity
+
+        assertNull(manager.checkCollisions(player, gameState))
+
+        assertEquals(EncounterOutcome.CLEAN_PASS, entity.encounterOutcome)
+        assertTrue(entity.hasBeenPassed)
+        assertEquals(1, entity.uniqueActionCount)
+        assertEquals(1, gameState.cleanPassesThisRun)
+    }
+
+    @Test
+    fun `malformed encounter geometry cannot manufacture clean pass rewards`() {
+        val manager = manager()
+        val gameState = GameStateManager(context)
+        val malformedEntities = malformedGeometryEntities()
+        manager.activeEntities += malformedEntities
+
+        assertNull(manager.checkCollisions(player, gameState))
+
+        malformedEntities.forEach { entity ->
+            assertEquals(EncounterOutcome.PENDING, entity.encounterOutcome)
+            assertFalse(entity.hasBeenPassed)
+            assertTrue(entity.isActive)
+            assertEquals(0, entity.uniqueActionCount)
+        }
+        assertEquals(0, gameState.cleanPassesThisRun)
+        assertEquals(0, manager.seedOrbManager.activeOrbCount)
+    }
+
+    @Test
+    fun `malformed encounter geometry cannot manufacture Bloom conversions`() {
+        val manager = manager()
+        val gameState = GameStateManager(context).apply { debugActivateBloom() }
+        val malformedEntities = malformedGeometryEntities()
+        manager.activeEntities += malformedEntities
+
+        assertNull(manager.checkCollisions(player, gameState))
+
+        malformedEntities.forEach { entity ->
+            assertEquals(EncounterOutcome.PENDING, entity.encounterOutcome)
+            assertFalse(entity.hasBeenPassed)
+            assertTrue(entity.isActive)
+        }
+        assertEquals(0, gameState.bloomConversionsThisRun)
+        assertEquals(0, gameState.seedsThisRun)
+    }
+
+    @Test
     fun `Bloom conversion is exclusive of clean pass and unique action rewards`() {
         val manager = manager()
         val gameState = GameStateManager(context).apply { debugActivateBloom() }
@@ -212,6 +271,20 @@ class EntityOutcomeIntegrationTest {
         }
     }
 
+    private fun malformedGeometryEntities(): List<ProbeEntity> = listOf(
+        ProbeEntity(context, CollisionResult.NONE).apply {
+            setGeometry(RectF(), RectF())
+        },
+        ProbeEntity(context, CollisionResult.NONE).apply {
+            val inverted = RectF(100f, 100f, 40f, 80f)
+            setGeometry(inverted, inverted)
+        },
+        ProbeEntity(context, CollisionResult.NONE).apply {
+            val nonFinite = RectF(Float.NaN, 100f, 40f, 180f)
+            setGeometry(nonFinite, nonFinite)
+        }
+    )
+
     private fun manager(): EntityManager = EntityManager(
         context = context,
         screenWidth = 1_920f,
@@ -258,6 +331,15 @@ class EntityOutcomeIntegrationTest {
         init {
             hitbox.set(right - 100f, 600f, right, 700f)
             completeBounds.set(hitbox.left, hitbox.top, encounterRight, hitbox.bottom)
+        }
+
+        fun setGeometry(hitboxBounds: RectF, encounterBounds: RectF) {
+            hitbox.set(hitboxBounds)
+            completeBounds.set(encounterBounds)
+        }
+
+        fun setEncounterBounds(bounds: RectF) {
+            completeBounds.set(bounds)
         }
 
         override fun update(deltaTime: Float, scrollSpeed: Float) = Unit
