@@ -1,7 +1,6 @@
 package com.anurag9000.forestrun.systems
 
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
@@ -63,8 +62,8 @@ class GhostPlayer {
     }
 
     companion object {
-        const val GHOST_ALPHA  = 102   // 40% of 255
-        const val WAVE_DURATION = 0.8f  // seconds for wave + fade-out
+        const val GHOST_ALPHA = 102 // 40% of 255
+        const val WAVE_DURATION = 0.8f // seconds for wave + fade-out
         private const val START_DELAY = 1.15f
         private const val FADE_IN_DURATION = 0.65f
         private const val DENSE_SUPPRESSION_DURATION = 0.32f
@@ -77,22 +76,22 @@ class GhostPlayer {
             m.setSaturation(0.15f)
             // Tint blue channel boost
             val tint = floatArrayOf(
-                0.8f, 0f, 0f, 0f, 20f,   // R
-                0f, 0.8f, 0f, 0f, 30f,   // G
-                0f, 0f, 1.1f, 0f, 60f,   // B
-                0f, 0f, 0f, 1f, 0f       // A  (paint alpha controls final opacity)
+                0.8f, 0f, 0f, 0f, 20f, // R
+                0f, 0.8f, 0f, 0f, 30f, // G
+                0f, 0f, 1.1f, 0f, 60f, // B
+                0f, 0f, 0f, 1f, 0f // A (paint alpha controls final opacity)
             )
             ColorMatrixColorFilter(ColorMatrix(tint))
         }
     }
 
     // ── State ─────────────────────────────────────────────────────────────
-    private var frames:    List<GhostFrame> = emptyList()
-    private var elapsed:   Float = 0f
-    private var frameIdx:  Int   = 0
-    private var isWaving:  Boolean = false
-    private var waveTimer: Float   = 0f
-    private var isActive:  Boolean = false
+    private var frames: List<GhostFrame> = emptyList()
+    private var elapsed: Float = 0f
+    private var frameIdx: Int = 0
+    private var isWaving: Boolean = false
+    private var waveTimer: Float = 0f
+    private var isActive: Boolean = false
     private var suppressedFor: Float = 0f
     private var denseSuppressedFor: Float = 0f
     private var visibilityAlpha: Float = 0f
@@ -100,34 +99,39 @@ class GhostPlayer {
 
     // ── Paints ────────────────────────────────────────────────────────────
     private val ghostPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        alpha       = GHOST_ALPHA
+        alpha = GHOST_ALPHA
         colorFilter = GHOST_FILTER
     }
 
-    // Reusable draw rect
+    // Reusable draw rects
     private val drawRect = RectF()
     private val spriteRect = RectF()
 
     // ── API ───────────────────────────────────────────────────────────────
 
-    /** Load a frame list recorded from a previous run. Starts ghost playback. */
+    /** Load a validated, detached recording from a previous run. */
     fun load(recordedFrames: List<GhostFrame>, revealImmediately: Boolean = false) {
-        frames    = recordedFrames
-        elapsed   = 0f
-        frameIdx  = 0
-        isWaving  = false
-        waveTimer = 0f
-        suppressedFor = 0f
-        denseSuppressedFor = 0f
-        visibilityAlpha = 0f
+        reset()
+        if (!GhostRunValidator.isValid(recordedFrames)) return
+
+        frames = recordedFrames.toList()
         this.revealImmediately = revealImmediately
-        isActive  = recordedFrames.isNotEmpty()
+        isActive = true
     }
 
     fun reset() {
+        frames = emptyList()
+        elapsed = 0f
+        frameIdx = 0
+        isWaving = false
+        waveTimer = 0f
         isActive = false
-        frames   = emptyList()
+        suppressedFor = 0f
+        denseSuppressedFor = 0f
+        visibilityAlpha = 0f
         revealImmediately = false
+        lastX = 0f
+        lastY = 0f
     }
 
     val hasGhost: Boolean get() = isActive
@@ -136,48 +140,38 @@ class GhostPlayer {
     fun update(deltaTime: Float, visibilityContext: VisibilityContext? = null) {
         if (!isActive) return
 
-        elapsed += deltaTime
-        if (suppressedFor > 0f) {
-            suppressedFor = (suppressedFor - deltaTime).coerceAtLeast(0f)
-        }
-        if (denseSuppressedFor > 0f) {
-            denseSuppressedFor = (denseSuppressedFor - deltaTime).coerceAtLeast(0f)
-        }
+        val safeDelta = deltaTime.takeIf { it.isFinite() && it > 0f } ?: 0f
+        advanceElapsed(safeDelta)
+        suppressedFor = decrementTimer(suppressedFor, safeDelta)
+        denseSuppressedFor = decrementTimer(denseSuppressedFor, safeDelta)
 
         if (isWaving) {
-            waveTimer += deltaTime
+            waveTimer = addClamped(waveTimer, safeDelta, WAVE_DURATION)
             if (waveTimer >= WAVE_DURATION) {
-                isActive = false   // ghost finishes
-                // Sparkle burst emitted by GameView at last frame position
+                isActive = false // Sparkle burst is emitted by GameView at the last frame position.
             }
             return
         }
 
-        // Binary-search for the frame closest to elapsed time
-        while (frameIdx < frames.size - 1 && frames[frameIdx + 1].t <= elapsed) {
-            frameIdx++
-        }
+        frameIdx = frameIndexAt(elapsed)
 
-        // Ghost has run out of recording
-        if (frameIdx >= frames.size - 1 && elapsed > frames.last().t) {
-            isWaving  = true
+        // Ghost has run out of recording.
+        if (frameIdx >= frames.lastIndex && elapsed > frames.last().t) {
+            isWaving = true
             waveTimer = 0f
         }
 
-        if (!isWaving) {
-            visibilityContext?.let { context ->
-                if (shouldSuppressForDensePlay(context)) {
-                    denseSuppressedFor = maxOf(denseSuppressedFor, DENSE_SUPPRESSION_DURATION)
-                }
-            }
+        if (!isWaving && visibilityContext != null && shouldSuppressForDensePlay(visibilityContext)) {
+            denseSuppressedFor = maxOf(denseSuppressedFor, DENSE_SUPPRESSION_DURATION)
         }
 
         val targetAlpha = visibilityTargetFor(visibilityContext)
         val speed = if (targetAlpha < visibilityAlpha) FADE_OUT_SPEED else FADE_IN_SPEED
-        visibilityAlpha = approach(visibilityAlpha, targetAlpha, speed * deltaTime)
+        visibilityAlpha = approach(visibilityAlpha, targetAlpha, speed * safeDelta)
     }
 
     fun suppress(durationSec: Float) {
+        if (!durationSec.isFinite() || durationSec <= 0f) return
         suppressedFor = maxOf(suppressedFor, durationSec)
     }
 
@@ -192,46 +186,62 @@ class GhostPlayer {
         lastX = frame.x
         lastY = frame.y
 
-        // Fade out during wave
+        // Fade out during wave.
         var alphaMulti = if (isWaving) {
             (1f - (waveTimer / WAVE_DURATION)).coerceIn(0f, 1f)
-        } else 1f
-
+        } else {
+            1f
+        }
         alphaMulti *= visibilityAlpha
-        if (alphaMulti <= 0.02f) return
+        if (!alphaMulti.isFinite() || alphaMulti <= 0.02f) return
 
-        ghostPaint.alpha = (GHOST_ALPHA * alphaMulti).toInt()
+        val geometry = finiteDrawGeometry(frame) ?: return
+        ghostPaint.alpha = (GHOST_ALPHA * alphaMulti).toInt().coerceIn(0, GHOST_ALPHA)
+        drawRect.set(frame.x, frame.y, geometry.drawRight, geometry.drawBottom)
+        spriteRect.set(frame.x, frame.y, geometry.spriteRight, geometry.spriteBottom)
 
-        val w = Player.BASE_WIDTH  * frame.scaleX
-        val h = Player.BASE_HEIGHT * frame.scaleY
-
-        drawRect.set(frame.x, frame.y, frame.x + w, frame.y + h)
-
-        // Pick sprite that matches the ghost's recorded state
+        // Pick sprite that matches the ghost's recorded state.
         val sprite = spriteForState(frame.stateOrdinal, spriteManager)
-        canvas.save()
-        canvas.scale(frame.scaleX, frame.scaleY, drawRect.centerX(), drawRect.bottom)
-        spriteRect.set(frame.x, frame.y, frame.x + Player.BASE_WIDTH, frame.y + Player.BASE_HEIGHT)
-        sprite.draw(canvas, spriteRect, ghostPaint)
-        canvas.restore()
+        val saveCount = canvas.save()
+        try {
+            canvas.scale(frame.scaleX, frame.scaleY, geometry.pivotX, geometry.drawBottom)
+            sprite.draw(canvas, spriteRect, ghostPaint)
+        } finally {
+            canvas.restoreToCount(saveCount)
+        }
     }
 
     // ── Ghost's last known world position (for GameView sparkle on finish) ──
-    var lastX: Float = 0f; private set
-    var lastY: Float = 0f; private set
+    var lastX: Float = 0f
+        private set
+    var lastY: Float = 0f
+        private set
+
     internal val visibilityAlphaForTest: Float get() = visibilityAlpha
     internal val denseSuppressionRemainingForTest: Float get() = denseSuppressedFor
+    internal val suppressionRemainingForTest: Float get() = suppressedFor
+    internal val frameIndexForTest: Int get() = frameIdx
+    internal val isWavingForTest: Boolean get() = isWaving
+    internal val elapsedForTest: Float get() = elapsed
+
+    private data class DrawGeometry(
+        val drawRight: Float,
+        val drawBottom: Float,
+        val spriteRight: Float,
+        val spriteBottom: Float,
+        val pivotX: Float
+    )
 
     private fun spriteForState(ordinal: Int, sm: SpriteManager): SpriteSheet {
         val state = PlayerState.entries.getOrElse(ordinal) { PlayerState.RUNNING }
         return when (state) {
             PlayerState.JUMP_START -> sm.playerJumpStart
-            PlayerState.JUMPING    -> sm.playerJumping
-            PlayerState.APEX       -> sm.playerApex
-            PlayerState.FALLING    -> sm.playerFalling
-            PlayerState.LANDING    -> sm.playerLanding
-            PlayerState.DUCKING    -> sm.playerDuck
-            else                   -> sm.playerRun
+            PlayerState.JUMPING -> sm.playerJumping
+            PlayerState.APEX -> sm.playerApex
+            PlayerState.FALLING -> sm.playerFalling
+            PlayerState.LANDING -> sm.playerLanding
+            PlayerState.DUCKING -> sm.playerDuck
+            else -> sm.playerRun
         }
     }
 
@@ -242,6 +252,7 @@ class GhostPlayer {
         val revealProgress = ((elapsed - revealDelay) / FADE_IN_DURATION).coerceIn(0f, 1f)
         if (revealProgress <= 0f) return 0f
         if (visibilityContext == null || frames.isEmpty()) return revealProgress
+        if (!isValidVisibilityContext(visibilityContext)) return 0f
 
         val frame = frames[frameIdx.coerceIn(0, frames.lastIndex)]
         val ghostWidth = Player.BASE_WIDTH * frame.scaleX
@@ -289,15 +300,81 @@ class GhostPlayer {
     }
 
     private fun shouldSuppressForDensePlay(visibilityContext: VisibilityContext): Boolean {
+        if (!isValidVisibilityContext(visibilityContext)) return false
         return visibilityContext.nearbyHazardCount >= 2 &&
             visibilityContext.nearestHazardDistancePx <= visibilityContext.livePlayerWidth * 1.65f
     }
 
+    private fun isValidVisibilityContext(context: VisibilityContext): Boolean =
+        context.livePlayerX.isFinite() &&
+            context.livePlayerY.isFinite() &&
+            context.livePlayerWidth.isFinite() &&
+            context.livePlayerWidth > 0f &&
+            context.livePlayerHeight.isFinite() &&
+            context.livePlayerHeight > 0f &&
+            context.nearbyHazardCount >= 0 &&
+            !context.nearestHazardDistancePx.isNaN() &&
+            context.nearestHazardDistancePx >= 0f
+
     private fun approach(current: Float, target: Float, delta: Float): Float {
+        val safeCurrent = current.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+        val safeTarget = target.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+        val safeDelta = delta.takeIf { it.isFinite() && it > 0f } ?: 0f
         return when {
-            current < target -> minOf(target, current + delta)
-            current > target -> maxOf(target, current - delta)
-            else -> current
+            safeCurrent < safeTarget -> minOf(safeTarget, safeCurrent + safeDelta)
+            safeCurrent > safeTarget -> maxOf(safeTarget, safeCurrent - safeDelta)
+            else -> safeCurrent
         }
+    }
+
+    private fun advanceElapsed(deltaTime: Float) {
+        if (deltaTime <= 0f) return
+        val maximum = frames.last().t.toDouble() + WAVE_DURATION.toDouble()
+        elapsed = (elapsed.toDouble() + deltaTime.toDouble())
+            .coerceAtMost(maximum)
+            .toFloat()
+    }
+
+    private fun decrementTimer(timer: Float, deltaTime: Float): Float {
+        val safeTimer = timer.takeIf { it.isFinite() && it > 0f } ?: 0f
+        return (safeTimer - deltaTime).coerceAtLeast(0f)
+    }
+
+    private fun addClamped(current: Float, delta: Float, maximum: Float): Float =
+        (current.toDouble() + delta.toDouble())
+            .coerceIn(0.0, maximum.toDouble())
+            .toFloat()
+
+    private fun frameIndexAt(time: Float): Int {
+        var low = 0
+        var high = frames.lastIndex
+        var result = 0
+        while (low <= high) {
+            val middle = low + (high - low) / 2
+            if (frames[middle].t <= time) {
+                result = middle
+                low = middle + 1
+            } else {
+                high = middle - 1
+            }
+        }
+        return result
+    }
+
+    private fun finiteDrawGeometry(frame: GhostFrame): DrawGeometry? {
+        val drawRight = frame.x.toDouble() + Player.BASE_WIDTH.toDouble() * frame.scaleX.toDouble()
+        val drawBottom = frame.y.toDouble() + Player.BASE_HEIGHT.toDouble() * frame.scaleY.toDouble()
+        val spriteRight = frame.x.toDouble() + Player.BASE_WIDTH.toDouble()
+        val spriteBottom = frame.y.toDouble() + Player.BASE_HEIGHT.toDouble()
+        val pivotX = (frame.x.toDouble() + drawRight) * 0.5
+        val values = doubleArrayOf(drawRight, drawBottom, spriteRight, spriteBottom, pivotX)
+        if (values.any { !it.isFinite() || it < -Float.MAX_VALUE || it > Float.MAX_VALUE }) return null
+        return DrawGeometry(
+            drawRight = drawRight.toFloat(),
+            drawBottom = drawBottom.toFloat(),
+            spriteRight = spriteRight.toFloat(),
+            spriteBottom = spriteBottom.toFloat(),
+            pivotX = pivotX.toFloat()
+        )
     }
 }
