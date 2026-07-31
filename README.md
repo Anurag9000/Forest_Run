@@ -28,16 +28,17 @@ The canonical `main` branch includes:
 - distance-based encounter spacing that remains stable as speed changes;
 - live Eagle targeting and aligned flora/tree collision geometry;
 - bounded gameplay input routing and interruption-safe render-thread shutdown;
-- Garden lifecycle, local-day, particle, layout, and currency corrections;
+- direct atomic Garden purchases with finite screen timing and fail-closed touch admission;
+- independently composed and bounded sanctuary atmosphere modifiers;
 - bounded/wrapped presentation queues and cached game-over composition;
-- finite, capped Menu, HUD, and Rest presentation clocks;
+- finite, capped Menu, HUD, Garden, and Rest presentation clocks;
 - strict runtime asset checks and hardened audio/music lifecycle handling;
 - 30 Hz, twenty-minute ghost capture with atomic off-thread persistence;
 - ghost binary format v2 with magic/version headers, stable state codes, and legacy-file reads;
 - one aspect-preserving safe-content transform for menu, Garden, HUD, debug, and rest UI;
 - persistent reduced-motion, audio, and haptic settings enforced at manager boundaries;
 - versioned SharedPreferences repair with future-schema compatibility storage;
-- allocation-free frame timing capture and a physical-device JSON profiling harness;
+- coherent frame, workload, heap, and ghost-I/O profiling snapshots;
 - final application ID `com.anurag9000.forestrun`;
 - API 36 host/release validation and API 35 connected validation on exact candidate SHAs.
 
@@ -82,6 +83,7 @@ The large hardware-capture and performance-profile tests are compiled but intent
 
 ## Remaining Release Blockers
 
+- observe host/release and connected-emulator validation for one exact frozen `main` SHA;
 - run deterministic scenarios and ordinary play on representative physical devices;
 - capture and review frame-time, allocation/GC, memory, I/O, audio-thread, thermal, and long-run evidence;
 - establish evidence-based performance thresholds and repair any material hotspots found;
@@ -93,7 +95,7 @@ The large hardware-capture and performance-profile tests are compiled but intent
 - revalidate current store-policy, privacy, data-safety, content-rating, and submission requirements;
 - decide whether the remaining procedural scenic layers and fixed-landscape policy are final art/product choices.
 
-See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist.
+See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist and [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) for the exhaustive implemented/remaining audit.
 
 ## Documentation
 
@@ -103,6 +105,7 @@ See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Current runtime structure, ownership, persistence, CI, and architectural debt |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Physical-device profiling protocol, report collection, and threshold procedure |
 | [`docs/RELEASE.md`](docs/RELEASE.md) | Correctness, validation, packaging, hardware, signing, and store checklist |
+| [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) | Exhaustive remediation status, validation truth, bounded debt, and remaining gates |
 
 ## Build and Test
 
@@ -123,13 +126,13 @@ Physical performance evidence on one authorized device:
 bash scripts/collect_performance_profiles.sh
 ```
 
-Canonical release preparation from the exact clean `main` tip:
+Canonical release preparation from the exact clean canonical `origin/main` tip:
 
 ```bash
 bash scripts/prepare_main_release.sh
 ```
 
-The wrapper rejects dirty, detached, or non-`main` worktrees, freezes the full candidate SHA, runs the existing Play release preparer, and verifies that the same `main` SHA still owns the tree after preparation. Dry-run options accepted by `prepare_play_release.py`, such as `--skip-build` or `--allow-unsigned`, may be passed through the wrapper.
+The wrapper rejects dirty, detached, non-`main`, stale, and unpushed worktrees. It freshly fetches `origin/main`, freezes the full matching candidate SHA, runs the existing Play release preparer, and verifies that both local `main` and `origin/main` still equal that SHA afterward. Dry-run options accepted by `prepare_play_release.py`, such as `--skip-build` or `--allow-unsigned`, may be passed through the wrapper.
 
 Expected build outputs:
 
