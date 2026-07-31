@@ -34,22 +34,28 @@ object PacifistPresentation {
     ): RouteWorldState? {
         val appContext = context.applicationContext
         val kindRuns = SaveManager.loadRouteTierCount(appContext, PacifistRouteTier.KIND)
+            .coerceAtLeast(0)
+            .toLong()
         val mercifulRuns = SaveManager.loadRouteTierCount(appContext, PacifistRouteTier.MERCIFUL)
+            .coerceAtLeast(0)
+            .toLong()
         val peacefulRuns = SaveManager.loadRouteTierCount(appContext, PacifistRouteTier.PEACEFUL)
+            .coerceAtLeast(0)
+            .toLong()
         val cumulativeKind = kindRuns + mercifulRuns + peacefulRuns
         val cumulativeMerciful = mercifulRuns + peacefulRuns
         return when {
-            peacefulRuns >= 2 || (latestRouteTier == PacifistRouteTier.PEACEFUL && cumulativeMerciful >= 2) ->
+            peacefulRuns >= 2L || (latestRouteTier == PacifistRouteTier.PEACEFUL && cumulativeMerciful >= 2L) ->
                 RouteWorldState(
                     label = "Peace Remembered",
                     line = "The world has started treating peace as something it expects from you, not a one-run accident."
                 )
-            cumulativeMerciful >= 3 || (latestRouteTier == PacifistRouteTier.MERCIFUL && cumulativeKind >= 3) ->
+            cumulativeMerciful >= 3L || (latestRouteTier == PacifistRouteTier.MERCIFUL && cumulativeKind >= 3L) ->
                 RouteWorldState(
                     label = "Mercy Remembered",
                     line = "The world has started meeting you with softer edges because mercy keeps making it home."
                 )
-            cumulativeKind >= 4 || (latestRouteTier == PacifistRouteTier.KIND && cumulativeKind >= 2) ->
+            cumulativeKind >= 4L || (latestRouteTier == PacifistRouteTier.KIND && cumulativeKind >= 2L) ->
                 RouteWorldState(
                     label = "Gentler Paths",
                     line = "The world has started assuming you might choose the gentler answer again instead of bracing for the harsh one."
