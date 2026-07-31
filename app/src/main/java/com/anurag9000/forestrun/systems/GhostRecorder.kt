@@ -31,19 +31,22 @@ class GhostRecorder {
     fun record(deltaTime: Float, player: Player) {
         if (!deltaTime.isFinite() || deltaTime <= 0f || activeFrames.size >= MAX_FRAMES) return
 
-        elapsed = (elapsed + deltaTime).coerceAtMost(MAX_DURATION_S.toFloat())
+        elapsed = (elapsed.toDouble() + deltaTime.toDouble())
+            .coerceAtMost(MAX_DURATION_S.toDouble())
+            .toFloat()
         if (activeFrames.isNotEmpty() && elapsed - lastSampleTime < SAMPLE_INTERVAL_S) return
 
-        activeFrames.add(
-            GhostFrame(
-                t = elapsed,
-                x = player.x,
-                y = player.y,
-                stateOrdinal = player.state.ordinal,
-                scaleX = player.scaleX,
-                scaleY = player.scaleY
-            )
+        val frame = GhostFrame(
+            t = elapsed,
+            x = player.x,
+            y = player.y,
+            stateOrdinal = player.state.ordinal,
+            scaleX = player.scaleX,
+            scaleY = player.scaleY
         )
+        if (!GhostRunValidator.isValidFrame(frame, lastSampleTime)) return
+
+        activeFrames.add(frame)
         lastSampleTime = elapsed
     }
 
