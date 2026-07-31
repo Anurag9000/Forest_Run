@@ -67,6 +67,8 @@ object GhostIoTelemetry {
         maximumWriteDurationNs = 0L
     }
 
+    /** Capture one internally consistent out-of-band profiling publication. */
+    @Synchronized
     fun snapshot(): GhostIoTelemetrySnapshot = GhostIoTelemetrySnapshot(
         writesStarted = writesStarted,
         writesCompleted = writesCompleted,
