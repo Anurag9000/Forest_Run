@@ -4,46 +4,50 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 
-/**
- * A single horizontally-scrolling background layer.
- *
- * The bitmap is drawn twice side-by-side ([x] and [x + bitmap.width]) so
- * the seam is never visible.  When the left copy fully exits the screen
- * the X position is snapped forward by one bitmap width, keeping the loop
- * seamless forever.
- *
- * @param bitmap        The pre-loaded, pre-scaled layer image.
- * @param speedFraction Fraction of the game's scroll speed this layer moves at
- *                      (0.1 = far background, 1.0 = ground layer, 1.5 = near foreground).
- */
+/** A single horizontally scrolling, seamlessly wrapped background layer. */
 class ParallaxLayer(
     val bitmap: Bitmap,
     private val speedFraction: Float
 ) {
-    /** Current left-edge position of the layer. */
+    init {
+        require(speedFraction.isFinite() && speedFraction >= 0f) {
+            "speedFraction must be finite and non-negative"
+        }
+        require(bitmap.width > 0) { "bitmap width must be positive" }
+    }
+
+    /** Current left-edge position, normalized to (-bitmap.width, 0]. */
     var x: Float = 0f
+        set(value) {
+            if (value.isFinite()) field = value
+        }
 
-    private val paint = Paint().apply { isFilterBitmap = false }   // pixel-art: no filtering
+    private val paint = Paint().apply { isFilterBitmap = false }
 
-    /**
-     * Advance the layer.
-     * @param deltaTime      Seconds since last frame.
-     * @param gameScrollSpeed Current game scroll speed in pixels per second.
-     */
+    /** Advance in O(1), rejecting malformed or reversing frame inputs. */
     fun update(deltaTime: Float, gameScrollSpeed: Float) {
-        x -= speedFraction * gameScrollSpeed * deltaTime
+        if (!deltaTime.isFinite() || deltaTime <= 0f ||
+            !gameScrollSpeed.isFinite() || gameScrollSpeed < 0f
+        ) return
 
-        // Seamless wrap: once the left copy is fully off-screen, snap forward
-        if (x <= -bitmap.width.toFloat()) {
-            x += bitmap.width.toFloat()
+        val width = bitmap.width.toDouble()
+        val current = x.takeIf { it.isFinite() }?.toDouble() ?: 0.0
+        val distance = speedFraction.toDouble() *
+            gameScrollSpeed.toDouble() *
+            deltaTime.toDouble()
+        val raw = current - distance
+        val positiveRemainder = ((raw % width) + width) % width
+        x = if (positiveRemainder == 0.0) {
+            0f
+        } else {
+            (positiveRemainder - width).toFloat()
         }
     }
 
-    /**
-     * Draw the layer (two copies: the current one and the one directly to its right).
-     */
+    /** Draw the current tile and its immediate right-hand successor. */
     fun draw(canvas: Canvas) {
-        canvas.drawBitmap(bitmap, x, 0f, paint)
-        canvas.drawBitmap(bitmap, x + bitmap.width.toFloat(), 0f, paint)
+        val safeX = x.takeIf { it.isFinite() } ?: 0f
+        canvas.drawBitmap(bitmap, safeX, 0f, paint)
+        canvas.drawBitmap(bitmap, safeX + bitmap.width.toFloat(), 0f, paint)
     }
 }
