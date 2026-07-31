@@ -122,80 +122,27 @@ object GardenSanctuaryPlanner {
         val featuredVisitor = featuredReward?.type
         val featuredVisitorTitle = featuredReward?.gardenReactionTitle.orEmpty()
         val featuredVisitorLine = featuredReward?.gardenReactionLine.orEmpty()
-
-        val fireflies = when (mood) {
-            ForestMood.GENTLE -> 4 + moodState.moodStreak.coerceAtMost(4)
-            ForestMood.RECKLESS -> 1
-            ForestMood.FEARFUL -> 2
-            ForestMood.STEADY -> 3 + (moodState.moodStreak / 2).coerceAtMost(2)
-        } + warmBonds.size.coerceAtMost(2) + milestoneRewards.size.coerceAtMost(2) + (kindnessStreak / 2).coerceAtMost(2) + peacefulBiomes.size.coerceAtMost(2) + if (repeatFriend != null) 1 else 0 - if (repeatedHarmCreature != null) 1 else 0 +
-            if (featuredReward != null) 1 else 0 +
-            when (routeTier) {
-                PacifistRouteTier.NONE -> 0
-                PacifistRouteTier.KIND -> 1
-                PacifistRouteTier.MERCIFUL -> 2
-                PacifistRouteTier.PEACEFUL -> 3
-            }
-
-        val petals = when (mood) {
-            ForestMood.GENTLE -> 3
-            ForestMood.RECKLESS -> 5
-            ForestMood.FEARFUL -> 2
-            ForestMood.STEADY -> 3
-        } + if ((summary?.sparedCount ?: 0) > 0) 1 else 0 + if (repeatedKindnessCreature != null) 1 else 0 + if (featuredPeaceBiome != null) 1 else 0 +
-            if (featuredReward != null && mood != ForestMood.FEARFUL) 1 else 0 +
-            if (featuredCostume != null) 1 else 0 +
-            if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 1 else 0
-
-        val bloomPatches = when (mood) {
-            ForestMood.GENTLE -> 2
-            ForestMood.RECKLESS -> 0
-            ForestMood.FEARFUL -> 1
-            ForestMood.STEADY -> 1
-        } + warmBonds.size.coerceAtMost(2) / 2 + milestoneRewards.size.coerceAtMost(2) + if ((summary?.bloomConversions ?: 0) >= 2) 1 else 0 + (kindnessStreak / 3).coerceAtMost(1) + if (featuredPeaceBiome != null) 1 else 0 +
-            if (featuredReward != null) 1 else 0 +
-            if (cactusBloom != null) 1 else 0 +
-            if (routeTier == PacifistRouteTier.PEACEFUL) 1 else 0
-
-        val mistBands = when (mood) {
-            ForestMood.GENTLE -> 1
-            ForestMood.RECKLESS -> 0
-            ForestMood.FEARFUL -> 3
-            ForestMood.STEADY -> 2
-        } + if (repeatedHarmCreature != null) 1 else 0 - if (featuredPeaceBiome != null && routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 1 else 0
-
-        val lanternGlows = warmBonds.size.coerceAtMost(3) +
-            milestoneRewards.size.coerceAtMost(2) +
-            peacefulBiomes.size.coerceAtMost(2) +
-            if (repeatFriend != null) 1 else 0 +
-            when (routeTier) {
-                PacifistRouteTier.NONE -> 0
-                PacifistRouteTier.KIND -> 1
-                PacifistRouteTier.MERCIFUL -> 2
-                PacifistRouteTier.PEACEFUL -> 3
-            } +
-            if (repeatedKindnessCreature != null && kindnessStreak >= 2) 1 else 0
-
-        val groundGlowAlpha = when (mood) {
-            ForestMood.GENTLE -> 92
-            ForestMood.RECKLESS -> 36
-            ForestMood.FEARFUL -> 54
-            ForestMood.STEADY -> 68
-        } + if ((summary?.bloomConversions ?: 0) >= 2) 12 else 0 +
-            if (featuredReward != null) 8 else 0 +
-            if (featuredCostume != null) 6 else 0 +
-            if (featuredPeaceBiome != null) 8 else 0 +
-            if (cactusBloom != null) 6 else 0 +
-            if (routeTier.ordinal >= PacifistRouteTier.MERCIFUL.ordinal) 16 else 0 +
-            if (repeatedKindnessCreature != null) 10 else 0
-
-        val canopyShadeAlpha = when (mood) {
-            ForestMood.GENTLE -> 26
-            ForestMood.RECKLESS -> 22
-            ForestMood.FEARFUL -> 54
-            ForestMood.STEADY -> 18
-        } + if (memoryPages >= 4) 6 else 0 + if (repeatedHarmCreature != null) 10 else 0 -
-            if (featuredPeaceBiome != null && routeTier == PacifistRouteTier.PEACEFUL) 6 else 0
+        val atmosphere = buildSanctuaryAtmosphere(
+            SanctuaryAtmosphereSignals(
+                mood = mood,
+                moodStreak = moodState.moodStreak,
+                warmBondCount = warmBonds.size,
+                milestoneRewardCount = milestoneRewards.size,
+                kindnessStreak = kindnessStreak,
+                peacefulBiomeCount = peacefulBiomes.size,
+                hasRepeatFriend = repeatFriend != null,
+                hasRepeatedHarm = repeatedHarmCreature != null,
+                hasFeaturedReward = featuredReward != null,
+                routeTier = routeTier,
+                sparedCount = summary?.sparedCount ?: 0,
+                hasRepeatedKindness = repeatedKindnessCreature != null,
+                hasFeaturedPeaceBiome = featuredPeaceBiome != null,
+                hasFeaturedCostume = featuredCostume != null,
+                bloomConversions = summary?.bloomConversions ?: 0,
+                hasCactusBloom = cactusBloom != null,
+                memoryPageCount = memoryPages
+            )
+        )
 
         val traces = buildList {
             if (strainedBond != null) {
@@ -621,13 +568,13 @@ object GardenSanctuaryPlanner {
             featuredVisitor = featuredVisitor,
             featuredVisitorTitle = featuredVisitorTitle,
             featuredVisitorLine = featuredVisitorLine,
-            fireflyCount = fireflies.coerceAtLeast(0),
-            petalCount = petals.coerceAtLeast(0),
-            bloomPatchCount = bloomPatches.coerceAtLeast(0),
-            mistBandCount = mistBands.coerceAtLeast(0),
-            lanternGlowCount = lanternGlows.coerceAtLeast(0),
-            groundGlowAlpha = groundGlowAlpha.coerceIn(0, 180),
-            canopyShadeAlpha = canopyShadeAlpha.coerceIn(0, 255),
+            fireflyCount = atmosphere.fireflyCount,
+            petalCount = atmosphere.petalCount,
+            bloomPatchCount = atmosphere.bloomPatchCount,
+            mistBandCount = atmosphere.mistBandCount,
+            lanternGlowCount = atmosphere.lanternGlowCount,
+            groundGlowAlpha = atmosphere.groundGlowAlpha,
+            canopyShadeAlpha = atmosphere.canopyShadeAlpha,
             traces = traces
         )
     }
