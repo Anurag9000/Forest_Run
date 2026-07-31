@@ -1,6 +1,8 @@
 package com.anurag9000.forestrun.engine
 
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -40,6 +42,59 @@ class FramePerformanceMonitorTest {
         assertEquals(30L, snapshot.p99ProcessingNs)
         assertEquals(30L, snapshot.maximumProcessingNs)
         assertEquals(0.5, snapshot.slowFrameRatio, 0.0)
+    }
+
+    @Test
+    fun `concurrent snapshots satisfy the report evidence contract`() {
+        val monitor = FramePerformanceMonitor(windowSize = 64, frameBudgetNs = 16L)
+        val failure = AtomicReference<Throwable?>(null)
+        val iterations = 8_000
+
+        val writer = Thread {
+            repeat(iterations) { index ->
+                val processing = (index % 40 + 1).toLong()
+                monitor.record(
+                    updateNs = processing / 3L,
+                    renderNs = processing / 2L,
+                    processingNs = processing
+                )
+            }
+        }
+        val reader = Thread {
+            repeat(iterations / 4) {
+                if (failure.get() == null) {
+                    runCatching {
+                        val snapshot = monitor.snapshot()
+                        assertTrue(snapshot.sampledFrames.toLong() <= snapshot.totalFrames)
+                        assertTrue(snapshot.slowFrames in 0L..snapshot.totalFrames)
+                        assertTrue(snapshot.p50ProcessingNs <= snapshot.p95ProcessingNs)
+                        assertTrue(snapshot.p95ProcessingNs <= snapshot.p99ProcessingNs)
+                        assertTrue(snapshot.p99ProcessingNs <= snapshot.maximumProcessingNs)
+                        assertTrue(snapshot.meanProcessingNs <= snapshot.maximumProcessingNs)
+                        assertTrue(snapshot.usedHeapBytes <= snapshot.maxHeapBytes)
+                        FramePerformanceReport(
+                            scenario = "concurrent",
+                            durationMs = 1L,
+                            manufacturer = "test",
+                            model = "test",
+                            apiLevel = 35,
+                            refreshRateHz = 60f,
+                            snapshot = snapshot
+                        )
+                    }.onFailure { error ->
+                        failure.compareAndSet(null, error)
+                    }
+                }
+            }
+        }
+
+        writer.start()
+        reader.start()
+        writer.join()
+        reader.join()
+
+        assertNull(failure.get())
+        assertEquals(iterations.toLong(), monitor.snapshot().totalFrames)
     }
 
     @Test
