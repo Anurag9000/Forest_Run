@@ -26,6 +26,9 @@ class SpriteSheet(
         require(bitmap.width >= totalFramesInBitmap) {
             "Bitmap width ${bitmap.width} cannot contain $totalFramesInBitmap frames"
         }
+        require(bitmap.width % totalFramesInBitmap == 0) {
+            "Bitmap width ${bitmap.width} must divide exactly into $totalFramesInBitmap frames"
+        }
         require(bitmap.height > 0) { "Bitmap height must be positive" }
     }
 
