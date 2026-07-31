@@ -12,8 +12,15 @@ import kotlin.math.sin
  */
 class FaceManager {
 
+    companion object {
+        private const val BLINK_COOLDOWN_S = 1.4f
+        private const val TIMER_WRAP_S = 60f
+    }
+
     private var blinkTimer = 0f
-    private var blinkCooldown = 1.4f
+
+    internal val blinkTimerForTest: Float
+        get() = blinkTimer
 
     private val eyePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(34, 32, 28)
@@ -31,7 +38,10 @@ class FaceManager {
     }
 
     fun update(deltaTime: Float) {
-        blinkTimer += deltaTime
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return
+        blinkTimer = (blinkTimer + deltaTime).let { next ->
+            if (next.isFinite()) next % TIMER_WRAP_S else 0f
+        }
     }
 
     fun draw(
@@ -42,15 +52,23 @@ class FaceManager {
         isInvincible: Boolean,
         motion: PlayerSecondaryMotionState
     ) {
+        if (!bodyRect.left.isFinite() || !bodyRect.top.isFinite() ||
+            !bodyRect.right.isFinite() || !bodyRect.bottom.isFinite() ||
+            bodyRect.width() <= 0f || bodyRect.height() <= 0f
+        ) return
+
+        val safeVelocityY = velocityY.takeIf(Float::isFinite) ?: 0f
+        val safeHeadOffset = motion.headOffsetPx.takeIf(Float::isFinite) ?: 0f
         val faceCenterX = bodyRect.centerX()
-        val faceCenterY = bodyRect.top + bodyRect.height() * 0.34f + motion.headOffsetPx
+        val faceCenterY = bodyRect.top + bodyRect.height() * 0.34f + safeHeadOffset
         val eyeOffsetX = bodyRect.width() * 0.12f
         val eyeY = faceCenterY
         val eyeW = bodyRect.width() * 0.08f
         val eyeH = bodyRect.height() * 0.05f
         val mouthY = bodyRect.top + bodyRect.height() * 0.47f
 
-        val shouldBlink = state == PlayerState.RUNNING && (blinkTimer % blinkCooldown) < 0.09f
+        val shouldBlink = state == PlayerState.RUNNING &&
+            (blinkTimer % BLINK_COOLDOWN_S) < 0.09f
         val eyeHeightFactor = when {
             shouldBlink -> 0.18f
             state == PlayerState.DUCKING -> 0.28f
@@ -58,7 +76,7 @@ class FaceManager {
             state == PlayerState.BLOOM -> 1.0f
             state == PlayerState.STUMBLE -> 0.9f
             state == PlayerState.REST -> 0.18f
-            velocityY < -450f -> 0.85f
+            safeVelocityY < -450f -> 0.85f
             else -> 0.58f
         }
 
