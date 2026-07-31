@@ -14,6 +14,10 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
         self.assertIn("set -euo pipefail", self.script)
         self.assertIn("READINESS_TIMEOUT_SECONDS", self.script)
         self.assertIn("while (( SECONDS < deadline ))", self.script)
+        self.assertIn(
+            'timeout "${READINESS_TIMEOUT_SECONDS}s" adb -s "${SERIAL}" wait-for-device',
+            self.script,
+        )
         self.assertIn("return 1", self.script)
 
     def test_runner_waits_for_framework_and_provider_readiness(self) -> None:
