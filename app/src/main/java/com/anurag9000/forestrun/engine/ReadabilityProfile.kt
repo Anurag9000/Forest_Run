@@ -38,6 +38,7 @@ private data class EntityReadabilityTemplate(
 
 object ReadabilityProfile {
     private const val GROUND_RATIO = 0.82f
+    private const val DEFAULT_SCREEN_HEIGHT_PX = 1080f
 
     private val templates = mapOf(
         EntityType.CACTUS to EntityReadabilityTemplate(138f, 72f, 0.16f, 0.10f, mercyPaddingPx = 13f, stagingPaddingPx = 14f),
@@ -61,12 +62,20 @@ object ReadabilityProfile {
         EntityType.EAGLE to EntityReadabilityTemplate(98f, 72f, 0.10f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 14f, telegraphDurationSec = 0.38f, movementSpeedPxPerSec = 720f)
     )
 
-    fun estimateScreenHeightFromGround(groundY: Float): Float = groundY / GROUND_RATIO
+    fun estimateScreenHeightFromGround(groundY: Float): Float {
+        val safeGround = groundY.takeIf { it.isFinite() && it > 0f }
+            ?: return DEFAULT_SCREEN_HEIGHT_PX
+        return safeGround / GROUND_RATIO
+    }
 
-    fun densityBucket(screenHeight: Float): DeviceDensityBucket = when {
-        screenHeight < 760f -> DeviceDensityBucket.COMPACT
-        screenHeight > 1320f -> DeviceDensityBucket.ROOMY
-        else -> DeviceDensityBucket.BALANCED
+    fun densityBucket(screenHeight: Float): DeviceDensityBucket {
+        val safeHeight = screenHeight.takeIf { it.isFinite() && it > 0f }
+            ?: DEFAULT_SCREEN_HEIGHT_PX
+        return when {
+            safeHeight < 760f -> DeviceDensityBucket.COMPACT
+            safeHeight > 1320f -> DeviceDensityBucket.ROOMY
+            else -> DeviceDensityBucket.BALANCED
+        }
     }
 
     fun entity(type: EntityType, screenHeight: Float): EntityReadability {
@@ -105,7 +114,8 @@ object ReadabilityProfile {
      * the current scroll speed.
      */
     fun spawnGapPx(distanceMetres: Float): Float {
-        val t = (distanceMetres / GameConstants.SPAWN_GAP_RAMP_METRES).coerceIn(0f, 1f)
+        val safeDistance = distanceMetres.takeIf { it.isFinite() && it > 0f } ?: 0f
+        val t = (safeDistance / GameConstants.SPAWN_GAP_RAMP_METRES).coerceIn(0f, 1f)
         return GameConstants.SPAWN_GAP_MAX_PX -
             t * (GameConstants.SPAWN_GAP_MAX_PX - GameConstants.SPAWN_GAP_MIN_PX)
     }
