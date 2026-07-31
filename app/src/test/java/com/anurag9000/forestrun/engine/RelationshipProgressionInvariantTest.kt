@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -102,5 +103,84 @@ class RelationshipProgressionInvariantTest {
             RelationshipStage.TRUST,
             RelationshipArcSystem.stageFor(context, EntityType.FOX)
         )
+    }
+
+    @Test
+    fun `saturated positive history cannot wrap milestone progression backwards`() {
+        writeRelationshipCounters(
+            type = EntityType.CAT,
+            encounters = Int.MAX_VALUE,
+            cleanPasses = Int.MAX_VALUE,
+            spared = Int.MAX_VALUE,
+            hits = Int.MAX_VALUE
+        )
+
+        assertEquals(
+            RelationshipStage.MILESTONE,
+            RelationshipArcSystem.refreshStage(context, EntityType.CAT)
+        )
+    }
+
+    @Test
+    fun `saturated positive affinity remains stronger than a modest bond`() {
+        writeRelationshipCounters(
+            type = EntityType.CAT,
+            encounters = Int.MAX_VALUE,
+            cleanPasses = Int.MAX_VALUE,
+            spared = Int.MAX_VALUE,
+            hits = 0
+        )
+        writeRelationshipCounters(
+            type = EntityType.DOG,
+            encounters = 10,
+            cleanPasses = 10,
+            spared = 5,
+            hits = 0
+        )
+        SaveManager.saveRelationshipStage(context, EntityType.CAT, RelationshipStage.MILESTONE)
+        SaveManager.saveRelationshipStage(context, EntityType.DOG, RelationshipStage.MILESTONE)
+
+        assertEquals(
+            EntityType.CAT,
+            RelationshipArcSystem.strongestRelationship(context)?.first
+        )
+    }
+
+    @Test
+    fun `saturated repeated strain remains severe instead of wrapping to wary`() {
+        writeRelationshipCounters(
+            type = EntityType.CAT,
+            encounters = 10,
+            cleanPasses = 0,
+            spared = 0,
+            hits = Int.MAX_VALUE,
+            tenderStreak = Int.MAX_VALUE
+        )
+        SaveManager.saveRelationshipStage(context, EntityType.CAT, RelationshipStage.MILESTONE)
+
+        val line = RelationshipArcSystem.strainedBondLine(context, EntityType.CAT)
+
+        assertTrue(line.contains("disappointed", ignoreCase = true))
+    }
+
+    private fun writeRelationshipCounters(
+        type: EntityType,
+        encounters: Int,
+        cleanPasses: Int,
+        spared: Int,
+        hits: Int,
+        kindnessStreak: Int = 0,
+        tenderStreak: Int = 0
+    ) {
+        val suffix = type.name.lowercase()
+        context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt("encounter_$suffix", encounters)
+            .putInt("clean_pass_$suffix", cleanPasses)
+            .putInt("spared_$suffix", spared)
+            .putInt("hit_$suffix", hits)
+            .putInt("kindness_streak_$suffix", kindnessStreak)
+            .putInt("tender_streak_$suffix", tenderStreak)
+            .commit()
     }
 }
