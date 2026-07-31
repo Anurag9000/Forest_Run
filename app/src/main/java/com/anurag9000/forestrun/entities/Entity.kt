@@ -95,19 +95,28 @@ abstract class Entity(val context: Context) {
         rightPadding: Float,
         bottomPadding: Float
     ): Boolean {
+        if (!isUsableRect(target) || !isUsableRect(source)) return false
         if (!leftPadding.isFinite() || !topPadding.isFinite() ||
             !rightPadding.isFinite() || !bottomPadding.isFinite()
         ) return false
 
-        val left = leftPadding.coerceAtLeast(0f)
-        val top = topPadding.coerceAtLeast(0f)
-        val right = rightPadding.coerceAtLeast(0f)
-        val bottom = bottomPadding.coerceAtLeast(0f)
-        return target.left < source.right + right &&
-            source.left - left < target.right &&
-            target.top < source.bottom + bottom &&
-            source.top - top < target.bottom
+        val left = leftPadding.coerceAtLeast(0f).toDouble()
+        val top = topPadding.coerceAtLeast(0f).toDouble()
+        val right = rightPadding.coerceAtLeast(0f).toDouble()
+        val bottom = bottomPadding.coerceAtLeast(0f).toDouble()
+        return target.left.toDouble() < source.right.toDouble() + right &&
+            source.left.toDouble() - left < target.right.toDouble() &&
+            target.top.toDouble() < source.bottom.toDouble() + bottom &&
+            source.top.toDouble() - top < target.bottom.toDouble()
     }
+
+    private fun isUsableRect(rect: RectF): Boolean =
+        rect.left.isFinite() &&
+            rect.top.isFinite() &&
+            rect.right.isFinite() &&
+            rect.bottom.isFinite() &&
+            rect.left < rect.right &&
+            rect.top < rect.bottom
 
     /** Return the current overlap result without mutating state or emitting presentation. */
     abstract fun onCollision(player: Player, gameState: GameStateManager): CollisionResult
