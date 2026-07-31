@@ -27,6 +27,8 @@ internal data class LeitmotifSignature(
     val cadenceLift: Float
 )
 
+private const val MAX_BLOOM_PROFILE_CONVERSIONS = 5
+
 private val defaultBloomMusicSignature = BloomMusicSignature(
     secondsRemaining = GameConstants.BLOOM_DURATION_S,
     conversions = 0
@@ -55,6 +57,18 @@ private val restLeitmotifProfile = LeitmotifPlaybackProfile(
         cadenceLift = 0.18f
     )
 )
+
+private fun sanitizeLeitmotifScrollSpeed(value: Float): Float =
+    value.takeIf { it.isFinite() && it > 0f } ?: GameConstants.BASE_SCROLL_SPEED
+
+private fun sanitizeBloomMusicSignature(signature: BloomMusicSignature): BloomMusicSignature =
+    BloomMusicSignature(
+        secondsRemaining = signature.secondsRemaining
+            .takeIf { it.isFinite() }
+            ?.coerceIn(0f, GameConstants.BLOOM_DURATION_S)
+            ?: 0f,
+        conversions = signature.conversions.coerceIn(0, MAX_BLOOM_PROFILE_CONVERSIONS)
+    )
 
 /** Thread-safe MediaPlayer state machine for the game's musical layers. */
 @SuppressLint("StaticFieldLeak", "DiscouragedApi")
@@ -214,7 +228,7 @@ object LeitmotifManager {
      */
     fun updateTempo(scrollSpeed: Float) {
         synchronized(audioLock) {
-            currentScrollSpeed = scrollSpeed.coerceAtLeast(1f)
+            currentScrollSpeed = sanitizeLeitmotifScrollSpeed(scrollSpeed)
             if (currentState == MusicState.BLOOM || currentState == MusicState.REST) return
 
             val nowNs = System.nanoTime()
@@ -243,20 +257,22 @@ object LeitmotifManager {
         synchronized(audioLock) {
             if (currentState != MusicState.BLOOM) return
 
-            val clampedSeconds = secondsRemaining.coerceIn(0f, GameConstants.BLOOM_DURATION_S)
-            val clampedConversions = conversions.coerceAtLeast(0)
-            val conversionChanged = clampedConversions != bloomMusicSignature.conversions
-            val timeChanged = abs(clampedSeconds - bloomMusicSignature.secondsRemaining) >=
-                BLOOM_SIGNATURE_SECONDS_EPSILON
+            val sanitizedSignature = sanitizeBloomMusicSignature(
+                BloomMusicSignature(
+                    secondsRemaining = secondsRemaining,
+                    conversions = conversions
+                )
+            )
+            val conversionChanged = sanitizedSignature.conversions != bloomMusicSignature.conversions
+            val timeChanged = abs(
+                sanitizedSignature.secondsRemaining - bloomMusicSignature.secondsRemaining
+            ) >= BLOOM_SIGNATURE_SECONDS_EPSILON
             if (!conversionChanged && !timeChanged) return
 
             val nowNs = System.nanoTime()
             if (!bloomEvaluationThrottle.tryAcquire(nowNs, force = conversionChanged)) return
 
-            bloomMusicSignature = BloomMusicSignature(
-                secondsRemaining = clampedSeconds,
-                conversions = clampedConversions
-            )
+            bloomMusicSignature = sanitizedSignature
             val profile = buildLeitmotifPlaybackProfile(
                 MusicState.BLOOM,
                 currentScrollSpeed,
@@ -322,10 +338,13 @@ object LeitmotifManager {
     internal fun currentMotifSignature(): LeitmotifSignature =
         synchronized(audioLock) { currentMotifSignature }
 
-    private fun runStateForDistance(distanceM: Float): MusicState = when {
-        distanceM < 500f -> MusicState.PLAYING_1
-        distanceM < 1500f -> MusicState.PLAYING_2
-        else -> MusicState.PLAYING_3
+    private fun runStateForDistance(distanceM: Float): MusicState {
+        val safeDistance = distanceM.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        return when {
+            safeDistance < 500f -> MusicState.PLAYING_1
+            safeDistance < 1500f -> MusicState.PLAYING_2
+            else -> MusicState.PLAYING_3
+        }
     }
 
     private fun applyProfileIfNeededLocked(
@@ -416,7 +435,7 @@ object LeitmotifManager {
     }
 
     private fun setPlayerVolume(player: MediaPlayer, volume: Float) {
-        val clamped = volume.coerceIn(0f, 1f)
+        val clamped = volume.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
         player.setVolume(clamped, clamped)
     }
 
@@ -424,8 +443,9 @@ object LeitmotifManager {
     private fun applyTempoToPlayer(player: MediaPlayer, speed: Float) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
         try {
+            val safeSpeed = speed.takeIf { it.isFinite() && it > 0f } ?: 1f
             val params = player.playbackParams
-            params.speed = speed.coerceIn(0.5f, 2f)
+            params.speed = safeSpeed.coerceIn(0.5f, 2f)
             player.playbackParams = params
         } catch (_: Exception) {
             // Some devices/codecs do not support PlaybackParams.
@@ -439,9 +459,15 @@ internal fun buildLeitmotifPlaybackProfile(
     bloomSignature: BloomMusicSignature = defaultBloomMusicSignature
 ): LeitmotifPlaybackProfile {
     val base = GameConstants.BASE_SCROLL_SPEED
-    val speedRatio = (scrollSpeed / base).coerceIn(0.75f, 2.0f)
+    val safeScrollSpeed = sanitizeLeitmotifScrollSpeed(scrollSpeed)
+    val safeBloomSignature = sanitizeBloomMusicSignature(bloomSignature)
+    val speedRatio = (safeScrollSpeed / base).coerceIn(0.75f, 2.0f)
     val speedLift = (speedRatio - 1f).coerceAtLeast(0f)
-    val runTempo = (1f + ((scrollSpeed - base) / base) * 0.8f).coerceIn(1f, 1.8f)
+    val runTempo = (1f + ((safeScrollSpeed - base) / base) * 0.8f).coerceIn(1f, 1.8f)
+    val bloomRemainingRatio = (
+        safeBloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S
+    ).coerceIn(0f, 1f)
+    val bloomConversions = safeBloomSignature.conversions.toFloat()
 
     return when (state) {
         LeitmotifManager.MusicState.MENU -> menuLeitmotifProfile
@@ -493,34 +519,33 @@ internal fun buildLeitmotifPlaybackProfile(
                 (
                     runTempo +
                         0.08f +
-                        (bloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S) * 0.08f +
-                        bloomSignature.conversions.coerceAtMost(5) * 0.014f
+                        bloomRemainingRatio * 0.08f +
+                        bloomConversions * 0.014f
                     ).coerceAtMost(1.8f)
             ),
             targetVolume = (
                 0.88f +
-                    (bloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S) * 0.08f +
-                    bloomSignature.conversions.coerceAtMost(5) * 0.015f
+                    bloomRemainingRatio * 0.08f +
+                    bloomConversions * 0.015f
                 ).coerceIn(0.88f, 1f),
             motifSignature = LeitmotifSignature(
                 motifLabel = "Bloom Surge",
                 leadPresence = (
                     0.78f +
-                        (bloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S) * 0.08f +
-                        bloomSignature.conversions.coerceAtMost(5) * 0.02f
+                        bloomRemainingRatio * 0.08f +
+                        bloomConversions * 0.02f
                     ).coerceIn(0.78f, 0.96f),
                 pulsePresence = (
-                    0.74f + bloomSignature.conversions.coerceAtMost(5) * 0.035f
+                    0.74f + bloomConversions * 0.035f
                     ).coerceIn(0.74f, 0.96f),
                 warmth = (
-                    0.58f +
-                        (bloomSignature.secondsRemaining / GameConstants.BLOOM_DURATION_S) * 0.08f
+                    0.58f + bloomRemainingRatio * 0.08f
                     ).coerceIn(0.58f, 0.74f),
                 shimmer = (
-                    0.68f + bloomSignature.conversions.coerceAtMost(5) * 0.045f
+                    0.68f + bloomConversions * 0.045f
                     ).coerceIn(0.68f, 0.94f),
                 cadenceLift = (
-                    0.66f + bloomSignature.conversions.coerceAtMost(5) * 0.04f
+                    0.66f + bloomConversions * 0.04f
                     ).coerceIn(0.66f, 0.90f)
             )
         )
