@@ -48,7 +48,7 @@ class PlayerBoundaryTest {
             Float.NaN,
             Float.POSITIVE_INFINITY,
             Float.NEGATIVE_INFINITY
-        ).forEach(player::update)
+        ).forEach { delta -> player.update(delta) }
 
         assertEquals(PlayerState.RUNNING, player.state)
         assertEquals(initialY, player.y, 0f)
