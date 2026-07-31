@@ -61,4 +61,104 @@ class GardenLayoutPlannerTest {
             }
         }
     }
+
+    @Test
+    fun `non finite or non positive surface dimensions are rejected`() {
+        val malformedDimensions = listOf(
+            Float.NaN,
+            Float.POSITIVE_INFINITY,
+            Float.NEGATIVE_INFINITY,
+            0f,
+            -1f
+        )
+
+        malformedDimensions.forEach { malformed ->
+            assertRejected {
+                GardenLayoutPlanner.build(
+                    width = malformed,
+                    height = 1080f,
+                    plantCount = 9,
+                    costumeCount = 8
+                )
+            }
+            assertRejected {
+                GardenLayoutPlanner.build(
+                    width = 1920f,
+                    height = malformed,
+                    plantCount = 9,
+                    costumeCount = 8
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `non positive catalogue counts are rejected`() {
+        listOf(0, -1, Int.MIN_VALUE).forEach { malformedCount ->
+            assertRejected {
+                GardenLayoutPlanner.build(
+                    width = 1920f,
+                    height = 1080f,
+                    plantCount = malformedCount,
+                    costumeCount = 8
+                )
+            }
+            assertRejected {
+                GardenLayoutPlanner.build(
+                    width = 1920f,
+                    height = 1080f,
+                    plantCount = 9,
+                    costumeCount = malformedCount
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `excessive catalogue counts fail before list allocation`() {
+        assertRejected {
+            GardenLayoutPlanner.build(
+                width = 1920f,
+                height = 1080f,
+                plantCount = Int.MAX_VALUE,
+                costumeCount = 8
+            )
+        }
+        assertRejected {
+            GardenLayoutPlanner.build(
+                width = 1920f,
+                height = 1080f,
+                plantCount = 9,
+                costumeCount = Int.MAX_VALUE
+            )
+        }
+    }
+
+    @Test
+    fun `malformed layout boxes fail closed`() {
+        val valid = LayoutBox(0f, 0f, 100f, 100f)
+        val malformed = listOf(
+            LayoutBox(Float.NaN, 0f, 10f, 10f),
+            LayoutBox(20f, 0f, 10f, 10f),
+            LayoutBox(0f, 10f, 10f, 10f),
+            LayoutBox(0f, Float.POSITIVE_INFINITY, 10f, 20f)
+        )
+
+        malformed.forEach { box ->
+            assertFalse(valid.intersects(box))
+            assertFalse(box.intersects(valid))
+            assertFalse(valid.contains(box))
+            assertFalse(box.contains(valid))
+        }
+    }
+
+    private fun assertRejected(block: () -> Unit) {
+        var rejected = false
+        try {
+            block()
+        } catch (_: IllegalArgumentException) {
+            rejected = true
+        }
+        assertTrue("Expected malformed Garden layout input to be rejected.", rejected)
+    }
 }
