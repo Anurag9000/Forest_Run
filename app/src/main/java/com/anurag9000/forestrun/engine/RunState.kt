@@ -4,9 +4,12 @@ package com.anurag9000.forestrun.engine
  * All possible top-level states of a single run.
  *
  * GameView holds a [RunState] value and uses it to decide:
- *  - Whether to run physics / entity updates (only in PLAYING / BLOOM states).
- *  - Whether to draw the rest overlay (DYING / GAME_OVER).
- *  - When to trigger RunResetManager's fade back to the Garden (on RESTARTING).
+ *  - Whether to run physics / entity updates (only in [PLAYING]).
+ *  - Whether to draw the rest overlay ([DYING] / [GAME_OVER]).
+ *  - When to trigger RunResetManager's fade back to the Garden (on [RESTARTING]).
+ *
+ * Bloom is not a run state. It is an orthogonal power flag owned by
+ * [GameStateManager] while locomotion and [PLAYING] continue normally.
  */
 enum class RunState {
     /** Normal gameplay — all systems update. */
