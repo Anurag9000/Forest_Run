@@ -9,17 +9,23 @@ object GhostRunValidator {
 
         var previousTime = Float.NEGATIVE_INFINITY
         for (frame in frames) {
-            if (!frame.t.isFinite() || frame.t < 0f || frame.t < previousTime) return false
-            if (frame.t > GhostRecorder.MAX_DURATION_S.toFloat() + GhostRecorder.SAMPLE_INTERVAL_S) {
-                return false
-            }
-            if (!frame.x.isFinite() || !frame.y.isFinite()) return false
-            if (frame.stateOrdinal !in PlayerState.entries.indices) return false
-            if (GhostStateCodec.encodeOrdinal(frame.stateOrdinal) == null) return false
-            if (!frame.scaleX.isFinite() || frame.scaleX !in 0.1f..4f) return false
-            if (!frame.scaleY.isFinite() || frame.scaleY !in 0.1f..4f) return false
+            if (!isValidFrame(frame, previousTime)) return false
             previousTime = frame.t
         }
         return true
     }
+
+    internal fun isValidFrame(frame: GhostFrame, previousTime: Float): Boolean =
+        frame.t.isFinite() &&
+            frame.t >= 0f &&
+            frame.t >= previousTime &&
+            frame.t <= GhostRecorder.MAX_DURATION_S.toFloat() + GhostRecorder.SAMPLE_INTERVAL_S &&
+            frame.x.isFinite() &&
+            frame.y.isFinite() &&
+            frame.stateOrdinal in PlayerState.entries.indices &&
+            GhostStateCodec.encodeOrdinal(frame.stateOrdinal) != null &&
+            frame.scaleX.isFinite() &&
+            frame.scaleX in 0.1f..4f &&
+            frame.scaleY.isFinite() &&
+            frame.scaleY in 0.1f..4f
 }
