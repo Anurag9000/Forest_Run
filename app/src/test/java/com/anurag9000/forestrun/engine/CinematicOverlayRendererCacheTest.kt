@@ -64,6 +64,57 @@ class CinematicOverlayRendererCacheTest {
     }
 
     @Test
+    fun `invalid geometry is a no op and does not enter shader cache`() {
+        val bitmap = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val renderer = CinematicOverlayRenderer()
+        val profile = buildCinematicPolishProfile(CinematicScene.RUN)
+
+        listOf(0f, -1f, Float.NaN, Float.POSITIVE_INFINITY).forEach { invalid ->
+            renderer.draw(canvas, invalid, 32f, profile, 0f, Color.WHITE)
+            renderer.draw(canvas, 32f, invalid, profile, 0f, Color.WHITE)
+        }
+
+        assertEquals(0, renderer.shaderRebuildCountForTest)
+    }
+
+    @Test
+    fun `malformed external profile fields draw through finite clamps`() {
+        val bitmap = Bitmap.createBitmap(320, 180, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val renderer = CinematicOverlayRenderer()
+        val malformed = CinematicPolishProfile(
+            vignetteAlpha = Int.MIN_VALUE,
+            edgeGlowAlpha = Int.MAX_VALUE,
+            letterboxAlpha = Int.MAX_VALUE,
+            letterboxHeightFraction = Float.NaN,
+            centerLiftAlpha = Int.MIN_VALUE,
+            shimmerStrength = Float.POSITIVE_INFINITY
+        )
+
+        renderer.draw(
+            canvas = canvas,
+            width = 320f,
+            height = 180f,
+            profile = malformed,
+            elapsedSeconds = Float.NaN,
+            glowColor = Color.MAGENTA,
+            centerYFraction = Float.NaN
+        )
+        renderer.draw(
+            canvas = canvas,
+            width = 320f,
+            height = 180f,
+            profile = malformed,
+            elapsedSeconds = Float.POSITIVE_INFINITY,
+            glowColor = Color.MAGENTA,
+            centerYFraction = Float.POSITIVE_INFINITY
+        )
+
+        assertEquals(1, renderer.shaderRebuildCountForTest)
+    }
+
+    @Test
     fun `fixed sanctuary lighting identities are reused`() {
         assertSame(
             buildSanctuaryLightingIdentity(SanctuaryLightingScene.MENU),
