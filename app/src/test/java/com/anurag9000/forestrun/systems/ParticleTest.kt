@@ -1,15 +1,33 @@
 package com.anurag9000.forestrun.systems
 
+import android.content.Context
 import android.graphics.Color
+import androidx.test.core.app.ApplicationProvider
+import com.anurag9000.forestrun.engine.FeedbackSettings
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class ParticleTest {
+    private lateinit var context: Context
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        FeedbackSettings.setReducedMotion(context, false)
+    }
+
+    @After
+    fun tearDown() {
+        FeedbackSettings.setReducedMotion(context, false)
+        FeedbackSettings.resetMemoryForTests()
+    }
 
     @Test
     fun `invalid lifetime is immediately terminal with bounded appearance`() {
@@ -102,6 +120,40 @@ class ParticleTest {
         assertEquals(0.5f, particle.elapsed, 0f)
         assertEquals(10f, particle.x, 0f)
         assertTrue(particle.isDead)
+    }
+
+    @Test
+    fun `enabling reduced motion retires particles born before the toggle`() {
+        val particle = Particle(
+            x = 10f,
+            y = 20f,
+            velX = 30f,
+            lifetime = 10f,
+            isActive = true
+        )
+
+        FeedbackSettings.setReducedMotion(context, true)
+        particle.update(1f / 60f)
+
+        assertFalse(particle.isActive)
+        assertEquals(10f, particle.x, 0f)
+        assertEquals(0f, particle.elapsed, 0f)
+    }
+
+    @Test
+    fun `particles acquired after reduced motion remains enabled still animate`() {
+        FeedbackSettings.setReducedMotion(context, true)
+        val particle = Particle()
+        particle.reset()
+        particle.lifetime = 10f
+        particle.velX = 60f
+        particle.isActive = true
+
+        particle.update(1f / 60f)
+
+        assertTrue(particle.isActive)
+        assertTrue(particle.elapsed > 0f)
+        assertTrue(particle.x > 0f)
     }
 
     @Test
