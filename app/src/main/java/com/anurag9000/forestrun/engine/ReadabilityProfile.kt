@@ -1,0 +1,122 @@
+package com.anurag9000.forestrun.engine
+
+import com.anurag9000.forestrun.entities.EntityType
+
+enum class DeviceDensityBucket {
+    COMPACT,
+    BALANCED,
+    ROOMY
+}
+
+data class EntityReadability(
+    val heightPx: Float,
+    val minWidthPx: Float,
+    val hitInsetXRatio: Float,
+    val hitInsetYRatio: Float,
+    val mercyPaddingPx: Float = 12f,
+    val stagingPaddingPx: Float = 10f,
+    val secondaryWidthPx: Float = 0f,
+    val secondarySpacingPx: Float = 0f,
+    val detectionRangeBodies: Float = 3f,
+    val telegraphDurationSec: Float = 0.3f,
+    val movementSpeedPxPerSec: Float = 0f
+)
+
+private data class EntityReadabilityTemplate(
+    val baseHeightPx: Float,
+    val baseMinWidthPx: Float,
+    val hitInsetXRatio: Float,
+    val hitInsetYRatio: Float,
+    val mercyPaddingPx: Float = 12f,
+    val stagingPaddingPx: Float = 10f,
+    val secondaryWidthPx: Float = 0f,
+    val secondarySpacingPx: Float = 0f,
+    val detectionRangeBodies: Float = 3f,
+    val telegraphDurationSec: Float = 0.3f,
+    val movementSpeedPxPerSec: Float = 0f
+)
+
+object ReadabilityProfile {
+    private const val GROUND_RATIO = 0.82f
+    private const val DEFAULT_SCREEN_HEIGHT_PX = 1080f
+
+    private val templates = mapOf(
+        EntityType.CACTUS to EntityReadabilityTemplate(138f, 72f, 0.16f, 0.10f, mercyPaddingPx = 13f, stagingPaddingPx = 14f),
+        EntityType.LILY_OF_VALLEY to EntityReadabilityTemplate(110f, 70f, 0.18f, 0.12f, mercyPaddingPx = 15f, stagingPaddingPx = 14f),
+        EntityType.HYACINTH to EntityReadabilityTemplate(132f, 60f, 0.20f, 0.34f, mercyPaddingPx = 14f, stagingPaddingPx = 14f),
+        EntityType.EUCALYPTUS to EntityReadabilityTemplate(148f, 74f, 0.22f, 0.20f, mercyPaddingPx = 15f, stagingPaddingPx = 16f),
+        EntityType.VANILLA_ORCHID to EntityReadabilityTemplate(244f, 112f, 0.18f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 16f),
+        EntityType.WEEPING_WILLOW to EntityReadabilityTemplate(724f, 304f, 0.18f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 18f),
+        EntityType.JACARANDA to EntityReadabilityTemplate(656f, 258f, 0.16f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 18f),
+        EntityType.BAMBOO to EntityReadabilityTemplate(0f, 0f, 0f, 0f, mercyPaddingPx = 10f, stagingPaddingPx = 18f, secondaryWidthPx = 26f, secondarySpacingPx = 40f),
+        EntityType.CHERRY_BLOSSOM to EntityReadabilityTemplate(632f, 254f, 0.16f, 0.10f, mercyPaddingPx = 15f, stagingPaddingPx = 20f),
+        EntityType.CAT to EntityReadabilityTemplate(84f, 70f, 0.14f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
+        EntityType.FOX to EntityReadabilityTemplate(102f, 84f, 0.12f, 0.09f, mercyPaddingPx = 14f, stagingPaddingPx = 12f, detectionRangeBodies = 3.2f),
+        EntityType.WOLF to EntityReadabilityTemplate(118f, 94f, 0.11f, 0.07f, mercyPaddingPx = 14f, stagingPaddingPx = 14f, telegraphDurationSec = 1.05f),
+        EntityType.DOG to EntityReadabilityTemplate(104f, 82f, 0.13f, 0.07f, mercyPaddingPx = 14f, stagingPaddingPx = 12f),
+        EntityType.HEDGEHOG to EntityReadabilityTemplate(66f, 50f, 0.08f, 0.08f, mercyPaddingPx = 14f, stagingPaddingPx = 10f, telegraphDurationSec = 0.18f),
+        EntityType.DUCK to EntityReadabilityTemplate(96f, 68f, 0.10f, 0.10f, mercyPaddingPx = 13f, stagingPaddingPx = 12f),
+        EntityType.TIT to EntityReadabilityTemplate(62f, 50f, 0.06f, 0.06f, mercyPaddingPx = 12f, stagingPaddingPx = 10f),
+        EntityType.CHICKADEE to EntityReadabilityTemplate(54f, 44f, 0.06f, 0.06f, mercyPaddingPx = 12f, stagingPaddingPx = 10f),
+        EntityType.OWL to EntityReadabilityTemplate(92f, 68f, 0.10f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 14f, telegraphDurationSec = 0.24f, movementSpeedPxPerSec = 620f),
+        EntityType.EAGLE to EntityReadabilityTemplate(98f, 72f, 0.10f, 0.10f, mercyPaddingPx = 14f, stagingPaddingPx = 14f, telegraphDurationSec = 0.38f, movementSpeedPxPerSec = 720f)
+    )
+
+    fun estimateScreenHeightFromGround(groundY: Float): Float {
+        val safeGround = groundY.takeIf { it.isFinite() && it > 0f }
+            ?: return DEFAULT_SCREEN_HEIGHT_PX
+        return safeGround / GROUND_RATIO
+    }
+
+    fun densityBucket(screenHeight: Float): DeviceDensityBucket {
+        val safeHeight = screenHeight.takeIf { it.isFinite() && it > 0f }
+            ?: DEFAULT_SCREEN_HEIGHT_PX
+        return when {
+            safeHeight < 760f -> DeviceDensityBucket.COMPACT
+            safeHeight > 1320f -> DeviceDensityBucket.ROOMY
+            else -> DeviceDensityBucket.BALANCED
+        }
+    }
+
+    fun entity(type: EntityType, screenHeight: Float): EntityReadability {
+        val template = templates[type] ?: return EntityReadability(
+            heightPx = 88f,
+            minWidthPx = 64f,
+            hitInsetXRatio = 0.1f,
+            hitInsetYRatio = 0.1f
+        )
+        val scale = when (densityBucket(screenHeight)) {
+            DeviceDensityBucket.COMPACT -> 0.94f
+            DeviceDensityBucket.BALANCED -> 1f
+            DeviceDensityBucket.ROOMY -> 1.08f
+        }
+        return EntityReadability(
+            heightPx = template.baseHeightPx * scale,
+            minWidthPx = template.baseMinWidthPx * scale,
+            hitInsetXRatio = template.hitInsetXRatio,
+            hitInsetYRatio = template.hitInsetYRatio,
+            mercyPaddingPx = template.mercyPaddingPx * scale,
+            stagingPaddingPx = template.stagingPaddingPx * scale,
+            secondaryWidthPx = template.secondaryWidthPx * scale,
+            secondarySpacingPx = template.secondarySpacingPx * scale,
+            detectionRangeBodies = template.detectionRangeBodies,
+            telegraphDurationSec = template.telegraphDurationSec,
+            movementSpeedPxPerSec = template.movementSpeedPxPerSec * scale
+        )
+    }
+
+    fun entityForGround(type: EntityType, groundY: Float): EntityReadability =
+        entity(type, estimateScreenHeightFromGround(groundY))
+
+    /**
+     * Required distance between random spawn origins. Pacing becomes denser as
+     * the run progresses, but remains monotonic and bounded independently of
+     * the current scroll speed.
+     */
+    fun spawnGapPx(distanceMetres: Float): Float {
+        val safeDistance = distanceMetres.takeIf { it.isFinite() && it > 0f } ?: 0f
+        val t = (safeDistance / GameConstants.SPAWN_GAP_RAMP_METRES).coerceIn(0f, 1f)
+        return GameConstants.SPAWN_GAP_MAX_PX -
+            t * (GameConstants.SPAWN_GAP_MAX_PX - GameConstants.SPAWN_GAP_MIN_PX)
+    }
+}

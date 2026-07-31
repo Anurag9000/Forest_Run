@@ -1,0 +1,163 @@
+name: Android validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-validation:
+    name: Host, release, lint, and packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out the exact candidate SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify immutable source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden_script="scripts/patch_runtime_workload_"telemetry.py
+          test ! -e "$forbidden_script"
+          if grep -R --line-number -E 'contents:[[:space:]]*write|git[[:space:]]+push' .github/workflows; then
+            echo "Validation workflows must not mutate or push repository source." >&2
+            exit 1
+          fi
+          grep -q 'RuntimeWorkloadTelemetry.publishEntities' app/src/main/java/com/anurag9000/forestrun/engine/EntityManager.kt
+          grep -q 'RuntimeWorkloadTelemetry.publishSeedOrbs' app/src/main/java/com/anurag9000/forestrun/systems/SeedOrbManager.kt
+          grep -q 'RuntimeWorkloadTelemetry.publishParticles' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
+          grep -q 'RuntimeWorkloadTelemetry.publishDialogueBubbles' app/src/main/java/com/anurag9000/forestrun/ui/DialogueBubbleManager.kt
+          grep -q 'RuntimeWorkloadTelemetry.publishFlavorTexts' app/src/main/java/com/anurag9000/forestrun/ui/FlavorTextManager.kt
+          grep -q 'RuntimeWorkloadTelemetry.reset()' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceTelemetry.kt
+          grep -q 'val workload: RuntimeWorkloadSnapshot' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceReport.kt
+          grep -q 'workload = RuntimeWorkloadTelemetry.snapshot()' app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/RuntimeWorkloadTelemetryTest.kt
+          test -f scripts/evaluate_performance_profiles.py
+          test -f scripts/test_evaluate_performance_profiles.py
+
+      - name: Test performance evidence tooling
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 36
+        shell: bash
+        run: |
+          set +o pipefail
+          yes | sdkmanager 'platforms;android-36' >/dev/null
+          status=${PIPESTATUS[1]}
+          set -o pipefail
+          exit "$status"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Compile, test, lint, and package the checked-in tree
+        run: >-
+          ./gradlew
+          compileDebugKotlin
+          compileDebugUnitTestKotlin
+          compileReleaseKotlin
+          compileDebugAndroidTestKotlin
+          testDebugUnitTest
+          lintDebug
+          lintRelease
+          assembleDebug
+          assembleDebugAndroidTest
+          bundleRelease
+          --no-daemon
+          --stacktrace
+          --console=plain
+
+      - name: Verify R8 output and source immutability
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapping='app/build/outputs/mapping/release/mapping.txt'
+          test -s "$mapping"
+          awk -F' -> ' '
+            /^com\.anurag9000\.forestrun\./ {
+              target=$2
+              sub(/:$/, "", target)
+              if (target !~ /^com\.anurag9000\.forestrun\./) renamed=1
+            }
+            END { exit renamed ? 0 : 1 }
+          ' "$mapping"
+          git diff --exit-code
+          git diff --cached --exit-code
+
+  connected-validation:
+    name: API 35 connected behaviour
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out the exact candidate SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 36
+        shell: bash
+        run: |
+          set +o pipefail
+          yes | sdkmanager 'platforms;android-36' >/dev/null
+          status=${PIPESTATUS[1]}
+          set -o pipefail
+          exit "$status"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run connected tests on API 35
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: ./gradlew connectedDebugAndroidTest --no-daemon --stacktrace --console=plain
+
+      - name: Verify connected validation did not mutate source
+        run: |
+          git diff --exit-code
+          git diff --cached --exit-code

@@ -1,0 +1,502 @@
+package com.anurag9000.forestrun.engine
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.anurag9000.forestrun.entities.CostumeStyle
+import com.anurag9000.forestrun.entities.EntityType
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+@RunWith(RobolectricTestRunner::class)
+class GardenSanctuaryPlannerTest {
+
+    private lateinit var context: Context
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        context.getSharedPreferences("forest_run_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+    }
+
+    @Test
+    fun `gentle bonded runs brighten sanctuary and surface traces`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 1_240,
+            distanceM = 890f,
+            isNewHighScore = true,
+            highScore = 1_240,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 6,
+            cleanPasses = 9,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 2,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertTrue(state.fireflyCount >= 6)
+        assertTrue(state.bloomPatchCount >= 2)
+        assertTrue(state.lanternGlowCount >= 1)
+        assertTrue(state.groundGlowAlpha >= 90)
+        assertTrue(state.traces.any { it.type == EntityType.CAT })
+    }
+
+    @Test
+    fun `fearful runs keep sanctuary quieter`() {
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 2, totalRuns = 2, fearfulRuns = 2)
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertEquals(ForestMood.FEARFUL.gardenLine, ForestMoodSystem.currentState(context).currentMood.gardenLine)
+        assertTrue(state.sanctuaryLine.contains("lowers its voice"))
+        assertEquals("Sheltering Home", state.homeCharacterLabel)
+        assertTrue(state.homeCharacterLine.contains("shelter", ignoreCase = true))
+        assertTrue(state.canopyShadeAlpha >= 50)
+    }
+
+    @Test
+    fun `repeated harm leaves a cautious sanctuary trace`() {
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 3, totalRuns = 3, fearfulRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 420,
+            distanceM = 330f,
+            isNewHighScore = false,
+            highScore = 990,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 2,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Cautious Path", state.traces.first().label)
+        assertEquals(EntityType.WOLF, state.traces.first().type)
+        assertEquals("Tender Return", state.arrivalBadge)
+        assertTrue(state.sanctuaryLine.contains("tender"))
+        assertTrue(state.carryHomeLine.contains("Wolf"))
+        assertTrue(state.canopyShadeAlpha >= 64)
+        assertTrue(state.mistBandCount >= 3)
+    }
+
+    @Test
+    fun `strained bond upgrades sanctuary into a watchful distance state`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 3, totalRuns = 3, fearfulRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 410,
+            distanceM = 320f,
+            isNewHighScore = false,
+            highScore = 980,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Held At A Distance", state.arrivalBadge)
+        assertEquals("Watchful Home", state.homeCharacterLabel)
+        assertTrue(state.traces.any { it.type == EntityType.WOLF && it.label == "Watchful Distance" })
+        assertTrue(state.sanctuaryLine.contains("watchful"))
+        assertTrue(state.homeCharacterLine.contains("watchful", ignoreCase = true))
+        assertTrue(state.carryHomeLine.contains("careful", ignoreCase = true) || state.carryHomeLine.contains("break", ignoreCase = true))
+    }
+
+    @Test
+    fun `repeat killer history upgrades sanctuary badge to same shadow`() {
+        repeat(3) { PersistentMemoryManager.recordHit(context, EntityType.OWL) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 4, totalRuns = 4, fearfulRuns = 4)
+        )
+        val summary = RunSummary(
+            score = 300,
+            distanceM = 250f,
+            isNewHighScore = false,
+            highScore = 900,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 1,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 2,
+            bloomConversions = 0,
+            lastKiller = EntityType.OWL,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Same Shadow", state.arrivalBadge)
+        assertTrue(state.carryHomeLine.contains("shape") || state.carryHomeLine.contains("trouble"))
+    }
+
+    @Test
+    fun `milestone bond adds keepsake trace and warmer carry-home`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 4, totalRuns = 4, gentleRuns = 4)
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertTrue(state.traces.any { it.label == "Napping Patch" })
+        assertTrue(
+            state.carryHomeLine.contains("quiet patch", ignoreCase = true) ||
+                state.carryHomeLine.contains("home", ignoreCase = true) ||
+                state.carryHomeLine.contains("pause", ignoreCase = true) ||
+                state.carryHomeLine.contains("both of you", ignoreCase = true)
+        )
+        assertTrue(state.fireflyCount >= 6)
+    }
+
+    @Test
+    fun `featured milestone reward can surface matching wardrobe payoff`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.DOG) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 4, totalRuns = 4, gentleRuns = 4)
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertTrue(state.featuredRewardLine.contains("Bell Charm") || state.carryHomeLine.contains("Bell Charm"))
+        assertEquals("Open Gate", state.featuredPresenceLabel)
+        assertTrue(state.featuredPresenceLine.contains("home", ignoreCase = true) || state.featuredPresenceLine.contains("entrance", ignoreCase = true))
+        assertEquals("Meeting Run", state.featuredRitualLabel)
+        assertTrue(state.featuredRitualLine.contains("together", ignoreCase = true) || state.featuredRitualLine.contains("halfway", ignoreCase = true))
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Ritual", ignoreCase = true) })
+        assertEquals(EntityType.DOG, state.featuredVisitor)
+        assertEquals("Glad Return", state.featuredVisitorTitle)
+        assertTrue(state.featuredVisitorLine.contains("return", ignoreCase = true) || state.featuredVisitorLine.contains("garden", ignoreCase = true))
+        assertTrue(state.traces.any { it.label == "Welcome Bell" })
+    }
+
+    @Test
+    fun `route world history can surface a named world sign beyond biome peace`() {
+        repeat(3) {
+            SaveManager.saveLastRunSummary(
+                context,
+                RunSummary(
+                    score = 420 + it,
+                    distanceM = 320f + it,
+                    isNewHighScore = false,
+                    highScore = 900,
+                    mercyHearts = 3,
+                    mercyMisses = 3,
+                    kindnessChain = 6,
+                    cleanPasses = 7,
+                    sparedCount = 2,
+                    hitsTaken = 0,
+                    seedsCollected = 4,
+                    bloomConversions = 0,
+                    lastKiller = null,
+                    restQuote = "Mercy.",
+                    forestMood = ForestMood.GENTLE,
+                    pacifistRouteTier = PacifistRouteTier.MERCIFUL
+                )
+            )
+        }
+
+        val state = GardenSanctuaryPlanner.build(context, SaveManager.loadLastRunSummary(context))
+
+        assertEquals("Mercy Remembered", state.routeWorldLabel)
+        assertTrue(state.routeWorldLine.contains("mercy", ignoreCase = true))
+        assertTrue(state.homecomingConsequences.any { it.label.contains("World: Mercy Remembered", ignoreCase = true) })
+    }
+
+    @Test
+    fun `world opinion is surfaced as a first class homecoming consequence`() {
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.CAT) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertEquals("Trusting", state.worldOpinionLabel)
+        assertTrue(state.worldOpinionLine.contains("Cat", ignoreCase = true))
+        assertTrue(state.homecomingConsequences.first().label.contains("Opinion:", ignoreCase = true))
+    }
+
+    @Test
+    fun `repeated kindness leaves a trust path and warmer carry-home`() {
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 2, totalRuns = 2, gentleRuns = 2)
+        )
+        val summary = RunSummary(
+            score = 760,
+            distanceM = 590f,
+            isNewHighScore = false,
+            highScore = 1_100,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 4,
+            cleanPasses = 6,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 5,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Softly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertTrue(state.traces.any { it.label == "Trust Path" && it.type == EntityType.FOX })
+        assertEquals("Trust Kept", state.arrivalBadge)
+        assertTrue(state.carryHomeLine.contains("Fox") || state.carryHomeLine.contains("trust"))
+    }
+
+    @Test
+    fun `repeated clean cactus reads leave a named needle bloom trace`() {
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.CACTUS) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.STEADY, moodStreak = 2, totalRuns = 2, steadyRuns = 2)
+        )
+        val summary = RunSummary(
+            score = 780,
+            distanceM = 560f,
+            isNewHighScore = false,
+            highScore = 1_100,
+            mercyHearts = 1,
+            mercyMisses = 1,
+            kindnessChain = 1,
+            cleanPasses = 6,
+            sparedCount = 0,
+            hitsTaken = 0,
+            seedsCollected = 5,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Steady.",
+            forestMood = ForestMood.STEADY
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertTrue(state.traces.any { it.type == EntityType.CACTUS && it.label == "Needle Bloom" })
+        assertTrue(state.homecomingConsequences.any { it.label == "Flora: Needle Bloom" })
+        assertTrue(state.carryHomeLine.contains("flowering") || state.carryHomeLine.contains("cactus"))
+    }
+
+    @Test
+    fun `peaceful biome friendship surfaces named world-state signs`() {
+        repeat(2) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.MEADOW) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 1_320,
+            distanceM = 940f,
+            isNewHighScore = false,
+            highScore = 1_620,
+            mercyHearts = 5,
+            mercyMisses = 5,
+            kindnessChain = 7,
+            cleanPasses = 11,
+            sparedCount = 2,
+            hitsTaken = 0,
+            seedsCollected = 10,
+            bloomConversions = 2,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals(Biome.MEADOW, state.featuredPeaceBiome)
+        assertTrue(state.homeCharacterLabel.contains("Meadow"))
+        assertTrue(state.homeCharacterLabel.contains("Quiet"))
+        assertTrue(state.featuredPeaceLabel.contains("Meadow"))
+        assertTrue(state.featuredPeaceLine.contains("Meadow"))
+        assertTrue(state.homeCharacterLine.contains("peace", ignoreCase = true) || state.homeCharacterLine.contains("calmer", ignoreCase = true))
+        assertEquals("Peace Carried", state.arrivalBadge)
+        assertTrue(state.carryHomeLine.contains("quiet", ignoreCase = true) || state.carryHomeLine.contains("Meadow"))
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Route: Peaceful") })
+        assertTrue(state.homecomingConsequences.any { it.label.contains("World:") && it.line.contains("peace", ignoreCase = true) })
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Mood: Gentle") })
+    }
+
+    @Test
+    fun `repeat friend leaves shared path and familiar return badge`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.DOG) }
+        PersistentMemoryManager.recordSpare(context, EntityType.DOG)
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 1_060,
+            distanceM = 810f,
+            isNewHighScore = false,
+            highScore = 1_500,
+            mercyHearts = 2,
+            mercyMisses = 2,
+            kindnessChain = 5,
+            cleanPasses = 9,
+            sparedCount = 1,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 0,
+            lastKiller = null,
+            restQuote = "Gladly.",
+            forestMood = ForestMood.GENTLE
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Familiar Return", state.arrivalBadge)
+        assertTrue(state.traces.any { it.label == "Shared Path" && it.type == EntityType.DOG })
+        assertTrue(state.carryHomeLine.contains("Dog") || state.carryHomeLine.contains("familiar"))
+    }
+
+    @Test
+    fun `peaceful route marks the sanctuary as peace kept`() {
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.GENTLE, moodStreak = 3, totalRuns = 3, gentleRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 1_020,
+            distanceM = 740f,
+            isNewHighScore = false,
+            highScore = 1_400,
+            mercyHearts = 4,
+            mercyMisses = 4,
+            kindnessChain = 5,
+            cleanPasses = 9,
+            sparedCount = 3,
+            hitsTaken = 0,
+            seedsCollected = 8,
+            bloomConversions = 1,
+            lastKiller = null,
+            restQuote = "Quietly.",
+            forestMood = ForestMood.GENTLE,
+            pacifistRouteTier = PacifistRouteTier.PEACEFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertEquals("Peace Kept", state.arrivalBadge)
+        assertTrue(state.lanternGlowCount >= 3)
+        assertTrue(state.groundGlowAlpha >= 100)
+    }
+
+    @Test
+    fun `harm and bond history surface explicit homecoming consequences`() {
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+        repeat(2) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+        SaveManager.saveForestMoodState(
+            context,
+            ForestMoodState(currentMood = ForestMood.FEARFUL, moodStreak = 3, totalRuns = 3, fearfulRuns = 3)
+        )
+        val summary = RunSummary(
+            score = 380,
+            distanceM = 280f,
+            isNewHighScore = false,
+            highScore = 910,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 2,
+            sparedCount = 0,
+            hitsTaken = 1,
+            seedsCollected = 3,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "Again.",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        val state = GardenSanctuaryPlanner.build(context, summary)
+
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Bond: Watchful") })
+        assertTrue(state.homecomingConsequences.any { it.label.contains("History:") && it.line.contains("Wolf") })
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Mood: Fearful") })
+    }
+
+    @Test
+    fun `history unlock mark surfaces as explicit memory consequence`() {
+        repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.CACTUS) }
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Memory:") && it.line.contains("memory", ignoreCase = true) })
+    }
+
+    @Test
+    fun `featured costume sign can surface outside the wardrobe`() {
+        SaveManager.saveUnlockedCostumes(context, setOf(CostumeStyle.BLOOM_RIBBON))
+        SaveManager.saveActiveCostume(context, CostumeStyle.BLOOM_RIBBON)
+        SaveManager.saveFeaturedCostume(context, CostumeStyle.BLOOM_RIBBON)
+
+        val state = GardenSanctuaryPlanner.build(context, null)
+
+        assertEquals("Bloom Afterglow", state.featuredCostumeLabel)
+        assertTrue(state.featuredCostumeLine.contains("afterglow", ignoreCase = true))
+        assertEquals("Bloom Ribbon", state.activeCostumeLabel)
+        assertTrue(state.activeCostumeLine.contains("Bloom", ignoreCase = true))
+        assertTrue(state.homecomingConsequences.any { it.label.contains("Dress", ignoreCase = true) })
+    }
+}

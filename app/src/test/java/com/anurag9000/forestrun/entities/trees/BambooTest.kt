@@ -1,0 +1,101 @@
+package com.anurag9000.forestrun.entities.trees
+
+import android.content.Context
+import android.graphics.RectF
+import androidx.test.core.app.ApplicationProvider
+import com.anurag9000.forestrun.engine.GameStateManager
+import com.anurag9000.forestrun.engine.SpriteManager
+import com.anurag9000.forestrun.entities.CollisionResult
+import com.anurag9000.forestrun.entities.Player
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+@RunWith(RobolectricTestRunner::class)
+class BambooTest {
+
+    private lateinit var context: Context
+    private lateinit var spriteManager: SpriteManager
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        spriteManager = SpriteManager(context)
+    }
+
+    @Test
+    fun `bamboo keeps a featured seam wider than the surrounding gaps`() {
+        val bamboo = bamboo()
+        val player = Player(1920, 1080, spriteManager)
+        val gameState = GameStateManager(context)
+
+        val gapRects = rectArrayField(bamboo, "gapRects")
+        assertTrue(gapRects[1].width() > gapRects[0].width())
+        assertTrue(gapRects[1].width() > gapRects[2].width())
+
+        player.hitbox.set(
+            gapRects[1].left + 4f,
+            gapRects[1].top + 8f,
+            gapRects[1].right - 4f,
+            gapRects[1].bottom - 8f
+        )
+        assertEquals(CollisionResult.NONE, bamboo.onCollision(player, gameState))
+
+        val topHitboxes = rectArrayField(bamboo, "topHitboxes")
+        player.hitbox.set(
+            topHitboxes[1].left + 2f,
+            topHitboxes[1].bottom - 10f,
+            topHitboxes[1].right - 2f,
+            topHitboxes[1].bottom - 2f
+        )
+        assertEquals(CollisionResult.HIT, bamboo.onCollision(player, gameState))
+    }
+
+    @Test
+    fun `aggregate pass bounds enclose live stalk geometry through both sway directions`() {
+        val bamboo = bamboo()
+
+        // time = 1.5 radians: positive sway
+        bamboo.update(deltaTime = 0.5f, scrollSpeed = 0f)
+        assertAggregateMatchesStalks(bamboo)
+
+        // time = 4.5 radians: negative sway
+        bamboo.update(deltaTime = 0.5f, scrollSpeed = 0f)
+        bamboo.update(deltaTime = 0.5f, scrollSpeed = 0f)
+        assertAggregateMatchesStalks(bamboo)
+    }
+
+    private fun assertAggregateMatchesStalks(bamboo: Bamboo) {
+        val topHitboxes = rectArrayField(bamboo, "topHitboxes")
+        val bottomHitboxes = rectArrayField(bamboo, "bottomHitboxes")
+        val allSegments = topHitboxes.asList() + bottomHitboxes.asList()
+        val minimumLeft = allSegments.minOf { it.left }
+        val maximumRight = allSegments.maxOf { it.right }
+        val minimumTop = allSegments.minOf { it.top }
+        val maximumBottom = allSegments.maxOf { it.bottom }
+
+        assertEquals(minimumLeft, bamboo.hitbox.left, 0.001f)
+        assertEquals(maximumRight, bamboo.hitbox.right, 0.001f)
+        assertEquals(minimumTop, bamboo.hitbox.top, 0.001f)
+        assertEquals(maximumBottom, bamboo.hitbox.bottom, 0.001f)
+    }
+
+    private fun bamboo() = Bamboo(
+        context = context,
+        startX = 560f,
+        screenHeight = 1080f,
+        groundY = 885.6f,
+        sprite = spriteManager.bambooSprite.copy()
+    )
+
+    private fun rectArrayField(bamboo: Bamboo, name: String): Array<RectF> {
+        val field = Bamboo::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val value = field.get(bamboo) as Array<RectF>
+        return Array(value.size) { index -> RectF(value[index]) }
+    }
+}

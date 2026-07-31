@@ -1,15 +1,41 @@
 *.iml
-.gradle
+.gradle/
 /local.properties
-/.idea/caches
-/.idea/libraries
+/.idea/caches/
+/.idea/libraries/
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
 local.properties
+
+# Generated local/CI diagnostics
+/candidate-sha.txt
+/performance-profiles/
+
+# Python helper-script artefacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Generated release/store outputs
+/release/
+/release-output/
+/store-assets/generated/
+/screenshots/raw/
+/screenshots/curated/
+*.aab
+*.apk
+
+# Local signing material must never enter source control
+*.jks
+*.keystore
+keystore.properties
