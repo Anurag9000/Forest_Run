@@ -15,8 +15,8 @@ class OriginMainVerifierTest(unittest.TestCase):
         self.remote = self.base / "origin.git"
         self.work = self.base / "work"
 
-        self.run(["git", "init", "--bare", str(self.remote)], cwd=self.base)
-        self.run(
+        self.run_command(["git", "init", "--bare", str(self.remote)], cwd=self.base)
+        self.run_command(
             ["git", "init", "--initial-branch=main", str(self.work)],
             cwd=self.base,
         )
@@ -32,7 +32,7 @@ class OriginMainVerifierTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
-    def run(
+    def run_command(
         self,
         command: list[str],
         *,
@@ -53,10 +53,10 @@ class OriginMainVerifierTest(unittest.TestCase):
         return result
 
     def git(self, *arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-        return self.run(["git", *arguments], cwd=self.work, check=check)
+        return self.run_command(["git", *arguments], cwd=self.work, check=check)
 
     def verify(self) -> subprocess.CompletedProcess[str]:
-        return self.run(
+        return self.run_command(
             ["bash", str(SCRIPT), str(self.work)],
             cwd=self.work,
             check=False,
@@ -80,19 +80,19 @@ class OriginMainVerifierTest(unittest.TestCase):
 
     def test_remote_advance_invalidates_stale_local_main(self) -> None:
         other = self.base / "other"
-        self.run(
+        self.run_command(
             ["git", "clone", "--branch", "main", str(self.remote), str(other)],
             cwd=self.base,
         )
-        self.run(["git", "config", "user.name", "Remote Writer"], cwd=other)
-        self.run(
+        self.run_command(["git", "config", "user.name", "Remote Writer"], cwd=other)
+        self.run_command(
             ["git", "config", "user.email", "remote-writer@example.invalid"],
             cwd=other,
         )
         (other / "remote.txt").write_text("remote advance\n", encoding="utf-8")
-        self.run(["git", "add", "remote.txt"], cwd=other)
-        self.run(["git", "commit", "-m", "Remote advance"], cwd=other)
-        self.run(["git", "push", "origin", "main"], cwd=other)
+        self.run_command(["git", "add", "remote.txt"], cwd=other)
+        self.run_command(["git", "commit", "-m", "Remote advance"], cwd=other)
+        self.run_command(["git", "push", "origin", "main"], cwd=other)
 
         result = self.verify()
 
