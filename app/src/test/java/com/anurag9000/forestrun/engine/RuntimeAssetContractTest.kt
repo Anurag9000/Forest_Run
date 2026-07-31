@@ -67,10 +67,15 @@ class RuntimeAssetContractTest {
                 bitmap.width % contract.frames
             )
             val frameWidth = bitmap.width / contract.frames
+            val pixelCount = bitmap.width.toLong() * bitmap.height.toLong()
             assertTrue("Frame is too narrow for ${contract.path}: $frameWidth", frameWidth >= 8)
             assertTrue("Frame is too short for ${contract.path}: ${bitmap.height}", bitmap.height >= 8)
             assertTrue("Sheet is too wide for ${contract.path}", bitmap.width <= 16_384)
             assertTrue("Sheet is too tall for ${contract.path}", bitmap.height <= 4_096)
+            assertTrue(
+                "Sheet exceeds the release pixel budget for ${contract.path}: $pixelCount",
+                pixelCount <= 4L * 1_024L * 1_024L
+            )
             bitmap.recycle()
         }
     }
