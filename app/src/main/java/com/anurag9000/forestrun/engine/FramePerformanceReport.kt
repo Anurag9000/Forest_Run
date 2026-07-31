@@ -19,6 +19,9 @@ data class FramePerformanceReport(
         require(refreshRateHz.isFinite() && refreshRateHz >= 0f) {
             "refreshRateHz must be finite and non-negative"
         }
+        requireValidFrameSnapshot(snapshot)
+        requireValidWorkloadSnapshot(workload)
+        requireValidGhostIoSnapshot(ghostIo)
     }
 
     /** Dependency-free deterministic JSON for adb/CI artifact collection. */
@@ -62,6 +65,71 @@ data class FramePerformanceReport(
         append("  \"latestGhostWriteDurationNs\": ").append(ghostIo.latestWriteDurationNs).append(",\n")
         append("  \"maximumGhostWriteDurationNs\": ").append(ghostIo.maximumWriteDurationNs).append("\n")
         append("}\n")
+    }
+
+    private fun requireValidFrameSnapshot(value: FramePerformanceSnapshot) {
+        require(value.sampledFrames >= 0) { "sampledFrames must be non-negative" }
+        require(value.totalFrames >= value.sampledFrames.toLong()) {
+            "totalFrames must include every sampled frame"
+        }
+        require(value.slowFrames in 0L..value.totalFrames) {
+            "slowFrames must be within totalFrames"
+        }
+        require(value.frameBudgetNs > 0L) { "frameBudgetNs must be positive" }
+        require(value.meanUpdateNs >= 0L) { "meanUpdateNs must be non-negative" }
+        require(value.meanRenderNs >= 0L) { "meanRenderNs must be non-negative" }
+        require(value.meanProcessingNs >= 0L) { "meanProcessingNs must be non-negative" }
+        require(value.p50ProcessingNs >= 0L) { "p50ProcessingNs must be non-negative" }
+        require(value.p95ProcessingNs >= value.p50ProcessingNs) {
+            "p95ProcessingNs must not be below p50ProcessingNs"
+        }
+        require(value.p99ProcessingNs >= value.p95ProcessingNs) {
+            "p99ProcessingNs must not be below p95ProcessingNs"
+        }
+        require(value.maximumProcessingNs >= value.p99ProcessingNs) {
+            "maximumProcessingNs must not be below p99ProcessingNs"
+        }
+        require(value.maximumProcessingNs >= value.meanProcessingNs) {
+            "maximumProcessingNs must not be below meanProcessingNs"
+        }
+        require(value.usedHeapBytes >= 0L) { "usedHeapBytes must be non-negative" }
+        require(value.maxHeapBytes >= value.usedHeapBytes) {
+            "maxHeapBytes must cover usedHeapBytes"
+        }
+    }
+
+    private fun requireValidWorkloadSnapshot(value: RuntimeWorkloadSnapshot) {
+        require(value.currentEntities in 0..value.peakEntities) {
+            "currentEntities must be within peakEntities"
+        }
+        require(value.currentSeedOrbs in 0..value.peakSeedOrbs) {
+            "currentSeedOrbs must be within peakSeedOrbs"
+        }
+        require(value.currentParticles in 0..value.peakParticles) {
+            "currentParticles must be within peakParticles"
+        }
+        require(value.currentDialogueBubbles in 0..value.peakDialogueBubbles) {
+            "currentDialogueBubbles must be within peakDialogueBubbles"
+        }
+        require(value.currentFlavorTexts in 0..value.peakFlavorTexts) {
+            "currentFlavorTexts must be within peakFlavorTexts"
+        }
+    }
+
+    private fun requireValidGhostIoSnapshot(value: GhostIoTelemetrySnapshot) {
+        require(value.writesStarted >= 0L) { "writesStarted must be non-negative" }
+        require(value.writesCompleted in 0L..value.writesStarted) {
+            "writesCompleted must be within writesStarted"
+        }
+        require(value.writesFailed in 0L..value.writesCompleted) {
+            "writesFailed must be within writesCompleted"
+        }
+        require(value.latestFrameCount in 0..value.maximumFrameCount) {
+            "latestFrameCount must be within maximumFrameCount"
+        }
+        require(value.latestWriteDurationNs in 0L..value.maximumWriteDurationNs) {
+            "latestWriteDurationNs must be within maximumWriteDurationNs"
+        }
     }
 
     private fun StringBuilder.appendJsonString(
