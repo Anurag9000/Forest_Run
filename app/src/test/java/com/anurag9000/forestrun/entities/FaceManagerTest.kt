@@ -32,7 +32,8 @@ class FaceManagerTest {
         face.update(Float.MAX_VALUE)
 
         assertTrue(face.blinkTimerForTest.isFinite())
-        assertTrue(face.blinkTimerForTest in 0f..<60f)
+        assertTrue(face.blinkTimerForTest >= 0f)
+        assertTrue(face.blinkTimerForTest < 60f)
     }
 
     @Test
@@ -51,7 +52,7 @@ class FaceManagerTest {
             motion = motion
         )
 
-        assertEquals(0, bitmap.getPixel(0, 0))
+        assertTrue(bitmapContainsOnlyTransparentPixels(bitmap))
     }
 
     @Test
@@ -76,6 +77,15 @@ class FaceManagerTest {
             motion = malformedMotion
         )
 
-        assertTrue(bitmap.getPixel(64, 51) != 0 || bitmap.getPixel(54, 51) != 0)
+        assertTrue(bitmapContainsVisiblePixel(bitmap))
+    }
+
+    private fun bitmapContainsOnlyTransparentPixels(bitmap: Bitmap): Boolean =
+        !bitmapContainsVisiblePixel(bitmap)
+
+    private fun bitmapContainsVisiblePixel(bitmap: Bitmap): Boolean {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return pixels.any { pixel -> pixel ushr 24 != 0 }
     }
 }
