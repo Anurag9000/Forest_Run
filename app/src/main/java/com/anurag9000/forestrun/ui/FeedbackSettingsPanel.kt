@@ -21,7 +21,13 @@ internal data class FeedbackSettingsLayout(
 
 internal object FeedbackSettingsPanelLayout {
     fun build(width: Float, height: Float): FeedbackSettingsLayout {
-        require(width > 0f && height > 0f)
+        require(width.isFinite() && width > 0f) {
+            "Feedback settings width must be finite and positive."
+        }
+        require(height.isFinite() && height > 0f) {
+            "Feedback settings height must be finite and positive."
+        }
+
         val right = width - (width * 0.02f).coerceAtLeast(18f)
         val chipWidth = (width * 0.18f).coerceIn(210f, 340f)
         val chipHeight = (height * 0.055f).coerceIn(38f, 54f)
@@ -31,18 +37,42 @@ internal object FeedbackSettingsPanelLayout {
             val y = top + index * (chipHeight + gap)
             return RectF(right - chipWidth, y, right, y + chipHeight)
         }
-        return FeedbackSettingsLayout(rect(0), rect(1), rect(2))
+
+        val layout = FeedbackSettingsLayout(rect(0), rect(1), rect(2))
+        require(layout.all.all { isValidContainedRect(it, width, height) }) {
+            "Feedback settings surface is too small for the comfort controls."
+        }
+        return layout
     }
 
-    fun hitTest(layout: FeedbackSettingsLayout, x: Float, y: Float): FeedbackToggle? = when {
-        contains(layout.reducedMotion, x, y) -> FeedbackToggle.REDUCED_MOTION
-        contains(layout.audio, x, y) -> FeedbackToggle.AUDIO
-        contains(layout.haptics, x, y) -> FeedbackToggle.HAPTICS
-        else -> null
+    fun hitTest(layout: FeedbackSettingsLayout, x: Float, y: Float): FeedbackToggle? {
+        if (!x.isFinite() || !y.isFinite()) return null
+        return when {
+            contains(layout.reducedMotion, x, y) -> FeedbackToggle.REDUCED_MOTION
+            contains(layout.audio, x, y) -> FeedbackToggle.AUDIO
+            contains(layout.haptics, x, y) -> FeedbackToggle.HAPTICS
+            else -> null
+        }
     }
 
     private fun contains(rect: RectF, x: Float, y: Float): Boolean =
-        x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom
+        isFiniteNonEmpty(rect) &&
+            x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom
+
+    private fun isValidContainedRect(rect: RectF, width: Float, height: Float): Boolean =
+        isFiniteNonEmpty(rect) &&
+            rect.left >= 0f &&
+            rect.top >= 0f &&
+            rect.right <= width &&
+            rect.bottom <= height
+
+    private fun isFiniteNonEmpty(rect: RectF): Boolean =
+        rect.left.isFinite() &&
+            rect.top.isFinite() &&
+            rect.right.isFinite() &&
+            rect.bottom.isFinite() &&
+            rect.left < rect.right &&
+            rect.top < rect.bottom
 }
 
 internal class FeedbackSettingsPanel(
