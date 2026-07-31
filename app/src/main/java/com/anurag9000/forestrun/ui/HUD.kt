@@ -204,22 +204,34 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     // ── Update ────────────────────────────────────────────────────────────
 
     fun update(deltaTime: Float, state: GameStateManager) {
-        val dt = deltaTime
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return
+        val dt = deltaTime.coerceAtMost(0.05f)
 
-        // Smooth fill lerp toward actual bloom meter value
+        // Smooth fill lerp toward actual bloom meter value. Recover from an
+        // already-poisoned field so a single malformed caller cannot make the
+        // HUD permanently non-renderable.
         val target = if (state.isBloomActive) SEG_COUNT.toFloat() else state.bloomMeter.toFloat()
-        displayedFill = MathUtils.lerp(displayedFill, target, (FILL_LERP_SPEED * dt).coerceAtMost(1f))
+        val safeDisplayedFill = displayedFill.takeIf { it.isFinite() } ?: 0f
+        displayedFill = MathUtils.lerp(
+            safeDisplayedFill,
+            target,
+            (FILL_LERP_SPEED * dt).coerceIn(0f, 1f)
+        ).coerceIn(0f, SEG_COUNT.toFloat())
 
         // Bloom pulse oscillator
         if (state.isBloomActive) {
-            bloomPulse = (bloomPulse + dt * 4.5f) % (Math.PI.toFloat() * 2f)
+            val safePulse = bloomPulse.takeIf { it.isFinite() } ?: 0f
+            bloomPulse = (safePulse + dt * 4.5f) % (Math.PI.toFloat() * 2f)
         } else {
             bloomPulse = 0f
         }
 
         // NEW badge pulse
         if (state.isNewHighScore) {
-            newBadge = (newBadge + dt * 3f) % (Math.PI.toFloat() * 2f)
+            val safeBadge = newBadge.takeIf { it.isFinite() } ?: 0f
+            newBadge = (safeBadge + dt * 3f) % (Math.PI.toFloat() * 2f)
+        } else {
+            newBadge = 0f
         }
     }
 
