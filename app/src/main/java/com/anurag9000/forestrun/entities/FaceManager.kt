@@ -14,7 +14,8 @@ class FaceManager {
 
     companion object {
         private const val BLINK_COOLDOWN_S = 1.4f
-        private const val TIMER_WRAP_S = 60f
+        private const val TIMER_WRAP_SECONDS = 60.0
+        private const val MAX_FRAME_DELTA_SECONDS = 0.05f
     }
 
     private var blinkTimer = 0f
@@ -39,9 +40,10 @@ class FaceManager {
 
     fun update(deltaTime: Float) {
         if (!deltaTime.isFinite() || deltaTime <= 0f) return
-        blinkTimer = (blinkTimer + deltaTime).let { next ->
-            if (next.isFinite()) next % TIMER_WRAP_S else 0f
-        }
+        val frameDelta = deltaTime.coerceAtMost(MAX_FRAME_DELTA_SECONDS)
+        val safeTimer = blinkTimer.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        blinkTimer = ((safeTimer.toDouble() + frameDelta.toDouble()) % TIMER_WRAP_SECONDS)
+            .toFloat()
     }
 
     fun draw(
