@@ -119,8 +119,8 @@ class DialogueBubbleManagerTest {
     @Test
     fun `long dialogue wraps to no more than three lines and marks truncation`() {
         val lines = DialogueBubbleManager.wrapTextForTest(
-            text = "The forest remembers every gentle crossing and every hurried mistake you bring home after another long impossible evening.",
-            maxWidth = 90f
+            text = List(80) { "forest" }.joinToString(" "),
+            maxWidth = 60f
         )
 
         assertTrue(lines.isNotEmpty())
@@ -132,8 +132,8 @@ class DialogueBubbleManagerTest {
     @Test
     fun `oversized unbroken word is split safely`() {
         val lines = DialogueBubbleManager.wrapTextForTest(
-            text = "supercalifragilisticexpialidocioussupercalifragilisticexpialidocious",
-            maxWidth = 70f
+            text = "supercalifragilistic".repeat(20),
+            maxWidth = 40f
         )
 
         assertTrue(lines.isNotEmpty())
