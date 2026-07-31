@@ -21,17 +21,18 @@ class SwayComponentTest {
 
     @Test
     fun `invalid wind multiplier uses finite default and negative wind cannot rewind`() {
-        val defaultWind = SwayComponent(speed = 2f, intensity = 10f)
+        val invalidReference = SwayComponent(speed = 2f, intensity = 10f)
+        val negativeReference = SwayComponent(speed = 2f, intensity = 10f)
         val invalidWind = SwayComponent(speed = 2f, intensity = 10f)
         val negativeWind = SwayComponent(speed = 2f, intensity = 10f)
 
         assertEquals(
-            defaultWind.getOffset(0.1f),
+            invalidReference.getOffset(0.1f),
             invalidWind.getOffset(0.1f, Float.NaN),
             0.0001f
         )
         assertEquals(
-            defaultWind.getOffset(0.1f),
+            negativeReference.getOffset(0.1f),
             negativeWind.getOffset(0.1f, -4f),
             0.0001f
         )
