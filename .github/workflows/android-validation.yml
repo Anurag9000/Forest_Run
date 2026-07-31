@@ -37,6 +37,7 @@ jobs:
             echo "Validation workflows must not mutate or push repository source." >&2
             exit 1
           fi
+
           grep -q 'RuntimeWorkloadTelemetry.publishEntities' app/src/main/java/com/anurag9000/forestrun/engine/EntityManager.kt
           grep -q 'RuntimeWorkloadTelemetry.publishSeedOrbs' app/src/main/java/com/anurag9000/forestrun/systems/SeedOrbManager.kt
           grep -q 'RuntimeWorkloadTelemetry.publishParticles' app/src/main/java/com/anurag9000/forestrun/systems/ParticleManager.kt
@@ -45,13 +46,35 @@ jobs:
           grep -q 'RuntimeWorkloadTelemetry.reset()' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceTelemetry.kt
           grep -q 'val workload: RuntimeWorkloadSnapshot' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceReport.kt
           grep -q 'workload = RuntimeWorkloadTelemetry.snapshot()' app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt
+
+          grep -q 'GardenPurchaseManager.purchaseNext' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
+          if grep -q 'SaveManager.saveGardenProgress\|SaveManager.saveLifetimeSeeds' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt; then
+            echo "GardenScreen must use the single atomic purchase boundary." >&2
+            exit 1
+          fi
+          grep -q 'buildSanctuaryAtmosphere' app/src/main/java/com/anurag9000/forestrun/engine/GardenSanctuaryPlanner.kt
+          test -f app/src/main/java/com/anurag9000/forestrun/engine/SanctuaryAtmosphere.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/SanctuaryAtmosphereTest.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/ui/GardenScreenBoundaryTest.kt
+
+          grep -q 'publicationSequence' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceMonitor.kt
+          grep -q 'publicationSequence' app/src/main/java/com/anurag9000/forestrun/engine/RuntimeWorkloadTelemetry.kt
+          grep -q '@Synchronized' app/src/main/java/com/anurag9000/forestrun/engine/GhostIoTelemetry.kt
           test -f app/src/test/java/com/anurag9000/forestrun/engine/RuntimeWorkloadTelemetryTest.kt
+
           test -f scripts/evaluate_performance_profiles.py
           test -f scripts/test_evaluate_performance_profiles.py
           test -f scripts/run_connected_validation.sh
           test -f scripts/test_connected_validation_runner.py
+          test -f scripts/verify_main_candidate.py
+          test -f scripts/test_verify_main_candidate.py
+          test -f scripts/verify_origin_main.sh
+          test -f scripts/test_verify_origin_main.py
+          test -f scripts/prepare_main_release.sh
+          grep -q 'verify_origin_main.sh' scripts/prepare_main_release.sh
+          grep -q -- '--expected-sha' scripts/prepare_main_release.sh
 
-      - name: Test performance and connected-validation tooling
+      - name: Test performance, release, and connected-validation tooling
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Set up Java 21
