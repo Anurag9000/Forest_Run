@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import android.util.Log
+import java.util.concurrent.ConcurrentHashMap
 
 /** Low-latency short-effect playback with explicit generation-safe load readiness. */
 object SfxManager {
@@ -23,7 +24,7 @@ object SfxManager {
     @Volatile
     private var pool: SoundPool? = null
     private val sampleReadiness = SoundSampleReadiness()
-    private val optionalSampleIds = mutableSetOf<Int>()
+    private val optionalSampleIds = ConcurrentHashMap.newKeySet<Int>()
 
     private var idJump = 0
     private var idLand = 0
