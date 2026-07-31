@@ -27,6 +27,24 @@ class ReadabilityProfileTest {
     }
 
     @Test
+    fun `invalid dimensions resolve to balanced defaults`() {
+        val balanced = ReadabilityProfile.entity(EntityType.OWL, screenHeight = 1080f)
+
+        listOf(
+            0f,
+            -1f,
+            Float.NaN,
+            Float.POSITIVE_INFINITY,
+            Float.NEGATIVE_INFINITY
+        ).forEach { invalid ->
+            assertEquals(DeviceDensityBucket.BALANCED, ReadabilityProfile.densityBucket(invalid))
+            assertEquals(balanced, ReadabilityProfile.entity(EntityType.OWL, invalid))
+            assertEquals(balanced, ReadabilityProfile.entityForGround(EntityType.OWL, invalid))
+            assertEquals(1080f, ReadabilityProfile.estimateScreenHeightFromGround(invalid), 0f)
+        }
+    }
+
+    @Test
     fun `spawn gap remains within canonical readability bounds`() {
         assertEquals(
             GameConstants.SPAWN_GAP_MAX_PX,
@@ -37,6 +55,27 @@ class ReadabilityProfileTest {
             GameConstants.SPAWN_GAP_MIN_PX,
             ReadabilityProfile.spawnGapPx(5_000f),
             0.0001f
+        )
+    }
+
+    @Test
+    fun `invalid spawn distances use the opening gap`() {
+        listOf(
+            -1f,
+            Float.NaN,
+            Float.POSITIVE_INFINITY,
+            Float.NEGATIVE_INFINITY
+        ).forEach { invalid ->
+            assertEquals(
+                GameConstants.SPAWN_GAP_MAX_PX,
+                ReadabilityProfile.spawnGapPx(invalid),
+                0f
+            )
+        }
+        assertEquals(
+            GameConstants.SPAWN_GAP_MIN_PX,
+            ReadabilityProfile.spawnGapPx(Float.MAX_VALUE),
+            0f
         )
     }
 
