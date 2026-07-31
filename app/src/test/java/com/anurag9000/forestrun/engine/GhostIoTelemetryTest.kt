@@ -1,6 +1,9 @@
 package com.anurag9000.forestrun.engine
 
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GhostIoTelemetryTest {
@@ -24,6 +27,46 @@ class GhostIoTelemetryTest {
     }
 
     @Test
+    fun `concurrent snapshots preserve publication invariants`() {
+        GhostIoTelemetry.reset()
+        val failure = AtomicReference<Throwable?>(null)
+        val iterations = 10_000
+
+        val writer = Thread {
+            repeat(iterations) { index ->
+                GhostIoTelemetry.recordWriteStarted(frameCount = index)
+                GhostIoTelemetry.recordWriteCompleted(
+                    durationNs = index.toLong(),
+                    succeeded = index % 5 != 0
+                )
+            }
+        }
+        val reader = Thread {
+            repeat(iterations) {
+                if (failure.get() != null) return@Thread
+                val snapshot = GhostIoTelemetry.snapshot()
+                runCatching {
+                    assertTrue(snapshot.writesCompleted <= snapshot.writesStarted)
+                    assertTrue(snapshot.writesFailed <= snapshot.writesCompleted)
+                    assertTrue(snapshot.latestFrameCount <= snapshot.maximumFrameCount)
+                    assertTrue(snapshot.latestWriteDurationNs <= snapshot.maximumWriteDurationNs)
+                }.onFailure(failure::compareAndSetNull)
+            }
+        }
+
+        writer.start()
+        reader.start()
+        writer.join()
+        reader.join()
+
+        assertNull(failure.get())
+        val snapshot = GhostIoTelemetry.snapshot()
+        assertEquals(iterations.toLong(), snapshot.writesStarted)
+        assertEquals(iterations.toLong(), snapshot.writesCompleted)
+        assertEquals((iterations / 5).toLong(), snapshot.writesFailed)
+    }
+
+    @Test
     fun `reset isolates profiling sessions`() {
         GhostIoTelemetry.recordWriteStarted(frameCount = 12)
         GhostIoTelemetry.recordWriteCompleted(durationNs = 5L, succeeded = false)
@@ -31,5 +74,9 @@ class GhostIoTelemetryTest {
         GhostIoTelemetry.reset()
 
         assertEquals(GhostIoTelemetrySnapshot.EMPTY, GhostIoTelemetry.snapshot())
+    }
+
+    private fun <T> AtomicReference<T?>.compareAndSetNull(value: T) {
+        compareAndSet(null, value)
     }
 }
