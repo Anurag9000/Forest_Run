@@ -48,8 +48,10 @@ jobs:
           test -f app/src/test/java/com/anurag9000/forestrun/engine/RuntimeWorkloadTelemetryTest.kt
           test -f scripts/evaluate_performance_profiles.py
           test -f scripts/test_evaluate_performance_profiles.py
+          test -f scripts/run_connected_validation.sh
+          test -f scripts/test_connected_validation_runner.py
 
-      - name: Test performance evidence tooling
+      - name: Test performance and connected-validation tooling
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Set up Java 21
@@ -114,7 +116,7 @@ jobs:
   connected-validation:
     name: API 35 connected behaviour
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
 
     steps:
       - name: Check out the exact candidate SHA
@@ -146,15 +148,28 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Enable KVM group permissions
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
+            sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Run connected tests on API 35
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
           profile: pixel_2
+          ram-size: 3072M
+          heap-size: 512M
+          disk-size: 6G
+          emulator-boot-timeout: 900
           disable-animations: true
+          disable-spellchecker: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: ./gradlew connectedDebugAndroidTest --no-daemon --stacktrace --console=plain
+          script: bash scripts/run_connected_validation.sh
 
       - name: Verify connected validation did not mutate source
         run: |
