@@ -241,7 +241,8 @@ class GameOverScreen(
     // ── Update ────────────────────────────────────────────────────────────
 
     fun update(deltaTime: Float) {
-        pulseTimer += deltaTime
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return
+        pulseTimer += deltaTime.coerceAtMost(0.05f)
     }
 
     // ── Draw ──────────────────────────────────────────────────────────────
