@@ -116,8 +116,10 @@ class GardenScreenBoundaryTest {
             costumeCount = CostumeStyle.entries.size
         )
         val nextCard = layout.plantCards[1]
+        val tapX = (nextCard.left + nextCard.right) / 2f
+        val tapY = (nextCard.top + nextCard.bottom) / 2f
 
-        assertTrue(screen.onTap(nextCard.centerX, nextCard.centerY))
+        assertTrue(screen.onTap(tapX, tapY))
 
         assertEquals(2, SaveManager.loadGardenProgress(context))
         assertEquals(30, SaveManager.loadLifetimeSeeds(context))
