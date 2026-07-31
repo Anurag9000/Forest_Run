@@ -8,11 +8,14 @@ import com.anurag9000.forestrun.engine.GameStateManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class EntityCollisionGeometryTest {
     private class ProbeEntity(context: Context) : Entity(context) {
         override fun update(deltaTime: Float, scrollSpeed: Float) = Unit
@@ -46,8 +49,15 @@ class EntityCollisionGeometryTest {
         )
     }
 
-    private val probe = ProbeEntity(ApplicationProvider.getApplicationContext())
-    private val source = RectF(20f, 20f, 40f, 40f)
+    private lateinit var probe: ProbeEntity
+    private lateinit var source: RectF
+
+    @Before
+    fun setUp() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        probe = ProbeEntity(context)
+        source = RectF(20f, 20f, 40f, 40f)
+    }
 
     @Test
     fun `zero padding preserves strict RectF overlap semantics`() {
@@ -94,7 +104,12 @@ class EntityCollisionGeometryTest {
 
     @Test
     fun `extreme finite padding expands without float overflow`() {
-        val veryDistant = RectF(Float.MAX_VALUE / 2f, 25f, Float.MAX_VALUE * 0.75f, 35f)
+        val veryDistant = RectF(
+            Float.MAX_VALUE / 2f,
+            25f,
+            Float.MAX_VALUE * 0.75f,
+            35f
+        )
 
         assertFalse(probe.intersects(veryDistant, source, 0f))
         assertTrue(probe.intersects(veryDistant, source, Float.MAX_VALUE))
