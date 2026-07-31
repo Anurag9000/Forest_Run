@@ -4,26 +4,16 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
+import kotlin.math.floor
 
-/**
- * Handles playing animations from a single packed sprite sheet bitmap.
- *
- * Assumes all frames in the sheet are arranged horizontally in a single row
- * and have the exact same width and height.
- *
- * @param bitmap        The full sprite sheet image.
- * @param frameCount    Total number of frames in this strip.
- * @param framesPerSec  Playback speed (FPS). 0 means it won't animate automatically.
- * @param isLooping     If true, loops back to 0; if false, stops on the last frame.
- */
+/** Plays a horizontal packed sprite strip without allocating per frame. */
 class SpriteSheet(
     val bitmap: Bitmap,
     val frameCount: Int,
     var framesPerSec: Float,
     var isLooping: Boolean = true,
-    /** Offset into the strip — allows multiple SpriteSheets to share one bitmap. */
     private val startFrame: Int = 0,
-    /** Number of physical frames packed into the backing bitmap strip. */
     private val totalFramesInBitmap: Int = frameCount
 ) {
     init {
@@ -33,88 +23,93 @@ class SpriteSheet(
         require(startFrame + frameCount <= totalFramesInBitmap) {
             "Requested frames [$startFrame, ${startFrame + frameCount}) exceed bitmap strip size $totalFramesInBitmap"
         }
+        require(bitmap.width >= totalFramesInBitmap) {
+            "Bitmap width ${bitmap.width} cannot contain $totalFramesInBitmap frames"
+        }
+        require(bitmap.height > 0) { "Bitmap height must be positive" }
     }
 
-    /** Width of a single frame in pixels. */
-    val frameWidth: Int =
-        if (totalFramesInBitmap > 0) bitmap.width / totalFramesInBitmap.coerceAtLeast(1) else bitmap.width
-
-    /** Height of a single frame in pixels (same as bitmap height). */
+    val frameWidth: Int = bitmap.width / totalFramesInBitmap
     val frameHeight: Int = bitmap.height
+    val aspectRatio: Float = frameWidth.toFloat() / frameHeight.toFloat()
 
-    /** Width / height ratio of a single frame. */
-    val aspectRatio: Float = frameWidth.toFloat() / frameHeight.coerceAtLeast(1)
-
-    /** The currently displayed frame index (0..frameCount-1). */
     var currentFrame: Int = 0
         private set
 
-    /** Whether a non-looping animation has reached its final frame. */
-    val isFinished: Boolean get() = !isLooping && currentFrame == frameCount - 1
+    val isFinished: Boolean
+        get() = !isLooping && currentFrame == frameCount - 1
 
     private var animationTimer: Float = 0f
-    private val srcRect = Rect()
-    private val dstRect = Rect()
+    internal val animationTimerForTest: Float
+        get() = animationTimer
 
-    // Pixel-art Paint (no filtering)
+    private val srcRect = Rect()
     private val paint = Paint().apply { isFilterBitmap = false }
 
-    /** Must be called every game frame to advance the animation. */
+    /**
+     * Advance in O(1). Invalid timing or FPS values are no-ops, and arbitrarily
+     * large valid deltas skip directly to the mathematically equivalent frame.
+     */
     fun update(deltaTime: Float) {
-        if (framesPerSec <= 0f || frameCount <= 1 || isFinished) return
+        if (!deltaTime.isFinite() || deltaTime <= 0f || frameCount <= 1 || isFinished) return
+        val fps = framesPerSec
+        if (!fps.isFinite() || fps <= 0f) return
 
-        animationTimer += deltaTime
-        val timePerFrame = 1f / framesPerSec
+        val safeTimer = animationTimer.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        val totalSeconds = safeTimer.toDouble() + deltaTime.toDouble()
+        val frameCredit = totalSeconds * fps.toDouble()
+        val wholeFrames = floor(frameCredit)
+        if (wholeFrames < 1.0) {
+            animationTimer = totalSeconds
+                .coerceAtMost(Float.MAX_VALUE.toDouble())
+                .toFloat()
+            return
+        }
 
-        while (animationTimer >= timePerFrame) {
-            animationTimer -= timePerFrame
-            currentFrame++
+        val fractionalCredit = (frameCredit - wholeFrames).coerceIn(0.0, 1.0)
+        if (isLooping) {
+            val steps = (wholeFrames % frameCount.toDouble()).toInt()
+            currentFrame = (currentFrame + steps) % frameCount
+            animationTimer = (fractionalCredit / fps.toDouble()).toFloat()
+            return
+        }
 
-            if (currentFrame >= frameCount) {
-                if (isLooping) {
-                    currentFrame = 0
-                } else {
-                    currentFrame = frameCount - 1
-                    animationTimer = 0f // clamp timer
-                }
-            }
+        val remainingFrames = frameCount - 1 - currentFrame
+        if (wholeFrames >= remainingFrames.toDouble()) {
+            currentFrame = frameCount - 1
+            animationTimer = 0f
+        } else {
+            currentFrame += wholeFrames.toInt()
+            animationTimer = (fractionalCredit / fps.toDouble()).toFloat()
         }
     }
 
-    /** Forces the animation back to the first frame. */
     fun reset() {
         currentFrame = 0
         animationTimer = 0f
     }
 
-    /** Hard-sets a specific frame (useful for state-based single frames like JUMP_START). */
     fun setFrame(frameIndex: Int) {
         currentFrame = frameIndex.coerceIn(0, frameCount - 1)
         animationTimer = 0f
     }
 
-    /**
-     * Draws the current frame stretching/squashing it to exactly fit [drawRect].
-     */
-    fun draw(canvas: Canvas, drawRect: android.graphics.RectF) {
+    fun draw(canvas: Canvas, drawRect: RectF) {
         draw(canvas, drawRect, paint)
     }
 
-    /**
-     * Draws the current frame using a caller-supplied [Paint].
-     * Useful for ghost tints and special overlays without duplicating bitmap work.
-     */
-    fun draw(canvas: Canvas, drawRect: android.graphics.RectF, drawPaint: Paint) {
-        // Offset by startFrame so a shared bitmap plays only the right segment
+    fun draw(canvas: Canvas, drawRect: RectF, drawPaint: Paint) {
+        if (!drawRect.left.isFinite() || !drawRect.top.isFinite() ||
+            !drawRect.right.isFinite() || !drawRect.bottom.isFinite() ||
+            drawRect.width() <= 0f || drawRect.height() <= 0f
+        ) return
+
         val absoluteFrame = startFrame + currentFrame
         val srcLeft = absoluteFrame * frameWidth
         srcRect.set(srcLeft, 0, srcLeft + frameWidth, frameHeight)
-
         canvas.drawBitmap(bitmap, srcRect, drawRect, drawPaint)
     }
 
-    /** Clones this instance (sharing the underlying Bitmap memory) so multiple entities can use it. */
-    fun copy(): SpriteSheet {
-        return SpriteSheet(bitmap, frameCount, framesPerSec, isLooping, startFrame, totalFramesInBitmap)
-    }
+    fun copy(): SpriteSheet =
+        SpriteSheet(bitmap, frameCount, framesPerSec, isLooping, startFrame, totalFramesInBitmap)
 }
