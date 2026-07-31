@@ -12,6 +12,18 @@ import com.anurag9000.forestrun.entities.PlayerState
 import kotlin.math.abs
 
 /**
+ * Matrix produced by applying 15% saturation first, then the authored cool tint.
+ * Keeping the coefficients explicit makes the one-time filter construction
+ * testable without depending on Android's hidden ColorMatrix internals.
+ */
+internal fun ghostColorMatrixValues(): FloatArray = floatArrayOf(
+    0.26484f, 0.48620f, 0.04896f, 0f, 20f,
+    0.14484f, 0.60620f, 0.04896f, 0f, 30f,
+    0.199155f, 0.668525f, 0.23232f, 0f, 60f,
+    0f, 0f, 0f, 1f, 0f
+)
+
+/**
  * Plays back a ghost recording of the personal-best run.
  *
  * Visual spec:
@@ -70,18 +82,9 @@ class GhostPlayer {
         private const val FADE_OUT_SPEED = 8.5f
         private const val FADE_IN_SPEED = 3.1f
 
-        // White-blue colour filter: cool tint, low saturation
+        // White-blue colour filter: cool tint, low saturation.
         private val GHOST_FILTER: ColorMatrixColorFilter by lazy {
-            val m = ColorMatrix()
-            m.setSaturation(0.15f)
-            // Tint blue channel boost
-            val tint = floatArrayOf(
-                0.8f, 0f, 0f, 0f, 20f, // R
-                0f, 0.8f, 0f, 0f, 30f, // G
-                0f, 0f, 1.1f, 0f, 60f, // B
-                0f, 0f, 0f, 1f, 0f // A (paint alpha controls final opacity)
-            )
-            ColorMatrixColorFilter(ColorMatrix(tint))
+            ColorMatrixColorFilter(ColorMatrix(ghostColorMatrixValues()))
         }
     }
 
