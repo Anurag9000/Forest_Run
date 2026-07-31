@@ -1,7 +1,6 @@
 name: Android validation
 
 on:
-  pull_request:
   push:
     branches:
       - main
@@ -11,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: android-validation-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,7 +23,7 @@ jobs:
       - name: Check out the exact candidate SHA
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -121,7 +120,7 @@ jobs:
       - name: Check out the exact candidate SHA
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
