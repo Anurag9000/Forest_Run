@@ -28,8 +28,9 @@ class GardenScreenTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        SaveManager.usePrimaryPreferences()
         spriteManager = SpriteManager(context)
-        context.getSharedPreferences("forest_run_prefs", Context.MODE_PRIVATE)
+        context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .clear()
             .commit()
@@ -39,6 +40,7 @@ class GardenScreenTest {
     @After
     fun tearDown() {
         ParticleManager.resetOneShotEmitterCacheForTests()
+        SaveManager.usePrimaryPreferences()
     }
 
     @Test
