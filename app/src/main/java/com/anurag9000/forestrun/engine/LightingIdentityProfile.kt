@@ -31,8 +31,8 @@ internal fun resolveRunLightingIdentity(
     nightFactor: Float,
     bloomStrength: Float
 ): RunLightingIdentity {
-    val night = nightFactor.coerceIn(0f, 1f)
-    val bloom = bloomStrength.coerceIn(0f, 1f)
+    val night = (nightFactor.takeIf { it.isFinite() } ?: 0f).coerceIn(0f, 1f)
+    val bloom = (bloomStrength.takeIf { it.isFinite() } ?: 0f).coerceIn(0f, 1f)
     target.canopyNearColor = Color.rgb(
         (18f + bloom * 16f).toInt().coerceAtMost(255),
         (28f + night * 24f + bloom * 10f).toInt().coerceAtMost(255),
