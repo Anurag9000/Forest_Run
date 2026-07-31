@@ -151,23 +151,22 @@ class GameStateManagerTest {
     }
 
     @Test
-    fun `pacifist rewards flow through game state`() {
+    fun `pacifist rewards flow through game state in FIFO order`() {
         val state = GameStateManager(context)
 
         repeat(5) { state.recordCleanPass() }
-        val streakReward = state.consumePacifistReward()
-        assertEquals("Kindness carries", streakReward?.message)
+        assertEquals("Mercy noticed", state.consumePacifistReward()?.message)
+        assertEquals("Kindness carries", state.consumePacifistReward()?.message)
 
         state.updatePacifistBiome(Biome.MEADOW)
         repeat(3) { state.recordCleanPass() }
         state.updatePacifistBiome(Biome.ORCHARD)
-        val biomeReward = state.consumePacifistReward()
-        assertEquals("Meadow at peace", biomeReward?.message)
+        assertEquals("Meadow at peace", state.consumePacifistReward()?.message)
 
         state.recordSpare()
         state.recordSpare()
-        val spareReward = state.consumePacifistReward()
-        assertEquals("Mercy kept", spareReward?.message)
+        assertEquals("Mercy kept", state.consumePacifistReward()?.message)
+        assertEquals("Merciful route", state.consumePacifistReward()?.message)
     }
 
     @Test
