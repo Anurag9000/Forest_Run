@@ -43,15 +43,16 @@ class GhostIoTelemetryTest {
         }
         val reader = Thread {
             repeat(iterations) {
-                if (failure.get() != null) return@Thread
-                val snapshot = GhostIoTelemetry.snapshot()
-                runCatching {
-                    assertTrue(snapshot.writesCompleted <= snapshot.writesStarted)
-                    assertTrue(snapshot.writesFailed <= snapshot.writesCompleted)
-                    assertTrue(snapshot.latestFrameCount <= snapshot.maximumFrameCount)
-                    assertTrue(snapshot.latestWriteDurationNs <= snapshot.maximumWriteDurationNs)
-                }.onFailure { error ->
-                    failure.compareAndSet(null, error)
+                if (failure.get() == null) {
+                    val snapshot = GhostIoTelemetry.snapshot()
+                    runCatching {
+                        assertTrue(snapshot.writesCompleted <= snapshot.writesStarted)
+                        assertTrue(snapshot.writesFailed <= snapshot.writesCompleted)
+                        assertTrue(snapshot.latestFrameCount <= snapshot.maximumFrameCount)
+                        assertTrue(snapshot.latestWriteDurationNs <= snapshot.maximumWriteDurationNs)
+                    }.onFailure { error ->
+                        failure.compareAndSet(null, error)
+                    }
                 }
             }
         }
