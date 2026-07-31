@@ -76,6 +76,31 @@ class EntityCollisionGeometryTest {
     }
 
     @Test
+    fun `malformed rectangles fail closed`() {
+        val invalidRects = listOf(
+            RectF(Float.NaN, 20f, 40f, 40f),
+            RectF(20f, Float.POSITIVE_INFINITY, 40f, 40f),
+            RectF(40f, 20f, 20f, 40f),
+            RectF(20f, 40f, 40f, 20f),
+            RectF(20f, 20f, 20f, 40f),
+            RectF(20f, 20f, 40f, 20f)
+        )
+
+        invalidRects.forEach { invalid ->
+            assertFalse(probe.intersects(invalid, source, 10f))
+            assertFalse(probe.intersects(source, invalid, 10f))
+        }
+    }
+
+    @Test
+    fun `extreme finite padding expands without float overflow`() {
+        val veryDistant = RectF(Float.MAX_VALUE / 2f, 25f, Float.MAX_VALUE * 0.75f, 35f)
+
+        assertFalse(probe.intersects(veryDistant, source, 0f))
+        assertTrue(probe.intersects(veryDistant, source, Float.MAX_VALUE))
+    }
+
+    @Test
     fun `axis expansion preserves Cherry gust geometry`() {
         val verticalNearMiss = RectF(25f, 12f, 35f, 18f)
         assertFalse(probe.intersects(verticalNearMiss, source, 3f, 1f))
