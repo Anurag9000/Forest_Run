@@ -1,6 +1,7 @@
 package com.anurag9000.forestrun.systems
 
 import android.graphics.Color
+import com.anurag9000.forestrun.engine.FeedbackSettings
 import kotlin.math.pow
 
 /** A pooled particle value object with fail-closed physics and appearance. */
@@ -22,6 +23,14 @@ data class Particle(
     var spinRate: Float = 0f,
     var isActive: Boolean = false
 ) {
+    /**
+     * Pool acquisition calls [reset] on the game thread immediately before an
+     * emitter configures this particle. Remembering the comfort setting at that
+     * boundary lets a later reduced-motion toggle retire only already-active
+     * full-motion particles without mutating the pool from the UI thread.
+     */
+    private var reducedMotionAtBirth: Boolean = FeedbackSettings.reducedMotion
+
     val progress: Float
         get() = when {
             !lifetime.isFinite() || lifetime <= 0f -> 1f
@@ -57,6 +66,10 @@ data class Particle(
 
     fun update(deltaTime: Float) {
         if (!isActive || isDead) return
+        if (FeedbackSettings.reducedMotion && !reducedMotionAtBirth) {
+            isActive = false
+            return
+        }
         if (!deltaTime.isFinite() || deltaTime <= 0f) return
         if (!hasFiniteKinematics()) {
             isActive = false
@@ -107,6 +120,7 @@ data class Particle(
         rotation = 0f
         spinRate = 0f
         isActive = false
+        reducedMotionAtBirth = FeedbackSettings.reducedMotion
     }
 
     private fun hasFiniteKinematics(): Boolean =
