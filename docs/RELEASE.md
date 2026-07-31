@@ -1,6 +1,6 @@
 # Forest Run — Release and Validation
 
-Forest Run is a **feature-rich alpha**. Primary gameplay, encounter, persistence, lifecycle, UI, asset, build, and automated-validation defects have been remediated, but a release candidate requires one frozen SHA with complete automated, physical-device, performance, signed-artifact, visual, and store evidence.
+Forest Run is a **feature-rich alpha**. Primary gameplay, encounter, persistence, lifecycle, UI, asset, build, and automated-validation defects have been remediated, but a release candidate requires one frozen `main` SHA with complete automated, physical-device, performance, signed-artifact, visual, and store evidence.
 
 A feature is not complete merely because code exists. A gate is complete only when its evidence is tied to the exact candidate commit.
 
@@ -8,7 +8,7 @@ A feature is not complete merely because code exists. A gate is complete only wh
 
 For every release-candidate attempt:
 
-1. Freeze one commit SHA.
+1. Freeze one `main` commit SHA without creating a release branch or pull request.
 2. Run permanent read-only CI on that SHA.
 3. Archive host and connected-test artifacts.
 4. Build the signed minified artifact from that SHA.
@@ -17,7 +17,7 @@ For every release-candidate attempt:
 7. Capture performance evidence and compare it with written thresholds.
 8. Approve artwork, screenshots, metadata, and policy declarations.
 9. Perform a final independent code/diff audit.
-10. Only then mark the PR ready, merge, and tag.
+10. Only then tag that exact frozen `main` SHA as the accepted candidate.
 
 Any source, asset, dependency, build, or documentation change invalidates candidate evidence and starts this sequence again.
 
@@ -233,7 +233,7 @@ Implemented and automatically covered:
 - [x] bounded interruption-safe render-thread shutdown;
 - [x] caller interruption restoration;
 - [x] stale-render suppression after stop;
-- [x] repeated launch-intent handling;
+- [x] repeated launch-intent handling with latest-intent ownership;
 - [x] explicit audio/haptic teardown;
 - [x] cached game-over composition;
 - [x] bounded/wrapped/deduplicated/clamped dialogue and flavour queues;
@@ -245,7 +245,8 @@ Implemented and automatically covered:
 - [x] manager-boundary enforcement of those settings;
 - [x] explicit `SoundPool` readiness/failure handling;
 - [x] deterministic adaptive-music crossfade ownership;
-- [x] throttled repeated music parameter writes.
+- [x] throttled repeated music parameter writes;
+- [x] finite and capped Menu, HUD, Rest, and Player presentation clocks.
 
 Still requiring hardware acceptance:
 
@@ -294,10 +295,12 @@ See `docs/PERFORMANCE.md`.
 Implemented programmatic contracts:
 
 - [x] required sprites, mandatory audio, and fonts must exist outside debug;
+- [x] required raw resources must contain readable data;
 - [x] sprite sheets must decode;
 - [x] dimensions must be sane;
 - [x] atlas width must divide by declared frame count;
 - [x] generated placeholder sprites are prohibited outside debug;
+- [x] debug placeholder construction is overflow-safe and allocation-bounded;
 - [x] optional Bloom sounds have explicit fallback behavior;
 - [x] mandatory and optional audio are distinguished;
 - [x] playback waits for successful sample loading.
@@ -424,7 +427,7 @@ Still required before declaring the original exhaustive mission complete:
 - [ ] inspect every entity state/outcome/reward path;
 - [ ] inspect all lifecycle and thread transitions;
 - [ ] inspect build/signing/R8/store scripts;
-- [ ] review the complete final PR diff;
+- [ ] review the complete candidate diff on `main` since the previous accepted release/tag;
 - [ ] record any accepted architectural debt.
 
 Known debt that may remain for a post-release-candidate refactor if behavior is stable:
@@ -448,6 +451,6 @@ Forest Run may be called a release candidate only when all are true:
 7. Safe-content, settings, audio, haptics, and reduced motion are accepted on hardware.
 8. Artwork/animation/scenic direction is manually approved.
 9. Screenshots, metadata, privacy, data safety, content rating, and current policy requirements are approved.
-10. The final independent exhaustive audit and full PR-diff review are complete.
+10. The final independent exhaustive audit and complete candidate-diff review are complete.
 
-Until then, keep the PR draft and describe the project as a feature-rich alpha.
+Until then, keep `main` untagged and describe the project as a feature-rich alpha.
