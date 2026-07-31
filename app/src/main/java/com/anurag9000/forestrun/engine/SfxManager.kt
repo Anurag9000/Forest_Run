@@ -100,14 +100,16 @@ object SfxManager {
     private fun play(id: Int, volume: Float = 1f, rate: Float = RATE_1X) {
         if (!FeedbackSettings.audioEnabled || !sampleReadiness.isReady(id)) return
         val activePool = pool ?: return
+        val safeVolume = volume.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+        val safeRate = rate.takeIf { it.isFinite() }?.coerceIn(0.5f, 2f) ?: RATE_1X
         runCatching {
             activePool.play(
                 id,
-                volume.coerceIn(0f, 1f),
-                volume.coerceIn(0f, 1f),
+                safeVolume,
+                safeVolume,
                 PRIORITY,
                 NO_LOOP,
-                rate.coerceIn(0.5f, 2f)
+                safeRate
             )
         }.onFailure { error ->
             Log.w(TAG, "SFX playback failed for sample id=$id", error)
@@ -124,18 +126,18 @@ object SfxManager {
 
     fun playBloomReady() {
         val profile = buildBloomSfxProfile(BloomSfxEvent.READY, 0)
-        play(if (idBloomReady != 0) idBloomReady else idSeedPing, profile.volume, profile.rate)
+        play(readySampleOrFallback(idBloomReady, idSeedPing), profile.volume, profile.rate)
     }
 
     fun playBloomConvert(conversionsInBurst: Int) {
         val profile = buildBloomSfxProfile(BloomSfxEvent.CONVERT, conversionsInBurst)
-        play(if (idBloomConvert != 0) idBloomConvert else idSeedPing, profile.volume, profile.rate)
+        play(readySampleOrFallback(idBloomConvert, idSeedPing), profile.volume, profile.rate)
     }
 
     fun playBloomFade(conversionsInBurst: Int) {
         val profile = buildBloomSfxProfile(BloomSfxEvent.FADE, conversionsInBurst)
         play(
-            if (idBloomFade != 0) idBloomFade else idBloomActivate,
+            readySampleOrFallback(idBloomFade, idBloomActivate),
             profile.volume,
             profile.rate
         )
@@ -143,6 +145,14 @@ object SfxManager {
 
     fun playMercyMiss() = play(idMercyMiss, 0.6f)
     fun playHit() = play(idHit, 1.0f)
+
+    private fun readySampleOrFallback(primaryId: Int, fallbackId: Int): Int =
+        chooseReadySample(
+            primaryId = primaryId,
+            fallbackId = fallbackId,
+            primaryReady = sampleReadiness.isReady(primaryId),
+            fallbackReady = sampleReadiness.isReady(fallbackId)
+        )
 
     @Synchronized
     fun destroy() {
@@ -166,6 +176,17 @@ object SfxManager {
         idMercyMiss = 0
         idHit = 0
     }
+}
+
+internal fun chooseReadySample(
+    primaryId: Int,
+    fallbackId: Int,
+    primaryReady: Boolean,
+    fallbackReady: Boolean
+): Int = when {
+    primaryId > 0 && primaryReady -> primaryId
+    fallbackId > 0 && fallbackReady -> fallbackId
+    else -> 0
 }
 
 internal fun buildBloomSfxProfile(
