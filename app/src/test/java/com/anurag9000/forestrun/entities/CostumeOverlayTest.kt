@@ -21,19 +21,27 @@ class CostumeOverlayTest {
         overlay.update(-1f)
         assertEquals(0f, overlay.elapsedForTest, 0f)
 
-        overlay.update(0.25f)
-        assertEquals(0.25f, overlay.elapsedForTest, 0.0001f)
+        overlay.update(0.025f)
+        assertEquals(0.025f, overlay.elapsedForTest, 0.0001f)
     }
 
     @Test
-    fun `extreme finite time wraps into finite phase`() {
+    fun `extreme finite time is capped to one presentation frame`() {
         val overlay = CostumeOverlay()
 
         overlay.update(Float.MAX_VALUE)
 
-        assertTrue(overlay.elapsedForTest.isFinite())
-        assertTrue(overlay.elapsedForTest >= 0f)
-        assertTrue(overlay.elapsedForTest < 60f)
+        assertEquals(0.05f, overlay.elapsedForTest, 0.0001f)
+    }
+
+    @Test
+    fun `valid frame repairs a poisoned elapsed phase`() {
+        val overlay = CostumeOverlay()
+        setPrivateFloat(overlay, "elapsed", Float.NaN)
+
+        overlay.update(10f)
+
+        assertEquals(0.05f, overlay.elapsedForTest, 0.0001f)
     }
 
     @Test
@@ -90,6 +98,12 @@ class CostumeOverlayTest {
         }
 
         assertTrue(overlay.elapsedForTest.isFinite())
+    }
+
+    private fun setPrivateFloat(target: Any, name: String, value: Float) {
+        val field = target.javaClass.getDeclaredField(name)
+        field.isAccessible = true
+        field.setFloat(target, value)
     }
 
     private fun bitmapContainsOnlyTransparentPixels(bitmap: Bitmap): Boolean {
