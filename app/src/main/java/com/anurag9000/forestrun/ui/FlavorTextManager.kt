@@ -41,7 +41,9 @@ object FlavorTextManager {
         var colour: Int = Color.WHITE,
         var lifetime: Float = DEFAULT_LIFETIME_S,
         var baseSize: Float = DEFAULT_SIZE_PX,
-        var elapsed: Float = 0f
+        var elapsed: Float = 0f,
+        var anchorX: Float = x,
+        var anchorY: Float = y
     ) {
         val progress: Float
             get() = if (!elapsed.isFinite() || !lifetime.isFinite() || lifetime <= 0f) {
@@ -90,13 +92,16 @@ object FlavorTextManager {
             ?.coerceIn(MIN_SIZE_PX, MAX_SIZE_PX)
             ?: DEFAULT_SIZE_PX
 
-        // Repeated callbacks should not flood the screen with the same message.
+        // Match repeated callbacks against their stable authored anchors rather
+        // than animated coordinates that drift upward every frame.
         val duplicate = active.lastOrNull { existing ->
             existing.text == normalizedText &&
-                abs(existing.x - x) <= DUPLICATE_RADIUS_PX &&
-                abs(existing.y - y) <= DUPLICATE_RADIUS_PX
+                abs(existing.anchorX - x) <= DUPLICATE_RADIUS_PX &&
+                abs(existing.anchorY - y) <= DUPLICATE_RADIUS_PX
         }
         if (duplicate != null) {
+            duplicate.anchorX = x
+            duplicate.anchorY = y
             duplicate.x = x
             duplicate.y = y
             duplicate.colour = colour
@@ -115,7 +120,9 @@ object FlavorTextManager {
                 y = y,
                 colour = colour,
                 lifetime = safeLifetime,
-                baseSize = safeSize
+                baseSize = safeSize,
+                anchorX = x,
+                anchorY = y
             )
         )
         RuntimeWorkloadTelemetry.publishFlavorTexts(active.size)
