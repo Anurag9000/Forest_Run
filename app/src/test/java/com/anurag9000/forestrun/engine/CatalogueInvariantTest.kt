@@ -34,6 +34,26 @@ class CatalogueInvariantTest {
     }
 
     @Test
+    fun `pacifist route order preserves ordinal severity comparisons`() {
+        assertEquals(
+            listOf(
+                PacifistRouteTier.NONE,
+                PacifistRouteTier.KIND,
+                PacifistRouteTier.MERCIFUL,
+                PacifistRouteTier.PEACEFUL
+            ),
+            PacifistRouteTier.entries
+        )
+        assertEquals("", PacifistRouteTier.NONE.restLine)
+        assertEquals("", PacifistRouteTier.NONE.gardenLine)
+        assertTrue(
+            PacifistRouteTier.entries
+                .filterNot { it == PacifistRouteTier.NONE }
+                .all { it.displayName.isNotBlank() && it.restLine.isNotBlank() && it.gardenLine.isNotBlank() }
+        )
+    }
+
+    @Test
     fun `Garden costs cover every plant and increase monotonically`() {
         assertEquals(9, GardenEconomy.catalogueSize)
         val costs = (0 until GardenEconomy.catalogueSize)
