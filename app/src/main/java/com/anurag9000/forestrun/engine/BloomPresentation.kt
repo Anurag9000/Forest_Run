@@ -35,10 +35,13 @@ object BloomPresentation {
     ): BloomHudPresentation {
         val safeTarget = seedTarget.coerceAtLeast(1)
         val safeMeter = bloomMeter.coerceIn(0, safeTarget)
-        val safeAfterglow = recentAfterglow.coerceIn(0f, 1f)
+        val safeSeconds = (secondsRemaining.takeIf { it.isFinite() } ?: 0f)
+            .coerceIn(0f, GameConstants.BLOOM_DURATION_S)
+        val safeAfterglow = (recentAfterglow.takeIf { it.isFinite() } ?: 0f)
+            .coerceIn(0f, 1f)
         val safeBurstConversions = burstConversions.coerceAtLeast(0)
         val safeTotalConversions = totalConversions.coerceAtLeast(0)
-        val secondsTenths = (secondsRemaining.coerceAtLeast(0f) * 10f + 0.5f).toInt()
+        val secondsTenths = (safeSeconds * 10f + 0.5f).toInt()
         val mode = when {
             isActive -> BloomPresentationMode.ACTIVE
             safeAfterglow > 0.01f -> BloomPresentationMode.AFTERGLOW
@@ -91,8 +94,7 @@ object BloomPresentation {
         target.mode = mode
         target.emphasis = when (mode) {
             BloomPresentationMode.ACTIVE -> {
-                val timeFraction =
-                    (secondsRemaining / GameConstants.BLOOM_DURATION_S).coerceIn(0f, 1f)
+                val timeFraction = (safeSeconds / GameConstants.BLOOM_DURATION_S).coerceIn(0f, 1f)
                 0.72f + timeFraction * 0.28f
             }
             BloomPresentationMode.AFTERGLOW -> safeAfterglow
