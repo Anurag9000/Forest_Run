@@ -24,8 +24,8 @@ internal fun resolveCinematicPolishProfile(
     emphasis: Float = 0f,
     bloomStrength: Float = 0f
 ): CinematicPolishProfile {
-    val sceneEmphasis = emphasis.coerceIn(0f, 1f)
-    val bloom = bloomStrength.coerceIn(0f, 1f)
+    val sceneEmphasis = (emphasis.takeIf { it.isFinite() } ?: 0f).coerceIn(0f, 1f)
+    val bloom = (bloomStrength.takeIf { it.isFinite() } ?: 0f).coerceIn(0f, 1f)
     when (scene) {
         CinematicScene.MENU -> {
             target.vignetteAlpha = (66 + sceneEmphasis * 18f).toInt().coerceIn(0, 140)
@@ -75,6 +75,11 @@ internal fun buildCinematicPolishProfile(
 )
 
 internal class CinematicOverlayRenderer {
+    companion object {
+        private const val DEFAULT_CENTER_Y_FRACTION = 0.46f
+        private const val MAX_LETTERBOX_FRACTION = 0.25f
+    }
+
     private val vignettePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val edgeGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val centerLiftPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -104,34 +109,46 @@ internal class CinematicOverlayRenderer {
         profile: CinematicPolishProfile,
         elapsedSeconds: Float,
         glowColor: Int,
-        centerYFraction: Float = 0.46f
+        centerYFraction: Float = DEFAULT_CENTER_Y_FRACTION
     ) {
+        if (!width.isFinite() || !height.isFinite() || width <= 0f || height <= 0f) return
+
+        val safeElapsed = elapsedSeconds.takeIf { it.isFinite() } ?: 0f
+        val safeShimmer = (profile.shimmerStrength.takeIf { it.isFinite() } ?: 0f)
+            .coerceIn(0f, 1f)
         val shimmerPulse = cinematicShimmerPulse(
-            elapsedSeconds = elapsedSeconds,
-            shimmerStrength = profile.shimmerStrength,
+            elapsedSeconds = safeElapsed,
+            shimmerStrength = safeShimmer,
             reducedMotion = FeedbackSettings.reducedMotion
-        )
-        val topLetterbox = (height * profile.letterboxHeightFraction).coerceAtLeast(0f)
+        ).takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0.55f
+        val letterboxFraction = (
+            profile.letterboxHeightFraction.takeIf { it.isFinite() } ?: 0f
+            ).coerceIn(0f, MAX_LETTERBOX_FRACTION)
+        val topLetterbox = height * letterboxFraction
         val bottomLetterboxTop = height - topLetterbox
-        val normalizedCenter = centerYFraction.coerceIn(0.2f, 0.8f)
+        val normalizedCenter = (
+            centerYFraction.takeIf { it.isFinite() } ?: DEFAULT_CENTER_Y_FRACTION
+            ).coerceIn(0.2f, 0.8f)
         ensureShaders(width, height, glowColor, normalizedCenter)
 
-        letterboxPaint.color = Color.argb(profile.letterboxAlpha, 10, 12, 18)
+        letterboxPaint.color = Color.argb(profile.letterboxAlpha.coerceIn(0, 255), 10, 12, 18)
         letterboxRect.set(0f, 0f, width, topLetterbox)
         canvas.drawRect(letterboxRect, letterboxPaint)
         letterboxRect.set(0f, bottomLetterboxTop, width, height)
         canvas.drawRect(letterboxRect, letterboxPaint)
 
-        val glowAlpha = (profile.edgeGlowAlpha * (0.82f + shimmerPulse * 0.18f)).toInt().coerceIn(0, 255)
+        val safeEdgeAlpha = profile.edgeGlowAlpha.coerceIn(0, 255)
+        val glowAlpha = (safeEdgeAlpha * (0.82f + shimmerPulse * 0.18f)).toInt().coerceIn(0, 255)
         edgeGlowPaint.alpha = glowAlpha
         canvas.drawRect(0f, 0f, width, height, edgeGlowPaint)
 
-        val centerAlpha = (profile.centerLiftAlpha * (0.78f + shimmerPulse * 0.22f)).toInt().coerceIn(0, 255)
+        val safeCenterAlpha = profile.centerLiftAlpha.coerceIn(0, 255)
+        val centerAlpha = (safeCenterAlpha * (0.78f + shimmerPulse * 0.22f)).toInt().coerceIn(0, 255)
         val centerY = height * normalizedCenter
         centerLiftPaint.alpha = centerAlpha
         canvas.drawRect(0f, centerY - height * 0.18f, width, centerY + height * 0.22f, centerLiftPaint)
 
-        vignettePaint.alpha = profile.vignetteAlpha
+        vignettePaint.alpha = profile.vignetteAlpha.coerceIn(0, 255)
         canvas.drawRect(0f, 0f, width, height, vignettePaint)
     }
 
