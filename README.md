@@ -123,6 +123,14 @@ Physical performance evidence on one authorized device:
 bash scripts/collect_performance_profiles.sh
 ```
 
+Canonical release preparation from the exact clean `main` tip:
+
+```bash
+bash scripts/prepare_main_release.sh
+```
+
+The wrapper rejects dirty, detached, or non-`main` worktrees, freezes the full candidate SHA, runs the existing Play release preparer, and verifies that the same `main` SHA still owns the tree after preparation. Dry-run options accepted by `prepare_play_release.py`, such as `--skip-build` or `--allow-unsigned`, may be passed through the wrapper.
+
 Expected build outputs:
 
 - Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
