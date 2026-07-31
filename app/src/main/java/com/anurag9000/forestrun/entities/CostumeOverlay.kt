@@ -10,7 +10,8 @@ import kotlin.math.sin
 class CostumeOverlay {
 
     companion object {
-        private const val ELAPSED_WRAP_SECONDS = 60f
+        private const val ELAPSED_WRAP_SECONDS = 60.0
+        private const val MAX_FRAME_DELTA_SECONDS = 0.05f
     }
 
     private var elapsed = 0f
@@ -45,7 +46,9 @@ class CostumeOverlay {
 
     fun update(deltaTime: Float) {
         if (!deltaTime.isFinite() || deltaTime <= 0f) return
-        elapsed = ((elapsed.toDouble() + deltaTime.toDouble()) % ELAPSED_WRAP_SECONDS.toDouble())
+        val frameDelta = deltaTime.coerceAtMost(MAX_FRAME_DELTA_SECONDS)
+        val safeElapsed = elapsed.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        elapsed = ((safeElapsed.toDouble() + frameDelta.toDouble()) % ELAPSED_WRAP_SECONDS)
             .toFloat()
     }
 
