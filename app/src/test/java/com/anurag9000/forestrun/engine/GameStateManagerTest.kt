@@ -19,6 +19,7 @@ class GameStateManagerTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        SaveManager.usePrimaryPreferences()
         context.getSharedPreferences("forest_run_prefs", Context.MODE_PRIVATE)
             .edit()
             .clear()
@@ -43,6 +44,49 @@ class GameStateManagerTest {
         val reloaded = GameStateManager(context)
         assertEquals(GameConstants.BLOOM_SEED_COUNT, reloaded.lifetimeSeeds)
         assertEquals(250, reloaded.highScore)
+    }
+
+    @Test
+    fun `bulk seed bonus crosses the meter once and ignores surplus during active bloom`() {
+        val state = GameStateManager(context)
+        state.debugPrimeBloomMeter(GameConstants.BLOOM_SEED_COUNT - 2)
+
+        state.addBonus(seeds = 3)
+
+        assertTrue(state.isBloomActive)
+        assertEquals(0, state.bloomMeter)
+        assertEquals(3, state.seedsThisRun)
+        assertEquals(3, state.lifetimeSeeds)
+        assertEquals(3, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
+    fun `extreme bulk seed bonus saturates without iterative work or wraparound`() {
+        SaveManager.saveLifetimeSeeds(context, Int.MAX_VALUE - 5)
+        val state = GameStateManager(context)
+
+        state.addBonus(seeds = Int.MAX_VALUE)
+
+        assertEquals(Int.MAX_VALUE, state.seedsThisRun)
+        assertEquals(Int.MAX_VALUE, state.lifetimeSeeds)
+        assertEquals(Int.MAX_VALUE, SaveManager.loadLifetimeSeeds(context))
+        assertTrue(state.isBloomActive)
+        assertEquals(0, state.bloomMeter)
+    }
+
+    @Test
+    fun `bulk seeds earned during bloom do not refill or restart its clock`() {
+        val state = GameStateManager(context)
+        state.debugActivateBloom()
+        state.update(GameConstants.BLOOM_DURATION_S / 2f)
+        val secondsRemaining = state.bloomSecondsRemaining
+
+        state.addBonus(seeds = Int.MAX_VALUE)
+
+        assertTrue(state.isBloomActive)
+        assertEquals(0, state.bloomMeter)
+        assertEquals(secondsRemaining, state.bloomSecondsRemaining, 0.0001f)
+        assertEquals(Int.MAX_VALUE, state.seedsThisRun)
     }
 
     @Test
