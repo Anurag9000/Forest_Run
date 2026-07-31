@@ -82,7 +82,7 @@ class RuntimeAssetContractTest {
     }
 
     @Test
-    fun `all mandatory music and sound resources are packaged`() {
+    fun `all mandatory music and sound resources are packaged and nonempty`() {
         val rawNames = listOf(
             "sfx_jump",
             "sfx_land",
@@ -104,6 +104,8 @@ class RuntimeAssetContractTest {
         for (name in rawNames) {
             val resourceId = context.resources.getIdentifier(name, "raw", context.packageName)
             assertNotEquals("Missing res/raw/$name", 0, resourceId)
+            val firstByte = context.resources.openRawResource(resourceId).use { it.read() }
+            assertNotEquals("Empty res/raw/$name", -1, firstByte)
         }
     }
 }
