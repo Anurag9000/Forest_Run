@@ -3,6 +3,7 @@ package com.anurag9000.forestrun.engine
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -122,5 +123,31 @@ class PacifistPresentationTest {
 
         assertEquals("Peace Remembered", state?.label)
         assertTrue(state?.line?.contains("expects", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun `saturated route counts do not wrap cumulative history`() {
+        context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt("route_kind_runs", Int.MAX_VALUE)
+            .putInt("route_merciful_runs", Int.MAX_VALUE)
+            .putInt("route_peaceful_runs", 0)
+            .commit()
+
+        val state = PacifistPresentation.routeWorldState(context, PacifistRouteTier.NONE)
+
+        assertEquals("Mercy Remembered", state?.label)
+    }
+
+    @Test
+    fun `negative corrupted route counts contribute nothing`() {
+        context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt("route_kind_runs", Int.MIN_VALUE)
+            .putInt("route_merciful_runs", Int.MIN_VALUE)
+            .putInt("route_peaceful_runs", Int.MIN_VALUE)
+            .commit()
+
+        assertNull(PacifistPresentation.routeWorldState(context, PacifistRouteTier.NONE))
     }
 }
