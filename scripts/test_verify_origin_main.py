@@ -80,7 +80,10 @@ class OriginMainVerifierTest(unittest.TestCase):
 
     def test_remote_advance_invalidates_stale_local_main(self) -> None:
         other = self.base / "other"
-        self.run(["git", "clone", str(self.remote), str(other)], cwd=self.base)
+        self.run(
+            ["git", "clone", "--branch", "main", str(self.remote), str(other)],
+            cwd=self.base,
+        )
         self.run(["git", "config", "user.name", "Remote Writer"], cwd=other)
         self.run(
             ["git", "config", "user.email", "remote-writer@example.invalid"],
