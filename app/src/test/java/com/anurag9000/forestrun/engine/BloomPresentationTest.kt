@@ -58,4 +58,56 @@ class BloomPresentationTest {
         assertTrue(presentation.statusText.contains("2 converts"))
         assertTrue(presentation.statusText.contains("light", ignoreCase = true))
     }
+
+    @Test
+    fun `non finite active timing resolves to finite zero countdown`() {
+        listOf(Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY).forEach { invalid ->
+            val presentation = BloomPresentation.hudPresentation(
+                bloomMeter = 0,
+                seedTarget = 8,
+                isActive = true,
+                secondsRemaining = invalid,
+                totalConversions = -1,
+                burstConversions = -1,
+                recentAfterglow = invalid
+            )
+
+            assertEquals(BloomPresentationMode.ACTIVE, presentation.mode)
+            assertTrue(presentation.statusText.startsWith("0.0s"))
+            assertEquals(0.72f, presentation.emphasis, 0.0001f)
+            assertTrue(presentation.emphasis.isFinite())
+        }
+    }
+
+    @Test
+    fun `extreme finite active timing clamps to authored duration`() {
+        val presentation = BloomPresentation.hudPresentation(
+            bloomMeter = Int.MAX_VALUE,
+            seedTarget = 0,
+            isActive = true,
+            secondsRemaining = Float.MAX_VALUE,
+            totalConversions = Int.MAX_VALUE,
+            burstConversions = Int.MAX_VALUE,
+            recentAfterglow = Float.MAX_VALUE
+        )
+
+        assertTrue(presentation.statusText.startsWith("${GameConstants.BLOOM_DURATION_S}s"))
+        assertEquals(1f, presentation.emphasis, 0f)
+    }
+
+    @Test
+    fun `non finite afterglow cannot create afterglow mode`() {
+        val presentation = BloomPresentation.hudPresentation(
+            bloomMeter = 0,
+            seedTarget = 8,
+            isActive = false,
+            secondsRemaining = 0f,
+            totalConversions = 0,
+            burstConversions = 0,
+            recentAfterglow = Float.NaN
+        )
+
+        assertEquals(BloomPresentationMode.CHARGING, presentation.mode)
+        assertEquals(0f, presentation.emphasis, 0f)
+    }
 }
