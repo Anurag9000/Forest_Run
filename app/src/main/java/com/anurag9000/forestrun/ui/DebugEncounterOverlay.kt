@@ -14,8 +14,9 @@ enum class DebugOverlayAction {
 }
 
 class DebugEncounterOverlay(
-    private val screenWidth: Int
+    screenWidth: Int
 ) {
+    private val layoutWidth = screenWidth.coerceIn(1, MAX_LAYOUT_WIDTH_PX).toFloat()
     private val panelRect = RectF()
     private val prevRect = RectF()
     private val toggleRect = RectF()
@@ -59,6 +60,7 @@ class DebugEncounterOverlay(
     }
 
     fun handleTap(tapX: Float, tapY: Float): DebugOverlayAction? {
+        if (!tapX.isFinite() || !tapY.isFinite()) return null
         syncLayout()
         return when {
             prevRect.contains(tapX, tapY) -> DebugOverlayAction.PREVIOUS
@@ -117,13 +119,17 @@ class DebugEncounterOverlay(
     }
 
     private fun syncLayout() {
-        panelRect.set(screenWidth * 0.44f, 12f, screenWidth * 0.98f, 144f)
+        panelRect.set(layoutWidth * 0.44f, 12f, layoutWidth * 0.98f, 144f)
         val buttonTop = panelRect.bottom - 36f
         val buttonBottom = panelRect.bottom - 10f
         val buttonGap = 10f
-        val buttonWidth = (panelRect.width() - buttonGap * 4f) / 3f
+        val buttonWidth = ((panelRect.width() - buttonGap * 4f) / 3f).coerceAtLeast(1f)
         prevRect.set(panelRect.left + buttonGap, buttonTop, panelRect.left + buttonGap + buttonWidth, buttonBottom)
         toggleRect.set(prevRect.right + buttonGap, buttonTop, prevRect.right + buttonGap + buttonWidth, buttonBottom)
         nextRect.set(toggleRect.right + buttonGap, buttonTop, toggleRect.right + buttonGap + buttonWidth, buttonBottom)
+    }
+
+    private companion object {
+        const val MAX_LAYOUT_WIDTH_PX = 16_384
     }
 }
