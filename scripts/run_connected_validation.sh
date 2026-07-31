@@ -46,7 +46,7 @@ wait_for_android_services() {
   return 1
 }
 
-adb wait-for-device
+timeout "${READINESS_TIMEOUT_SECONDS}s" adb -s "${SERIAL}" wait-for-device
 wait_for_android_services
 
 ./gradlew connectedDebugAndroidTest \
