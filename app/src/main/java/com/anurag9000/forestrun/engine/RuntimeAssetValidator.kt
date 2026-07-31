@@ -74,7 +74,10 @@ object RuntimeAssetValidator {
 
         val resources = appContext.resources
         val missingRaw = requiredRawResources.filter { name ->
-            resources.getIdentifier(name, "raw", appContext.packageName) == 0
+            val resourceId = resources.getIdentifier(name, "raw", appContext.packageName)
+            resourceId == 0 || !runCatching {
+                resources.openRawResource(resourceId).use { stream -> stream.read() >= 0 }
+            }.getOrDefault(false)
         }
 
         check(missingAssets.isEmpty() && missingRaw.isEmpty()) {
@@ -86,7 +89,7 @@ object RuntimeAssetValidator {
                     append('.')
                 }
                 if (missingRaw.isNotEmpty()) {
-                    append(" Missing raw resources: ")
+                    append(" Missing or empty raw resources: ")
                     append(missingRaw.joinToString())
                     append('.')
                 }
