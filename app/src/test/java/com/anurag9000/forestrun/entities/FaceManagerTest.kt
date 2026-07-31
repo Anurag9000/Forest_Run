@@ -56,7 +56,7 @@ class FaceManagerTest {
     }
 
     @Test
-    fun `non finite velocity and head offset fall back to stable geometry`() {
+    fun `non finite velocity and head offset draw without poisoning animation state`() {
         val face = FaceManager()
         val bitmap = Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -68,6 +68,7 @@ class FaceManagerTest {
             headOffsetPx = Float.NaN
         )
 
+        face.update(0.25f)
         face.draw(
             canvas = canvas,
             bodyRect = RectF(24f, 14f, 104f, 124f),
@@ -77,15 +78,13 @@ class FaceManagerTest {
             motion = malformedMotion
         )
 
-        assertTrue(bitmapContainsVisiblePixel(bitmap))
+        assertEquals(0.25f, face.blinkTimerForTest, 0.0001f)
+        assertTrue(face.blinkTimerForTest.isFinite())
     }
 
-    private fun bitmapContainsOnlyTransparentPixels(bitmap: Bitmap): Boolean =
-        !bitmapContainsVisiblePixel(bitmap)
-
-    private fun bitmapContainsVisiblePixel(bitmap: Bitmap): Boolean {
+    private fun bitmapContainsOnlyTransparentPixels(bitmap: Bitmap): Boolean {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        return pixels.any { pixel -> pixel ushr 24 != 0 }
+        return pixels.none { pixel -> pixel ushr 24 != 0 }
     }
 }
