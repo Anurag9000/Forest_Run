@@ -12,6 +12,7 @@ import com.anurag9000.forestrun.engine.AssetPaths
 import com.anurag9000.forestrun.engine.CostumeManager
 import com.anurag9000.forestrun.engine.CinematicOverlayRenderer
 import com.anurag9000.forestrun.engine.CinematicScene
+import com.anurag9000.forestrun.engine.GardenPurchaseManager
 import com.anurag9000.forestrun.engine.GardenSanctuaryPlanner
 import com.anurag9000.forestrun.engine.GardenSanctuaryState
 import com.anurag9000.forestrun.engine.GameConstants
@@ -57,7 +58,7 @@ import kotlin.math.sin
  *   - Bottom: "back" hint
  *
  * After unlock: bloom burst particle effect fires at the card centre.
- * SaveManager persists which plants are unlocked + remaining lifetime seeds.
+ * GardenPurchaseManager atomically persists progress and remaining Seeds.
  */
 class GardenScreen(
     private val context: Context,
@@ -70,8 +71,8 @@ class GardenScreen(
     data class GardenPlant(
         val name: String,
         val seedCost: Int,
-        val colour: Int,       // primary display colour
-        val emoji: String      // unicode plant char rendered large
+        val colour: Int,
+        val emoji: String
     )
 
     private val catalogue = listOf(
@@ -99,19 +100,14 @@ class GardenScreen(
 
     // ── State ─────────────────────────────────────────────────────────────
 
-    /** How many plants are currently unlocked (left-to-right). */
-    private var unlockedCount: Int = 1   // first plant always unlocked
-
-    /** Lifetime seeds available to spend. */
+    private var unlockedCount: Int = 1
     private var lifeSeeds: Int = 0
 
-    /** Callback — called when player taps the back button area. */
     var onBack: (() -> Unit)? = null
     var onRun: (() -> Unit)? = null
 
-    // Unlock animation
-    private var unlockAnim: Float = -1f   // -1 = none; 0..1 = progress
-    private var unlockIdx:  Int   = -1
+    private var unlockAnim: Float = -1f
+    private var unlockIdx: Int = -1
 
     private var elapsed = 0f
     private var bestDistance = 0f
@@ -144,12 +140,9 @@ class GardenScreen(
     private var sanctuaryState = GardenSanctuaryState()
     private var arrivalLine = ""
 
-    // ── Font ─────────────────────────────────────────────────────────────
     private val pixelFont: Typeface = runCatching {
         Typeface.createFromAsset(context.assets, AssetPaths.PIXEL_FONT)
     }.getOrDefault(Typeface.MONOSPACE)
-
-    // ── Layout ────────────────────────────────────────────────────────────
 
     private val layoutPlan = GardenLayoutPlanner.build(
         width = screenW.toFloat(),
@@ -166,15 +159,13 @@ class GardenScreen(
     }
     private val ROW_START_X = layoutPlan.catalogueBand.left
     private val ROW_Y = layoutPlan.catalogueBand.top
-    private val cardRect    = RectF()
-    private val spriteRect  = RectF()
+    private val cardRect = RectF()
+    private val spriteRect = RectF()
     private val runButtonRect = RectF()
     private val statsRect = RectF()
     private val wardrobeRect = RectF()
     private val lastRunRect = RectF()
     private val wardrobeCardRects = MutableList(CostumeStyle.entries.size) { RectF() }
-
-    // ── Paints ────────────────────────────────────────────────────────────
 
     private val skyPaint = Paint().apply {
         shader = LinearGradient(
@@ -185,18 +176,18 @@ class GardenScreen(
     }
     private val groundPaint = Paint().apply { color = Color.rgb(80, 160, 70) }
 
-    private val cardUnlockPaint   = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val cardNextPaint     = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val cardUnlockPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val cardNextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(90, 200, 220, 200); style = Paint.Style.FILL
     }
-    private val cardLockedPaint   = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val cardLockedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(50, 40, 40, 40); style = Paint.Style.FILL
     }
-    private val cardBorderPaint   = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val cardBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeWidth = 2f; color = Color.argb(160, 100, 200, 100)
     }
     private val emojiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize  = 48f; textAlign = Paint.Align.CENTER
+        textSize = 48f; textAlign = Paint.Align.CENTER
     }
     private val namePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE; textSize = 14f; typeface = pixelFont; textAlign = Paint.Align.CENTER
@@ -264,12 +255,8 @@ class GardenScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
-    private val canopyShadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
-    private val traceChipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
+    private val canopyShadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val traceChipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val traceChipBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(180, 245, 246, 232)
         style = Paint.Style.STROKE
@@ -281,9 +268,7 @@ class GardenScreen(
         typeface = pixelFont
         textAlign = Paint.Align.CENTER
     }
-    private val ambiencePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
+    private val ambiencePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val seedCountPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(160, 255, 120); textSize = 22f; typeface = pixelFont; textAlign = Paint.Align.LEFT
     }
@@ -338,9 +323,7 @@ class GardenScreen(
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
-    private val wardrobeCardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
+    private val wardrobeCardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val wardrobeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textSize = 12f
@@ -354,44 +337,51 @@ class GardenScreen(
         textAlign = Paint.Align.LEFT
     }
 
-    // ── API ───────────────────────────────────────────────────────────────
-
-    /** Load persisted garden state from SaveManager. */
     fun load() {
-        unlockedCount = SaveManager.loadGardenProgress(context).coerceAtLeast(1)
-        lifeSeeds     = SaveManager.loadLifetimeSeeds(context)
+        unlockedCount = SaveManager.loadGardenProgress(context).coerceIn(1, catalogue.size)
+        lifeSeeds = SaveManager.loadLifetimeSeeds(context).coerceAtLeast(0)
         syncWardrobe()
-        // Surface creation may happen while the menu is still visible. Preview
-        // the greeting here; only an actual Garden entry may consume it.
         refreshStats(consumeReturnMoment = false)
     }
 
-    /** Called when the Garden is actually entered or revisited. */
     fun refresh() {
-        lifeSeeds = SaveManager.loadLifetimeSeeds(context)
+        unlockedCount = SaveManager.loadGardenProgress(context).coerceIn(1, catalogue.size)
+        lifeSeeds = SaveManager.loadLifetimeSeeds(context).coerceAtLeast(0)
         syncWardrobe()
         refreshStats(consumeReturnMoment = true)
     }
 
     fun update(deltaTime: Float) {
-        elapsed += deltaTime
-        catalogueSprites.forEach { it.update(deltaTime) }
-        returnVisitorSprite?.update(deltaTime)
-        ParticleManager.update(deltaTime)
-        if (unlockAnim >= 0f) {
-            unlockAnim = (unlockAnim + deltaTime * 1.5f).coerceAtMost(1f)
-            if (unlockAnim >= 1f) unlockAnim = -1f
+        if (!deltaTime.isFinite() || deltaTime <= 0f) return
+        val frameDelta = deltaTime.coerceAtMost(MAX_FRAME_DELTA_SECONDS)
+        val safeElapsed = elapsed.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        elapsed = ((safeElapsed.toDouble() + frameDelta.toDouble()) % ELAPSED_WRAP_SECONDS)
+            .toFloat()
+
+        catalogueSprites.forEach { it.update(frameDelta) }
+        returnVisitorSprite?.update(frameDelta)
+        ParticleManager.update(frameDelta)
+
+        if (!unlockAnim.isFinite()) {
+            unlockAnim = -1f
+            unlockIdx = -1
+        } else if (unlockAnim >= 0f) {
+            unlockAnim = (unlockAnim + frameDelta * 1.5f).coerceAtMost(1f)
+            if (unlockAnim >= 1f) {
+                unlockAnim = -1f
+                unlockIdx = -1
+            }
         }
-        if (wardrobeMessageTimer > 0f) {
-            wardrobeMessageTimer = (wardrobeMessageTimer - deltaTime).coerceAtLeast(0f)
+
+        if (!wardrobeMessageTimer.isFinite() || wardrobeMessageTimer < 0f) {
+            wardrobeMessageTimer = 0f
+        } else if (wardrobeMessageTimer > 0f) {
+            wardrobeMessageTimer = (wardrobeMessageTimer - frameDelta).coerceAtLeast(0f)
         }
     }
 
-    /**
-     * Handle a tap at screen position ([tapX], [tapY]).
-     * Returns true if the tap was consumed.
-     */
     fun onTap(tapX: Float, tapY: Float): Boolean {
+        if (!tapX.isFinite() || !tapY.isFinite()) return false
         syncInteractiveLayout(screenW.toFloat(), screenH.toFloat())
 
         if (runButtonRect.contains(tapX, tapY)) {
@@ -417,26 +407,28 @@ class GardenScreen(
             return true
         }
 
-        // Back area — bottom strip
-        if (tapY > screenH * 0.88f) { onBack?.invoke(); return true }
+        if (tapY > screenH * 0.88f) {
+            onBack?.invoke()
+            return true
+        }
 
-        // Card taps
         for (i in catalogue.indices) {
             val cx = ROW_START_X + i * (CARD_W + CARD_GAP) + CARD_W / 2f
             val cy = ROW_Y + CARD_H / 2f
             if (tapX in cx - CARD_W / 2f..cx + CARD_W / 2f &&
                 tapY in cy - CARD_H / 2f..cy + CARD_H / 2f) {
-                if (i == unlockedCount && lifeSeeds >= catalogue[i].seedCost) {
-                    // Unlock!
-                    lifeSeeds     -= catalogue[i].seedCost
-                    unlockedCount++
-                    unlockIdx  = i
-                    unlockAnim = 0f
-                    // Bloom burst (using SEED_COLLECT preset for a nice golden unlock pop)
-                    ParticleManager.emit(FxPreset.SEED_COLLECT, cx, cy)
-                    // Persist
-                    SaveManager.saveGardenProgress(context, unlockedCount)
-                    SaveManager.saveLifetimeSeeds(context, lifeSeeds)
+                if (i == unlockedCount) {
+                    val result = GardenPurchaseManager.purchaseNext(
+                        context = context,
+                        requestedIndex = i
+                    )
+                    unlockedCount = result.unlockedCount.coerceIn(1, catalogue.size)
+                    lifeSeeds = result.remainingSeeds.coerceAtLeast(0)
+                    if (result.purchased) {
+                        unlockIdx = i
+                        unlockAnim = 0f
+                        ParticleManager.emit(FxPreset.SEED_COLLECT, cx, cy)
+                    }
                 }
                 return true
             }
@@ -469,7 +461,6 @@ class GardenScreen(
             centerYFraction = 0.48f
         )
 
-        // Title
         titlePaint.color = forestMoodState.currentMood.accentColor
         canvas.drawText("GARDEN", cw / 2f, ch * 0.10f, titlePaint)
         canvas.drawText(forestMoodState.currentMood.gardenLine, cw / 2f, ch * 0.13f, moodPaint)
@@ -478,10 +469,7 @@ class GardenScreen(
             drawWrappedCenteredText(canvas, moment.line, cw / 2f, ch * 0.182f, cw * 0.60f, returnLinePaint)
             drawReturnVisitor(canvas, cw, ch)
         }
-        if (returnMoment == null &&
-            sanctuaryState.featuredVisitor != null &&
-            sanctuaryState.featuredVisitorLine.isNotBlank()
-        ) {
+        if (returnMoment == null && sanctuaryState.featuredVisitor != null && sanctuaryState.featuredVisitorLine.isNotBlank()) {
             if (sanctuaryState.featuredVisitorTitle.isNotBlank()) {
                 canvas.drawText(sanctuaryState.featuredVisitorTitle, cw / 2f, ch * 0.16f, returnTitlePaint)
             }
@@ -498,12 +486,10 @@ class GardenScreen(
                 drawArrivalBadge(canvas, cw, ch)
                 drawSanctuaryTraces(canvas, cw, ch)
             }
-            sanctuaryState.homeCharacterLabel.isNotBlank() ->
-                drawHomeCharacter(canvas, cw, ch)
+            sanctuaryState.homeCharacterLabel.isNotBlank() -> drawHomeCharacter(canvas, cw, ch)
             else -> drawSanctuaryTraces(canvas, cw, ch)
         }
 
-        // Seed count
         canvas.drawText("🌱 $lifeSeeds", 28f, ch * 0.10f, seedCountPaint)
 
         syncInteractiveLayout(cw, ch)
@@ -512,25 +498,19 @@ class GardenScreen(
         drawLastRunPanel(canvas)
         drawWardrobe(canvas, cw, ch)
 
-        // Cards
         for (i in catalogue.indices) {
             val left = ROW_START_X + i * (CARD_W + CARD_GAP)
-            val top  = ROW_Y
+            val top = ROW_Y
             cardRect.set(left, top, left + CARD_W, top + CARD_H)
 
             val isUnlocked = i < unlockedCount
-            val isNext     = i == unlockedCount
+            val isNext = i == unlockedCount
             val isAnimatingThis = unlockIdx == i && unlockAnim in 0f..1f
 
-            // Card background
             when {
                 isUnlocked -> {
                     val col = catalogue[i].colour
-                    cardUnlockPaint.color = Color.argb(
-                        200,
-                        Color.red(col), Color.green(col), Color.blue(col)
-                    )
-                    // Bounce pop effect during unlock animation
+                    cardUnlockPaint.color = Color.argb(200, Color.red(col), Color.green(col), Color.blue(col))
                     if (isAnimatingThis) {
                         val scale = 1f + 0.25f * sin(unlockAnim * Math.PI.toFloat())
                         canvas.save()
@@ -538,12 +518,8 @@ class GardenScreen(
                     }
                     canvas.drawRoundRect(cardRect, 12f, 12f, cardUnlockPaint)
                 }
-                isNext -> {
-                    canvas.drawRoundRect(cardRect, 12f, 12f, cardNextPaint)
-                }
-                else -> {
-                    canvas.drawRoundRect(cardRect, 12f, 12f, cardLockedPaint)
-                }
+                isNext -> canvas.drawRoundRect(cardRect, 12f, 12f, cardNextPaint)
+                else -> canvas.drawRoundRect(cardRect, 12f, 12f, cardLockedPaint)
             }
             canvas.drawRoundRect(cardRect, 12f, 12f, cardBorderPaint)
 
@@ -564,12 +540,10 @@ class GardenScreen(
                 )
                 catalogueSprites[i].draw(canvas, spriteRect)
             } else {
-                val emojiFade = 60
-                emojiPaint.alpha = emojiFade
+                emojiPaint.alpha = 60
                 canvas.drawText(catalogue[i].emoji, cardRect.centerX(), cardRect.centerY() - 10f, emojiPaint)
             }
 
-            // Name / cost
             when {
                 isUnlocked -> {
                     namePaint.alpha = 220
@@ -577,7 +551,7 @@ class GardenScreen(
                 }
                 isNext -> {
                     val pulse = (0.6f + 0.4f * sin(elapsed * 2.5f)) * 255
-                    costPaint.alpha = pulse.toInt()
+                    costPaint.alpha = pulse.toInt().coerceIn(0, 255)
                     canvas.drawText("🌱${catalogue[i].seedCost}", cardRect.centerX(), cardRect.bottom - 36f, costPaint)
                     namePaint.alpha = 180
                     canvas.drawText(catalogue[i].name, cardRect.centerX(), cardRect.bottom - 18f, namePaint)
@@ -591,12 +565,9 @@ class GardenScreen(
             if (isAnimatingThis) canvas.restore()
         }
 
-        // Back hint
         val backAlpha = (0.5f + 0.5f * sin(elapsed * 2f)) * 200
-        backPaint.alpha = backAlpha.toInt()
+        backPaint.alpha = backAlpha.toInt().coerceIn(0, 255)
         canvas.drawText("tap the bottom edge to go back", cw / 2f, ch * 0.93f, backPaint)
-
-        // Particle layer
         ParticleManager.draw(canvas)
     }
 
@@ -734,25 +705,15 @@ class GardenScreen(
         }
 
         if (summary.pacifistRouteTier != com.anurag9000.forestrun.engine.PacifistRouteTier.NONE) {
-            narrative(
-                "Route afterglow",
-                PacifistPresentation.routeAfterglowLine(summary.pacifistRouteTier),
-                maxLines = 2
-            )
+            narrative("Route afterglow", PacifistPresentation.routeAfterglowLine(summary.pacifistRouteTier), 2)
         }
         if (sanctuaryState.worldOpinionLine.isNotBlank()) {
-            narrative(
-                "Opinion: ${sanctuaryState.worldOpinionLabel}",
-                sanctuaryState.worldOpinionLine,
-                maxLines = 2
-            )
+            narrative("Opinion: ${sanctuaryState.worldOpinionLabel}", sanctuaryState.worldOpinionLine, 2)
         }
         sanctuaryState.homecomingConsequences.firstOrNull()?.let { consequence ->
-            narrative(consequence.label, consequence.line, maxLines = 2)
+            narrative(consequence.label, consequence.line, 2)
         }
-        reflectionEntries.take(2).forEach { entry ->
-            narrative(entry.label, entry.text, maxLines = 2)
-        }
+        reflectionEntries.take(2).forEach { entry -> narrative(entry.label, entry.text, 2) }
         canvas.restore()
     }
 
@@ -774,38 +735,28 @@ class GardenScreen(
         wardrobeCardPaint.alpha = alpha
         when (style) {
             CostumeStyle.NONE -> canvas.drawCircle(iconCenterX, iconCenterY, rect.width() * 0.12f, wardrobeCardPaint)
-            CostumeStyle.FLOWER_CROWN -> {
-                repeat(3) { index ->
-                    canvas.drawCircle(
-                        iconCenterX + (index - 1) * rect.width() * 0.09f,
-                        iconCenterY,
-                        rect.width() * 0.07f,
-                        wardrobeCardPaint
-                    )
-                }
+            CostumeStyle.FLOWER_CROWN -> repeat(3) { index ->
+                canvas.drawCircle(
+                    iconCenterX + (index - 1) * rect.width() * 0.09f,
+                    iconCenterY,
+                    rect.width() * 0.07f,
+                    wardrobeCardPaint
+                )
             }
             CostumeStyle.VINE_SCARF -> {
                 canvas.drawLine(iconCenterX - rect.width() * 0.10f, iconCenterY - 6f, iconCenterX + rect.width() * 0.10f, iconCenterY + 2f, wardrobeCardPaint)
                 canvas.drawLine(iconCenterX + rect.width() * 0.04f, iconCenterY, iconCenterX + rect.width() * 0.12f, iconCenterY + rect.height() * 0.12f, wardrobeCardPaint)
             }
-            CostumeStyle.MOON_CAPE -> {
-                canvas.drawRect(
-                    iconCenterX - rect.width() * 0.12f,
-                    iconCenterY - rect.height() * 0.10f,
-                    iconCenterX + rect.width() * 0.12f,
-                    iconCenterY + rect.height() * 0.12f,
-                    wardrobeCardPaint
-                )
-            }
+            CostumeStyle.MOON_CAPE -> canvas.drawRect(
+                iconCenterX - rect.width() * 0.12f,
+                iconCenterY - rect.height() * 0.10f,
+                iconCenterX + rect.width() * 0.12f,
+                iconCenterY + rect.height() * 0.12f,
+                wardrobeCardPaint
+            )
             CostumeStyle.BELL_CHARM -> {
                 canvas.drawCircle(iconCenterX, iconCenterY + 4f, rect.width() * 0.07f, wardrobeCardPaint)
-                canvas.drawLine(
-                    iconCenterX - rect.width() * 0.10f,
-                    iconCenterY - 10f,
-                    iconCenterX + rect.width() * 0.10f,
-                    iconCenterY - 10f,
-                    wardrobeCardPaint
-                )
+                canvas.drawLine(iconCenterX - rect.width() * 0.10f, iconCenterY - 10f, iconCenterX + rect.width() * 0.10f, iconCenterY - 10f, wardrobeCardPaint)
             }
             CostumeStyle.LANTERN_PIN -> {
                 canvas.drawRect(
@@ -839,8 +790,7 @@ class GardenScreen(
     private fun refreshStats(consumeReturnMoment: Boolean) {
         bestDistance = SaveManager.loadBestDistance(context)
         lastKillerLabel = PersistentMemoryManager.getLastKiller(context)?.let { formatEntityName(it) } ?: "None"
-        sparedTotal =
-            PersistentMemoryManager.getSparedCount(context, EntityType.CAT) +
+        sparedTotal = PersistentMemoryManager.getSparedCount(context, EntityType.CAT) +
             PersistentMemoryManager.getSparedCount(context, EntityType.FOX) +
             PersistentMemoryManager.getSparedCount(context, EntityType.WOLF)
         friendshipTotal = Biome.entries.sumOf { PersistentMemoryManager.getBiomeFriendship(context, it) }
@@ -906,13 +856,17 @@ class GardenScreen(
         statsRect.apply(layoutPlan.statsPanel)
         lastRunRect.apply(layoutPlan.lastRunPanel)
         wardrobeRect.apply(layoutPlan.wardrobePanel)
-        layoutPlan.wardrobeCards.forEachIndexed { index, box ->
-            wardrobeCardRects[index].apply(box)
-        }
+        layoutPlan.wardrobeCards.forEachIndexed { index, box -> wardrobeCardRects[index].apply(box) }
     }
 
-    private fun formatDistance(distanceMetres: Float): String =
-        if (distanceMetres < 1_000f) "${distanceMetres.toInt()} m" else String.format("%.2f km", distanceMetres / 1_000f)
+    private fun formatDistance(distanceMetres: Float): String {
+        val safeDistance = distanceMetres.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        return if (safeDistance < 1_000f) {
+            "${safeDistance.toInt()} m"
+        } else {
+            String.format("%.2f km", safeDistance / 1_000f)
+        }
+    }
 
     private fun formatEntityName(type: EntityType): String =
         type.name.lowercase().split("_").joinToString(" ") { part ->
@@ -1008,13 +962,7 @@ class GardenScreen(
                 Color.green(lighting.groundGlowColor),
                 Color.blue(lighting.groundGlowColor)
             )
-            canvas.drawOval(
-                cw * 0.18f,
-                groundY - ch * 0.03f,
-                cw * 0.82f,
-                groundY + ch * 0.11f,
-                ambiencePaint
-            )
+            canvas.drawOval(cw * 0.18f, groundY - ch * 0.03f, cw * 0.82f, groundY + ch * 0.11f, ambiencePaint)
         }
     }
 
@@ -1058,14 +1006,7 @@ class GardenScreen(
         canvas.drawRoundRect(rect, 16f, 16f, homeCharacterChipBorderPaint)
         val labelY = rect.centerY() - (homeCharacterChipTextPaint.descent() + homeCharacterChipTextPaint.ascent()) / 2f
         canvas.drawText(sanctuaryState.homeCharacterLabel.take(28), rect.centerX(), labelY, homeCharacterChipTextPaint)
-        drawWrappedCenteredText(
-            canvas,
-            sanctuaryState.homeCharacterLine,
-            cw / 2f,
-            rect.bottom + 18f,
-            cw * 0.60f,
-            returnLinePaint
-        )
+        drawWrappedCenteredText(canvas, sanctuaryState.homeCharacterLine, cw / 2f, rect.bottom + 18f, cw * 0.60f, returnLinePaint)
     }
 
     private fun spriteForVisitor(type: EntityType): SpriteSheet = when (type) {
@@ -1110,13 +1051,8 @@ class GardenScreen(
         return y
     }
 
-    private fun wrapTextLines(
-        text: String,
-        maxWidth: Float,
-        paint: Paint,
-        maxLines: Int
-    ): List<String> {
-        if (text.isBlank() || maxLines <= 0 || maxWidth <= 0f) return emptyList()
+    private fun wrapTextLines(text: String, maxWidth: Float, paint: Paint, maxLines: Int): List<String> {
+        if (text.isBlank() || maxLines <= 0 || !maxWidth.isFinite() || maxWidth <= 0f) return emptyList()
         val lines = mutableListOf<String>()
         val builder = StringBuilder()
         for (word in text.trim().split(Regex("\\s+"))) {
@@ -1142,6 +1078,7 @@ class GardenScreen(
     }
 
     private fun ellipsizeText(text: String, maxWidth: Float, paint: Paint): String {
+        if (!maxWidth.isFinite() || maxWidth <= 0f) return ""
         if (paint.measureText(text) <= maxWidth) return text
         val suffix = "…"
         var end = text.length
@@ -1149,5 +1086,10 @@ class GardenScreen(
             end--
         }
         return text.substring(0, end).trimEnd() + suffix
+    }
+
+    private companion object {
+        const val MAX_FRAME_DELTA_SECONDS = 0.05f
+        const val ELAPSED_WRAP_SECONDS = 1_000_000.0
     }
 }
