@@ -114,6 +114,15 @@ class SpriteSheetTest {
         )
     }
 
+    @Test(expected = IllegalArgumentException::class)
+    fun `bitmap width must divide exactly across physical frames`() {
+        SpriteSheet(
+            bitmap = Bitmap.createBitmap(41, 10, Bitmap.Config.ARGB_8888),
+            frameCount = 4,
+            framesPerSec = 4f
+        )
+    }
+
     private fun sheet(frameCount: Int, framesPerSec: Float, looping: Boolean): SpriteSheet =
         SpriteSheet(
             bitmap = Bitmap.createBitmap(frameCount * 10, 12, Bitmap.Config.ARGB_8888),
