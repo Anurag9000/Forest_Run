@@ -1,5 +1,6 @@
 package com.anurag9000.forestrun.engine
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -29,5 +30,66 @@ class SfxManagerTest {
 
         assertTrue(fade.volume < convert.volume)
         assertTrue(fade.rate < convert.rate)
+    }
+
+    @Test
+    fun `ready optional sample is preferred over fallback`() {
+        assertEquals(
+            17,
+            chooseReadySample(
+                primaryId = 17,
+                fallbackId = 29,
+                primaryReady = true,
+                fallbackReady = true
+            )
+        )
+    }
+
+    @Test
+    fun `failed optional sample falls back to ready mandatory sample`() {
+        assertEquals(
+            29,
+            chooseReadySample(
+                primaryId = 17,
+                fallbackId = 29,
+                primaryReady = false,
+                fallbackReady = true
+            )
+        )
+    }
+
+    @Test
+    fun `nonpositive or stale sample identifiers never become playable`() {
+        assertEquals(
+            29,
+            chooseReadySample(
+                primaryId = 0,
+                fallbackId = 29,
+                primaryReady = true,
+                fallbackReady = true
+            )
+        )
+        assertEquals(
+            0,
+            chooseReadySample(
+                primaryId = 17,
+                fallbackId = -1,
+                primaryReady = false,
+                fallbackReady = true
+            )
+        )
+    }
+
+    @Test
+    fun `no ready sample resolves to silent no-op identifier`() {
+        assertEquals(
+            0,
+            chooseReadySample(
+                primaryId = 17,
+                fallbackId = 29,
+                primaryReady = false,
+                fallbackReady = false
+            )
+        )
     }
 }
