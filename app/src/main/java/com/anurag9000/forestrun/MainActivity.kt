@@ -18,6 +18,7 @@ import com.anurag9000.forestrun.engine.EncounterScenario
 import com.anurag9000.forestrun.engine.FeedbackSettings
 import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.HapticManager
+import com.anurag9000.forestrun.engine.LatestRequestGate
 import com.anurag9000.forestrun.engine.LeitmotifManager
 import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.RuntimeAssetValidator
@@ -31,6 +32,7 @@ class MainActivity : AppCompatActivity() {
     private var hasPaused = false
     private var configurationWidthDp = 0
     private var configurationHeightDp = 0
+    private val debugLaunchGate = LatestRequestGate()
 
     companion object {
         private const val TAG = "ForestRunLaunch"
@@ -56,9 +58,10 @@ class MainActivity : AppCompatActivity() {
         gameView = GameView(this)
         setContentView(gameView)
         configureSafeAreaInsets()
+        val launchToken = debugLaunchGate.begin()
         gameView.post {
             hideSystemUI()
-            applyDebugLaunchWhenReady(Intent(intent))
+            applyDebugLaunchWhenReady(Intent(intent), launchToken)
         }
     }
 
@@ -92,8 +95,9 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        val launchToken = debugLaunchGate.begin()
         if (::gameView.isInitialized) {
-            gameView.post { applyDebugLaunchWhenReady(Intent(intent)) }
+            gameView.post { applyDebugLaunchWhenReady(Intent(intent), launchToken) }
         }
     }
 
@@ -120,6 +124,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        debugLaunchGate.cancel()
         if (::gameView.isInitialized) gameView.pause()
         HapticManager.release()
         LeitmotifManager.destroy()
@@ -129,9 +134,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyDebugLaunchWhenReady(
         launchIntent: Intent,
+        launchToken: LatestRequestGate.Token,
         attemptsRemaining: Int = MAX_DEBUG_LAUNCH_ATTEMPTS
     ) {
-        if (!::gameView.isInitialized) return
+        if (!debugLaunchGate.isCurrent(launchToken) || !::gameView.isInitialized) return
         val scenarioName = launchIntent.getStringExtra(EXTRA_DEBUG_SCENARIO)
         val autoStart = launchIntent.getBooleanExtra(EXTRA_DEBUG_AUTOSTART, false)
         if (scenarioName.isNullOrBlank() && !autoStart) return
@@ -157,12 +163,19 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             gameView.postDelayed(
-                { applyDebugLaunchWhenReady(launchIntent, attemptsRemaining - 1) },
+                {
+                    applyDebugLaunchWhenReady(
+                        launchIntent = launchIntent,
+                        launchToken = launchToken,
+                        attemptsRemaining = attemptsRemaining - 1
+                    )
+                },
                 DEBUG_LAUNCH_RETRY_MS
             )
             return
         }
 
+        if (!debugLaunchGate.isCurrent(launchToken)) return
         gameView.applyDebugLaunchIntent(launchIntent)
         val effectiveMode = if (scenario != null) {
             RunMode.forScenario(launchIntent.getStringExtra(EXTRA_RUN_MODE))
