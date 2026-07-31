@@ -301,7 +301,9 @@ class GameStateManager(context: Context) {
     }
 
     fun recordJumpHold(holdSeconds: Float) {
-        if (holdSeconds >= OpeningReadabilityGuide.HOLD_DISCOVERY_THRESHOLD_SEC) {
+        if (holdSeconds.isFinite() &&
+            holdSeconds >= OpeningReadabilityGuide.HOLD_DISCOVERY_THRESHOLD_SEC
+        ) {
             openingInputState = openingInputState.copy(holdSeen = true)
         }
     }
