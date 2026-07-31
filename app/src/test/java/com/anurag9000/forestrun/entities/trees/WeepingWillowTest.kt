@@ -53,10 +53,11 @@ class WeepingWillowTest {
 
         player.hitbox.set(
             duckLaneRect.left + 8f,
-            curtainHitbox.bottom + 2f,
+            curtainHitbox.bottom + 0.5f,
             duckLaneRect.right - 8f,
-            duckLaneRect.top - 2f
+            duckLaneRect.top - 0.5f
         )
+        assertTrue(player.hitbox.top < player.hitbox.bottom)
         assertEquals(CollisionResult.MERCY_MISS, willow.onCollision(player, gameState))
     }
 
