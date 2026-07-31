@@ -21,19 +21,27 @@ class FaceManagerTest {
         face.update(-1f)
         assertEquals(0f, face.blinkTimerForTest, 0f)
 
-        face.update(0.25f)
-        assertEquals(0.25f, face.blinkTimerForTest, 0.0001f)
+        face.update(0.025f)
+        assertEquals(0.025f, face.blinkTimerForTest, 0.0001f)
     }
 
     @Test
-    fun `extreme finite time wraps to a finite phase`() {
+    fun `extreme finite time is capped to one presentation frame`() {
         val face = FaceManager()
 
         face.update(Float.MAX_VALUE)
 
-        assertTrue(face.blinkTimerForTest.isFinite())
-        assertTrue(face.blinkTimerForTest >= 0f)
-        assertTrue(face.blinkTimerForTest < 60f)
+        assertEquals(0.05f, face.blinkTimerForTest, 0.0001f)
+    }
+
+    @Test
+    fun `valid frame repairs a poisoned blink phase`() {
+        val face = FaceManager()
+        setPrivateFloat(face, "blinkTimer", Float.NaN)
+
+        face.update(10f)
+
+        assertEquals(0.05f, face.blinkTimerForTest, 0.0001f)
     }
 
     @Test
@@ -68,7 +76,7 @@ class FaceManagerTest {
             headOffsetPx = Float.NaN
         )
 
-        face.update(0.25f)
+        face.update(0.025f)
         face.draw(
             canvas = canvas,
             bodyRect = RectF(24f, 14f, 104f, 124f),
@@ -78,8 +86,14 @@ class FaceManagerTest {
             motion = malformedMotion
         )
 
-        assertEquals(0.25f, face.blinkTimerForTest, 0.0001f)
+        assertEquals(0.025f, face.blinkTimerForTest, 0.0001f)
         assertTrue(face.blinkTimerForTest.isFinite())
+    }
+
+    private fun setPrivateFloat(target: Any, name: String, value: Float) {
+        val field = target.javaClass.getDeclaredField(name)
+        field.isAccessible = true
+        field.setFloat(target, value)
     }
 
     private fun bitmapContainsOnlyTransparentPixels(bitmap: Bitmap): Boolean {
