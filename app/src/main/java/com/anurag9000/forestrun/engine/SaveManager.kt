@@ -28,6 +28,7 @@ object SaveManager {
     internal const val PREFS_NAME = "forest_run_prefs"
     private const val COMPAT_PREFS_PREFIX = "forest_run_prefs_compat_v"
     private const val LEGACY_GARDEN_FOLLOW_UP_WINDOW_NS = 1_000_000_000L
+    private const val MAX_DERIVED_COUNTER = Int.MAX_VALUE / 16
 
     @Volatile
     private var activePrefsName: String = PREFS_NAME
@@ -367,28 +368,28 @@ object SaveManager {
     }
 
     fun loadEncounterCount(context: Context, type: EntityType): Int =
-        prefs(context).getInt("encounter_${type.name.lowercase()}", 0)
+        loadDerivedCounter(context, "encounter_${type.name.lowercase()}")
 
     fun incrementSparedCount(context: Context, type: EntityType) {
         incrementInt(context, "spared_${type.name.lowercase()}")
     }
 
     fun loadSparedCount(context: Context, type: EntityType): Int =
-        prefs(context).getInt("spared_${type.name.lowercase()}", 0)
+        loadDerivedCounter(context, "spared_${type.name.lowercase()}")
 
     fun incrementHitCount(context: Context, type: EntityType) {
         incrementInt(context, "hit_${type.name.lowercase()}")
     }
 
     fun loadHitCount(context: Context, type: EntityType): Int =
-        prefs(context).getInt("hit_${type.name.lowercase()}", 0)
+        loadDerivedCounter(context, "hit_${type.name.lowercase()}")
 
     fun incrementCleanPassCount(context: Context, type: EntityType) {
         incrementInt(context, "clean_pass_${type.name.lowercase()}")
     }
 
     fun loadCleanPassCount(context: Context, type: EntityType): Int =
-        prefs(context).getInt("clean_pass_${type.name.lowercase()}", 0)
+        loadDerivedCounter(context, "clean_pass_${type.name.lowercase()}")
 
     fun incrementKindnessStreak(context: Context, type: EntityType) {
         incrementInt(context, "kindness_streak_${type.name.lowercase()}")
@@ -399,7 +400,7 @@ object SaveManager {
     }
 
     fun loadKindnessStreak(context: Context, type: EntityType): Int =
-        prefs(context).getInt("kindness_streak_${type.name.lowercase()}", 0)
+        loadDerivedCounter(context, "kindness_streak_${type.name.lowercase()}")
 
     fun incrementTenderStreak(context: Context, type: EntityType) {
         incrementInt(context, "tender_streak_${type.name.lowercase()}")
@@ -410,7 +411,7 @@ object SaveManager {
     }
 
     fun loadTenderStreak(context: Context, type: EntityType): Int =
-        prefs(context).getInt("tender_streak_${type.name.lowercase()}", 0)
+        loadDerivedCounter(context, "tender_streak_${type.name.lowercase()}")
 
     fun saveLastKiller(context: Context, type: EntityType?) {
         prefs(context).edit().putString(KEY_LAST_KILLER, type?.name).apply()
@@ -476,7 +477,7 @@ object SaveManager {
     }
 
     fun loadRouteTierCount(context: Context, tier: PacifistRouteTier): Int =
-        prefs(context).getInt(routeTierKey(tier), 0)
+        loadDerivedCounter(context, routeTierKey(tier))
 
     private fun incrementRouteTierCount(context: Context, tier: PacifistRouteTier) {
         if (tier == PacifistRouteTier.NONE) return
@@ -495,7 +496,7 @@ object SaveManager {
     }
 
     fun loadBiomeFriendship(context: Context, biome: Biome): Int =
-        prefs(context).getInt("friendship_${biome.name.lowercase()}", 0)
+        loadDerivedCounter(context, "friendship_${biome.name.lowercase()}")
 
     fun saveForestMoodState(context: Context, state: ForestMoodState) {
         prefs(context).edit()
@@ -587,10 +588,16 @@ object SaveManager {
 
     private fun ghostFile(context: Context) = File(context.filesDir, activeGhostFilename)
 
+    private fun loadDerivedCounter(context: Context, key: String): Int =
+        boundedDerivedCounter(prefs(context).all[key])
+
+    private fun boundedDerivedCounter(value: Any?): Int =
+        (value as? Int)?.coerceIn(0, MAX_DERIVED_COUNTER) ?: 0
+
     private fun incrementInt(context: Context, key: String) {
         val prefs = prefs(context)
-        val current = (prefs.all[key] as? Int)?.coerceAtLeast(0) ?: 0
-        val next = if (current == Int.MAX_VALUE) Int.MAX_VALUE else current + 1
+        val current = boundedDerivedCounter(prefs.all[key])
+        val next = if (current >= MAX_DERIVED_COUNTER) MAX_DERIVED_COUNTER else current + 1
         prefs.edit().putInt(key, next).apply()
     }
 }
