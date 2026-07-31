@@ -58,17 +58,19 @@ object SfxManager {
         optionalSampleIds.clear()
 
         newPool.setOnLoadCompleteListener { callbackPool, sampleId, status ->
-            if (pool !== callbackPool) return@setOnLoadCompleteListener
-            when (sampleReadiness.complete(generation, sampleId, status)) {
-                SoundSampleReadiness.CompletionResult.READY -> Unit
-                SoundSampleReadiness.CompletionResult.FAILED -> {
-                    if (sampleId in optionalSampleIds) {
-                        Log.w(TAG, "Optional SFX sample failed to load; fallback will be used: id=$sampleId status=$status")
-                    } else {
-                        Log.e(TAG, "Required SFX sample failed to load: id=$sampleId status=$status")
+            synchronized(SfxManager) {
+                if (pool !== callbackPool) return@synchronized
+                when (sampleReadiness.complete(generation, sampleId, status)) {
+                    SoundSampleReadiness.CompletionResult.READY -> Unit
+                    SoundSampleReadiness.CompletionResult.FAILED -> {
+                        if (sampleId in optionalSampleIds) {
+                            Log.w(TAG, "Optional SFX sample failed to load; fallback will be used: id=$sampleId status=$status")
+                        } else {
+                            Log.e(TAG, "Required SFX sample failed to load: id=$sampleId status=$status")
+                        }
                     }
+                    SoundSampleReadiness.CompletionResult.STALE -> Unit
                 }
-                SoundSampleReadiness.CompletionResult.STALE -> Unit
             }
         }
         pool = newPool
