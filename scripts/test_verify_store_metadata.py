@@ -15,20 +15,24 @@ ROOT = Path(__file__).resolve().parent.parent
 class StoreMetadataVerifierTest(unittest.TestCase):
     candidate = "a" * 40
 
-    def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory()
-        self.metadata = Path(self.temp.name, "metadata")
-        self.metadata.mkdir()
-        (self.metadata / "title.txt").write_text("Forest Run", encoding="utf-8")
-        (self.metadata / "short-description.txt").write_text(
+    @staticmethod
+    def write_valid_metadata(metadata: Path) -> None:
+        (metadata / "title.txt").write_text("Forest Run", encoding="utf-8")
+        (metadata / "short-description.txt").write_text(
             "Run gently through a living forest.", encoding="utf-8"
         )
-        (self.metadata / "full-description.txt").write_text(
+        (metadata / "full-description.txt").write_text(
             "Forest Run is a handcrafted endless runner where mercy changes the path.\n\n"
             "Collect Seeds, enter Bloom, meet memorable creatures, and return to a "
             "persistent Garden that remembers how you played.",
             encoding="utf-8",
         )
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.metadata = Path(self.temp.name, "metadata")
+        self.metadata.mkdir()
+        self.write_valid_metadata(self.metadata)
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -64,13 +68,11 @@ class StoreMetadataVerifierTest(unittest.TestCase):
         )
         for filename, text, message in cases:
             with self.subTest(filename=filename, message=message):
-                self.setUp()
-                try:
-                    (self.metadata / filename).write_text(text, encoding="utf-8")
-                    with self.assertRaisesRegex(StoreMetadataError, message):
-                        finalize_metadata(self.metadata, self.candidate)
-                finally:
-                    self.tearDown()
+                self.write_valid_metadata(self.metadata)
+                (self.metadata / "metadata_manifest.json").unlink(missing_ok=True)
+                (self.metadata / filename).write_text(text, encoding="utf-8")
+                with self.assertRaisesRegex(StoreMetadataError, message):
+                    finalize_metadata(self.metadata, self.candidate)
 
     def test_missing_extra_and_malformed_manifest_entries_are_rejected(self) -> None:
         finalize_metadata(self.metadata, self.candidate)
@@ -96,7 +98,11 @@ class StoreMetadataVerifierTest(unittest.TestCase):
 class StoreMetadataReleaseContractTest(unittest.TestCase):
     def test_canonical_release_verifies_metadata_before_play_preparer(self) -> None:
         source = (ROOT / "scripts/prepare_main_release.sh").read_text(encoding="utf-8")
-        self.assertNotIn("verify_store_metadata.py", source)  # Updated with wrapper commit.
+        metadata_index = source.index("verify_store_metadata.py")
+        preparer_index = source.index("prepare_play_release.py")
+        self.assertLess(metadata_index, preparer_index)
+        self.assertIn('--candidate-sha "${candidate_sha}"', source[metadata_index:preparer_index])
+        self.assertIn('--metadata-dir "${ROOT}/release/google-play/metadata/en-US"', source)
 
 
 if __name__ == "__main__":
