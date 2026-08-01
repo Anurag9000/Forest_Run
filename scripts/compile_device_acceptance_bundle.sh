@@ -39,4 +39,5 @@ fi
   "${OUTPUT_PATH}"
 "${PYTHON_BIN}" "${ROOT}/scripts/validate_manifest_scenario_traces.py" \
   "${OUTPUT_PATH}" \
-  --root "${ROOT}"
+  --root "${ROOT}" \
+  --require-at-least-one
