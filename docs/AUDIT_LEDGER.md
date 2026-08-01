@@ -28,35 +28,41 @@ Implemented:
 
 - `GameThread` supplies finite frame deltas capped at 50 ms.
 - Player, Menu, HUD, Rest/Game Over, Garden, camera, particles, dialogue, flavour text, sway, encounter scripts, and reset timing reject malformed/non-positive deltas.
-- Presentation owners cap lifecycle catch-up and recover previously poisoned finite state on the next valid frame where recovery is meaningful.
+- Face and costume-overlay animation clocks also cap direct updates to 50 ms and recover poisoned phases on the next valid frame.
+- Presentation owners cap lifecycle catch-up and recover previously poisoned finite state where recovery is meaningful.
 - Sprite animation advances in O(1), rejects invalid timing/FPS, and requires exact physical-frame divisibility.
 - Placeholder bitmap generation validates drawable geometry, detects multiplication overflow, caps allocation, and reuses paints.
 - Shared sizing, safe-content, cinematic, lighting, parallax, and layout builders reject or normalize malformed geometry.
+- `EntityFactory` gives all 19 entity families one finite positive geometry boundary and preserves valid spawn origins.
+- Global speed, Bloom, mercy, spawn-gap, biome-length, wind, catalogue, costume, and pacifist-route ordering assumptions have executable invariant tests.
 
 Bounded debt:
 
 - `GameView.update()` remains a large coordinator whose direct-call boundary still relies on the render-thread delta contract; production `GameThread` calls are bounded, but the coordinator should eventually be decomposed and given a narrow public admission layer.
+- `ParallaxBackground` still relies on finite production inputs from `GameThread` and `GameStateManager`; malformed direct/debug calls should eventually be normalized at its own public boundary after the large owner is decomposed.
 
-## 3. Garden economy, screen, and sanctuary
+## 3. Garden economy, screen, wardrobe, and sanctuary
 
 Implemented:
 
 - canonical Garden costs are centralized in `GardenEconomy`;
 - `GardenPurchaseManager` performs one synchronized committed progress-and-Seed transaction;
-- `GardenScreen` now invokes the atomic purchase boundary directly and adopts the returned persisted state as its only local source of truth;
+- `GardenScreen` invokes the atomic purchase boundary directly and adopts the returned persisted state as its only local source of truth;
 - the old screen-level split `saveGardenProgress`/`saveLifetimeSeeds` sequence is prohibited by CI source contract;
 - load/refresh clamp Garden progress and Seed state;
 - malformed taps cannot invoke run/back/equip/purchase actions;
 - Garden frame time is finite, capped, and self-recovering;
 - Garden tests cover atomic purchase persistence, local state adoption, malformed touches, invalid deltas, lifecycle catch-up, and primary-save namespace isolation;
-- `GardenLayoutPlanner` owns the shared visual/touch geometry across supported landscape sizes;
+- `GardenLayoutPlanner` owns shared visual/touch geometry across supported landscape sizes;
 - return moments are consumed only on visible Garden entry;
-- Garden particles advance only while Garden is active.
+- Garden particles advance only while Garden is active;
+- `CostumeStyle.NONE` cannot persist as an unlocked reward or become a blank featured costume card;
+- locked active costumes and malformed wardrobe sets are repaired, while ordinary equipped/featured carry-over remains intact.
 
 Sanctuary arithmetic:
 
 - the precedence-prone chained `+ if ... else ...` atmosphere expressions were removed;
-- `SanctuaryAtmosphere` now composes fireflies, petals, Bloom patches, mist, lanterns, ground glow, and canopy shade as independent bounded modifiers;
+- `SanctuaryAtmosphere` composes fireflies, petals, Bloom patches, mist, lanterns, ground glow, and canopy shade as independent bounded modifiers;
 - pure tests cover simultaneous modifiers, additions plus subtractions, malformed restored counters, and output bounds;
 - planner integration tests verify exact baseline atmosphere publication.
 
@@ -77,6 +83,7 @@ Implemented:
 - Bloom conversion is exclusive from ordinary pass/unique-action/Orb rewards;
 - Seed Orbs validate lifecycle/geometry, claim terminally, stage inside a reachable visible band, and remain bounded;
 - entity spawn pacing is distance-based and finite;
+- opening guidance now replaces zero, negative, NaN, or infinite spawn intervals with a conservative positive cadence rather than permitting a spawn-every-frame loop;
 - unsafe heterogeneous entity pooling remains disabled;
 - entity encounter bounds drive pass/Bloom/shared lifecycle decisions.
 
@@ -92,11 +99,15 @@ Still requiring ordinary-play/hardware acceptance:
 Implemented:
 
 - startup save schema repair and future-schema compatibility storage;
-- unknown preference keys are preserved;
+- unknown preference keys and unknown future string sets are preserved;
 - invalid types/enums/sets and non-finite values are repaired;
+- known memory-page and history-mark sets reject non-string, blank, and oversized IDs, sort deterministically, and cap persisted cardinality;
+- malformed unlocked-costume sets remove `NONE` and invalid values;
 - incomplete run summaries are discarded rather than fabricated;
 - derived counters are bounded and saturating;
 - Forest mood, mercy, pacifist, Seed, score, time, and relationship-facing counters fail closed;
+- persistent-memory selectors clamp nonpositive caller minima to one, so untouched creatures and biomes cannot be featured;
+- persistent-memory tie-breaking is deterministic and repeat-killer severity uses `Long` arithmetic;
 - deterministic scenarios cannot contaminate permanent score, relationships, Garden, summaries, or ghosts;
 - ghost files are versioned, bounded, atomically written, and legacy-readable;
 - return-day identity uses the local calendar date.
@@ -115,11 +126,16 @@ Implemented:
 - Trust/Bond progression requires positive outcomes;
 - hits delay or strain relationships;
 - milestone rewards, home presence, rituals, repeat friends, strained bonds, and Garden traces are persisted and presented;
-- relationship-derived counters use bounded persistence values, keeping score products within integer range.
+- persistent input counters are bounded before relationship code reads them;
+- selector minima and tie-breaking outside the monolithic relationship owner are now fail-closed and deterministic.
 
 Bounded debt:
 
-- `RelationshipArcSystem.familiarityWarmth()` contains an authored-precedence defect similar to the former sanctuary arithmetic: later warmth modifiers can be nested inside preceding `else` branches instead of accumulating independently. The affected expression is isolated; the monolithic owner requires a carefully verified replacement or decomposition before changing it.
+- `RelationshipArcSystem.computeStage()` adds and multiplies persistent counters in `Int`; extreme valid bounded counters can still overflow stage scoring.
+- `RelationshipArcSystem.affinityScore()` has the same `Int` multiplication/addition risk and can invert ranking under extreme counters.
+- `RelationshipArcSystem.familiarityWarmth()` contains an authored-precedence defect similar to the former sanctuary arithmetic: later warmth modifiers are nested inside preceding `else` branches instead of accumulating independently.
+- `RelationshipArcSystem.strainedConsequence()` adds hit and tender-streak counters in `Int` and can overflow severity.
+- These functions are precisely isolated, but the surrounding file is a roughly 1,400-line authored dialogue catalogue. They require a verified checkout/patch path or decomposition before changing them without risking unrelated narrative loss.
 
 ## 7. Ghost recording, playback, and I/O
 
