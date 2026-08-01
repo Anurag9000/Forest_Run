@@ -88,7 +88,7 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
             with self.assertRaisesRegex(CaptureEvidenceError, "imageSha256 mismatch"):
                 self.load(wrong_hash)
 
-    def test_debug_package_activity_and_timezone_are_mandatory(self):
+    def test_debug_package_activity_and_utc_are_mandatory(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             wrong_package = self.write(
@@ -106,6 +106,11 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
                 self.evidence(capturedAtUtc="2026-07-30T12:00:00"),
                 "no-timezone.json",
             )
+            non_utc = self.write(
+                root,
+                self.evidence(capturedAtUtc="2026-07-30T17:30:00+05:30"),
+                "non-utc.json",
+            )
 
             with self.assertRaisesRegex(CaptureEvidenceError, "packageName mismatch"):
                 self.load(wrong_package)
@@ -113,8 +118,10 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
                 self.load(wrong_activity)
             with self.assertRaisesRegex(CaptureEvidenceError, "timezone"):
                 self.load(no_timezone)
+            with self.assertRaisesRegex(CaptureEvidenceError, "must use UTC"):
+                self.load(non_utc)
 
-    def test_candidate_and_apk_digests_require_exact_hex_lengths(self):
+    def test_candidate_apk_and_image_digests_require_exact_hex_lengths(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             bad_candidate = self.write(
@@ -127,11 +134,23 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
                 self.evidence(apkSha256="xyz"),
                 "bad-apk.json",
             )
+            bad_image = self.write(
+                root,
+                self.evidence(imageSha256="xyz"),
+                "bad-image.json",
+            )
 
             with self.assertRaisesRegex(CaptureEvidenceError, "40-character"):
                 self.load(bad_candidate)
-            with self.assertRaisesRegex(CaptureEvidenceError, "SHA-256"):
+            with self.assertRaisesRegex(CaptureEvidenceError, "apkSha256"):
                 self.load(bad_apk)
+            with self.assertRaisesRegex(CaptureEvidenceError, "imageSha256"):
+                self.load(bad_image, expected_image_sha256="xyz")
+            with self.assertRaisesRegex(CaptureEvidenceError, "expected_image_sha256"):
+                self.load(
+                    self.write(root, self.evidence(), "bad-expected.json"),
+                    expected_image_sha256="not-a-digest",
+                )
 
     def test_mixed_capture_identity_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
