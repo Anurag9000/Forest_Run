@@ -118,20 +118,23 @@ At least two distinct named reviewers are required for final visual/store approv
 Use [`scripts/compile_device_acceptance.py`](../scripts/compile_device_acceptance.py) to build the final manifest from a human-entered draft. In the draft:
 
 - keep candidate identity, certificate, version, signed status, and internal-track installation facts explicit;
-- record all device/session/scenario/performance/manual-review facts;
+- record the package, version, artifact digest, and certificate digest captured from the internal-store delivery path;
+- record every session's captured commit, artifact digest, version, certificate, signing state, and installation path;
+- record all device/scenario/performance/manual-review facts;
 - list each scenario's `evidence_files` as plain relative path strings;
-- do not type artifact or evidence SHA-256 values manually.
+- do not type the candidate-file or raw-evidence-file SHA-256 values that the compiler derives from local bytes.
 
 The compiler:
 
-1. hashes the actual candidate artifact;
-2. fills the matching store-delivery digest;
-3. binds every session build block to the same repository, branch, commit, version, artifact, certificate, signing state, and internal-store path;
-4. hashes every raw evidence file;
-5. invokes the strict validator before publication;
-6. writes the final manifest and optional summary atomically.
+1. hashes the actual candidate artifact and writes that digest only to the candidate artifact field;
+2. preserves the independently captured store-delivery and per-session build identity exactly as entered;
+3. hashes every raw evidence file;
+4. invokes the strict validator, which rejects any store/session identity that differs from the candidate;
+5. transactionally publishes the final manifest and optional summary, restoring previous outputs if publication is interrupted.
 
-The draft, final manifest, summary, artifact, and evidence tree share one root directory so all relative paths remain stable.
+The compiler deliberately does **not** copy candidate identity into store or session records. Doing so could conceal a stale local APK, a different internal-track artifact, or a mixed-device candidate set.
+
+The draft, final manifest, summary, artifact, and evidence tree share one root directory so all relative paths remain stable. The final manifest and summary must not overwrite the draft or each other.
 
 ```bash
 python scripts/compile_device_acceptance.py \
@@ -140,7 +143,7 @@ python scripts/compile_device_acceptance.py \
   --summary-output release-evidence/device-acceptance-summary.json
 ```
 
-Compilation cannot turn a failed scenario, exceeded threshold, incomplete device class, missing approval, or incorrect identity into a pass. It only derives candidate/build bindings and cryptographic hashes from existing files.
+Compilation cannot turn a failed scenario, exceeded threshold, incomplete device class, missing approval, or incorrect identity into a pass. It derives only the candidate-file and raw-evidence-file hashes; all observed store/session identity remains independent evidence.
 
 ## 8. Independent validation
 
