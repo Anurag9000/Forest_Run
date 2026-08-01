@@ -11,10 +11,12 @@ invent regression tolerances.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
 import tempfile
+import unicodedata
 from pathlib import Path
 from statistics import fmean
 from typing import Any, Mapping, Sequence
@@ -138,12 +140,51 @@ def _metric_distribution(values: Sequence[float]) -> dict[str, float | int]:
     }
 
 
-def _device_identity(session: Mapping[str, Any]) -> str:
+def _normalized_device_text(value: Any) -> str:
+    return unicodedata.normalize("NFKC", str(value)).strip().casefold()
+
+
+def _device_profile_id(session: Mapping[str, Any]) -> str:
     device = session["device"]
-    return "|".join(
-        str(device[key]).strip().casefold()
-        for key in ("manufacturer", "model", "build_fingerprint")
-    )
+    canonical = {
+        "class": _normalized_device_text(device["class"]),
+        "manufacturer": _normalized_device_text(device["manufacturer"]),
+        "model": _normalized_device_text(device["model"]),
+        "build_fingerprint": _normalized_device_text(device["build_fingerprint"]),
+        "sdk": int(device["sdk"]),
+        "ram_mb": int(device["ram_mb"]),
+        "refresh_millihz": round(float(device["refresh_hz"]) * 1_000),
+        "width_px": int(device["width_px"]),
+        "height_px": int(device["height_px"]),
+        "density_dpi": int(device["density_dpi"]),
+        "tablet": bool(device["tablet"]),
+        "cutout": bool(device["cutout"]),
+    }
+    encoded = json.dumps(
+        canonical,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _comparison_matrix_sha256(by_class: Mapping[str, Any]) -> str:
+    canonical = {
+        device_class: {
+            "session_count": summary["session_count"],
+            "device_profile_ids": summary["device_profile_ids"],
+        }
+        for device_class, summary in sorted(by_class.items())
+    }
+    encoded = json.dumps(
+        canonical,
+        separators=(",", ":"),
+        sort_keys=True,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _trace_contracts(trace_validation: Mapping[str, Any]) -> list[dict[str, str]]:
@@ -193,9 +234,11 @@ def _summarize_manifest(
                 metric_values[metric].append(value)
                 global_values[metric].append(value)
 
+        device_profile_ids = sorted({_device_profile_id(session) for session in class_sessions})
         by_class[device_class] = {
             "session_count": len(class_sessions),
-            "physical_device_count": len({_device_identity(session) for session in class_sessions}),
+            "physical_device_count": len(device_profile_ids),
+            "device_profile_ids": device_profile_ids,
             "session_ids": sorted(session["session_id"] for session in class_sessions),
             "metrics": {
                 metric: _metric_distribution(metric_values[metric])
@@ -229,6 +272,7 @@ def _summarize_manifest(
         "session_count": validation.session_count,
         "evidence_file_count": validation.evidence_file_count,
         "device_class_count": len(required_classes),
+        "comparison_matrix_sha256": _comparison_matrix_sha256(by_class),
         "trace_count": trace_validation["trace_count"],
         "trace_contracts": _trace_contracts(trace_validation),
         "duration_seconds": _metric_distribution(durations),
@@ -274,6 +318,27 @@ def _compare(
             f"candidate={sorted(candidate_contracts)}, baseline={sorted(baseline_contracts)}"
         )
 
+    for device_class in sorted(candidate_classes):
+        candidate_class = candidate["by_device_class"][device_class]
+        baseline_class = baseline["by_device_class"][device_class]
+        if candidate_class["session_count"] != baseline_class["session_count"]:
+            raise AggregationError(
+                f"candidate and baseline session counts differ for {device_class}: "
+                f"candidate={candidate_class['session_count']}, "
+                f"baseline={baseline_class['session_count']}"
+            )
+        if set(candidate_class["device_profile_ids"]) != set(
+            baseline_class["device_profile_ids"]
+        ):
+            raise AggregationError(
+                f"candidate and baseline device-profile sets differ for {device_class}"
+            )
+
+    if candidate["comparison_matrix_sha256"] != baseline["comparison_matrix_sha256"]:
+        raise AggregationError(
+            "candidate and baseline comparison-matrix hashes differ after profile validation"
+        )
+
     class_deltas: dict[str, Any] = {}
     for device_class in sorted(candidate_classes):
         candidate_metrics = candidate["by_device_class"][device_class]["metrics"]
@@ -291,6 +356,7 @@ def _compare(
     return {
         "baseline_commit_sha": baseline["candidate"]["commit_sha"],
         "baseline_artifact_sha256": baseline["candidate"]["artifact_sha256"],
+        "comparison_matrix_sha256": candidate["comparison_matrix_sha256"],
         "trace_contracts": candidate["trace_contracts"],
         "global_metric_deltas": {
             metric: {
