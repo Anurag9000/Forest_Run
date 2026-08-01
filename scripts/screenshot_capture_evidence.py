@@ -57,25 +57,35 @@ def _load_object(path: Path) -> dict[str, Any]:
     except FileNotFoundError as exc:
         raise CaptureEvidenceError(f"Missing capture evidence: {path}") from exc
     except OSError as exc:
-        raise CaptureEvidenceError(f"Could not read capture evidence {path}: {exc}") from exc
+        raise CaptureEvidenceError(
+            f"Could not read capture evidence {path}: {exc}"
+        ) from exc
     except json.JSONDecodeError as exc:
-        raise CaptureEvidenceError(f"Invalid JSON in capture evidence {path}: {exc}") from exc
+        raise CaptureEvidenceError(
+            f"Invalid JSON in capture evidence {path}: {exc}"
+        ) from exc
     if not isinstance(parsed, dict):
-        raise CaptureEvidenceError(f"Capture evidence must be a JSON object: {path}")
+        raise CaptureEvidenceError(
+            f"Capture evidence must be a JSON object: {path}"
+        )
     return parsed
 
 
 def _string(source: dict[str, Any], key: str, path: Path) -> str:
     value = source.get(key)
     if not isinstance(value, str) or not value.strip():
-        raise CaptureEvidenceError(f"{path}: {key} must be a non-blank string")
+        raise CaptureEvidenceError(
+            f"{path}: {key} must be a non-blank string"
+        )
     return value.strip()
 
 
 def _integer(source: dict[str, Any], key: str, path: Path) -> int:
     value = source.get(key)
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-        raise CaptureEvidenceError(f"{path}: {key} must be a positive integer")
+        raise CaptureEvidenceError(
+            f"{path}: {key} must be a positive integer"
+        )
     return value
 
 
@@ -85,7 +95,9 @@ def _number(source: dict[str, Any], key: str, path: Path) -> float:
         raise CaptureEvidenceError(f"{path}: {key} must be numeric")
     number = float(value)
     if not 0.0 <= number <= 60.0:
-        raise CaptureEvidenceError(f"{path}: {key} must be between 0 and 60 seconds")
+        raise CaptureEvidenceError(
+            f"{path}: {key} must be between 0 and 60 seconds"
+        )
     return number
 
 
@@ -93,9 +105,17 @@ def _parse_utc(value: str, path: Path) -> None:
     try:
         parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise CaptureEvidenceError(f"{path}: capturedAtUtc is not ISO-8601") from exc
+        raise CaptureEvidenceError(
+            f"{path}: capturedAtUtc is not ISO-8601"
+        ) from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise CaptureEvidenceError(f"{path}: capturedAtUtc must include a timezone")
+        raise CaptureEvidenceError(
+            f"{path}: capturedAtUtc must include a timezone"
+        )
+    if parsed.utcoffset() != dt.timedelta(0):
+        raise CaptureEvidenceError(
+            f"{path}: capturedAtUtc must use UTC offset +00:00 or Z"
+        )
 
 
 def load_capture_evidence(
@@ -131,6 +151,24 @@ def load_capture_evidence(
     )
     _parse_utc(evidence.captured_at_utc, path)
 
+    expected_image_digest = expected_image_sha256.lower()
+    if HEX_64.fullmatch(expected_image_digest) is None:
+        raise CaptureEvidenceError(
+            "expected_image_sha256 must be a SHA-256 hex digest"
+        )
+    if HEX_40.fullmatch(evidence.candidate_sha) is None:
+        raise CaptureEvidenceError(
+            f"{path}: candidateSha must be a 40-character Git SHA"
+        )
+    if HEX_64.fullmatch(evidence.apk_sha256) is None:
+        raise CaptureEvidenceError(
+            f"{path}: apkSha256 must be a SHA-256 hex digest"
+        )
+    if HEX_64.fullmatch(evidence.image_sha256) is None:
+        raise CaptureEvidenceError(
+            f"{path}: imageSha256 must be a SHA-256 hex digest"
+        )
+
     expected_marker = (
         f"{READY_PREFIX} scenario={expected_scenario} mode={EXPECTED_RUN_MODE}"
     )
@@ -139,7 +177,7 @@ def load_capture_evidence(
         "scenario": (evidence.scenario, expected_scenario),
         "runMode": (evidence.run_mode, EXPECTED_RUN_MODE),
         "readinessMarker": (evidence.readiness_marker, expected_marker),
-        "imageSha256": (evidence.image_sha256, expected_image_sha256.lower()),
+        "imageSha256": (evidence.image_sha256, expected_image_digest),
         "width": (evidence.width, expected_width),
         "height": (evidence.height, expected_height),
         "packageName": (evidence.package_name, EXPECTED_PACKAGE_NAME),
@@ -148,13 +186,9 @@ def load_capture_evidence(
     for field, (actual, expected) in comparisons.items():
         if actual != expected:
             raise CaptureEvidenceError(
-                f"{path}: {field} mismatch; expected {expected!r}, found {actual!r}"
+                f"{path}: {field} mismatch; expected {expected!r}, "
+                f"found {actual!r}"
             )
-
-    if HEX_40.fullmatch(evidence.candidate_sha) is None:
-        raise CaptureEvidenceError(f"{path}: candidateSha must be a 40-character Git SHA")
-    if HEX_64.fullmatch(evidence.apk_sha256) is None:
-        raise CaptureEvidenceError(f"{path}: apkSha256 must be a SHA-256 hex digest")
     return evidence
 
 
@@ -181,5 +215,6 @@ def require_same_capture_identity(
             if left != right
         ]
         raise CaptureEvidenceError(
-            f"{candidate_path}: mixed capture identity for {', '.join(differing)}"
+            f"{candidate_path}: mixed capture identity for "
+            f"{', '.join(differing)}"
         )
