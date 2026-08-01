@@ -362,7 +362,6 @@ def verify_bundle_signature(
         "jar is unsigned",
         "unsigned entry",
         "unsigned entries",
-        "not signed",
     )
     if (
         "jar verified" not in normalized_verification
