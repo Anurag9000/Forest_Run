@@ -76,23 +76,26 @@ class DeterministicScenarioTraceEvidenceStoreTest {
         }
     }
 
-    private fun evidence(capturedAtUtcMs: Long): DeterministicScenarioTraceEvidence? =
-        DeterministicScenarioTraceEvidenceCodec.encode(
+    private fun evidence(capturedAtUtcMs: Long): DeterministicScenarioTraceEvidence? {
+        val scenario = EncounterScenario.CACTUS_READ
+        val events = DebugScenarioScript.stepsFor(scenario).mapIndexed { index, step ->
+            DeterministicScenarioTraceEvent(
+                scenario = scenario,
+                sequence = index,
+                scheduledAtSeconds = step.atSeconds,
+                dispatchedAtSeconds = step.atSeconds + 0.02f,
+                action = step.action
+            )
+        }
+        return DeterministicScenarioTraceEvidenceCodec.encode(
             snapshot = DeterministicScenarioTraceSnapshot(
-                scenario = EncounterScenario.CACTUS_READ,
-                events = listOf(
-                    DeterministicScenarioTraceEvent(
-                        scenario = EncounterScenario.CACTUS_READ,
-                        sequence = 0,
-                        scheduledAtSeconds = 1f,
-                        dispatchedAtSeconds = 1.1f,
-                        action = DebugScenarioAction.HOLD_JUMP_START
-                    )
-                ),
+                scenario = scenario,
+                events = events,
                 overflowed = false
             ),
             candidateCommitSha = "a".repeat(40),
             artifactSha256 = "b".repeat(64),
             capturedAtUtcMs = capturedAtUtcMs
         )
+    }
 }
