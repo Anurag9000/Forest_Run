@@ -1,3 +1,4 @@
+import stat
 import tempfile
 import unittest
 import warnings
@@ -28,13 +29,17 @@ class FakeRunner:
 
 
 class ReleaseArtifactVerifierTest(unittest.TestCase):
+    @staticmethod
+    def write_required_entries(archive: zipfile.ZipFile, include_dex: bool = True) -> None:
+        archive.writestr("BundleConfig.pb", b"config")
+        archive.writestr("base/manifest/AndroidManifest.xml", b"manifest")
+        if include_dex:
+            archive.writestr("base/dex/classes.dex", b"dex")
+
     def create_bundle(self, root: Path, include_dex=True):
         bundle = root / "app-release.aab"
         with zipfile.ZipFile(bundle, "w") as archive:
-            archive.writestr("BundleConfig.pb", b"config")
-            archive.writestr("base/manifest/AndroidManifest.xml", b"manifest")
-            if include_dex:
-                archive.writestr("base/dex/classes.dex", b"dex")
+            self.write_required_entries(archive, include_dex)
         return bundle
 
     def test_bundle_structure_requires_manifest_config_and_dex(self):
@@ -72,17 +77,37 @@ class ReleaseArtifactVerifierTest(unittest.TestCase):
                 verify_bundle_structure(bundle)
 
     def test_bundle_structure_rejects_unsafe_entry_names(self):
+        unsafe_names = (
+            "../outside.txt",
+            "C:/outside.txt",
+            "base/assets/file:stream",
+            "base/assets/bad\x01name",
+        )
         with tempfile.TemporaryDirectory() as temporary_directory:
-            bundle = Path(temporary_directory, "unsafe.aab")
-            with zipfile.ZipFile(bundle, "w") as archive:
-                archive.writestr("BundleConfig.pb", b"config")
-                archive.writestr(
-                    "base/manifest/AndroidManifest.xml", b"manifest"
-                )
-                archive.writestr("base/dex/classes.dex", b"dex")
-                archive.writestr("../outside.txt", b"unsafe")
+            root = Path(temporary_directory)
+            for index, unsafe_name in enumerate(unsafe_names):
+                bundle = root / f"unsafe-{index}.aab"
+                with zipfile.ZipFile(bundle, "w") as archive:
+                    self.write_required_entries(archive)
+                    archive.writestr(unsafe_name, b"unsafe")
 
-            with self.assertRaisesRegex(ArtifactVerificationError, "unsafe ZIP"):
+                with self.assertRaisesRegex(
+                    ArtifactVerificationError,
+                    "unsafe ZIP|control character",
+                ):
+                    verify_bundle_structure(bundle)
+
+    def test_bundle_structure_rejects_symbolic_link_entries(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            bundle = Path(temporary_directory, "symlink.aab")
+            with zipfile.ZipFile(bundle, "w") as archive:
+                self.write_required_entries(archive)
+                link = zipfile.ZipInfo("base/assets/link")
+                link.create_system = 3
+                link.external_attr = (stat.S_IFLNK | 0o777) << 16
+                archive.writestr(link, "../../outside")
+
+            with self.assertRaisesRegex(ArtifactVerificationError, "symbolic-link"):
                 verify_bundle_structure(bundle)
 
     def test_bundle_structure_rejects_empty_required_and_dex_entries(self):
@@ -175,7 +200,9 @@ class ReleaseArtifactVerifierTest(unittest.TestCase):
             runner = FakeRunner(
                 {
                     (jarsigner, "-verify", "-verbose", "-certs", str(bundle)): CommandResult(
-                        0, "jar verified.\n", ""
+                        0,
+                        "jar verified.\nWarning: signer certificate is self-signed.\n",
+                        "",
                     ),
                     (keytool, "-printcert", "-jarfile", str(bundle)): CommandResult(
                         0, f"Certificate fingerprints:\n SHA256: {fingerprint}\n", ""
@@ -214,6 +241,37 @@ class ReleaseArtifactVerifierTest(unittest.TestCase):
                     "secret-value",
                     environment["FOREST_RUN_RELEASE_VERIFY_STORE_PASSWORD"],
                 )
+
+    def test_unsigned_entry_warning_is_rejected_even_when_jarsigner_says_verified(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            bundle = self.create_bundle(root)
+            keystore = root / "upload.jks"
+            keystore.write_bytes(b"keystore")
+            jarsigner = "/jdk/jarsigner"
+            runner = FakeRunner(
+                {
+                    (jarsigner, "-verify", "-verbose", "-certs", str(bundle)): CommandResult(
+                        0,
+                        "jar verified.\nWarning: This jar contains unsigned entries.\n",
+                        "",
+                    )
+                }
+            )
+
+            with self.assertRaisesRegex(ArtifactVerificationError, "completely"):
+                verify_bundle_signature(
+                    bundle,
+                    keystore=keystore,
+                    alias="upload",
+                    store_password="secret-value",
+                    allow_unsigned=False,
+                    runner=runner,
+                    jarsigner=jarsigner,
+                    keytool="/jdk/keytool",
+                )
+
+            self.assertEqual(1, len(runner.calls))
 
     def test_unsigned_override_is_explicitly_reported(self):
         signature = verify_bundle_signature(
