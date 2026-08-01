@@ -37,9 +37,13 @@ class DeviceAcceptanceBundleEntrypointContractTest(unittest.TestCase):
         self.assertIn('"${OUTPUT_PATH}"', output_slice)
         self.assertIn('"${SUMMARY_PATH}"', output_slice)
 
-    def test_final_manifest_is_independently_revalidated(self) -> None:
+    def test_final_manifest_and_referenced_traces_are_independently_revalidated(self) -> None:
         validator = self.source.index("validate_device_acceptance.py")
-        self.assertIn('"${OUTPUT_PATH}"', self.source[validator:])
+        traces = self.source.index("validate_manifest_scenario_traces.py")
+        self.assertLess(validator, traces)
+        self.assertIn('"${OUTPUT_PATH}"', self.source[validator:traces])
+        self.assertIn('"${OUTPUT_PATH}"', self.source[traces:])
+        self.assertIn('--root "${ROOT}"', self.source[traces:])
         self.assertIn("set -euo pipefail", self.source)
 
     def test_optional_generated_timestamp_is_forwarded_only_when_present(self) -> None:
