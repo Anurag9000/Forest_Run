@@ -50,7 +50,7 @@ Every required scenario must be marked passed and reference at least one unique 
 
 ## 4. Evidence-file integrity
 
-Each evidence reference is an object:
+Each final evidence reference is an object:
 
 ```json
 {
@@ -113,7 +113,38 @@ Allowed states are `pass` or a justified `not_applicable`. The final bundle addi
 
 At least two distinct named reviewers are required for final visual/store approval.
 
-## 7. Validation command
+## 7. Deterministic manifest compilation
+
+Use [`scripts/compile_device_acceptance.py`](../scripts/compile_device_acceptance.py) to build the final manifest from a human-entered draft. In the draft:
+
+- keep candidate identity, certificate, version, signed status, and internal-track installation facts explicit;
+- record all device/session/scenario/performance/manual-review facts;
+- list each scenario's `evidence_files` as plain relative path strings;
+- do not type artifact or evidence SHA-256 values manually.
+
+The compiler:
+
+1. hashes the actual candidate artifact;
+2. fills the matching store-delivery digest;
+3. binds every session build block to the same repository, branch, commit, version, artifact, certificate, signing state, and internal-store path;
+4. hashes every raw evidence file;
+5. invokes the strict validator before publication;
+6. writes the final manifest and optional summary atomically.
+
+The draft, final manifest, summary, artifact, and evidence tree share one root directory so all relative paths remain stable.
+
+```bash
+python scripts/compile_device_acceptance.py \
+  release-evidence/device-acceptance-draft.json \
+  release-evidence/device-acceptance.json \
+  --summary-output release-evidence/device-acceptance-summary.json
+```
+
+Compilation cannot turn a failed scenario, exceeded threshold, incomplete device class, missing approval, or incorrect identity into a pass. It only derives candidate/build bindings and cryptographic hashes from existing files.
+
+## 8. Independent validation
+
+The compiled bundle can be checked again independently:
 
 ```bash
 python scripts/validate_device_acceptance.py \
@@ -123,7 +154,7 @@ python scripts/validate_device_acceptance.py \
 
 Exit code `0` means only that the declared bundle is internally consistent, complete under its frozen policy, and cryptographically bound to existing evidence files. It does not independently prove that screenshots are aesthetically acceptable, tester statements are truthful, or store declarations are legally sufficient. Those remain accountable human approvals.
 
-## 8. Release decision
+## 9. Release decision
 
 A release candidate may advance only when:
 
