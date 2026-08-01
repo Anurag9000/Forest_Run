@@ -13,9 +13,12 @@ Implemented:
 - Published history is preserved; no force-push or history rewriting is part of the workflow.
 - Permanent Android validation is read-only, checks out the exact event SHA with credentials disabled, and never commits or pushes source.
 - Release preparation starts only from a clean named `main` worktree.
-- `scripts/verify_origin_main.sh` freshly fetches canonical `origin/main` and rejects stale or unpushed local main commits.
-- `scripts/prepare_main_release.sh` verifies local main and origin/main before preparation, freezes the full SHA, runs the existing release preparer, then re-verifies the same local and remote SHA afterward.
-- Python contract tests cover clean-main acceptance, dirty/untracked rejection, feature/detached rejection, SHA mismatch, missing origin, unpushed commits, and remote advancement.
+- `scripts/verify_origin_main.sh` freshly fetches canonical `origin/main`, rejects stale or unpushed local main commits, and verifies that the remote actually identifies `Anurag9000/Forest_Run` rather than merely being named `origin`.
+- Canonical-origin identity accepts normalized GitHub HTTPS, SCP-style SSH, and `ssh://` forms while rejecting unrelated remotes before fetch.
+- `scripts/prepare_main_release.sh` freezes the exact local/canonical SHA before preparation and re-verifies both after every release gate.
+- The canonical wrapper aligns `JAVA_HOME/bin` with the Java runtime Gradle will use instead of validating one runtime and building with another.
+- Prior human and machine release summaries are quarantined during preparation; any failure removes partial replacements and restores the last published pair.
+- Python and shell contract tests cover cleanliness, named-main ownership, detached/feature rejection, root/SHA mismatch, missing or unrelated origin, unpushed commits, remote advancement, Java alignment, preflight ordering, summary rollback, and final local/remote rechecks.
 
 Still required:
 
@@ -161,7 +164,7 @@ Still requiring physical evidence:
 - playback readability near dense hazards;
 - disk I/O under thermal and memory pressure.
 
-## 8. Performance and workload evidence
+## 8. Performance, physical-device, and store-delivery evidence
 
 Implemented:
 
@@ -172,14 +175,22 @@ Implemented:
 - means, p50/p95/p99, maximums, slow-frame ratio, heap observations, workload pressure, and ghost-write evidence;
 - `FramePerformanceReport` rejects impossible counts, percentile ordering, heap bounds, workload pairs, and ghost-write relationships before serializing JSON;
 - concurrent stress tests repeatedly construct reports from live snapshots;
-- deterministic physical profiling scenarios and Python evidence evaluators.
+- deterministic physical profiling scenarios and Python evidence evaluators;
+- physical profiling starts and ends on the same clean canonical `origin/main` SHA and records both local and remote candidate identities;
+- threshold manifests are hashed portably through Python, and evaluator input must satisfy complete frame, heap, workload, and ghost-I/O consistency before threshold comparison;
+- connected validation rejects malformed timeout configuration, missing prerequisites, ambiguous devices, and non-exact ADB serial matches while preserving application-test failures;
+- `validate_device_acceptance.py` fail-closes one signed internal-track candidate across required device classes, scenarios, thresholds, manual checks, approvals, package/version/certificate identity, and cryptographically hashed evidence files;
+- `compile_device_acceptance.py` converts tester-authored relative-path drafts into one candidate-bound, fully hashed, already validated manifest and optional summary through atomic publication;
+- device/store evidence contracts require unique evidence ownership, two distinct final reviewers, exact signed artifact and certificate matching, and no mixing of local APKs or different candidates.
 
 Still required:
 
-- measured thresholds for p95/p99/slow frames/memory/I/O;
-- representative older, mid-range, high-refresh, cutout/aspect, and tablet devices as supported;
+- measured and approved thresholds for p95/p99/slow frames/memory/I/O;
+- complete representative older, mid-range, high-refresh, cutout/aspect, and tablet sessions where supported;
 - allocation/GC, audio-thread, thermal, battery, and long-session traces;
-- remediation and remeasurement of any observed hotspot.
+- actual internal-track installation and certificate/package/version proof;
+- manual completion and approval of every declared physical/device/store result;
+- remediation and full-matrix remeasurement of any observed hotspot or correctness failure.
 
 ## 9. Audio, haptics, and comfort settings
 
@@ -204,39 +215,48 @@ Still requiring hardware acceptance:
 - vibration intensity and differentiation across OEMs;
 - reduced-motion adequacy without losing gameplay telegraphs.
 
-## 10. Assets, packaging, and release preparation
+## 10. Assets, store evidence, packaging, and release preparation
 
 Implemented:
 
 - final application identity `com.anurag9000.forestrun`;
 - API 36 compile/target configuration and Java 17 Android bytecode;
-- required sprites, font, and mandatory audio contracts;
-- mandatory raw resources must be addressable and nonempty;
-- sprite sheets must decode, divide exactly by frames, satisfy edge dimensions, and remain within a four-megapixel decode budget;
+- one cross-owner contract locks all 30 authored runtime asset paths, all 15 mandatory raw-audio resources, runtime release validation, and Play release requirements together;
+- checked-in PNGs receive bounded full signature/chunk/CRC/IHDR/zlib/scanline validation and filename-declared sprite-frame divisibility checks;
+- the checked-in SFNT font receives bounded table-directory, required-table, `head`, glyph, cmap, and name-record validation;
+- Ogg resources receive page-boundary, CRC, logical-stream sequence, BOS/EOS, and Vorbis/Opus identification checks; WAV, MP3, and M4A inputs receive structural container/frame checks;
+- runtime sprite sheets must decode, divide exactly by frames, satisfy edge dimensions, and remain within the runtime decode budget;
 - debug-only generated placeholders are prohibited in release;
-- R8 minification/resource shrinking and effective class-renaming checks;
-- release artifact identity, structure, signing, graphics, metadata, and screenshot tooling;
-- exact-origin-main release wrapper and tests.
+- generated store graphics are candidate-bound, generator/source-hash-bound, dimension/mode/hash verified, exact-set checked, and atomically published with rollback;
+- Play metadata is exact-file-set checked, UTF-8/NFC/LF normalized, whitespace/control/template sanitized, bounded, per-file hashed, candidate-bound, and atomically finalized;
+- screenshot capture builds a fresh exact-candidate APK, verifies exact scenario readiness and foreground Activity ownership around every screencap, structurally validates each PNG, atomically writes per-image sidecars, and atomically finalizes one shared capture session;
+- curated screenshots require exact manifest membership, unique scenario/title/image coverage, complete PNG integrity, and one shared candidate/APK/device/package/Activity/session identity;
+- release AAB verification covers ZIP safety/integrity, required module entries and DEX, application/version identity, complete JAR signing, configured certificate matching, and cross-platform unsafe entry names;
+- R8 minification/resource shrinking and effective application-class renaming are checked;
+- human and machine release summaries are independently verified against the current bundle/mapping hashes, candidate, screenshot evidence, final application identity, signing status, dry-run disclosures, and exact audio/graphics/metadata counts;
+- the canonical wrapper verifies source assets, graphics, metadata, summaries, local main, and canonical origin/main, with transactional restoration of prior summaries on failure;
+- `docs/STORE_EVIDENCE.md` documents generation, finalization, verification, invalidation, and the limits of automated evidence.
 
 Still required:
 
-- real upload credentials;
-- signed, minified artifact build and direct installation;
+- real upload credentials and upload-key access;
+- signed, minified artifact build and direct installation from that exact artifact;
 - internal-store delivery test and certificate/package/version verification;
 - final artwork/atlas/animation inspection, including Wolf;
-- final screenshots and metadata approval;
+- final screenshots and metadata human approval;
 - privacy, data-safety, content-rating, target-audience, and current Play-policy review.
 
 ## 11. Validation truth
 
-Locally verified during remediation:
+Locally verified during earlier remediation where runtime execution was available:
 
 - pure sanctuary atmosphere Kotlin model compilation and expected combined outputs;
 - Python local-main verifier tests;
 - Python origin/main local-remote repository tests.
 
-Not currently observable through the installed GitHub connector:
+Currently not executable or observable from this environment:
 
-- push-triggered GitHub Actions check-run conclusions for the latest `main` SHA.
+- a local repository checkout and the newly expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
+- push-triggered GitHub Actions check-run conclusions for the latest `main` SHA, because the installed connector exposes only pull-request-triggered workflow runs.
 
-Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Even after that, the project remains a feature-rich alpha until the physical-device, signed-artifact, visual, and store gates above are complete.
+Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. The new evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
