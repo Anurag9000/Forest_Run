@@ -66,6 +66,7 @@ class ContinuationSourceContractTest(unittest.TestCase):
         expected = (
             "scripts/aggregate_device_acceptance.py",
             "scripts/test_aggregate_device_acceptance.py",
+            "scripts/test_aggregate_device_acceptance_aliases.py",
             "scripts/aggregate_device_acceptance_bundle.sh",
             "scripts/test_aggregate_device_acceptance_bundle_contract.py",
             "docs/DEVICE_ACCEPTANCE_AGGREGATION.md",
@@ -75,6 +76,9 @@ class ContinuationSourceContractTest(unittest.TestCase):
                 self.assertTrue((ROOT / relative).is_file())
 
         wrapper = (ROOT / "scripts/aggregate_device_acceptance_bundle.sh").read_text(
+            encoding="utf-8"
+        )
+        aggregator = (ROOT / "scripts/aggregate_device_acceptance.py").read_text(
             encoding="utf-8"
         )
         self.assertLess(
@@ -87,6 +91,13 @@ class ContinuationSourceContractTest(unittest.TestCase):
         )
         self.assertIn("must not overwrite the candidate", wrapper)
         self.assertIn("must not overwrite the baseline", wrapper)
+        self.assertIn("os.path.samefile", aggregator)
+        self.assertIn("_manifest_protected_paths", aggregator)
+        self.assertIn("aggregate output must not overwrite protected source", aggregator)
+        self.assertGreaterEqual(
+            aggregator.count("_assert_output_is_separate(destination, protected_paths)"),
+            2,
+        )
 
     def test_strict_json_numeric_and_depth_boundaries_remain_present(self) -> None:
         parser = (ROOT / "scripts/strict_json.py").read_text(encoding="utf-8")
