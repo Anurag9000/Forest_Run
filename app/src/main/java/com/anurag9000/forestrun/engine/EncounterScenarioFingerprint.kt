@@ -6,11 +6,15 @@ import kotlin.math.roundToLong
 /** Stable SHA-256 identities for authored deterministic encounter definitions. */
 internal object EncounterScenarioFingerprint {
     private const val FORMAT_VERSION = 1
+    private const val TRACE_CONTRACT_FORMAT_VERSION = 1
     private const val MICROS_PER_SECOND = 1_000_000.0
     private const val MICRO_PIXELS_PER_PIXEL = 1_000_000.0
 
     fun sha256(scenario: EncounterScenario): String =
         sha256(canonicalBytes(scenario))
+
+    fun traceContractSha256(scenario: EncounterScenario): String =
+        sha256(traceContractCanonicalBytes(scenario))
 
     fun catalogueSha256(): String {
         val canonical = buildString {
@@ -39,6 +43,24 @@ internal object EncounterScenarioFingerprint {
                 appendLengthPrefixed(step.type.name)
                 append(pixelsToMicroPixels(step.xOffset)).append('\n')
                 appendLengthPrefixed(step.variant.name)
+            }
+        }
+        return canonical.toByteArray(Charsets.UTF_8)
+    }
+
+    fun traceContractCanonicalBytes(scenario: EncounterScenario): ByteArray {
+        val inputSteps = DebugScenarioScript.stepsFor(scenario)
+        val canonical = buildString(256 + inputSteps.size * 64) {
+            append("forest-run-scenario-trace-contract-v")
+                .append(TRACE_CONTRACT_FORMAT_VERSION)
+                .append('\n')
+            appendLengthPrefixed(scenario.name)
+            appendLengthPrefixed(sha256(scenario))
+            append(inputSteps.size).append('\n')
+            inputSteps.forEachIndexed { index, step ->
+                append(index).append('\n')
+                append(secondsToMicros(step.atSeconds)).append('\n')
+                appendLengthPrefixed(step.action.name)
             }
         }
         return canonical.toByteArray(Charsets.UTF_8)
