@@ -62,6 +62,16 @@ jobs:
           grep -q '@Synchronized' app/src/main/java/com/anurag9000/forestrun/engine/GhostIoTelemetry.kt
           test -f app/src/test/java/com/anurag9000/forestrun/engine/RuntimeWorkloadTelemetryTest.kt
 
+          test -f app/src/main/java/com/anurag9000/forestrun/engine/DeterministicScenarioTrace.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceTest.kt
+          grep -q 'DebugScenarioInputContract.validate' app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt
+          grep -q '!deltaTime.isFinite() || deltaTime <= 0f' app/src/main/java/com/anurag9000/forestrun/systems/GhostPlayer.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/systems/GhostPlayerMalformedDeltaAdmissionTest.kt
+          if grep -q 'lastParameterUpdateNs' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt; then
+            echo "EvaluationThrottle must remain the sole leitmotif interval gate." >&2
+            exit 1
+          fi
+
           test -f scripts/evaluate_performance_profiles.py
           test -f scripts/test_evaluate_performance_profiles.py
           test -f scripts/collect_performance_profiles.sh
@@ -95,11 +105,19 @@ jobs:
           test -f scripts/verify_curated_screenshot_set.py
           test -f scripts/test_verify_curated_screenshot_set.py
 
+          test -f scripts/strict_json.py
+          test -f scripts/test_strict_json.py
+          test -f scripts/test_strict_json_overflow.py
           test -f scripts/validate_device_acceptance.py
           test -f scripts/test_validate_device_acceptance.py
+          test -f scripts/test_device_acceptance_hardening.py
           test -f scripts/compile_device_acceptance.py
           test -f scripts/test_compile_device_acceptance.py
+          test -f scripts/aggregate_device_acceptance.py
+          test -f scripts/test_aggregate_device_acceptance.py
+          test -f scripts/test_leitmotif_throttle_contract.py
           test -f docs/DEVICE_ACCEPTANCE.md
+          test -f docs/DEVICE_ACCEPTANCE_AGGREGATION.md
           test -f docs/audits/2026-08-01_post_merge_audit.md
 
           python3 scripts/verify_release_source_assets.py --root .
