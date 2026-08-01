@@ -11,14 +11,22 @@ SCRIPT = ROOT / "scripts/aggregate_device_acceptance_bundle.sh"
 
 
 class AggregateDeviceAcceptanceBundleContractTest(unittest.TestCase):
-    def test_operator_orders_preflight_aggregation_and_output_verification(self) -> None:
+    def test_operator_orders_preflight_trace_validation_aggregation_and_output_verification(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")
         preflight = source.index('"${ROOT}/scripts/verify_strict_json_evidence.py"')
+        trace_validation = source.index(
+            '"${ROOT}/scripts/validate_manifest_scenario_traces.py"'
+        )
         aggregate = source.index('"${ROOT}/scripts/aggregate_device_acceptance.py"')
         output_verify = source.rindex('"${ROOT}/scripts/verify_strict_json_evidence.py"')
 
-        self.assertLess(preflight, aggregate)
+        self.assertLess(preflight, trace_validation)
+        self.assertLess(trace_validation, aggregate)
         self.assertLess(aggregate, output_verify)
+        self.assertGreaterEqual(
+            source.count('"${ROOT}/scripts/validate_manifest_scenario_traces.py"'),
+            2,
+        )
         self.assertIn("--baseline", source)
         self.assertIn("--output", source)
         self.assertIn("must not overwrite the candidate", source)
