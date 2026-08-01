@@ -120,7 +120,7 @@ def loads(
         )
     except StrictJsonError:
         raise
-    except (json.JSONDecodeError, RecursionError) as exc:
+    except (ValueError, RecursionError) as exc:
         raise StrictJsonError(f"invalid {label}: {exc}") from exc
     _validate_tree(value, depth=1, maximum_depth=maximum_depth)
     if require_object and not isinstance(value, dict):
