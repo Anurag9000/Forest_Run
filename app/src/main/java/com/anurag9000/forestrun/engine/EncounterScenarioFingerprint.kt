@@ -28,7 +28,7 @@ internal object EncounterScenarioFingerprint {
             append("forest-run-encounter-scenario-v").append(FORMAT_VERSION).append('\n')
             appendLengthPrefixed(scenario.name)
             appendLengthPrefixed(scenario.title)
-            appendLengthPrefixed(scenario.description)
+            appendLengthPrefixed(scenario.summary)
             append(if (scenario.startsWithBloom) '1' else '0').append('\n')
             append(scenario.steps.size).append('\n')
             scenario.steps.forEachIndexed { index, step ->
