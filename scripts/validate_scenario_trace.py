@@ -151,6 +151,10 @@ def validate_trace(
     if expected_scenario is not None and scenario != expected_scenario:
         raise ScenarioTraceError("scenario does not match the expected scenario")
     authored = _load_authored_contract(repository_root.expanduser().resolve(), scenario)
+    if not authored.input_steps:
+        raise ScenarioTraceError(
+            "scenario has no authored deterministic input script and cannot produce trace evidence"
+        )
 
     scenario_definition_sha = _lower_sha256(
         data["scenario_definition_sha256"],
