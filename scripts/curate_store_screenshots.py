@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from screenshot_capture_evidence import (
     CaptureEvidence,
@@ -15,25 +17,29 @@ from screenshot_capture_evidence import (
     require_same_capture_identity,
 )
 
-try:
-    from PIL import Image, ImageStat, UnidentifiedImageError
-except ImportError as exc:
-    raise SystemExit(
-        "Pillow is required. Install scripts/requirements.txt before curating screenshots."
-    ) from exc
-
 ROOT_DIR = Path(__file__).resolve().parent.parent
 SCREENSHOT_DIR = ROOT_DIR / "release" / "google-play" / "screenshots"
 RAW_DIR = SCREENSHOT_DIR / "raw"
 FINAL_DIR = SCREENSHOT_DIR / "final"
+STAGING_DIR = SCREENSHOT_DIR / ".final-staging"
+BACKUP_DIR = SCREENSHOT_DIR / ".final-backup"
 MANIFEST_PATH = SCREENSHOT_DIR / "curation_manifest.json"
 SUMMARY_PATH = SCREENSHOT_DIR / "CURATED_SET.md"
 
 MIN_WIDTH = 800
 MIN_HEIGHT = 480
+MAX_WIDTH = 7_680
+MAX_HEIGHT = 4_320
+MAX_FILE_BYTES = 50 * 1024 * 1024
 MIN_LUMA_STDDEV = 6.0
 NEAR_DUPLICATE_HAMMING_DISTANCE = 3
 SYSTEM_BAR_BAND_PX = 18
+HEX_64 = re.compile(r"[0-9a-fA-F]{64}")
+SCENARIO_TOKEN = re.compile(r"[A-Z][A-Z0-9_]*")
+
+_IMAGE = None
+_IMAGE_STAT = None
+_UNIDENTIFIED_IMAGE_ERROR = None
 
 
 @dataclass(frozen=True)
@@ -45,11 +51,30 @@ class ImageFacts:
     luma_stddev: float
 
 
-def load_manifest() -> dict:
+def _load_pillow():
+    global _IMAGE, _IMAGE_STAT, _UNIDENTIFIED_IMAGE_ERROR
+    if _IMAGE is not None:
+        return _IMAGE, _IMAGE_STAT, _UNIDENTIFIED_IMAGE_ERROR
+    try:
+        from PIL import Image, ImageStat, UnidentifiedImageError
+    except ImportError as exc:
+        raise SystemExit(
+            "Pillow is required. Install scripts/requirements.txt before curating screenshots."
+        ) from exc
+    Image.MAX_IMAGE_PIXELS = MAX_WIDTH * MAX_HEIGHT
+    _IMAGE = Image
+    _IMAGE_STAT = ImageStat
+    _UNIDENTIFIED_IMAGE_ERROR = UnidentifiedImageError
+    return _IMAGE, _IMAGE_STAT, _UNIDENTIFIED_IMAGE_ERROR
+
+
+def load_manifest() -> dict[str, Any]:
     try:
         value = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise SystemExit(f"Missing manifest: {MANIFEST_PATH}") from exc
+    except OSError as exc:
+        raise SystemExit(f"Could not read manifest {MANIFEST_PATH}: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise SystemExit(f"Invalid JSON in {MANIFEST_PATH}: {exc}") from exc
     if not isinstance(value, dict):
@@ -57,60 +82,85 @@ def load_manifest() -> dict:
     return value
 
 
-def validate_manifest(manifest: dict) -> list[dict]:
+def validate_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     items = manifest.get("screenshots")
     if not isinstance(items, list) or not items:
         raise SystemExit("Manifest must define a non-empty screenshots list")
 
     required = {"order", "raw_file", "final_file", "scenario", "title", "purpose"}
-    seen_orders: set[int] = set()
     seen_raw: set[str] = set()
     seen_final: set[str] = set()
     seen_scenarios: set[str] = set()
+    seen_titles: set[str] = set()
+    normalized: list[dict[str, Any]] = []
 
-    for item in items:
+    for index, item in enumerate(items):
+        label = f"Manifest screenshots[{index}]"
         if not isinstance(item, dict):
-            raise SystemExit(f"Manifest screenshot entry must be an object: {item!r}")
+            raise SystemExit(f"{label} must be an object")
         missing = sorted(required - item.keys())
         if missing:
-            raise SystemExit(f"Manifest entry missing keys {missing}: {item}")
+            raise SystemExit(f"{label} missing keys {missing}")
 
+        expected_order = index + 1
         order = item["order"]
-        if not isinstance(order, int) or order < 1:
-            raise SystemExit(f"Screenshot order must be a positive integer: {item}")
+        if isinstance(order, bool) or not isinstance(order, int) or order != expected_order:
+            raise SystemExit(
+                f"{label}.order must equal {expected_order}; found {order!r}"
+            )
+
+        values: dict[str, str] = {}
+        for key in ("raw_file", "final_file", "scenario", "title", "purpose"):
+            value = item[key]
+            if not isinstance(value, str) or not value.strip():
+                raise SystemExit(f"{label}.{key} must be a non-blank string")
+            values[key] = value.strip()
 
         for key in ("raw_file", "final_file"):
-            filename = item[key]
-            if not isinstance(filename, str) or Path(filename).name != filename:
-                raise SystemExit(f"{key} must be a plain filename: {filename!r}")
-            if Path(filename).suffix.lower() != ".png":
-                raise SystemExit(f"{key} must end in .png: {filename}")
+            filename = values[key]
+            if Path(filename).name != filename or Path(filename).suffix.lower() != ".png":
+                raise SystemExit(f"{label}.{key} must be a plain PNG filename: {filename!r}")
+        if SCENARIO_TOKEN.fullmatch(values["scenario"]) is None:
+            raise SystemExit(
+                f"{label}.scenario must be an uppercase scenario token: "
+                f"{values['scenario']!r}"
+            )
 
-        if order in seen_orders:
-            raise SystemExit(f"Duplicate screenshot order: {order}")
-        if item["raw_file"] in seen_raw:
-            raise SystemExit(f"Duplicate raw filename: {item['raw_file']}")
-        if item["final_file"] in seen_final:
-            raise SystemExit(f"Duplicate final filename: {item['final_file']}")
-        if item["scenario"] in seen_scenarios:
-            raise SystemExit(f"Duplicate scenario: {item['scenario']}")
+        allow_dark_bars = item.get("allow_dark_bars", False)
+        if not isinstance(allow_dark_bars, bool):
+            raise SystemExit(f"{label}.allow_dark_bars must be boolean when present")
 
-        seen_orders.add(order)
-        seen_raw.add(item["raw_file"])
-        seen_final.add(item["final_file"])
-        seen_scenarios.add(item["scenario"])
+        expected_hash = item.get("sha256")
+        if expected_hash is not None:
+            if not isinstance(expected_hash, str) or HEX_64.fullmatch(expected_hash) is None:
+                raise SystemExit(f"{label}.sha256 must be a SHA-256 hex digest")
+            expected_hash = expected_hash.lower()
 
-    sorted_items = sorted(items, key=lambda entry: entry["order"])
-    expected_orders = list(range(1, len(sorted_items) + 1))
-    actual_orders = [entry["order"] for entry in sorted_items]
-    if actual_orders != expected_orders:
-        raise SystemExit(
-            f"Screenshot order must be contiguous starting at 1: got {actual_orders}"
+        duplicate_fields = (
+            ("raw_file", values["raw_file"].casefold(), seen_raw),
+            ("final_file", values["final_file"].casefold(), seen_final),
+            ("scenario", values["scenario"].casefold(), seen_scenarios),
+            ("title", values["title"].casefold(), seen_titles),
         )
-    return sorted_items
+        for field, key, seen in duplicate_fields:
+            if key in seen:
+                raise SystemExit(f"Duplicate screenshot {field}: {values[field]}")
+            seen.add(key)
+
+        normalized.append(
+            {
+                **item,
+                **values,
+                "order": order,
+                "allow_dark_bars": allow_dark_bars,
+                **({"sha256": expected_hash} if expected_hash is not None else {}),
+            }
+        )
+    return normalized
 
 
-def difference_hash(image: Image.Image) -> int:
+def difference_hash(image) -> int:
+    Image, _, _ = _load_pillow()
     reduced = image.convert("L").resize((9, 8), Image.Resampling.LANCZOS)
     pixels = list(reduced.getdata())
     value = 0
@@ -127,7 +177,8 @@ def hamming_distance(left: int, right: int) -> int:
     return (left ^ right).bit_count()
 
 
-def band_is_uniform_dark(image: Image.Image, top: bool) -> bool:
+def band_is_uniform_dark(image, top: bool) -> bool:
+    _, ImageStat, _ = _load_pillow()
     band_height = min(SYSTEM_BAR_BAND_PX, max(1, image.height // 20))
     box = (
         (0, 0, image.width, band_height)
@@ -143,10 +194,16 @@ def band_is_uniform_dark(image: Image.Image, top: bool) -> bool:
 
 
 def inspect_image(path: Path, allow_dark_bars: bool) -> ImageFacts:
+    Image, ImageStat, UnidentifiedImageError = _load_pillow()
     if not path.is_file():
         raise SystemExit(f"Missing raw screenshot: {path}")
-    if path.stat().st_size == 0:
+    file_size = path.stat().st_size
+    if file_size <= 0:
         raise SystemExit(f"Raw screenshot is empty: {path}")
+    if file_size > MAX_FILE_BYTES:
+        raise SystemExit(
+            f"Raw screenshot exceeds {MAX_FILE_BYTES} bytes: {path} is {file_size} bytes"
+        )
 
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     try:
@@ -159,6 +216,11 @@ def inspect_image(path: Path, allow_dark_bars: bool) -> ImageFacts:
                 raise SystemExit(
                     f"Screenshot too small: {path} is {width}x{height}; "
                     f"minimum is {MIN_WIDTH}x{MIN_HEIGHT}"
+                )
+            if width > MAX_WIDTH or height > MAX_HEIGHT:
+                raise SystemExit(
+                    f"Screenshot too large: {path} is {width}x{height}; "
+                    f"maximum is {MAX_WIDTH}x{MAX_HEIGHT}"
                 )
             if width <= height:
                 raise SystemExit(f"Screenshot must be landscape: {path} is {width}x{height}")
@@ -190,25 +252,34 @@ def inspect_image(path: Path, allow_dark_bars: bool) -> ImageFacts:
         raise SystemExit(f"Unreadable or corrupt PNG: {path}: {exc}") from exc
 
 
-def clear_final_directory() -> None:
+def _remove_path(path: Path) -> None:
+    if path.is_dir():
+        shutil.rmtree(path)
+    elif path.exists():
+        path.unlink()
+
+
+def _publish_staged_directory() -> None:
+    _remove_path(BACKUP_DIR)
     if FINAL_DIR.exists():
-        for child in FINAL_DIR.iterdir():
-            if child.is_dir():
-                shutil.rmtree(child)
-            else:
-                child.unlink()
-    FINAL_DIR.mkdir(parents=True, exist_ok=True)
+        FINAL_DIR.replace(BACKUP_DIR)
+    try:
+        STAGING_DIR.replace(FINAL_DIR)
+    except BaseException:
+        if not FINAL_DIR.exists() and BACKUP_DIR.exists():
+            BACKUP_DIR.replace(FINAL_DIR)
+        raise
+    _remove_path(BACKUP_DIR)
 
 
-def curate(items: list[dict]) -> list[tuple[dict, ImageFacts, CaptureEvidence]]:
-    clear_final_directory()
-    copied: list[tuple[dict, ImageFacts, CaptureEvidence]] = []
+def curate(items: list[dict[str, Any]]) -> list[tuple[dict[str, Any], ImageFacts, CaptureEvidence]]:
+    validated: list[tuple[dict[str, Any], ImageFacts, CaptureEvidence, Path, Path]] = []
     expected_dimensions: tuple[int, int] | None = None
     baseline_evidence: CaptureEvidence | None = None
 
     for item in items:
         raw_path = RAW_DIR / item["raw_file"]
-        facts = inspect_image(raw_path, allow_dark_bars=bool(item.get("allow_dark_bars", False)))
+        facts = inspect_image(raw_path, allow_dark_bars=item["allow_dark_bars"])
         evidence_path = raw_path.with_suffix(".capture.json")
         try:
             evidence = load_capture_evidence(
@@ -235,7 +306,7 @@ def curate(items: list[dict]) -> list[tuple[dict, ImageFacts, CaptureEvidence]]:
                 f"{expected_dimensions[0]}x{expected_dimensions[1]}"
             )
 
-        for previous_item, previous_facts, _ in copied:
+        for previous_item, previous_facts, _, _, _ in validated:
             if facts.sha256 == previous_facts.sha256:
                 raise SystemExit(
                     f"Exact duplicate screenshots: {item['raw_file']} and "
@@ -257,18 +328,28 @@ def curate(items: list[dict]) -> list[tuple[dict, ImageFacts, CaptureEvidence]]:
                 f"SHA-256 mismatch for {raw_path}: expected {expected_hash}, got {facts.sha256}"
             )
 
-        target_path = FINAL_DIR / item["final_file"]
-        target_evidence_path = target_path.with_suffix(".capture.json")
-        shutil.copy2(raw_path, target_path)
-        shutil.copy2(evidence_path, target_evidence_path)
-        copied.append((item, facts, evidence))
+        validated.append((item, facts, evidence, raw_path, evidence_path))
 
-    if not copied:
+    if not validated:
         raise SystemExit("No screenshots were curated")
-    return copied
+
+    _remove_path(STAGING_DIR)
+    STAGING_DIR.mkdir(parents=True, exist_ok=False)
+    try:
+        for item, _, _, raw_path, evidence_path in validated:
+            target_path = STAGING_DIR / item["final_file"]
+            target_evidence_path = target_path.with_suffix(".capture.json")
+            shutil.copy2(raw_path, target_path)
+            shutil.copy2(evidence_path, target_evidence_path)
+        _publish_staged_directory()
+    except BaseException:
+        _remove_path(STAGING_DIR)
+        raise
+
+    return [(item, facts, evidence) for item, facts, evidence, _, _ in validated]
 
 
-def write_summary(copied: list[tuple[dict, ImageFacts, CaptureEvidence]]) -> None:
+def write_summary(copied: list[tuple[dict[str, Any], ImageFacts, CaptureEvidence]]) -> None:
     baseline = copied[0][2]
     lines = [
         "# Curated Screenshot Set",
@@ -282,10 +363,11 @@ def write_summary(copied: list[tuple[dict, ImageFacts, CaptureEvidence]]) -> Non
         f"- Capture device: `{baseline.device_serial}`",
         f"- Package: `{baseline.package_name}`",
         "",
-        "Automated checks cover PNG integrity, dimensions, orientation, blank images, "
-        "uniform black edge bands, exact duplicates, near duplicates, verified scenario-ready "
-        "markers, image hashes, candidate/APK identity, run mode, package, and device consistency. "
-        "Marketing quality and truthful visual interpretation still require human review.",
+        "Automated checks cover PNG integrity, dimensions, orientation, size bounds, "
+        "blank images, uniform black edge bands, exact duplicates, near duplicates, "
+        "verified scenario-ready markers, image hashes, candidate/APK identity, run mode, "
+        "package, and device consistency. Marketing quality and truthful visual "
+        "interpretation still require human review.",
         "",
         "## Final Set",
         "",
