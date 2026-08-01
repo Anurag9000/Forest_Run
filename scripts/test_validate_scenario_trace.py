@@ -79,7 +79,7 @@ class ValidateScenarioTraceTest(unittest.TestCase):
 
         event_extra = valid_trace()
         event_extra["events"][0]["invented"] = 1
-        self.invalid(event_extra, "events\\[0\\].*unrecognized")
+        self.invalid(event_extra, r"events\[0\].*unrecognized")
 
     def test_identity_and_scenario_must_match_canonical_expectations(self) -> None:
         payload = valid_trace()
