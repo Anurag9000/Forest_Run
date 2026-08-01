@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import scenario_source_contract as source_contract
 import validate_manifest_scenario_traces as manifest_traces
 from test_validate_device_acceptance import (
     ARTIFACT_SHA,
@@ -16,32 +17,30 @@ from test_validate_device_acceptance import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+AUTHORED = source_contract.load_trace_contract(ROOT, "CACTUS_READ")
 
 
 def trace_payload(*, commit: str = SHA, artifact: str = ARTIFACT_SHA) -> dict:
+    events = [
+        {
+            "sequence": index,
+            "scheduled_at_micros": step.at_micros,
+            "dispatched_at_micros": step.at_micros + 20_000,
+            "lateness_micros": 20_000,
+            "action": step.action,
+        }
+        for index, step in enumerate(AUTHORED.input_steps)
+    ]
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "candidate_commit_sha": commit,
         "artifact_sha256": artifact,
         "captured_at_utc_ms": 1_775_000_000_000,
         "scenario": "CACTUS_READ",
-        "event_count": 2,
-        "events": [
-            {
-                "sequence": 0,
-                "scheduled_at_micros": 3_180_000,
-                "dispatched_at_micros": 3_200_000,
-                "lateness_micros": 20_000,
-                "action": "HOLD_JUMP_START",
-            },
-            {
-                "sequence": 1,
-                "scheduled_at_micros": 3_480_000,
-                "dispatched_at_micros": 3_500_000,
-                "lateness_micros": 20_000,
-                "action": "HOLD_JUMP_END",
-            },
-        ],
+        "scenario_definition_sha256": AUTHORED.scenario_definition_sha256,
+        "trace_contract_sha256": AUTHORED.trace_contract_sha256,
+        "event_count": len(events),
+        "events": events,
     }
 
 
@@ -64,7 +63,7 @@ def attach_trace(root: Path, bundle: dict, payload: dict) -> Path:
 
 
 class ValidateManifestScenarioTracesTest(unittest.TestCase):
-    def test_valid_referenced_trace_is_bound_to_candidate_and_artifact(self) -> None:
+    def test_valid_referenced_trace_is_bound_to_candidate_artifact_and_contract(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manifest = attach_trace(root, valid_bundle(), trace_payload())
@@ -79,6 +78,10 @@ class ValidateManifestScenarioTracesTest(unittest.TestCase):
             self.assertEqual(1, summary["trace_count"])
             self.assertEqual("CACTUS_READ", summary["traces"][0]["trace_scenario"])
             self.assertEqual("ordinary_play_15m", summary["traces"][0]["acceptance_scenario"])
+            self.assertEqual(
+                AUTHORED.trace_contract_sha256,
+                summary["traces"][0]["trace_contract_sha256"],
+            )
 
     def test_structurally_valid_but_wrong_candidate_trace_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -110,6 +113,22 @@ class ValidateManifestScenarioTracesTest(unittest.TestCase):
             with self.assertRaisesRegex(
                 manifest_traces.ManifestTraceError,
                 "does not match the expected artifact",
+            ):
+                manifest_traces.validate_manifest_traces(
+                    manifest,
+                    repository_root=ROOT,
+                )
+
+    def test_forged_contract_hash_is_rejected_even_when_manifest_hash_matches(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            payload = trace_payload()
+            payload["trace_contract_sha256"] = "8" * 64
+            manifest = attach_trace(root, valid_bundle(), payload)
+
+            with self.assertRaisesRegex(
+                manifest_traces.ManifestTraceError,
+                "canonical input contract",
             ):
                 manifest_traces.validate_manifest_traces(
                     manifest,
