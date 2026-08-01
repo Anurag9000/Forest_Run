@@ -143,9 +143,9 @@ class GhostPlayer {
 
     /** Advance ghost playback. Call every PLAYING frame. */
     fun update(deltaTime: Float, visibilityContext: VisibilityContext? = null) {
-        if (!isActive) return
+        if (!isActive || !deltaTime.isFinite() || deltaTime <= 0f) return
 
-        val safeDelta = deltaTime.takeIf { it.isFinite() && it > 0f } ?: 0f
+        val safeDelta = deltaTime
         advanceElapsed(safeDelta)
         suppressedFor = decrementTimer(suppressedFor, safeDelta)
         denseSuppressedFor = decrementTimer(denseSuppressedFor, safeDelta)
