@@ -21,10 +21,13 @@ bash scripts/compile_device_acceptance_bundle.sh \
 
 The wrapper performs one fail-closed chain:
 
-1. Strictly parses the draft JSON, rejecting duplicate keys, `NaN`/infinities, overflowed floating-point values, UTF-8 BOMs, oversized files, non-object roots, and excessive nesting.
+1. Strictly parses the draft JSON, rejecting duplicate keys, `NaN`/infinities, overflowed floating-point values, oversized integers, UTF-8 BOMs, oversized files, non-object roots, and excessive nesting.
 2. Invokes `compile_device_acceptance.py`, which preserves separately captured store-delivery and per-session build identities, hashes the signed candidate and every evidence file with bounded streaming reads, validates the complete matrix, and publishes the final manifest plus summary as one rollback-safe transaction.
 3. Strictly parses both generated outputs.
 4. Independently invokes `validate_device_acceptance.py` against the published manifest and real evidence files.
+5. Invokes `validate_manifest_scenario_traces.py --require-at-least-one`, so the manifest must reference at least one nonempty schema-v2 deterministic trace bound to the candidate, artifact, exact authored scenario definition, and exact authored input script.
+
+A trace is not accepted merely because its file digest matches the manifest. The validator independently reconstructs the scenario and script from `EncounterDirector.kt` and `DebugScenarioScript.kt`, checks both SHA-256 contracts, and requires every schedule and action to match the authored sequence.
 
 ## Minimum matrix
 
@@ -48,6 +51,8 @@ It also cannot omit these scenarios:
 
 One physical device identity cannot satisfy multiple device classes. Scenario evidence paths must be unique, and path aliases or hard links cannot make one physical file count more than once. The signed candidate artifact itself cannot double as scenario evidence.
 
+At least one referenced evidence file must use the canonical `scenario-trace-<scenario>.json` naming convention and pass exact trace validation. A zero-event trace from an unscripted scenario cannot satisfy this requirement.
+
 ## Manual and approval semantics
 
 Every manual check must be `pass`, except `haptics`, which may be `not_applicable` only when the hardware genuinely lacks the capability. Unknown manual-check and approval keys are rejected. Final reviewers must identify at least two distinct people after Unicode normalization and case folding.
@@ -59,6 +64,7 @@ The compiler does not derive store or session identity from the candidate. Teste
 - draft/manifest: at most 16 MiB;
 - signed candidate artifact: at most 4 GiB;
 - each evidence file: at most 2 GiB;
+- each deterministic trace: at most 256 KiB and 4,096 events;
 - files are hashed in chunks and rejected if size, modification time, or inode changes during the read;
 - output and summary must share the draft directory so relative evidence paths remain stable;
 - output files cannot overwrite the draft or each other;
@@ -66,4 +72,4 @@ The compiler does not derive store or session identity from the candidate. Teste
 
 ## What a valid result means
 
-A valid result proves that the supplied evidence is internally consistent, complete for the mandatory matrix, cryptographically bound to one signed internal-track candidate, and approved according to the declared schema. It does not create measurements, prove that a tester actually performed an action, replace current store-policy review, or convert an alpha into a release candidate without the underlying physical sessions and approvals.
+A valid result proves that the supplied evidence is internally consistent, complete for the mandatory matrix, cryptographically bound to one signed internal-track candidate, includes at least one exact authored deterministic trace, and is approved according to the declared schema. It does not create measurements, prove that a tester actually performed an action, replace current store-policy review, or convert an alpha into a release candidate without the underlying physical sessions and approvals.
