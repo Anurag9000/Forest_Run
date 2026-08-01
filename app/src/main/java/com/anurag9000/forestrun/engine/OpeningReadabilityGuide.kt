@@ -27,6 +27,7 @@ object OpeningReadabilityGuide {
     const val HOLD_DISCOVERY_THRESHOLD_SEC = 0.22f
     private const val RANDOM_SPAWN_LOCKOUT_SEC = 6.75f
     private const val GUIDED_WINDOW_SEC = 28f
+    private const val SAFE_SPAWN_INTERVAL_SEC = 1.95f
 
     private const val ACCENT_SOFT = 0xFFEACB74.toInt()
     private const val ACCENT_KIND = 0xFF8EDB8A.toInt()
@@ -45,7 +46,8 @@ object OpeningReadabilityGuide {
 
     fun adjustedSpawnInterval(runTimeSeconds: Float, defaultInterval: Float): Float {
         val time = safeTime(runTimeSeconds)
-        val fallback = defaultInterval.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        val fallback = defaultInterval.takeIf { it.isFinite() && it > 0f }
+            ?: SAFE_SPAWN_INTERVAL_SEC
         return when {
             time < RANDOM_SPAWN_LOCKOUT_SEC -> fallback
             time < 12f -> maxOf(fallback, 1.95f)
