@@ -27,6 +27,7 @@ class AggregateDeviceAcceptanceBundleContractTest(unittest.TestCase):
             source.count('"${ROOT}/scripts/validate_manifest_scenario_traces.py"'),
             2,
         )
+        self.assertGreaterEqual(source.count("--require-at-least-one"), 2)
         self.assertIn("--baseline", source)
         self.assertIn("--output", source)
         self.assertIn("must not overwrite the candidate", source)
