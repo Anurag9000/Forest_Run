@@ -20,12 +20,13 @@ class DeterministicScenarioTraceEvidenceTest {
 
         val snapshot = script.traceSnapshot()
         assertTrue(snapshot.isReplayable)
+        assertTrue(DeterministicScenarioReplayContract.matches(snapshot))
         assertEquals(dispatched, snapshot.events.map { it.action })
         assertEquals(EncounterScenario.CAT_KINDNESS, snapshot.scenario)
     }
 
     @Test
-    fun `evidence encoding is stable finite and candidate bound`() {
+    fun `evidence encoding is stable finite candidate bound and contract bound`() {
         val snapshot = replayableSnapshot()
         val evidence = DeterministicScenarioTraceEvidenceCodec.encode(
             snapshot = snapshot,
@@ -38,12 +39,20 @@ class DeterministicScenarioTraceEvidenceTest {
         evidence!!
         assertEquals("a".repeat(40), evidence.candidateCommitSha)
         assertEquals("b".repeat(64), evidence.artifactSha256)
-        assertEquals(2, evidence.eventCount)
-        assertTrue(evidence.payloadJson.startsWith("{\"schema_version\":1"))
+        assertEquals(4, evidence.eventCount)
+        assertEquals(
+            EncounterScenarioFingerprint.sha256(EncounterScenario.CACTUS_READ),
+            evidence.scenarioDefinitionSha256
+        )
+        assertEquals(
+            EncounterScenarioFingerprint.traceContractSha256(EncounterScenario.CACTUS_READ),
+            evidence.traceContractSha256
+        )
+        assertTrue(evidence.payloadJson.startsWith("{\"schema_version\":2"))
         assertTrue(evidence.payloadJson.contains("\"scenario\":\"CACTUS_READ\""))
-        assertTrue(evidence.payloadJson.contains("\"scheduled_at_micros\":1000000"))
-        assertTrue(evidence.payloadJson.contains("\"dispatched_at_micros\":1100000"))
-        assertTrue(evidence.payloadJson.contains("\"lateness_micros\":100000"))
+        assertTrue(evidence.payloadJson.contains("\"scenario_definition_sha256\":"))
+        assertTrue(evidence.payloadJson.contains("\"trace_contract_sha256\":"))
+        assertTrue(evidence.payloadJson.contains("\"lateness_micros\":20000"))
         assertFalse(evidence.payloadJson.contains("NaN"))
         assertFalse(evidence.payloadJson.contains("Infinity"))
         assertEquals(sha256(evidence.payloadJson), evidence.payloadSha256)
@@ -59,27 +68,31 @@ class DeterministicScenarioTraceEvidenceTest {
     }
 
     @Test
-    fun `incomplete overflowed or unbound traces fail closed`() {
+    fun `incomplete altered overflowed or unbound traces fail closed`() {
         val valid = replayableSnapshot()
         val incomplete = valid.copy(events = valid.events.dropLast(1))
+        val alteredSchedule = valid.copy(
+            events = valid.events.toMutableList().also { events ->
+                events[0] = events[0].copy(scheduledAtSeconds = 3.17f)
+            }
+        )
+        val alteredAction = valid.copy(
+            events = valid.events.toMutableList().also { events ->
+                events[0] = events[0].copy(action = DebugScenarioAction.TAP_JUMP)
+            }
+        )
         val overflowed = valid.copy(overflowed = true)
 
-        assertNull(
-            DeterministicScenarioTraceEvidenceCodec.encode(
-                incomplete,
-                "a".repeat(40),
-                "b".repeat(64),
-                1L
+        for (snapshot in listOf(incomplete, alteredSchedule, alteredAction, overflowed)) {
+            assertNull(
+                DeterministicScenarioTraceEvidenceCodec.encode(
+                    snapshot,
+                    "a".repeat(40),
+                    "b".repeat(64),
+                    1L
+                )
             )
-        )
-        assertNull(
-            DeterministicScenarioTraceEvidenceCodec.encode(
-                overflowed,
-                "a".repeat(40),
-                "b".repeat(64),
-                1L
-            )
-        )
+        }
         assertNull(
             DeterministicScenarioTraceEvidenceCodec.encode(
                 valid,
@@ -106,27 +119,23 @@ class DeterministicScenarioTraceEvidenceTest {
         )
     }
 
-    private fun replayableSnapshot(): DeterministicScenarioTraceSnapshot =
-        DeterministicScenarioTraceSnapshot(
-            scenario = EncounterScenario.CACTUS_READ,
-            events = listOf(
+    private fun replayableSnapshot(): DeterministicScenarioTraceSnapshot {
+        val scenario = EncounterScenario.CACTUS_READ
+        val steps = DebugScenarioScript.stepsFor(scenario)
+        return DeterministicScenarioTraceSnapshot(
+            scenario = scenario,
+            events = steps.mapIndexed { index, step ->
                 DeterministicScenarioTraceEvent(
-                    scenario = EncounterScenario.CACTUS_READ,
-                    sequence = 0,
-                    scheduledAtSeconds = 1f,
-                    dispatchedAtSeconds = 1.1f,
-                    action = DebugScenarioAction.HOLD_JUMP_START
-                ),
-                DeterministicScenarioTraceEvent(
-                    scenario = EncounterScenario.CACTUS_READ,
-                    sequence = 1,
-                    scheduledAtSeconds = 1.3f,
-                    dispatchedAtSeconds = 1.4f,
-                    action = DebugScenarioAction.HOLD_JUMP_END
+                    scenario = scenario,
+                    sequence = index,
+                    scheduledAtSeconds = step.atSeconds,
+                    dispatchedAtSeconds = step.atSeconds + 0.02f,
+                    action = step.action
                 )
-            ),
+            },
             overflowed = false
         )
+    }
 
     private fun sha256(value: String): String =
         MessageDigest.getInstance("SHA-256")
