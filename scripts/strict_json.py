@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,33 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def _preflight_nesting(text: str, *, maximum_depth: int, label: str) -> None:
+    """Reject excessive structural nesting before the recursive JSON parser runs."""
+    depth = 0
+    in_string = False
+    escaped = False
+    for character in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+            continue
+
+        if character == '"':
+            in_string = True
+        elif character in "[{":
+            depth += 1
+            if depth > maximum_depth:
+                raise StrictJsonError(
+                    f"{label} nesting exceeds the {maximum_depth}-level safety limit"
+                )
+        elif character in "]}":
+            depth = max(0, depth - 1)
+
+
 def _validate_tree(value: Any, *, depth: int, maximum_depth: int) -> None:
     if depth > maximum_depth:
         raise StrictJsonError(
@@ -41,7 +69,10 @@ def _validate_tree(value: Any, *, depth: int, maximum_depth: int) -> None:
     elif isinstance(value, list):
         for child in value:
             _validate_tree(child, depth=depth + 1, maximum_depth=maximum_depth)
-    elif value is None or isinstance(value, (str, int, float, bool)):
+    elif isinstance(value, float):
+        if not math.isfinite(value):
+            raise StrictJsonError("finite-looking JSON number overflowed to a non-finite value")
+    elif value is None or isinstance(value, (str, int, bool)):
         return
     else:
         raise StrictJsonError(f"unsupported JSON value type: {type(value).__name__}")
@@ -80,6 +111,7 @@ def loads(
     else:
         raise TypeError("raw must be bytes or str")
 
+    _preflight_nesting(text, maximum_depth=maximum_depth, label=label)
     try:
         value = json.loads(
             text,
@@ -88,7 +120,7 @@ def loads(
         )
     except StrictJsonError:
         raise
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, RecursionError) as exc:
         raise StrictJsonError(f"invalid {label}: {exc}") from exc
     _validate_tree(value, depth=1, maximum_depth=maximum_depth)
     if require_object and not isinstance(value, dict):
