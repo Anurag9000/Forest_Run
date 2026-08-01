@@ -79,7 +79,14 @@ def validate_manifest_traces(
                         "path": safe_relative,
                         "acceptance_scenario": acceptance_scenario,
                         "trace_scenario": summary["scenario"],
+                        "scenario_definition_sha256": summary[
+                            "scenario_definition_sha256"
+                        ],
+                        "trace_contract_sha256": summary["trace_contract_sha256"],
                         "event_count": summary["event_count"],
+                        "maximum_lateness_micros": summary[
+                            "maximum_lateness_micros"
+                        ],
                         "payload_sha256": summary["payload_sha256"],
                     }
                 )
