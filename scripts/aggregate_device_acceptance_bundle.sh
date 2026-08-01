@@ -41,6 +41,15 @@ if [[ -n "${BASELINE_PATH}" ]]; then
 fi
 "${PYTHON_BIN}" "${preflight_args[@]}"
 
+"${PYTHON_BIN}" "${ROOT}/scripts/validate_manifest_scenario_traces.py" \
+  "${CANDIDATE_PATH}" \
+  --root "${ROOT}"
+if [[ -n "${BASELINE_PATH}" ]]; then
+  "${PYTHON_BIN}" "${ROOT}/scripts/validate_manifest_scenario_traces.py" \
+    "${BASELINE_PATH}" \
+    --root "${ROOT}"
+fi
+
 aggregate_args=(
   "${ROOT}/scripts/aggregate_device_acceptance.py"
   "${CANDIDATE_PATH}"
