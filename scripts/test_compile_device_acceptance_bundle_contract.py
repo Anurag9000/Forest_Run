@@ -42,8 +42,10 @@ class DeviceAcceptanceBundleEntrypointContractTest(unittest.TestCase):
         traces = self.source.index("validate_manifest_scenario_traces.py")
         self.assertLess(validator, traces)
         self.assertIn('"${OUTPUT_PATH}"', self.source[validator:traces])
-        self.assertIn('"${OUTPUT_PATH}"', self.source[traces:])
-        self.assertIn('--root "${ROOT}"', self.source[traces:])
+        trace_slice = self.source[traces:]
+        self.assertIn('"${OUTPUT_PATH}"', trace_slice)
+        self.assertIn('--root "${ROOT}"', trace_slice)
+        self.assertIn("--require-at-least-one", trace_slice)
         self.assertIn("set -euo pipefail", self.source)
 
     def test_optional_generated_timestamp_is_forwarded_only_when_present(self) -> None:
