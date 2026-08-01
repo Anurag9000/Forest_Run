@@ -64,12 +64,14 @@ OUTPUT_DIR="${1:-performance-profiles/${SERIAL}/${TIMESTAMP}}"
 TEST_SELECTOR="${FOREST_RUN_PROFILE_TEST:-com.anurag9000.forestrun.HardwarePerformanceProfileTest}"
 THRESHOLDS="${FOREST_RUN_PERFORMANCE_THRESHOLDS:-}"
 THRESHOLDS_ABS=""
+THRESHOLDS_SHA256=""
 if [[ -n "$THRESHOLDS" ]]; then
   if [[ ! -f "$THRESHOLDS" ]]; then
     echo "Threshold manifest does not exist: $THRESHOLDS" >&2
     exit 1
   fi
   THRESHOLDS_ABS="$(cd "$(dirname "$THRESHOLDS")" && pwd)/$(basename "$THRESHOLDS")"
+  THRESHOLDS_SHA256="$($PYTHON -c 'import hashlib, pathlib, sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())' "$THRESHOLDS_ABS")"
 fi
 
 mkdir -p "$OUTPUT_DIR"
@@ -89,7 +91,7 @@ mkdir -p "$OUTPUT_DIR"
   echo "build_fingerprint=$("${ADB_DEVICE[@]}" shell getprop ro.build.fingerprint | tr -d '\r')"
   if [[ -n "$THRESHOLDS_ABS" ]]; then
     echo "threshold_manifest=$THRESHOLDS_ABS"
-    echo "threshold_manifest_sha256=$(sha256sum "$THRESHOLDS_ABS" | awk '{print $1}')"
+    echo "threshold_manifest_sha256=$THRESHOLDS_SHA256"
   else
     echo "threshold_manifest=(not supplied)"
   fi
