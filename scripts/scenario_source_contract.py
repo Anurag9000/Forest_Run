@@ -16,7 +16,12 @@ TRACE_CONTRACT_FORMAT_VERSION = 1
 MICROS_PER_SECOND = 1_000_000.0
 MICRO_PIXELS_PER_PIXEL = 1_000_000.0
 MAX_SOURCE_BYTES = 2 * 1024 * 1024
-NUMBER = r"[+-]?(?:\d[\d_]*)(?:\.\d[\d_]*)?[fF]?"
+LONG_MIN = -(1 << 63)
+LONG_MAX = (1 << 63) - 1
+NUMBER = (
+    r"[+-]?(?:(?:\d[\d_]*(?:\.\d[\d_]*)?)|(?:\.\d[\d_]*))"
+    r"(?:[eE][+-]?\d[\d_]*)?[fF]?"
+)
 
 
 class ScenarioSourceContractError(ValueError):
@@ -149,27 +154,41 @@ def _balanced_parenthesized(text: str, open_index: int) -> str:
     raise ScenarioSourceContractError("unterminated parenthesized Kotlin source block")
 
 
-def _float32(value: str) -> float:
-    parsed = float(value.rstrip("fF").replace("_", ""))
-    return struct.unpack(">f", struct.pack(">f", parsed))[0]
+def _float32(value: str, label: str) -> float:
+    try:
+        parsed = float(value.rstrip("fF").replace("_", ""))
+        converted = struct.unpack(">f", struct.pack(">f", parsed))[0]
+    except (OverflowError, ValueError, struct.error) as exc:
+        raise ScenarioSourceContractError(
+            f"{label} is not a representable Kotlin Float literal"
+        ) from exc
+    if not math.isfinite(converted):
+        raise ScenarioSourceContractError(f"{label} must be finite")
+    return converted
 
 
-def _positive_round_to_long(value: float, label: str) -> int:
-    if not math.isfinite(value) or value < 0 or value > 9_223_372_036_854_775_000:
-        raise ScenarioSourceContractError(f"{label} is outside the supported numeric range")
+def _kotlin_round_to_long(value: float, label: str) -> int:
+    """Emulate kotlin.math.roundToLong: nearest, ties toward positive infinity."""
+    if math.isnan(value):
+        raise ScenarioSourceContractError(f"{label} cannot be NaN")
+    if value >= LONG_MAX:
+        return LONG_MAX
+    if value <= LONG_MIN:
+        return LONG_MIN
     return math.floor(value + 0.5)
 
 
 def _seconds_to_micros(value: str) -> int:
-    return _positive_round_to_long(
-        _float32(value) * MICROS_PER_SECOND,
-        "scenario time",
-    )
+    seconds = _float32(value, "scenario time")
+    if seconds < 0:
+        raise ScenarioSourceContractError("scenario time must be non-negative")
+    return _kotlin_round_to_long(seconds * MICROS_PER_SECOND, "scenario time")
 
 
 def _pixels_to_micro_pixels(value: str) -> int:
-    return _positive_round_to_long(
-        _float32(value) * MICRO_PIXELS_PER_PIXEL,
+    pixels = _float32(value, "scenario offset")
+    return _kotlin_round_to_long(
+        pixels * MICRO_PIXELS_PER_PIXEL,
         "scenario offset",
     )
 
