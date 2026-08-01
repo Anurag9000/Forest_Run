@@ -144,30 +144,46 @@ def _normalized_device_text(value: Any) -> str:
     return unicodedata.normalize("NFKC", str(value)).strip().casefold()
 
 
-def _device_profile_id(session: Mapping[str, Any]) -> str:
-    device = session["device"]
-    canonical = {
-        "class": _normalized_device_text(device["class"]),
-        "manufacturer": _normalized_device_text(device["manufacturer"]),
-        "model": _normalized_device_text(device["model"]),
-        "build_fingerprint": _normalized_device_text(device["build_fingerprint"]),
-        "sdk": int(device["sdk"]),
-        "ram_mb": int(device["ram_mb"]),
-        "refresh_millihz": round(float(device["refresh_hz"]) * 1_000),
-        "width_px": int(device["width_px"]),
-        "height_px": int(device["height_px"]),
-        "density_dpi": int(device["density_dpi"]),
-        "tablet": bool(device["tablet"]),
-        "cutout": bool(device["cutout"]),
-    }
+def _sha256_json(value: Mapping[str, Any]) -> str:
     encoded = json.dumps(
-        canonical,
+        value,
         ensure_ascii=False,
         separators=(",", ":"),
         sort_keys=True,
         allow_nan=False,
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _physical_device_id(session: Mapping[str, Any]) -> str:
+    device = session["device"]
+    return _sha256_json(
+        {
+            "manufacturer": _normalized_device_text(device["manufacturer"]),
+            "model": _normalized_device_text(device["model"]),
+            "build_fingerprint": _normalized_device_text(device["build_fingerprint"]),
+        }
+    )
+
+
+def _device_profile_id(session: Mapping[str, Any]) -> str:
+    device = session["device"]
+    return _sha256_json(
+        {
+            "class": _normalized_device_text(device["class"]),
+            "manufacturer": _normalized_device_text(device["manufacturer"]),
+            "model": _normalized_device_text(device["model"]),
+            "build_fingerprint": _normalized_device_text(device["build_fingerprint"]),
+            "sdk": int(device["sdk"]),
+            "ram_mb": int(device["ram_mb"]),
+            "refresh_millihz": round(float(device["refresh_hz"]) * 1_000),
+            "width_px": int(device["width_px"]),
+            "height_px": int(device["height_px"]),
+            "density_dpi": int(device["density_dpi"]),
+            "tablet": bool(device["tablet"]),
+            "cutout": bool(device["cutout"]),
+        }
+    )
 
 
 def _comparison_matrix_sha256(by_class: Mapping[str, Any]) -> str:
@@ -178,13 +194,7 @@ def _comparison_matrix_sha256(by_class: Mapping[str, Any]) -> str:
         }
         for device_class, summary in sorted(by_class.items())
     }
-    encoded = json.dumps(
-        canonical,
-        separators=(",", ":"),
-        sort_keys=True,
-        allow_nan=False,
-    ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return _sha256_json(canonical)
 
 
 def _trace_contracts(trace_validation: Mapping[str, Any]) -> list[dict[str, str]]:
@@ -234,10 +244,12 @@ def _summarize_manifest(
                 metric_values[metric].append(value)
                 global_values[metric].append(value)
 
+        physical_device_ids = sorted({_physical_device_id(session) for session in class_sessions})
         device_profile_ids = sorted({_device_profile_id(session) for session in class_sessions})
         by_class[device_class] = {
             "session_count": len(class_sessions),
-            "physical_device_count": len(device_profile_ids),
+            "physical_device_count": len(physical_device_ids),
+            "physical_device_ids": physical_device_ids,
             "device_profile_ids": device_profile_ids,
             "session_ids": sorted(session["session_id"] for session in class_sessions),
             "metrics": {
