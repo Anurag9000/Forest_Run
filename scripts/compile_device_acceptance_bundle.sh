@@ -37,3 +37,6 @@ fi
   "${SUMMARY_PATH}"
 "${PYTHON_BIN}" "${ROOT}/scripts/validate_device_acceptance.py" \
   "${OUTPUT_PATH}"
+"${PYTHON_BIN}" "${ROOT}/scripts/validate_manifest_scenario_traces.py" \
+  "${OUTPUT_PATH}" \
+  --root "${ROOT}"
