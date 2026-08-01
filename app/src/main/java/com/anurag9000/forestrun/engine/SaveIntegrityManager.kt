@@ -133,7 +133,9 @@ object SaveIntegrityManager {
         )
         repair.enumSet(
             "unlocked_relationship_milestones",
-            EntityType.entries.mapTo(mutableSetOf()) { it.name }
+            EntityType.entries
+                .filter(RelationshipArcSystem::isTracked)
+                .mapTo(mutableSetOf()) { it.name }
         )
         repair.genericStringSet(
             key = "unlocked_history_marks",
