@@ -1,6 +1,7 @@
 package com.anurag9000.forestrun.engine
 
 import java.security.MessageDigest
+import kotlin.math.roundToLong
 
 internal data class DeterministicScenarioTraceEvidence(
     val candidateCommitSha: String,
@@ -16,6 +17,7 @@ internal data class DeterministicScenarioTraceEvidence(
 internal object DeterministicScenarioTraceEvidenceCodec {
     private const val SCHEMA_VERSION = 1
     private const val MAX_PAYLOAD_BYTES = 256 * 1024
+    private const val MICROS_PER_SECOND = 1_000_000.0
     private val commitPattern = Regex("^[0-9a-f]{40}$")
     private val sha256Pattern = Regex("^[0-9a-f]{64}$")
 
@@ -47,11 +49,16 @@ internal object DeterministicScenarioTraceEvidenceCodec {
             append(",\"events\":[")
             snapshot.events.forEachIndexed { index, event ->
                 if (index > 0) append(',')
+                val scheduledMicros = secondsToMicros(event.scheduledAtSeconds)
+                val dispatchedMicros = secondsToMicros(event.dispatchedAtSeconds)
+                if (scheduledMicros == null || dispatchedMicros == null || dispatchedMicros < scheduledMicros) {
+                    return null
+                }
                 append('{')
                 append("\"sequence\":").append(event.sequence)
-                append(",\"scheduled_at_seconds\":").append(event.scheduledAtSeconds)
-                append(",\"dispatched_at_seconds\":").append(event.dispatchedAtSeconds)
-                append(",\"lateness_seconds\":").append(event.latenessSeconds)
+                append(",\"scheduled_at_micros\":").append(scheduledMicros)
+                append(",\"dispatched_at_micros\":").append(dispatchedMicros)
+                append(",\"lateness_micros\":").append(dispatchedMicros - scheduledMicros)
                 append(",\"action\":\"").append(event.action.name).append('"')
                 append('}')
             }
@@ -69,6 +76,13 @@ internal object DeterministicScenarioTraceEvidenceCodec {
             payloadJson = payload,
             payloadSha256 = sha256(payloadBytes)
         )
+    }
+
+    private fun secondsToMicros(seconds: Float): Long? {
+        if (!seconds.isFinite() || seconds < 0f) return null
+        val micros = seconds.toDouble() * MICROS_PER_SECOND
+        if (!micros.isFinite() || micros > Long.MAX_VALUE.toDouble()) return null
+        return micros.roundToLong()
     }
 
     private fun sha256(bytes: ByteArray): String =
