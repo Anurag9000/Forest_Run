@@ -3,6 +3,7 @@ import json
 import struct
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 from verify_curated_screenshot_set import (
@@ -15,12 +16,27 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
     candidate_sha = "a" * 40
     apk_sha256 = "b" * 64
 
+    @staticmethod
+    def png_chunk(chunk_type: bytes, data: bytes) -> bytes:
+        checksum = zlib.crc32(chunk_type)
+        checksum = zlib.crc32(data, checksum) & 0xFFFFFFFF
+        return (
+            struct.pack(">I", len(data))
+            + chunk_type
+            + data
+            + struct.pack(">I", checksum)
+        )
+
     def create_png(self, path: Path, width=1920, height=1080, marker=b"one"):
+        colour = hashlib.sha256(marker).digest()[:3] + b"\xff"
+        scanline = b"\x00" + colour * width
+        image_data = zlib.compress(scanline * height, level=9)
+        ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
         content = (
             b"\x89PNG\r\n\x1a\n"
-            + b"\x00\x00\x00\rIHDR"
-            + struct.pack(">II", width, height)
-            + marker
+            + self.png_chunk(b"IHDR", ihdr)
+            + self.png_chunk(b"IDAT", image_data)
+            + self.png_chunk(b"IEND", b"")
         )
         path.write_bytes(content)
         return hashlib.sha256(content).hexdigest()
@@ -202,6 +218,41 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
             sidecar.write_text(json.dumps(payload), encoding="utf-8")
 
             with self.assertRaisesRegex(CuratedScreenshotError, "deviceSerial"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_corrupt_png_crc_is_rejected_before_sidecar_trust(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            content = bytearray(png_path.read_bytes())
+            idat_offset = content.index(b"IDAT")
+            content[idat_offset + 5] ^= 0x01
+            png_path.write_bytes(content)
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "CRC mismatch"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_truncated_png_and_trailing_payload_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            png_path.write_bytes(png_path.read_bytes()[:-12])
+
+            with self.assertRaisesRegex(
+                CuratedScreenshotError,
+                "missing required PNG chunks|truncated PNG",
+            ):
+                verify_curated_set(root, self.candidate_sha)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            png_path.write_bytes(png_path.read_bytes() + b"stale-payload")
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "trailing bytes"):
                 verify_curated_set(root, self.candidate_sha)
 
 
