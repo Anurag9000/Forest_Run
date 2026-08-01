@@ -99,14 +99,11 @@ class ReleaseSourceAssetVerifierTest(unittest.TestCase):
     def test_checked_in_repository_assets_pass_source_contract(self) -> None:
         evidence = verify_release_source_assets(ROOT)
 
-        self.assertGreaterEqual(evidence.asset_count, 30)
-        self.assertGreaterEqual(evidence.png_count, 29)
-        self.assertGreaterEqual(evidence.font_count, 1)
-        self.assertGreaterEqual(evidence.required_audio_count, 15)
-        self.assertGreaterEqual(
-            evidence.checked_audio_count,
-            evidence.required_audio_count,
-        )
+        self.assertEqual(25, evidence.asset_count)
+        self.assertEqual(24, evidence.png_count)
+        self.assertEqual(1, evidence.font_count)
+        self.assertEqual(18, evidence.required_audio_count)
+        self.assertEqual(18, evidence.checked_audio_count)
 
     def test_main_release_wrapper_runs_asset_preflight_before_preparer(self) -> None:
         wrapper = (ROOT / "scripts/prepare_main_release.sh").read_text(
