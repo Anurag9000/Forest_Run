@@ -10,9 +10,10 @@ import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+import scenario_source_contract as source_contract
 import strict_json
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MAX_TRACE_BYTES = 256 * 1024
 MAX_TRACE_EVENTS = 4_096
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -30,6 +31,8 @@ ROOT_KEYS = {
     "artifact_sha256",
     "captured_at_utc_ms",
     "scenario",
+    "scenario_definition_sha256",
+    "trace_contract_sha256",
     "event_count",
     "events",
 }
@@ -97,29 +100,23 @@ def _integer(value: Any, label: str, *, minimum: int = 0) -> int:
     return value
 
 
-def _scenario_names(root: Path) -> set[str]:
-    source = (
-        root
-        / "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt"
-    )
+def _lower_sha256(value: Any, label: str) -> str:
+    digest = _string(value, label)
+    if not SHA256_RE.fullmatch(digest):
+        raise ScenarioTraceError(f"{label} must be lowercase 64-hex")
+    return digest
+
+
+def _load_authored_contract(
+    repository_root: Path,
+    scenario: str,
+) -> source_contract.ScenarioTraceContract:
     try:
-        text = source.read_text(encoding="utf-8")
-    except OSError as exc:
-        raise ScenarioTraceError(f"could not read canonical scenario catalogue: {exc}") from exc
-    enum_start = text.find("enum class EncounterScenario(")
-    init_start = text.find("\n    init {", enum_start)
-    if enum_start < 0 or init_start < 0:
-        raise ScenarioTraceError("canonical scenario catalogue structure is missing")
-    names = set(
-        re.findall(
-            r"^    ([A-Z][A-Z0-9_]*)\($",
-            text[enum_start:init_start],
-            flags=re.MULTILINE,
-        )
-    )
-    if not names:
-        raise ScenarioTraceError("canonical scenario catalogue is empty")
-    return names
+        return source_contract.load_trace_contract(repository_root, scenario)
+    except source_contract.ScenarioSourceContractError as exc:
+        raise ScenarioTraceError(
+            f"scenario is not reconstructable from the canonical catalogue: {scenario}: {exc}"
+        ) from exc
 
 
 def validate_trace(
@@ -151,10 +148,26 @@ def validate_trace(
 
     captured_at = _integer(data["captured_at_utc_ms"], "captured_at_utc_ms")
     scenario = _string(data["scenario"], "scenario")
-    if scenario not in _scenario_names(repository_root):
-        raise ScenarioTraceError(f"scenario is not in the canonical catalogue: {scenario}")
     if expected_scenario is not None and scenario != expected_scenario:
         raise ScenarioTraceError("scenario does not match the expected scenario")
+    authored = _load_authored_contract(repository_root.expanduser().resolve(), scenario)
+
+    scenario_definition_sha = _lower_sha256(
+        data["scenario_definition_sha256"],
+        "scenario_definition_sha256",
+    )
+    trace_contract_sha = _lower_sha256(
+        data["trace_contract_sha256"],
+        "trace_contract_sha256",
+    )
+    if scenario_definition_sha != authored.scenario_definition_sha256:
+        raise ScenarioTraceError(
+            "scenario_definition_sha256 does not match the canonical scenario definition"
+        )
+    if trace_contract_sha != authored.trace_contract_sha256:
+        raise ScenarioTraceError(
+            "trace_contract_sha256 does not match the canonical input contract"
+        )
 
     declared_count = _integer(data["event_count"], "event_count")
     events = data["events"]
@@ -164,6 +177,10 @@ def validate_trace(
         raise ScenarioTraceError(f"events exceeds the {MAX_TRACE_EVENTS}-event limit")
     if declared_count != len(events):
         raise ScenarioTraceError("event_count does not match events length")
+    if len(events) != len(authored.input_steps):
+        raise ScenarioTraceError(
+            "events length does not match the canonical input contract"
+        )
 
     previous_scheduled = -1
     previous_dispatched = -1
@@ -185,6 +202,7 @@ def validate_trace(
         )
         lateness = _integer(raw_event["lateness_micros"], f"{label}.lateness_micros")
         action = _string(raw_event["action"], f"{label}.action")
+        expected = authored.input_steps[index]
 
         if sequence != index:
             raise ScenarioTraceError(f"{label}.sequence must equal {index}")
@@ -198,6 +216,14 @@ def validate_trace(
             raise ScenarioTraceError(f"{label}.lateness_micros is inconsistent")
         if action not in ALLOWED_ACTIONS:
             raise ScenarioTraceError(f"{label}.action is unknown: {action}")
+        if scheduled != expected.at_micros:
+            raise ScenarioTraceError(
+                f"{label}.scheduled_at_micros does not match the canonical input contract"
+            )
+        if action != expected.action:
+            raise ScenarioTraceError(
+                f"{label}.action does not match the canonical input contract"
+            )
 
         previous_scheduled = scheduled
         previous_dispatched = dispatched
@@ -211,6 +237,8 @@ def validate_trace(
         "artifact_sha256": artifact,
         "captured_at_utc_ms": captured_at,
         "scenario": scenario,
+        "scenario_definition_sha256": scenario_definition_sha,
+        "trace_contract_sha256": trace_contract_sha,
         "event_count": declared_count,
         "maximum_lateness_micros": maximum_lateness,
         "action_counts": action_counts,
