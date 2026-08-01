@@ -10,12 +10,13 @@ This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records th
 - Duplicate object keys are rejected instead of silently taking the final value.
 - Literal `NaN`, `Infinity`, and `-Infinity` are rejected.
 - Finite-looking JSON numbers that overflow Python floating point, such as `1e400`, are rejected after conversion.
+- Oversized integer literals are normalized into `StrictJsonError` rather than escaping as interpreter-specific `ValueError` failures.
 - UTF-8 BOMs, invalid UTF-8, empty or oversized inputs, non-object roots where an object is required, and excessive nesting are rejected.
 - A string-aware nesting pre-scan rejects deeply nested input before Python's parser can hit recursion limits.
 - Files are rejected if size, modification time, or inode changes while they are read.
 - Added `scripts/verify_strict_json_evidence.py` to recursively preflight selected evidence files/directories with deduplication and a bounded file count.
-- Canonical release preparation now strictly parses graphics, metadata, screenshot, capture-session, final-sidecar, and new machine-summary JSON before semantic verification.
-- Added adversarial parser, directory-expansion, numeric-overflow, duplicate-key, BOM, depth, and release-wrapper ordering tests.
+- Canonical release preparation strictly parses graphics, metadata, screenshot, capture-session, final-sidecar, physical-acceptance, trace, aggregate, and machine-summary JSON before semantic verification.
+- Added adversarial parser, directory-expansion, numeric-overflow, oversized-integer, duplicate-key, BOM, depth, and release-wrapper ordering tests.
 
 ### Physical-device acceptance hardening
 
@@ -48,12 +49,73 @@ This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records th
   1. strict-parse draft;
   2. compile and validate transactionally;
   3. strict-parse both outputs;
-  4. independently revalidate the published manifest.
+  4. independently revalidate the published manifest;
+  5. validate every referenced deterministic trace against the candidate.
 - Added `docs/DEVICE_ACCEPTANCE_COMPILATION.md` describing the canonical workflow, minimum matrix, identity preservation, bounds, publication semantics, and limits of automated validation.
+
+### Physical evidence aggregation and baseline comparison
+
+- Added `scripts/aggregate_device_acceptance.py`.
+- Every input manifest is strictly parsed and independently accepted before aggregation.
+- Reports summarize minimum, mean, and maximum p95 frame time, p99 frame time, slow-frame ratio, peak PSS, crashes, and ANRs:
+  - globally;
+  - for every mandatory device class.
+- Reports include session counts, distinct physical-device counts, exact session IDs, duration distributions, and worst-case threshold headroom.
+- Optional accepted-baseline comparison reports mean and maximum deltas globally and per device class.
+- The tool intentionally does not invent an acceptable regression tolerance.
+- Invalid or tampered evidence is rejected before any distribution is calculated.
+- Output is strict finite JSON published through flushed atomic replacement.
+- Added `scripts/aggregate_device_acceptance_bundle.sh` as the canonical operator path with:
+  - strict candidate/baseline preflight;
+  - candidate, baseline, and output alias rejection;
+  - structural validation of referenced deterministic traces;
+  - aggregation;
+  - strict output verification.
+- Added `docs/DEVICE_ACCEPTANCE_AGGREGATION.md` and adversarial calculation, matrix, alias, tamper, and operator-ordering tests.
+
+### Deterministic scenario trace and soak evidence
+
+- Added `DeterministicScenarioTraceRecorder`, a bounded in-memory recorder that never owns gameplay or disk state.
+- `DebugScenarioScript` now records by default; existing callers do not need to opt in.
+- Only successfully dispatched actions are recorded. A dispatch exception leaves the action pending and emits no false evidence.
+- Completed traces remain available after scenario clear as detached immutable snapshots.
+- Added `DebugScenarioInputContract` for catalogue-wide validation of finite chronological schedules, balanced held inputs, and jump/duck exclusivity.
+- Added candidate- and artifact-bound strict JSON trace encoding.
+- Floating-point times are canonicalized to integer microseconds for byte-stable cross-device evidence and hashes.
+- Added digest-checked Android `AtomicFile` persistence with deterministic scenario filenames.
+- Added `scripts/validate_scenario_trace.py` to verify exact keys, schema, candidate/artifact binding, canonical scenario membership, event count, sequence, chronology, lateness arithmetic, action vocabulary, bounds, and payload digest.
+- Added `scripts/validate_manifest_scenario_traces.py` so correctly hashed but structurally false trace files cannot pass through acceptance compilation or aggregation.
+- Added `docs/DETERMINISTIC_SCENARIO_EVIDENCE.md` and runtime, codec, persistence, schema, manifest-binding, and failure-path tests.
+
+### Runtime timing and malformed-input corrections
+
+- `GhostPlayer.update()` now makes nonfinite or nonpositive deltas complete no-ops before elapsed time, frame selection, visibility, or dense-hazard suppression can change.
+- Added regression coverage after the ghost is already visible to prove malformed updates cannot mutate playback state.
+- Removed the duplicate raw nanosecond interval gate from `LeitmotifManager`.
+- `EvaluationThrottle` is now the sole tempo/Bloom evaluation authority, retaining its rollback/reset-safe semantics.
+- Added source contracts preventing reintroduction of `lastParameterUpdateNs` or raw subtraction gates.
+
+### Progression and relationship arithmetic primitives
+
+- Added `SafeProgressionArithmetic`:
+  - negative restored counters normalize to zero;
+  - increments saturate at an explicit maximum without overflow;
+  - elapsed-time thresholds reject invalid timestamps and clock rollback;
+  - nonnegative ordered timestamps use subtraction that cannot overflow.
+- Added exhaustive negative, saturation, zero-maximum, rollback, and `Long.MAX_VALUE` tests.
+- Added `FamiliarityWarmthScoring` with independent modifiers for:
+  - stage;
+  - three clean passes;
+  - five clean passes;
+  - two spares;
+  - three-kindness streak;
+  - five encounters.
+- Added tests proving every modifier contributes independently and the authored `PERSONAL` and `BONDED` thresholds remain 5 and 7.
+- The pure replacements are ready; the two large authored catalogue call sites still require a narrow verified patch and are listed below rather than falsely marked integrated.
 
 ### Candidate-bound store and release evidence
 
-- Checked-in release assets now receive structural validation rather than header-only checks:
+- Checked-in release assets receive structural validation rather than header-only checks:
   - PNG chunk order, CRC, IHDR, zlib stream, scanline geometry, and filename-declared frame divisibility;
   - SFNT table directory and required font tables;
   - Ogg page CRC/sequence/BOS/EOS and Vorbis/Opus identification;
@@ -68,7 +130,7 @@ This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records th
 - `prepare_main_release.sh` aligns `JAVA_HOME`, verifies source assets/graphics/metadata, quarantines prior summaries, restores them on failure, verifies the new summary, and rechecks local and canonical `origin/main` identity.
 - Added `docs/STORE_EVIDENCE.md` for generation, finalization, verification, invalidation, and manual approval boundaries.
 
-### Persistence, Garden, pacing, and catalogue contracts
+### Persistence, Garden, pacing, catalogue, and narrative contracts
 
 - Persistent-memory selectors fail closed when caller minima are zero or negative.
 - Repeat-killer severity uses `Long` arithmetic and deterministic tie-breaking.
@@ -79,22 +141,11 @@ This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records th
 - Opening spawn guidance replaces zero, negative, NaN, or infinite intervals with a conservative positive cadence.
 - Biome and deterministic-scenario catalogues have executable ordering, uniqueness, coverage, and variant invariants.
 - Player jump-force interpolation is finite, bounded, monotonic, and fail-closed for malformed holds.
-
-### Narrative catalogue integrity
-
-- Added `StoryFragmentCatalogueInvariantTest` using public StoryFragment APIs only.
-- Every emitted contextual page and history mark must have:
-  - a safe lowercase identifier;
-  - identifier length within the persisted 128-character boundary;
-  - nonblank trimmed title/body or title/line;
-  - no duplicate identifier within one visible catalogue.
-- The suite exercises optional weathering pages, rich warm relationship history, active run-history pages/marks, repeat-friend and biome-friendship pages, empty history, and strained-bond history.
-- Added `RestQuoteCatalogueInvariantTest`, enumerating every last-killer value, forest mood, pacifist route tier, and low/high run profile.
-- Rest quotes must be deterministic, nonblank, trimmed, bounded, and free of unsafe control characters.
+- Story fragment and rest-quote catalogues have deterministic identifier, content, length, whitespace, and control-character invariants across rich state combinations.
 
 ## Validation truth
 
-The implementation above is committed directly to `main`, but this environment still cannot provide a local exact checkout or observe push-triggered GitHub Actions conclusions. Consequently:
+The implementation above is committed directly to `main`, but this environment still cannot provide a local exact checkout or reliably observe push-triggered GitHub Actions conclusions. Consequently:
 
 - the latest tree is **not** described as exact-head green;
 - newly added Python, JVM, Robolectric, Android, shell, and source-contract tests still require execution on one frozen head;
@@ -103,15 +154,14 @@ The implementation above is committed directly to `main`, but this environment s
 
 ## Remaining implementation debt
 
-### Precisely isolated monolithic defects
+### Precisely isolated source call sites and large-owner boundaries
 
-1. `RelationshipArcSystem.familiarityWarmth()` still contains Kotlin conditional-arithmetic precedence that prevents the intended accumulated warmth score and leaves deeper `PERSONAL`/`BONDED` dialogue branches unreachable. The function is isolated, but the surrounding roughly 1,400-line authored dialogue catalogue still needs a safe patch-capable checkout or prior decomposition.
-2. `ReturnMomentsSystem.recordRunOutcome()` still uses raw `roughRunStreak + 1`, and long-absence detection still uses raw timestamp subtraction. Persistence clamps ordinary stored state, but source arithmetic should use explicit saturating/overflow-safe helpers.
-3. `LeitmotifManager` retains a duplicate raw nanosecond interval check after the wrap/reset-safe `EvaluationThrottle`; this matters only under artificial monotonic-clock rollback/wrap but should be removed during audio-owner decomposition.
-4. `ParallaxBackground` and `GameView.update()` still rely on the production render-thread finite-delta contract at their large public coordination boundaries.
-5. `MainMenuScreen.onTap()` can advance its ritual on a synthetic non-finite direct-call coordinate after both hit regions compare false. Real Android MotionEvent coordinates are finite; the safe fix belongs in the large menu owner once line-level patching is available.
-6. `GhostPlayer.update()` maps malformed deltas to zero but can still recompute visibility suppression on that call. Production deltas are bounded; a future narrow admission guard should make malformed direct calls complete no-ops.
-7. `SaveManager.hasGhostRun()` checks only the AtomicFile base path and does not validate or recognize a recoverable backup, while actual runtime loading correctly validates both. The unused convenience method remains cleanup debt.
+1. `RelationshipArcSystem.familiarityWarmth()` still contains the old conditional-arithmetic expression. `FamiliarityWarmthScoring` now implements and tests the correct independent sum, but the roughly 1,400-line authored dialogue catalogue requires a narrow verified call-site substitution rather than whole-file replacement.
+2. `ReturnMomentsSystem.recordRunOutcome()` still uses raw `roughRunStreak + 1`, and long-absence detection still uses raw timestamp subtraction. `SafeProgressionArithmetic` now implements and tests both replacements, but the large authored return-moment catalogue still requires two narrow call-site substitutions.
+3. `ParallaxBackground` and `GameView.update()` still rely on the production render-thread finite-delta contract at their large public coordination boundaries.
+4. `MainMenuScreen.onTap()` can advance its ritual on a synthetic nonfinite direct-call coordinate after both hit regions compare false. Real Android `MotionEvent` coordinates are finite; the exact one-line admission guard is mapped but the 600-line art/UI owner should not be whole-file replaced through the current connector.
+5. `SaveManager.hasGhostRun()` checks only the `AtomicFile` base path and does not validate or recognize a recoverable backup, while actual runtime loading correctly validates both. The unused convenience method remains cleanup debt.
+6. `GameView` remains a large coordinator and persistence ownership remains distributed. Both should be decomposed only through behavior-preserving seams after exact-head validation stabilizes.
 
 ### Required external gates
 
