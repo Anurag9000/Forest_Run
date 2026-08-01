@@ -43,11 +43,13 @@ fi
 
 "${PYTHON_BIN}" "${ROOT}/scripts/validate_manifest_scenario_traces.py" \
   "${CANDIDATE_PATH}" \
-  --root "${ROOT}"
+  --root "${ROOT}" \
+  --require-at-least-one
 if [[ -n "${BASELINE_PATH}" ]]; then
   "${PYTHON_BIN}" "${ROOT}/scripts/validate_manifest_scenario_traces.py" \
     "${BASELINE_PATH}" \
-    --root "${ROOT}"
+    --root "${ROOT}" \
+    --require-at-least-one
 fi
 
 aggregate_args=(
