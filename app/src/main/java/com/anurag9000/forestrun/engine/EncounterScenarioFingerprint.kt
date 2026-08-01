@@ -29,7 +29,9 @@ internal object EncounterScenarioFingerprint {
             appendLengthPrefixed(scenario.name)
             appendLengthPrefixed(scenario.title)
             appendLengthPrefixed(scenario.summary)
+            appendLengthPrefixed(scenario.forcedBiome?.name.orEmpty())
             append(if (scenario.startsWithBloom) '1' else '0').append('\n')
+            append(if (scenario.allowGhostPlayback) '1' else '0').append('\n')
             append(scenario.steps.size).append('\n')
             scenario.steps.forEachIndexed { index, step ->
                 append(index).append('\n')
