@@ -114,6 +114,32 @@ class EncounterDirectorTest {
         }
     }
 
+    @Test
+    fun `scenario catalogue has unique titles and covers every entity type`() {
+        assertEquals(
+            EncounterScenario.entries.size,
+            EncounterScenario.entries.map { it.title }.toSet().size
+        )
+        assertEquals(
+            EntityType.entries.toSet(),
+            EncounterScenario.entries.flatMap { scenario ->
+                scenario.steps.map { step -> step.type }
+            }.toSet()
+        )
+    }
+
+    @Test
+    fun `dog-specific variants cannot be assigned to another entity family`() {
+        val variantSteps = EncounterScenario.entries
+            .flatMap { it.steps }
+            .filter { it.variant != EncounterVariant.DEFAULT }
+
+        assertTrue(variantSteps.isNotEmpty())
+        assertTrue(variantSteps.all { it.type == EntityType.DOG })
+        assertTrue(variantSteps.any { it.variant == EncounterVariant.DOG_HAZARD })
+        assertTrue(variantSteps.any { it.variant == EncounterVariant.DOG_BUDDY })
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun `encounter step rejects negative time`() {
         EncounterStep(-1f, EntityType.CACTUS, 100f)
