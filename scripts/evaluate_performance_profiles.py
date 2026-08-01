@@ -19,6 +19,13 @@ REQUIRED_LIMITS = (
     "maxSlowFrameRatio",
     "maxUsedHeapBytes",
 )
+WORKLOAD_PAIRS = (
+    ("currentEntities", "peakEntities"),
+    ("currentSeedOrbs", "peakSeedOrbs"),
+    ("currentParticles", "peakParticles"),
+    ("currentDialogueBubbles", "peakDialogueBubbles"),
+    ("currentFlavorTexts", "peakFlavorTexts"),
+)
 
 
 class ConfigurationError(ValueError):
@@ -63,6 +70,20 @@ class EvaluationResult:
         return not self.violations
 
 
+@dataclass(frozen=True)
+class ReportEvidence:
+    sampled_frames: int
+    p95_processing_ns: int
+    p99_processing_ns: int
+    maximum_processing_ns: int
+    slow_frame_ratio: float
+    used_heap_bytes: int
+    ghost_writes_completed: int
+    ghost_writes_failed: int
+    maximum_ghost_frame_count: int
+    maximum_ghost_write_duration_ns: int
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         parsed = json.loads(path.read_text(encoding="utf-8"))
@@ -96,6 +117,13 @@ def _non_negative_int(source: dict[str, Any], key: str, label: str) -> int:
     value = source.get(key)
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ConfigurationError(f"{label}.{key} must be a non-negative integer")
+    return value
+
+
+def _positive_int(source: dict[str, Any], key: str, label: str) -> int:
+    value = _non_negative_int(source, key, label)
+    if value <= 0:
+        raise ConfigurationError(f"{label}.{key} must be a positive integer")
     return value
 
 
@@ -200,8 +228,8 @@ def select_profile(
     model = _required_string(report, "model", "report")
     scenario = _required_string(report, "scenario", "report")
     refresh_rate = _finite_number(report, "refreshRateHz", "report")
-    if refresh_rate < 0:
-        raise ConfigurationError("report.refreshRateHz must be non-negative")
+    if refresh_rate <= 0:
+        raise ConfigurationError("report.refreshRateHz must be positive")
 
     matches = [
         profile
@@ -233,18 +261,117 @@ def select_profile(
     return best[0]
 
 
-def _read_optional_metric(
-    report: dict[str, Any],
-    key: str,
-    required_by_limit: int | None,
-) -> int | None:
-    if required_by_limit is None:
-        return None
-    if key not in report:
+def _validate_report_evidence(report: dict[str, Any]) -> ReportEvidence:
+    _required_string(report, "scenario", "report")
+    _required_string(report, "manufacturer", "report")
+    _required_string(report, "model", "report")
+    _non_negative_int(report, "durationMs", "report")
+    _non_negative_int(report, "apiLevel", "report")
+    refresh_rate = _finite_number(report, "refreshRateHz", "report")
+    if refresh_rate <= 0:
+        raise ConfigurationError("report.refreshRateHz must be positive")
+
+    sampled_frames = _non_negative_int(report, "sampledFrames", "report")
+    total_frames = _non_negative_int(report, "totalFrames", "report")
+    slow_frames = _non_negative_int(report, "slowFrames", "report")
+    if sampled_frames > total_frames:
+        raise ConfigurationError("report.sampledFrames cannot exceed totalFrames")
+    if slow_frames > total_frames:
+        raise ConfigurationError("report.slowFrames cannot exceed totalFrames")
+
+    slow_ratio = _finite_number(report, "slowFrameRatio", "report")
+    if not 0.0 <= slow_ratio <= 1.0:
+        raise ConfigurationError("report.slowFrameRatio must be between 0 and 1")
+    expected_slow_ratio = 0.0 if total_frames == 0 else slow_frames / total_frames
+    if not math.isclose(
+        slow_ratio,
+        expected_slow_ratio,
+        rel_tol=1e-9,
+        abs_tol=1e-12,
+    ):
         raise ConfigurationError(
-            f"report.{key} is required by the selected threshold profile"
+            "report.slowFrameRatio must equal slowFrames / totalFrames"
         )
-    return _non_negative_int(report, key, "report")
+
+    _positive_int(report, "frameBudgetNs", "report")
+    mean_update = _non_negative_int(report, "meanUpdateNs", "report")
+    mean_render = _non_negative_int(report, "meanRenderNs", "report")
+    mean_processing = _non_negative_int(report, "meanProcessingNs", "report")
+    p50 = _non_negative_int(report, "p50ProcessingNs", "report")
+    p95 = _non_negative_int(report, "p95ProcessingNs", "report")
+    p99 = _non_negative_int(report, "p99ProcessingNs", "report")
+    maximum = _non_negative_int(report, "maximumProcessingNs", "report")
+    if p50 > p95 or p95 > p99 or p99 > maximum:
+        raise ConfigurationError("report processing percentiles are not ordered")
+    if mean_processing > maximum:
+        raise ConfigurationError(
+            "report.meanProcessingNs cannot exceed maximumProcessingNs"
+        )
+    if mean_update > maximum or mean_render > maximum:
+        raise ConfigurationError(
+            "report update/render means cannot exceed maximumProcessingNs"
+        )
+
+    used_heap = _non_negative_int(report, "usedHeapBytes", "report")
+    max_heap = _non_negative_int(report, "maxHeapBytes", "report")
+    if used_heap > max_heap:
+        raise ConfigurationError("report.usedHeapBytes cannot exceed maxHeapBytes")
+
+    for current_key, peak_key in WORKLOAD_PAIRS:
+        current = _non_negative_int(report, current_key, "report")
+        peak = _non_negative_int(report, peak_key, "report")
+        if current > peak:
+            raise ConfigurationError(
+                f"report.{current_key} cannot exceed {peak_key}"
+            )
+
+    ghost_started = _non_negative_int(report, "ghostWritesStarted", "report")
+    ghost_completed = _non_negative_int(report, "ghostWritesCompleted", "report")
+    ghost_failed = _non_negative_int(report, "ghostWritesFailed", "report")
+    if ghost_completed > ghost_started:
+        raise ConfigurationError(
+            "report.ghostWritesCompleted cannot exceed ghostWritesStarted"
+        )
+    if ghost_failed > ghost_completed:
+        raise ConfigurationError(
+            "report.ghostWritesFailed cannot exceed ghostWritesCompleted"
+        )
+
+    latest_ghost_frames = _non_negative_int(
+        report, "latestGhostFrameCount", "report"
+    )
+    maximum_ghost_frames = _non_negative_int(
+        report, "maximumGhostFrameCount", "report"
+    )
+    if latest_ghost_frames > maximum_ghost_frames:
+        raise ConfigurationError(
+            "report.latestGhostFrameCount cannot exceed maximumGhostFrameCount"
+        )
+
+    latest_ghost_duration = _non_negative_int(
+        report, "latestGhostWriteDurationNs", "report"
+    )
+    maximum_ghost_duration = _non_negative_int(
+        report, "maximumGhostWriteDurationNs", "report"
+    )
+    if latest_ghost_duration > maximum_ghost_duration:
+        raise ConfigurationError(
+            "report.latestGhostWriteDurationNs cannot exceed "
+            "maximumGhostWriteDurationNs"
+        )
+
+    return ReportEvidence(
+        sampled_frames=sampled_frames,
+        p95_processing_ns=p95,
+        p99_processing_ns=p99,
+        maximum_processing_ns=maximum,
+        slow_frame_ratio=slow_ratio,
+        used_heap_bytes=used_heap,
+        ghost_writes_completed=ghost_completed,
+        ghost_writes_failed=ghost_failed,
+        maximum_ghost_frame_count=maximum_ghost_frames,
+        maximum_ghost_write_duration_ns=maximum_ghost_duration,
+    )
 
 
 def evaluate_report(
@@ -252,95 +379,81 @@ def evaluate_report(
     report: dict[str, Any],
     profiles: Sequence[ThresholdProfile],
 ) -> EvaluationResult:
+    evidence = _validate_report_evidence(report)
     profile = select_profile(report, profiles)
-    sampled_frames = _non_negative_int(report, "sampledFrames", "report")
-    p95 = _non_negative_int(report, "p95ProcessingNs", "report")
-    p99 = _non_negative_int(report, "p99ProcessingNs", "report")
-    maximum = _non_negative_int(report, "maximumProcessingNs", "report")
-    used_heap = _non_negative_int(report, "usedHeapBytes", "report")
-    slow_ratio = _finite_number(report, "slowFrameRatio", "report")
-    if not 0.0 <= slow_ratio <= 1.0:
-        raise ConfigurationError("report.slowFrameRatio must be between 0 and 1")
-    if p95 > p99 or p99 > maximum:
-        raise ConfigurationError("report processing percentiles are not ordered")
-
-    ghost_writes_completed = _read_optional_metric(
-        report, "ghostWritesCompleted", profile.min_ghost_writes_completed
-    )
-    ghost_write_failures = _read_optional_metric(
-        report, "ghostWritesFailed", profile.max_ghost_write_failures
-    )
-    maximum_ghost_frame_count = _read_optional_metric(
-        report, "maximumGhostFrameCount", profile.min_maximum_ghost_frame_count
-    )
-    maximum_ghost_write_duration_ns = _read_optional_metric(
-        report, "maximumGhostWriteDurationNs", profile.max_ghost_write_duration_ns
-    )
 
     violations: list[str] = []
-    if sampled_frames < profile.min_sampled_frames:
+    if evidence.sampled_frames < profile.min_sampled_frames:
         violations.append(
-            f"sampledFrames {sampled_frames} < minimum {profile.min_sampled_frames}"
+            f"sampledFrames {evidence.sampled_frames} < minimum {profile.min_sampled_frames}"
         )
-    if p95 > profile.max_p95_processing_ns:
+    if evidence.p95_processing_ns > profile.max_p95_processing_ns:
         violations.append(
-            f"p95ProcessingNs {p95} > limit {profile.max_p95_processing_ns}"
+            "p95ProcessingNs "
+            f"{evidence.p95_processing_ns} > limit {profile.max_p95_processing_ns}"
         )
-    if p99 > profile.max_p99_processing_ns:
+    if evidence.p99_processing_ns > profile.max_p99_processing_ns:
         violations.append(
-            f"p99ProcessingNs {p99} > limit {profile.max_p99_processing_ns}"
+            "p99ProcessingNs "
+            f"{evidence.p99_processing_ns} > limit {profile.max_p99_processing_ns}"
         )
-    if slow_ratio > profile.max_slow_frame_ratio:
+    if evidence.slow_frame_ratio > profile.max_slow_frame_ratio:
         violations.append(
-            f"slowFrameRatio {slow_ratio:.6f} > limit {profile.max_slow_frame_ratio:.6f}"
+            "slowFrameRatio "
+            f"{evidence.slow_frame_ratio:.6f} > limit "
+            f"{profile.max_slow_frame_ratio:.6f}"
         )
-    if used_heap > profile.max_used_heap_bytes:
+    if evidence.used_heap_bytes > profile.max_used_heap_bytes:
         violations.append(
-            f"usedHeapBytes {used_heap} > limit {profile.max_used_heap_bytes}"
+            "usedHeapBytes "
+            f"{evidence.used_heap_bytes} > limit {profile.max_used_heap_bytes}"
         )
     if (
         profile.max_maximum_processing_ns is not None
-        and maximum > profile.max_maximum_processing_ns
+        and evidence.maximum_processing_ns > profile.max_maximum_processing_ns
     ):
         violations.append(
             "maximumProcessingNs "
-            f"{maximum} > limit {profile.max_maximum_processing_ns}"
+            f"{evidence.maximum_processing_ns} > limit "
+            f"{profile.max_maximum_processing_ns}"
         )
     if (
         profile.min_ghost_writes_completed is not None
-        and ghost_writes_completed is not None
-        and ghost_writes_completed < profile.min_ghost_writes_completed
+        and evidence.ghost_writes_completed < profile.min_ghost_writes_completed
     ):
         violations.append(
             "ghostWritesCompleted "
-            f"{ghost_writes_completed} < minimum {profile.min_ghost_writes_completed}"
+            f"{evidence.ghost_writes_completed} < minimum "
+            f"{profile.min_ghost_writes_completed}"
         )
     if (
         profile.max_ghost_write_failures is not None
-        and ghost_write_failures is not None
-        and ghost_write_failures > profile.max_ghost_write_failures
+        and evidence.ghost_writes_failed > profile.max_ghost_write_failures
     ):
         violations.append(
             "ghostWritesFailed "
-            f"{ghost_write_failures} > limit {profile.max_ghost_write_failures}"
+            f"{evidence.ghost_writes_failed} > limit "
+            f"{profile.max_ghost_write_failures}"
         )
     if (
         profile.min_maximum_ghost_frame_count is not None
-        and maximum_ghost_frame_count is not None
-        and maximum_ghost_frame_count < profile.min_maximum_ghost_frame_count
+        and evidence.maximum_ghost_frame_count
+        < profile.min_maximum_ghost_frame_count
     ):
         violations.append(
             "maximumGhostFrameCount "
-            f"{maximum_ghost_frame_count} < minimum {profile.min_maximum_ghost_frame_count}"
+            f"{evidence.maximum_ghost_frame_count} < minimum "
+            f"{profile.min_maximum_ghost_frame_count}"
         )
     if (
         profile.max_ghost_write_duration_ns is not None
-        and maximum_ghost_write_duration_ns is not None
-        and maximum_ghost_write_duration_ns > profile.max_ghost_write_duration_ns
+        and evidence.maximum_ghost_write_duration_ns
+        > profile.max_ghost_write_duration_ns
     ):
         violations.append(
             "maximumGhostWriteDurationNs "
-            f"{maximum_ghost_write_duration_ns} > limit {profile.max_ghost_write_duration_ns}"
+            f"{evidence.maximum_ghost_write_duration_ns} > limit "
+            f"{profile.max_ghost_write_duration_ns}"
         )
 
     return EvaluationResult(report_path, profile.name, tuple(violations))
