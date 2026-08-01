@@ -21,17 +21,18 @@ internal object DeterministicScenarioTraceEvidenceStore {
 
         val destination = File(directory, fileNameFor(evidence))
         val atomicFile = AtomicFile(destination)
-        var stream: FileOutputStream? = null
+        var pendingStream: FileOutputStream? = null
         return try {
-            stream = atomicFile.startWrite()
-            val output = BufferedOutputStream(stream)
+            val activeStream = atomicFile.startWrite()
+            pendingStream = activeStream
+            val output = BufferedOutputStream(activeStream)
             output.write(payload)
             output.flush()
-            atomicFile.finishWrite(stream)
-            stream = null
+            atomicFile.finishWrite(activeStream)
+            pendingStream = null
             destination
         } catch (_: Exception) {
-            stream?.let(atomicFile::failWrite)
+            pendingStream?.let(atomicFile::failWrite)
             null
         }
     }
