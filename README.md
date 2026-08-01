@@ -10,7 +10,7 @@ The player begins beneath a willow, runs through five atmospheric biomes, collec
 
 ## Current Status
 
-**Feature-rich alpha with the primary correctness-remediation history consolidated on `main`.** The repository has a permanent application identity, current Android target, immutable exact-SHA host/emulator CI, broad invariant coverage, an obfuscated/resource-shrunk release bundle, versioned atomic ghost persistence, cutout-safe essential UI, persistent feedback controls, and a physical performance-evidence harness.
+**Feature-rich alpha with the primary correctness-remediation history consolidated on `main`.** The repository has a permanent application identity, current Android target, immutable exact-SHA host/emulator CI, broad invariant coverage, an obfuscated/resource-shrunk release bundle, versioned atomic ghost persistence, cutout-safe essential UI, persistent feedback controls, a physical performance-evidence harness, and a fail-closed physical-device/store acceptance validator.
 
 It is not yet a release candidate because representative physical-device acceptance, measured performance thresholds, signed-artifact installation, final visual approval, and store/policy work remain.
 
@@ -40,7 +40,8 @@ The canonical `main` branch includes:
 - versioned SharedPreferences repair with future-schema compatibility storage;
 - coherent frame, workload, heap, and ghost-I/O profiling snapshots;
 - final application ID `com.anurag9000.forestrun`;
-- API 36 host/release validation and API 35 connected validation on exact candidate SHAs.
+- API 36 host/release validation and API 35 connected validation on exact candidate SHAs;
+- candidate-, artifact-, certificate-, internal-store-, device-, scenario-, threshold-, evidence-hash-, and reviewer-bound physical acceptance validation.
 
 ## Development Workflow
 
@@ -63,12 +64,13 @@ The canonical `main` branch includes:
 - score, distance, Seeds, Bloom, mercy, pacifist route, and run-summary systems;
 - persistent Garden, plants, wardrobe, relationships, forest mood, return moments, and story fragments;
 - ghost replay, particles, camera feedback, dialogue, flavour text, audio, and haptics;
-- deterministic encounter scenarios, store-support scripts, and physical profiling tools.
+- deterministic encounter scenarios, store-support scripts, physical profiling tools, and candidate-bound acceptance evidence.
 
 ## Automated Evidence
 
 Permanent read-only CI checks out and records the exact event SHA, then runs:
 
+- all Python release, provenance, screenshot, metadata, graphics, performance, connected-runner, and physical-acceptance tests under `scripts/test_*.py`;
 - debug, release, unit-test, and instrumentation Kotlin compilation;
 - the complete JVM/Robolectric invariant suite;
 - debug and release lint;
@@ -95,7 +97,7 @@ The large hardware-capture and performance-profile tests are compiled but intent
 - revalidate current store-policy, privacy, data-safety, content-rating, and submission requirements;
 - decide whether the remaining procedural scenic layers and fixed-landscape policy are final art/product choices.
 
-See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist and [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) for the exhaustive implemented/remaining audit.
+See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist, [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) for the physical/store evidence contract, and [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) for the exhaustive implemented/remaining audit.
 
 ## Documentation
 
@@ -104,14 +106,17 @@ See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist 
 | [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) | Product vision, runtime-honest entity mechanics, session lifecycle, and design rules |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Current runtime structure, ownership, persistence, CI, and architectural debt |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Physical-device profiling protocol, report collection, and threshold procedure |
+| [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) | Candidate identity, device/scenario coverage, evidence hashes, thresholds, approvals, and release decision |
 | [`docs/RELEASE.md`](docs/RELEASE.md) | Correctness, validation, packaging, hardware, signing, and store checklist |
 | [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) | Exhaustive remediation status, validation truth, bounded debt, and remaining gates |
+| [`docs/audits/2026-08-01_post_merge_audit.md`](docs/audits/2026-08-01_post_merge_audit.md) | Reconstructed original mission, merged-PR audit, remaining work, and assessed additions |
 
 ## Build and Test
 
 CI runs on Java 21 while Android source remains compiled to Java 17 bytecode. Android API 36 must be installed.
 
 ```bash
+python3 -m unittest discover -s scripts -p 'test_*.py'
 bash gradlew compileDebugKotlin compileReleaseKotlin compileDebugAndroidTestKotlin
 bash gradlew testDebugUnitTest
 bash gradlew lintDebug lintRelease
@@ -124,6 +129,14 @@ Physical performance evidence on one authorized device:
 
 ```bash
 bash scripts/collect_performance_profiles.sh
+```
+
+Validate a completed, candidate-bound physical-device/store evidence bundle:
+
+```bash
+python3 scripts/validate_device_acceptance.py \
+  release-evidence/device-acceptance.json \
+  --summary-output release-evidence/device-acceptance-summary.json
 ```
 
 Canonical release preparation from the exact clean canonical `origin/main` tip:
