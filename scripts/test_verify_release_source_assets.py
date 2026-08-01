@@ -108,6 +108,16 @@ class ReleaseSourceAssetVerifierTest(unittest.TestCase):
             evidence.required_audio_count,
         )
 
+    def test_main_release_wrapper_runs_asset_preflight_before_preparer(self) -> None:
+        wrapper = (ROOT / "scripts/prepare_main_release.sh").read_text(
+            encoding="utf-8"
+        )
+
+        verifier_index = wrapper.index("verify_release_source_assets.py")
+        preparer_index = wrapper.index("prepare_play_release.py")
+        self.assertLess(verifier_index, preparer_index)
+        self.assertIn('--root "${ROOT}"', wrapper[verifier_index:preparer_index])
+
 
 if __name__ == "__main__":
     unittest.main()
