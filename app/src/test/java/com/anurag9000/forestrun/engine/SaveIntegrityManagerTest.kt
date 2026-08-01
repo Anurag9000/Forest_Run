@@ -70,7 +70,7 @@ class SaveIntegrityManagerTest {
         assertEquals(0, SaveManager.loadHighScore(context))
         assertEquals(0, SaveManager.loadLifetimeSeeds(context))
         assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
-        assertEquals(9, SaveManager.loadGardenProgress(context))
+        assertEquals(GardenEconomy.catalogueSize, SaveManager.loadGardenProgress(context))
         assertNull(SaveManager.loadLastKiller(context))
         assertEquals(setOf(CostumeStyle.FLOWER_CROWN), SaveManager.loadUnlockedCostumes(context))
         assertEquals(CostumeStyle.NONE, SaveManager.loadActiveCostume(context))
@@ -104,6 +104,10 @@ class SaveIntegrityManagerTest {
             .putStringSet("unlocked_history_marks", historyMarks)
             .putStringSet("unlocked_costumes", setOf(CostumeStyle.NONE.name))
             .putString("featured_costume", CostumeStyle.NONE.name)
+            .putStringSet(
+                "unlocked_relationship_milestones",
+                setOf(EntityType.CAT.name, EntityType.CACTUS.name)
+            )
             .putStringSet("future_string_set", unknownSet)
             .commit()
 
@@ -124,6 +128,10 @@ class SaveIntegrityManagerTest {
         )
         assertTrue(SaveManager.loadUnlockedCostumes(context).isEmpty())
         assertNull(SaveManager.loadFeaturedCostume(context))
+        assertEquals(
+            setOf(EntityType.CAT),
+            SaveManager.loadUnlockedRelationshipMilestones(context)
+        )
         assertEquals(unknownSet, prefs.getStringSet("future_string_set", emptySet()))
     }
 
@@ -220,7 +228,7 @@ class SaveIntegrityManagerTest {
         assertEquals(0, SaveManager.loadHighScore(context))
         assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(0, SaveManager.loadLifetimeSeeds(context))
-        assertEquals(9, SaveManager.loadGardenProgress(context))
+        assertEquals(GardenEconomy.catalogueSize, SaveManager.loadGardenProgress(context))
         val saturatedEncounterCount = SaveManager.loadEncounterCount(context, EntityType.FOX)
         assertTrue(saturatedEncounterCount > 0)
         assertTrue(saturatedEncounterCount < Int.MAX_VALUE)
