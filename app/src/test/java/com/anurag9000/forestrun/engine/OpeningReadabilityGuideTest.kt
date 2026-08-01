@@ -122,11 +122,20 @@ class OpeningReadabilityGuideTest {
     }
 
     @Test
-    fun `invalid default intervals never escape as NaN or negative`() {
-        listOf(-1f, Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY).forEach { invalid ->
-            val adjusted = OpeningReadabilityGuide.adjustedSpawnInterval(8f, invalid)
-            assertTrue(adjusted.isFinite())
-            assertEquals(1.95f, adjusted, 0.0001f)
+    fun `invalid or zero intervals always resolve to a conservative positive cadence`() {
+        listOf(
+            -1f,
+            0f,
+            Float.NaN,
+            Float.POSITIVE_INFINITY,
+            Float.NEGATIVE_INFINITY
+        ).forEach { invalid ->
+            listOf(1f, 8f, 40f).forEach { time ->
+                val adjusted = OpeningReadabilityGuide.adjustedSpawnInterval(time, invalid)
+                assertTrue(adjusted.isFinite())
+                assertEquals(1.95f, adjusted, 0.0001f)
+                assertTrue(adjusted > 0f)
+            }
         }
     }
 }
