@@ -6,7 +6,8 @@ import unittest
 from pathlib import Path
 
 import aggregate_device_acceptance as aggregate
-from test_validate_device_acceptance import materialize_files, valid_bundle
+from acceptance_test_support import materialize_traced_bundle
+from test_validate_device_acceptance import valid_bundle
 
 
 class AggregateDeviceAcceptanceAliasTest(unittest.TestCase):
@@ -16,12 +17,12 @@ class AggregateDeviceAcceptanceAliasTest(unittest.TestCase):
 
         bundle = valid_bundle()
         root.mkdir(parents=True, exist_ok=True)
+        materialize_traced_bundle(root, bundle)
         manifest = root / "manifest.json"
         manifest.write_text(
             json.dumps(bundle, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
-        materialize_files(root, bundle)
         return manifest, bundle
 
     def test_output_cannot_overwrite_manifest_artifact_or_evidence(self) -> None:
