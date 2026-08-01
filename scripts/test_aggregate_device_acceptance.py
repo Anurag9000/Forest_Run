@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -142,6 +143,31 @@ class AggregateDeviceAcceptanceTest(unittest.TestCase):
             with self.assertRaisesRegex(
                 aggregate.AggregationError,
                 "evidence digest mismatch",
+            ):
+                aggregate.aggregate(manifest)
+
+    def test_digest_matched_but_unauthored_trace_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = valid_bundle()
+            manifest = self.write_bundle(root, bundle)
+            entry = bundle["sessions"][0]["scenarios"]["ordinary_play_15m"][
+                "evidence_files"
+            ][0]
+            trace_path = root / entry["path"]
+            payload = json.loads(trace_path.read_text(encoding="utf-8"))
+            payload["events"][0]["action"] = "TAP_JUMP"
+            forged = (json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8")
+            trace_path.write_bytes(forged)
+            entry["sha256"] = hashlib.sha256(forged).hexdigest()
+            manifest.write_text(
+                json.dumps(bundle, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                aggregate.AggregationError,
+                "action does not match the canonical input contract",
             ):
                 aggregate.aggregate(manifest)
 
