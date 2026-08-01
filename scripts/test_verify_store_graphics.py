@@ -8,6 +8,8 @@ from PIL import Image
 
 from verify_store_graphics import StoreGraphicsError, verify_store_graphics
 
+ROOT = Path(__file__).resolve().parent.parent
+
 
 class StoreGraphicsVerifierTest(unittest.TestCase):
     candidate = "a" * 40
@@ -122,6 +124,16 @@ class StoreGraphicsVerifierTest(unittest.TestCase):
         self.write_manifest(outputs=payload["outputs"])
         with self.assertRaisesRegex(StoreGraphicsError, "mode"):
             verify_store_graphics(self.root, self.graphics, self.candidate)
+
+
+class StoreGraphicsReleaseContractTest(unittest.TestCase):
+    def test_canonical_wrapper_verifies_graphics_before_play_preparer(self) -> None:
+        source = (ROOT / "scripts/prepare_main_release.sh").read_text(encoding="utf-8")
+        graphics_index = source.index("verify_store_graphics.py")
+        preparer_index = source.index("prepare_play_release.py")
+        self.assertLess(graphics_index, preparer_index)
+        self.assertIn('--candidate-sha "${candidate_sha}"', source[graphics_index:preparer_index])
+        self.assertIn('--root "${ROOT}"', source[graphics_index:preparer_index])
 
 
 if __name__ == "__main__":
