@@ -19,6 +19,10 @@ class ContinuationSourceContractTest(unittest.TestCase):
             ROOT
             / "app/src/main/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidence.kt"
         ).read_text(encoding="utf-8")
+        fingerprint = (
+            ROOT
+            / "app/src/main/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprint.kt"
+        ).read_text(encoding="utf-8")
 
         self.assertTrue(trace.is_file())
         self.assertIn("private val defaultTraceRecorder", script)
@@ -28,6 +32,9 @@ class ContinuationSourceContractTest(unittest.TestCase):
         self.assertIn("dispatched_at_micros", evidence)
         self.assertIn("lateness_micros", evidence)
         self.assertNotIn("scheduled_at_seconds", evidence)
+        self.assertIn("scenario.forcedBiome?.name.orEmpty()", fingerprint)
+        self.assertIn("scenario.allowGhostPlayback", fingerprint)
+        self.assertIn("scenario.startsWithBloom", fingerprint)
         self.assertTrue(
             (
                 ROOT
@@ -40,6 +47,20 @@ class ContinuationSourceContractTest(unittest.TestCase):
                 / "app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceTest.kt"
             ).is_file()
         )
+        self.assertTrue(
+            (
+                ROOT
+                / "app/src/test/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprintTest.kt"
+            ).is_file()
+        )
+        self.assertTrue(
+            (
+                ROOT
+                / "app/src/main/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceStore.kt"
+            ).is_file()
+        )
+        self.assertTrue((ROOT / "scripts/validate_scenario_trace.py").is_file())
+        self.assertTrue((ROOT / "scripts/validate_manifest_scenario_traces.py").is_file())
 
     def test_physical_acceptance_aggregation_surface_is_complete(self) -> None:
         expected = (
@@ -58,6 +79,10 @@ class ContinuationSourceContractTest(unittest.TestCase):
         )
         self.assertLess(
             wrapper.index("verify_strict_json_evidence.py"),
+            wrapper.index("validate_manifest_scenario_traces.py"),
+        )
+        self.assertLess(
+            wrapper.index("validate_manifest_scenario_traces.py"),
             wrapper.index("aggregate_device_acceptance.py"),
         )
         self.assertIn("must not overwrite the candidate", wrapper)
@@ -67,6 +92,9 @@ class ContinuationSourceContractTest(unittest.TestCase):
         parser = (ROOT / "scripts/strict_json.py").read_text(encoding="utf-8")
         self.assertIn("math.isfinite(value)", parser)
         self.assertIn("_preflight_nesting", parser)
+        self.assertIn("DEFAULT_MAX_INTEGER_DIGITS = 256", parser)
+        self.assertIn("parse_int=lambda literal", parser)
+        self.assertIn("maximum_integer_digits=maximum_integer_digits", parser)
         self.assertIn("except (ValueError, RecursionError)", parser)
         self.assertTrue((ROOT / "scripts/test_strict_json_overflow.py").is_file())
 
@@ -87,6 +115,24 @@ class ContinuationSourceContractTest(unittest.TestCase):
         self.assertNotIn("lastParameterUpdateNs", leitmotif)
         self.assertIn("tempoEvaluationThrottle.tryAcquire(nowNs)", leitmotif)
         self.assertIn("bloomEvaluationThrottle.tryAcquire(nowNs, force = conversionChanged)", leitmotif)
+
+    def test_progression_arithmetic_replacements_and_tests_exist(self) -> None:
+        arithmetic = (
+            ROOT
+            / "app/src/main/java/com/anurag9000/forestrun/engine/SafeProgressionArithmetic.kt"
+        ).read_text(encoding="utf-8")
+        warmth = (
+            ROOT
+            / "app/src/main/java/com/anurag9000/forestrun/engine/FamiliarityWarmthScoring.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("fun saturatingIncrement", arithmetic)
+        self.assertIn("fun elapsedAtLeast", arithmetic)
+        self.assertIn("fun elapsedOrZero", arithmetic)
+        self.assertIn("bonus(safePasses >= 3)", warmth)
+        self.assertIn("bonus(safePasses >= 5)", warmth)
+        self.assertIn("bonus(safeSpares >= 2)", warmth)
+        self.assertIn("bonus(safeKindness >= 3)", warmth)
+        self.assertIn("bonus(safeEncounters >= 5)", warmth)
 
 
 if __name__ == "__main__":
