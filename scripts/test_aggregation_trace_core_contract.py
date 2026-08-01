@@ -28,6 +28,22 @@ class AggregationTraceCoreContractTest(unittest.TestCase):
         self.assertIn("trace-contract sets differ", source)
         self.assertIn('"trace_contracts": candidate["trace_contracts"]', source)
 
+    def test_manifest_is_stable_across_acceptance_and_trace_validation(self) -> None:
+        source = AGGREGATOR.read_text(encoding="utf-8")
+        mutation_tests = (ROOT / "scripts/test_aggregate_manifest_snapshot.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("def _stable_manifest_read", source)
+        self.assertIn("before.st_mtime_ns", source)
+        self.assertIn("before.st_ino", source)
+        self.assertIn("confirmed_raw != raw", source)
+        self.assertIn("changed while trace contracts were validated", source)
+        self.assertIn("def _aggregate_with_sources", source)
+        self.assertIn("_manifest_protected_paths(candidate_path, candidate_data)", source)
+        self.assertIn("payload, protected_paths = _aggregate_with_sources", source)
+        self.assertIn("mutation_between_acceptance_and_trace_validation", mutation_tests)
+
     def test_reusable_traced_test_fixture_and_adversarial_tests_exist(self) -> None:
         support = (ROOT / "scripts/acceptance_test_support.py").read_text(
             encoding="utf-8"
