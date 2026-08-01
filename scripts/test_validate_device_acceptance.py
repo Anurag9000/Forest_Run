@@ -145,6 +145,23 @@ def valid_bundle() -> dict:
     }
 
 
+def materialize_files(root: Path, bundle: dict, *, corrupt: bool = False) -> None:
+    """Materialize the candidate artifact and every declared evidence file."""
+    artifact = root / bundle["candidate"]["artifact_path"]
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_bytes(ARTIFACT_BYTES)
+    first = True
+    for item in bundle["sessions"]:
+        for result in item["scenarios"].values():
+            for evidence in result["evidence_files"]:
+                target = root / evidence["path"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(
+                    b"bad\n" if corrupt and first else EVIDENCE_BYTES
+                )
+                first = False
+
+
 class DeviceAcceptanceTest(unittest.TestCase):
     def validate(self, bundle: dict):
         raw = json.dumps(bundle, sort_keys=True).encode()
@@ -157,19 +174,7 @@ class DeviceAcceptanceTest(unittest.TestCase):
 
     @staticmethod
     def materialize(root: Path, bundle: dict, *, corrupt: bool = False) -> None:
-        artifact = root / bundle["candidate"]["artifact_path"]
-        artifact.parent.mkdir(parents=True, exist_ok=True)
-        artifact.write_bytes(ARTIFACT_BYTES)
-        first = True
-        for item in bundle["sessions"]:
-            for result in item["scenarios"].values():
-                for evidence in result["evidence_files"]:
-                    target = root / evidence["path"]
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_bytes(
-                        b"bad\n" if corrupt and first else EVIDENCE_BYTES
-                    )
-                    first = False
+        materialize_files(root, bundle, corrupt=corrupt)
 
     def test_complete_bundle(self) -> None:
         summary = self.validate(valid_bundle())
