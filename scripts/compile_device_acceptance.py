@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import hashlib
 import json
 import os
 import shutil
@@ -32,27 +31,40 @@ class CompilationError(ValueError):
 
 def _read_object(path: Path) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        size = path.stat().st_size
+    except FileNotFoundError as exc:
+        raise CompilationError(f"could not read {path}: file is missing") from exc
+    except OSError as exc:
+        raise CompilationError(f"could not inspect {path}: {exc}") from exc
+    if size <= 0 or size > acceptance.MAX_MANIFEST_BYTES:
+        raise CompilationError(
+            f"draft must be between 1 and {acceptance.MAX_MANIFEST_BYTES} bytes"
+        )
+    try:
+        raw = path.read_bytes()
     except OSError as exc:
         raise CompilationError(f"could not read {path}: {exc}") from exc
-    except json.JSONDecodeError as exc:
+    if len(raw) != size:
+        raise CompilationError(f"draft changed while being read: {path}")
+    try:
+        value = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise CompilationError(f"invalid JSON in {path}: {exc}") from exc
     if not isinstance(value, dict):
         raise CompilationError(f"{path} must contain a JSON object")
     return value
 
 
-def _hash_file(path: Path, label: str) -> str:
-    if not path.is_file():
-        raise CompilationError(f"{label} is missing: {path}")
-    digest = hashlib.sha256()
+def _hash_file(path: Path, label: str, maximum_bytes: int) -> str:
     try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as exc:
-        raise CompilationError(f"could not hash {label} {path}: {exc}") from exc
-    return digest.hexdigest()
+        digest, _ = acceptance._hash_bounded_file(
+            path,
+            label,
+            maximum_bytes,
+        )
+    except acceptance.EvidenceError as exc:
+        raise CompilationError(str(exc)) from exc
+    return digest
 
 
 def _resolve_relative(base: Path, value: Any, label: str) -> tuple[str, Path]:
@@ -119,6 +131,7 @@ def compile_bundle(
     candidate["artifact_sha256"] = _hash_file(
         artifact_path,
         "candidate artifact",
+        acceptance.MAX_ARTIFACT_BYTES,
     )
 
     # Store-delivery identity is a captured fact. Never derive or overwrite it
@@ -169,7 +182,11 @@ def compile_bundle(
                 hashed_files.append(
                     {
                         "path": relative,
-                        "sha256": _hash_file(resolved, "evidence file"),
+                        "sha256": _hash_file(
+                            resolved,
+                            "evidence file",
+                            acceptance.MAX_EVIDENCE_FILE_BYTES,
+                        ),
                     }
                 )
             result["evidence_files"] = hashed_files
