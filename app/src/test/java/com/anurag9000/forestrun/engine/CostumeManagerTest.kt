@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.CostumeStyle
 import com.anurag9000.forestrun.entities.EntityType
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -21,10 +23,16 @@ class CostumeManagerTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        context.getSharedPreferences("forest_run_prefs", Context.MODE_PRIVATE)
+        SaveManager.usePrimaryPreferences()
+        context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .clear()
             .commit()
+    }
+
+    @After
+    fun tearDown() {
+        SaveManager.usePrimaryPreferences()
     }
 
     @Test
@@ -115,5 +123,32 @@ class CostumeManagerTest {
         assertEquals("Bell Charm", activePresentation?.activeLabel)
         assertTrue(activePresentation?.activeLine.orEmpty().contains("dog", ignoreCase = true))
         assertEquals(CostumeStyle.BELL_CHARM, CostumeManager.featuredPresentation(context)?.style)
+    }
+
+    @Test
+    fun `NONE-only malformed unlock storage cannot create a blank featured card`() {
+        SaveManager.saveUnlockedCostumes(context, setOf(CostumeStyle.NONE))
+        SaveManager.saveFeaturedCostume(context, CostumeStyle.NONE)
+        SaveManager.saveActiveCostume(context, CostumeStyle.NONE)
+
+        assertNull(CostumeManager.featuredPresentation(context))
+        assertNull(CostumeManager.activePresentation(context))
+
+        CostumeManager.refreshUnlocks(context)
+
+        assertTrue(SaveManager.loadUnlockedCostumes(context).isEmpty())
+        assertEquals(listOf(CostumeStyle.NONE), CostumeManager.availableCostumes(context))
+    }
+
+    @Test
+    fun `refresh persists repair for a locked active costume`() {
+        SaveManager.saveUnlockedCostumes(context, emptySet())
+        SaveManager.saveActiveCostume(context, CostumeStyle.MOON_CAPE)
+
+        assertEquals(CostumeStyle.NONE, CostumeManager.activeCostume(context))
+
+        CostumeManager.refreshUnlocks(context)
+
+        assertEquals(CostumeStyle.NONE, SaveManager.loadActiveCostume(context))
     }
 }
