@@ -49,7 +49,10 @@ class SaveIntegrityManagerTest {
             .putFloat("best_distance", Float.NaN)
             .putInt("garden_unlocked", 99)
             .putString("last_killer", "NOT_AN_ENTITY")
-            .putStringSet("unlocked_costumes", setOf(CostumeStyle.FLOWER_CROWN.name, "BROKEN"))
+            .putStringSet(
+                "unlocked_costumes",
+                setOf(CostumeStyle.NONE.name, CostumeStyle.FLOWER_CROWN.name, "BROKEN")
+            )
             .putString("active_costume", CostumeStyle.MOON_CAPE.name)
             .putString("featured_costume", "BROKEN")
             .putString("forest_mood", "BROKEN")
@@ -78,6 +81,50 @@ class SaveIntegrityManagerTest {
         assertNull(SaveManager.loadRelationshipStage(context, EntityType.CAT))
         assertEquals(0L, SaveManager.loadReturnMomentState(context).lastActiveAtMs)
         assertEquals("preserve-me", prefs.getString("unknown_future_key", null))
+    }
+
+    @Test
+    fun `known string sets are bounded while unknown sets remain untouched`() {
+        val memoryPages = (0 until 600).mapTo(mutableSetOf()) { index ->
+            "page_${index.toString().padStart(3, '0')}"
+        }.apply {
+            add("")
+            add("   ")
+            add("x".repeat(129))
+        }
+        val historyMarks = (0 until 300).mapTo(mutableSetOf()) { index ->
+            "history_${index.toString().padStart(3, '0')}"
+        }.apply {
+            add("\t")
+            add("y".repeat(129))
+        }
+        val unknownSet = setOf("", "future", "z".repeat(200))
+        prefs.edit()
+            .putStringSet("unlocked_memory_pages", memoryPages)
+            .putStringSet("unlocked_history_marks", historyMarks)
+            .putStringSet("unlocked_costumes", setOf(CostumeStyle.NONE.name))
+            .putString("featured_costume", CostumeStyle.NONE.name)
+            .putStringSet("future_string_set", unknownSet)
+            .commit()
+
+        val report = SaveIntegrityManager.repair(context)
+
+        assertEquals(SaveIntegrityStatus.MIGRATED, report.status)
+        assertEquals(
+            (0 until 512).mapTo(mutableSetOf()) { index ->
+                "page_${index.toString().padStart(3, '0')}"
+            },
+            SaveManager.loadUnlockedMemoryPages(context)
+        )
+        assertEquals(
+            (0 until 256).mapTo(mutableSetOf()) { index ->
+                "history_${index.toString().padStart(3, '0')}"
+            },
+            SaveManager.loadUnlockedHistoryMarks(context)
+        )
+        assertTrue(SaveManager.loadUnlockedCostumes(context).isEmpty())
+        assertNull(SaveManager.loadFeaturedCostume(context))
+        assertEquals(unknownSet, prefs.getStringSet("future_string_set", emptySet()))
     }
 
     @Test
