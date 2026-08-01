@@ -1,6 +1,6 @@
 # Forest Run — Performance Evidence Protocol
 
-Performance is a release-evidence task, not a documentation adjective. The engine contains low-overhead telemetry, repeated deterministic physical-device workloads, a clean-SHA collector, and a candidate-specific acceptance evaluator. No device class is accepted until its measurements are captured, reviewed, converted into explicit limits, and re-evaluated against those limits.
+Performance is a release-evidence task, not a documentation adjective. The engine contains low-overhead telemetry, repeated deterministic physical-device workloads, a canonical-`origin/main` collector, and a candidate-specific acceptance evaluator. No device class is accepted until its measurements are captured, reviewed, converted into explicit limits, and re-evaluated against those limits.
 
 ## What the engine records
 
@@ -73,10 +73,10 @@ Capture from one authorized device, or set `FOREST_RUN_DEVICE_SERIAL` when multi
 bash scripts/collect_performance_profiles.sh
 ```
 
-Choose a custom local output directory:
+Choose a custom local output directory. Keep it outside the repository or under an ignored evidence directory so the final source-integrity recheck remains clean:
 
 ```bash
-bash scripts/collect_performance_profiles.sh evidence/performance/my-device
+bash scripts/collect_performance_profiles.sh performance-profiles/my-device
 ```
 
 Run one profiling method only:
@@ -86,7 +86,19 @@ FOREST_RUN_PROFILE_TEST='com.anurag9000.forestrun.HardwarePerformanceProfileTest
   bash scripts/collect_performance_profiles.sh
 ```
 
-The collector refuses a dirty Git tree and records the exact candidate SHA. It also:
+A method-only run is targeted diagnostic evidence; it does not substitute for the complete release workload set.
+
+Before contacting the device, the collector:
+
+- requires the named `main` branch rather than a detached or feature checkout;
+- rejects tracked changes and untracked files;
+- freshly fetches canonical `origin/main`;
+- rejects stale local main and unpushed local commits;
+- freezes the full SHA shared by `HEAD`, local `main`, and `origin/main`.
+
+After instrumentation, report pulling, diagnostics, and threshold evaluation, it re-runs both local and remote verification. Evidence is rejected if the worktree changes or `origin/main` advances during capture.
+
+The collector also:
 
 - resolves `adb` from PATH or Android SDK environment variables;
 - requires an explicit or unique authorized device;
@@ -96,7 +108,7 @@ The collector refuses a dirty Git tree and records the exact candidate SHA. It a
 - records device properties and build fingerprint;
 - captures `dumpsys gfxinfo`, `meminfo`, and display diagnostics;
 - records whether acceptance thresholds were supplied;
-- hashes the supplied threshold manifest;
+- hashes the supplied threshold manifest with Python's portable SHA-256 implementation;
 - writes an explicit accepted, failed, or pending result.
 
 ## Candidate-specific threshold manifest
@@ -145,30 +157,44 @@ Thresholds must be derived from representative evidence, not guessed before prof
 
 The numbers above illustrate the schema only. They are not Forest Run release limits.
 
-`manufacturer`, `model`, and `scenario` may use `"*"` as a fallback. Exact matches outrank wildcards. Equal-specificity matches are rejected as ambiguous rather than selected by file order. Core frame and heap limits are mandatory. Maximum single-frame processing time and ghost-persistence limits are optional. When a selected profile declares a ghost limit, the corresponding report metric becomes mandatory.
+`manufacturer`, `model`, and `scenario` may use `"*"` as a fallback. Exact matches outrank wildcards. Equal-specificity matches are rejected as ambiguous rather than selected by file order. Core frame and heap limits are mandatory. Maximum single-frame processing time and ghost-persistence limits are optional.
 
 Evaluate existing reports directly:
 
 ```bash
 python3 scripts/evaluate_performance_profiles.py \
-  --thresholds evidence/performance/thresholds.json \
-  evidence/performance/my-device/reports
+  --thresholds performance-profiles/thresholds.json \
+  performance-profiles/my-device/reports
 ```
 
 The evaluator exits:
 
-- `0` when every supplied report passes;
+- `0` when every supplied report is structurally valid and passes;
 - `1` when one or more measured limits are violated;
 - `2` for malformed reports, malformed manifests, missing metrics, missing matches, or ambiguous matches.
 
-The evaluator validates percentile ordering, finite ratios, non-negative integer metrics, required limits, refresh bounds, unique profile names, and declared ghost I/O metrics before comparing results.
+Before threshold comparison, every current report must provide:
+
+- nonblank scenario/manufacturer/model identity;
+- nonnegative duration and API level;
+- a finite positive refresh rate;
+- coherent sampled, total, and slow-frame counts;
+- an exact `slowFrames / totalFrames` slow-frame ratio;
+- a positive frame budget;
+- ordered p50/p95/p99/maximum timing values and bounded means;
+- `usedHeapBytes <= maxHeapBytes`;
+- each workload's `current <= peak` relationship;
+- ghost `failed <= completed <= started` relationships;
+- latest ghost frame count and write duration no greater than their maxima.
+
+A tampered, truncated, internally contradictory, or older incomplete report is a configuration error even when its headline p95/p99 values happen to meet the manifest.
 
 ## Collect and enforce in one command
 
 After measured limits have been approved:
 
 ```bash
-FOREST_RUN_PERFORMANCE_THRESHOLDS='evidence/performance/thresholds.json' \
+FOREST_RUN_PERFORMANCE_THRESHOLDS='performance-profiles/thresholds.json' \
   bash scripts/collect_performance_profiles.sh
 ```
 
@@ -188,9 +214,9 @@ display.txt
 acceptance.txt
 ```
 
-`device.properties` includes the candidate SHA, device serial, manufacturer, model, SDK, build fingerprint, application ID, selected instrumentation test, capture time, threshold-manifest path, and threshold-manifest SHA-256 when applicable.
+`device.properties` includes the frozen candidate SHA, freshly fetched `origin/main` SHA, device serial, manufacturer, model, SDK, build fingerprint, application ID, selected instrumentation test, capture time, threshold-manifest path, and threshold-manifest SHA-256 when applicable.
 
-Do not compare or accept reports unless the candidate commit, build type, scenario, device, thermal state, refresh mode, battery mode, and test duration are known.
+Do not compare or accept reports unless the candidate commit, remote-main identity, build type, scenario, device, thermal state, refresh mode, battery mode, and test duration are known.
 
 ## Required device matrix
 
@@ -226,14 +252,14 @@ A low mean does not excuse a damaging p99. A low p99 during deterministic lanes 
 
 ## Threshold derivation procedure
 
-1. Capture repeat runs on every required device class from a clean candidate SHA.
+1. Capture repeat runs on every required device class from a clean synchronized `origin/main` candidate.
 2. Remove environmental outliers only with a written reason.
 3. Inspect distributions and workload-correlated spikes rather than averages alone.
 4. Remediate material hotspots before defining acceptance limits.
 5. Choose limits that preserve measured headroom and product expectations.
 6. Record exact device/scenario limits in the versioned manifest.
 7. Re-run collection with the manifest enabled.
-8. Archive reports, diagnostics, manifest, manifest hash, and `acceptance.txt` together.
+8. Archive reports, diagnostics, manifest, manifest hash, candidate SHA, origin/main SHA, and `acceptance.txt` together.
 9. Repeat whenever code, assets, target SDK, rendering policy, persistence format, or accepted device scope changes materially.
 
 Do not mark a device/scenario row accepted merely because instrumentation completed. Instrumentation proves that evidence was collected; the evaluator proves only that it met the approved measured manifest; human review still covers visual smoothness, thermal behaviour, audio, input feel, and ghost readability.
