@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import warnings
 import zipfile
 from pathlib import Path
 
@@ -45,6 +46,7 @@ class ReleaseArtifactVerifierTest(unittest.TestCase):
 
             self.assertEqual(3, facts["entries"])
             self.assertEqual(["base/dex/classes.dex"], facts["dex_files"])
+            self.assertEqual(17, facts["total_uncompressed_bytes"])
 
     def test_bundle_structure_rejects_missing_dex(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -52,6 +54,57 @@ class ReleaseArtifactVerifierTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ArtifactVerificationError, "DEX"):
                 verify_bundle_structure(bundle)
+
+    def test_bundle_structure_rejects_duplicate_names(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            bundle = Path(temporary_directory, "duplicate.aab")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                with zipfile.ZipFile(bundle, "w") as archive:
+                    archive.writestr("BundleConfig.pb", b"config")
+                    archive.writestr("BundleConfig.pb", b"second")
+                    archive.writestr(
+                        "base/manifest/AndroidManifest.xml", b"manifest"
+                    )
+                    archive.writestr("base/dex/classes.dex", b"dex")
+
+            with self.assertRaisesRegex(ArtifactVerificationError, "duplicate"):
+                verify_bundle_structure(bundle)
+
+    def test_bundle_structure_rejects_unsafe_entry_names(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            bundle = Path(temporary_directory, "unsafe.aab")
+            with zipfile.ZipFile(bundle, "w") as archive:
+                archive.writestr("BundleConfig.pb", b"config")
+                archive.writestr(
+                    "base/manifest/AndroidManifest.xml", b"manifest"
+                )
+                archive.writestr("base/dex/classes.dex", b"dex")
+                archive.writestr("../outside.txt", b"unsafe")
+
+            with self.assertRaisesRegex(ArtifactVerificationError, "unsafe ZIP"):
+                verify_bundle_structure(bundle)
+
+    def test_bundle_structure_rejects_empty_required_and_dex_entries(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            empty_manifest = root / "empty-manifest.aab"
+            with zipfile.ZipFile(empty_manifest, "w") as archive:
+                archive.writestr("BundleConfig.pb", b"config")
+                archive.writestr("base/manifest/AndroidManifest.xml", b"")
+                archive.writestr("base/dex/classes.dex", b"dex")
+            with self.assertRaisesRegex(ArtifactVerificationError, "empty required"):
+                verify_bundle_structure(empty_manifest)
+
+            empty_dex = root / "empty-dex.aab"
+            with zipfile.ZipFile(empty_dex, "w") as archive:
+                archive.writestr("BundleConfig.pb", b"config")
+                archive.writestr(
+                    "base/manifest/AndroidManifest.xml", b"manifest"
+                )
+                archive.writestr("base/dex/classes.dex", b"")
+            with self.assertRaisesRegex(ArtifactVerificationError, "non-empty.*DEX"):
+                verify_bundle_structure(empty_dex)
 
     def test_apkanalyzer_identity_must_match_gradle_configuration(self):
         bundle = Path("app-release.aab")
