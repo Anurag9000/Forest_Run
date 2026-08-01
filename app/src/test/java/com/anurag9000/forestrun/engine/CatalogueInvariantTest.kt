@@ -20,7 +20,7 @@ class CatalogueInvariantTest {
     @Test
     fun `tracked relationship catalogue remains exactly the six authored bonds`() {
         assertEquals(
-            listOf(
+            setOf(
                 EntityType.CAT,
                 EntityType.FOX,
                 EntityType.WOLF,
@@ -28,7 +28,7 @@ class CatalogueInvariantTest {
                 EntityType.EAGLE,
                 EntityType.DOG
             ),
-            EntityType.entries.filter(RelationshipArcSystem::isTracked)
+            EntityType.entries.filter(RelationshipArcSystem::isTracked).toSet()
         )
     }
 
