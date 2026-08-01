@@ -139,18 +139,16 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
                 self.evidence(imageSha256="xyz"),
                 "bad-image.json",
             )
+            valid = self.write(root, self.evidence(), "bad-expected.json")
 
             with self.assertRaisesRegex(CaptureEvidenceError, "40-character"):
                 self.load(bad_candidate)
             with self.assertRaisesRegex(CaptureEvidenceError, "apkSha256"):
                 self.load(bad_apk)
             with self.assertRaisesRegex(CaptureEvidenceError, "imageSha256"):
-                self.load(bad_image, expected_image_sha256="xyz")
+                self.load(bad_image)
             with self.assertRaisesRegex(CaptureEvidenceError, "expected_image_sha256"):
-                self.load(
-                    self.write(root, self.evidence(), "bad-expected.json"),
-                    expected_image_sha256="not-a-digest",
-                )
+                self.load(valid, expected_image_sha256="not-a-digest")
 
     def test_mixed_capture_identity_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
