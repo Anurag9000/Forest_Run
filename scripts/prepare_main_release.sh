@@ -15,6 +15,10 @@ if [[ "${candidate_sha}" != "${origin_sha}" ]]; then
 fi
 
 python3 "${ROOT}/scripts/verify_release_source_assets.py" --root "${ROOT}"
+python3 "${ROOT}/scripts/verify_store_graphics.py" \
+  --root "${ROOT}" \
+  --graphics-dir "${ROOT}/release/google-play/graphics" \
+  --candidate-sha "${candidate_sha}"
 echo "Preparing Forest Run release evidence from origin/main at ${candidate_sha}."
 python3 "${ROOT}/scripts/prepare_play_release.py" "$@"
 python3 "${ROOT}/scripts/verify_main_candidate.py" \
