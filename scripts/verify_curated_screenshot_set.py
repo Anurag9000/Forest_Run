@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import math
@@ -17,6 +18,8 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from screenshot_capture_evidence import (
+    EXPECTED_ACTIVITY_NAME,
+    EXPECTED_PACKAGE_NAME,
     CaptureEvidence,
     CaptureEvidenceError,
     load_capture_evidence,
@@ -26,10 +29,13 @@ from screenshot_capture_evidence import (
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SCREENSHOT_ROOT = ROOT / "release" / "google-play" / "screenshots"
 HEX_40 = re.compile(r"[0-9a-f]{40}")
+HEX_64 = re.compile(r"[0-9a-f]{64}")
 SCENARIO_TOKEN = re.compile(r"[A-Z][A-Z0-9_]*")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 MAX_SCREENSHOT_BYTES = 64 * 1024 * 1024
-MAX_SCREENSHOT_PIXELS = 100_000_000
+MAX_SCREENSHOT_PIXELS = 12_000_000
+MAX_DECODED_SCREENSHOT_BYTES = 128 * 1024 * 1024
+MAX_SESSION_BYTES = 64 * 1024
 VALID_BIT_DEPTHS = {
     0: {1, 2, 4, 8, 16},
     2: {8, 16},
@@ -53,6 +59,104 @@ class VerifiedCuratedSet:
     package_name: str
     activity_name: str
     image_sha256: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CaptureSession:
+    candidate_sha: str
+    origin_main_sha: str
+    apk_sha256: str
+    device_serial: str
+    package_name: str
+    activity_name: str
+    captured_at_utc: dt.datetime
+    screenshot_count: int
+
+
+def _parse_utc(value: Any, label: str) -> dt.datetime:
+    if not isinstance(value, str) or not value.strip():
+        raise CuratedScreenshotError(f"{label} must be a non-blank UTC timestamp")
+    try:
+        parsed = dt.datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise CuratedScreenshotError(f"{label} is not ISO-8601") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() != dt.timedelta(0):
+        raise CuratedScreenshotError(f"{label} must use UTC offset +00:00 or Z")
+    return parsed
+
+
+def _load_capture_session(
+    path: Path,
+    expected_candidate_sha: str,
+    expected_count: int,
+) -> CaptureSession:
+    try:
+        size = path.stat().st_size
+    except FileNotFoundError as exc:
+        raise CuratedScreenshotError(f"Missing capture session evidence: {path}") from exc
+    except OSError as exc:
+        raise CuratedScreenshotError(f"Could not inspect capture session {path}: {exc}") from exc
+    if size <= 0 or size > MAX_SESSION_BYTES:
+        raise CuratedScreenshotError(
+            f"Capture session has invalid file size: {path} is {size} bytes"
+        )
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise CuratedScreenshotError(f"Could not read capture session {path}: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise CuratedScreenshotError(f"Invalid capture session JSON {path}: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise CuratedScreenshotError(f"Capture session must be a JSON object: {path}")
+    if raw.get("schemaVersion") != 1:
+        raise CuratedScreenshotError(f"{path}: schemaVersion must equal 1")
+
+    def required_string(key: str) -> str:
+        value = raw.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise CuratedScreenshotError(f"{path}: {key} must be a non-blank string")
+        return value.strip()
+
+    candidate_sha = required_string("candidateSha").lower()
+    origin_main_sha = required_string("originMainSha").lower()
+    apk_sha256 = required_string("apkSha256").lower()
+    device_serial = required_string("deviceSerial")
+    package_name = required_string("packageName")
+    activity_name = required_string("activityName")
+    screenshot_count = raw.get("screenshotCount")
+    if (
+        HEX_40.fullmatch(candidate_sha) is None
+        or HEX_40.fullmatch(origin_main_sha) is None
+    ):
+        raise CuratedScreenshotError(f"{path}: candidate/origin SHA is invalid")
+    if HEX_64.fullmatch(apk_sha256) is None:
+        raise CuratedScreenshotError(f"{path}: apkSha256 is invalid")
+    if isinstance(screenshot_count, bool) or not isinstance(screenshot_count, int) or screenshot_count <= 0:
+        raise CuratedScreenshotError(f"{path}: screenshotCount must be a positive integer")
+
+    session = CaptureSession(
+        candidate_sha=candidate_sha,
+        origin_main_sha=origin_main_sha,
+        apk_sha256=apk_sha256,
+        device_serial=device_serial,
+        package_name=package_name,
+        activity_name=activity_name,
+        captured_at_utc=_parse_utc(raw.get("capturedAtUtc"), f"{path}: capturedAtUtc"),
+        screenshot_count=screenshot_count,
+    )
+    expected_values = {
+        "candidateSha": (session.candidate_sha, expected_candidate_sha),
+        "originMainSha": (session.origin_main_sha, expected_candidate_sha),
+        "screenshotCount": (session.screenshot_count, expected_count),
+        "packageName": (session.package_name, EXPECTED_PACKAGE_NAME),
+        "activityName": (session.activity_name, EXPECTED_ACTIVITY_NAME),
+    }
+    for field, (actual, expected) in expected_values.items():
+        if actual != expected:
+            raise CuratedScreenshotError(
+                f"{path}: {field} mismatch; expected {expected!r}, found {actual!r}"
+            )
+    return session
 
 
 def _load_manifest(path: Path) -> list[dict[str, Any]]:
@@ -196,7 +300,9 @@ def _inspect_png(path: Path) -> tuple[int, int, str]:
     color_type = -1
     interlace = -1
     saw_ihdr = False
+    saw_plte = False
     saw_idat = False
+    idat_closed = False
     saw_iend = False
     idat_parts: list[bytes] = []
 
@@ -207,7 +313,10 @@ def _inspect_png(path: Path) -> tuple[int, int, str]:
             )
         length = struct.unpack(">I", content[offset : offset + 4])[0]
         chunk_type = content[offset + 4 : offset + 8]
-        if len(chunk_type) != 4 or any(not chr(value).isalpha() for value in chunk_type):
+        if len(chunk_type) != 4 or any(
+            not (65 <= value <= 90 or 97 <= value <= 122)
+            for value in chunk_type
+        ):
             raise CuratedScreenshotError(
                 f"Curated screenshot has an invalid PNG chunk type: {path}"
             )
@@ -259,10 +368,20 @@ def _inspect_png(path: Path) -> tuple[int, int, str]:
                     f"Curated screenshot has invalid PNG IHDR values: {path}"
                 )
             saw_ihdr = True
+        elif chunk_type == b"PLTE":
+            if saw_idat or saw_plte or color_type in {0, 4} or length == 0 or length > 768 or length % 3 != 0:
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has an invalid PNG palette: {path}"
+                )
+            saw_plte = True
         elif chunk_type == b"IDAT":
-            if not saw_ihdr or saw_iend:
+            if not saw_ihdr or saw_iend or idat_closed:
                 raise CuratedScreenshotError(
                     f"Curated screenshot has an out-of-order PNG IDAT: {path}"
+                )
+            if color_type == 3 and not saw_plte:
+                raise CuratedScreenshotError(
+                    f"Curated indexed PNG is missing a palette before IDAT: {path}"
                 )
             saw_idat = True
             idat_parts.append(chunk_data)
@@ -278,10 +397,13 @@ def _inspect_png(path: Path) -> tuple[int, int, str]:
                     f"Curated screenshot has trailing bytes after PNG IEND: {path}"
                 )
             break
-        elif chunk_type[0] & 0x20 == 0 and chunk_type not in {b"PLTE"}:
-            raise CuratedScreenshotError(
-                f"Curated screenshot has an unknown critical PNG chunk: {path}"
-            )
+        else:
+            if saw_idat:
+                idat_closed = True
+            if chunk_type[0] & 0x20 == 0:
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has an unknown critical PNG chunk: {path}"
+                )
 
         offset = chunk_end
 
@@ -289,12 +411,29 @@ def _inspect_png(path: Path) -> tuple[int, int, str]:
         raise CuratedScreenshotError(
             f"Curated screenshot is missing required PNG chunks: {path}"
         )
+    decompressor = zlib.decompressobj()
     try:
-        decoded = zlib.decompress(b"".join(idat_parts))
+        decoded = decompressor.decompress(
+            b"".join(idat_parts),
+            MAX_DECODED_SCREENSHOT_BYTES + 1,
+        )
+        if decompressor.unconsumed_tail or len(decoded) > MAX_DECODED_SCREENSHOT_BYTES:
+            raise CuratedScreenshotError(
+                f"Curated screenshot expands beyond the PNG safety limit: {path}"
+            )
+        decoded += decompressor.flush()
     except zlib.error as exc:
         raise CuratedScreenshotError(
             f"Curated screenshot has invalid compressed PNG image data: {path}: {exc}"
         ) from exc
+    if (
+        not decompressor.eof
+        or decompressor.unused_data
+        or len(decoded) > MAX_DECODED_SCREENSHOT_BYTES
+    ):
+        raise CuratedScreenshotError(
+            f"Curated screenshot has an incomplete or trailing PNG data stream: {path}"
+        )
     if not decoded:
         raise CuratedScreenshotError(
             f"Curated screenshot has empty PNG image data: {path}"
@@ -350,6 +489,11 @@ def verify_curated_set(
     final_dir = screenshot_root / "final"
     manifest_path = screenshot_root / "curation_manifest.json"
     items = _load_manifest(manifest_path)
+    session = _load_capture_session(
+        screenshot_root / "raw" / "capture-session.json",
+        expected_candidate_sha,
+        len(items),
+    )
     expected_png_names = {item["final_file"] for item in items}
     expected_sidecar_names = {
         Path(item["final_file"]).with_suffix(".capture.json").name
@@ -388,6 +532,7 @@ def verify_curated_set(
 
     baseline: CaptureEvidence | None = None
     image_hashes: list[str] = []
+    capture_times: list[dt.datetime] = []
     for item in items:
         png_path = final_dir / item["final_file"]
         width, height, image_sha256 = _inspect_png(png_path)
@@ -412,10 +557,26 @@ def verify_curated_set(
                 f"{sidecar}: screenshot candidate {evidence.candidate_sha} "
                 f"does not match release candidate {expected_candidate_sha}"
             )
+        capture_times.append(_parse_utc(evidence.captured_at_utc, f"{sidecar}: capturedAtUtc"))
         image_hashes.append(image_sha256)
 
     if baseline is None:
         raise CuratedScreenshotError("No curated screenshots were verified")
+    session_identity = (
+        session.candidate_sha,
+        session.apk_sha256,
+        session.device_serial,
+        session.package_name,
+        session.activity_name,
+    )
+    if session_identity != baseline.session_identity:
+        raise CuratedScreenshotError(
+            "Capture session identity does not match curated screenshot sidecars"
+        )
+    if capture_times and session.captured_at_utc < max(capture_times):
+        raise CuratedScreenshotError(
+            "Capture session timestamp predates one or more screenshot captures"
+        )
     if len(image_hashes) != len(set(image_hashes)):
         raise CuratedScreenshotError(
             "Curated screenshot set contains exact duplicate image hashes"
