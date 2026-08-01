@@ -4,7 +4,7 @@
 The draft contains tester-entered device, scenario, performance, manual-check,
 and approval facts. Evidence references are plain relative paths. This compiler
 hashes the signed candidate and every evidence file, binds every session to the
-same candidate identity, invokes the fail-closed validator, and atomically
+same candidate identity, invokes the fail-closed validator, and transactionally
 publishes the final manifest and optional validation summary.
 """
 
@@ -14,7 +14,10 @@ import argparse
 import copy
 import hashlib
 import json
+import os
+import shutil
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -191,21 +194,81 @@ def compile_bundle(
     return compiled, summary
 
 
-def _write_json_atomic(path: Path, value: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + ".tmp")
+def _json_bytes(value: Mapping[str, Any]) -> bytes:
+    return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def _write_staged_json(path: Path, value: Mapping[str, Any]) -> None:
     try:
-        temporary.write_text(
-            json.dumps(value, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        temporary.replace(path)
+        with path.open("xb") as handle:
+            handle.write(_json_bytes(value))
+            handle.flush()
+            os.fsync(handle.fileno())
     except OSError as exc:
-        try:
-            temporary.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise CompilationError(f"could not publish {path}: {exc}") from exc
+        raise CompilationError(f"could not stage {path.name}: {exc}") from exc
+
+
+def _replace_path(source: Path, destination: Path) -> None:
+    os.replace(source, destination)
+
+
+def _publish_json_transaction(
+    outputs: Sequence[tuple[Path, Mapping[str, Any]]],
+) -> None:
+    if not outputs:
+        raise CompilationError("at least one output is required")
+    destinations = [path.resolve() for path, _ in outputs]
+    if len(destinations) != len(set(destinations)):
+        raise CompilationError("transaction output paths must be distinct")
+    parent = destinations[0].parent
+    if any(path.parent != parent for path in destinations):
+        raise CompilationError("transaction outputs must share one directory")
+    parent.mkdir(parents=True, exist_ok=True)
+
+    transaction_dir = Path(
+        tempfile.mkdtemp(prefix=".device-acceptance-", dir=parent)
+    )
+    staged: list[Path] = []
+    backups: list[tuple[Path, Path]] = []
+    published: list[Path] = []
+    try:
+        for index, (_, value) in enumerate(outputs):
+            staged_path = transaction_dir / f"staged-{index}.json"
+            _write_staged_json(staged_path, value)
+            staged.append(staged_path)
+
+        for index, destination in enumerate(destinations):
+            if destination.exists():
+                backup = transaction_dir / f"backup-{index}.json"
+                _replace_path(destination, backup)
+                backups.append((destination, backup))
+
+        for staged_path, destination in zip(staged, destinations):
+            _replace_path(staged_path, destination)
+            published.append(destination)
+    except (OSError, CompilationError) as exc:
+        rollback_errors: list[str] = []
+        for destination in reversed(published):
+            try:
+                destination.unlink(missing_ok=True)
+            except OSError as rollback_exc:
+                rollback_errors.append(
+                    f"could not remove partial {destination.name}: {rollback_exc}"
+                )
+        for destination, backup in reversed(backups):
+            try:
+                if backup.exists():
+                    _replace_path(backup, destination)
+            except OSError as rollback_exc:
+                rollback_errors.append(
+                    f"could not restore {destination.name}: {rollback_exc}"
+                )
+        detail = f"could not publish acceptance outputs: {exc}"
+        if rollback_errors:
+            detail += "; rollback errors: " + "; ".join(rollback_errors)
+        raise CompilationError(detail) from exc
+    finally:
+        shutil.rmtree(transaction_dir, ignore_errors=True)
 
 
 def compile_file(
@@ -230,9 +293,10 @@ def compile_file(
         base_dir=draft_parent,
         generated_at_utc=generated_at_utc,
     )
-    _write_json_atomic(output_path, compiled)
+    outputs: list[tuple[Path, Mapping[str, Any]]] = [(output_path, compiled)]
     if summary_path is not None:
-        _write_json_atomic(summary_path, summary.to_json())
+        outputs.append((summary_path, summary.to_json()))
+    _publish_json_transaction(outputs)
     return summary
 
 
