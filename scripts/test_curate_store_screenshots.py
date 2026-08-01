@@ -97,7 +97,7 @@ class ScreenshotCurationTest(unittest.TestCase):
                 width=1920,
                 height=1080,
                 sha256=str(index + 1) * 64,
-                perceptual_hash=index * 16,
+                perceptual_hash=0 if index == 0 else (1 << 64) - 1,
                 luma_stddev=20.0,
             )
             for index, item in enumerate(items)
