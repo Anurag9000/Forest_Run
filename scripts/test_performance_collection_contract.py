@@ -44,6 +44,11 @@ class PerformanceCollectionContractTest(unittest.TestCase):
         self.assertIn('echo "candidate_sha=$CANDIDATE_SHA"', self.source)
         self.assertIn('echo "origin_main_sha=$ORIGIN_SHA"', self.source)
 
+    def test_threshold_manifest_hash_uses_required_python_runtime(self) -> None:
+        self.assertIn("hashlib.sha256", self.source)
+        self.assertIn("THRESHOLDS_SHA256", self.source)
+        self.assertNotIn("sha256sum", self.source)
+
     def test_legacy_tracked_only_cleanliness_check_cannot_return(self) -> None:
         self.assertNotIn("git diff --quiet", self.source)
         self.assertNotIn("git diff --cached --quiet", self.source)
