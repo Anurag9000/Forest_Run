@@ -27,12 +27,18 @@ internal class DebugScenarioScript {
     @Volatile
     private var nextIndex = 0
 
+    private val defaultTraceRecorder = DeterministicScenarioTraceRecorder()
     private var activeScenario: EncounterScenario? = null
-    private var traceRecorder: DeterministicScenarioTraceRecorder? = null
+    private var traceRecorder: DeterministicScenarioTraceRecorder = defaultTraceRecorder
+    private var completedTrace = DeterministicScenarioTraceSnapshot(
+        scenario = null,
+        events = emptyList(),
+        overflowed = false
+    )
 
     fun prepare(
         scenario: EncounterScenario,
-        recorder: DeterministicScenarioTraceRecorder? = null
+        recorder: DeterministicScenarioTraceRecorder = defaultTraceRecorder
     ) {
         val preparedSteps = stepsFor(scenario)
         val validation = DebugScenarioInputContract.validate(preparedSteps)
@@ -46,16 +52,22 @@ internal class DebugScenarioScript {
             nextIndex = 0
             activeScenario = scenario
             traceRecorder = recorder
-            recorder?.begin(scenario)
+            completedTrace = DeterministicScenarioTraceSnapshot(
+                scenario = null,
+                events = emptyList(),
+                overflowed = false
+            )
+            recorder.begin(scenario)
         }
     }
 
     fun clear() {
         synchronized(this) {
+            completedTrace = traceRecorder.snapshot()
             steps = emptyList()
             nextIndex = 0
             activeScenario = null
-            traceRecorder = null
+            traceRecorder = defaultTraceRecorder
         }
     }
 
@@ -73,7 +85,7 @@ internal class DebugScenarioScript {
                 val step = activeSteps[sequence]
                 dispatch(step.action)
                 if (scenario != null) {
-                    traceRecorder?.record(
+                    traceRecorder.record(
                         scenario = scenario,
                         sequence = sequence,
                         scheduledAtSeconds = step.atSeconds,
@@ -84,6 +96,10 @@ internal class DebugScenarioScript {
                 nextIndex++
             }
         }
+    }
+
+    fun traceSnapshot(): DeterministicScenarioTraceSnapshot = synchronized(this) {
+        if (activeScenario != null) traceRecorder.snapshot() else completedTrace
     }
 
     internal fun pendingCountForTest(): Int =
