@@ -2,7 +2,7 @@
 """Fail-closed validator for Forest Run physical-device release evidence.
 
 The validator proves only that an evidence bundle is internally consistent and
-covers the declared acceptance policy. It does not create device evidence and
+covers the mandatory release matrix. It does not create device evidence and
 must not be used to replace real hardware, store-delivery, visual, or policy
 review.
 """
@@ -13,8 +13,11 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import re
 import sys
+import tempfile
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -27,8 +30,27 @@ CANONICAL_APPLICATION_ID = "com.anurag9000.forestrun"
 SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 SESSION_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$")
+MAX_MANIFEST_BYTES = 16 * 1024 * 1024
+MAX_ARTIFACT_BYTES = 4 * 1024 * 1024 * 1024
+MAX_EVIDENCE_FILE_BYTES = 2 * 1024 * 1024 * 1024
 ALLOWED_MANUAL_STATES = {"pass", "not_applicable"}
 ALLOWED_APPROVAL_STATES = {"approved"}
+MANDATORY_DEVICE_CLASSES = {
+    "older_phone",
+    "midrange_phone",
+    "high_refresh_phone",
+    "cutout_phone",
+    "tablet",
+}
+MANDATORY_SCENARIOS = {
+    "ordinary_play_15m",
+    "all_entities",
+    "bloom_dense",
+    "lifecycle_recovery",
+    "settings_accessibility",
+    "garden_transactions",
+    "ghost_persistence",
+}
 REQUIRED_MANUAL_CHECKS = {
     "touch_controls",
     "safe_content_readability",
@@ -38,6 +60,7 @@ REQUIRED_MANUAL_CHECKS = {
     "lifecycle_recovery",
     "artwork_animation",
 }
+MANUAL_NOT_APPLICABLE_ALLOWED = {"haptics"}
 REQUIRED_APPROVALS = {
     "visual",
     "metadata",
@@ -105,6 +128,8 @@ def _string(value: Any, label: str, *, nonempty: bool = True) -> str:
     result = value.strip()
     if nonempty and not result:
         raise EvidenceError(f"{label} must not be blank")
+    if any(ord(character) < 32 or ord(character) == 127 for character in result):
+        raise EvidenceError(f"{label} must not contain control characters")
     return result
 
 
@@ -166,6 +191,41 @@ def _safe_evidence_path(value: Any, label: str) -> str:
     return text
 
 
+def _hash_bounded_file(path: Path, label: str, maximum_bytes: int) -> tuple[str, os.stat_result]:
+    try:
+        stat_result = path.stat()
+    except FileNotFoundError as exc:
+        raise EvidenceError(f"{label} is missing: {path}") from exc
+    except OSError as exc:
+        raise EvidenceError(f"could not inspect {label} {path}: {exc}") from exc
+    if not path.is_file():
+        raise EvidenceError(f"{label} is not a regular file: {path}")
+    if stat_result.st_size <= 0:
+        raise EvidenceError(f"{label} is empty: {path}")
+    if stat_result.st_size > maximum_bytes:
+        raise EvidenceError(
+            f"{label} exceeds the {maximum_bytes}-byte safety limit: {path}"
+        )
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError as exc:
+        raise EvidenceError(f"could not hash {label} {path}: {exc}") from exc
+    try:
+        after = path.stat()
+    except OSError as exc:
+        raise EvidenceError(f"could not re-inspect {label} {path}: {exc}") from exc
+    if (
+        after.st_size != stat_result.st_size
+        or after.st_mtime_ns != stat_result.st_mtime_ns
+        or (stat_result.st_ino and after.st_ino != stat_result.st_ino)
+    ):
+        raise EvidenceError(f"{label} changed while being hashed: {path}")
+    return digest.hexdigest(), after
+
+
 def _parse_thresholds(policy: Mapping[str, Any]) -> Thresholds:
     raw = _mapping(policy.get("thresholds"), "policy.thresholds")
     p95 = _finite_number(
@@ -217,9 +277,14 @@ def _require_exact_keys(
     required: Iterable[str],
     label: str,
 ) -> None:
-    missing = sorted(set(required) - set(mapping))
+    expected = set(required)
+    actual = set(mapping)
+    missing = sorted(expected - actual)
+    extras = sorted(actual - expected)
     if missing:
         raise EvidenceError(f"{label} is missing: {', '.join(missing)}")
+    if extras:
+        raise EvidenceError(f"{label} contains unrecognized keys: {', '.join(extras)}")
 
 
 def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, str, int]:
@@ -324,7 +389,7 @@ def _validate_session(
     required_scenarios: tuple[str, ...],
     thresholds: Thresholds,
     evidence_paths: dict[str, str],
-) -> tuple[str, str, set[str], datetime]:
+) -> tuple[str, str, tuple[str, str, str], set[str], datetime]:
     label = f"sessions[{index}]"
     session = _mapping(raw_session, label)
     session_id = _string(session.get("session_id"), f"{label}.session_id")
@@ -349,9 +414,17 @@ def _validate_session(
 
     device = _mapping(session.get("device"), f"{label}.device")
     device_class = _string(device.get("class"), f"{label}.device.class")
-    _string(device.get("manufacturer"), f"{label}.device.manufacturer")
-    _string(device.get("model"), f"{label}.device.model")
-    _string(device.get("build_fingerprint"), f"{label}.device.build_fingerprint")
+    manufacturer = _string(device.get("manufacturer"), f"{label}.device.manufacturer")
+    model = _string(device.get("model"), f"{label}.device.model")
+    build_fingerprint = _string(
+        device.get("build_fingerprint"),
+        f"{label}.device.build_fingerprint",
+    )
+    device_identity = (
+        unicodedata.normalize("NFKC", manufacturer).casefold(),
+        unicodedata.normalize("NFKC", model).casefold(),
+        build_fingerprint,
+    )
     _integer(device.get("sdk"), f"{label}.device.sdk", minimum=24)
     _integer(device.get("ram_mb"), f"{label}.device.ram_mb", minimum=512)
     width = _integer(device.get("width_px"), f"{label}.device.width_px", minimum=320)
@@ -483,6 +556,8 @@ def _validate_session(
         f"{label}.performance.slow_frame_ratio",
         minimum=0.0,
     )
+    if slow > 1.0:
+        raise EvidenceError(f"{label}.performance.slow_frame_ratio must be <= 1.0")
     peak_pss = _finite_number(
         performance.get("peak_pss_mb"),
         f"{label}.performance.peak_pss_mb",
@@ -523,8 +598,12 @@ def _validate_session(
             raise EvidenceError(
                 f"{label}.manual_checks.{name} must be pass or not_applicable"
             )
+        if state == "not_applicable" and name not in MANUAL_NOT_APPLICABLE_ALLOWED:
+            raise EvidenceError(
+                f"{label}.manual_checks.{name} cannot be not_applicable"
+            )
 
-    return session_id, device_class, passed_scenarios, completed
+    return session_id, device_class, device_identity, passed_scenarios, completed
 
 
 def validate_bundle(
@@ -533,6 +612,10 @@ def validate_bundle(
     source_bytes: bytes,
     evidence_base: Path | None = None,
 ) -> ValidationSummary:
+    if len(source_bytes) <= 0 or len(source_bytes) > MAX_MANIFEST_BYTES:
+        raise EvidenceError(
+            f"acceptance manifest must be between 1 and {MAX_MANIFEST_BYTES} bytes"
+        )
     root = _mapping(data, "root")
     if (
         _integer(root.get("schema_version"), "schema_version", minimum=1)
@@ -555,10 +638,26 @@ def validate_bundle(
         policy.get("required_device_classes"),
         "policy.required_device_classes",
     )
+    missing_mandatory_classes = sorted(
+        MANDATORY_DEVICE_CLASSES - set(required_classes)
+    )
+    if missing_mandatory_classes:
+        raise EvidenceError(
+            "policy.required_device_classes is missing mandatory classes: "
+            + ", ".join(missing_mandatory_classes)
+        )
     required_scenarios = _unique_strings(
         policy.get("required_scenarios"),
         "policy.required_scenarios",
     )
+    missing_mandatory_scenarios = sorted(
+        MANDATORY_SCENARIOS - set(required_scenarios)
+    )
+    if missing_mandatory_scenarios:
+        raise EvidenceError(
+            "policy.required_scenarios is missing mandatory scenarios: "
+            + ", ".join(missing_mandatory_scenarios)
+        )
     min_sessions_per_class = _integer(
         policy.get("min_sessions_per_class"),
         "policy.min_sessions_per_class",
@@ -572,10 +671,17 @@ def validate_bundle(
 
     session_ids: set[str] = set()
     class_counts = {name: 0 for name in required_classes}
+    device_classes_by_identity: dict[tuple[str, str, str], str] = {}
     covered_scenarios: set[str] = set()
     evidence_paths: dict[str, str] = {}
     for index, raw_session in enumerate(sessions):
-        session_id, device_class, passed, completed_at = _validate_session(
+        (
+            session_id,
+            device_class,
+            device_identity,
+            passed,
+            completed_at,
+        ) = _validate_session(
             raw_session,
             index=index,
             candidate_sha=candidate_sha,
@@ -595,6 +701,13 @@ def validate_bundle(
             )
         if device_class not in class_counts:
             raise EvidenceError(f"undeclared device class: {device_class}")
+        prior_class = device_classes_by_identity.get(device_identity)
+        if prior_class is not None and prior_class != device_class:
+            raise EvidenceError(
+                "one physical device identity cannot satisfy multiple device classes: "
+                f"{prior_class}, {device_class}"
+            )
+        device_classes_by_identity[device_identity] = device_class
         class_counts[device_class] += 1
         covered_scenarios.update(passed)
 
@@ -618,12 +731,20 @@ def validate_bundle(
             raise EvidenceError(
                 "candidate.artifact_path escapes manifest directory"
             ) from exc
-        if not resolved_artifact.is_file():
-            raise EvidenceError(f"candidate artifact is missing: {artifact_path}")
-        if hashlib.sha256(resolved_artifact.read_bytes()).hexdigest() != artifact_sha:
+        actual_artifact_sha, artifact_stat = _hash_bounded_file(
+            resolved_artifact,
+            "candidate artifact",
+            MAX_ARTIFACT_BYTES,
+        )
+        if actual_artifact_sha != artifact_sha:
             raise EvidenceError(
                 f"candidate artifact digest mismatch: {artifact_path}"
             )
+
+        seen_canonical_paths: dict[Path, str] = {resolved_artifact: artifact_path}
+        seen_file_identities: dict[tuple[int, int], str] = {}
+        if artifact_stat.st_ino:
+            seen_file_identities[(artifact_stat.st_dev, artifact_stat.st_ino)] = artifact_path
         for relative_path, expected_digest in evidence_paths.items():
             candidate_path = (canonical_base / relative_path).resolve()
             try:
@@ -632,9 +753,25 @@ def validate_bundle(
                 raise EvidenceError(
                     f"evidence path escapes evidence base: {relative_path}"
                 ) from exc
-            if not candidate_path.is_file():
-                raise EvidenceError(f"evidence file is missing: {relative_path}")
-            actual_digest = hashlib.sha256(candidate_path.read_bytes()).hexdigest()
+            prior_path = seen_canonical_paths.get(candidate_path)
+            if prior_path is not None:
+                raise EvidenceError(
+                    f"physical evidence file is reused by path aliases: {prior_path}, {relative_path}"
+                )
+            actual_digest, evidence_stat = _hash_bounded_file(
+                candidate_path,
+                "evidence file",
+                MAX_EVIDENCE_FILE_BYTES,
+            )
+            file_identity = (evidence_stat.st_dev, evidence_stat.st_ino)
+            if evidence_stat.st_ino and file_identity in seen_file_identities:
+                raise EvidenceError(
+                    "physical evidence file is reused through a hard link: "
+                    f"{seen_file_identities[file_identity]}, {relative_path}"
+                )
+            seen_canonical_paths[candidate_path] = relative_path
+            if evidence_stat.st_ino:
+                seen_file_identities[file_identity] = relative_path
             if actual_digest != expected_digest:
                 raise EvidenceError(f"evidence digest mismatch: {relative_path}")
 
@@ -653,6 +790,14 @@ def validate_bundle(
         "approvals.reviewers",
         minimum_items=2,
     )
+    normalized_reviewers = {
+        unicodedata.normalize("NFKC", name).casefold()
+        for name in reviewers
+    }
+    if len(normalized_reviewers) != len(reviewers):
+        raise EvidenceError(
+            "approvals.reviewers must identify distinct reviewers case-insensitively"
+        )
     if any(len(name) > 120 for name in reviewers):
         raise EvidenceError("approvals.reviewers contains an overlong value")
     reviewed_at = _parse_utc(
@@ -676,7 +821,19 @@ def validate_bundle(
 
 
 def load_and_validate(path: Path) -> ValidationSummary:
+    try:
+        size = path.stat().st_size
+    except FileNotFoundError as exc:
+        raise EvidenceError(f"acceptance manifest is missing: {path}") from exc
+    except OSError as exc:
+        raise EvidenceError(f"could not inspect acceptance manifest {path}: {exc}") from exc
+    if size <= 0 or size > MAX_MANIFEST_BYTES:
+        raise EvidenceError(
+            f"acceptance manifest must be between 1 and {MAX_MANIFEST_BYTES} bytes"
+        )
     raw = path.read_bytes()
+    if len(raw) != size:
+        raise EvidenceError(f"acceptance manifest changed while being read: {path}")
     try:
         data = json.loads(raw)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -686,12 +843,26 @@ def load_and_validate(path: Path) -> ValidationSummary:
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    temporary.replace(path)
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temporary_path = Path(stream.name)
+            json.dump(payload, stream, indent=2, sort_keys=True)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_path, path)
+        temporary_path = None
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
