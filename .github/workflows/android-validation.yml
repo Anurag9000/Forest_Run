@@ -95,6 +95,13 @@ jobs:
           test -f scripts/verify_curated_screenshot_set.py
           test -f scripts/test_verify_curated_screenshot_set.py
 
+          test -f scripts/validate_device_acceptance.py
+          test -f scripts/test_validate_device_acceptance.py
+          test -f scripts/compile_device_acceptance.py
+          test -f scripts/test_compile_device_acceptance.py
+          test -f docs/DEVICE_ACCEPTANCE.md
+          test -f docs/audits/2026-08-01_post_merge_audit.md
+
           python3 scripts/verify_release_source_assets.py --root .
 
       - name: Test performance, release, and connected-validation tooling
