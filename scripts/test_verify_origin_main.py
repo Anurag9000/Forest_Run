@@ -55,12 +55,25 @@ class OriginMainVerifierTest(unittest.TestCase):
     def git(self, *arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:
         return self.run_command(["git", *arguments], cwd=self.work, check=check)
 
-    def verify(self) -> subprocess.CompletedProcess[str]:
+    def verify(self, expected_origin: Path | str | None = None) -> subprocess.CompletedProcess[str]:
+        command = ["bash", str(SCRIPT), str(self.work)]
+        if expected_origin is not None:
+            command.append(str(expected_origin))
+        else:
+            command.append(str(self.remote))
         return self.run_command(
-            ["bash", str(SCRIPT), str(self.work)],
+            command,
             cwd=self.work,
             check=False,
         )
+
+    def test_script_has_valid_bash_syntax(self) -> None:
+        result = self.run_command(
+            ["bash", "-n", str(SCRIPT)],
+            cwd=self.work,
+            check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
 
     def test_synchronized_main_is_accepted(self) -> None:
         result = self.verify()
@@ -106,6 +119,17 @@ class OriginMainVerifierTest(unittest.TestCase):
 
         self.assertNotEqual(0, result.returncode)
         self.assertIn("requires the canonical Git remote named origin", result.stderr)
+
+    def test_unrelated_origin_identity_is_rejected_before_fetch(self) -> None:
+        unrelated = self.base / "unrelated.git"
+        self.run_command(["git", "init", "--bare", str(unrelated)], cwd=self.base)
+        self.git("remote", "set-url", "origin", str(unrelated))
+
+        result = self.verify(expected_origin=self.remote)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("does not identify the canonical Forest Run repository", result.stderr)
+        self.assertIn(f"expected={self.remote}", result.stderr)
 
 
 class MainReleaseOriginContractTest(unittest.TestCase):
