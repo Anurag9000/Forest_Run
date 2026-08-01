@@ -12,6 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
+MAX_BUNDLE_ENTRIES = 100_000
+MAX_ENTRY_UNCOMPRESSED_BYTES = 1 * 1024 * 1024 * 1024
+MAX_TOTAL_UNCOMPRESSED_BYTES = 4 * 1024 * 1024 * 1024
+
 
 class ArtifactVerificationError(RuntimeError):
     """Raised when a built Android release artifact is inconsistent or unverifiable."""
@@ -127,37 +131,109 @@ def _last_non_blank_line(output: str, label: str) -> str:
     return lines[-1]
 
 
+def _validate_zip_entry_name(name: str) -> None:
+    if not name:
+        raise ArtifactVerificationError("Release bundle contains an empty ZIP entry name")
+    if name.startswith("/") or name.startswith("./") or "\\" in name:
+        raise ArtifactVerificationError(
+            f"Release bundle contains an unsafe ZIP entry name: {name!r}"
+        )
+    normalized = name[:-1] if name.endswith("/") else name
+    parts = normalized.split("/")
+    if not normalized or any(part in {"", ".", ".."} for part in parts):
+        raise ArtifactVerificationError(
+            f"Release bundle contains an unsafe ZIP entry name: {name!r}"
+        )
+
+
 def verify_bundle_structure(bundle: Path) -> dict[str, object]:
     if not bundle.is_file() or bundle.stat().st_size <= 0:
         raise ArtifactVerificationError(f"Release bundle is missing or empty: {bundle}")
     try:
         with zipfile.ZipFile(bundle) as archive:
-            names = archive.namelist()
+            infos = archive.infolist()
+            if len(infos) > MAX_BUNDLE_ENTRIES:
+                raise ArtifactVerificationError(
+                    f"Release bundle contains too many entries: {len(infos)}"
+                )
+
+            names = [info.filename for info in infos]
+            if len(names) != len(set(names)):
+                duplicates = sorted(
+                    name for name in set(names) if names.count(name) > 1
+                )
+                raise ArtifactVerificationError(
+                    "Release bundle contains duplicate ZIP entries: "
+                    + ", ".join(duplicates[:10])
+                )
+
+            total_uncompressed_bytes = 0
+            info_by_name: dict[str, zipfile.ZipInfo] = {}
+            for info in infos:
+                _validate_zip_entry_name(info.filename)
+                if info.flag_bits & 0x1:
+                    raise ArtifactVerificationError(
+                        f"Release bundle contains an encrypted ZIP entry: {info.filename}"
+                    )
+                if info.file_size < 0 or info.file_size > MAX_ENTRY_UNCOMPRESSED_BYTES:
+                    raise ArtifactVerificationError(
+                        "Release bundle entry has an invalid or excessive expanded size: "
+                        f"{info.filename} ({info.file_size} bytes)"
+                    )
+                total_uncompressed_bytes += info.file_size
+                if total_uncompressed_bytes > MAX_TOTAL_UNCOMPRESSED_BYTES:
+                    raise ArtifactVerificationError(
+                        "Release bundle exceeds the expanded-size safety limit: "
+                        f"{total_uncompressed_bytes} bytes"
+                    )
+                info_by_name[info.filename] = info
+
             bad_entry = archive.testzip()
-    except (OSError, zipfile.BadZipFile) as exc:
-        raise ArtifactVerificationError(f"Release bundle is not a valid ZIP archive: {exc}") from exc
+    except ArtifactVerificationError:
+        raise
+    except (OSError, zipfile.BadZipFile, RuntimeError) as exc:
+        raise ArtifactVerificationError(
+            f"Release bundle is not a valid ZIP archive: {exc}"
+        ) from exc
     if bad_entry is not None:
-        raise ArtifactVerificationError(f"Release bundle contains a corrupt entry: {bad_entry}")
+        raise ArtifactVerificationError(
+            f"Release bundle contains a corrupt entry: {bad_entry}"
+        )
 
     required_entries = {
         "BundleConfig.pb",
         "base/manifest/AndroidManifest.xml",
     }
-    missing = sorted(required_entries.difference(names))
+    missing = sorted(required_entries.difference(info_by_name))
     if missing:
         raise ArtifactVerificationError(
             "Release bundle is missing required entries: " + ", ".join(missing)
         )
+    empty_required = sorted(
+        name for name in required_entries if info_by_name[name].file_size <= 0
+    )
+    if empty_required:
+        raise ArtifactVerificationError(
+            "Release bundle contains empty required entries: "
+            + ", ".join(empty_required)
+        )
+
     dex_entries = sorted(
         name
-        for name in names
-        if name.startswith("base/dex/") and name.endswith(".dex")
+        for name, info in info_by_name.items()
+        if name.startswith("base/dex/")
+        and name.endswith(".dex")
+        and not name.endswith("/")
+        and info.file_size > 0
     )
     if not dex_entries:
-        raise ArtifactVerificationError("Release bundle contains no base-module DEX files")
+        raise ArtifactVerificationError(
+            "Release bundle contains no non-empty base-module DEX files"
+        )
     return {
-        "entries": len(names),
+        "entries": len(infos),
         "dex_files": dex_entries,
+        "total_uncompressed_bytes": total_uncompressed_bytes,
     }
 
 
@@ -213,10 +289,16 @@ def _extract_sha256_fingerprint(output: str, label: str) -> str:
         flags=re.IGNORECASE,
     )
     if not match:
-        raise ArtifactVerificationError(f"Could not find a SHA-256 fingerprint in {label} output")
-    fingerprint = "".join(re.findall(r"[0-9A-Fa-f]{2}", match.group(1))).upper()
+        raise ArtifactVerificationError(
+            f"Could not find a SHA-256 fingerprint in {label} output"
+        )
+    fingerprint = "".join(
+        re.findall(r"[0-9A-Fa-f]{2}", match.group(1))
+    ).upper()
     if len(fingerprint) != 64:
-        raise ArtifactVerificationError(f"Malformed SHA-256 fingerprint in {label} output")
+        raise ArtifactVerificationError(
+            f"Malformed SHA-256 fingerprint in {label} output"
+        )
     return fingerprint
 
 
@@ -235,7 +317,9 @@ def verify_bundle_signature(
     if allow_unsigned and (keystore is None or not alias or store_password is None):
         return BundleSignature(False, None, None)
     if keystore is None or not keystore.is_file():
-        raise ArtifactVerificationError(f"Configured release keystore does not exist: {keystore}")
+        raise ArtifactVerificationError(
+            f"Configured release keystore does not exist: {keystore}"
+        )
     if not alias:
         raise ArtifactVerificationError("Release key alias is missing")
     if store_password is None:
@@ -254,8 +338,13 @@ def verify_bundle_signature(
         label="jarsigner verification",
     )
     normalized_verification = verification_output.casefold()
-    if "jar verified" not in normalized_verification or "jar is unsigned" in normalized_verification:
-        raise ArtifactVerificationError("Release bundle is not verifiably JAR-signed")
+    if (
+        "jar verified" not in normalized_verification
+        or "jar is unsigned" in normalized_verification
+    ):
+        raise ArtifactVerificationError(
+            "Release bundle is not verifiably JAR-signed"
+        )
 
     signer_output = _run_checked(
         [keytool_path, "-printcert", "-jarfile", str(bundle)],
@@ -279,8 +368,12 @@ def verify_bundle_signature(
         active_environment,
         label="configured keystore certificate inspection",
     )
-    signer_sha256 = _extract_sha256_fingerprint(signer_output, "bundle signer")
-    expected_sha256 = _extract_sha256_fingerprint(expected_output, "configured keystore")
+    signer_sha256 = _extract_sha256_fingerprint(
+        signer_output, "bundle signer"
+    )
+    expected_sha256 = _extract_sha256_fingerprint(
+        expected_output, "configured keystore"
+    )
     if signer_sha256 != expected_sha256:
         raise ArtifactVerificationError(
             "Release bundle signer does not match the configured upload key: "
