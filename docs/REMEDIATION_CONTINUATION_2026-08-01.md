@@ -1,6 +1,6 @@
 # Forest Run — Remediation Continuation (2026-08-01)
 
-This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records the additional direct-to-`main` implementation completed during the August 1 exhaustive audit sweep and keeps unresolved work explicit rather than implying release readiness.
+This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records the additional direct-to-`main` implementation completed during the August 1–2 exhaustive audit sweep and keeps unresolved work explicit rather than implying release readiness.
 
 ## Implemented in this continuation
 
@@ -10,12 +10,12 @@ This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records th
 - Duplicate object keys are rejected instead of silently taking the final value.
 - Literal `NaN`, `Infinity`, and `-Infinity` are rejected.
 - Finite-looking JSON numbers that overflow Python floating point, such as `1e400`, are rejected after conversion.
-- Oversized integer literals are normalized into `StrictJsonError` rather than escaping as interpreter-specific `ValueError` failures.
+- Integer parsing has an explicit 256-digit ceiling through `json.loads(parse_int=...)`; behavior no longer depends on Python's mutable process-wide integer-conversion limit.
 - UTF-8 BOMs, invalid UTF-8, empty or oversized inputs, non-object roots where an object is required, and excessive nesting are rejected.
-- A string-aware nesting pre-scan rejects deeply nested input before Python's parser can hit recursion limits.
+- A string-aware nesting pre-scan rejects deeply nested input before Python's recursive parser can hit recursion limits.
 - Files are rejected if size, modification time, or inode changes while they are read.
 - Added `scripts/verify_strict_json_evidence.py` to recursively preflight selected evidence files/directories with deduplication and a bounded file count.
-- Canonical release preparation strictly parses graphics, metadata, screenshot, capture-session, final-sidecar, physical-acceptance, trace, aggregate, and machine-summary JSON before semantic verification.
+- Canonical release preparation strictly parses graphics, metadata, screenshot, capture-session, final-sidecar, physical-acceptance, deterministic-trace, aggregate, and machine-summary JSON before semantic verification.
 - Added adversarial parser, directory-expansion, numeric-overflow, oversized-integer, duplicate-key, BOM, depth, and release-wrapper ordering tests.
 
 ### Physical-device acceptance hardening
@@ -46,12 +46,12 @@ This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records th
 - A forced second-file publication failure restores both previous outputs and removes transaction debris.
 - Added sparse-file tests for oversized drafts, artifacts, and evidence without allocating gigabytes.
 - Added `scripts/compile_device_acceptance_bundle.sh` as the strict operator entrypoint:
-  1. strict-parse draft;
+  1. strict-parse the draft;
   2. compile and validate transactionally;
   3. strict-parse both outputs;
   4. independently revalidate the published manifest;
-  5. validate every referenced deterministic trace against the candidate.
-- Added `docs/DEVICE_ACCEPTANCE_COMPILATION.md` describing the canonical workflow, minimum matrix, identity preservation, bounds, publication semantics, and limits of automated validation.
+  5. require and validate at least one nonempty exact deterministic trace.
+- Added `docs/DEVICE_ACCEPTANCE_COMPILATION.md` describing the canonical workflow, minimum matrix, identity preservation, trace requirement, bounds, publication semantics, and limits of automated validation.
 
 ### Physical evidence aggregation and baseline comparison
 
@@ -65,34 +65,90 @@ This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records th
 - The tool intentionally does not invent an acceptable regression tolerance.
 - Invalid or tampered evidence is rejected before any distribution is calculated.
 - Output is strict finite JSON published through flushed atomic replacement.
+- Direct Python callers cannot make aggregate output overwrite:
+  - the candidate or baseline manifest;
+  - either signed artifact;
+  - any referenced evidence file;
+  - a symlink-resolved alias;
+  - an existing hard-link alias.
+- Source/output separation is checked before staging and again immediately before atomic replacement.
+- Candidate and baseline manifests must be distinct files and distinct inodes.
 - Added `scripts/aggregate_device_acceptance_bundle.sh` as the canonical operator path with:
   - strict candidate/baseline preflight;
   - candidate, baseline, and output alias rejection;
-  - structural validation of referenced deterministic traces;
+  - mandatory nonempty exact trace validation for both candidate and baseline;
   - aggregation;
   - strict output verification.
-- Added `docs/DEVICE_ACCEPTANCE_AGGREGATION.md` and adversarial calculation, matrix, alias, tamper, and operator-ordering tests.
+- Added `docs/DEVICE_ACCEPTANCE_AGGREGATION.md` and adversarial calculation, matrix, alias, hard-link, tamper, and operator-ordering tests.
 
 ### Deterministic scenario trace and soak evidence
 
 - Added `DeterministicScenarioTraceRecorder`, a bounded in-memory recorder that never owns gameplay or disk state.
-- `DebugScenarioScript` now records by default; existing callers do not need to opt in.
+- `DebugScenarioScript` records by default; existing callers do not need to opt in.
 - Only successfully dispatched actions are recorded. A dispatch exception leaves the action pending and emits no false evidence.
 - Completed traces remain available after scenario clear as detached immutable snapshots.
 - Added `DebugScenarioInputContract` for catalogue-wide validation of finite chronological schedules, balanced held inputs, and jump/duck exclusivity.
-- Added candidate- and artifact-bound strict JSON trace encoding.
+- Added `DeterministicScenarioReplayContract`; evidence is emitted only when the complete recorded event list exactly equals the authored script's count, scenario, sequence, schedule, and action.
+- Unscripted zero-action scenarios cannot manufacture valid trace evidence or satisfy the physical acceptance trace requirement.
+- Added `EncounterScenarioFingerprint` with two identities:
+  - `scenario_definition_sha256` covers name, title, summary, forced biome, Bloom-start policy, ghost policy, and every ordered encounter step including timing, entity, offset, and variant;
+  - `trace_contract_sha256` covers the scenario-definition identity and every ordered deterministic input schedule/action.
+- Trace JSON is schema version 2 and is bound to:
+  - exact candidate commit;
+  - exact signed artifact digest;
+  - capture timestamp;
+  - canonical scenario;
+  - scenario-definition SHA-256;
+  - trace-contract SHA-256;
+  - complete ordered event list.
 - Floating-point times are canonicalized to integer microseconds for byte-stable cross-device evidence and hashes.
-- Added digest-checked Android `AtomicFile` persistence with deterministic scenario filenames.
-- Added `scripts/validate_scenario_trace.py` to verify exact keys, schema, candidate/artifact binding, canonical scenario membership, event count, sequence, chronology, lateness arithmetic, action vocabulary, bounds, and payload digest.
-- Added `scripts/validate_manifest_scenario_traces.py` so correctly hashed but structurally false trace files cannot pass through acceptance compilation or aggregation.
-- Added `docs/DETERMINISTIC_SCENARIO_EVIDENCE.md` and runtime, codec, persistence, schema, manifest-binding, and failure-path tests.
+- Added `scripts/scenario_source_contract.py`, an independent parser that reconstructs the checked-in Kotlin scenario and input definitions rather than trusting the runtime encoder.
+- The parser:
+  - performs stable bounded reads;
+  - understands balanced Kotlin parentheses, strings, line comments, and nested block comments;
+  - parses signed decimal and exponent Float literals;
+  - emulates Float32 conversion;
+  - emulates Kotlin `roundToLong` including signed values, tie direction, and `Long` saturation;
+  - canonicalizes offsets to signed micro-pixels;
+  - fails closed on malformed or nonrepresentable source.
+- JVM and Python tests assert the same fixed `CACTUS_READ` hashes, so either implementation drifting independently fails.
+- Added digest-checked Android `AtomicFile` persistence with deterministic scenario filenames and explicit stream ownership.
+- Added `scripts/validate_scenario_trace.py` to verify exact schema-v2 keys, candidate/artifact binding, both source-reconstructed hashes, nonempty authored script, exact count, sequence, schedule, action, chronology, lateness arithmetic, bounds, and payload digest.
+- Added `scripts/validate_manifest_scenario_traces.py`; a correctly hashed but structurally false, rescheduled, substituted, incomplete, or trace-free evidence set cannot pass canonical acceptance compilation or aggregation.
+- Manifest trace summaries preserve both contract hashes and maximum dispatch lateness.
+- Added `docs/DETERMINISTIC_SCENARIO_EVIDENCE.md` and runtime, codec, cross-language canonicalization, persistence, schema, manifest-binding, zero-action, and failure-path tests.
+
+### Production spawn fairness envelope
+
+- Added `SpawnFairnessEnvelope`, a pure observation boundary over the actual production chain rather than a second tuning model:
+  - `GameConstants` acceleration limits;
+  - `DifficultyScaler.getSpawnGapPx`;
+  - `ReadabilityProfile.spawnGapPx`;
+  - `OpeningReadabilityGuide.adjustedSpawnInterval` through `SpawnPacing.requiredGapPx`.
+- The envelope exposes the real speed, readability gap, effective gap, and reaction lead time for a distance/time point.
+- The supported worst-case reaction floor is explicitly derived as:
+
+```text
+SPAWN_GAP_MIN_PX / MAX_SCROLL_SPEED = 780 / 2000 = 0.39 seconds
+```
+
+- Property coverage checks more than 36,000 production distance/time combinations.
+- Tests lock:
+  - finite bounded observations;
+  - required gap never below the readability gap;
+  - 1.95 s, 1.78 s, and 1.58 s guided-opening floors;
+  - exact expiry of opening adjustment;
+  - monotonic bounded speed acceleration;
+  - maximum-speed saturation;
+  - conservative fallback for NaN, infinity, and negative inputs;
+  - the 390 ms late-run floor.
 
 ### Runtime timing and malformed-input corrections
 
-- `GhostPlayer.update()` now makes nonfinite or nonpositive deltas complete no-ops before elapsed time, frame selection, visibility, or dense-hazard suppression can change.
+- `GhostPlayer.update()` makes nonfinite or nonpositive deltas complete no-ops before elapsed time, frame selection, visibility, or dense-hazard suppression can change.
 - Added regression coverage after the ghost is already visible to prove malformed updates cannot mutate playback state.
 - Removed the duplicate raw nanosecond interval gate from `LeitmotifManager`.
-- `EvaluationThrottle` is now the sole tempo/Bloom evaluation authority, retaining its rollback/reset-safe semantics.
+- `EvaluationThrottle` is now the sole tempo/Bloom evaluation authority, retaining rollback/reset-safe semantics.
 - Added source contracts preventing reintroduction of `lastParameterUpdateNs` or raw subtraction gates.
 
 ### Progression and relationship arithmetic primitives
@@ -130,7 +186,7 @@ This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records th
 - `prepare_main_release.sh` aligns `JAVA_HOME`, verifies source assets/graphics/metadata, quarantines prior summaries, restores them on failure, verifies the new summary, and rechecks local and canonical `origin/main` identity.
 - Added `docs/STORE_EVIDENCE.md` for generation, finalization, verification, invalidation, and manual approval boundaries.
 
-### Persistence, Garden, pacing, catalogue, and narrative contracts
+### Persistence, Garden, catalogue, and narrative contracts
 
 - Persistent-memory selectors fail closed when caller minima are zero or negative.
 - Repeat-killer severity uses `Long` arithmetic and deterministic tie-breaking.
@@ -142,6 +198,13 @@ This dated continuation record supplements `docs/AUDIT_LEDGER.md`. It records th
 - Biome and deterministic-scenario catalogues have executable ordering, uniqueness, coverage, and variant invariants.
 - Player jump-force interpolation is finite, bounded, monotonic, and fail-closed for malformed holds.
 - Story fragment and rest-quote catalogues have deterministic identifier, content, length, whitespace, and control-character invariants across rich state combinations.
+
+## Repository topology
+
+- All work in this continuation was committed directly to `main`.
+- No development branch or pull request was created.
+- The current branch listing contains only `main`.
+- No force-push or history rewrite was used.
 
 ## Validation truth
 
@@ -156,8 +219,8 @@ The implementation above is committed directly to `main`, but this environment s
 
 ### Precisely isolated source call sites and large-owner boundaries
 
-1. `RelationshipArcSystem.familiarityWarmth()` still contains the old conditional-arithmetic expression. `FamiliarityWarmthScoring` now implements and tests the correct independent sum, but the roughly 1,400-line authored dialogue catalogue requires a narrow verified call-site substitution rather than whole-file replacement.
-2. `ReturnMomentsSystem.recordRunOutcome()` still uses raw `roughRunStreak + 1`, and long-absence detection still uses raw timestamp subtraction. `SafeProgressionArithmetic` now implements and tests both replacements, but the large authored return-moment catalogue still requires two narrow call-site substitutions.
+1. `RelationshipArcSystem.familiarityWarmth()` still contains the old conditional-arithmetic expression. `FamiliarityWarmthScoring` implements and tests the correct independent sum, but the roughly 1,400-line authored dialogue catalogue requires a narrow verified call-site substitution rather than whole-file replacement.
+2. `ReturnMomentsSystem.recordRunOutcome()` still uses raw `roughRunStreak + 1`, and long-absence detection still uses raw timestamp subtraction. `SafeProgressionArithmetic` implements and tests both replacements, but the large authored return-moment catalogue still requires two narrow call-site substitutions.
 3. `ParallaxBackground` and `GameView.update()` still rely on the production render-thread finite-delta contract at their large public coordination boundaries.
 4. `MainMenuScreen.onTap()` can advance its ritual on a synthetic nonfinite direct-call coordinate after both hit regions compare false. Real Android `MotionEvent` coordinates are finite; the exact one-line admission guard is mapped but the 600-line art/UI owner should not be whole-file replaced through the current connector.
 5. `SaveManager.hasGhostRun()` checks only the `AtomicFile` base path and does not validate or recognize a recoverable backup, while actual runtime loading correctly validates both. The unused convenience method remains cleanup debt.
@@ -167,7 +230,7 @@ The implementation above is committed directly to `main`, but this environment s
 
 - exact-head host/release test execution;
 - exact-head connected-emulator behavior execution;
-- representative physical-device matrix and approved measured thresholds;
+- representative physical-device matrix with real measured traces and approved thresholds;
 - signed minified upload artifact using real credentials;
 - direct installation and internal-track delivery of that exact artifact;
 - certificate, package, version, and artifact receipt verification;
