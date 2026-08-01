@@ -72,6 +72,28 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
         values.update(overrides)
         return values
 
+    def session(self, **overrides):
+        values = {
+            "schemaVersion": 1,
+            "candidateSha": self.candidate_sha,
+            "originMainSha": self.candidate_sha,
+            "apkSha256": self.apk_sha256,
+            "deviceSerial": "device-1",
+            "packageName": "com.anurag9000.forestrun.debug",
+            "activityName": "com.anurag9000.forestrun.MainActivity",
+            "capturedAtUtc": "2026-07-30T12:10:00+00:00",
+            "screenshotCount": 2,
+        }
+        values.update(overrides)
+        return values
+
+    def write_session(self, root: Path, **overrides) -> Path:
+        raw_dir = root / "raw"
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        path = raw_dir / "capture-session.json"
+        path.write_text(json.dumps(self.session(**overrides)), encoding="utf-8")
+        return path
+
     def create_set(self, root: Path):
         final_dir = root / "final"
         final_dir.mkdir(parents=True)
@@ -96,6 +118,7 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
         (root / "curation_manifest.json").write_text(
             json.dumps({"screenshots": items}), encoding="utf-8"
         )
+        self.write_session(root)
         for index, item in enumerate(items, start=1):
             png_path = final_dir / item["final_file"]
             image_hash = self.create_png(
@@ -204,7 +227,7 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
             root = Path(temporary_directory)
             self.create_set(root)
 
-            with self.assertRaisesRegex(CuratedScreenshotError, "does not match"):
+            with self.assertRaisesRegex(CuratedScreenshotError, "does not match|mismatch"):
                 verify_curated_set(root, "c" * 40)
 
     def test_mixed_device_identity_is_rejected(self):
@@ -218,6 +241,48 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
             sidecar.write_text(json.dumps(payload), encoding="utf-8")
 
             with self.assertRaisesRegex(CuratedScreenshotError, "deviceSerial"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_capture_session_is_required_and_candidate_bound(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            (root / "raw" / "capture-session.json").unlink()
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "Missing capture session"):
+                verify_curated_set(root, self.candidate_sha)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            self.write_session(root, originMainSha="c" * 40)
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "originMainSha mismatch"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_capture_session_count_identity_and_timestamp_must_match_sidecars(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            self.write_session(root, screenshotCount=3)
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "screenshotCount mismatch"):
+                verify_curated_set(root, self.candidate_sha)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            self.write_session(root, apkSha256="d" * 64)
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "session identity"):
+                verify_curated_set(root, self.candidate_sha)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            self.write_session(root, capturedAtUtc="2026-07-30T11:59:59+00:00")
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "timestamp predates"):
                 verify_curated_set(root, self.candidate_sha)
 
     def test_corrupt_png_crc_is_rejected_before_sidecar_trust(self):
