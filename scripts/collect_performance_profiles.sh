@@ -21,18 +21,23 @@ resolve_adb() {
   exit 1
 }
 
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "Performance evidence must be captured from a clean candidate tree." >&2
-  exit 1
-fi
-
-ADB="$(resolve_adb)"
 PYTHON="${PYTHON:-python3}"
 if ! command -v "$PYTHON" >/dev/null 2>&1; then
   echo "Python interpreter '$PYTHON' was not found." >&2
   exit 1
 fi
 
+ORIGIN_SHA="$(bash scripts/verify_origin_main.sh "$ROOT_DIR")"
+CANDIDATE_JSON="$($PYTHON scripts/verify_main_candidate.py --root "$ROOT_DIR" --json)"
+CANDIDATE_SHA="$($PYTHON -c 'import json,sys; print(json.load(sys.stdin)["sha"])' <<<"$CANDIDATE_JSON")"
+if [[ "$CANDIDATE_SHA" != "$ORIGIN_SHA" ]]; then
+  echo "Performance candidate verification disagrees with origin/main." >&2
+  echo "candidate=$CANDIDATE_SHA" >&2
+  echo "origin/main=$ORIGIN_SHA" >&2
+  exit 1
+fi
+
+ADB="$(resolve_adb)"
 mapfile -t CONNECTED_SERIALS < <("$ADB" devices | awk 'NR > 1 && $2 == "device" { print $1 }')
 
 SERIAL="${FOREST_RUN_DEVICE_SERIAL:-}"
@@ -57,7 +62,6 @@ REMOTE_DIR="/sdcard/Android/data/${APP_ID}/files/performance-profiles"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUTPUT_DIR="${1:-performance-profiles/${SERIAL}/${TIMESTAMP}}"
 TEST_SELECTOR="${FOREST_RUN_PROFILE_TEST:-com.anurag9000.forestrun.HardwarePerformanceProfileTest}"
-CANDIDATE_SHA="$(git rev-parse HEAD)"
 THRESHOLDS="${FOREST_RUN_PERFORMANCE_THRESHOLDS:-}"
 THRESHOLDS_ABS=""
 if [[ -n "$THRESHOLDS" ]]; then
@@ -73,6 +77,7 @@ mkdir -p "$OUTPUT_DIR"
 
 {
   echo "candidate_sha=$CANDIDATE_SHA"
+  echo "origin_main_sha=$ORIGIN_SHA"
   echo "serial=$SERIAL"
   echo "captured_at_utc=$TIMESTAMP"
   echo "test_selector=$TEST_SELECTOR"
@@ -122,6 +127,17 @@ else
     echo "PENDING: reports were collected but no acceptance manifest was supplied."
     echo "Set FOREST_RUN_PERFORMANCE_THRESHOLDS to candidate-specific measured limits."
   } | tee "${OUTPUT_DIR}/acceptance.txt"
+fi
+
+FINAL_LOCAL_JSON="$($PYTHON scripts/verify_main_candidate.py --root "$ROOT_DIR" --expected-sha "$CANDIDATE_SHA" --json)"
+FINAL_LOCAL_SHA="$($PYTHON -c 'import json,sys; print(json.load(sys.stdin)["sha"])' <<<"$FINAL_LOCAL_JSON")"
+FINAL_ORIGIN_SHA="$(bash scripts/verify_origin_main.sh "$ROOT_DIR")"
+if [[ "$FINAL_LOCAL_SHA" != "$CANDIDATE_SHA" || "$FINAL_ORIGIN_SHA" != "$CANDIDATE_SHA" ]]; then
+  echo "Candidate or origin/main changed during performance capture." >&2
+  echo "started=$CANDIDATE_SHA" >&2
+  echo "local=$FINAL_LOCAL_SHA" >&2
+  echo "origin/main=$FINAL_ORIGIN_SHA" >&2
+  exit 1
 fi
 
 echo "Collected $REPORT_COUNT performance report(s) for $CANDIDATE_SHA in $OUTPUT_DIR"
