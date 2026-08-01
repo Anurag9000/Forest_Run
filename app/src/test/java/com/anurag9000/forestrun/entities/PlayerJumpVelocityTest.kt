@@ -42,7 +42,7 @@ class PlayerJumpVelocityTest {
         val holds = listOf(0f, 0.1f, 0.2f, 0.4f, Player.MAX_HOLD_DURATION_S)
         val velocities = holds.map(Player::jumpVelocityForHold)
 
-        assertTrue(velocities.all(Float::isFinite))
+        assertTrue(velocities.all { velocity -> velocity.isFinite() })
         assertTrue(
             velocities.all { velocity ->
                 velocity in Player.MAX_JUMP_FORCE..Player.MIN_JUMP_FORCE
