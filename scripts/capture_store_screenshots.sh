@@ -11,6 +11,7 @@ readonly OUTPUT_DIR="${OUTPUT_DIR:-${ROOT_DIR}/release/google-play/screenshots/r
 readonly STARTUP_TIMEOUT_S="${STARTUP_TIMEOUT_S:-15}"
 readonly READY_PREFIX="FOREST_RUN_SCENARIO_READY"
 readonly RUN_MODE="SCREENSHOT_CAPTURE"
+readonly CAPTURE_COUNT=8
 
 cd "${ROOT_DIR}"
 
@@ -133,74 +134,38 @@ wait_for_scenario() {
   return 1
 }
 
+assert_app_foreground() {
+  local resumed
+  resumed="$(
+    "${ADB[@]}" shell dumpsys activity activities 2>/dev/null \
+      | tr -d '\r' \
+      | grep -E 'mResumedActivity|topResumedActivity' \
+      || true
+  )"
+  if [[ "${resumed}" != *"${PACKAGE_NAME}/${ACTIVITY_NAME}"* ]]; then
+    echo "Screenshot app is not the resumed foreground activity." >&2
+    echo "Expected ${PACKAGE_NAME}/${ACTIVITY_NAME}" >&2
+    echo "Observed: ${resumed:-'(no resumed activity reported)'}" >&2
+    return 1
+  fi
+}
+
 write_capture_evidence() {
   local destination="$1"
   local scenario="$2"
   local settle_seconds="$3"
   local readiness_marker="$4"
-  "${PYTHON_BIN}" - \
-    "${destination}" \
-    "${scenario}" \
-    "${settle_seconds}" \
-    "${readiness_marker}" \
-    "${CANDIDATE_SHA}" \
-    "${APK_SHA256}" \
-    "${DEVICE_SERIAL_RESOLVED}" \
-    "${PACKAGE_NAME}" \
-    "${ACTIVITY_NAME}" \
-    "${RUN_MODE}" <<'PY'
-import datetime
-import hashlib
-import json
-import struct
-import sys
-from pathlib import Path
-
-(
-    raw_path,
-    scenario,
-    settle_seconds,
-    readiness_marker,
-    candidate_sha,
-    apk_sha256,
-    device_serial,
-    package_name,
-    activity_name,
-    run_mode,
-) = sys.argv[1:]
-path = Path(raw_path)
-content = path.read_bytes()
-if len(content) < 24 or content[:8] != b"\x89PNG\r\n\x1a\n":
-    raise SystemExit(f"Invalid PNG while writing capture evidence: {path}")
-width, height = struct.unpack(">II", content[16:24])
-if width <= height or width < 800 or height < 480:
-    raise SystemExit(
-        f"Screenshot has invalid landscape dimensions: {path} is {width}x{height}"
-    )
-image_sha256 = hashlib.sha256(content).hexdigest()
-evidence = {
-    "schemaVersion": 1,
-    "rawFile": path.name,
-    "scenario": scenario,
-    "runMode": run_mode,
-    "readinessMarker": readiness_marker,
-    "candidateSha": candidate_sha,
-    "apkSha256": apk_sha256,
-    "deviceSerial": device_serial,
-    "packageName": package_name,
-    "activityName": activity_name,
-    "settleSeconds": float(settle_seconds),
-    "capturedAtUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-    "imageSha256": image_sha256,
-    "width": width,
-    "height": height,
-}
-sidecar = path.with_suffix(".capture.json")
-sidecar.write_text(
-    json.dumps(evidence, indent=2, sort_keys=True) + "\n",
-    encoding="utf-8",
-)
-PY
+  "${PYTHON_BIN}" scripts/write_screenshot_capture_evidence.py \
+    --image "${destination}" \
+    --scenario "${scenario}" \
+    --settle-seconds "${settle_seconds}" \
+    --readiness-marker "${readiness_marker}" \
+    --candidate-sha "${CANDIDATE_SHA}" \
+    --apk-sha256 "${APK_SHA256}" \
+    --device-serial "${DEVICE_SERIAL_RESOLVED}" \
+    --package-name "${PACKAGE_NAME}" \
+    --activity-name "${ACTIVITY_NAME}" \
+    --run-mode "${RUN_MODE}" >/dev/null
 }
 
 capture() {
@@ -221,7 +186,10 @@ capture() {
   local readiness_marker
   readiness_marker="$(wait_for_scenario "${scenario}")"
   sleep "${settle_seconds}"
+  wait_for_process
+  assert_app_foreground
   "${ADB[@]}" exec-out screencap -p > "${destination}"
+  assert_app_foreground
 
   if [[ ! -s "${destination}" ]]; then
     echo "Screenshot capture produced an empty file: ${destination}" >&2
@@ -243,48 +211,15 @@ capture "06-dog" "DOG_BUDDY" 2.2
 capture "07-owl" "OWL_DIVE" 2.1
 capture "08-jacaranda" "JACARANDA_PETALS" 2.0
 
-"${PYTHON_BIN}" - \
-  "${OUTPUT_DIR}/capture-session.json" \
-  "${CANDIDATE_SHA}" \
-  "${ORIGIN_SHA}" \
-  "${APK_SHA256}" \
-  "${DEVICE_SERIAL_RESOLVED}" \
-  "${PACKAGE_NAME}" \
-  "${ACTIVITY_NAME}" <<'PY'
-import datetime
-import json
-import sys
-from pathlib import Path
-
-(
-    destination,
-    candidate_sha,
-    origin_sha,
-    apk_sha256,
-    device_serial,
-    package_name,
-    activity_name,
-) = sys.argv[1:]
-Path(destination).write_text(
-    json.dumps(
-        {
-            "schemaVersion": 1,
-            "candidateSha": candidate_sha,
-            "originMainSha": origin_sha,
-            "apkSha256": apk_sha256,
-            "deviceSerial": device_serial,
-            "packageName": package_name,
-            "activityName": activity_name,
-            "capturedAtUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            "screenshotCount": 8,
-        },
-        indent=2,
-        sort_keys=True,
-    )
-    + "\n",
-    encoding="utf-8",
-)
-PY
+"${PYTHON_BIN}" scripts/finalize_screenshot_capture_session.py \
+  --output-dir "${OUTPUT_DIR}" \
+  --candidate-sha "${CANDIDATE_SHA}" \
+  --origin-main-sha "${ORIGIN_SHA}" \
+  --apk-sha256 "${APK_SHA256}" \
+  --device-serial "${DEVICE_SERIAL_RESOLVED}" \
+  --package-name "${PACKAGE_NAME}" \
+  --activity-name "${ACTIVITY_NAME}" \
+  --expected-count "${CAPTURE_COUNT}" >/dev/null
 
 readonly FINAL_LOCAL_JSON="$(${PYTHON_BIN} scripts/verify_main_candidate.py --root "${ROOT_DIR}" --expected-sha "${CANDIDATE_SHA}" --json)"
 readonly FINAL_LOCAL_SHA="$(${PYTHON_BIN} -c 'import json,sys; print(json.load(sys.stdin)["sha"])' <<<"${FINAL_LOCAL_JSON}")"
