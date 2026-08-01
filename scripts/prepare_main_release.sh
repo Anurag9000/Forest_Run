@@ -14,6 +14,7 @@ if [[ "${candidate_sha}" != "${origin_sha}" ]]; then
   exit 1
 fi
 
+python3 "${ROOT}/scripts/verify_release_source_assets.py" --root "${ROOT}"
 echo "Preparing Forest Run release evidence from origin/main at ${candidate_sha}."
 python3 "${ROOT}/scripts/prepare_play_release.py" "$@"
 python3 "${ROOT}/scripts/verify_main_candidate.py" \
