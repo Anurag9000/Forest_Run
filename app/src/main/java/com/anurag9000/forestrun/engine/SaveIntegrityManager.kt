@@ -85,7 +85,12 @@ object SaveIntegrityManager {
         repair.nonNegativeInt("lifetime_seeds")
         repair.finiteNonNegativeFloat("best_distance")
         repair.nullableEnum("last_killer", EntityType.entries.mapTo(mutableSetOf()) { it.name })
-        repair.boundedInt("garden_unlocked", minimum = 1, maximum = 9, fallback = 1)
+        repair.boundedInt(
+            "garden_unlocked",
+            minimum = 1,
+            maximum = GardenEconomy.catalogueSize,
+            fallback = 1
+        )
 
         repair.nonNegativeInt("route_kind_runs")
         repair.nonNegativeInt("route_merciful_runs")
