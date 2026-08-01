@@ -34,7 +34,7 @@ Implemented:
 - Placeholder bitmap generation validates drawable geometry, detects multiplication overflow, caps allocation, and reuses paints.
 - Shared sizing, safe-content, cinematic, lighting, parallax, and layout builders reject or normalize malformed geometry.
 - `EntityFactory` gives all 19 entity families one finite positive geometry boundary and preserves valid spawn origins.
-- Global speed, Bloom, mercy, spawn-gap, biome-length, wind, catalogue, costume, and pacifist-route ordering assumptions have executable invariant tests.
+- Global speed, Bloom, mercy, spawn-gap, biome-length, wind, catalogue, costume, biome-cycle, scenario, and pacifist-route assumptions have executable invariant tests.
 
 Bounded debt:
 
@@ -46,13 +46,14 @@ Bounded debt:
 Implemented:
 
 - canonical Garden costs are centralized in `GardenEconomy`;
+- displayed Garden costs, startup repair bounds, purchase charging, and layout plant count are regression-locked to the canonical catalogue size and prices;
 - `GardenPurchaseManager` performs one synchronized committed progress-and-Seed transaction;
 - `GardenScreen` invokes the atomic purchase boundary directly and adopts the returned persisted state as its only local source of truth;
 - the old screen-level split `saveGardenProgress`/`saveLifetimeSeeds` sequence is prohibited by CI source contract;
 - load/refresh clamp Garden progress and Seed state;
 - malformed taps cannot invoke run/back/equip/purchase actions;
 - Garden frame time is finite, capped, and self-recovering;
-- Garden tests cover atomic purchase persistence, local state adoption, malformed touches, invalid deltas, lifecycle catch-up, and primary-save namespace isolation;
+- Garden tests cover atomic purchase persistence, local state adoption, malformed touches, invalid deltas, lifecycle catch-up, pricing synchronization, and primary-save namespace isolation;
 - `GardenLayoutPlanner` owns shared visual/touch geometry across supported landscape sizes;
 - return moments are consumed only on visible Garden entry;
 - Garden particles advance only while Garden is active;
@@ -83,7 +84,8 @@ Implemented:
 - Bloom conversion is exclusive from ordinary pass/unique-action/Orb rewards;
 - Seed Orbs validate lifecycle/geometry, claim terminally, stage inside a reachable visible band, and remain bounded;
 - entity spawn pacing is distance-based and finite;
-- opening guidance now replaces zero, negative, NaN, or infinite spawn intervals with a conservative positive cadence rather than permitting a spawn-every-frame loop;
+- opening guidance replaces zero, negative, NaN, or infinite spawn intervals with a conservative positive cadence rather than permitting a spawn-every-frame loop;
+- deterministic scenarios validate metadata and chronological schedules, have unique titles, cover all 19 entity types, and restrict dog-specific variants to dog steps;
 - unsafe heterogeneous entity pooling remains disabled;
 - entity encounter bounds drive pass/Bloom/shared lifecycle decisions.
 
@@ -126,16 +128,15 @@ Implemented:
 - Trust/Bond progression requires positive outcomes;
 - hits delay or strain relationships;
 - milestone rewards, home presence, rituals, repeat friends, strained bonds, and Garden traces are persisted and presented;
-- persistent input counters are bounded before relationship code reads them;
-- selector minima and tie-breaking outside the monolithic relationship owner are now fail-closed and deterministic.
+- every relationship-facing derived counter is clamped by `SaveManager` to `Int.MAX_VALUE / 16` before use;
+- under that cap, the maximum stage, affinity, and strain expressions remain well below `Int.MAX_VALUE`;
+- extreme raw `Int.MAX_VALUE` preference values are regression-tested through stage progression, strongest-bond selection, encounter tuning, and strained dialogue;
+- selector minima and tie-breaking outside the monolithic relationship owner are fail-closed and deterministic.
 
 Bounded debt:
 
-- `RelationshipArcSystem.computeStage()` adds and multiplies persistent counters in `Int`; extreme valid bounded counters can still overflow stage scoring.
-- `RelationshipArcSystem.affinityScore()` has the same `Int` multiplication/addition risk and can invert ranking under extreme counters.
 - `RelationshipArcSystem.familiarityWarmth()` contains an authored-precedence defect similar to the former sanctuary arithmetic: later warmth modifiers are nested inside preceding `else` branches instead of accumulating independently.
-- `RelationshipArcSystem.strainedConsequence()` adds hit and tender-streak counters in `Int` and can overflow severity.
-- These functions are precisely isolated, but the surrounding file is a roughly 1,400-line authored dialogue catalogue. They require a verified checkout/patch path or decomposition before changing them without risking unrelated narrative loss.
+- The affected function is precisely isolated, but the surrounding file is a roughly 1,400-line authored dialogue catalogue. It requires a verified checkout/patch path or decomposition before changing it without risking unrelated narrative loss.
 
 ## 7. Ghost recording, playback, and I/O
 
