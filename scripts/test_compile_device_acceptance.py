@@ -196,7 +196,7 @@ class CompileDeviceAcceptanceTest(unittest.TestCase):
             with self.assertRaisesRegex(compiler.CompilationError, "exceeds max_p95"):
                 compiler.compile_bundle(draft, base_dir=root)
 
-    def test_compile_file_publishes_manifest_and_summary_atomically(self) -> None:
+    def test_compile_file_publishes_manifest_and_summary_transactionally(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             draft = draft_bundle()
@@ -213,16 +213,60 @@ class CompileDeviceAcceptanceTest(unittest.TestCase):
             )
             self.assertEqual(5, result.session_count)
             self.assertEqual("valid", json.loads(summary_path.read_text())["status"])
-            self.assertFalse(output_path.with_name(output_path.name + ".tmp").exists())
-            self.assertFalse(summary_path.with_name(summary_path.name + ".tmp").exists())
+            self.assertFalse(any(root.glob(".device-acceptance-*")))
 
-    def test_output_must_share_draft_directory(self) -> None:
+    def test_second_publish_failure_restores_both_previous_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            draft = draft_bundle()
+            materialize(root, draft)
+            draft_path = root / "draft.json"
+            output_path = root / "device-acceptance.json"
+            summary_path = root / "device-acceptance-summary.json"
+            draft_path.write_text(json.dumps(draft), encoding="utf-8")
+            output_path.write_text("old manifest", encoding="utf-8")
+            summary_path.write_text("old summary", encoding="utf-8")
+
+            original_replace = compiler._replace_path
+            calls = 0
+
+            def fail_on_second_publication(source: Path, destination: Path) -> None:
+                nonlocal calls
+                calls += 1
+                if calls == 4:
+                    raise OSError("forced second publication failure")
+                original_replace(source, destination)
+
+            compiler._replace_path = fail_on_second_publication
+            try:
+                with self.assertRaisesRegex(
+                    compiler.CompilationError,
+                    "forced second publication failure",
+                ):
+                    compiler.compile_file(
+                        draft_path,
+                        output_path,
+                        summary_path=summary_path,
+                        generated_at_utc="2026-08-01T12:00:00Z",
+                    )
+            finally:
+                compiler._replace_path = original_replace
+
+            self.assertEqual("old manifest", output_path.read_text(encoding="utf-8"))
+            self.assertEqual("old summary", summary_path.read_text(encoding="utf-8"))
+            self.assertFalse(any(root.glob(".device-acceptance-*")))
+
+    def test_output_paths_must_share_directory_and_be_distinct(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             draft_path = root / "draft.json"
             draft_path.write_text("{}", encoding="utf-8")
             with self.assertRaisesRegex(compiler.CompilationError, "share the draft directory"):
                 compiler.compile_file(draft_path, root / "nested" / "manifest.json")
+            with self.assertRaisesRegex(compiler.CompilationError, "distinct"):
+                compiler._publish_json_transaction(
+                    [(root / "same.json", {}), (root / "same.json", {})]
+                )
 
 
 if __name__ == "__main__":
