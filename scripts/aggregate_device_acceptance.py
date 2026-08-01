@@ -214,11 +214,59 @@ def _compare(
     }
 
 
+def _same_file_or_resolved_path(first: Path, second: Path) -> bool:
+    first_resolved = first.expanduser().resolve()
+    second_resolved = second.expanduser().resolve()
+    if first_resolved == second_resolved:
+        return True
+    try:
+        return os.path.samefile(first_resolved, second_resolved)
+    except (FileNotFoundError, OSError):
+        return False
+
+
+def _manifest_protected_paths(path: Path) -> tuple[Path, ...]:
+    resolved = path.expanduser().resolve()
+    data, _ = _load_validated_manifest(resolved)
+    protected: list[Path] = [resolved]
+    protected.append((resolved.parent / data["candidate"]["artifact_path"]).resolve())
+    for session in data["sessions"]:
+        for scenario in session["scenarios"].values():
+            for evidence in scenario["evidence_files"]:
+                protected.append((resolved.parent / evidence["path"]).resolve())
+    return tuple(protected)
+
+
+def _protected_source_paths(
+    candidate_path: Path,
+    baseline_path: Path | None,
+) -> tuple[Path, ...]:
+    protected = list(_manifest_protected_paths(candidate_path))
+    if baseline_path is not None:
+        protected.extend(_manifest_protected_paths(baseline_path))
+    return tuple(protected)
+
+
+def _assert_output_is_separate(output_path: Path, protected_paths: Sequence[Path]) -> None:
+    output = output_path.expanduser().resolve()
+    for protected in protected_paths:
+        if _same_file_or_resolved_path(output, protected):
+            raise AggregationError(
+                f"aggregate output must not overwrite protected source: {protected}"
+            )
+
+
 def aggregate(
     candidate_path: Path,
     *,
     baseline_path: Path | None = None,
 ) -> dict[str, Any]:
+    if baseline_path is not None and _same_file_or_resolved_path(
+        candidate_path,
+        baseline_path,
+    ):
+        raise AggregationError("candidate and baseline manifests must be distinct files")
+
     candidate_data, candidate_validation = _load_validated_manifest(candidate_path)
     candidate_summary = _summarize_manifest(candidate_data, candidate_validation)
     result: dict[str, Any] = {
@@ -233,8 +281,14 @@ def aggregate(
     return result
 
 
-def _write_json_atomic(path: Path, payload: Mapping[str, Any]) -> None:
+def _write_json_atomic(
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    protected_paths: Sequence[Path] = (),
+) -> None:
     destination = path.expanduser().resolve()
+    _assert_output_is_separate(destination, protected_paths)
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{destination.name}.",
@@ -248,9 +302,12 @@ def _write_json_atomic(path: Path, payload: Mapping[str, Any]) -> None:
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
+        _assert_output_is_separate(destination, protected_paths)
         os.replace(temporary, destination)
-    except OSError as exc:
+    except (OSError, AggregationError) as exc:
         temporary.unlink(missing_ok=True)
+        if isinstance(exc, AggregationError):
+            raise
         raise AggregationError(f"could not publish aggregate {destination}: {exc}") from exc
 
 
@@ -264,7 +321,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         payload = aggregate(args.candidate, baseline_path=args.baseline)
         if args.output is not None:
-            _write_json_atomic(args.output, payload)
+            protected_paths = _protected_source_paths(args.candidate, args.baseline)
+            _write_json_atomic(
+                args.output,
+                payload,
+                protected_paths=protected_paths,
+            )
     except (OSError, AggregationError) as exc:
         print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
         return 1
