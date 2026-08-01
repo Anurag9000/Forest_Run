@@ -6,10 +6,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import struct
 import subprocess
 import sys
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
@@ -25,6 +27,17 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SCREENSHOT_ROOT = ROOT / "release" / "google-play" / "screenshots"
 HEX_40 = re.compile(r"[0-9a-f]{40}")
 SCENARIO_TOKEN = re.compile(r"[A-Z][A-Z0-9_]*")
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+MAX_SCREENSHOT_BYTES = 64 * 1024 * 1024
+MAX_SCREENSHOT_PIXELS = 100_000_000
+VALID_BIT_DEPTHS = {
+    0: {1, 2, 4, 8, 16},
+    2: {8, 16},
+    3: {1, 2, 4, 8},
+    4: {8, 16},
+    6: {8, 16},
+}
+CHANNELS_BY_COLOR_TYPE = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}
 
 
 class CuratedScreenshotError(ValueError):
@@ -146,22 +159,155 @@ def _load_manifest(path: Path) -> list[dict[str, Any]]:
     return normalized
 
 
-def _inspect_png(path: Path) -> tuple[int, int, str]:
+def _read_png_content(path: Path) -> bytes:
     try:
-        content = path.read_bytes()
+        size = path.stat().st_size
     except FileNotFoundError as exc:
         raise CuratedScreenshotError(
             f"Missing curated screenshot: {path}"
         ) from exc
     except OSError as exc:
         raise CuratedScreenshotError(
+            f"Could not inspect curated screenshot {path}: {exc}"
+        ) from exc
+    if size <= 0 or size > MAX_SCREENSHOT_BYTES:
+        raise CuratedScreenshotError(
+            f"Curated screenshot has invalid file size: {path} is {size} bytes"
+        )
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise CuratedScreenshotError(
             f"Could not read curated screenshot {path}: {exc}"
         ) from exc
-    if len(content) < 24 or content[:8] != b"\x89PNG\r\n\x1a\n":
+
+
+def _inspect_png(path: Path) -> tuple[int, int, str]:
+    content = _read_png_content(path)
+    if not content.startswith(PNG_SIGNATURE):
         raise CuratedScreenshotError(
             f"Curated screenshot is not a PNG: {path}"
         )
-    width, height = struct.unpack(">II", content[16:24])
+
+    offset = len(PNG_SIGNATURE)
+    width = 0
+    height = 0
+    bit_depth = 0
+    color_type = -1
+    interlace = -1
+    saw_ihdr = False
+    saw_idat = False
+    saw_iend = False
+    idat_parts: list[bytes] = []
+
+    while offset < len(content):
+        if len(content) - offset < 12:
+            raise CuratedScreenshotError(
+                f"Curated screenshot has a truncated PNG chunk header: {path}"
+            )
+        length = struct.unpack(">I", content[offset : offset + 4])[0]
+        chunk_type = content[offset + 4 : offset + 8]
+        if len(chunk_type) != 4 or any(not chr(value).isalpha() for value in chunk_type):
+            raise CuratedScreenshotError(
+                f"Curated screenshot has an invalid PNG chunk type: {path}"
+            )
+        chunk_end = offset + 12 + length
+        if chunk_end > len(content):
+            raise CuratedScreenshotError(
+                f"Curated screenshot has a truncated PNG chunk: {path}"
+            )
+        data_start = offset + 8
+        data_end = data_start + length
+        chunk_data = content[data_start:data_end]
+        expected_crc = struct.unpack(">I", content[data_end : data_end + 4])[0]
+        actual_crc = zlib.crc32(chunk_type)
+        actual_crc = zlib.crc32(chunk_data, actual_crc) & 0xFFFFFFFF
+        if actual_crc != expected_crc:
+            raise CuratedScreenshotError(
+                f"Curated screenshot has a PNG CRC mismatch: {path}"
+            )
+
+        if not saw_ihdr and chunk_type != b"IHDR":
+            raise CuratedScreenshotError(
+                f"Curated screenshot PNG does not start with IHDR: {path}"
+            )
+        if chunk_type == b"IHDR":
+            if saw_ihdr or length != 13:
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has an invalid PNG IHDR: {path}"
+                )
+            (
+                width,
+                height,
+                bit_depth,
+                color_type,
+                compression,
+                filtering,
+                interlace,
+            ) = struct.unpack(">IIBBBBB", chunk_data)
+            if (
+                width <= 0
+                or height <= 0
+                or width * height > MAX_SCREENSHOT_PIXELS
+                or color_type not in VALID_BIT_DEPTHS
+                or bit_depth not in VALID_BIT_DEPTHS[color_type]
+                or compression != 0
+                or filtering != 0
+                or interlace not in {0, 1}
+            ):
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has invalid PNG IHDR values: {path}"
+                )
+            saw_ihdr = True
+        elif chunk_type == b"IDAT":
+            if not saw_ihdr or saw_iend:
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has an out-of-order PNG IDAT: {path}"
+                )
+            saw_idat = True
+            idat_parts.append(chunk_data)
+        elif chunk_type == b"IEND":
+            if length != 0 or not saw_ihdr or not saw_idat or saw_iend:
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has an invalid PNG IEND: {path}"
+                )
+            saw_iend = True
+            offset = chunk_end
+            if offset != len(content):
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has trailing bytes after PNG IEND: {path}"
+                )
+            break
+        elif chunk_type[0] & 0x20 == 0 and chunk_type not in {b"PLTE"}:
+            raise CuratedScreenshotError(
+                f"Curated screenshot has an unknown critical PNG chunk: {path}"
+            )
+
+        offset = chunk_end
+
+    if not saw_ihdr or not saw_idat or not saw_iend:
+        raise CuratedScreenshotError(
+            f"Curated screenshot is missing required PNG chunks: {path}"
+        )
+    try:
+        decoded = zlib.decompress(b"".join(idat_parts))
+    except zlib.error as exc:
+        raise CuratedScreenshotError(
+            f"Curated screenshot has invalid compressed PNG image data: {path}: {exc}"
+        ) from exc
+    if not decoded:
+        raise CuratedScreenshotError(
+            f"Curated screenshot has empty PNG image data: {path}"
+        )
+    if interlace == 0:
+        channels = CHANNELS_BY_COLOR_TYPE[color_type]
+        row_bytes = math.ceil(width * channels * bit_depth / 8)
+        expected_decoded_bytes = height * (row_bytes + 1)
+        if len(decoded) != expected_decoded_bytes:
+            raise CuratedScreenshotError(
+                f"Curated screenshot PNG scanline size mismatch: {path}"
+            )
+
     if width <= height or width < 800 or height < 480:
         raise CuratedScreenshotError(
             f"Curated screenshot has invalid landscape dimensions: "
