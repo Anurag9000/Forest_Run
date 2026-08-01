@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Compile and validate a Forest Run physical-device acceptance bundle.
 
-The draft contains tester-entered device, scenario, performance, manual-check,
-and approval facts. Evidence references are plain relative paths. This compiler
-hashes the signed candidate and every evidence file, binds every session to the
-same candidate identity, invokes the fail-closed validator, and transactionally
-publishes the final manifest and optional validation summary.
+The draft contains tester-entered candidate, store-delivery, session-build,
+device, scenario, performance, manual-check, and approval facts. Evidence
+references are plain relative paths. This compiler hashes the signed candidate
+and every evidence file, preserves captured store/session identity, invokes the
+fail-closed validator to reject any mismatch, and transactionally publishes the
+final manifest and optional validation summary.
 """
 
 from __future__ import annotations
@@ -98,7 +99,7 @@ def compile_bundle(
     base_dir: Path,
     generated_at_utc: str | None = None,
 ) -> tuple[dict[str, Any], acceptance.ValidationSummary]:
-    """Return a fully hashed, candidate-bound, already validated manifest."""
+    """Return a fully hashed, identity-preserving, already validated manifest."""
 
     compiled = copy.deepcopy(dict(draft))
     compiled["schema_version"] = acceptance.SCHEMA_VERSION
@@ -114,40 +115,33 @@ def compile_bundle(
         candidate.get("artifact_path"),
         "candidate.artifact_path",
     )
-    artifact_sha = _hash_file(artifact_path, "candidate artifact")
     candidate["artifact_path"] = artifact_relative
-    candidate["artifact_sha256"] = artifact_sha
+    candidate["artifact_sha256"] = _hash_file(
+        artifact_path,
+        "candidate artifact",
+    )
 
-    repository = candidate.get("repository")
-    branch = candidate.get("branch")
-    commit_sha = candidate.get("commit_sha")
-    application_id = candidate.get("application_id")
-    version_code = candidate.get("version_code")
-    certificate_sha = candidate.get("certificate_sha256")
-    signed = candidate.get("signed")
-
-    store = _required_mapping(candidate.get("store_delivery"), "candidate.store_delivery")
-    store["package_name"] = application_id
-    store["version_code"] = version_code
-    store["artifact_sha256"] = artifact_sha
-    store["certificate_sha256"] = certificate_sha
+    # Store-delivery identity is a captured fact. Never derive or overwrite it
+    # from the candidate: the validator must reject a wrong package, version,
+    # artifact, certificate, track, or installation result.
+    _required_mapping(
+        candidate.get("store_delivery"),
+        "candidate.store_delivery",
+    )
 
     sessions = _required_list(compiled.get("sessions"), "sessions")
     if not sessions:
         raise CompilationError("sessions must not be empty")
     for session_index, raw_session in enumerate(sessions):
         session = _required_mapping(raw_session, f"sessions[{session_index}]")
-        session["build"] = {
-            "repository": repository,
-            "branch": branch,
-            "commit_sha": commit_sha,
-            "application_id": application_id,
-            "version_code": version_code,
-            "artifact_sha256": artifact_sha,
-            "certificate_sha256": certificate_sha,
-            "signed": signed,
-            "installed_via": "internal_store",
-        }
+
+        # Per-session build identity is also captured evidence. Preserving it
+        # allows the validator to detect a stale/local APK or mixed candidate.
+        _required_mapping(
+            session.get("build"),
+            f"sessions[{session_index}].build",
+        )
+
         scenarios = _required_mapping(
             session.get("scenarios"),
             f"sessions[{session_index}].scenarios",
@@ -278,24 +272,37 @@ def compile_file(
     summary_path: Path | None = None,
     generated_at_utc: str | None = None,
 ) -> acceptance.ValidationSummary:
-    draft_parent = draft_path.resolve().parent
-    if output_path.resolve().parent != draft_parent:
+    draft_resolved = draft_path.resolve()
+    output_resolved = output_path.resolve()
+    draft_parent = draft_resolved.parent
+    if output_resolved.parent != draft_parent:
         raise CompilationError(
             "output manifest must share the draft directory so relative evidence paths remain stable"
         )
-    if summary_path is not None and summary_path.resolve().parent != draft_parent:
-        raise CompilationError(
-            "summary output must share the draft directory"
-        )
-    draft = _read_object(draft_path)
+    if output_resolved == draft_resolved:
+        raise CompilationError("output manifest must not overwrite the draft")
+
+    summary_resolved: Path | None = None
+    if summary_path is not None:
+        summary_resolved = summary_path.resolve()
+        if summary_resolved.parent != draft_parent:
+            raise CompilationError("summary output must share the draft directory")
+        if summary_resolved in {draft_resolved, output_resolved}:
+            raise CompilationError(
+                "summary output must not overwrite the draft or final manifest"
+            )
+
+    draft = _read_object(draft_resolved)
     compiled, summary = compile_bundle(
         draft,
         base_dir=draft_parent,
         generated_at_utc=generated_at_utc,
     )
-    outputs: list[tuple[Path, Mapping[str, Any]]] = [(output_path, compiled)]
-    if summary_path is not None:
-        outputs.append((summary_path, summary.to_json()))
+    outputs: list[tuple[Path, Mapping[str, Any]]] = [
+        (output_resolved, compiled)
+    ]
+    if summary_resolved is not None:
+        outputs.append((summary_resolved, summary.to_json()))
     _publish_json_transaction(outputs)
     return summary
 
