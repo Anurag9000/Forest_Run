@@ -10,6 +10,7 @@ from typing import Any
 
 DEFAULT_MAX_BYTES = 16 * 1024 * 1024
 DEFAULT_MAX_DEPTH = 64
+DEFAULT_MAX_INTEGER_DIGITS = 256
 
 
 class StrictJsonError(ValueError):
@@ -18,6 +19,17 @@ class StrictJsonError(ValueError):
 
 def _reject_constant(value: str) -> None:
     raise StrictJsonError(f"non-finite JSON number is forbidden: {value}")
+
+
+def _bounded_integer(value: str, *, maximum_digits: int = DEFAULT_MAX_INTEGER_DIGITS) -> int:
+    if maximum_digits <= 0:
+        raise ValueError("maximum_digits must be positive")
+    digits = value[1:] if value.startswith("-") else value
+    if len(digits) > maximum_digits:
+        raise StrictJsonError(
+            f"JSON integer literal exceeds the {maximum_digits}-digit safety limit"
+        )
+    return int(value)
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -84,12 +96,15 @@ def loads(
     label: str = "JSON",
     maximum_bytes: int = DEFAULT_MAX_BYTES,
     maximum_depth: int = DEFAULT_MAX_DEPTH,
+    maximum_integer_digits: int = DEFAULT_MAX_INTEGER_DIGITS,
     require_object: bool = False,
 ) -> Any:
     if maximum_bytes <= 0:
         raise ValueError("maximum_bytes must be positive")
     if maximum_depth <= 0:
         raise ValueError("maximum_depth must be positive")
+    if maximum_integer_digits <= 0:
+        raise ValueError("maximum_integer_digits must be positive")
     if isinstance(raw, bytes):
         if not raw or len(raw) > maximum_bytes:
             raise StrictJsonError(
@@ -117,6 +132,10 @@ def loads(
             text,
             object_pairs_hook=_unique_object,
             parse_constant=_reject_constant,
+            parse_int=lambda literal: _bounded_integer(
+                literal,
+                maximum_digits=maximum_integer_digits,
+            ),
         )
     except StrictJsonError:
         raise
@@ -133,6 +152,7 @@ def load_file(
     *,
     maximum_bytes: int = DEFAULT_MAX_BYTES,
     maximum_depth: int = DEFAULT_MAX_DEPTH,
+    maximum_integer_digits: int = DEFAULT_MAX_INTEGER_DIGITS,
     require_object: bool = False,
 ) -> Any:
     path = path.expanduser().resolve()
@@ -165,5 +185,6 @@ def load_file(
         label=str(path),
         maximum_bytes=maximum_bytes,
         maximum_depth=maximum_depth,
+        maximum_integer_digits=maximum_integer_digits,
         require_object=require_object,
     )
