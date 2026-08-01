@@ -20,13 +20,27 @@ class AggregationTraceCoreContractTest(unittest.TestCase):
         self.assertIn("scenario_definition_sha256", source)
         self.assertIn("trace_contract_sha256", source)
 
-    def test_baseline_comparison_requires_identical_trace_contract_sets(self) -> None:
+    def test_baseline_comparison_requires_identical_trace_and_hardware_matrices(self) -> None:
         source = AGGREGATOR.read_text(encoding="utf-8")
+        matrix_tests = (ROOT / "scripts/test_aggregate_device_matrix.py").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("candidate_contracts", source)
         self.assertIn("baseline_contracts", source)
         self.assertIn("trace-contract sets differ", source)
         self.assertIn('"trace_contracts": candidate["trace_contracts"]', source)
+        self.assertIn("def _physical_device_id", source)
+        self.assertIn("def _device_profile_id", source)
+        self.assertIn("def _comparison_matrix_sha256", source)
+        self.assertIn('"physical_device_ids": physical_device_ids', source)
+        self.assertIn('"device_profile_ids": device_profile_ids', source)
+        self.assertIn("session counts differ", source)
+        self.assertIn("device-profile sets differ", source)
+        self.assertIn("comparison-matrix hashes differ", source)
+        self.assertIn("configuration_change_preserves_physical_identity", matrix_tests)
+        self.assertIn("device_profile_substitution", matrix_tests)
+        self.assertIn("session_count_mismatch", matrix_tests)
 
     def test_manifest_is_stable_across_acceptance_and_trace_validation(self) -> None:
         source = AGGREGATOR.read_text(encoding="utf-8")
