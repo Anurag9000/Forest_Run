@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import zipfile
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
@@ -158,10 +159,11 @@ def verify_bundle_structure(bundle: Path) -> dict[str, object]:
                 )
 
             names = [info.filename for info in infos]
-            if len(names) != len(set(names)):
-                duplicates = sorted(
-                    name for name in set(names) if names.count(name) > 1
-                )
+            duplicate_counts = Counter(names)
+            duplicates = sorted(
+                name for name, count in duplicate_counts.items() if count > 1
+            )
+            if duplicates:
                 raise ArtifactVerificationError(
                     "Release bundle contains duplicate ZIP entries: "
                     + ", ".join(duplicates[:10])
