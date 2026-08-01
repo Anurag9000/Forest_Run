@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+"""Aggregate validated Forest Run physical acceptance evidence.
+
+This tool never relaxes or replaces the fail-closed acceptance validator. It
+first validates every supplied manifest and its referenced files, then produces
+per-device-class distributions, worst-case threshold headroom, and optional
+baseline deltas. It deliberately does not invent regression tolerances.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import os
+import tempfile
+from pathlib import Path
+from statistics import fmean
+from typing import Any, Mapping, Sequence
+
+import strict_json
+import validate_device_acceptance as acceptance
+
+SCHEMA_VERSION = 1
+METRICS = (
+    "p95_frame_ms",
+    "p99_frame_ms",
+    "slow_frame_ratio",
+    "peak_pss_mb",
+    "crashes",
+    "anrs",
+)
+THRESHOLD_FOR_METRIC = {
+    "p95_frame_ms": "max_p95_frame_ms",
+    "p99_frame_ms": "max_p99_frame_ms",
+    "slow_frame_ratio": "max_slow_frame_ratio",
+    "peak_pss_mb": "max_peak_pss_mb",
+    "crashes": "max_crashes",
+    "anrs": "max_anrs",
+}
+
+
+class AggregationError(ValueError):
+    """Raised when validated evidence cannot be aggregated unambiguously."""
+
+
+def _load_validated_manifest(path: Path) -> tuple[dict[str, Any], acceptance.ValidationSummary]:
+    resolved = path.expanduser().resolve()
+    try:
+        raw = resolved.read_bytes()
+    except OSError as exc:
+        raise AggregationError(f"could not read acceptance manifest {resolved}: {exc}") from exc
+    try:
+        data = strict_json.loads(
+            raw,
+            label=str(resolved),
+            maximum_bytes=acceptance.MAX_MANIFEST_BYTES,
+            maximum_depth=64,
+            require_object=True,
+        )
+        summary = acceptance.validate_bundle(
+            data,
+            source_bytes=raw,
+            evidence_base=resolved.parent,
+        )
+    except (strict_json.StrictJsonError, acceptance.EvidenceError) as exc:
+        raise AggregationError(f"invalid acceptance manifest {resolved}: {exc}") from exc
+    return data, summary
+
+
+def _finite_metric(value: Any, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise AggregationError(f"{label} must be numeric")
+    result = float(value)
+    if not math.isfinite(result) or result < 0:
+        raise AggregationError(f"{label} must be finite and non-negative")
+    return result
+
+
+def _metric_distribution(values: Sequence[float]) -> dict[str, float | int]:
+    if not values:
+        raise AggregationError("cannot summarize an empty metric distribution")
+    return {
+        "count": len(values),
+        "minimum": min(values),
+        "mean": fmean(values),
+        "maximum": max(values),
+    }
+
+
+def _device_identity(session: Mapping[str, Any]) -> str:
+    device = session["device"]
+    return "|".join(
+        str(device[key]).strip().casefold()
+        for key in ("manufacturer", "model", "build_fingerprint")
+    )
+
+
+def _summarize_manifest(
+    data: Mapping[str, Any],
+    validation: acceptance.ValidationSummary,
+) -> dict[str, Any]:
+    sessions = data["sessions"]
+    thresholds = data["policy"]["thresholds"]
+    required_classes = tuple(data["policy"]["required_device_classes"])
+    by_class: dict[str, Any] = {}
+    global_values: dict[str, list[float]] = {metric: [] for metric in METRICS}
+
+    for device_class in required_classes:
+        class_sessions = [
+            session for session in sessions if session["device"]["class"] == device_class
+        ]
+        if not class_sessions:
+            raise AggregationError(f"validated manifest has no session for {device_class}")
+        metric_values: dict[str, list[float]] = {metric: [] for metric in METRICS}
+        for index, session in enumerate(class_sessions):
+            performance = session["performance"]
+            for metric in METRICS:
+                value = _finite_metric(
+                    performance[metric],
+                    f"{device_class}.sessions[{index}].performance.{metric}",
+                )
+                metric_values[metric].append(value)
+                global_values[metric].append(value)
+
+        by_class[device_class] = {
+            "session_count": len(class_sessions),
+            "physical_device_count": len({_device_identity(session) for session in class_sessions}),
+            "session_ids": sorted(session["session_id"] for session in class_sessions),
+            "metrics": {
+                metric: _metric_distribution(metric_values[metric])
+                for metric in METRICS
+            },
+        }
+
+    global_metrics = {
+        metric: _metric_distribution(global_values[metric])
+        for metric in METRICS
+    }
+    threshold_headroom = {
+        metric: float(thresholds[THRESHOLD_FOR_METRIC[metric]])
+        - float(global_metrics[metric]["maximum"])
+        for metric in METRICS
+    }
+    durations = [
+        _finite_metric(session["duration_seconds"], "sessions[].duration_seconds")
+        for session in sessions
+    ]
+
+    candidate = data["candidate"]
+    return {
+        "candidate": {
+            "commit_sha": validation.candidate_sha,
+            "artifact_sha256": validation.artifact_sha256,
+            "application_id": candidate["application_id"],
+            "version_code": candidate["version_code"],
+            "certificate_sha256": candidate["certificate_sha256"],
+        },
+        "session_count": validation.session_count,
+        "evidence_file_count": validation.evidence_file_count,
+        "device_class_count": len(required_classes),
+        "duration_seconds": _metric_distribution(durations),
+        "global_metrics": global_metrics,
+        "threshold_headroom": threshold_headroom,
+        "by_device_class": by_class,
+    }
+
+
+def _compare(
+    candidate: Mapping[str, Any],
+    baseline: Mapping[str, Any],
+) -> dict[str, Any]:
+    candidate_classes = set(candidate["by_device_class"])
+    baseline_classes = set(baseline["by_device_class"])
+    if candidate_classes != baseline_classes:
+        missing = sorted(baseline_classes - candidate_classes)
+        added = sorted(candidate_classes - baseline_classes)
+        raise AggregationError(
+            "candidate and baseline device-class matrices differ; "
+            f"missing={missing}, added={added}"
+        )
+
+    class_deltas: dict[str, Any] = {}
+    for device_class in sorted(candidate_classes):
+        candidate_metrics = candidate["by_device_class"][device_class]["metrics"]
+        baseline_metrics = baseline["by_device_class"][device_class]["metrics"]
+        class_deltas[device_class] = {
+            metric: {
+                "mean_delta": candidate_metrics[metric]["mean"]
+                - baseline_metrics[metric]["mean"],
+                "maximum_delta": candidate_metrics[metric]["maximum"]
+                - baseline_metrics[metric]["maximum"],
+            }
+            for metric in METRICS
+        }
+
+    return {
+        "baseline_commit_sha": baseline["candidate"]["commit_sha"],
+        "baseline_artifact_sha256": baseline["candidate"]["artifact_sha256"],
+        "global_metric_deltas": {
+            metric: {
+                "mean_delta": candidate["global_metrics"][metric]["mean"]
+                - baseline["global_metrics"][metric]["mean"],
+                "maximum_delta": candidate["global_metrics"][metric]["maximum"]
+                - baseline["global_metrics"][metric]["maximum"],
+            }
+            for metric in METRICS
+        },
+        "by_device_class": class_deltas,
+        "interpretation": (
+            "Positive frame-time, slow-frame, memory, crash, or ANR deltas are regressions; "
+            "this report does not invent an allowed tolerance."
+        ),
+    }
+
+
+def aggregate(
+    candidate_path: Path,
+    *,
+    baseline_path: Path | None = None,
+) -> dict[str, Any]:
+    candidate_data, candidate_validation = _load_validated_manifest(candidate_path)
+    candidate_summary = _summarize_manifest(candidate_data, candidate_validation)
+    result: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "status": "valid",
+        "candidate_summary": candidate_summary,
+    }
+    if baseline_path is not None:
+        baseline_data, baseline_validation = _load_validated_manifest(baseline_path)
+        baseline_summary = _summarize_manifest(baseline_data, baseline_validation)
+        result["baseline_comparison"] = _compare(candidate_summary, baseline_summary)
+    return result
+
+
+def _write_json_atomic(path: Path, payload: Mapping[str, Any]) -> None:
+    destination = path.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
+        dir=destination.parent,
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination)
+    except OSError as exc:
+        temporary.unlink(missing_ok=True)
+        raise AggregationError(f"could not publish aggregate {destination}: {exc}") from exc
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("candidate", type=Path)
+    parser.add_argument("--baseline", type=Path)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args(argv)
+
+    try:
+        payload = aggregate(args.candidate, baseline_path=args.baseline)
+        if args.output is not None:
+            _write_json_atomic(args.output, payload)
+    except (OSError, AggregationError) as exc:
+        print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+        return 1
+    print(json.dumps(payload, sort_keys=True, allow_nan=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
