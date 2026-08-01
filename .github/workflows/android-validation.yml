@@ -64,15 +64,38 @@ jobs:
 
           test -f scripts/evaluate_performance_profiles.py
           test -f scripts/test_evaluate_performance_profiles.py
+          test -f scripts/collect_performance_profiles.sh
+          test -f scripts/test_performance_collection_contract.py
+          grep -q 'verify_origin_main.sh' scripts/collect_performance_profiles.sh
+          grep -q 'verify_main_candidate.py' scripts/collect_performance_profiles.sh
+
           test -f scripts/run_connected_validation.sh
           test -f scripts/test_connected_validation_runner.py
           test -f scripts/verify_main_candidate.py
           test -f scripts/test_verify_main_candidate.py
           test -f scripts/verify_origin_main.sh
           test -f scripts/test_verify_origin_main.py
+
+          test -f scripts/verify_release_source_assets.py
+          test -f scripts/test_verify_release_source_assets.py
+          test -f scripts/release_artifact_verifier.py
+          test -f scripts/test_release_artifact_verifier.py
           test -f scripts/prepare_main_release.sh
           grep -q 'verify_origin_main.sh' scripts/prepare_main_release.sh
+          grep -q 'verify_release_source_assets.py' scripts/prepare_main_release.sh
           grep -q -- '--expected-sha' scripts/prepare_main_release.sh
+
+          test -f scripts/capture_store_screenshots.sh
+          test -f scripts/test_capture_store_screenshots_contract.py
+          grep -q './gradlew clean assembleDebug' scripts/capture_store_screenshots.sh
+          grep -q 'verify_origin_main.sh' scripts/capture_store_screenshots.sh
+          grep -q 'shell pm clear' scripts/capture_store_screenshots.sh
+          test -f scripts/screenshot_capture_evidence.py
+          test -f scripts/test_screenshot_capture_evidence.py
+          test -f scripts/verify_curated_screenshot_set.py
+          test -f scripts/test_verify_curated_screenshot_set.py
+
+          python3 scripts/verify_release_source_assets.py --root .
 
       - name: Test performance, release, and connected-validation tooling
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
