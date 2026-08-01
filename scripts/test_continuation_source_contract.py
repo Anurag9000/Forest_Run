@@ -67,7 +67,7 @@ class ContinuationSourceContractTest(unittest.TestCase):
         parser = (ROOT / "scripts/strict_json.py").read_text(encoding="utf-8")
         self.assertIn("math.isfinite(value)", parser)
         self.assertIn("_preflight_nesting", parser)
-        self.assertIn("except (json.JSONDecodeError, RecursionError)", parser)
+        self.assertIn("except (ValueError, RecursionError)", parser)
         self.assertTrue((ROOT / "scripts/test_strict_json_overflow.py").is_file())
 
     def test_ghost_and_leitmotif_admission_fixes_remain_present(self) -> None:
