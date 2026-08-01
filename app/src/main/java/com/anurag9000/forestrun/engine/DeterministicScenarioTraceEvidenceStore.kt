@@ -4,6 +4,7 @@ import android.util.AtomicFile
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.security.MessageDigest
 
 /** Atomic persistence boundary for already validated deterministic trace evidence. */
 internal object DeterministicScenarioTraceEvidenceStore {
@@ -15,7 +16,7 @@ internal object DeterministicScenarioTraceEvidenceStore {
 
     fun write(directory: File, evidence: DeterministicScenarioTraceEvidence): File? {
         val payload = evidence.payloadJson.toByteArray(Charsets.UTF_8)
-        if (payload.isEmpty() || evidence.payloadSha256.length != 64) return null
+        if (payload.isEmpty() || sha256(payload) != evidence.payloadSha256) return null
         if ((!directory.exists() && !directory.mkdirs()) || !directory.isDirectory) return null
 
         val destination = File(directory, fileNameFor(evidence))
@@ -23,10 +24,9 @@ internal object DeterministicScenarioTraceEvidenceStore {
         var stream: FileOutputStream? = null
         return try {
             stream = atomicFile.startWrite()
-            BufferedOutputStream(stream).use { output ->
-                output.write(payload)
-                output.flush()
-            }
+            val output = BufferedOutputStream(stream)
+            output.write(payload)
+            output.flush()
             atomicFile.finishWrite(stream)
             stream = null
             destination
@@ -35,4 +35,9 @@ internal object DeterministicScenarioTraceEvidenceStore {
             null
         }
     }
+
+    private fun sha256(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(bytes)
+            .joinToString(separator = "") { byte -> "%02x".format(byte) }
 }
