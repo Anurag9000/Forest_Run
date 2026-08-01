@@ -85,7 +85,11 @@ These are bounded debts, not evidence that the repaired core invariants are stil
 - Safe, unique evidence paths with SHA-256 and actual-file verification.
 - Per-session manual checks and final policy approvals.
 - Atomic machine-readable validation summary.
-- Regression tests covering valid bundles and every major rejection path.
+- A deterministic draft compiler that hashes candidate/evidence files while preserving independently captured store and per-session build identity.
+- Rejection of stale local APKs, mixed commits, mismatched internal-track artifacts, versions, package names, certificates, signing states, and installation paths rather than silently normalizing them.
+- Transactional publication of final manifest plus summary, including rollback to previous outputs after an interrupted second publication.
+- Exact-SHA CI existence contracts for the validator, compiler, tests, acceptance specification, and this audit.
+- Regression tests covering valid bundles, every major rejection path, captured-identity preservation, mixed-build rejection, output collisions, and transactional rollback.
 
 ## 5. Remaining work — cannot be honestly completed without external evidence
 
@@ -134,4 +138,4 @@ A change is complete only when all applicable layers agree:
 7. manual visual/policy approval where applicable;
 8. synchronized README/spec/release/audit claims.
 
-The physical-device validator closes the evidence-structure gap. It intentionally does not close the hardware, art, signing, store, or policy gates without real evidence.
+The physical-device validator and compiler close the evidence-structure and publication-integrity gaps. They intentionally do not close the hardware, art, signing, store, or policy gates without real evidence.
