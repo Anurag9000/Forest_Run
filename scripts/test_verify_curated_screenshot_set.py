@@ -61,14 +61,20 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
         final_dir.mkdir(parents=True)
         items = [
             {
+                "order": 1,
                 "raw_file": "01-opening.png",
                 "final_file": "01-opening.png",
                 "scenario": "OPENING_READABILITY",
+                "title": "Opening Readability",
+                "purpose": "Readable first-run scene.",
             },
             {
+                "order": 2,
                 "raw_file": "02-bloom.png",
                 "final_file": "02-bloom.png",
                 "scenario": "BLOOM_SHOWCASE",
+                "title": "Bloom",
+                "purpose": "Bloom transformation and HUD state.",
             },
         ]
         (root / "curation_manifest.json").write_text(
@@ -76,7 +82,9 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
         )
         for index, item in enumerate(items, start=1):
             png_path = final_dir / item["final_file"]
-            image_hash = self.create_png(png_path, marker=f"image-{index}".encode())
+            image_hash = self.create_png(
+                png_path, marker=f"image-{index}".encode()
+            )
             png_path.with_suffix(".capture.json").write_text(
                 json.dumps(
                     self.evidence(
@@ -88,6 +96,11 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
                 encoding="utf-8",
             )
         return items
+
+    def write_manifest(self, root: Path, items) -> None:
+        (root / "curation_manifest.json").write_text(
+            json.dumps({"screenshots": items}), encoding="utf-8"
+        )
 
     def test_valid_curated_set_is_bound_to_candidate(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -118,6 +131,58 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
             with self.assertRaisesRegex(CuratedScreenshotError, "extra"):
                 verify_curated_set(root, self.candidate_sha)
 
+    def test_missing_and_extra_sidecars_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            (root / "final" / "02-bloom.capture.json").unlink()
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "missing_sidecars"):
+                verify_curated_set(root, self.candidate_sha)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            (root / "final" / "stale.capture.json").write_text(
+                "{}", encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "extra_sidecars"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_duplicate_raw_scenario_and_title_coverage_is_rejected(self):
+        for key in ("raw_file", "scenario", "title"):
+            with self.subTest(key=key):
+                with tempfile.TemporaryDirectory() as temporary_directory:
+                    root = Path(temporary_directory)
+                    items = self.create_set(root)
+                    items[1][key] = items[0][key]
+                    self.write_manifest(root, items)
+
+                    with self.assertRaisesRegex(
+                        CuratedScreenshotError, f"duplicate {key}"
+                    ):
+                        verify_curated_set(root, self.candidate_sha)
+
+    def test_order_and_marketing_copy_are_required(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            items[1]["order"] = 3
+            self.write_manifest(root, items)
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "order must equal 2"):
+                verify_curated_set(root, self.candidate_sha)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            items[0]["purpose"] = " "
+            self.write_manifest(root, items)
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "purpose must be non-blank"):
+                verify_curated_set(root, self.candidate_sha)
+
     def test_stale_candidate_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -137,15 +202,6 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
             sidecar.write_text(json.dumps(payload), encoding="utf-8")
 
             with self.assertRaisesRegex(CuratedScreenshotError, "deviceSerial"):
-                verify_curated_set(root, self.candidate_sha)
-
-    def test_missing_sidecar_is_rejected(self):
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            self.create_set(root)
-            (root / "final" / "02-bloom.capture.json").unlink()
-
-            with self.assertRaisesRegex(CuratedScreenshotError, "Missing capture evidence"):
                 verify_curated_set(root, self.candidate_sha)
 
 
