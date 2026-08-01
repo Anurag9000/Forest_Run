@@ -18,6 +18,21 @@ class CatalogueInvariantTest {
     }
 
     @Test
+    fun `tracked relationship catalogue remains exactly the six authored bonds`() {
+        assertEquals(
+            listOf(
+                EntityType.CAT,
+                EntityType.FOX,
+                EntityType.WOLF,
+                EntityType.OWL,
+                EntityType.EAGLE,
+                EntityType.DOG
+            ),
+            EntityType.entries.filter(RelationshipArcSystem::isTracked)
+        )
+    }
+
+    @Test
     fun `biome cycle remains complete readable and covers every entity`() {
         assertEquals(
             listOf(
