@@ -28,6 +28,10 @@ object SaveIntegrityManager {
     internal const val CURRENT_SCHEMA_VERSION = 1
     internal const val KEY_SCHEMA_VERSION = "save_schema_version"
 
+    private const val MAX_MEMORY_PAGE_IDS = 512
+    private const val MAX_HISTORY_MARK_IDS = 256
+    private const val MAX_PERSISTED_ID_LENGTH = 128
+
     private val lastRunKeys = setOf(
         "last_run_score",
         "last_run_distance",
@@ -89,7 +93,9 @@ object SaveIntegrityManager {
 
         repair.enumSet(
             "unlocked_costumes",
-            CostumeStyle.entries.mapTo(mutableSetOf()) { it.name }
+            CostumeStyle.entries
+                .filterNot { it == CostumeStyle.NONE }
+                .mapTo(mutableSetOf()) { it.name }
         )
         repair.requiredEnum(
             "active_costume",
@@ -115,12 +121,20 @@ object SaveIntegrityManager {
         repair.boundedLong("last_active_at_ms", minimum = 0L, maximum = Long.MAX_VALUE, fallback = 0L)
         repair.boundedLong("last_garden_greeting_day", minimum = -1L, maximum = Long.MAX_VALUE, fallback = -1L)
         repair.nonNegativeInt("rough_run_streak")
-        repair.genericStringSet("unlocked_memory_pages")
+        repair.genericStringSet(
+            key = "unlocked_memory_pages",
+            maximumEntries = MAX_MEMORY_PAGE_IDS,
+            maximumIdLength = MAX_PERSISTED_ID_LENGTH
+        )
         repair.enumSet(
             "unlocked_relationship_milestones",
             EntityType.entries.mapTo(mutableSetOf()) { it.name }
         )
-        repair.genericStringSet("unlocked_history_marks")
+        repair.genericStringSet(
+            key = "unlocked_history_marks",
+            maximumEntries = MAX_HISTORY_MARK_IDS,
+            maximumIdLength = MAX_PERSISTED_ID_LENGTH
+        )
 
         repairLastRun(repair, all)
         repairDynamicKeys(repair, all)
@@ -286,10 +300,23 @@ object SaveIntegrityManager {
             }
         }
 
-        fun genericStringSet(key: String) {
+        fun genericStringSet(
+            key: String,
+            maximumEntries: Int,
+            maximumIdLength: Int
+        ) {
+            require(maximumEntries > 0) { "maximumEntries must be positive" }
+            require(maximumIdLength > 0) { "maximumIdLength must be positive" }
             val raw = original[key] ?: return
             val current = raw as? Set<*>
-            val repaired = current.orEmpty().filterIsInstance<String>().toSet()
+            val repaired = current.orEmpty()
+                .asSequence()
+                .filterIsInstance<String>()
+                .filter { value -> value.isNotBlank() && value.length <= maximumIdLength }
+                .distinct()
+                .sorted()
+                .take(maximumEntries)
+                .toCollection(linkedSetOf())
             if (current == null || current.size != repaired.size ||
                 current.any { it !is String || it !in repaired }
             ) {
@@ -299,7 +326,9 @@ object SaveIntegrityManager {
         }
 
         fun enforceCostumeConsistency() {
-            val allowed = CostumeStyle.entries.mapTo(mutableSetOf()) { it.name }
+            val allowed = CostumeStyle.entries
+                .filterNot { it == CostumeStyle.NONE }
+                .mapTo(mutableSetOf()) { it.name }
             val unlocked = when (val raw = original["unlocked_costumes"]) {
                 is Set<*> -> raw.filterIsInstance<String>().filterTo(mutableSetOf()) { it in allowed }
                 else -> emptySet()
