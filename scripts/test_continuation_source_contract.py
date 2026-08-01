@@ -23,18 +23,46 @@ class ContinuationSourceContractTest(unittest.TestCase):
             ROOT
             / "app/src/main/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprint.kt"
         ).read_text(encoding="utf-8")
+        replay = (
+            ROOT
+            / "app/src/main/java/com/anurag9000/forestrun/engine/DeterministicScenarioReplayContract.kt"
+        ).read_text(encoding="utf-8")
+        validator = (ROOT / "scripts/validate_scenario_trace.py").read_text(
+            encoding="utf-8"
+        )
+        source_parser = (ROOT / "scripts/scenario_source_contract.py").read_text(
+            encoding="utf-8"
+        )
 
         self.assertTrue(trace.is_file())
         self.assertIn("private val defaultTraceRecorder", script)
         self.assertIn("recorder: DeterministicScenarioTraceRecorder = defaultTraceRecorder", script)
         self.assertIn("fun traceSnapshot()", script)
+        self.assertIn("private const val SCHEMA_VERSION = 2", evidence)
+        self.assertIn("scenario_definition_sha256", evidence)
+        self.assertIn("trace_contract_sha256", evidence)
         self.assertIn("scheduled_at_micros", evidence)
         self.assertIn("dispatched_at_micros", evidence)
         self.assertIn("lateness_micros", evidence)
         self.assertNotIn("scheduled_at_seconds", evidence)
+        self.assertIn("DeterministicScenarioReplayContract.matches(snapshot)", evidence)
         self.assertIn("scenario.forcedBiome?.name.orEmpty()", fingerprint)
         self.assertIn("scenario.allowGhostPlayback", fingerprint)
         self.assertIn("scenario.startsWithBloom", fingerprint)
+        self.assertIn("traceContractSha256", fingerprint)
+        self.assertIn("DebugScenarioScript.stepsFor(scenario)", fingerprint)
+        self.assertIn("expected.isEmpty()", replay)
+        self.assertIn("event.scheduledAtSeconds == step.atSeconds", replay)
+        self.assertIn("SCHEMA_VERSION = 2", validator)
+        self.assertIn("scenario_definition_sha256", validator)
+        self.assertIn("trace_contract_sha256", validator)
+        self.assertIn("no authored deterministic input script", validator)
+        self.assertIn("scheduled_at_micros does not match", validator)
+        self.assertIn("action does not match", validator)
+        self.assertIn("parse_scenario_definition", source_parser)
+        self.assertIn("parse_input_steps", source_parser)
+        self.assertIn("struct.pack", source_parser)
+        self.assertIn("trace_contract_canonical_bytes", source_parser)
         self.assertTrue(
             (
                 ROOT
@@ -50,6 +78,12 @@ class ContinuationSourceContractTest(unittest.TestCase):
         self.assertTrue(
             (
                 ROOT
+                / "app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioReplayContractTest.kt"
+            ).is_file()
+        )
+        self.assertTrue(
+            (
+                ROOT
                 / "app/src/test/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprintTest.kt"
             ).is_file()
         )
@@ -59,8 +93,10 @@ class ContinuationSourceContractTest(unittest.TestCase):
                 / "app/src/main/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceStore.kt"
             ).is_file()
         )
-        self.assertTrue((ROOT / "scripts/validate_scenario_trace.py").is_file())
+        self.assertTrue((ROOT / "scripts/test_scenario_source_contract.py").is_file())
+        self.assertTrue((ROOT / "scripts/test_scenario_trace_zero_action.py").is_file())
         self.assertTrue((ROOT / "scripts/validate_manifest_scenario_traces.py").is_file())
+        self.assertTrue((ROOT / "docs/DETERMINISTIC_SCENARIO_EVIDENCE.md").is_file())
 
     def test_physical_acceptance_aggregation_surface_is_complete(self) -> None:
         expected = (
@@ -69,6 +105,8 @@ class ContinuationSourceContractTest(unittest.TestCase):
             "scripts/test_aggregate_device_acceptance_aliases.py",
             "scripts/aggregate_device_acceptance_bundle.sh",
             "scripts/test_aggregate_device_acceptance_bundle_contract.py",
+            "scripts/compile_device_acceptance_bundle.sh",
+            "scripts/test_compile_device_acceptance_bundle_contract.py",
             "docs/DEVICE_ACCEPTANCE_AGGREGATION.md",
         )
         for relative in expected:
@@ -76,6 +114,9 @@ class ContinuationSourceContractTest(unittest.TestCase):
                 self.assertTrue((ROOT / relative).is_file())
 
         wrapper = (ROOT / "scripts/aggregate_device_acceptance_bundle.sh").read_text(
+            encoding="utf-8"
+        )
+        compiler_wrapper = (ROOT / "scripts/compile_device_acceptance_bundle.sh").read_text(
             encoding="utf-8"
         )
         aggregator = (ROOT / "scripts/aggregate_device_acceptance.py").read_text(
@@ -89,6 +130,8 @@ class ContinuationSourceContractTest(unittest.TestCase):
             wrapper.index("validate_manifest_scenario_traces.py"),
             wrapper.index("aggregate_device_acceptance.py"),
         )
+        self.assertGreaterEqual(wrapper.count("--require-at-least-one"), 2)
+        self.assertIn("--require-at-least-one", compiler_wrapper)
         self.assertIn("must not overwrite the candidate", wrapper)
         self.assertIn("must not overwrite the baseline", wrapper)
         self.assertIn("os.path.samefile", aggregator)
