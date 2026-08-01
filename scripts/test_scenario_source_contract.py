@@ -44,6 +44,46 @@ class ScenarioSourceContractTest(unittest.TestCase):
         self.assertEqual((), ghost.input_steps)
         self.assertEqual("DOG_HAZARD", dog.scenario.steps[0].variant)
 
+    def test_signed_exponent_offsets_match_kotlin_float_and_rounding_semantics(self) -> None:
+        source = self.encounter_source(ROOT).read_text(encoding="utf-8")
+        modified = source.replace(
+            "EncounterStep(0.20f, EntityType.CACTUS, 420f)",
+            "EncounterStep(0.20f, EntityType.CACTUS, -1.25e1f)",
+            1,
+        )
+
+        definition = contract.parse_scenario_definition(modified, "CACTUS_READ")
+
+        self.assertEqual(-12_500_000, definition.steps[0].x_offset_micro_pixels)
+        self.assertEqual(2, contract._kotlin_round_to_long(1.5, "positive tie"))
+        self.assertEqual(-1, contract._kotlin_round_to_long(-1.5, "negative tie"))
+        self.assertEqual(contract.LONG_MAX, contract._kotlin_round_to_long(1e40, "large"))
+        self.assertEqual(contract.LONG_MIN, contract._kotlin_round_to_long(-1e40, "small"))
+
+    def test_negative_time_and_nonrepresentable_float_literals_fail_closed(self) -> None:
+        source = self.encounter_source(ROOT).read_text(encoding="utf-8")
+        negative_time = source.replace(
+            "EncounterStep(0.20f, EntityType.CACTUS, 420f)",
+            "EncounterStep(-0.20f, EntityType.CACTUS, 420f)",
+            1,
+        )
+        with self.assertRaisesRegex(
+            contract.ScenarioSourceContractError,
+            "time must be non-negative",
+        ):
+            contract.parse_scenario_definition(negative_time, "CACTUS_READ")
+
+        overflow = source.replace(
+            "EncounterStep(0.20f, EntityType.CACTUS, 420f)",
+            "EncounterStep(0.20f, EntityType.CACTUS, 1e100f)",
+            1,
+        )
+        with self.assertRaisesRegex(
+            contract.ScenarioSourceContractError,
+            "representable Kotlin Float",
+        ):
+            contract.parse_scenario_definition(overflow, "CACTUS_READ")
+
     def test_scenario_and_input_changes_affect_only_the_expected_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
