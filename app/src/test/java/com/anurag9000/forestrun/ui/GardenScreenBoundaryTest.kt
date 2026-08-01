@@ -2,6 +2,7 @@ package com.anurag9000.forestrun.ui
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.anurag9000.forestrun.engine.GardenEconomy
 import com.anurag9000.forestrun.engine.SaveManager
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CostumeStyle
@@ -42,6 +43,20 @@ class GardenScreenBoundaryTest {
     fun tearDown() {
         ParticleManager.resetOneShotEmitterCacheForTests()
         SaveManager.usePrimaryPreferences()
+    }
+
+    @Test
+    fun `display catalogue stays synchronized with canonical economy`() {
+        val catalogue = getPrivateField<List<GardenScreen.GardenPlant>>(screen, "catalogue")
+
+        assertEquals(GardenEconomy.catalogueSize, catalogue.size)
+        assertEquals(
+            (0 until GardenEconomy.catalogueSize).map { index ->
+                requireNotNull(GardenEconomy.seedCostForIndex(index))
+            },
+            catalogue.map { plant -> plant.seedCost }
+        )
+        assertTrue(catalogue.all { plant -> plant.name.isNotBlank() && plant.seedCost > 0 })
     }
 
     @Test
@@ -112,7 +127,7 @@ class GardenScreenBoundaryTest {
         val layout = GardenLayoutPlanner.build(
             width = 1_920f,
             height = 1_080f,
-            plantCount = 9,
+            plantCount = GardenEconomy.catalogueSize,
             costumeCount = CostumeStyle.entries.size
         )
         val nextCard = layout.plantCards[1]
