@@ -10,10 +10,19 @@ class StrictJsonOverflowTest(unittest.TestCase):
                 with self.assertRaisesRegex(StrictJsonError, "overflowed"):
                     loads(raw)
 
-    def test_oversized_integer_failure_is_normalized(self) -> None:
-        raw = '{"value":' + "9" * 10_000 + "}"
-        with self.assertRaisesRegex(StrictJsonError, "invalid JSON"):
-            loads(raw)
+    def test_oversized_positive_and_negative_integers_are_rejected_explicitly(self) -> None:
+        for sign in ("", "-"):
+            raw = '{"value":' + sign + "9" * 257 + "}"
+            with self.subTest(sign=sign):
+                with self.assertRaisesRegex(StrictJsonError, "256-digit safety limit"):
+                    loads(raw)
+
+    def test_integer_digit_bound_is_configurable_without_global_interpreter_state(self) -> None:
+        self.assertEqual({"value": 1234}, loads('{"value":1234}', maximum_integer_digits=4))
+        with self.assertRaisesRegex(StrictJsonError, "4-digit safety limit"):
+            loads('{"value":12345}', maximum_integer_digits=4)
+        with self.assertRaisesRegex(ValueError, "maximum_integer_digits"):
+            loads('{"value":1}', maximum_integer_digits=0)
 
     def test_very_deep_input_is_rejected_before_recursive_parse(self) -> None:
         raw = "[" * 5_000 + "0" + "]" * 5_000
