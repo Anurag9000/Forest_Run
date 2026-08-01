@@ -63,6 +63,10 @@ class ContinuationSourceContractTest(unittest.TestCase):
         self.assertIn("parse_input_steps", source_parser)
         self.assertIn("struct.pack", source_parser)
         self.assertIn("trace_contract_canonical_bytes", source_parser)
+        self.assertIn("LONG_MIN = -(1 << 63)", source_parser)
+        self.assertIn("LONG_MAX = (1 << 63) - 1", source_parser)
+        self.assertIn("def _kotlin_round_to_long", source_parser)
+        self.assertIn("ties toward positive infinity", source_parser)
         self.assertTrue(
             (
                 ROOT
@@ -141,6 +145,28 @@ class ContinuationSourceContractTest(unittest.TestCase):
             aggregator.count("_assert_output_is_separate(destination, protected_paths)"),
             2,
         )
+
+    def test_spawn_fairness_envelope_uses_production_pacing_contracts(self) -> None:
+        envelope_path = (
+            ROOT
+            / "app/src/main/java/com/anurag9000/forestrun/engine/SpawnFairnessEnvelope.kt"
+        )
+        test_path = (
+            ROOT
+            / "app/src/test/java/com/anurag9000/forestrun/engine/SpawnFairnessEnvelopeTest.kt"
+        )
+        envelope = envelope_path.read_text(encoding="utf-8")
+        tests = test_path.read_text(encoding="utf-8")
+
+        self.assertIn("DifficultyScaler.getSpawnGapPx", envelope)
+        self.assertIn("SpawnPacing.requiredGapPx", envelope)
+        self.assertIn("GameConstants.BASE_SCROLL_SPEED", envelope)
+        self.assertIn("GameConstants.MAX_SCROLL_SPEED", envelope)
+        self.assertIn("SPAWN_GAP_MIN_PX / GameConstants.MAX_SCROLL_SPEED", envelope)
+        self.assertIn("0.39f", tests)
+        self.assertIn("distance <= 20_000f", tests)
+        self.assertIn("runTimes", tests)
+        self.assertIn("malformed inputs fail closed", tests)
 
     def test_strict_json_numeric_and_depth_boundaries_remain_present(self) -> None:
         parser = (ROOT / "scripts/strict_json.py").read_text(encoding="utf-8")
