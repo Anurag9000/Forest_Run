@@ -41,6 +41,12 @@ object PersistentMemoryManager {
         val featuredUnlock: HistoryUnlockMark?
     )
 
+    private data class RepeatKillerCandidate(
+        val type: EntityType,
+        val hits: Int,
+        val severity: Long
+    )
+
     fun recordEncounter(context: Context, type: EntityType) {
         val appContext = context.applicationContext
         SaveManager.incrementEncounterCount(appContext, type)
@@ -112,14 +118,16 @@ object PersistentMemoryManager {
     fun getBiomeFriendship(context: Context, biome: Biome): Int =
         SaveManager.loadBiomeFriendship(context.applicationContext, biome)
 
-    fun peacefulBiomes(context: Context, minimumFriendship: Int = 1): List<BiomeFriendshipMark> =
-        Biome.entries
+    fun peacefulBiomes(context: Context, minimumFriendship: Int = 1): List<BiomeFriendshipMark> {
+        val safeMinimum = minimumFriendship.coerceAtLeast(1)
+        return Biome.entries
             .map { biome -> BiomeFriendshipMark(biome, getBiomeFriendship(context, biome)) }
-            .filter { it.friendshipCount >= minimumFriendship }
+            .filter { it.friendshipCount >= safeMinimum }
             .sortedWith(
                 compareByDescending<BiomeFriendshipMark> { it.friendshipCount }
                     .thenBy { Biome.entries.indexOf(it.biome) }
             )
+    }
 
     fun featuredPeaceBiome(context: Context, minimumFriendship: Int = 1): BiomeFriendshipMark? =
         peacefulBiomes(context, minimumFriendship).firstOrNull()
@@ -127,8 +135,9 @@ object PersistentMemoryManager {
     fun getRelationshipStage(context: Context, type: EntityType): RelationshipStage =
         RelationshipArcSystem.stageFor(context.applicationContext, type)
 
-    fun featuredWarmCreature(context: Context, minimumStreak: Int = 2): EntityType? =
-        EntityType.entries
+    fun featuredWarmCreature(context: Context, minimumStreak: Int = 2): EntityType? {
+        val safeMinimum = minimumStreak.coerceAtLeast(1)
+        return EntityType.entries
             .asSequence()
             .map { type ->
                 Triple(
@@ -137,12 +146,18 @@ object PersistentMemoryManager {
                     getSparedCount(context, type) - getHitCount(context, type)
                 )
             }
-            .filter { (_, streak, warmthMargin) -> streak >= minimumStreak || warmthMargin >= 2 }
-            .maxWithOrNull(compareBy<Triple<EntityType, Int, Int>> { it.second }.thenBy { it.third })
+            .filter { (_, streak, warmthMargin) -> streak >= safeMinimum || warmthMargin >= 2 }
+            .maxWithOrNull(
+                compareBy<Triple<EntityType, Int, Int>> { it.second }
+                    .thenBy { it.third }
+                    .thenBy { it.first.ordinal }
+            )
             ?.first
+    }
 
-    fun featuredTenderCreature(context: Context, minimumStreak: Int = 2): EntityType? =
-        EntityType.entries
+    fun featuredTenderCreature(context: Context, minimumStreak: Int = 2): EntityType? {
+        val safeMinimum = minimumStreak.coerceAtLeast(1)
+        return EntityType.entries
             .asSequence()
             .map { type ->
                 Triple(
@@ -151,30 +166,42 @@ object PersistentMemoryManager {
                     getHitCount(context, type) - getSparedCount(context, type)
                 )
             }
-            .filter { (_, streak, tensionMargin) -> streak >= minimumStreak || tensionMargin >= 2 }
-            .maxWithOrNull(compareBy<Triple<EntityType, Int, Int>> { it.second }.thenBy { it.third })
+            .filter { (_, streak, tensionMargin) -> streak >= safeMinimum || tensionMargin >= 2 }
+            .maxWithOrNull(
+                compareBy<Triple<EntityType, Int, Int>> { it.second }
+                    .thenBy { it.third }
+                    .thenBy { it.first.ordinal }
+            )
             ?.first
+    }
 
-    fun featuredRepeatKiller(context: Context, minimumHits: Int = 3): EntityType? =
-        EntityType.entries
+    fun featuredRepeatKiller(context: Context, minimumHits: Int = 3): EntityType? {
+        val safeMinimum = minimumHits.coerceAtLeast(1)
+        return EntityType.entries
             .asSequence()
             .map { type ->
-                Triple(
-                    type,
-                    getHitCount(context, type),
-                    getTenderStreak(context, type) + (getHitCount(context, type) - getSparedCount(context, type))
-                )
+                val hits = getHitCount(context, type)
+                val severity = getTenderStreak(context, type).toLong() +
+                    hits.toLong() -
+                    getSparedCount(context, type).toLong()
+                RepeatKillerCandidate(type, hits, severity)
             }
-            .filter { (_, hits, _) -> hits >= minimumHits }
-            .maxWithOrNull(compareBy<Triple<EntityType, Int, Int>> { it.second }.thenBy { it.third })
-            ?.first
+            .filter { candidate -> candidate.hits >= safeMinimum }
+            .maxWithOrNull(
+                compareBy<RepeatKillerCandidate> { it.hits }
+                    .thenBy { it.severity }
+                    .thenBy { it.type.ordinal }
+            )
+            ?.type
+    }
 
     fun featuredCleanPass(
         context: Context,
         candidates: Set<EntityType> = EntityType.entries.toSet(),
         minimumPasses: Int = 3
-    ): CleanPassMark? =
-        candidates
+    ): CleanPassMark? {
+        val safeMinimum = minimumPasses.coerceAtLeast(1)
+        return candidates
             .asSequence()
             .map { type ->
                 CleanPassMark(
@@ -183,11 +210,13 @@ object PersistentMemoryManager {
                     hitCount = getHitCount(context, type)
                 )
             }
-            .filter { it.passCount >= minimumPasses && it.passCount > it.hitCount }
+            .filter { it.passCount >= safeMinimum && it.passCount > it.hitCount }
             .maxWithOrNull(
                 compareBy<CleanPassMark> { it.passCount - it.hitCount }
                     .thenBy { it.passCount }
+                    .thenBy { it.type.ordinal }
             )
+    }
 
     fun unlockedHistoryMarks(context: Context): Set<String> =
         SaveManager.loadUnlockedHistoryMarks(context.applicationContext)
