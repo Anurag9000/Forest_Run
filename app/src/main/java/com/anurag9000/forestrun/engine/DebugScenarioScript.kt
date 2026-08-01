@@ -27,10 +27,26 @@ internal class DebugScenarioScript {
     @Volatile
     private var nextIndex = 0
 
-    fun prepare(scenario: EncounterScenario) {
+    private var activeScenario: EncounterScenario? = null
+    private var traceRecorder: DeterministicScenarioTraceRecorder? = null
+
+    fun prepare(
+        scenario: EncounterScenario,
+        recorder: DeterministicScenarioTraceRecorder? = null
+    ) {
+        val preparedSteps = stepsFor(scenario)
+        val validation = DebugScenarioInputContract.validate(preparedSteps)
+        require(validation.isValid) {
+            "Invalid deterministic input script for ${scenario.name}: " +
+                validation.violations.joinToString("; ")
+        }
+
         synchronized(this) {
-            steps = stepsFor(scenario)
+            steps = preparedSteps
             nextIndex = 0
+            activeScenario = scenario
+            traceRecorder = recorder
+            recorder?.begin(scenario)
         }
     }
 
@@ -38,6 +54,8 @@ internal class DebugScenarioScript {
         synchronized(this) {
             steps = emptyList()
             nextIndex = 0
+            activeScenario = null
+            traceRecorder = null
         }
     }
 
@@ -47,10 +65,22 @@ internal class DebugScenarioScript {
 
         synchronized(this) {
             val activeSteps = steps
+            val scenario = activeScenario
             while (nextIndex < activeSteps.size &&
                 activeSteps[nextIndex].atSeconds <= elapsedSeconds
             ) {
-                dispatch(activeSteps[nextIndex].action)
+                val sequence = nextIndex
+                val step = activeSteps[sequence]
+                dispatch(step.action)
+                if (scenario != null) {
+                    traceRecorder?.record(
+                        scenario = scenario,
+                        sequence = sequence,
+                        scheduledAtSeconds = step.atSeconds,
+                        dispatchedAtSeconds = elapsedSeconds,
+                        action = step.action
+                    )
+                }
                 nextIndex++
             }
         }
