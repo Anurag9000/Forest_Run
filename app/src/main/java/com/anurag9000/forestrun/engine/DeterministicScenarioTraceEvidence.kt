@@ -8,6 +8,8 @@ internal data class DeterministicScenarioTraceEvidence(
     val artifactSha256: String,
     val capturedAtUtcMs: Long,
     val scenario: EncounterScenario,
+    val scenarioDefinitionSha256: String,
+    val traceContractSha256: String,
     val eventCount: Int,
     val payloadJson: String,
     val payloadSha256: String
@@ -15,7 +17,7 @@ internal data class DeterministicScenarioTraceEvidence(
 
 /** Stable, bounded, privacy-preserving encoding for deterministic input traces. */
 internal object DeterministicScenarioTraceEvidenceCodec {
-    private const val SCHEMA_VERSION = 1
+    private const val SCHEMA_VERSION = 2
     private const val MAX_PAYLOAD_BYTES = 256 * 1024
     private const val MICROS_PER_SECOND = 1_000_000.0
     private val commitPattern = Regex("^[0-9a-f]{40}$")
@@ -29,7 +31,7 @@ internal object DeterministicScenarioTraceEvidenceCodec {
     ): DeterministicScenarioTraceEvidence? {
         val commit = candidateCommitSha.trim().lowercase()
         val artifact = artifactSha256.trim().lowercase()
-        if (!snapshot.isReplayable ||
+        if (!DeterministicScenarioReplayContract.matches(snapshot) ||
             !commitPattern.matches(commit) ||
             !sha256Pattern.matches(artifact) ||
             capturedAtUtcMs < 0L
@@ -37,14 +39,22 @@ internal object DeterministicScenarioTraceEvidenceCodec {
             return null
         }
         val scenario = snapshot.scenario ?: return null
+        val scenarioDefinitionSha = EncounterScenarioFingerprint.sha256(scenario)
+        val traceContractSha = EncounterScenarioFingerprint.traceContractSha256(scenario)
 
-        val payload = buildString(256 + snapshot.events.size * 128) {
+        val payload = buildString(384 + snapshot.events.size * 128) {
             append('{')
             append("\"schema_version\":").append(SCHEMA_VERSION)
             append(",\"candidate_commit_sha\":\"").append(commit).append('"')
             append(",\"artifact_sha256\":\"").append(artifact).append('"')
             append(",\"captured_at_utc_ms\":").append(capturedAtUtcMs)
             append(",\"scenario\":\"").append(scenario.name).append('"')
+            append(",\"scenario_definition_sha256\":\"")
+                .append(scenarioDefinitionSha)
+                .append('"')
+            append(",\"trace_contract_sha256\":\"")
+                .append(traceContractSha)
+                .append('"')
             append(",\"event_count\":").append(snapshot.events.size)
             append(",\"events\":[")
             snapshot.events.forEachIndexed { index, event ->
@@ -72,6 +82,8 @@ internal object DeterministicScenarioTraceEvidenceCodec {
             artifactSha256 = artifact,
             capturedAtUtcMs = capturedAtUtcMs,
             scenario = scenario,
+            scenarioDefinitionSha256 = scenarioDefinitionSha,
+            traceContractSha256 = traceContractSha,
             eventCount = snapshot.events.size,
             payloadJson = payload,
             payloadSha256 = sha256(payloadBytes)
