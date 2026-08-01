@@ -6,7 +6,7 @@ internal object DeterministicScenarioReplayContract {
         val scenario = snapshot.scenario ?: return false
         if (!snapshot.isReplayable || snapshot.overflowed) return false
         val expected = DebugScenarioScript.stepsFor(scenario)
-        if (snapshot.events.size != expected.size) return false
+        if (expected.isEmpty() || snapshot.events.size != expected.size) return false
         return snapshot.events.indices.all { index ->
             val event = snapshot.events[index]
             val step = expected[index]
