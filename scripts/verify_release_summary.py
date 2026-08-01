@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Sequence
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,10 +40,15 @@ def required_text(source: dict[str, Any], key: str, label: str) -> str:
 
 def verify_file_fact(root: Path, facts: dict[str, Any], label: str) -> Path:
     relative = required_text(facts, "path", label)
-    path = Path(relative)
-    if path.is_absolute() or ".." in path.parts or Path(relative).as_posix() != relative:
+    if any(ord(character) < 32 or ord(character) == 127 for character in relative):
         raise ReleaseSummaryError(f"{label}.path is unsafe")
-    absolute = root / path
+    normalized = relative.replace("\\", "/")
+    if normalized.startswith("/") or re.match(r"^[A-Za-z]:", normalized):
+        raise ReleaseSummaryError(f"{label}.path is unsafe")
+    pure = PurePosixPath(normalized)
+    if not pure.parts or any(part in {"", ".", ".."} for part in pure.parts):
+        raise ReleaseSummaryError(f"{label}.path is unsafe")
+    absolute = root.joinpath(*pure.parts)
     if not absolute.is_file():
         raise ReleaseSummaryError(f"{label} file is missing: {relative}")
     size = absolute.stat().st_size
