@@ -47,14 +47,37 @@ class AggregationError(ValueError):
     """Raised when validated evidence cannot be aggregated unambiguously."""
 
 
+def _stable_manifest_read(path: Path) -> tuple[bytes, tuple[int, int, int]]:
+    resolved = path.expanduser().resolve()
+    try:
+        before = resolved.stat()
+    except FileNotFoundError as exc:
+        raise AggregationError(f"acceptance manifest is missing: {resolved}") from exc
+    except OSError as exc:
+        raise AggregationError(f"could not inspect acceptance manifest {resolved}: {exc}") from exc
+    if not resolved.is_file():
+        raise AggregationError(f"acceptance manifest is not a regular file: {resolved}")
+    if before.st_size <= 0 or before.st_size > acceptance.MAX_MANIFEST_BYTES:
+        raise AggregationError(
+            f"acceptance manifest must be between 1 and {acceptance.MAX_MANIFEST_BYTES} bytes"
+        )
+    try:
+        raw = resolved.read_bytes()
+        after = resolved.stat()
+    except OSError as exc:
+        raise AggregationError(f"could not read acceptance manifest {resolved}: {exc}") from exc
+    before_identity = (before.st_size, before.st_mtime_ns, before.st_ino)
+    after_identity = (after.st_size, after.st_mtime_ns, after.st_ino)
+    if len(raw) != before.st_size or after_identity != before_identity:
+        raise AggregationError(f"acceptance manifest changed while being read: {resolved}")
+    return raw, before_identity
+
+
 def _load_validated_manifest(
     path: Path,
 ) -> tuple[dict[str, Any], acceptance.ValidationSummary, dict[str, Any]]:
     resolved = path.expanduser().resolve()
-    try:
-        raw = resolved.read_bytes()
-    except OSError as exc:
-        raise AggregationError(f"could not read acceptance manifest {resolved}: {exc}") from exc
+    raw, identity = _stable_manifest_read(resolved)
     try:
         data = strict_json.loads(
             raw,
@@ -79,6 +102,19 @@ def _load_validated_manifest(
         manifest_traces.ManifestTraceError,
     ) as exc:
         raise AggregationError(f"invalid acceptance manifest {resolved}: {exc}") from exc
+
+    confirmed_raw, confirmed_identity = _stable_manifest_read(resolved)
+    if confirmed_identity != identity or confirmed_raw != raw:
+        raise AggregationError(
+            f"acceptance manifest changed while trace contracts were validated: {resolved}"
+        )
+    if (
+        trace_summary["candidate_commit_sha"] != summary.candidate_sha
+        or trace_summary["artifact_sha256"] != summary.artifact_sha256
+    ):
+        raise AggregationError(
+            "acceptance and trace validation resolved different candidate identities"
+        )
     return data, summary, trace_summary
 
 
@@ -284,9 +320,13 @@ def _same_file_or_resolved_path(first: Path, second: Path) -> bool:
         return False
 
 
-def _manifest_protected_paths(path: Path) -> tuple[Path, ...]:
+def _manifest_protected_paths(
+    path: Path,
+    data: Mapping[str, Any] | None = None,
+) -> tuple[Path, ...]:
     resolved = path.expanduser().resolve()
-    data, _, _ = _load_validated_manifest(resolved)
+    if data is None:
+        data, _, _ = _load_validated_manifest(resolved)
     protected: list[Path] = [resolved]
     protected.append((resolved.parent / data["candidate"]["artifact_path"]).resolve())
     for session in data["sessions"]:
@@ -315,11 +355,11 @@ def _assert_output_is_separate(output_path: Path, protected_paths: Sequence[Path
             )
 
 
-def aggregate(
+def _aggregate_with_sources(
     candidate_path: Path,
     *,
     baseline_path: Path | None = None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], tuple[Path, ...]]:
     if baseline_path is not None and _same_file_or_resolved_path(
         candidate_path,
         baseline_path,
@@ -334,6 +374,7 @@ def aggregate(
         candidate_validation,
         candidate_traces,
     )
+    protected = list(_manifest_protected_paths(candidate_path, candidate_data))
     result: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "status": "valid",
@@ -349,7 +390,20 @@ def aggregate(
             baseline_traces,
         )
         result["baseline_comparison"] = _compare(candidate_summary, baseline_summary)
-    return result
+        protected.extend(_manifest_protected_paths(baseline_path, baseline_data))
+    return result, tuple(protected)
+
+
+def aggregate(
+    candidate_path: Path,
+    *,
+    baseline_path: Path | None = None,
+) -> dict[str, Any]:
+    payload, _ = _aggregate_with_sources(
+        candidate_path,
+        baseline_path=baseline_path,
+    )
+    return payload
 
 
 def _write_json_atomic(
@@ -390,9 +444,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        payload = aggregate(args.candidate, baseline_path=args.baseline)
+        payload, protected_paths = _aggregate_with_sources(
+            args.candidate,
+            baseline_path=args.baseline,
+        )
         if args.output is not None:
-            protected_paths = _protected_source_paths(args.candidate, args.baseline)
             _write_json_atomic(
                 args.output,
                 payload,
