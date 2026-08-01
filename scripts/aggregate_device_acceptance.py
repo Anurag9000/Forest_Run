@@ -2,9 +2,10 @@
 """Aggregate validated Forest Run physical acceptance evidence.
 
 This tool never relaxes or replaces the fail-closed acceptance validator. It
-first validates every supplied manifest and its referenced files, then produces
-per-device-class distributions, worst-case threshold headroom, and optional
-baseline deltas. It deliberately does not invent regression tolerances.
+first validates every supplied manifest, referenced file, and deterministic
+trace contract, then produces per-device-class distributions, worst-case
+threshold headroom, and optional baseline deltas. It deliberately does not
+invent regression tolerances.
 """
 
 from __future__ import annotations
@@ -20,8 +21,10 @@ from typing import Any, Mapping, Sequence
 
 import strict_json
 import validate_device_acceptance as acceptance
+import validate_manifest_scenario_traces as manifest_traces
 
 SCHEMA_VERSION = 1
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 METRICS = (
     "p95_frame_ms",
     "p99_frame_ms",
@@ -44,7 +47,9 @@ class AggregationError(ValueError):
     """Raised when validated evidence cannot be aggregated unambiguously."""
 
 
-def _load_validated_manifest(path: Path) -> tuple[dict[str, Any], acceptance.ValidationSummary]:
+def _load_validated_manifest(
+    path: Path,
+) -> tuple[dict[str, Any], acceptance.ValidationSummary, dict[str, Any]]:
     resolved = path.expanduser().resolve()
     try:
         raw = resolved.read_bytes()
@@ -63,9 +68,18 @@ def _load_validated_manifest(path: Path) -> tuple[dict[str, Any], acceptance.Val
             source_bytes=raw,
             evidence_base=resolved.parent,
         )
-    except (strict_json.StrictJsonError, acceptance.EvidenceError) as exc:
+        trace_summary = manifest_traces.validate_manifest_traces(
+            resolved,
+            repository_root=REPOSITORY_ROOT,
+            require_at_least_one=True,
+        )
+    except (
+        strict_json.StrictJsonError,
+        acceptance.EvidenceError,
+        manifest_traces.ManifestTraceError,
+    ) as exc:
         raise AggregationError(f"invalid acceptance manifest {resolved}: {exc}") from exc
-    return data, summary
+    return data, summary, trace_summary
 
 
 def _finite_metric(value: Any, label: str) -> float:
@@ -96,9 +110,29 @@ def _device_identity(session: Mapping[str, Any]) -> str:
     )
 
 
+def _trace_contracts(trace_validation: Mapping[str, Any]) -> list[dict[str, str]]:
+    unique = {
+        (
+            trace["trace_scenario"],
+            trace["scenario_definition_sha256"],
+            trace["trace_contract_sha256"],
+        )
+        for trace in trace_validation["traces"]
+    }
+    return [
+        {
+            "scenario": scenario,
+            "scenario_definition_sha256": scenario_sha,
+            "trace_contract_sha256": trace_sha,
+        }
+        for scenario, scenario_sha, trace_sha in sorted(unique)
+    ]
+
+
 def _summarize_manifest(
     data: Mapping[str, Any],
     validation: acceptance.ValidationSummary,
+    trace_validation: Mapping[str, Any],
 ) -> dict[str, Any]:
     sessions = data["sessions"]
     thresholds = data["policy"]["thresholds"]
@@ -159,6 +193,8 @@ def _summarize_manifest(
         "session_count": validation.session_count,
         "evidence_file_count": validation.evidence_file_count,
         "device_class_count": len(required_classes),
+        "trace_count": trace_validation["trace_count"],
+        "trace_contracts": _trace_contracts(trace_validation),
         "duration_seconds": _metric_distribution(durations),
         "global_metrics": global_metrics,
         "threshold_headroom": threshold_headroom,
@@ -180,6 +216,28 @@ def _compare(
             f"missing={missing}, added={added}"
         )
 
+    candidate_contracts = {
+        (
+            item["scenario"],
+            item["scenario_definition_sha256"],
+            item["trace_contract_sha256"],
+        )
+        for item in candidate["trace_contracts"]
+    }
+    baseline_contracts = {
+        (
+            item["scenario"],
+            item["scenario_definition_sha256"],
+            item["trace_contract_sha256"],
+        )
+        for item in baseline["trace_contracts"]
+    }
+    if candidate_contracts != baseline_contracts:
+        raise AggregationError(
+            "candidate and baseline deterministic trace-contract sets differ; "
+            f"candidate={sorted(candidate_contracts)}, baseline={sorted(baseline_contracts)}"
+        )
+
     class_deltas: dict[str, Any] = {}
     for device_class in sorted(candidate_classes):
         candidate_metrics = candidate["by_device_class"][device_class]["metrics"]
@@ -197,6 +255,7 @@ def _compare(
     return {
         "baseline_commit_sha": baseline["candidate"]["commit_sha"],
         "baseline_artifact_sha256": baseline["candidate"]["artifact_sha256"],
+        "trace_contracts": candidate["trace_contracts"],
         "global_metric_deltas": {
             metric: {
                 "mean_delta": candidate["global_metrics"][metric]["mean"]
@@ -227,7 +286,7 @@ def _same_file_or_resolved_path(first: Path, second: Path) -> bool:
 
 def _manifest_protected_paths(path: Path) -> tuple[Path, ...]:
     resolved = path.expanduser().resolve()
-    data, _ = _load_validated_manifest(resolved)
+    data, _, _ = _load_validated_manifest(resolved)
     protected: list[Path] = [resolved]
     protected.append((resolved.parent / data["candidate"]["artifact_path"]).resolve())
     for session in data["sessions"]:
@@ -267,16 +326,28 @@ def aggregate(
     ):
         raise AggregationError("candidate and baseline manifests must be distinct files")
 
-    candidate_data, candidate_validation = _load_validated_manifest(candidate_path)
-    candidate_summary = _summarize_manifest(candidate_data, candidate_validation)
+    candidate_data, candidate_validation, candidate_traces = _load_validated_manifest(
+        candidate_path
+    )
+    candidate_summary = _summarize_manifest(
+        candidate_data,
+        candidate_validation,
+        candidate_traces,
+    )
     result: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "status": "valid",
         "candidate_summary": candidate_summary,
     }
     if baseline_path is not None:
-        baseline_data, baseline_validation = _load_validated_manifest(baseline_path)
-        baseline_summary = _summarize_manifest(baseline_data, baseline_validation)
+        baseline_data, baseline_validation, baseline_traces = _load_validated_manifest(
+            baseline_path
+        )
+        baseline_summary = _summarize_manifest(
+            baseline_data,
+            baseline_validation,
+            baseline_traces,
+        )
         result["baseline_comparison"] = _compare(candidate_summary, baseline_summary)
     return result
 
