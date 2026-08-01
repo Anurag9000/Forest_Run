@@ -18,6 +18,35 @@ class CatalogueInvariantTest {
     }
 
     @Test
+    fun `biome cycle remains complete readable and covers every entity`() {
+        assertEquals(
+            listOf(
+                Biome.MEADOW,
+                Biome.ORCHARD,
+                Biome.ANCIENT_GROVE,
+                Biome.DUSK_CANYON,
+                Biome.NIGHT_FOREST
+            ),
+            Biome.entries
+        )
+        assertEquals(
+            Biome.entries.size,
+            Biome.entries.map { it.displayName }.toSet().size
+        )
+        assertTrue(Biome.entries.all { it.displayName.isNotBlank() })
+        assertTrue(Biome.entries.all { it.ambientLightFactor in 0f..1f })
+        assertTrue(Biome.entries.all { it.preferredPool.isNotEmpty() })
+        assertTrue(Biome.entries.all { it.preferredPool.size == it.preferredPool.distinct().size })
+        assertEquals(
+            EntityType.entries.toSet(),
+            Biome.entries.flatMap { it.preferredPool }.toSet()
+        )
+        Biome.entries.forEachIndexed { index, biome ->
+            assertEquals(Biome.entries[(index + 1) % Biome.entries.size], Biome.next(biome))
+        }
+    }
+
+    @Test
     fun `classic costume remains first and authored labels remain unique`() {
         assertEquals(0, CostumeStyle.NONE.ordinal)
         assertEquals("Classic", CostumeStyle.NONE.displayName)
