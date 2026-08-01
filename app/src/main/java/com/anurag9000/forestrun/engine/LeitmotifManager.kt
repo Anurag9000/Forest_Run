@@ -97,7 +97,6 @@ object LeitmotifManager {
     private var currentSpeed = 1f
     private var currentScrollSpeed = GameConstants.BASE_SCROLL_SPEED
     private var currentTargetVolume = 0.48f
-    private var lastParameterUpdateNs = 0L
     private val tempoEvaluationThrottle = EvaluationThrottle(PARAMETER_UPDATE_INTERVAL_NS)
     private val bloomEvaluationThrottle = EvaluationThrottle(PARAMETER_UPDATE_INTERVAL_NS)
     private var currentMotifSignature = menuLeitmotifProfile.motifSignature
@@ -199,7 +198,6 @@ object LeitmotifManager {
             currentTargetVolume = newProfile.targetVolume
             currentMotifSignature = newProfile.motifSignature
             val transitionNowNs = System.nanoTime()
-            lastParameterUpdateNs = transitionNowNs
             tempoEvaluationThrottle.tryAcquire(transitionNowNs, force = true)
             bloomEvaluationThrottle.tryAcquire(transitionNowNs, force = true)
             applyTempoToPlayer(newPlayer, newProfile.tempo)
@@ -240,7 +238,7 @@ object LeitmotifManager {
                 bloomMusicSignature
             )
             currentMotifSignature = profile.motifSignature
-            applyProfileIfNeededLocked(profile, force = false, nowNs = nowNs)
+            applyProfileIfNeededLocked(profile, force = false)
         }
     }
 
@@ -281,8 +279,7 @@ object LeitmotifManager {
             currentMotifSignature = profile.motifSignature
             applyProfileIfNeededLocked(
                 profile = profile,
-                force = conversionChanged,
-                nowNs = nowNs
+                force = conversionChanged
             )
         }
     }
@@ -325,7 +322,6 @@ object LeitmotifManager {
             currentScrollSpeed = GameConstants.BASE_SCROLL_SPEED
             currentTargetVolume = 0.48f
             currentSpeed = 1f
-            lastParameterUpdateNs = 0L
             currentMotifSignature = menuLeitmotifProfile.motifSignature
             bloomMusicSignature = defaultBloomMusicSignature
             tempoEvaluationThrottle.reset()
@@ -349,15 +345,11 @@ object LeitmotifManager {
 
     private fun applyProfileIfNeededLocked(
         profile: LeitmotifPlaybackProfile,
-        force: Boolean,
-        nowNs: Long
+        force: Boolean
     ) {
         val tempoChanged = abs(profile.tempo - currentSpeed) >= TEMPO_EPSILON
         val volumeChanged = abs(profile.targetVolume - currentTargetVolume) >= VOLUME_EPSILON
         if (!force && !tempoChanged && !volumeChanged) return
-
-        if (!force && nowNs - lastParameterUpdateNs < PARAMETER_UPDATE_INTERVAL_NS) return
-        lastParameterUpdateNs = nowNs
 
         if (tempoChanged || force) {
             activePlayer?.let { applyTempoToPlayer(it, profile.tempo) }
