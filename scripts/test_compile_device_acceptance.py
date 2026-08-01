@@ -5,11 +5,14 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import compile_device_acceptance as compiler
 
 ARTIFACT_BYTES = b"signed forest run candidate\n"
 EVIDENCE_BYTES = b"physical evidence\n"
+ARTIFACT_SHA = hashlib.sha256(ARTIFACT_BYTES).hexdigest()
+EVIDENCE_SHA = hashlib.sha256(EVIDENCE_BYTES).hexdigest()
 CERTIFICATE_SHA = "3" * 64
 COMMIT_SHA = "1" * 40
 SCENARIOS = (
@@ -28,6 +31,17 @@ CLASSES = (
     "cutout_phone",
     "tablet",
 )
+
+
+def captured_build() -> dict:
+    return {
+        "commit_sha": COMMIT_SHA,
+        "artifact_sha256": ARTIFACT_SHA,
+        "version_code": 7,
+        "certificate_sha256": CERTIFICATE_SHA,
+        "signed": True,
+        "installed_via": "internal_store",
+    }
 
 
 def draft_bundle() -> dict:
@@ -53,6 +67,7 @@ def draft_bundle() -> dict:
                     "tablet": device_class == "tablet",
                     "cutout": device_class == "cutout_phone",
                 },
+                "build": captured_build(),
                 "scenarios": {
                     scenario: {
                         "passed": True,
@@ -91,7 +106,14 @@ def draft_bundle() -> dict:
             "artifact_path": "artifact/app-release.aab",
             "signed": True,
             "certificate_sha256": CERTIFICATE_SHA,
-            "store_delivery": {"track": "internal", "installed": True},
+            "store_delivery": {
+                "track": "internal",
+                "installed": True,
+                "package_name": "com.anurag9000.forestrun",
+                "version_code": 7,
+                "artifact_sha256": ARTIFACT_SHA,
+                "certificate_sha256": CERTIFICATE_SHA,
+            },
         },
         "policy": {
             "required_device_classes": list(CLASSES),
@@ -140,25 +162,25 @@ def materialize(root: Path, draft: dict, *, omit_first: bool = False) -> None:
 
 
 class CompileDeviceAcceptanceTest(unittest.TestCase):
-    def test_compile_hashes_and_binds_every_session(self) -> None:
+    def test_compile_hashes_files_without_rewriting_captured_identity(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             draft = draft_bundle()
+            original_store = dict(draft["candidate"]["store_delivery"])
+            original_builds = [dict(session["build"]) for session in draft["sessions"]]
             materialize(root, draft)
             compiled, summary = compiler.compile_bundle(
                 draft,
                 base_dir=root,
                 generated_at_utc="2026-08-01T12:00:00Z",
             )
-            expected_artifact = hashlib.sha256(ARTIFACT_BYTES).hexdigest()
-            expected_evidence = hashlib.sha256(EVIDENCE_BYTES).hexdigest()
-            self.assertEqual(expected_artifact, compiled["candidate"]["artifact_sha256"])
+            self.assertEqual(ARTIFACT_SHA, compiled["candidate"]["artifact_sha256"])
+            self.assertEqual(original_store, compiled["candidate"]["store_delivery"])
             self.assertEqual(35, summary.evidence_file_count)
-            for session in compiled["sessions"]:
-                self.assertEqual(COMMIT_SHA, session["build"]["commit_sha"])
-                self.assertEqual(expected_artifact, session["build"]["artifact_sha256"])
+            for index, session in enumerate(compiled["sessions"]):
+                self.assertEqual(original_builds[index], session["build"])
                 for result in session["scenarios"].values():
-                    self.assertEqual(expected_evidence, result["evidence_files"][0]["sha256"])
+                    self.assertEqual(EVIDENCE_SHA, result["evidence_files"][0]["sha256"])
 
     def test_missing_artifact_or_evidence_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -187,13 +209,34 @@ class CompileDeviceAcceptanceTest(unittest.TestCase):
             with self.assertRaisesRegex(compiler.CompilationError, "safe relative path"):
                 compiler.compile_bundle(draft, base_dir=root)
 
-    def test_compiler_cannot_turn_failed_facts_into_a_pass(self) -> None:
+    def test_compiler_rejects_failed_metrics_and_captured_identity_mismatches(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             draft = draft_bundle()
             materialize(root, draft)
             draft["sessions"][0]["performance"]["p95_frame_ms"] = 40.0
             with self.assertRaisesRegex(compiler.CompilationError, "exceeds max_p95"):
+                compiler.compile_bundle(draft, base_dir=root)
+
+            draft = draft_bundle()
+            materialize(root, draft)
+            draft["candidate"]["store_delivery"]["artifact_sha256"] = "9" * 64
+            with self.assertRaisesRegex(compiler.CompilationError, "store_delivery.artifact_sha256"):
+                compiler.compile_bundle(draft, base_dir=root)
+
+            draft = draft_bundle()
+            materialize(root, draft)
+            draft["sessions"][0]["build"]["commit_sha"] = "2" * 40
+            with self.assertRaisesRegex(compiler.CompilationError, "build.commit_sha"):
+                compiler.compile_bundle(draft, base_dir=root)
+
+    def test_missing_captured_session_build_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            draft = draft_bundle()
+            materialize(root, draft)
+            del draft["sessions"][0]["build"]
+            with self.assertRaisesRegex(compiler.CompilationError, "sessions\[0\]\.build"):
                 compiler.compile_bundle(draft, base_dir=root)
 
     def test_compile_file_publishes_manifest_and_summary_transactionally(self) -> None:
@@ -215,7 +258,7 @@ class CompileDeviceAcceptanceTest(unittest.TestCase):
             self.assertEqual("valid", json.loads(summary_path.read_text())["status"])
             self.assertFalse(any(root.glob(".device-acceptance-*")))
 
-    def test_second_publish_failure_restores_both_previous_outputs(self) -> None:
+    def test_publication_failure_restores_prior_manifest_and_summary(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             draft = draft_bundle()
@@ -224,48 +267,46 @@ class CompileDeviceAcceptanceTest(unittest.TestCase):
             output_path = root / "device-acceptance.json"
             summary_path = root / "device-acceptance-summary.json"
             draft_path.write_text(json.dumps(draft), encoding="utf-8")
-            output_path.write_text("old manifest", encoding="utf-8")
-            summary_path.write_text("old summary", encoding="utf-8")
-
+            output_path.write_text("old manifest\n", encoding="utf-8")
+            summary_path.write_text("old summary\n", encoding="utf-8")
             original_replace = compiler._replace_path
-            calls = 0
 
-            def fail_on_second_publication(source: Path, destination: Path) -> None:
-                nonlocal calls
-                calls += 1
-                if calls == 4:
-                    raise OSError("forced second publication failure")
+            def fail_second_publish(source: Path, destination: Path) -> None:
+                if source.name == "staged-1.json":
+                    raise OSError("simulated interrupted publish")
                 original_replace(source, destination)
 
-            compiler._replace_path = fail_on_second_publication
-            try:
-                with self.assertRaisesRegex(
-                    compiler.CompilationError,
-                    "forced second publication failure",
-                ):
+            with mock.patch.object(
+                compiler,
+                "_replace_path",
+                side_effect=fail_second_publish,
+            ):
+                with self.assertRaisesRegex(compiler.CompilationError, "could not publish"):
                     compiler.compile_file(
                         draft_path,
                         output_path,
                         summary_path=summary_path,
                         generated_at_utc="2026-08-01T12:00:00Z",
                     )
-            finally:
-                compiler._replace_path = original_replace
-
-            self.assertEqual("old manifest", output_path.read_text(encoding="utf-8"))
-            self.assertEqual("old summary", summary_path.read_text(encoding="utf-8"))
+            self.assertEqual("old manifest\n", output_path.read_text())
+            self.assertEqual("old summary\n", summary_path.read_text())
             self.assertFalse(any(root.glob(".device-acceptance-*")))
 
-    def test_output_paths_must_share_directory_and_be_distinct(self) -> None:
+    def test_outputs_are_distinct_and_share_draft_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             draft_path = root / "draft.json"
             draft_path.write_text("{}", encoding="utf-8")
             with self.assertRaisesRegex(compiler.CompilationError, "share the draft directory"):
                 compiler.compile_file(draft_path, root / "nested" / "manifest.json")
-            with self.assertRaisesRegex(compiler.CompilationError, "distinct"):
-                compiler._publish_json_transaction(
-                    [(root / "same.json", {}), (root / "same.json", {})]
+            with self.assertRaisesRegex(compiler.CompilationError, "must not overwrite the draft"):
+                compiler.compile_file(draft_path, draft_path)
+            output_path = root / "manifest.json"
+            with self.assertRaisesRegex(compiler.CompilationError, "must not overwrite"):
+                compiler.compile_file(
+                    draft_path,
+                    output_path,
+                    summary_path=output_path,
                 )
 
 
