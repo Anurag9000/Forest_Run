@@ -5,6 +5,17 @@ readonly SERIAL="${ANDROID_SERIAL:-emulator-${EMULATOR_PORT:-5554}}"
 readonly READINESS_TIMEOUT_SECONDS="${FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS:-240}"
 readonly POLL_SECONDS=5
 
+if [[ ! "${READINESS_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS must be a positive integer." >&2
+  exit 2
+fi
+for required_command in adb timeout; do
+  if ! command -v "${required_command}" >/dev/null 2>&1; then
+    echo "Connected validation requires '${required_command}' on PATH." >&2
+    exit 2
+  fi
+done
+
 export ANDROID_SERIAL="${SERIAL}"
 
 dump_emulator_diagnostics() {
@@ -36,7 +47,7 @@ wait_for_android_services() {
       return 0
     fi
 
-    if ! adb devices | grep -q "^${SERIAL}[[:space:]]"; then
+    if ! adb devices | awk -v serial="${SERIAL}" 'NR > 1 && $1 == serial { found=1 } END { exit found ? 0 : 1 }'; then
       adb start-server >/dev/null 2>&1 || true
     fi
     sleep "${POLL_SECONDS}"
