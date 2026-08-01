@@ -49,16 +49,21 @@ object CostumeManager {
 
     fun refreshUnlocks(context: Context): List<CostumeUnlock> {
         val appContext = context.applicationContext
-        val unlocked = SaveManager.loadUnlockedCostumes(appContext).toMutableSet()
+        val loaded = SaveManager.loadUnlockedCostumes(appContext)
+        val unlocked = loaded.filterNotTo(mutableSetOf()) { it == CostumeStyle.NONE }
+        var unlockSetChanged = unlocked.size != loaded.size
         val newlyUnlocked = mutableListOf<CostumeUnlock>()
         for ((style, requirement) in unlockRules) {
             if (style !in unlocked && requirement(appContext)) {
                 unlocked += style
+                unlockSetChanged = true
                 newlyUnlocked += CostumeUnlock(style, unlockLineFor(appContext, style))
             }
         }
-        if (newlyUnlocked.isNotEmpty()) {
+        if (unlockSetChanged) {
             SaveManager.saveUnlockedCostumes(appContext, unlocked)
+        }
+        if (newlyUnlocked.isNotEmpty()) {
             SaveManager.saveFeaturedCostume(appContext, newlyUnlocked.last().style)
         }
         val active = SaveManager.loadActiveCostume(appContext)
@@ -99,7 +104,9 @@ object CostumeManager {
     fun featuredPresentation(context: Context): CostumePresentationState? {
         val appContext = context.applicationContext
         val unlocked = SaveManager.loadUnlockedCostumes(appContext)
-        val featured = SaveManager.loadFeaturedCostume(appContext)?.takeIf { it in unlocked }
+            .filterNotTo(mutableSetOf()) { it == CostumeStyle.NONE }
+        val featured = SaveManager.loadFeaturedCostume(appContext)
+            ?.takeIf { it != CostumeStyle.NONE && it in unlocked }
             ?: activeCostume(appContext).takeIf { it != CostumeStyle.NONE }
             ?: unlocked.maxByOrNull { it.ordinal }
         return presentationFor(featured ?: return null)
