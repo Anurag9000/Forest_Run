@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import stat
 import subprocess
 import zipfile
 from collections import Counter
@@ -135,16 +136,29 @@ def _last_non_blank_line(output: str, label: str) -> str:
 def _validate_zip_entry_name(name: str) -> None:
     if not name:
         raise ArtifactVerificationError("Release bundle contains an empty ZIP entry name")
+    if any(ord(character) < 32 or ord(character) == 127 for character in name):
+        raise ArtifactVerificationError(
+            f"Release bundle contains a control character in a ZIP entry name: {name!r}"
+        )
     if name.startswith("/") or name.startswith("./") or "\\" in name:
         raise ArtifactVerificationError(
             f"Release bundle contains an unsafe ZIP entry name: {name!r}"
         )
     normalized = name[:-1] if name.endswith("/") else name
     parts = normalized.split("/")
-    if not normalized or any(part in {"", ".", ".."} for part in parts):
+    if (
+        not normalized
+        or re.match(r"^[A-Za-z]:", normalized)
+        or any(part in {"", ".", ".."} or ":" in part for part in parts)
+    ):
         raise ArtifactVerificationError(
             f"Release bundle contains an unsafe ZIP entry name: {name!r}"
         )
+
+
+def _is_symbolic_link(info: zipfile.ZipInfo) -> bool:
+    unix_mode = (info.external_attr >> 16) & 0xFFFF
+    return stat.S_ISLNK(unix_mode)
 
 
 def verify_bundle_structure(bundle: Path) -> dict[str, object]:
@@ -173,6 +187,10 @@ def verify_bundle_structure(bundle: Path) -> dict[str, object]:
             info_by_name: dict[str, zipfile.ZipInfo] = {}
             for info in infos:
                 _validate_zip_entry_name(info.filename)
+                if _is_symbolic_link(info):
+                    raise ArtifactVerificationError(
+                        f"Release bundle contains a symbolic-link ZIP entry: {info.filename}"
+                    )
                 if info.flag_bits & 0x1:
                     raise ArtifactVerificationError(
                         f"Release bundle contains an encrypted ZIP entry: {info.filename}"
@@ -340,12 +358,18 @@ def verify_bundle_signature(
         label="jarsigner verification",
     )
     normalized_verification = verification_output.casefold()
+    unsigned_markers = (
+        "jar is unsigned",
+        "unsigned entry",
+        "unsigned entries",
+        "not signed",
+    )
     if (
         "jar verified" not in normalized_verification
-        or "jar is unsigned" in normalized_verification
+        or any(marker in normalized_verification for marker in unsigned_markers)
     ):
         raise ArtifactVerificationError(
-            "Release bundle is not verifiably JAR-signed"
+            "Release bundle is not completely and verifiably JAR-signed"
         )
 
     signer_output = _run_checked(
