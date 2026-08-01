@@ -16,15 +16,42 @@ class PerformanceProfileEvaluatorTest(unittest.TestCase):
     def setUp(self):
         self.report = {
             "scenario": "OPENING_READABILITY",
+            "durationMs": 20_000,
             "manufacturer": "Example",
             "model": "Midrange One",
+            "apiLevel": 35,
             "refreshRateHz": 60.0,
             "sampledFrames": 600,
+            "totalFrames": 1_200,
+            "slowFrames": 12,
+            "slowFrameRatio": 0.01,
+            "frameBudgetNs": 16_666_666,
+            "meanUpdateNs": 2_000_000,
+            "meanRenderNs": 4_000_000,
+            "meanProcessingNs": 6_500_000,
+            "p50ProcessingNs": 6_000_000,
             "p95ProcessingNs": 12_000_000,
             "p99ProcessingNs": 15_000_000,
             "maximumProcessingNs": 22_000_000,
-            "slowFrameRatio": 0.01,
             "usedHeapBytes": 48_000_000,
+            "maxHeapBytes": 256_000_000,
+            "currentEntities": 2,
+            "peakEntities": 5,
+            "currentSeedOrbs": 1,
+            "peakSeedOrbs": 2,
+            "currentParticles": 40,
+            "peakParticles": 120,
+            "currentDialogueBubbles": 1,
+            "peakDialogueBubbles": 3,
+            "currentFlavorTexts": 1,
+            "peakFlavorTexts": 4,
+            "ghostWritesStarted": 0,
+            "ghostWritesCompleted": 0,
+            "ghostWritesFailed": 0,
+            "latestGhostFrameCount": 0,
+            "maximumGhostFrameCount": 0,
+            "latestGhostWriteDurationNs": 0,
+            "maximumGhostWriteDurationNs": 0,
         }
 
     def profile(self, **overrides):
@@ -81,15 +108,18 @@ class PerformanceProfileEvaluatorTest(unittest.TestCase):
         report = dict(
             self.report,
             scenario="GHOST_PERSISTENCE_MAX",
-            ghostWritesCompleted=1,
+            ghostWritesStarted=2,
+            ghostWritesCompleted=2,
             ghostWritesFailed=0,
+            latestGhostFrameCount=36_000,
             maximumGhostFrameCount=36_000,
+            latestGhostWriteDurationNs=18_000_000,
             maximumGhostWriteDurationNs=18_000_000,
         )
         profile = self.profile(
             name="ghost-max",
             scenario="GHOST_PERSISTENCE_MAX",
-            min_ghost_writes_completed=1,
+            min_ghost_writes_completed=2,
             max_ghost_write_failures=0,
             min_maximum_ghost_frame_count=36_000,
             max_ghost_write_duration_ns=20_000_000,
@@ -97,10 +127,12 @@ class PerformanceProfileEvaluatorTest(unittest.TestCase):
 
         self.assertTrue(evaluate_report(Path("ghost.json"), report, (profile,)).passed)
 
-        report["ghostWritesCompleted"] = 0
+        report["ghostWritesCompleted"] = 1
         report["ghostWritesFailed"] = 1
         report["maximumGhostFrameCount"] = 1_000
+        report["latestGhostFrameCount"] = 1_000
         report["maximumGhostWriteDurationNs"] = 40_000_000
+        report["latestGhostWriteDurationNs"] = 40_000_000
         result = evaluate_report(Path("ghost.json"), report, (profile,))
 
         self.assertFalse(result.passed)
@@ -110,13 +142,57 @@ class PerformanceProfileEvaluatorTest(unittest.TestCase):
         self.assertTrue(any("maximumGhostFrameCount" in item for item in result.violations))
         self.assertTrue(any("maximumGhostWriteDurationNs" in item for item in result.violations))
 
-    def test_missing_ghost_metric_is_configuration_error_when_required(self):
-        profile = self.profile(
-            min_ghost_writes_completed=1,
-        )
+    def test_impossible_frame_count_and_ratio_evidence_is_rejected(self):
+        malformed = dict(self.report, sampledFrames=1_201)
+        with self.assertRaisesRegex(ConfigurationError, "sampledFrames"):
+            evaluate_report(Path("opening.json"), malformed, (self.profile(),))
 
+        malformed = dict(self.report, slowFrames=13)
+        with self.assertRaisesRegex(ConfigurationError, "slowFrameRatio"):
+            evaluate_report(Path("opening.json"), malformed, (self.profile(),))
+
+    def test_impossible_timing_heap_and_workload_evidence_is_rejected(self):
+        malformed = dict(self.report, p50ProcessingNs=13_000_000)
+        with self.assertRaisesRegex(ConfigurationError, "percentiles"):
+            evaluate_report(Path("opening.json"), malformed, (self.profile(),))
+
+        malformed = dict(self.report, usedHeapBytes=300_000_000)
+        with self.assertRaisesRegex(ConfigurationError, "usedHeapBytes"):
+            evaluate_report(Path("opening.json"), malformed, (self.profile(),))
+
+        malformed = dict(self.report, currentParticles=121)
+        with self.assertRaisesRegex(ConfigurationError, "currentParticles"):
+            evaluate_report(Path("opening.json"), malformed, (self.profile(),))
+
+    def test_impossible_ghost_publication_is_rejected_before_thresholds(self):
+        malformed = dict(
+            self.report,
+            ghostWritesStarted=1,
+            ghostWritesCompleted=2,
+        )
         with self.assertRaisesRegex(ConfigurationError, "ghostWritesCompleted"):
-            evaluate_report(Path("opening.json"), self.report, (profile,))
+            evaluate_report(Path("opening.json"), malformed, (self.profile(),))
+
+        malformed = dict(
+            self.report,
+            latestGhostFrameCount=2,
+            maximumGhostFrameCount=1,
+        )
+        with self.assertRaisesRegex(ConfigurationError, "latestGhostFrameCount"):
+            evaluate_report(Path("opening.json"), malformed, (self.profile(),))
+
+    def test_zero_refresh_rate_is_rejected_as_unusable_hardware_evidence(self):
+        malformed = dict(self.report, refreshRateHz=0.0)
+
+        with self.assertRaisesRegex(ConfigurationError, "refreshRateHz"):
+            evaluate_report(Path("opening.json"), malformed, (self.profile(),))
+
+    def test_missing_current_schema_metric_is_configuration_error(self):
+        malformed = dict(self.report)
+        del malformed["maxHeapBytes"]
+
+        with self.assertRaisesRegex(ConfigurationError, "maxHeapBytes"):
+            evaluate_report(Path("opening.json"), malformed, (self.profile(),))
 
     def test_exact_device_profile_outranks_wildcard_profile(self):
         wildcard = self.profile(
