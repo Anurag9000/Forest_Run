@@ -11,7 +11,7 @@ from test_validate_device_acceptance import session, valid_bundle
 
 
 class AggregateDeviceMatrixTest(unittest.TestCase):
-    def test_device_profile_is_unicode_case_normalized_but_hardware_sensitive(self) -> None:
+    def test_device_identity_and_profile_are_unicode_case_normalized(self) -> None:
         original = session("older_phone", 0)
         equivalent = deepcopy(original)
         equivalent["device"]["manufacturer"] = "  ＥＸＡＭＰＬＥ  "
@@ -21,12 +21,17 @@ class AggregateDeviceMatrixTest(unittest.TestCase):
         ].upper()
 
         self.assertEqual(
+            aggregate._physical_device_id(original),
+            aggregate._physical_device_id(equivalent),
+        )
+        self.assertEqual(
             aggregate._device_profile_id(original),
             aggregate._device_profile_id(equivalent),
         )
 
+    def test_configuration_change_preserves_physical_identity_but_changes_profile(self) -> None:
+        original = session("older_phone", 0)
         for field, value in (
-            ("model", "Different-Model"),
             ("sdk", 34),
             ("ram_mb", 3072),
             ("refresh_hz", 90),
@@ -38,6 +43,29 @@ class AggregateDeviceMatrixTest(unittest.TestCase):
             changed = deepcopy(original)
             changed["device"][field] = value
             with self.subTest(field=field):
+                self.assertEqual(
+                    aggregate._physical_device_id(original),
+                    aggregate._physical_device_id(changed),
+                )
+                self.assertNotEqual(
+                    aggregate._device_profile_id(original),
+                    aggregate._device_profile_id(changed),
+                )
+
+    def test_identity_field_change_changes_both_physical_and_profile_ids(self) -> None:
+        original = session("older_phone", 0)
+        for field, value in (
+            ("manufacturer", "Different-OEM"),
+            ("model", "Different-Model"),
+            ("build_fingerprint", "different/device/build"),
+        ):
+            changed = deepcopy(original)
+            changed["device"][field] = value
+            with self.subTest(field=field):
+                self.assertNotEqual(
+                    aggregate._physical_device_id(original),
+                    aggregate._physical_device_id(changed),
+                )
                 self.assertNotEqual(
                     aggregate._device_profile_id(original),
                     aggregate._device_profile_id(changed),
