@@ -9,7 +9,7 @@ import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -101,7 +101,7 @@ class RunOutcomePersistenceIntegrationTest {
         assertEquals(RunOutcomeCommitDisposition.ALREADY_COMMITTED, retried.disposition)
         assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
         assertFalse(SaveManager.hasGhostRun(context))
-        assertEquals(null, SaveManager.loadLastRunSummary(context))
+        assertNull(SaveManager.loadLastRunSummary(context))
         assertEquals(0, SaveManager.loadForestMoodState(context).totalRuns)
         assertEquals(0L, SaveManager.loadReturnMomentState(context).lastActiveAtMs)
     }
