@@ -61,10 +61,14 @@ class GhostPersistenceManagerAdmissionTest {
         assertTrue(GhostPersistenceManager.awaitPendingWrites())
         assertEquals(longer, SaveManager.loadGhostRun(context))
         assertEquals(900f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(
+            manifest(longer, 900f),
+            (manifestStore().load() as GhostArtifactManifestLoadResult.Present).manifest
+        )
     }
 
     @Test
-    fun `compatibility overload preserves the current distance floor`() {
+    fun `compatibility overload preserves distance and replaces manifest identity`() {
         val first = frames(xOffset = 0f)
         val replacement = frames(xOffset = 25f)
         assertTrue(
@@ -82,7 +86,26 @@ class GhostPersistenceManagerAdmissionTest {
 
         assertEquals(replacement, SaveManager.loadGhostRun(context))
         assertEquals(600f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(
+            manifest(replacement, 600f),
+            (manifestStore().load() as GhostArtifactManifestLoadResult.Present).manifest
+        )
     }
+
+    private fun manifest(
+        frames: List<GhostFrame>,
+        distanceM: Float
+    ): GhostArtifactManifest = GhostArtifactManifest(
+        distanceM = distanceM,
+        frameCount = frames.size,
+        fingerprint = GhostRunFingerprint.calculate(frames)
+    )
+
+    private fun manifestStore(): AtomicFileGhostArtifactManifestStore =
+        AtomicFileGhostArtifactManifestStore(
+            context = context,
+            ghostFilename = SaveManager.activeGhostFilenameForTests
+        )
 
     private fun frames(xOffset: Float): List<GhostFrame> = listOf(
         GhostFrame(
@@ -116,7 +139,10 @@ class GhostPersistenceManagerAdmissionTest {
             File(ghost.path + ".new"),
             File(ghost.path + ".promotion"),
             File(ghost.path + ".promotion.bak"),
-            File(ghost.path + ".promotion.new")
+            File(ghost.path + ".promotion.new"),
+            File(ghost.path + ".manifest"),
+            File(ghost.path + ".manifest.bak"),
+            File(ghost.path + ".manifest.new")
         ).forEach { file -> file.delete() }
     }
 }
