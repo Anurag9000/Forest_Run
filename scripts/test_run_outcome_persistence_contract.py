@@ -138,8 +138,9 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
 
     def test_production_adapter_owns_storage_and_recovery_surfaces(self) -> None:
         expected_once = (
-            "GhostPersistenceManager.saveBestRunAsync(appContext, frames)",
-            "SaveManager.saveBestDistance(appContext, distanceM)",
+            "GhostPersistenceManager.recoverPendingPromotion(appContext)",
+            "GhostPersistenceManager.bestDistanceFloor(appContext)",
+            "GhostPersistenceManager.saveBestRunAsync(",
             "ForestMoodSystem.recordRun(appContext, summary)",
             "ReturnMomentsSystem.recordRunOutcome(appContext, summary)",
             "SaveManager.saveLastRunSummary(appContext, summary)",
@@ -152,6 +153,8 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
         )
         for call in expected_once:
             self.assertEqual(1, self.coordinator.count(call), call)
+        self.assertNotIn("SaveManager.saveBestDistance(", self.coordinator)
+        self.assertNotIn("fun saveBestDistanceM(", self.coordinator)
         self.assertEqual(1, self.coordinator.count("SharedPreferencesRunOutcomeRecoveryStore("))
         self.assertEqual(
             1,
@@ -185,20 +188,23 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
             commit.index("sink.loadBestDistanceM()"),
         )
 
-    def test_best_distance_advances_only_after_accepted_ghost(self) -> None:
+    def test_ghost_candidate_carries_distance_without_direct_threshold_write(self) -> None:
         commit = extract_braced_block(
             self.coordinator,
             "override fun commit(\n        summary: RunSummary,",
         )
         promoted = commit.index("val ghostPromoted =")
-        publish = commit.index("sink.publishBestGhost(completedGhost)")
-        gate = commit.index("if (ghostPromoted)")
-        save = commit.index("sink.saveBestDistanceM(completedDistance)")
+        publish = commit.index("sink.publishBestGhost(")
+        distance = commit.index("distanceM = completedDistance", publish)
         bundle = commit.index("commitRecoveryProtectedBundle(")
         self.assertLess(promoted, publish)
-        self.assertLess(publish, gate)
-        self.assertLess(gate, save)
-        self.assertLess(save, bundle)
+        self.assertLess(publish, distance)
+        self.assertLess(distance, bundle)
+        self.assertNotIn("saveBestDistance", commit)
+        self.assertIn(
+            "fun publishBestGhost(frames: List<GhostFrame>, distanceM: Float): Boolean",
+            self.coordinator,
+        )
 
     def test_recovery_bundle_orders_states_atomic_snapshot_and_clear(self) -> None:
         bundle = extract_braced_block(
