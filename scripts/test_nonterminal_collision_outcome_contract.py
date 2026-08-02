@@ -209,7 +209,6 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             "gameState.recordHit()",
             "ghostPlayer.suppress(seconds)",
             "player.triggerStumble()",
-            "mercyFlashTimer = mercyFlashDuration",
             "SfxManager.playHit()",
             "CameraSystem.shakeHit()",
             "HapticManager.mediumPulse()",
@@ -220,6 +219,10 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
         )
         for call in expected_once:
             self.assertEqual(1, self.effect_adapter.count(call), call)
+        self.assertEqual(
+            2,
+            self.effect_adapter.count("mercyFlashTimer = mercyFlashDuration"),
+        )
 
 
 if __name__ == "__main__":
