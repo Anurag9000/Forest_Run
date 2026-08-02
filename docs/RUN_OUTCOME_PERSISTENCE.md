@@ -4,26 +4,69 @@
 
 A terminal collision produces several permanent side effects:
 
+- entity-specific relationship hit history;
+- authored collision dialogue and flavor copy;
+- the completed rest quote and `RunSummary`;
 - best-ghost publication;
 - best-distance advancement;
 - forest-mood history;
 - return-moment history;
 - the canonical last-run summary.
 
-Those writes previously originated directly from `GameView`. That made terminal persistence difficult to test as one unit and left duplicate-delivery protection implicit in run-state timing.
+Those responsibilities previously lived directly in one large `GameView` branch. They are now split into two explicit owners:
 
-`RunOutcomePersistenceCoordinator` is now the only coordinator-level owner for this terminal bundle.
+- `TerminalHitOutcomeCoordinator` owns behavior-preserving terminal-hit completion;
+- `RunOutcomePersistenceCoordinator` owns the exactly-once persistent bundle.
 
-## Ownership boundary
+## GameView boundary
 
-`GameView` remains responsible for presentation and gameplay sequencing:
+`GameView` now remains responsible only for the immediate impact and run-state sequence:
 
-1. resolve the terminal collision;
-2. detach the completed ghost buffer in O(1);
-3. identify the killer and record entity-specific relationship history when allowed;
-4. build the completed `RunSummary` and authored rest quote;
-5. invoke `runOutcomePersistence.commit(...)` once;
-6. transition the run into `DYING`.
+1. record the run-level hit;
+2. suppress ghost visibility;
+3. trigger Player rest and immediate camera/audio/haptic feedback;
+4. detach the completed ghost buffer in O(1);
+5. identify the killer;
+6. invoke `terminalHitOutcome.complete(...)` once;
+7. accept the returned completed summary;
+8. transition the run into `DYING`.
+
+The `HIT` branch must not directly:
+
+```text
+record PersistentMemoryManager hit history
+compose RunFlavorPresentation collision copy
+spawn the terminal bubble or flavor line
+resolve RestQuoteManager copy
+call RunOutcomePersistenceCoordinator.commit
+```
+
+Those operations belong to the extracted terminal-hit seam.
+
+## Terminal-hit completion ordering
+
+`TerminalHitOutcomeCoordinator.complete(...)` preserves the authored ordering that existed before extraction:
+
+1. when persistence is allowed and the killer is known, record relationship hit history;
+2. present the canonical HIT dialogue bubble and floating flavor line;
+3. invoke the supplied summary builder exactly once;
+4. resolve the authored rest quote using the summary preview, biome, and killer;
+5. copy that quote into one completed `RunSummary`;
+6. invoke the exactly-once persistence committer;
+7. return the completed summary and persistence result.
+
+The summary builder remains a callback so `GameView` can use the authoritative live `GameStateManager` without making the extracted coordinator depend on the entire mutable game-state owner.
+
+Production side effects are isolated behind:
+
+- `AndroidTerminalHitRelationshipRecorder`;
+- `AndroidTerminalHitFeedbackPresenter`;
+- `AndroidTerminalHitRestQuoteResolver`;
+- `RunOutcomeCommitter`.
+
+Each has a fakeable interface used by pure ordering tests.
+
+## Persistence ownership boundary
 
 `GameView` must not directly call any of the following terminal write APIs:
 
@@ -33,13 +76,14 @@ SaveManager.saveBestDistance
 ForestMoodSystem.recordRun
 ReturnMomentsSystem.recordRunOutcome
 SaveManager.saveLastRunSummary
+RunOutcomePersistenceCoordinator.commit
 ```
 
-`AndroidRunOutcomePersistenceSink` is the sole production adapter for those calls.
+`TerminalHitOutcomeCoordinator` invokes the `RunOutcomeCommitter` seam. `RunOutcomePersistenceCoordinator` implements that seam, and `AndroidRunOutcomePersistenceSink` is the sole production adapter for the underlying storage calls.
 
 ## Exactly-once token
 
-Each coordinator instance owns one terminal token.
+Each persistence coordinator instance owns one terminal token.
 
 `commit(...)` performs these gates in order:
 
@@ -59,7 +103,7 @@ A death/restart animation, Garden transition, Activity pause, or duplicate colli
 
 ## Ordered persistence sequence
 
-For a persistent terminal outcome, the coordinator:
+For a persistent terminal outcome, the persistence coordinator:
 
 1. reads the current best distance;
 2. normalizes non-finite or negative comparison values to zero;
@@ -73,7 +117,7 @@ This fixes the prior threshold mismatch where best distance could advance even i
 
 ## Failure model
 
-The coordinator is fail-closed against duplicate delivery. It claims the token before the first sink call, including re-entrant calls on the same monitor.
+The persistence coordinator is fail-closed against duplicate delivery. It claims the token before the first sink call, including re-entrant calls on the same monitor.
 
 The storage bundle is not yet a cross-store transaction:
 
@@ -84,6 +128,21 @@ The storage bundle is not yet a cross-store transaction:
 The current design prioritizes preventing duplicate counters and duplicate summaries over retrying a partially completed in-process commit. Durable journaling or idempotent recovery keys remain future architectural work.
 
 ## Tests
+
+`TerminalHitOutcomeCoordinatorTest` covers:
+
+- relationship → feedback → summary → quote → persistence ordering;
+- exactly one summary callback;
+- deterministic/non-persistent relationship isolation;
+- unknown-killer behavior;
+- presentation identity pass-through;
+- completed-summary and persistence-result propagation.
+
+`TerminalHitFeedbackPresenterIntegrationTest` exercises the real Android presenter under Robolectric for:
+
+- canonical authored HIT cue parity;
+- one dialogue bubble and one flavor line;
+- fail-closed nonfinite presentation anchors.
 
 `RunOutcomePersistenceCoordinatorTest` uses a recording sink to cover:
 
@@ -105,10 +164,13 @@ The current design prioritizes preventing duplicate counters and duplicate summa
 - empty-ghost behavior;
 - deterministic-run isolation.
 
-`scripts/test_run_outcome_persistence_contract.py` enforces source ownership and ordering. It prevents direct terminal writes from returning to `GameView` and requires exactly one commit call and two run-start reset sites.
+Source contracts enforce both layers:
+
+- `test_terminal_hit_outcome_contract.py` locks the extracted completion order and keeps direct completion work out of the `GameView` HIT block;
+- `test_run_outcome_persistence_contract.py` prevents direct terminal storage writes from returning to `GameView`, requires one terminal-hit completion call, and preserves the two run-start reset sites.
 
 ## Evidence boundary
 
-Focused Kotlin compilation and executable coordinator checks were run locally, and the Python source-contract parser passed all six checks against a representative source fixture. The large `GameView` replacement was inspected as an exact four-hunk diff with no unrelated changes.
+Focused Kotlin compilation and executable ordering checks passed in this session. The first persistence extraction was inspected as an exact four-hunk `GameView` diff; the terminal-hit extraction was inspected as an exact three-hunk diff containing only the obsolete import removal, one coordinator construction, and one HIT-block delegation.
 
-The new Robolectric tests have not been executed through an exact-head Android Gradle environment in this session. This contract does not substitute for exact-head unit, lint, release-build, connected-emulator, or physical-device evidence.
+The new Robolectric tests have not been executed through an exact-head Android Gradle environment in this session. These contracts do not substitute for exact-head unit, lint, release-build, connected-emulator, or physical-device evidence.
