@@ -124,7 +124,7 @@ object GhostPersistenceManager {
         return maxOf(diskDistance, publishedDistance)
     }
 
-    /** Retry any receipt left by a previous process or failed worker step. */
+    /** Retry any receipt or durable manifest left by a previous process. */
     @Synchronized
     internal fun recoverPendingPromotion(
         context: Context
@@ -171,11 +171,19 @@ object GhostPersistenceManager {
         }
     }
 
-    internal fun clearPromotionEvidenceForTests(context: Context): Boolean =
-        AtomicFileGhostPromotionReceiptStore(
-            context = context.applicationContext,
-            ghostFilename = SaveManager.activeGhostFilenameForTests
+    internal fun clearPromotionEvidenceForTests(context: Context): Boolean {
+        val appContext = context.applicationContext
+        val ghostFilename = SaveManager.activeGhostFilenameForTests
+        val receiptCleared = AtomicFileGhostPromotionReceiptStore(
+            context = appContext,
+            ghostFilename = ghostFilename
         ).clear()
+        val manifestCleared = AtomicFileGhostArtifactManifestStore(
+            context = appContext,
+            ghostFilename = ghostFilename
+        ).clear()
+        return receiptCleared && manifestCleared
+    }
 
     internal fun clearMemoryForTests() {
         awaitPendingWrites()
@@ -186,14 +194,20 @@ object GhostPersistenceManager {
         GhostIoTelemetry.reset()
     }
 
-    private fun recoveryCoordinator(context: Context): GhostPromotionRecoveryCoordinator =
-        GhostPromotionRecoveryCoordinator(
+    private fun recoveryCoordinator(context: Context): GhostPromotionRecoveryCoordinator {
+        val ghostFilename = SaveManager.activeGhostFilenameForTests
+        return GhostPromotionRecoveryCoordinator(
             receiptStore = AtomicFileGhostPromotionReceiptStore(
                 context = context,
-                ghostFilename = SaveManager.activeGhostFilenameForTests
+                ghostFilename = ghostFilename
             ),
-            artifactStore = AndroidGhostPromotionArtifactStore(context)
+            artifactStore = AndroidGhostPromotionArtifactStore(context),
+            manifestStore = AtomicFileGhostArtifactManifestStore(
+                context = context,
+                ghostFilename = ghostFilename
+            )
         )
+    }
 
     @Synchronized
     private fun clearPublicationIfCurrent(publication: PublishedGhost) {
