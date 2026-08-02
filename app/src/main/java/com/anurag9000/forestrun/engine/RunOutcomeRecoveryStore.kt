@@ -72,22 +72,21 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
                     ?: return RunOutcomeRecoveryLoadResult.Corrupt
                 val previousRouteTierCount = prefs.getInt(PREVIOUS_ROUTE_TIER_COUNT, -1)
                 val nextRouteTierCount = prefs.getInt(NEXT_ROUTE_TIER_COUNT, -1)
-                if (previousRouteTierCount < 0 || nextRouteTierCount < 0) {
-                    return RunOutcomeRecoveryLoadResult.Corrupt
-                }
-
-                RunOutcomeRecoveryLoadResult.Pending(
-                    RunOutcomeRecoveryRecord(
-                        phase = phase,
-                        summary = summary,
-                        previousMood = previousMood,
-                        nextMood = nextMood,
-                        previousReturn = previousReturn,
-                        nextReturn = nextReturn,
-                        previousRouteTierCount = previousRouteTierCount,
-                        nextRouteTierCount = nextRouteTierCount
-                    )
+                val record = RunOutcomeRecoveryRecord(
+                    phase = phase,
+                    summary = summary,
+                    previousMood = previousMood,
+                    nextMood = nextMood,
+                    previousReturn = previousReturn,
+                    nextReturn = nextReturn,
+                    previousRouteTierCount = previousRouteTierCount,
+                    nextRouteTierCount = nextRouteTierCount
                 )
+                if (!isValid(record)) {
+                    RunOutcomeRecoveryLoadResult.Corrupt
+                } else {
+                    RunOutcomeRecoveryLoadResult.Pending(record)
+                }
             }
         } catch (_: ClassCastException) {
             RunOutcomeRecoveryLoadResult.Corrupt
@@ -114,6 +113,8 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
     override fun clear(): Boolean = prefs.edit().clear().commit()
 
     private fun readSummary(): RunSummary? {
+        if (REQUIRED_SUMMARY_KEYS.any { key -> !prefs.contains(key) }) return null
+
         val lastKiller = nullableEnumValue<EntityType>(SUMMARY_LAST_KILLER) ?: return null
         val forestMood = enumValueOrNull<ForestMood>(prefs.getString(SUMMARY_FOREST_MOOD, null))
             ?: return null
@@ -123,18 +124,18 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
         val quote = prefs.getString(SUMMARY_REST_QUOTE, null) ?: return null
 
         val summary = RunSummary(
-            score = prefs.getInt(SUMMARY_SCORE, -1),
+            score = prefs.getInt(SUMMARY_SCORE, 0),
             distanceM = prefs.getFloat(SUMMARY_DISTANCE, Float.NaN),
             isNewHighScore = prefs.getBoolean(SUMMARY_NEW_HIGH, false),
-            highScore = prefs.getInt(SUMMARY_HIGH_SCORE, -1),
-            mercyHearts = prefs.getInt(SUMMARY_MERCY_HEARTS, -1),
-            mercyMisses = prefs.getInt(SUMMARY_MERCY_MISSES, -1),
-            kindnessChain = prefs.getInt(SUMMARY_KINDNESS_CHAIN, -1),
-            cleanPasses = prefs.getInt(SUMMARY_CLEAN_PASSES, -1),
-            sparedCount = prefs.getInt(SUMMARY_SPARED, -1),
-            hitsTaken = prefs.getInt(SUMMARY_HITS, -1),
-            seedsCollected = prefs.getInt(SUMMARY_SEEDS, -1),
-            bloomConversions = prefs.getInt(SUMMARY_BLOOM, -1),
+            highScore = prefs.getInt(SUMMARY_HIGH_SCORE, 0),
+            mercyHearts = prefs.getInt(SUMMARY_MERCY_HEARTS, 0),
+            mercyMisses = prefs.getInt(SUMMARY_MERCY_MISSES, 0),
+            kindnessChain = prefs.getInt(SUMMARY_KINDNESS_CHAIN, 0),
+            cleanPasses = prefs.getInt(SUMMARY_CLEAN_PASSES, 0),
+            sparedCount = prefs.getInt(SUMMARY_SPARED, 0),
+            hitsTaken = prefs.getInt(SUMMARY_HITS, 0),
+            seedsCollected = prefs.getInt(SUMMARY_SEEDS, 0),
+            bloomConversions = prefs.getInt(SUMMARY_BLOOM, 0),
             lastKiller = lastKiller.value,
             restQuote = quote,
             forestMood = forestMood,
@@ -220,20 +221,22 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
             isValidReturn(record.previousReturn) &&
             isValidReturn(record.nextReturn) &&
             record.previousRouteTierCount >= 0 &&
-            record.nextRouteTierCount >= 0
+            record.nextMood == RunOutcomeRecoveryTransitions.nextForestMood(
+                record.previousMood,
+                record.summary
+            ) &&
+            record.nextReturn == RunOutcomeRecoveryTransitions.nextReturnMoment(
+                previous = record.previousReturn,
+                summary = record.summary,
+                nowMs = record.nextReturn.lastActiveAtMs
+            ) &&
+            record.nextRouteTierCount == RunOutcomeRecoveryTransitions.nextRouteTierCount(
+                previous = record.previousRouteTierCount,
+                tier = record.summary.pacifistRouteTier
+            )
 
     private fun isValidSummary(summary: RunSummary): Boolean =
-        summary.score >= 0 &&
-            summary.highScore >= 0 &&
-            summary.mercyHearts >= 0 &&
-            summary.mercyMisses >= 0 &&
-            summary.kindnessChain >= 0 &&
-            summary.cleanPasses >= 0 &&
-            summary.sparedCount >= 0 &&
-            summary.hitsTaken >= 0 &&
-            summary.seedsCollected >= 0 &&
-            summary.bloomConversions >= 0 &&
-            summary.restQuote.length <= MAX_QUOTE_LENGTH
+        summary.restQuote.length <= MAX_QUOTE_LENGTH
 
     private fun isValidMood(state: ForestMoodState): Boolean =
         state.moodStreak >= 0 &&
@@ -244,8 +247,8 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
             state.steadyRuns >= 0
 
     private fun isValidReturn(state: ReturnMomentState): Boolean =
-        state.lastActiveAtMs != Long.MIN_VALUE &&
-            state.lastGardenGreetingDay != Long.MIN_VALUE &&
+        state.lastActiveAtMs >= 0L &&
+            state.lastGardenGreetingDay >= -1L &&
             state.roughRunStreak >= 0
 
     private data class NullableEnum<T>(val value: T?)
@@ -286,6 +289,25 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
         const val SUMMARY_REST_QUOTE = "summary_rest_quote"
         const val SUMMARY_FOREST_MOOD = "summary_forest_mood"
         const val SUMMARY_ROUTE_TIER = "summary_route_tier"
+
+        val REQUIRED_SUMMARY_KEYS = arrayOf(
+            SUMMARY_SCORE,
+            SUMMARY_DISTANCE,
+            SUMMARY_NEW_HIGH,
+            SUMMARY_HIGH_SCORE,
+            SUMMARY_MERCY_HEARTS,
+            SUMMARY_MERCY_MISSES,
+            SUMMARY_KINDNESS_CHAIN,
+            SUMMARY_CLEAN_PASSES,
+            SUMMARY_SPARED,
+            SUMMARY_HITS,
+            SUMMARY_SEEDS,
+            SUMMARY_BLOOM,
+            SUMMARY_LAST_KILLER,
+            SUMMARY_REST_QUOTE,
+            SUMMARY_FOREST_MOOD,
+            SUMMARY_ROUTE_TIER
+        )
 
         const val PREVIOUS_MOOD = "previous_mood_"
         const val NEXT_MOOD = "next_mood_"
