@@ -31,7 +31,7 @@ class RunOutcomeRecoveryStoreTest {
     }
 
     @Test
-    fun `journal round trips every summary and state field`() {
+    fun `journal round trips every summary state and route field`() {
         val record = record()
 
         assertTrue(store.save(record))
@@ -66,6 +66,17 @@ class RunOutcomeRecoveryStoreTest {
     }
 
     @Test
+    fun `missing or negative route counts are corrupt`() {
+        assertTrue(store.save(record()))
+        rawPrefs().edit().remove("next_route_tier_count").commit()
+        assertEquals(RunOutcomeRecoveryLoadResult.Corrupt, store.load())
+
+        assertTrue(store.save(record()))
+        rawPrefs().edit().putInt("previous_route_tier_count", -1).commit()
+        assertEquals(RunOutcomeRecoveryLoadResult.Corrupt, store.load())
+    }
+
+    @Test
     fun `wrong preference types fail closed instead of escaping`() {
         rawPrefs().edit()
             .putString("present", "yes")
@@ -78,9 +89,11 @@ class RunOutcomeRecoveryStoreTest {
     fun `invalid records are rejected without replacing existing evidence`() {
         val valid = record()
         assertTrue(store.save(valid))
-        val invalid = valid.copy(summary = valid.summary.copy(score = -1))
+        val invalidSummary = valid.copy(summary = valid.summary.copy(score = -1))
+        val invalidRouteCount = valid.copy(nextRouteTierCount = -1)
 
-        assertFalse(store.save(invalid))
+        assertFalse(store.save(invalidSummary))
+        assertFalse(store.save(invalidRouteCount))
 
         assertEquals(
             valid,
@@ -135,7 +148,9 @@ class RunOutcomeRecoveryStoreTest {
             lastActiveAtMs = 1_725_000_000_000L,
             lastGardenGreetingDay = 19_000L,
             roughRunStreak = 0
-        )
+        ),
+        previousRouteTierCount = 6,
+        nextRouteTierCount = 7
     )
 
     private fun rawPrefs() = context.getSharedPreferences(
