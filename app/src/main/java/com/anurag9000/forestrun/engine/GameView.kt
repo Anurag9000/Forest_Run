@@ -949,19 +949,19 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             // 3. Entities (behind player, above background)
             if (::entityManager.isInitialized) {
                 entityManager.draw(canvas)
-                // 3b: Seed orbs — drawn above entities, below player
+                // 3b. Seed orbs — drawn above entities, below player
                 val bloomFrac = if (::gameState.isInitialized)
                     gameState.bloomMeterFraction
                 else 0f
                 entityManager.drawOrbs(canvas, bloomFrac)
             }
 
-            // 4: Ghost player (behind live player, 40% opacity white-blue) — Phase 19
+            // 4. Ghost player (behind live player, 40% opacity white-blue) — Phase 19
             if (::spriteManager.isInitialized && shouldDrawGhostPlayback()) {
                 ghostPlayer.draw(canvas, spriteManager)
             }
 
-            // 5: Live Player
+            // 5. Live Player
             if (::player.isInitialized) player.draw(canvas)
 
             if (debugToolsEnabled &&
@@ -971,7 +971,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 drawDebugScenarioLayer(canvas)
             }
 
-            // 5: World-space FX: flavor text + particles
+            // 5. World-space FX: flavor text + particles
             DialogueBubbleManager.draw(canvas)
             FlavorTextManager.draw(canvas)
             ParticleManager.draw(canvas)
