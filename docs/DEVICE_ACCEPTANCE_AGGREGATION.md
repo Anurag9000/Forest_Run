@@ -28,7 +28,7 @@ The wrapper performs a two-phase publication sequence:
 7. revalidate candidate and baseline manifests, signed artifacts, every evidence digest, and every exact trace after staging has completed;
 8. run a second physical-acceptance pass after exact trace validation so every artifact and evidence digest is rehashed at the last semantic boundary;
 9. bind the staged candidate and optional baseline identities back to those final manifest validations;
-10. snapshot every protected source's device, inode, size, and modification timestamp;
+10. perform a final bounded SHA-256 verification of every signed artifact and evidence file against its manifest digest, capturing each stable device, inode, size, and modification timestamp from that same hash pass;
 11. reread the staged aggregate and require identical bytes, identity, parsed payload, and independent-validation summary;
 12. recheck every protected-source snapshot and staged/output alias boundary;
 13. atomically replace the final output and fsync its parent directory.
@@ -85,14 +85,15 @@ Unknown fields fail closed. This makes accidental producer schema drift and forg
 - proves both acceptance passes resolve the same candidate summary and that the manifest remains byte- and inode-identical;
 - proves the staged candidate commit/artifact match the final candidate manifest;
 - proves baseline presence and commit/artifact identity match the supplied final baseline manifest;
-- snapshots every protected manifest, artifact, and evidence file by device, inode, size, and modification timestamp;
+- performs a final bounded SHA-256 pass over every signed artifact and evidence file, compares each digest with the accepted manifest, and captures the stable device, inode, size, and modification timestamp returned by that same pass;
+- carries the already confirmed manifest identity into the same protected-source snapshot set;
 - rereads the staged aggregate and requires the exact bytes, inode identity, parsed payload, and independent-validation summary to remain unchanged during source validation;
 - rejects staged/output resolved-path, symbolic-link, and hard-link aliases to protected sources;
 - rechecks every protected-source snapshot and alias boundary immediately before replacement;
 - atomically moves the already validated staged inode into the final path;
 - fsyncs the destination directory.
 
-This closes the canonical publication windows in which either a source or the staged report could otherwise be modified after validation but before replacement. Stat snapshots are a final race detector, while content authenticity remains grounded in the immediately preceding digest and semantic validation passes.
+This closes the canonical publication windows in which either a source or the staged report could otherwise be modified after validation but before replacement. The final artifact/evidence snapshot is not an unverified stat sample: it is emitted by the last digest-matching hash pass. Subsequent stat checks are the final race detector before replacement.
 
 ## Preconditions
 
@@ -204,6 +205,7 @@ The host-side suites include:
 - valid two-phase publication;
 - evidence mutation after staging;
 - non-trace evidence mutation during trace validation, caught by the post-trace acceptance rehash;
+- evidence mutation after the second acceptance pass, caught by the digest-bound final snapshot;
 - staged-report mutation during final source validation;
 - protected-source mutation after the final snapshot;
 - candidate and baseline identity substitution;
@@ -220,9 +222,10 @@ Aggregation adds a review layer after absolute acceptance:
 2. aggregate to a staged report and freeze its comparison-matrix hash;
 3. independently validate the aggregate schema and arithmetic;
 4. revalidate all source evidence after staging and rehash it again after exact trace validation;
-5. lock staged-report bytes plus protected-source stat snapshots;
-6. publish atomically only when candidate/baseline identities and all final snapshots still match;
-7. investigate material regressions using raw evidence;
-8. retain the final manifest, aggregate, comparison, exact traces, and raw evidence together.
+5. perform the final manifest-digest verification and capture source identities from that exact hash pass;
+6. lock staged-report bytes plus the digest-bound protected-source snapshots;
+7. publish atomically only when candidate/baseline identities and all final snapshots still match;
+8. investigate material regressions using raw evidence;
+9. retain the final manifest, aggregate, comparison, exact traces, and raw evidence together.
 
 A successful aggregate command does not make Forest Run release-ready by itself. Signing, internal delivery, physical testing, visual review, accessibility review, and current store-policy approval remain independent gates.
