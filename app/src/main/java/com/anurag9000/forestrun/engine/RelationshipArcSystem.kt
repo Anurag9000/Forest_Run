@@ -907,21 +907,16 @@ object RelationshipArcSystem {
         val sparedCount = PersistentMemoryManager.getSparedCount(appContext, type)
         val kindnessStreak = SaveManager.loadKindnessStreak(appContext, type)
         val encounters = SaveManager.loadEncounterCount(appContext, type)
-        val score =
-            when (stage) {
-                RelationshipStage.FIRST_IMPRESSION -> 0
-                RelationshipStage.RECOGNITION -> 1
-                RelationshipStage.TRUST -> 2
-                RelationshipStage.MILESTONE -> 3
-            } +
-                if (passCount >= 3) 1 else 0 +
-                if (passCount >= 5) 1 else 0 +
-                if (sparedCount >= 2) 1 else 0 +
-                if (kindnessStreak >= 3) 1 else 0 +
-                if (encounters >= 5) 1 else 0
-        return when {
-            score >= 7 -> FamiliarityWarmth.BONDED
-            score >= 5 -> FamiliarityWarmth.PERSONAL
+        val score = FamiliarityWarmthScoring.score(
+            stage = stage,
+            passCount = passCount,
+            sparedCount = sparedCount,
+            kindnessStreak = kindnessStreak,
+            encounters = encounters
+        )
+        return when (FamiliarityWarmthScoring.tierOrdinal(score)) {
+            3 -> FamiliarityWarmth.BONDED
+            2 -> FamiliarityWarmth.PERSONAL
             else -> FamiliarityWarmth.GENTLE
         }
     }
