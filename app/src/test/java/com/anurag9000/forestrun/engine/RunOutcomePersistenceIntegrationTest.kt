@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.PlayerState
 import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.systems.GhostPersistenceManager
+import com.anurag9000.forestrun.systems.GhostPromotionRecoveryDisposition
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -30,6 +31,7 @@ class RunOutcomePersistenceIntegrationTest {
             .clear()
             .commit()
         deleteGhostFiles()
+        deletePromotionFiles()
         GhostPersistenceManager.clearMemoryForTests()
     }
 
@@ -38,6 +40,7 @@ class RunOutcomePersistenceIntegrationTest {
         GhostPersistenceManager.awaitPendingWrites()
         GhostPersistenceManager.clearMemoryForTests()
         deleteGhostFiles()
+        deletePromotionFiles()
         SaveManager.usePrimaryPreferences()
     }
 
@@ -59,10 +62,15 @@ class RunOutcomePersistenceIntegrationTest {
         assertTrue(first.committed)
         assertTrue(first.ghostPromoted)
         assertEquals(RunOutcomeCommitDisposition.ALREADY_COMMITTED, duplicate.disposition)
+        assertEquals(480f, GhostPersistenceManager.bestDistanceFloor(context), 0f)
         assertTrue(GhostPersistenceManager.awaitPendingWrites())
 
         assertEquals(480f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(ghost, SaveManager.loadGhostRun(context))
+        assertEquals(
+            GhostPromotionRecoveryDisposition.EMPTY,
+            GhostPersistenceManager.recoverPendingPromotion(context)
+        )
         assertEquals(summary, SaveManager.loadLastRunSummary(context))
         assertEquals(1, SaveManager.loadForestMoodState(context).totalRuns)
         val returnState = SaveManager.loadReturnMomentState(context)
@@ -85,6 +93,37 @@ class RunOutcomePersistenceIntegrationTest {
         assertFalse(SaveManager.hasGhostRun(context))
         assertEquals(summary, SaveManager.loadLastRunSummary(context))
         assertEquals(1, SaveManager.loadForestMoodState(context).totalRuns)
+    }
+
+    @Test
+    fun `pending accepted distance prevents a shorter next run from replacing ghost`() {
+        val firstCoordinator = RunOutcomePersistenceCoordinator(
+            AndroidRunOutcomePersistenceSink(context)
+        )
+        val firstGhost = ghostFrames()
+        assertTrue(
+            firstCoordinator.commit(
+                summary(distanceM = 900f),
+                firstGhost,
+                persistProgress = true
+            ).ghostPromoted
+        )
+
+        val secondCoordinator = RunOutcomePersistenceCoordinator(
+            AndroidRunOutcomePersistenceSink(context)
+        )
+        val shorterGhost = firstGhost.map { it.copy(x = it.x + 30f) }
+        val shorter = secondCoordinator.commit(
+            summary(distanceM = 700f),
+            shorterGhost,
+            persistProgress = true
+        )
+
+        assertFalse(shorter.ghostPromoted)
+        assertEquals(900f, GhostPersistenceManager.bestDistanceFloor(context), 0f)
+        assertTrue(GhostPersistenceManager.awaitPendingWrites())
+        assertEquals(900f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(firstGhost, SaveManager.loadGhostRun(context))
     }
 
     @Test
@@ -144,8 +183,21 @@ class RunOutcomePersistenceIntegrationTest {
         )
     )
 
+    private fun ghostFile(): File =
+        File(context.filesDir, SaveManager.activeGhostFilenameForTests)
+
+    private fun promotionFile(): File =
+        File(context.filesDir, "${SaveManager.activeGhostFilenameForTests}.promotion")
+
     private fun deleteGhostFiles() {
-        val base = File(context.filesDir, SaveManager.activeGhostFilenameForTests)
+        val base = ghostFile()
+        base.delete()
+        File(base.path + ".bak").delete()
+        File(base.path + ".new").delete()
+    }
+
+    private fun deletePromotionFiles() {
+        val base = promotionFile()
         base.delete()
         File(base.path + ".bak").delete()
         File(base.path + ".new").delete()
