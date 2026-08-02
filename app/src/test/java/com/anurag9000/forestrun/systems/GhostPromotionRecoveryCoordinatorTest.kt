@@ -197,10 +197,11 @@ class GhostPromotionRecoveryCoordinatorTest {
         assertEquals(GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE, disposition)
         assertEquals(880f, artifactStore.bestDistanceM, 0f)
         assertEquals(1, artifactStore.distanceSaveCount)
+        assertEquals(1, artifactStore.ghostLoadCount)
     }
 
     @Test
-    fun `matching manifest with current distance is already applied`() {
+    fun `matching manifest with current distance skips ghost load`() {
         val frames = frames()
         val artifactStore = MemoryArtifactStore(
             ghost = frames,
@@ -216,6 +217,7 @@ class GhostPromotionRecoveryCoordinatorTest {
 
         assertEquals(GhostPromotionRecoveryDisposition.ALREADY_APPLIED, disposition)
         assertEquals(0, artifactStore.distanceSaveCount)
+        assertEquals(0, artifactStore.ghostLoadCount)
         assertTrue(disposition.allowsNewPromotion)
     }
 
@@ -252,14 +254,18 @@ class GhostPromotionRecoveryCoordinatorTest {
     }
 
     @Test
-    fun `manifest that does not identify durable ghost blocks promotion`() {
+    fun `manifest mismatch blocks distance repair`() {
         val durableGhost = frames()
         val unrelated = durableGhost.mapIndexed { index, frame ->
             if (index == 1) frame.copy(y = frame.y + 3f) else frame
         }
+        val artifactStore = MemoryArtifactStore(
+            ghost = durableGhost,
+            bestDistanceM = 100f
+        )
         val coordinator = coordinator(
             MemoryReceiptStore(),
-            MemoryArtifactStore(ghost = durableGhost, bestDistanceM = 700f),
+            artifactStore,
             MemoryManifestStore(manifest = manifest(unrelated, 700f))
         )
 
@@ -267,6 +273,8 @@ class GhostPromotionRecoveryCoordinatorTest {
 
         assertEquals(GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST, disposition)
         assertFalse(disposition.allowsNewPromotion)
+        assertEquals(0, artifactStore.distanceSaveCount)
+        assertEquals(1, artifactStore.ghostLoadCount)
     }
 
     @Test
@@ -407,8 +415,11 @@ class GhostPromotionRecoveryCoordinatorTest {
     ) : GhostPromotionArtifactStore {
         var distanceSaveCount = 0
             private set
+        var ghostLoadCount = 0
+            private set
 
         override fun loadGhost(): List<GhostFrame> {
+            ghostLoadCount++
             events += "ghost:load"
             return ghost
         }
