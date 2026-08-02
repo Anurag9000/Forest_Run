@@ -178,6 +178,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     // ── Phase 19: Ghost Run ───────────────────────────────────────────────
     private val ghostRecorder = GhostRecorder()
+    private val runOutcomePersistence =
+        RunOutcomePersistenceCoordinator(AndroidRunOutcomePersistenceSink(context))
     private val ghostPlayer   = GhostPlayer()
     private val ghostHazardFocusRect = RectF()
     private val reusableGhostVisibilityContext = GhostPlayer.VisibilityContext(
@@ -764,15 +766,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         SfxManager.playHit()          // Phase 20
                         LeitmotifManager.playRest()   // Phase 20
                         HapticManager.longPulse()     // Phase 21 — strong death feedback
-                        // Phase 19: save ghost if this run is a new best distance
-                        if (persistEncounter &&
-                            ::gameState.isInitialized &&
-                            gameState.distanceMetres > SaveManager.loadBestDistance(context)
-                        ) {
-                            val completedGhost = ghostRecorder.detachSnapshot()
-                            GhostPersistenceManager.saveBestRunAsync(context, completedGhost)
-                            SaveManager.saveBestDistance(context, gameState.distanceMetres)
-                        }
+                        val completedGhost = ghostRecorder.detachSnapshot()
                         val killerType = entityManager.entityTypeOf(collision.entity)
                         if (persistEncounter) {
                             killerType?.let { PersistentMemoryManager.recordHit(context, it) }
@@ -805,15 +799,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                             biome = entityManager.biomeManager.currentBiome,
                             killer = killerType
                         )
-                        currentRunSummary = summaryPreview.copy(restQuote = currentRestQuote)
-                        if (persistEncounter) {
-                            currentRunSummary?.let {
-                                ForestMoodSystem.recordRun(context, it)
-                                ReturnMomentsSystem.recordRunOutcome(context, it)
-                                SaveManager.saveLastRunSummary(context, it)
-                            }
-                        }
-                        ghostRecorder.reset()
+                        val completedSummary = summaryPreview.copy(restQuote = currentRestQuote)
+                        currentRunSummary = completedSummary
+                        runOutcomePersistence.commit(
+                            summary = completedSummary,
+                            completedGhost = completedGhost,
+                            persistProgress = persistEncounter
+                        )
                         // Transition to DYING
                         if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
                         runState = RunState.DYING
@@ -1191,6 +1183,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         encounterDirector?.stopScenario()
         debugScenarioScript.clear()
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
+        runOutcomePersistence.resetForNewRun()
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
         entityManager.biomeManager.forceDebugBiome(null)
@@ -1284,6 +1277,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private fun prepareEncounterScenario() {
         val director = encounterDirector ?: return
         if (!::entityManager.isInitialized || !::player.isInitialized || !::gameState.isInitialized) return
+        runOutcomePersistence.resetForNewRun()
         if (runMode == RunMode.NORMAL) runMode = RunMode.DEBUG_SCENARIO
         val scenario = director.selectedScenario
         debugScenarioScript.prepare(scenario)
