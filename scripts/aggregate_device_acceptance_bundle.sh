@@ -52,10 +52,20 @@ if [[ -n "${BASELINE_PATH}" ]]; then
     --require-at-least-one
 fi
 
+readonly OUTPUT_DIR="$(dirname -- "${OUTPUT_PATH}")"
+readonly OUTPUT_NAME="$(basename -- "${OUTPUT_PATH}")"
+mkdir -p -- "${OUTPUT_DIR}"
+STAGED_PATH="$(mktemp "${OUTPUT_DIR}/.${OUTPUT_NAME}.aggregate.XXXXXX.tmp")"
+readonly STAGED_PATH
+cleanup() {
+  rm -f -- "${STAGED_PATH}"
+}
+trap cleanup EXIT
+
 aggregate_args=(
   "${ROOT}/scripts/aggregate_device_acceptance.py"
   "${CANDIDATE_PATH}"
-  --output "${OUTPUT_PATH}"
+  --output "${STAGED_PATH}"
 )
 if [[ -n "${BASELINE_PATH}" ]]; then
   aggregate_args+=(--baseline "${BASELINE_PATH}")
@@ -63,6 +73,17 @@ fi
 "${PYTHON_BIN}" "${aggregate_args[@]}"
 
 "${PYTHON_BIN}" "${ROOT}/scripts/verify_strict_json_evidence.py" \
-  "${OUTPUT_PATH}"
+  "${STAGED_PATH}"
 "${PYTHON_BIN}" "${ROOT}/scripts/validate_device_acceptance_aggregate.py" \
+  "${STAGED_PATH}"
+
+publish_args=(
+  "${ROOT}/scripts/publish_device_acceptance_aggregate.py"
+  "${CANDIDATE_PATH}"
+  "${STAGED_PATH}"
   "${OUTPUT_PATH}"
+)
+if [[ -n "${BASELINE_PATH}" ]]; then
+  publish_args+=(--baseline "${BASELINE_PATH}")
+fi
+"${PYTHON_BIN}" "${publish_args[@]}"
