@@ -139,10 +139,39 @@ def _assert_separate(path: Path, protected_paths: Sequence[Path], label: str) ->
             raise PublicationError(f"{label} must not alias protected source: {protected}")
 
 
-def _load_aggregate(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+def _load_aggregate(
+    path: Path,
+) -> tuple[dict[str, Any], dict[str, Any], bytes, tuple[int, int, int, int]]:
+    resolved = path.expanduser().resolve()
     try:
-        payload = strict_json.load_file(
-            path,
+        before = resolved.stat()
+    except FileNotFoundError as exc:
+        raise PublicationError(f"staged aggregate is missing: {resolved}") from exc
+    except OSError as exc:
+        raise PublicationError(f"could not inspect staged aggregate {resolved}: {exc}") from exc
+    if not resolved.is_file():
+        raise PublicationError(f"staged aggregate is not a regular file: {resolved}")
+    if (
+        before.st_size <= 0
+        or before.st_size > aggregate_validator.MAX_AGGREGATE_BYTES
+    ):
+        raise PublicationError(
+            "staged aggregate must be between 1 and "
+            f"{aggregate_validator.MAX_AGGREGATE_BYTES} bytes"
+        )
+    try:
+        raw = resolved.read_bytes()
+        after = resolved.stat()
+    except OSError as exc:
+        raise PublicationError(f"could not read staged aggregate {resolved}: {exc}") from exc
+    identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+    after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+    if len(raw) != before.st_size or after_identity != identity:
+        raise PublicationError(f"staged aggregate changed while being read: {resolved}")
+    try:
+        payload = strict_json.loads(
+            raw,
+            label=str(resolved),
             maximum_bytes=aggregate_validator.MAX_AGGREGATE_BYTES,
             maximum_depth=64,
             require_object=True,
@@ -153,7 +182,61 @@ def _load_aggregate(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         aggregate_validator.AggregateValidationError,
     ) as exc:
         raise PublicationError(f"invalid staged aggregate {path}: {exc}") from exc
-    return payload, summary
+    return payload, summary, raw, identity
+
+
+def _snapshot_sources(
+    protected_paths: Sequence[Path],
+) -> tuple[tuple[Path, tuple[int, int, int, int]], ...]:
+    snapshots: list[tuple[Path, tuple[int, int, int, int]]] = []
+    seen: set[Path] = set()
+    for protected in protected_paths:
+        resolved = protected.expanduser().resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        try:
+            stat_result = resolved.stat()
+        except OSError as exc:
+            raise PublicationError(
+                f"could not snapshot protected source {resolved}: {exc}"
+            ) from exc
+        if not resolved.is_file():
+            raise PublicationError(f"protected source is not a regular file: {resolved}")
+        snapshots.append(
+            (
+                resolved,
+                (
+                    stat_result.st_dev,
+                    stat_result.st_ino,
+                    stat_result.st_size,
+                    stat_result.st_mtime_ns,
+                ),
+            )
+        )
+    return tuple(snapshots)
+
+
+def _assert_source_snapshot(
+    snapshots: Sequence[tuple[Path, tuple[int, int, int, int]]],
+) -> None:
+    for path, expected in snapshots:
+        try:
+            current = path.stat()
+        except OSError as exc:
+            raise PublicationError(
+                f"protected source changed before publication: {path}: {exc}"
+            ) from exc
+        identity = (
+            current.st_dev,
+            current.st_ino,
+            current.st_size,
+            current.st_mtime_ns,
+        )
+        if not path.is_file() or identity != expected:
+            raise PublicationError(
+                f"protected source changed before publication: {path}"
+            )
 
 
 def _assert_aggregate_identity(
@@ -240,7 +323,7 @@ def publish(
 
     _assert_separate(staged, manifest_paths, "staged aggregate")
     _assert_separate(output, manifest_paths, "aggregate output")
-    payload, summary = _load_aggregate(staged)
+    payload, summary, staged_raw, staged_identity = _load_aggregate(staged)
 
     # Final source validation deliberately happens after staged-report validation.
     # The second acceptance pass inside _validate_manifest rehashes every artifact
@@ -255,6 +338,21 @@ def publish(
     _assert_separate(staged, protected, "staged aggregate")
     _assert_separate(output, protected, "aggregate output")
     _assert_aggregate_identity(payload, candidate_summary, baseline_summary)
+    source_snapshot = _snapshot_sources(protected)
+
+    confirmed_payload, confirmed_summary, confirmed_raw, confirmed_identity = (
+        _load_aggregate(staged)
+    )
+    if (
+        confirmed_identity != staged_identity
+        or confirmed_raw != staged_raw
+        or confirmed_payload != payload
+        or confirmed_summary != summary
+    ):
+        raise PublicationError(
+            "staged aggregate changed during final source validation"
+        )
+    _assert_source_snapshot(source_snapshot)
 
     # Recheck aliases after all hashing and semantic validation, then replace the
     # destination immediately with the already validated staged inode.
