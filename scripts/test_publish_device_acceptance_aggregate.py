@@ -5,6 +5,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import aggregate_device_acceptance as aggregate
 import publish_device_acceptance_aggregate as publisher
@@ -71,6 +72,36 @@ class PublishDeviceAcceptanceAggregateTest(unittest.TestCase):
 
             self.assertTrue(staged.is_file())
             self.assertFalse(output.exists())
+
+    def test_rehashes_non_trace_evidence_after_trace_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest, bundle = self.materialize(root)
+            staged = self.stage(root, manifest)
+            evidence_entry = bundle["sessions"][1]["scenarios"]["ordinary_play_15m"][
+                "evidence_files"
+            ][0]
+            evidence = root / evidence_entry["path"]
+            original = publisher.manifest_traces.validate_manifest_traces
+
+            def validate_then_mutate(path: Path, **kwargs):
+                result = original(path, **kwargs)
+                evidence.write_bytes(b"mutated during trace validation\n")
+                return result
+
+            with patch.object(
+                publisher.manifest_traces,
+                "validate_manifest_traces",
+                side_effect=validate_then_mutate,
+            ):
+                with self.assertRaisesRegex(
+                    publisher.PublicationError,
+                    "invalid acceptance manifest",
+                ):
+                    publisher.publish(manifest, staged, root / "aggregate.json")
+
+            self.assertTrue(staged.is_file())
+            self.assertFalse((root / "aggregate.json").exists())
 
     def test_rejects_staged_candidate_identity_substitution(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
