@@ -2,45 +2,46 @@
 
 ## Purpose
 
-Forest Run deliberately fails closed when durable recovery evidence is corrupt, unreadable, or conflicts with live persistence state. That protects progression from silent double-counting or speculative overwrites, but it also requires an explicit support path when automatic recovery cannot finish.
+Forest Run fails closed when recovery evidence is corrupt, unreadable, or conflicts with live persistence state. This prevents silent double-counting and speculative overwrites, but unresolved evidence needs an explicit support path.
 
-`AndroidRecoveryEvidenceMaintenance` provides that path for the two independent recovery domains:
+`AndroidRecoveryEvidenceMaintenance` covers two independent domains:
 
 - `RUN_OUTCOME` — forest mood, return state, completed summary, and pacifist-route count;
-- `GHOST_PROMOTION` — best-ghost receipt, durable ghost artifact, and best-distance threshold.
+- `GHOST_PROMOTION` — the transient promotion receipt, persistent artifact manifest, durable ghost, and best-distance threshold.
 
-The maintenance layer separates inspection, safe retry, and destructive evidence removal. No destructive action runs automatically.
+Inspection, safe retry, and destructive evidence removal are deliberately separate. No destructive operation runs automatically.
 
 ## Evidence states
 
-Each domain reports one of:
+Each domain reports:
 
 ```text
-CLEAN      no outstanding evidence
-PENDING    syntactically valid evidence awaits recovery
+CLEAN      no unresolved evidence
+PENDING    syntactically valid transient evidence awaits recovery
 CORRUPT    evidence cannot be decoded or validated
 BLOCKED    valid run-outcome evidence conflicts with live state or cannot be applied
 IO_FAILURE evidence could not be read, recovered, or cleared reliably
 ```
 
-The stable support summary contains only domain, state, and a fixed detail code. It never includes:
+The support summary includes only domain, state, and fixed detail codes. It excludes:
 
-- scores or distances;
-- run-summary text;
+- scores and distances;
+- summary text;
 - entity identity;
 - ghost frames;
-- frame fingerprints;
-- timestamps or progression counters.
+- fingerprints;
+- timestamps and progression counters.
 
-Example:
+Examples:
 
 ```text
 run_outcome=PENDING(valid_journal); ghost_promotion=CORRUPT(invalid_receipt)
+run_outcome=CLEAN(no_journal); ghost_promotion=CLEAN(valid_manifest)
 ```
 
 ## Maintenance API
 
-`RecoveryEvidenceMaintenanceCoordinator` requires exactly one handler for each domain and exposes:
+`RecoveryEvidenceMaintenanceCoordinator` requires exactly one handler per domain and exposes:
 
 ```kotlin
 inspect()
@@ -51,61 +52,62 @@ discardUnresolvedPending(domain)
 
 ### `inspect()`
 
-Reads both evidence domains without applying or deleting anything.
+Reads both domains without applying or deleting anything.
 
 ### `recoverSafely()`
 
 Retries only recoverable states:
 
 - `CLEAN` remains unchanged;
-- `CORRUPT` remains preserved for diagnosis;
-- `PENDING`, `BLOCKED`, or transient `IO_FAILURE` is retried through the domain's canonical recovery owner.
+- `CORRUPT` remains preserved;
+- `PENDING`, `BLOCKED`, or transient `IO_FAILURE` is retried through the canonical domain owner.
 
-Safe recovery never calls `clearEvidence()` merely because evidence is corrupt.
+Safe recovery never deletes corrupt evidence merely to unblock progress.
 
 ### `discardCorrupt(domain)`
 
-Clears evidence only when a fresh inspection confirms `CORRUPT` for the selected domain. Clean, pending, blocked, and unreadable evidence returns `NOT_APPLICABLE` or `IO_FAILURE` without deletion.
+Clears evidence only after a fresh inspection confirms `CORRUPT` for the selected domain. Clean, pending, blocked, or unreadable evidence is not deleted.
 
 ### `discardUnresolvedPending(domain)`
 
-This is an explicit last-resort operation:
+This explicit last-resort operation:
 
-1. inspect the selected domain;
-2. refuse clean, corrupt, or unreadable evidence;
-3. attempt canonical safe recovery once more;
-4. return `RECOVERED_INSTEAD` if that succeeds;
-5. clear only evidence still confirmed as `PENDING` or `BLOCKED`;
-6. verify the domain reports `CLEAN` after deletion.
+1. inspects the selected domain;
+2. refuses clean, corrupt, or unreadable evidence;
+3. attempts canonical recovery once more;
+4. returns `RECOVERED_INSTEAD` when recovery succeeds;
+5. clears only evidence still confirmed `PENDING` or `BLOCKED`;
+6. verifies the domain reports `CLEAN` after deletion.
 
-A read failure is never interpreted as permission to erase unknown data.
+Read failure is never interpreted as permission to erase unknown data.
 
 ## Domain isolation
 
-The run-outcome maintenance handler uses a dedicated `MaintenanceRunOutcomePersistenceSink`:
+### Run-outcome handler
 
-- it can read and write complete mood, return, summary, and route snapshots;
-- it never publishes a ghost;
-- it never advances best distance;
-- it never constructs `AndroidRunOutcomePersistenceSink`, whose production initialization also touches ghost recovery.
+`MaintenanceRunOutcomePersistenceSink`:
 
-The ghost handler uses only:
+- reads and writes complete mood, return, summary, and route snapshots;
+- never publishes a ghost;
+- never advances best distance;
+- never constructs `AndroidRunOutcomePersistenceSink`, whose production initialization also touches ghost recovery.
+
+### Ghost handler
+
+The ghost handler owns only:
 
 - `AtomicFileGhostPromotionReceiptStore`;
+- `AtomicFileGhostArtifactManifestStore`;
 - `GhostPromotionRecoveryCoordinator`;
 - `AndroidGhostPromotionArtifactStore`.
 
-It does not access the run-outcome SharedPreferences journal.
+It never opens the run-outcome SharedPreferences journal.
 
-Therefore a corrupt ghost receipt cannot prevent a valid non-ghost journal from being recovered, and deliberate removal of one domain does not clear the other domain's evidence.
+A corrupt receipt or manifest therefore cannot prevent non-ghost recovery, and clearing one domain cannot erase the other domain’s evidence.
 
-## What evidence discard does
+## Run-outcome evidence removal
 
-Evidence removal is intentionally narrower than save reset.
-
-### Run-outcome evidence discard
-
-Clears only the save-namespace recovery journal:
+Run-outcome discard clears only:
 
 ```text
 forest_run_outcome_recovery_<active save namespace>
@@ -120,26 +122,56 @@ It does not rewrite current:
 - ghost data;
 - best distance.
 
-If a valid journal conflicts with live mood state, `discardUnresolvedPending(RUN_OUTCOME)` retries first, then removes only the journal while preserving the conflicting live state exactly as found.
+For a valid journal that conflicts with live state, `discardUnresolvedPending(RUN_OUTCOME)` retries first, then removes only the journal while preserving live state exactly as found.
 
-### Ghost-promotion evidence discard
+## Ghost evidence inspection
 
-Clears only:
+The ghost domain distinguishes:
 
 ```text
-<active ghost filename>.promotion
-<active ghost filename>.promotion.bak
-<active ghost filename>.promotion.new
+CLEAN(no_evidence)
+CLEAN(valid_manifest)
+PENDING(valid_receipt)
+CORRUPT(invalid_receipt)
+CORRUPT(invalid_manifest)
+CORRUPT(manifest_artifact_mismatch)
+IO_FAILURE(...)
 ```
 
-It does not directly delete or rewrite:
+A valid manifest is checked against the durable ghost by frame count, structural validity, and fingerprint during explicit inspection.
 
-- the ghost artifact;
-- the ghost backup;
-- best distance;
-- non-ghost progression evidence.
+Canonical safe recovery may:
 
-Canonical ghost recovery normally resolves a valid receipt by repairing distance, recognizing an already-applied promotion, or abandoning a receipt whose ghost never landed. Unknown I/O failure remains fail-closed and is not force-cleared.
+- reconstruct or replace a manifest from a matching receipt;
+- repair a lower best distance from a matching receipt;
+- repair a lower best distance from a matching manifest after the receipt is gone;
+- recognize an already-applied threshold;
+- abandon a receipt whose candidate ghost never became durable.
+
+## Ghost evidence removal
+
+Ghost-domain evidence consists of:
+
+```text
+<ghost>.promotion[.bak|.new]
+<ghost>.manifest[.bak|.new]
+```
+
+Targeted cleanup is identity-aware:
+
+- corrupt receipt removal preserves a valid manifest that matches the durable ghost;
+- corrupt manifest removal clears the manifest sidecar but preserves the ghost frame file;
+- manifest/artifact mismatch removal clears only the invalid association;
+- best distance is never rewritten by the discard operation itself;
+- run-outcome evidence is never touched.
+
+The following remain untouched by direct evidence removal:
+
+- the ghost frame artifact and backup;
+- current best distance;
+- forest mood, return state, summary, and route counters.
+
+Unknown I/O failure remains fail-closed and is not force-cleared.
 
 ## Debug-only Activity command surface
 
@@ -152,32 +184,41 @@ recovery_action = inspect | recover | discard_corrupt | discard_pending
 recovery_domain = RUN_OUTCOME | GHOST_PROMOTION
 ```
 
-`recovery_domain` is required only for the two discard actions.
+`recovery_domain` is required only for discard actions.
 
-All commands are one-shot. `MainActivity` removes both extras in `finally`, including rejection paths, so configuration recreation cannot repeat a maintenance mutation.
+Commands are one-shot. Both extras are removed in `finally`, including rejection paths, preventing Activity recreation from repeating a mutation.
 
 ### Live-session rule
 
-Because the manifest uses `singleTask`, an ADB launch may arrive through `onNewIntent` while gameplay or the ghost worker is active.
+Because the manifest uses `singleTask`, ADB can deliver a command through `onNewIntent` while gameplay or the ghost worker is active.
 
-In a reused Activity:
+A reused Activity permits only:
 
-- `inspect` is allowed;
-- `recover` is rejected with `reason=active_session`;
-- `discard_corrupt` is rejected with `reason=active_session`;
-- `discard_pending` is rejected with `reason=active_session`.
+```text
+inspect
+```
 
-Mutating commands are accepted only during cold `onCreate`, after `SaveIntegrityManager.repair(...)` and before `GameView` construction.
+It rejects:
+
+```text
+recover
+discard_corrupt
+discard_pending
+```
+
+with `reason=active_session` before constructing maintenance handlers.
+
+Mutating commands run only during cold `onCreate`, after `SaveIntegrityManager.repair(...)` and before `GameView` construction.
 
 ## ADB usage
 
-The debug application ID is:
+Debug application ID:
 
 ```text
 com.anurag9000.forestrun.debug
 ```
 
-### Inspect without stopping a live debug session
+### Inspect a live debug session
 
 ```bash
 adb shell am start \
@@ -186,8 +227,6 @@ adb shell am start \
 ```
 
 ### Safely retry both domains
-
-Stop the app first so the command is processed during cold `onCreate`:
 
 ```bash
 adb shell am force-stop com.anurag9000.forestrun.debug
@@ -216,7 +255,9 @@ adb shell am start \
   --es recovery_domain RUN_OUTCOME
 ```
 
-### Discard a confirmed corrupt ghost receipt
+### Discard confirmed corrupt ghost evidence
+
+The same command handles a corrupt receipt, corrupt manifest, or manifest/artifact mismatch. Healthy matching manifest evidence is preserved when only the receipt is corrupt.
 
 ```bash
 adb shell am force-stop com.anurag9000.forestrun.debug
@@ -228,7 +269,7 @@ adb shell am start \
 
 ## Log format
 
-Filter by:
+Filter:
 
 ```bash
 adb logcat -s ForestRunLaunch
@@ -240,7 +281,7 @@ Prefix:
 FOREST_RUN_RECOVERY_MAINTENANCE
 ```
 
-Inspection and recovery log the status-only support summary. Discard actions log:
+Inspection and recovery log only the support summary. Discard logs include:
 
 ```text
 action
@@ -261,33 +302,27 @@ unknown_action
 
 ## Tests and contracts
 
-`RecoveryEvidenceMaintenanceCoordinatorTest` covers:
+`RecoveryEvidenceMaintenanceCoordinatorTest` covers domain cardinality, independent inspection, status-only output, safe retry, corrupt-only deletion, recover-before-discard ordering, no deletion after read failure, and clear failure reporting.
 
-- exact domain-handler cardinality;
-- independent inspection;
-- status-only support output;
-- safe retry selection;
-- corrupt-only deletion;
-- recover-before-discard ordering;
-- deliberate blocked-journal removal;
-- no deletion after read failure;
-- clear failure reporting.
-
-`RecoveryEvidenceMaintenanceIntegrationTest` covers Android-backed:
+`RecoveryEvidenceMaintenanceIntegrationTest` covers:
 
 - clean inspection;
 - complete non-ghost journal recovery;
-- corrupt run journal retention and explicit removal;
-- conflicting valid journal retry before evidence-only discard;
-- matching ghost receipt distance repair;
-- corrupt ghost receipt isolation and explicit removal.
+- corrupt and conflicting run-journal behavior;
+- matching receipt repair and manifest creation;
+- receipt-free manifest repair;
+- corrupt receipt removal that preserves a valid manifest;
+- corrupt manifest retention and explicit removal;
+- manifest/artifact mismatch diagnosis and evidence-only removal.
 
 Source contracts lock:
 
-- separation of safe and destructive operations;
-- domain-isolated production adapters;
+- safe/destructive separation;
+- domain-isolated adapters;
 - no deletion after I/O failure;
-- cold-start command ordering;
+- distinct receipt and manifest diagnosis;
+- preservation of a valid manifest during receipt cleanup;
+- cold-start mutation;
 - debug-only access;
 - inspection-only reused Activities;
 - one-shot extras;
@@ -295,12 +330,8 @@ Source contracts lock:
 
 ## Evidence boundary
 
-Focused Kotlin/JVM compilation passed for:
+Focused Kotlin/JVM compilation passed for the policy core, production-shaped handlers, manifest-aware ghost adapter, and launch dispatcher.
 
-- the maintenance policy core;
-- Android handler and sink conformance against production-shaped stubs;
-- the launch command parser and dispatcher.
+Executable harnesses passed for maintenance policy, cold/live launch behavior, manifest-only distance repair, corrupt manifest blocking, and selective evidence cleanup.
 
-Executable harnesses passed for maintenance policy and cold/live launch behavior.
-
-The checked-in JUnit and Robolectric tests have not been executed through an exact-head Android Gradle environment in this session. Physical-device ADB command execution remains a separate acceptance gate.
+The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session. Physical-device ADB acceptance remains separate.
