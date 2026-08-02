@@ -41,7 +41,7 @@ class RelationshipFamiliarityWarmthIntegrationTest {
     @Test
     fun `personal tier remains distinct from bonded tier`() {
         SaveManager.saveRelationshipStage(context, EntityType.CAT, RelationshipStage.TRUST)
-        repeat(3) { SaveManager.incrementEncounterCount(context, EntityType.CAT) }
+        repeat(5) { SaveManager.incrementEncounterCount(context, EntityType.CAT) }
         repeat(3) { SaveManager.incrementCleanPassCount(context, EntityType.CAT) }
         repeat(3) { SaveManager.incrementKindnessStreak(context, EntityType.CAT) }
 
