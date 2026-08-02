@@ -111,7 +111,8 @@ The publisher rejects:
 - missing or unexpected baseline comparison;
 - baseline commit/artifact substitution;
 - source mutation during acceptance or trace validation;
-- source mutation after the final snapshot;
+- source mutation after either acceptance pass;
+- source mutation after the digest-bound final snapshot;
 - staged-report mutation during final source validation.
 
 Its final sequence is deliberately ordered:
@@ -123,14 +124,15 @@ Its final sequence is deliberately ordered:
 5. require both acceptance summaries to be identical;
 6. require manifest bytes, device, inode, size, and modification timestamp to remain stable;
 7. bind staged candidate/baseline identities to the final manifest summaries;
-8. snapshot every protected source's device, inode, size, and modification timestamp;
-9. reread the staged aggregate and require identical bytes, inode identity, parsed payload, and independent-validation summary;
-10. require every protected-source snapshot to remain unchanged;
-11. recheck all path and inode alias boundaries;
-12. atomically replace the destination with the validated staged inode;
-13. fsync the destination directory.
+8. perform a final bounded SHA-256 pass over every signed artifact and evidence file, require each digest to match the accepted manifest, and capture the stable device/inode/size/mtime identity from that same hash pass;
+9. carry the already confirmed manifest identity into the same protected-source snapshot set;
+10. reread the staged aggregate and require identical bytes, inode identity, parsed payload, and independent-validation summary;
+11. require every digest-bound protected-source snapshot to remain unchanged;
+12. recheck all path and inode alias boundaries;
+13. atomically replace the destination with the validated staged inode;
+14. fsync the destination directory.
 
-Digest and semantic validation provide authenticity. Final stat snapshots provide an additional race detector between the last content validation and replacement.
+Digest and semantic validation provide authenticity. The final artifact/evidence snapshot is emitted by the last digest-matching hash pass rather than by an unverified stat sample. Subsequent stat checks provide the last race detector before replacement.
 
 ### 5. Publisher adversarial tests
 
@@ -141,8 +143,9 @@ The suite covers:
 - successful candidate-only atomic publication;
 - source mutation after staging;
 - non-trace evidence mutation during trace validation, detected by the second acceptance pass;
+- evidence mutation after the second acceptance pass, detected by the final manifest-digest verification;
 - staged aggregate mutation during final source validation;
-- protected-source mutation after snapshot creation;
+- protected-source mutation after digest-bound snapshot creation;
 - staged candidate identity substitution;
 - baseline presence mismatch;
 - baseline identity substitution;
@@ -157,11 +160,11 @@ The suite covers:
 Updated `docs/DEVICE_ACCEPTANCE_AGGREGATION.md` to describe:
 
 - producer, validator, and publisher responsibilities;
-- the complete thirteen-step canonical flow;
+- the complete canonical publication flow;
 - independent schema and arithmetic reconstruction;
 - post-trace evidence rehashing;
+- final digest-bound source snapshots;
 - staged byte/inode stability;
-- protected-source snapshots;
 - adversarial tests;
 - filesystem-error semantics.
 
@@ -181,7 +184,11 @@ The direct-to-`main` implementation sequence includes:
 - `6e48f3daca3eafe3a65546ad2d190802532241c3` — test post-trace evidence rehashing;
 - `4c28732efe82eea4f2b1af80491efc89f7619ea0` — lock staged and protected-source snapshots;
 - `941f9e7897e8cc9b78dae0ccf3d9ca50ce06677b` — test final publication snapshot invariants;
-- `ef53ff1d879a7bb70c601c17af155584e687da77` — synchronize final operator documentation.
+- `ef53ff1d879a7bb70c601c17af155584e687da77` — synchronize final operator documentation;
+- `e1fba850aaa9c7c1e4a53dd118cc3b2c2b8ebeaa` — add this publication audit;
+- `aedac756634c4a7cdccfcf8269eb1d3ec8d418e1` — bind final source snapshots to verified digests;
+- `92f99c964d38d4dc1004aa10629fdd8a0818b6e6` — test digest-bound final source snapshots;
+- `fbc47094b66bcf4e856b5da50ec33454151b0042` — document digest-bound final snapshots.
 
 Intermediate commits remain intentionally preserved; history was not squashed or rewritten.
 
