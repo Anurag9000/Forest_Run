@@ -2,39 +2,24 @@
 
 ## Purpose
 
-A best run has two durable artifacts that must describe the same accepted result:
+A promoted best run spans three durable facts:
 
 - the validated ghost frame file;
-- the best-distance threshold used to decide whether a later run may replace it.
+- the distance associated with that exact frame artifact;
+- the best-distance threshold used for later promotion eligibility.
 
-Previously, `GhostPersistenceManager.saveBestRunAsync(...)` reported success when work was scheduled. `RunOutcomePersistenceCoordinator` then advanced best distance on the render thread before the asynchronous `AtomicFile` write was known to have completed.
-
-That left two process-death windows:
-
-```text
-accepted ghost → best distance advanced → ghost write never completes
-```
-
-and:
-
-```text
-ghost write completes → process dies before best distance advances
-```
-
-The first can preserve an old ghost behind a newer threshold. The second can preserve a newer ghost while allowing a shorter later run to replace it.
-
-Ghost promotion is now one recoverable single-worker protocol.
+The existing frame file remains `SaveManager` ghost format version 2. This tranche does **not** alter that binary payload. Instead, every newly promoted ghost receives a small fingerprint-bound manifest sidecar so the durable artifact bundle is self-describing after the transient promotion receipt has been cleared.
 
 ## Ownership
 
-`RunOutcomePersistenceCoordinator` owns only candidate eligibility:
+`RunOutcomePersistenceCoordinator` owns candidate eligibility only:
 
 1. normalize completed distance;
 2. compare it with `GhostPersistenceManager.bestDistanceFloor(...)`;
 3. require a strictly better distance and a non-empty detached ghost;
 4. submit one distance-aware promotion request.
 
-It does not write best distance directly.
+It never writes best distance directly.
 
 `GhostPersistenceManager` owns:
 
@@ -46,9 +31,9 @@ It does not write best distance directly.
 
 `GhostPromotionRecoveryCoordinator` owns the durable protocol.
 
-## Promotion receipt
+## Transient promotion receipt
 
-Before the ghost file changes, `AtomicFileGhostPromotionReceiptStore` writes:
+Before the ghost changes, `AtomicFileGhostPromotionReceiptStore` writes:
 
 ```text
 target distance
@@ -56,15 +41,40 @@ frame count
 64-bit frame fingerprint
 ```
 
-The receipt is:
+The receipt:
 
-- versioned with magic `FRGP`;
-- fixed at 24 bytes;
-- written through `AtomicFile`;
-- scoped to the active ghost filename as `<ghost>.promotion`;
-- validated before replacing existing evidence.
+- uses magic `FRGP`;
+- is schema version 1;
+- is fixed at 24 bytes;
+- is written through `AtomicFile`;
+- is scoped as `<ghost filename>.promotion`.
 
-The fingerprint covers the raw persisted identity of every frame:
+It represents an in-progress promotion and is cleared only after all durable promotion steps complete.
+
+## Persistent artifact manifest
+
+After the ghost is durable, `AtomicFileGhostArtifactManifestStore` writes the same identity as:
+
+```text
+target distance
+frame count
+64-bit frame fingerprint
+```
+
+The manifest:
+
+- uses magic `FRGM`;
+- is schema version 1;
+- is fixed at 24 bytes;
+- is written through `AtomicFile`;
+- is scoped as `<ghost filename>.manifest`;
+- remains after promotion completion.
+
+The manifest binds one validated ghost artifact to the distance that produced it. It is not another frame payload and does not change the version-2 ghost binary format.
+
+## Artifact fingerprint
+
+`GhostRunFingerprint` covers the raw persisted identity of every frame:
 
 ```text
 frame count
@@ -76,146 +86,177 @@ scaleX bits
 scaleY bits
 ```
 
-It is a compact local recovery identity, not a cryptographic authenticity claim.
+It is a compact local recovery identity, not a cryptographic authenticity mechanism.
 
 ## Durable worker sequence
 
-For an accepted candidate:
+For an accepted candidate, the single worker performs:
 
 ```text
-synchronously write promotion receipt
-→ atomically write validated ghost file
-→ synchronously write max(current best, candidate distance)
+write AtomicFile promotion receipt
+→ write AtomicFile validated ghost
+→ write AtomicFile artifact manifest
+→ synchronously commit max(current best, candidate distance)
 → clear promotion receipt
 ```
 
-The best-distance write is synchronous because receipt clearing must never precede its durability.
+Best distance cannot advance unless the receipt, ghost, and manifest are durable.
 
-The worker retains `max(current best, candidate distance)` as a defensive monotonic rule. A delayed or repeated operation cannot lower the threshold.
+The manifest precedes the threshold write so process death after receipt clearing can still associate the surviving ghost with its target distance.
+
+The threshold write uses `max(current best, candidate distance)`. Repeated or delayed recovery cannot lower progress.
 
 ## Immediate playback
 
-Accepted frames remain immediately available in memory before disk work starts. `PublishedGhost` carries:
+Accepted frames are published in memory before worker execution. `PublishedGhost` carries:
 
 - an immutable frame snapshot;
 - accepted distance;
 - frame fingerprint.
 
-This preserves the existing restart experience while allowing durable work to stay off the render thread.
+This preserves immediate restart/playback behavior while keeping disk work off the render thread.
 
-`RunOutcomeCommitResult.ghostPromoted` means the candidate was accepted into this worker pipeline. It does not mean disk completion occurred before `commit(...)` returned.
+`RunOutcomeCommitResult.ghostPromoted` means accepted into the recoverable worker pipeline. It does not claim worker completion before terminal completion returns.
 
 ## Pending-distance floor
 
-`GhostPersistenceManager.bestDistanceFloor(...)` returns:
+`GhostPersistenceManager.bestDistanceFloor(...)` is:
 
 ```text
 max(durable best distance, accepted in-memory promotion distance)
 ```
 
-This prevents a shorter run from entering the worker queue while a longer accepted promotion is still pending.
+A shorter candidate cannot queue behind and overwrite a longer accepted promotion.
 
-The gate also exists inside `GhostPersistenceManager`, not only in the terminal coordinator. Legacy or direct callers therefore cannot regress a pending promotion.
+The same gate exists inside `GhostPersistenceManager`, protecting legacy or direct callers in addition to the terminal coordinator.
 
-The compatibility overload submits at the current floor, preserving its historical ability to replace a ghost without changing best distance.
+The compatibility overload submits at the current floor. It may replace an equal-distance ghost, and the new artifact manifest is updated to the replacement frame fingerprint without lowering best distance.
 
-## Recovery decisions
+## Receipt recovery
 
-A pending receipt is recovered by loading the durable ghost and comparing:
+A pending receipt requires full artifact validation.
 
-```text
-frame count
-fingerprint
-```
+### Matching ghost
 
-### Matching durable ghost
+When durable frame count and fingerprint match the receipt:
 
-When the ghost matches:
+1. create or replace the manifest with the receipt identity;
+2. repair best distance when it is lower;
+3. clear the receipt only after manifest and threshold durability.
 
-- if best distance is lower, recovery writes the receipt distance;
-- if best distance is already equal or higher, it does not rewrite it;
-- the receipt is cleared only after the threshold is durable.
-
-Dispositions:
+Results:
 
 - `REPAIRED_DISTANCE`;
 - `ALREADY_APPLIED`.
 
-### Nonmatching durable ghost
+### Nonmatching ghost
 
-A mismatch means the candidate ghost never became the durable artifact represented by the receipt. Recovery:
+When the receipt does not identify the durable ghost:
 
-- does not advance best distance;
-- does not modify the existing ghost;
-- clears the stale uncommitted receipt.
+1. clear only the stale in-progress receipt;
+2. reconcile any older persistent manifest;
+3. preserve the existing ghost and threshold.
 
-Disposition:
+When the older manifest is healthy, the result remains:
 
 - `ABANDONED_UNWRITTEN_GHOST`.
 
-### Corrupt or inaccessible evidence
+A corrupt or mismatched older manifest remains fail-closed instead of being silently ignored.
 
-Unknown versions, malformed receipts, and unrecoverable I/O return:
+## Manifest-only recovery
+
+When no receipt remains, the manifest is the durable association between ghost and distance.
+
+### Threshold already applied
+
+When:
+
+```text
+current best distance >= manifest distance
+```
+
+recovery returns `ALREADY_APPLIED` without loading or hashing the ghost file. This keeps the ordinary startup path bounded and avoids repeatedly decoding up to the maximum frame count.
+
+Full artifact validation remains available through explicit maintenance inspection.
+
+### Threshold requires repair
+
+When:
+
+```text
+current best distance < manifest distance
+```
+
+recovery must first load the ghost and verify:
+
+- structural validity;
+- frame count;
+- fingerprint.
+
+Only a matching artifact may raise best distance to the manifest distance.
+
+Results:
+
+- matching artifact and successful write: `REPAIRED_DISTANCE`;
+- mismatched artifact: `CORRUPT_MANIFEST`;
+- failed I/O: `IO_FAILURE`.
+
+This closes the post-receipt crash window without adding repeated full-file work to healthy startup.
+
+## Corrupt evidence
+
+The following block new promotions:
 
 - `CORRUPT_RECEIPT`;
+- `CORRUPT_MANIFEST`;
 - `IO_FAILURE`.
 
-Both block new ghost promotions. Non-ghost terminal progression remains independently recoverable and may still complete.
+Automatic recovery never deletes corrupt or unreadable evidence merely to unblock the queue.
 
-Automatic recovery never clears corrupt or unreadable evidence merely to unblock the queue.
+## Maintenance behavior
 
-## Explicit receipt inspection and repair
-
-`AndroidRecoveryEvidenceMaintenance` exposes the ghost domain as:
+`AndroidRecoveryEvidenceMaintenance` exposes the combined ghost domain as:
 
 ```text
 GHOST_PROMOTION
 ```
 
-It reports:
+Inspection distinguishes:
 
 ```text
-CLEAN      no receipt
-PENDING    valid receipt awaits canonical recovery
-CORRUPT    invalid receipt
-IO_FAILURE receipt could not be read or recovered reliably
+CLEAN(no_evidence)
+CLEAN(valid_manifest)
+PENDING(valid_receipt)
+CORRUPT(invalid_receipt)
+CORRUPT(invalid_manifest)
+CORRUPT(manifest_artifact_mismatch)
+IO_FAILURE(...)
 ```
 
-Operations:
+Maintenance rules:
 
-```text
-inspect
-recoverSafely
-discardCorrupt(GHOST_PROMOTION)
-discardUnresolvedPending(GHOST_PROMOTION)
-```
+- safe retry delegates to canonical receipt/manifest recovery;
+- safe retry never discards corrupt evidence;
+- targeted corrupt-receipt removal preserves a valid matching manifest;
+- corrupt or mismatched manifest removal preserves the ghost frame file;
+- the run-outcome journal is never opened by the ghost handler;
+- I/O failure never authorizes deletion.
 
-Safety behavior:
+Mutating maintenance commands require a debuggable cold start after save repair and before `GameView`. A reused live Activity is inspection-only.
 
-- safe recovery delegates to `GhostPromotionRecoveryCoordinator`;
-- a matching receipt repairs or recognizes best distance;
-- a nonmatching receipt is canonically abandoned without modifying the existing ghost or threshold;
-- a corrupt receipt remains retained under safe recovery;
-- `discardCorrupt` clears only a freshly confirmed corrupt sidecar;
-- I/O failure never authorizes deletion;
-- evidence clearing never directly deletes the ghost artifact or rewrites best distance;
-- the run-outcome journal is never opened by the ghost maintenance handler.
-
-The debug command surface accepts receipt mutation only during cold Activity creation before `GameView` and any ghost worker exist. A reused live `singleTask` Activity is inspection-only.
-
-Detailed ADB commands are documented in `docs/RECOVERY_EVIDENCE_MAINTENANCE.md`.
+See `docs/RECOVERY_EVIDENCE_MAINTENANCE.md` for operational commands.
 
 ## Queue ordering
 
 A single daemon executor serializes promotions.
 
-When candidate B is queued behind candidate A:
+For candidate B queued behind candidate A:
 
-1. A completes or leaves recovery evidence;
-2. B first recovers A's receipt;
-3. only then may B create its own receipt and write its ghost.
+1. A completes or leaves receipt/manifest evidence;
+2. B recovers A’s evidence;
+3. only then may B write its own receipt and artifact bundle.
 
-If A fails before ghost durability, only A's matching in-memory publication may be removed. A newer B publication is protected by distance and fingerprint identity.
+If A fails before ghost durability, only A’s matching in-memory publication may be removed. A newer publication is protected by distance and fingerprint identity.
 
 ## Recovery triggers
 
@@ -223,15 +264,15 @@ Recovery is attempted:
 
 - when `AndroidRunOutcomePersistenceSink` is created;
 - when a new manager request arrives and no worker is active;
-- at the beginning of every worker task;
+- at the start of every worker task;
 - before disk fallback in `loadLatest(...)`;
-- through the explicit cold-start maintenance command.
+- through explicit cold-start maintenance.
 
-## Relationship to the terminal outcome journal
+## Relationship to non-ghost recovery
 
-There are now two purpose-specific recovery records:
+Terminal persistence has independent records:
 
-### Non-ghost outcome journal
+### Non-ghost journal
 
 Protects:
 
@@ -240,66 +281,50 @@ Protects:
 - last-run summary;
 - pacifist-route count.
 
-### Ghost promotion receipt
+### Ghost evidence
 
-Protects:
+The transient receipt protects an in-progress promotion. The persistent manifest protects the completed artifact-to-distance association.
 
-- ghost artifact identity;
-- best-distance promotion.
-
-These records are independently recoverable. They do not form one atomic transaction spanning every terminal side effect. A process may complete one recovery protocol before the other, but each protocol prevents its own duplicate or mismatched durable state.
-
-Maintenance preserves the same isolation: receipt inspection or removal does not clear the non-ghost journal.
+These protocols are independently recoverable. They are not one global transaction spanning relationship history, presentation, progression, ghost storage, and best distance.
 
 ## Validation surface
 
 `GhostPromotionRecoveryCoordinatorTest` covers:
 
-- receipt → ghost → distance → clear ordering;
-- distance repair;
-- already-applied recognition;
-- abandoned unwritten ghost;
-- failed ghost write;
-- failed distance write and later repair;
-- corrupt receipt blocking;
-- fingerprint sensitivity across every persisted field.
+- receipt → ghost → manifest → distance → clear ordering;
+- manifest-write failure;
+- distance-write failure and later repair;
+- receipt-based manifest reconstruction;
+- receipt mismatch with preservation of an older valid manifest;
+- receipt-free manifest repair;
+- already-applied no-ghost-load fast path;
+- manifest/artifact mismatch blocking;
+- corrupt receipt and manifest blocking;
+- stale-manifest replacement;
+- fingerprint sensitivity across every frame field.
 
-`GhostPromotionReceiptStoreTest` covers:
+`GhostArtifactManifestStoreTest` covers:
 
 - complete round trip;
-- empty and cleared states;
+- empty and cleared stores;
 - truncation, trailing bytes, and unknown version;
-- invalid distance and frame count;
-- preservation of existing evidence after rejected replacement.
+- invalid replacement preserving existing evidence;
+- namespace isolation by active ghost filename.
 
-`GhostPersistenceManagerTest` covers production integration for:
+`GhostPersistenceManagerTest`, `GhostPersistenceManagerAdmissionTest`, and `RunOutcomePersistenceIntegrationTest` cover production publication, manifest durability, startup repair, equal-distance replacement, pending-distance admission, and terminal integration.
 
-- immediate in-memory playback;
-- durable ghost and distance completion;
-- startup distance repair;
-- mismatch abandonment.
+`RecoveryEvidenceMaintenanceIntegrationTest` covers valid-manifest inspection, manifest-only repair, corrupt receipt removal that preserves a valid manifest, corrupt-manifest removal, and manifest/artifact mismatch handling.
 
-`GhostPersistenceManagerAdmissionTest` covers:
+Source contracts lock transaction order, both fixed-size codecs, manager construction, cleanup, lazy validation, fingerprint coverage, maintenance isolation, and fail-closed corruption behavior.
 
-- direct stale-candidate rejection;
-- pending-distance floor behavior;
-- compatibility overload behavior.
-
-`RunOutcomePersistenceIntegrationTest` covers terminal submission and ensures a shorter next run cannot replace a longer pending promotion.
-
-`RecoveryEvidenceMaintenanceCoordinatorTest` covers domain isolation, corrupt-only removal, recover-before-discard ordering, and no deletion after read failure.
-
-`RecoveryEvidenceMaintenanceIntegrationTest` covers matching receipt repair, corrupt receipt retention, independent run-journal state, and explicit receipt-only removal.
-
-Source contracts lock ownership, ordering, receipt structure, fingerprint coverage, key parity, stale admission, matching-publication cleanup, maintenance domain isolation, cold-start mutation, and inspection-only live intents.
-
-Focused compilation and executable harnesses passed for the recovery coordinator, manager, maintenance policy, production-shaped handlers, and command router. Exact-head Android Gradle, emulator, and physical-device execution remain separate evidence gates.
+Focused Kotlin compilation and executable state-machine harnesses passed for the core coordinator, manager surface, maintenance adapter, and lazy manifest recovery. Exact-head Android Gradle, Robolectric, emulator, and physical-device execution remain separate evidence gates.
 
 ## Remaining limitations
 
-- A mismatch created by an older build before promotion receipts existed cannot be reconstructed because the ghost file itself does not encode its run distance.
-- A 64-bit noncryptographic fingerprint has a theoretical collision risk.
-- Remediation is debug/support tooling rather than an end-user recovery UI.
+- Ghosts created before artifact manifests remain load-compatible but cannot reconstruct a mismatch that already existed before this feature.
+- The 64-bit fingerprint is noncryptographic and has theoretical collision risk.
+- The already-applied automatic fast path trusts the durable manifest/threshold pair and does not repeatedly hash the ghost; explicit maintenance inspection performs full validation.
+- Remediation is debug/support tooling rather than an end-user UI.
 - Release builds reject maintenance intents.
-- Save compatibility namespaces should not be switched concurrently with an active worker or maintenance instance.
-- Exact-head Android Gradle, emulator, physical-device, and ADB acceptance remain separate evidence gates.
+- Compatibility namespaces must not switch during an active worker or maintenance instance.
+- Exact-head Android Gradle, emulator, physical-device, and ADB acceptance remain outstanding.
