@@ -64,3 +64,5 @@ fi
 
 "${PYTHON_BIN}" "${ROOT}/scripts/verify_strict_json_evidence.py" \
   "${OUTPUT_PATH}"
+"${PYTHON_BIN}" "${ROOT}/scripts/validate_device_acceptance_aggregate.py" \
+  "${OUTPUT_PATH}"
