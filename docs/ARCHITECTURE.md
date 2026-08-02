@@ -45,6 +45,8 @@ The manifest currently uses:
 
 Repeated launch intents are handled through `onNewIntent` rather than relying on Activity recreation. Every asynchronous debug-launch retry carries an identity token from `LatestRequestGate`; a newer intent or Activity destruction invalidates all older retries before they can reach `GameView`. Audio and haptic managers have explicit teardown/recreation paths.
 
+Debug-only recovery maintenance intents are processed after `SaveIntegrityManager.repair(...)`. A cold `onCreate` may inspect, safely retry, or deliberately discard one confirmed recovery-evidence domain before `GameView` exists. A reused `singleTask` Activity is inspection-only: recover and discard commands reject with `reason=active_session` before constructing maintenance handlers, preventing races with gameplay or the ghost worker. Command extras are consumed once in `finally`, and non-debuggable builds reject the surface through `ApplicationInfo.FLAG_DEBUGGABLE`.
+
 ## 3. Game thread
 
 `GameThread` drives update and rendering on one dedicated thread:
@@ -341,6 +343,16 @@ PREPARED journal
 
 Ghost and best-distance promotion use the independent receipt protocol described in section 12. The terminal coordinator submits one distance-aware candidate but never writes the threshold itself. The two recovery records protect their own state surfaces; they do not form one global transaction across relationship history, presentation, non-ghost progression, ghost storage, and best distance.
 
+### Recovery evidence maintenance owner
+
+`RecoveryEvidenceMaintenanceCoordinator` provides one explicit policy layer over the independent `RUN_OUTCOME` and `GHOST_PROMOTION` domains. It reports `CLEAN`, `PENDING`, `CORRUPT`, `BLOCKED`, or `IO_FAILURE`, and separates inspection, safe retry, corrupt-evidence discard, and unresolved-pending discard.
+
+Safe retry never clears corrupt evidence. Corrupt discard requires a fresh confirmed corrupt state. Pending discard retries canonical recovery first, returns `RECOVERED_INSTEAD` when recovery succeeds, and clears only evidence that remains confirmed pending or blocked. Read or recovery I/O failure never authorizes deletion, and every successful clear is verified by reinspection.
+
+Production handlers are domain-isolated. `MaintenanceRunOutcomePersistenceSink` can recover complete mood, return, summary, and route snapshots but cannot publish ghosts or advance best distance. The ghost maintenance handler uses only the promotion receipt and ghost artifact owners and never opens the run-outcome journal. Support summaries expose only states and fixed detail codes.
+
+`MainActivity` exposes maintenance only in debuggable builds. Mutating commands run only during cold `onCreate`, after save repair and before `GameView`; a reused live Activity may inspect but cannot recover or discard evidence.
+
 Deterministic scenarios are isolated from permanent score, encounter, relationship, Garden, summary, and ghost history while still receiving local authored feedback.
 
 Relationship familiarity from appearances is capped at Recognition. Trust and Bond require meaningful positive outcomes; hits delay progression.
@@ -404,11 +416,13 @@ Permanent CI is read-only and validates the exact event SHA. It performs:
 - API 35 connected instrumentation;
 - exact assertion of fourteen tests with zero failures, errors, or skips.
 
-The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, terminal-run exactly-once ownership, non-ghost crash recovery, ghost-promotion crash recovery, journal and receipt validation, transition parity, atomic summary-route snapshots, pending-distance admission, and frame fingerprint identity.
+The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, terminal-run exactly-once ownership, non-ghost crash recovery, ghost-promotion crash recovery, journal and receipt validation, transition parity, atomic summary-route snapshots, pending-distance admission, frame fingerprint identity, recovery-evidence maintenance policy and Android integration, cold-start mutation gating, one-shot command consumption, and payload-free maintenance logging.
 
 ## 19. Debug scenarios
 
 Debug-only `EncounterDirector` scenarios mirror the device-acceptance checklist and can be selected through repeated launch intents or the in-game overlay. Scenario entities use persistence-disabled context.
+
+Recovery maintenance intents are a separate debug support surface. Live reused Activities permit inspection only; recovery or discard requires a cold start before gameplay systems exist.
 
 Debug scenarios are deterministic test aids, not substitutes for ordinary-play and physical-device acceptance.
 
@@ -423,8 +437,9 @@ The following remain intentionally open:
 - legacy ghost/distance mismatches created before promotion receipts cannot be reconstructed because ghost files contain no distance;
 - the 64-bit ghost fingerprint is noncryptographic and has a theoretical collision risk;
 - non-ghost and ghost recovery evidence are independently recoverable rather than one global terminal transaction;
-- concurrent compatibility-namespace switching during an active ghost worker is unsupported maintenance behavior;
-- corrupt/conflicting recovery evidence has no automated repair or user-facing remediation path;
+- concurrent compatibility-namespace switching during an active ghost worker or maintenance instance is unsupported;
+- automatic recovery remains fail-closed; deliberate remediation is debug/support-only and has no end-user recovery UI;
+- physical-device ADB maintenance acceptance remains outstanding;
 - entity mechanic/readability claims need ordinary-play and hardware acceptance;
 - frame, allocation, GC, memory, I/O, audio-thread, thermal, and long-run metrics need measured thresholds on representative hardware;
 - fixed landscape and procedural scenic layers need final product decisions;
