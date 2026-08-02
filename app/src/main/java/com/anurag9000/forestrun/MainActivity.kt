@@ -2,6 +2,7 @@ package com.anurag9000.forestrun
 
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -14,12 +15,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import com.anurag9000.forestrun.engine.AndroidRecoveryEvidenceMaintenance
 import com.anurag9000.forestrun.engine.EncounterScenario
 import com.anurag9000.forestrun.engine.FeedbackSettings
 import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.HapticManager
 import com.anurag9000.forestrun.engine.LatestRequestGate
 import com.anurag9000.forestrun.engine.LeitmotifManager
+import com.anurag9000.forestrun.engine.RecoveryEvidenceDomain
 import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.RuntimeAssetValidator
 import com.anurag9000.forestrun.engine.SaveIntegrityManager
@@ -39,9 +42,16 @@ class MainActivity : AppCompatActivity() {
         private const val DEBUG_LAUNCH_RETRY_MS = 100L
         private const val MAX_DEBUG_LAUNCH_ATTEMPTS = 150
         const val DEBUG_SCENARIO_READY_PREFIX = "FOREST_RUN_SCENARIO_READY"
+        const val RECOVERY_MAINTENANCE_PREFIX = "FOREST_RUN_RECOVERY_MAINTENANCE"
         const val EXTRA_DEBUG_AUTOSTART = "debug_autostart"
         const val EXTRA_DEBUG_SCENARIO = "debug_scenario"
         const val EXTRA_RUN_MODE = "run_mode"
+        const val EXTRA_RECOVERY_ACTION = "recovery_action"
+        const val EXTRA_RECOVERY_DOMAIN = "recovery_domain"
+        const val RECOVERY_ACTION_INSPECT = "inspect"
+        const val RECOVERY_ACTION_RECOVER = "recover"
+        const val RECOVERY_ACTION_DISCARD_CORRUPT = "discard_corrupt"
+        const val RECOVERY_ACTION_DISCARD_PENDING = "discard_pending"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         configurationHeightDp = resources.configuration.screenHeightDp
 
         SaveIntegrityManager.repair(this)
+        handleRecoveryMaintenanceIntent(intent, allowDestructive = true)
         FeedbackSettings.init(this)
         RuntimeAssetValidator.validateRelease(this)
         gameView = GameView(this)
@@ -95,6 +106,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleRecoveryMaintenanceIntent(intent, allowDestructive = false)
         val launchToken = debugLaunchGate.begin()
         if (::gameView.isInitialized) {
             gameView.post { applyDebugLaunchWhenReady(Intent(intent), launchToken) }
@@ -131,6 +143,95 @@ class MainActivity : AppCompatActivity() {
         SfxManager.destroy()
         super.onDestroy()
     }
+
+    private fun handleRecoveryMaintenanceIntent(
+        launchIntent: Intent,
+        allowDestructive: Boolean
+    ) {
+        val action = launchIntent.getStringExtra(EXTRA_RECOVERY_ACTION)
+            ?.trim()
+            ?.lowercase()
+            ?.takeIf(String::isNotEmpty)
+            ?: return
+
+        try {
+            if (!isDebuggableRuntime()) {
+                Log.e(
+                    TAG,
+                    "$RECOVERY_MAINTENANCE_PREFIX action=$action reason=not_debuggable"
+                )
+                return
+            }
+
+            val maintenance = AndroidRecoveryEvidenceMaintenance(this)
+            when (action) {
+                RECOVERY_ACTION_INSPECT -> {
+                    Log.i(
+                        TAG,
+                        "$RECOVERY_MAINTENANCE_PREFIX action=$action " +
+                            maintenance.inspect().supportSummary()
+                    )
+                }
+                RECOVERY_ACTION_RECOVER -> {
+                    Log.i(
+                        TAG,
+                        "$RECOVERY_MAINTENANCE_PREFIX action=$action " +
+                            maintenance.recoverSafely().supportSummary()
+                    )
+                }
+                RECOVERY_ACTION_DISCARD_CORRUPT,
+                RECOVERY_ACTION_DISCARD_PENDING -> {
+                    if (!allowDestructive) {
+                        Log.e(
+                            TAG,
+                            "$RECOVERY_MAINTENANCE_PREFIX action=$action " +
+                                "reason=active_session"
+                        )
+                        return
+                    }
+                    val domain = recoveryDomain(
+                        launchIntent.getStringExtra(EXTRA_RECOVERY_DOMAIN)
+                    )
+                    if (domain == null) {
+                        Log.e(
+                            TAG,
+                            "$RECOVERY_MAINTENANCE_PREFIX action=$action " +
+                                "reason=invalid_domain"
+                        )
+                        return
+                    }
+                    val result = if (action == RECOVERY_ACTION_DISCARD_CORRUPT) {
+                        maintenance.discardCorrupt(domain)
+                    } else {
+                        maintenance.discardUnresolvedPending(domain)
+                    }
+                    Log.i(
+                        TAG,
+                        "$RECOVERY_MAINTENANCE_PREFIX action=$action domain=${domain.name} " +
+                            "disposition=${result.disposition.name} " +
+                            "before=${result.before.state.name} after=${result.after.state.name}"
+                    )
+                }
+                else -> Log.e(
+                    TAG,
+                    "$RECOVERY_MAINTENANCE_PREFIX action=$action reason=unknown_action"
+                )
+            }
+        } finally {
+            // Maintenance commands are one-shot even if a configuration change
+            // recreates the Activity with the same Intent object.
+            launchIntent.removeExtra(EXTRA_RECOVERY_ACTION)
+            launchIntent.removeExtra(EXTRA_RECOVERY_DOMAIN)
+        }
+    }
+
+    private fun recoveryDomain(raw: String?): RecoveryEvidenceDomain? {
+        val normalized = raw?.trim()?.uppercase() ?: return null
+        return RecoveryEvidenceDomain.entries.firstOrNull { it.name == normalized }
+    }
+
+    private fun isDebuggableRuntime(): Boolean =
+        (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     private fun applyDebugLaunchWhenReady(
         launchIntent: Intent,
