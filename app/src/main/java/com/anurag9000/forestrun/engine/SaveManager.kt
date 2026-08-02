@@ -219,7 +219,7 @@ object SaveManager {
      */
     fun loadGhostRun(context: Context): List<GhostFrame> {
         val atomicFile = AtomicFile(ghostFile(context.applicationContext))
-        if (!atomicFile.baseFile.exists() && !File(atomicFile.baseFile.path + ".bak").exists()) {
+        if (!hasRecoverableGhostFile(atomicFile)) {
             return emptyList()
         }
 
@@ -281,7 +281,11 @@ object SaveManager {
         }
     }
 
-    fun hasGhostRun(context: Context): Boolean = ghostFile(context).exists()
+    fun hasGhostRun(context: Context): Boolean =
+        hasRecoverableGhostFile(AtomicFile(ghostFile(context.applicationContext)))
+
+    private fun hasRecoverableGhostFile(atomicFile: AtomicFile): Boolean =
+        atomicFile.baseFile.exists() || File(atomicFile.baseFile.path + ".bak").exists()
 
     private fun isValidGhostFrame(frame: GhostFrame, previousTime: Float): Boolean =
         frame.t.isFinite() &&
