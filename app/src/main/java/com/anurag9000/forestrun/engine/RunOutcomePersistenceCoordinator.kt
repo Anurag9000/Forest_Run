@@ -14,6 +14,7 @@ internal enum class RunOutcomeCommitDisposition {
 
 internal data class RunOutcomeCommitResult(
     val disposition: RunOutcomeCommitDisposition,
+    /** True when a best-ghost candidate was accepted into the recoverable worker pipeline. */
     val ghostPromoted: Boolean
 ) {
     val committed: Boolean
@@ -32,8 +33,7 @@ internal interface RunOutcomeCommitter {
 /** Side-effect seam used by [RunOutcomePersistenceCoordinator]. */
 internal interface RunOutcomePersistenceSink {
     fun loadBestDistanceM(): Float
-    fun publishBestGhost(frames: List<GhostFrame>): Boolean
-    fun saveBestDistanceM(distanceM: Float)
+    fun publishBestGhost(frames: List<GhostFrame>, distanceM: Float): Boolean
     fun recordForestMood(summary: RunSummary)
     fun recordReturnMoment(summary: RunSummary)
     fun saveLastRunSummary(summary: RunSummary)
@@ -57,6 +57,10 @@ internal class AndroidRunOutcomePersistenceSink(context: Context) :
     private val appContext = context.applicationContext
     private val persistenceNamespace = SaveManager.activePrefsNameForTests
 
+    init {
+        GhostPersistenceManager.recoverPendingPromotion(appContext)
+    }
+
     override val recoveryStore: RunOutcomeRecoveryStore =
         SharedPreferencesRunOutcomeRecoveryStore(
             context = appContext,
@@ -69,14 +73,17 @@ internal class AndroidRunOutcomePersistenceSink(context: Context) :
             persistenceNamespace = persistenceNamespace
         )
 
-    override fun loadBestDistanceM(): Float = SaveManager.loadBestDistance(appContext)
+    override fun loadBestDistanceM(): Float =
+        GhostPersistenceManager.bestDistanceFloor(appContext)
 
-    override fun publishBestGhost(frames: List<GhostFrame>): Boolean =
-        GhostPersistenceManager.saveBestRunAsync(appContext, frames)
-
-    override fun saveBestDistanceM(distanceM: Float) {
-        SaveManager.saveBestDistance(appContext, distanceM)
-    }
+    override fun publishBestGhost(
+        frames: List<GhostFrame>,
+        distanceM: Float
+    ): Boolean = GhostPersistenceManager.saveBestRunAsync(
+        context = appContext,
+        frames = frames,
+        distanceM = distanceM
+    )
 
     override fun recordForestMood(summary: RunSummary) {
         ForestMoodSystem.recordRun(appContext, summary)
@@ -123,7 +130,8 @@ internal class AndroidRunOutcomePersistenceSink(context: Context) :
  * Production sinks synchronously journal the summary and the before/after
  * progression states before any write. Recovery compares actual state with both
  * snapshots, allowing a write that completed before its checkpoint to be
- * recognized without incrementing the same run twice.
+ * recognized without incrementing the same run twice. Best-ghost and
+ * best-distance durability is owned by the asynchronous ghost promotion worker.
  */
 internal class RunOutcomePersistenceCoordinator(
     private val sink: RunOutcomePersistenceSink,
@@ -191,10 +199,10 @@ internal class RunOutcomePersistenceCoordinator(
         val ghostPromoted =
             completedDistance > previousBestDistance &&
                 completedGhost.isNotEmpty() &&
-                sink.publishBestGhost(completedGhost)
-        if (ghostPromoted) {
-            sink.saveBestDistanceM(completedDistance)
-        }
+                sink.publishBestGhost(
+                    frames = completedGhost,
+                    distanceM = completedDistance
+                )
 
         if (recoveryRecord != null && recoverableSink != null) {
             return commitRecoveryProtectedBundle(
