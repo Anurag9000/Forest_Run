@@ -171,18 +171,28 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             self.recovery,
             "private fun recover(receipt: GhostPromotionReceipt)",
         )
-        order = (
+        prefix_order = (
             "artifactStore.loadGhost()",
             "durableGhost.size == receipt.frameCount",
             "GhostRunFingerprint.calculate(durableGhost) == receipt.fingerprint",
             "if (!ghostMatches)",
+        )
+        prefix_positions = [recover.index(item) for item in prefix_order]
+        self.assertEqual(sorted(prefix_positions), prefix_positions)
+
+        mismatch = extract_braced_block(recover, "if (!ghostMatches)")
+        self.assertIn("receiptStore.clear()", mismatch)
+        self.assertIn("ABANDONED_UNWRITTEN_GHOST", mismatch)
+        self.assertNotIn("saveBestDistanceM", mismatch)
+
+        matching = recover[recover.index("val currentBest =") :]
+        matching_order = (
             "artifactStore.loadBestDistanceM()",
             "artifactStore.saveBestDistanceM(receipt.distanceM)",
             "receiptStore.clear()",
         )
-        positions = [recover.index(item) for item in order]
-        self.assertEqual(sorted(positions), positions)
-        self.assertIn("ABANDONED_UNWRITTEN_GHOST", recover)
+        matching_positions = [matching.index(item) for item in matching_order]
+        self.assertEqual(sorted(matching_positions), matching_positions)
 
     def test_corrupt_or_io_failed_receipt_blocks_new_promotion(self) -> None:
         enum = extract_braced_block(
