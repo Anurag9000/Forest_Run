@@ -3,9 +3,13 @@ package com.anurag9000.forestrun.engine
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.PlayerState
+import com.anurag9000.forestrun.systems.AtomicFileGhostArtifactManifestStore
+import com.anurag9000.forestrun.systems.GhostArtifactManifest
+import com.anurag9000.forestrun.systems.GhostArtifactManifestLoadResult
 import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.systems.GhostPersistenceManager
 import com.anurag9000.forestrun.systems.GhostPromotionRecoveryDisposition
+import com.anurag9000.forestrun.systems.GhostRunFingerprint
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -32,6 +36,7 @@ class RunOutcomePersistenceIntegrationTest {
             .commit()
         deleteGhostFiles()
         deletePromotionFiles()
+        deleteManifestFiles()
         GhostPersistenceManager.clearMemoryForTests()
     }
 
@@ -41,6 +46,7 @@ class RunOutcomePersistenceIntegrationTest {
         GhostPersistenceManager.clearMemoryForTests()
         deleteGhostFiles()
         deletePromotionFiles()
+        deleteManifestFiles()
         SaveManager.usePrimaryPreferences()
     }
 
@@ -68,7 +74,17 @@ class RunOutcomePersistenceIntegrationTest {
         assertEquals(480f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(ghost, SaveManager.loadGhostRun(context))
         assertEquals(
-            GhostPromotionRecoveryDisposition.EMPTY,
+            GhostArtifactManifestLoadResult.Present(
+                GhostArtifactManifest(
+                    distanceM = 480f,
+                    frameCount = ghost.size,
+                    fingerprint = GhostRunFingerprint.calculate(ghost)
+                )
+            ),
+            manifestStore().load()
+        )
+        assertEquals(
+            GhostPromotionRecoveryDisposition.ALREADY_APPLIED,
             GhostPersistenceManager.recoverPendingPromotion(context)
         )
         assertEquals(summary, SaveManager.loadLastRunSummary(context))
@@ -91,6 +107,7 @@ class RunOutcomePersistenceIntegrationTest {
         assertFalse(result.ghostPromoted)
         assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
         assertFalse(SaveManager.hasGhostRun(context))
+        assertEquals(GhostArtifactManifestLoadResult.Empty, manifestStore().load())
         assertEquals(summary, SaveManager.loadLastRunSummary(context))
         assertEquals(1, SaveManager.loadForestMoodState(context).totalRuns)
     }
@@ -124,6 +141,16 @@ class RunOutcomePersistenceIntegrationTest {
         assertTrue(GhostPersistenceManager.awaitPendingWrites())
         assertEquals(900f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(firstGhost, SaveManager.loadGhostRun(context))
+        assertEquals(
+            GhostArtifactManifestLoadResult.Present(
+                GhostArtifactManifest(
+                    distanceM = 900f,
+                    frameCount = firstGhost.size,
+                    fingerprint = GhostRunFingerprint.calculate(firstGhost)
+                )
+            ),
+            manifestStore().load()
+        )
     }
 
     @Test
@@ -140,6 +167,7 @@ class RunOutcomePersistenceIntegrationTest {
         assertEquals(RunOutcomeCommitDisposition.ALREADY_COMMITTED, retried.disposition)
         assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
         assertFalse(SaveManager.hasGhostRun(context))
+        assertEquals(GhostArtifactManifestLoadResult.Empty, manifestStore().load())
         assertNull(SaveManager.loadLastRunSummary(context))
         assertEquals(0, SaveManager.loadForestMoodState(context).totalRuns)
         assertEquals(0L, SaveManager.loadReturnMomentState(context).lastActiveAtMs)
@@ -183,11 +211,20 @@ class RunOutcomePersistenceIntegrationTest {
         )
     )
 
+    private fun manifestStore(): AtomicFileGhostArtifactManifestStore =
+        AtomicFileGhostArtifactManifestStore(
+            context = context,
+            ghostFilename = SaveManager.activeGhostFilenameForTests
+        )
+
     private fun ghostFile(): File =
         File(context.filesDir, SaveManager.activeGhostFilenameForTests)
 
     private fun promotionFile(): File =
         File(context.filesDir, "${SaveManager.activeGhostFilenameForTests}.promotion")
+
+    private fun manifestFile(): File =
+        File(context.filesDir, "${SaveManager.activeGhostFilenameForTests}.manifest")
 
     private fun deleteGhostFiles() {
         val base = ghostFile()
@@ -198,6 +235,13 @@ class RunOutcomePersistenceIntegrationTest {
 
     private fun deletePromotionFiles() {
         val base = promotionFile()
+        base.delete()
+        File(base.path + ".bak").delete()
+        File(base.path + ".new").delete()
+    }
+
+    private fun deleteManifestFiles() {
+        val base = manifestFile()
         base.delete()
         File(base.path + ".bak").delete()
         File(base.path + ".new").delete()
