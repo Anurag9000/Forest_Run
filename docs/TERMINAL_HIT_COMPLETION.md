@@ -145,6 +145,12 @@ The receipt stores target distance, frame count, and a raw-bit frame fingerprint
 
 `ghostPromoted` in the completion result means accepted into this recoverable worker pipeline, not necessarily durable before the completion call returns.
 
+### Explicit maintenance
+
+`RecoveryEvidenceMaintenanceCoordinator` provides independent inspection, safe retry, and deliberate evidence removal for the `RUN_OUTCOME` and `GHOST_PROMOTION` domains. Automatic recovery remains fail-closed; corrupt evidence is never cleared by safe retry, pending evidence is retried before deliberate removal, and I/O failure never authorizes deletion.
+
+`MainActivity` exposes maintenance only in debuggable builds. Mutating commands require a cold start after save repair and before `GameView`; a reused live Activity can inspect but cannot recover or discard evidence.
+
 ## Tests
 
 ### Pure ordering tests
@@ -184,6 +190,8 @@ The receipt stores target distance, frame count, and a raw-bit frame fingerprint
 
 `test_ghost_promotion_recovery_contract.py` locks distance-aware worker ownership, receipt-before-artifact ordering, pending-distance admission, frame fingerprint coverage, and the absence of a direct best-distance write in the terminal coordinator.
 
+`test_recovery_evidence_maintenance_contract.py` and `test_recovery_maintenance_launch_contract.py` lock domain-isolated repair policy, recover-before-discard ordering, no-delete-on-I/O behavior, debug-only access, cold-start mutation, one-shot extras, and payload-free logging.
+
 ## Evidence boundary
 
 The extracted production files compiled against focused Android/game stubs. An executable fake-seam harness passed the relationship → feedback → summary → quote → persistence order.
@@ -196,12 +204,12 @@ The complete `GameView` replacement was compared immediately. Its diff contained
 
 No immediate impact, STUMBLE, MERCY_MISS, rendering, input, Bloom, ghost playback, run reset, debug scenario, or death-transition code changed.
 
-Later persistence tranches compiled the non-ghost and ghost recovery surfaces against focused stubs and passed executable recovery, route-aware, route-ceiling, and ghost crash-window harnesses. The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session.
+Later persistence and maintenance tranches compiled the non-ghost, ghost, evidence-policy, and debug-command surfaces against focused stubs and passed executable recovery, route-aware, route-ceiling, ghost crash-window, maintenance-policy, and cold/live launch harnesses. The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session.
 
 ## Remaining architecture work
 
 - extract the complete collision-result dispatcher without changing severity or effect ordering;
 - consider a typed terminal-impact command rather than direct static manager calls;
-- add deliberate repair tooling for corrupt/conflicting recovery evidence;
+- decide whether an end-user recovery UI is warranted beyond the current debug/support tooling;
 - decide whether to encode distance inside a future ghost schema so legacy mismatches become self-describing;
 - continue reducing `GameView` only through diff-bounded, behavior-preserving seams.
