@@ -103,6 +103,41 @@ class PublishDeviceAcceptanceAggregateTest(unittest.TestCase):
             self.assertTrue(staged.is_file())
             self.assertFalse((root / "aggregate.json").exists())
 
+    def test_final_digest_snapshot_rejects_post_acceptance_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest, bundle = self.materialize(root)
+            staged = self.stage(root, manifest)
+            evidence_entry = bundle["sessions"][1]["scenarios"]["ordinary_play_15m"][
+                "evidence_files"
+            ][0]
+            evidence = root / evidence_entry["path"]
+            original = publisher.acceptance.validate_bundle
+            calls = 0
+
+            def validate_then_mutate(*args, **kwargs):
+                nonlocal calls
+                calls += 1
+                result = original(*args, **kwargs)
+                if calls == 2:
+                    evidence.write_bytes(b"mutated after second acceptance\n")
+                return result
+
+            with patch.object(
+                publisher.acceptance,
+                "validate_bundle",
+                side_effect=validate_then_mutate,
+            ):
+                with self.assertRaisesRegex(
+                    publisher.PublicationError,
+                    "digest changed before publication",
+                ):
+                    publisher.publish(manifest, staged, root / "aggregate.json")
+
+            self.assertEqual(2, calls)
+            self.assertTrue(staged.is_file())
+            self.assertFalse((root / "aggregate.json").exists())
+
     def test_rejects_staged_mutation_during_final_source_validation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
