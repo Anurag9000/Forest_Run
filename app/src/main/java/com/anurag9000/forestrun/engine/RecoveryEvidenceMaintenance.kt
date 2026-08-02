@@ -2,11 +2,16 @@ package com.anurag9000.forestrun.engine
 
 import android.content.Context
 import com.anurag9000.forestrun.systems.AndroidGhostPromotionArtifactStore
+import com.anurag9000.forestrun.systems.AtomicFileGhostArtifactManifestStore
 import com.anurag9000.forestrun.systems.AtomicFileGhostPromotionReceiptStore
+import com.anurag9000.forestrun.systems.GhostArtifactManifest
+import com.anurag9000.forestrun.systems.GhostArtifactManifestLoadResult
 import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.systems.GhostPromotionReceiptLoadResult
 import com.anurag9000.forestrun.systems.GhostPromotionRecoveryCoordinator
 import com.anurag9000.forestrun.systems.GhostPromotionRecoveryDisposition
+import com.anurag9000.forestrun.systems.GhostRunFingerprint
+import com.anurag9000.forestrun.systems.GhostRunValidator
 
 internal enum class RecoveryEvidenceDomain {
     RUN_OUTCOME,
@@ -361,21 +366,23 @@ private class AndroidGhostPromotionEvidenceHandler(
     private val context: Context
 ) : RecoveryEvidenceHandler {
     override val domain = RecoveryEvidenceDomain.GHOST_PROMOTION
-    private val store = AtomicFileGhostPromotionReceiptStore(
+    private val ghostFilename = SaveManager.activeGhostFilenameForTests
+    private val receiptStore = AtomicFileGhostPromotionReceiptStore(
         context = context,
-        ghostFilename = SaveManager.activeGhostFilenameForTests
+        ghostFilename = ghostFilename
+    )
+    private val manifestStore = AtomicFileGhostArtifactManifestStore(
+        context = context,
+        ghostFilename = ghostFilename
     )
     private val recovery = GhostPromotionRecoveryCoordinator(
-        receiptStore = store,
-        artifactStore = AndroidGhostPromotionArtifactStore(context)
+        receiptStore = receiptStore,
+        artifactStore = AndroidGhostPromotionArtifactStore(context),
+        manifestStore = manifestStore
     )
 
     override fun inspect(): RecoveryEvidenceSnapshot = try {
-        when (store.load()) {
-            GhostPromotionReceiptLoadResult.Empty -> snapshot(
-                RecoveryEvidenceState.CLEAN,
-                "no_receipt"
-            )
+        when (receiptStore.load()) {
             GhostPromotionReceiptLoadResult.Corrupt -> snapshot(
                 RecoveryEvidenceState.CORRUPT,
                 "invalid_receipt"
@@ -384,16 +391,17 @@ private class AndroidGhostPromotionEvidenceHandler(
                 RecoveryEvidenceState.PENDING,
                 "valid_receipt"
             )
+            GhostPromotionReceiptLoadResult.Empty -> inspectManifest()
         }
     } catch (_: Exception) {
-        snapshot(RecoveryEvidenceState.IO_FAILURE, "receipt_read_failed")
+        snapshot(RecoveryEvidenceState.IO_FAILURE, "ghost_evidence_read_failed")
     }
 
     override fun recoverSafely(): RecoveryEvidenceSnapshot = try {
         when (recovery.recover()) {
             GhostPromotionRecoveryDisposition.EMPTY -> snapshot(
                 RecoveryEvidenceState.CLEAN,
-                "no_receipt"
+                "no_evidence"
             )
             GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE -> snapshot(
                 RecoveryEvidenceState.CLEAN,
@@ -411,19 +419,64 @@ private class AndroidGhostPromotionEvidenceHandler(
                 RecoveryEvidenceState.CORRUPT,
                 "invalid_receipt"
             )
+            GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST -> snapshot(
+                RecoveryEvidenceState.CORRUPT,
+                "invalid_manifest_or_artifact"
+            )
             GhostPromotionRecoveryDisposition.IO_FAILURE -> snapshot(
                 RecoveryEvidenceState.IO_FAILURE,
-                "receipt_recovery_failed"
+                "ghost_recovery_failed"
             )
         }
     } catch (_: Exception) {
-        snapshot(RecoveryEvidenceState.IO_FAILURE, "receipt_recovery_failed")
+        snapshot(RecoveryEvidenceState.IO_FAILURE, "ghost_recovery_failed")
     }
 
     override fun clearEvidence(): Boolean = try {
-        store.clear()
+        val receiptCleared = when (receiptStore.load()) {
+            GhostPromotionReceiptLoadResult.Empty -> true
+            GhostPromotionReceiptLoadResult.Corrupt,
+            is GhostPromotionReceiptLoadResult.Pending -> receiptStore.clear()
+        }
+        val manifestCleared = when (val loaded = manifestStore.load()) {
+            GhostArtifactManifestLoadResult.Empty -> true
+            GhostArtifactManifestLoadResult.Corrupt -> manifestStore.clear()
+            is GhostArtifactManifestLoadResult.Present -> {
+                if (manifestMatches(loaded.manifest)) true else manifestStore.clear()
+            }
+        }
+        receiptCleared && manifestCleared
     } catch (_: Exception) {
         false
+    }
+
+    private fun inspectManifest(): RecoveryEvidenceSnapshot =
+        when (val loaded = manifestStore.load()) {
+            GhostArtifactManifestLoadResult.Empty -> snapshot(
+                RecoveryEvidenceState.CLEAN,
+                "no_evidence"
+            )
+            GhostArtifactManifestLoadResult.Corrupt -> snapshot(
+                RecoveryEvidenceState.CORRUPT,
+                "invalid_manifest"
+            )
+            is GhostArtifactManifestLoadResult.Present -> {
+                if (manifestMatches(loaded.manifest)) {
+                    snapshot(RecoveryEvidenceState.CLEAN, "valid_manifest")
+                } else {
+                    snapshot(
+                        RecoveryEvidenceState.CORRUPT,
+                        "manifest_artifact_mismatch"
+                    )
+                }
+            }
+        }
+
+    private fun manifestMatches(manifest: GhostArtifactManifest): Boolean {
+        val frames = SaveManager.loadGhostRun(context)
+        return frames.size == manifest.frameCount &&
+            GhostRunValidator.isValid(frames) &&
+            GhostRunFingerprint.calculate(frames) == manifest.fingerprint
     }
 
     private fun snapshot(
