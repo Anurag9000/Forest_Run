@@ -7,7 +7,9 @@ import com.anurag9000.forestrun.systems.GhostPersistenceManager
 internal enum class RunOutcomeCommitDisposition {
     COMMITTED,
     NON_PERSISTENT_RUN,
-    ALREADY_COMMITTED
+    ALREADY_COMMITTED,
+    RECOVERY_PENDING,
+    RECOVERY_BLOCKED
 }
 
 internal data class RunOutcomeCommitResult(
@@ -37,9 +39,25 @@ internal interface RunOutcomePersistenceSink {
     fun saveLastRunSummary(summary: RunSummary)
 }
 
+/** Optional capability that makes the non-ghost bundle crash recoverable. */
+internal interface RecoverableRunOutcomePersistenceSink : RunOutcomePersistenceSink {
+    val recoveryStore: RunOutcomeRecoveryStore
+    fun loadForestMoodState(): ForestMoodState
+    fun saveForestMoodState(state: ForestMoodState)
+    fun loadReturnMomentState(): ReturnMomentState
+    fun saveReturnMomentState(state: ReturnMomentState)
+}
+
 /** Production adapter for the terminal-run persistence surface. */
-internal class AndroidRunOutcomePersistenceSink(context: Context) : RunOutcomePersistenceSink {
+internal class AndroidRunOutcomePersistenceSink(context: Context) :
+    RecoverableRunOutcomePersistenceSink {
     private val appContext = context.applicationContext
+
+    override val recoveryStore: RunOutcomeRecoveryStore =
+        SharedPreferencesRunOutcomeRecoveryStore(
+            context = appContext,
+            persistenceNamespace = SaveManager.activePrefsNameForTests
+        )
 
     override fun loadBestDistanceM(): Float = SaveManager.loadBestDistance(appContext)
 
@@ -61,6 +79,20 @@ internal class AndroidRunOutcomePersistenceSink(context: Context) : RunOutcomePe
     override fun saveLastRunSummary(summary: RunSummary) {
         SaveManager.saveLastRunSummary(appContext, summary)
     }
+
+    override fun loadForestMoodState(): ForestMoodState =
+        SaveManager.loadForestMoodState(appContext)
+
+    override fun saveForestMoodState(state: ForestMoodState) {
+        SaveManager.saveForestMoodState(appContext, state)
+    }
+
+    override fun loadReturnMomentState(): ReturnMomentState =
+        SaveManager.loadReturnMomentState(appContext)
+
+    override fun saveReturnMomentState(state: ReturnMomentState) {
+        SaveManager.saveReturnMomentState(appContext, state)
+    }
 }
 
 /**
@@ -71,15 +103,24 @@ internal class AndroidRunOutcomePersistenceSink(context: Context) : RunOutcomePe
  * counters and summaries. Non-persistent terminal outcomes also consume the
  * token so a later mode change cannot retroactively write the same run.
  * [resetForNewRun] is the only operation that reopens the coordinator.
+ *
+ * Production sinks synchronously journal the summary and the before/after
+ * progression states before any write. Recovery compares actual state with both
+ * snapshots, allowing a write that completed before its checkpoint to be
+ * recognized without incrementing the same run twice.
  */
 internal class RunOutcomePersistenceCoordinator(
-    private val sink: RunOutcomePersistenceSink
+    private val sink: RunOutcomePersistenceSink,
+    private val clock: () -> Long = System::currentTimeMillis
 ) : RunOutcomeCommitter {
+    private val recoverableSink = sink as? RecoverableRunOutcomePersistenceSink
     private var terminalOutcomeCommitted = false
+    private var recoveryBlocked = !recoverPendingOutcome()
 
     @Synchronized
     fun resetForNewRun() {
         terminalOutcomeCommitted = false
+        recoveryBlocked = !recoverPendingOutcome()
     }
 
     @Synchronized
@@ -104,6 +145,24 @@ internal class RunOutcomePersistenceCoordinator(
             )
         }
 
+        if (recoveryBlocked) {
+            return RunOutcomeCommitResult(
+                disposition = RunOutcomeCommitDisposition.RECOVERY_BLOCKED,
+                ghostPromoted = false
+            )
+        }
+
+        val recoveryRecord = recoverableSink?.let { recoverable ->
+            prepareRecoveryRecord(recoverable, summary)
+        }
+        if (recoverableSink != null && recoveryRecord == null) {
+            recoveryBlocked = true
+            return RunOutcomeCommitResult(
+                disposition = RunOutcomeCommitDisposition.RECOVERY_BLOCKED,
+                ghostPromoted = false
+            )
+        }
+
         val completedDistance = summary.distanceM
             .takeIf { it.isFinite() }
             ?.coerceAtLeast(0f)
@@ -121,6 +180,14 @@ internal class RunOutcomePersistenceCoordinator(
             sink.saveBestDistanceM(completedDistance)
         }
 
+        if (recoveryRecord != null && recoverableSink != null) {
+            return commitRecoveryProtectedBundle(
+                recoverable = recoverableSink,
+                initialRecord = recoveryRecord,
+                ghostPromoted = ghostPromoted
+            )
+        }
+
         sink.recordForestMood(summary)
         sink.recordReturnMoment(summary)
         sink.saveLastRunSummary(summary)
@@ -130,4 +197,122 @@ internal class RunOutcomePersistenceCoordinator(
             ghostPromoted = ghostPromoted
         )
     }
+
+    private fun prepareRecoveryRecord(
+        recoverable: RecoverableRunOutcomePersistenceSink,
+        summary: RunSummary
+    ): RunOutcomeRecoveryRecord? = try {
+        val previousMood = recoverable.loadForestMoodState()
+        val previousReturn = recoverable.loadReturnMomentState()
+        val record = RunOutcomeRecoveryRecord(
+            phase = RunOutcomeRecoveryPhase.PREPARED,
+            summary = summary,
+            previousMood = previousMood,
+            nextMood = RunOutcomeRecoveryTransitions.nextForestMood(previousMood, summary),
+            previousReturn = previousReturn,
+            nextReturn = RunOutcomeRecoveryTransitions.nextReturnMoment(
+                previous = previousReturn,
+                summary = summary,
+                nowMs = clock()
+            )
+        )
+        record.takeIf { recoverable.recoveryStore.save(it) }
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun commitRecoveryProtectedBundle(
+        recoverable: RecoverableRunOutcomePersistenceSink,
+        initialRecord: RunOutcomeRecoveryRecord,
+        ghostPromoted: Boolean
+    ): RunOutcomeCommitResult {
+        return try {
+            var record = initialRecord
+            if (!ensureMoodState(recoverable, record)) {
+                recoveryBlocked = true
+                return recoveryPending(ghostPromoted)
+            }
+            record = record.copy(phase = RunOutcomeRecoveryPhase.MOOD_APPLIED)
+            recoverable.recoveryStore.save(record)
+
+            if (!ensureReturnState(recoverable, record)) {
+                recoveryBlocked = true
+                return recoveryPending(ghostPromoted)
+            }
+            record = record.copy(phase = RunOutcomeRecoveryPhase.RETURN_APPLIED)
+            recoverable.recoveryStore.save(record)
+
+            sink.saveLastRunSummary(record.summary)
+            record = record.copy(phase = RunOutcomeRecoveryPhase.SUMMARY_APPLIED)
+            recoverable.recoveryStore.save(record)
+
+            if (!recoverable.recoveryStore.clear()) {
+                recoveryBlocked = true
+                return recoveryPending(ghostPromoted)
+            }
+
+            RunOutcomeCommitResult(
+                disposition = RunOutcomeCommitDisposition.COMMITTED,
+                ghostPromoted = ghostPromoted
+            )
+        } catch (_: Exception) {
+            recoveryBlocked = true
+            recoveryPending(ghostPromoted)
+        }
+    }
+
+    private fun recoverPendingOutcome(): Boolean {
+        val recoverable = recoverableSink ?: return true
+        return try {
+            when (val loaded = recoverable.recoveryStore.load()) {
+                RunOutcomeRecoveryLoadResult.Empty -> true
+                RunOutcomeRecoveryLoadResult.Corrupt -> false
+                is RunOutcomeRecoveryLoadResult.Pending -> {
+                    var record = loaded.record
+                    if (!ensureMoodState(recoverable, record)) return false
+                    record = record.copy(phase = RunOutcomeRecoveryPhase.MOOD_APPLIED)
+                    recoverable.recoveryStore.save(record)
+
+                    if (!ensureReturnState(recoverable, record)) return false
+                    record = record.copy(phase = RunOutcomeRecoveryPhase.RETURN_APPLIED)
+                    recoverable.recoveryStore.save(record)
+
+                    sink.saveLastRunSummary(record.summary)
+                    record = record.copy(phase = RunOutcomeRecoveryPhase.SUMMARY_APPLIED)
+                    recoverable.recoveryStore.save(record)
+                    recoverable.recoveryStore.clear()
+                }
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun ensureMoodState(
+        recoverable: RecoverableRunOutcomePersistenceSink,
+        record: RunOutcomeRecoveryRecord
+    ): Boolean {
+        val actual = recoverable.loadForestMoodState()
+        if (actual == record.nextMood) return true
+        if (actual != record.previousMood) return false
+        recoverable.saveForestMoodState(record.nextMood)
+        return recoverable.loadForestMoodState() == record.nextMood
+    }
+
+    private fun ensureReturnState(
+        recoverable: RecoverableRunOutcomePersistenceSink,
+        record: RunOutcomeRecoveryRecord
+    ): Boolean {
+        val actual = recoverable.loadReturnMomentState()
+        if (actual == record.nextReturn) return true
+        if (actual != record.previousReturn) return false
+        recoverable.saveReturnMomentState(record.nextReturn)
+        return recoverable.loadReturnMomentState() == record.nextReturn
+    }
+
+    private fun recoveryPending(ghostPromoted: Boolean): RunOutcomeCommitResult =
+        RunOutcomeCommitResult(
+            disposition = RunOutcomeCommitDisposition.RECOVERY_PENDING,
+            ghostPromoted = ghostPromoted
+        )
 }
