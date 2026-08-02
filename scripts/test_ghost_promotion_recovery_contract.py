@@ -21,8 +21,7 @@ SAVE_MANAGER = (
 )
 
 
-def extract_braced_block(source: str, signature: str) -> str:
-    start = source.index(signature)
+def extract_braced_block_at(source: str, start: int) -> str:
     brace = source.index("{", start)
     depth = 0
     in_string = False
@@ -75,7 +74,26 @@ def extract_braced_block(source: str, signature: str) -> str:
                 return source[start : index + 1]
         index += 1
 
-    raise AssertionError(f"Unbalanced Kotlin block for {signature!r}")
+    raise AssertionError(f"Unbalanced Kotlin block starting at {start}")
+
+
+def extract_braced_block(source: str, signature: str) -> str:
+    return extract_braced_block_at(source, source.index(signature))
+
+
+def extract_braced_overload(source: str, signature: str) -> str:
+    """Return the first overload with a block body, skipping expression bodies."""
+    start = 0
+    while True:
+        candidate = source.find(signature, start)
+        if candidate < 0:
+            raise AssertionError(f"No block-bodied overload for {signature!r}")
+        next_candidate = source.find(signature, candidate + len(signature))
+        search_end = next_candidate if next_candidate >= 0 else len(source)
+        brace = source.find("{", candidate, search_end)
+        if brace >= 0:
+            return extract_braced_block_at(source, candidate)
+        start = candidate + len(signature)
 
 
 class GhostPromotionRecoveryContractTest(unittest.TestCase):
@@ -91,10 +109,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn("pendingWrite = executor.submit", self.manager)
 
     def test_immediate_publication_carries_distance_and_fingerprint(self) -> None:
-        save = extract_braced_block(
-            self.manager,
-            "fun saveBestRunAsync(\n        context: Context,",
-        )
+        save = extract_braced_overload(self.manager, "fun saveBestRunAsync(")
         order = (
             "val snapshot = frames.toList()",
             "GhostRunFingerprint.calculate(snapshot)",
@@ -106,6 +121,24 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertEqual(sorted(positions), positions)
         self.assertIn("distanceM = distanceM", save)
 
+    def test_legacy_and_direct_callers_cannot_regress_pending_distance(self) -> None:
+        compatibility_start = self.manager.index(
+            "fun saveBestRunAsync(context: Context, frames: List<GhostFrame>)"
+        )
+        compatibility_end = self.manager.index("/**", compatibility_start)
+        compatibility = self.manager[compatibility_start:compatibility_end]
+        self.assertIn(
+            "distanceM = bestDistanceFloor(context.applicationContext)",
+            compatibility,
+        )
+
+        save = extract_braced_overload(self.manager, "fun saveBestRunAsync(")
+        recovery_gate = save.index("if (!recovery.allowsNewPromotion) return false")
+        stale_gate = save.index("if (distanceM < bestDistanceFloor(appContext)) return false")
+        publication = save.index("val snapshot = frames.toList()")
+        self.assertLess(recovery_gate, stale_gate)
+        self.assertLess(stale_gate, publication)
+
     def test_pending_publication_is_part_of_best_distance_floor(self) -> None:
         floor = extract_braced_block(self.manager, "fun bestDistanceFloor(")
         self.assertIn("SaveManager.loadBestDistance", floor)
@@ -113,10 +146,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn("maxOf(diskDistance, publishedDistance)", floor)
 
     def test_worker_recovers_previous_receipt_before_new_persist(self) -> None:
-        save = extract_braced_block(
-            self.manager,
-            "fun saveBestRunAsync(\n        context: Context,",
-        )
+        save = extract_braced_overload(self.manager, "fun saveBestRunAsync(")
         worker = save[save.index("pendingWrite = executor.submit") :]
         recover = worker.index("val recovery = coordinator.recover()")
         gate = worker.index("if (!recovery.allowsNewPromotion)")
