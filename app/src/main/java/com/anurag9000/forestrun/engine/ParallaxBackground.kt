@@ -284,13 +284,22 @@ class ParallaxBackground(
     // -----------------------------------------------------------------------
 
     fun update(deltaTime: Float, gameScrollSpeed: Float) {
-        ambienceTime += deltaTime
-        currentScrollSpeed = gameScrollSpeed
-        for (layer in layers) layer.update(deltaTime, gameScrollSpeed)
+        if (!FrameInputAdmission.accepts(deltaTime, gameScrollSpeed)) return
+        val dt = FrameInputAdmission.boundedDeltaSeconds(deltaTime)
+        val scrollSpeed = FrameInputAdmission.boundedScrollSpeed(gameScrollSpeed)
+
+        val safeAmbienceTime = ambienceTime.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        ambienceTime = (safeAmbienceTime + dt).coerceAtMost(Float.MAX_VALUE)
+        currentScrollSpeed = scrollSpeed
+        for (layer in layers) layer.update(dt, scrollSpeed)
+
+        val safeBloomLevel = bloomLevel.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+        bloomLevel = safeBloomLevel
         val blendSpeed = if (bloomTarget > bloomLevel) 4.5f else 2.8f
-        bloomLevel += (bloomTarget - bloomLevel) * (blendSpeed * deltaTime).coerceAtMost(1f)
+        bloomLevel += (bloomTarget - bloomLevel) * (blendSpeed * dt).coerceAtMost(1f)
         if (bloomLevel > 0.01f || bloomActivationLevel > 0.01f) {
-            bloomPulse += deltaTime * 3.4f
+            val safeBloomPulse = bloomPulse.takeIf { it.isFinite() && it >= 0f } ?: 0f
+            bloomPulse = (safeBloomPulse + dt * 3.4f).coerceAtMost(Float.MAX_VALUE)
         }
     }
 
@@ -1155,7 +1164,7 @@ class ParallaxBackground(
     // ── Existing tree-silhouette helper (unchanged API) ─────────────────────
 
     /**
-     * Draws a row of simple rounded \"tree crown\" silhouettes across the bitmap.
+     * Draws a row of simple rounded "tree crown" silhouettes across the bitmap.
      */
     private fun drawTreeSilhouettes(
         canvas: Canvas,
