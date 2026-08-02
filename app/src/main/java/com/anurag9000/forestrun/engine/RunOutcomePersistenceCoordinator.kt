@@ -18,6 +18,15 @@ internal data class RunOutcomeCommitResult(
         get() = disposition == RunOutcomeCommitDisposition.COMMITTED
 }
 
+/** Exactly-once terminal persistence seam used by higher-level outcome owners. */
+internal interface RunOutcomeCommitter {
+    fun commit(
+        summary: RunSummary,
+        completedGhost: List<GhostFrame>,
+        persistProgress: Boolean
+    ): RunOutcomeCommitResult
+}
+
 /** Side-effect seam used by [RunOutcomePersistenceCoordinator]. */
 internal interface RunOutcomePersistenceSink {
     fun loadBestDistanceM(): Float
@@ -65,7 +74,7 @@ internal class AndroidRunOutcomePersistenceSink(context: Context) : RunOutcomePe
  */
 internal class RunOutcomePersistenceCoordinator(
     private val sink: RunOutcomePersistenceSink
-) {
+) : RunOutcomeCommitter {
     private var terminalOutcomeCommitted = false
 
     @Synchronized
@@ -74,7 +83,7 @@ internal class RunOutcomePersistenceCoordinator(
     }
 
     @Synchronized
-    fun commit(
+    override fun commit(
         summary: RunSummary,
         completedGhost: List<GhostFrame>,
         persistProgress: Boolean
