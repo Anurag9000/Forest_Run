@@ -17,6 +17,7 @@ class FrameInputAdmissionTest {
         )
 
         accepted.forEach { (delta, speed) ->
+            assertTrue(FrameInputAdmission.acceptsDelta(delta))
             assertTrue(FrameInputAdmission.accepts(delta, speed))
         }
     }
@@ -26,8 +27,11 @@ class FrameInputAdmissionTest {
         val malformed = listOf(Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY)
 
         malformed.forEach { delta ->
+            assertFalse(FrameInputAdmission.acceptsDelta(delta))
             assertFalse(FrameInputAdmission.accepts(delta, GameConstants.BASE_SCROLL_SPEED))
         }
+        assertFalse(FrameInputAdmission.acceptsDelta(0f))
+        assertFalse(FrameInputAdmission.acceptsDelta(-0.001f))
         assertFalse(FrameInputAdmission.accepts(0f, GameConstants.BASE_SCROLL_SPEED))
         assertFalse(FrameInputAdmission.accepts(-0.001f, GameConstants.BASE_SCROLL_SPEED))
 
