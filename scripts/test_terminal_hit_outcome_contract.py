@@ -132,6 +132,13 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
         for item in required:
             self.assertEqual(1, self.hit_block.count(item), item)
 
+    def test_identity_invariant_precedes_every_side_effect(self) -> None:
+        invariant = self.complete.index("require(presentation.killerType == killerType)")
+        first_side_effect = self.complete.index("relationshipRecorder.recordHit(killerType)")
+        feedback = self.complete.index("feedbackPresenter.present(presentation)")
+        self.assertLess(invariant, first_side_effect)
+        self.assertLess(invariant, feedback)
+
     def test_terminal_coordinator_preserves_authored_completion_order(self) -> None:
         relationship = self.complete.index("relationshipRecorder.recordHit(killerType)")
         feedback = self.complete.index("feedbackPresenter.present(presentation)")
