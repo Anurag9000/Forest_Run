@@ -171,16 +171,60 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
         self.assertIn("= false", sink)
         self.assertNotIn("GhostPersistenceManager", sink)
 
-    def test_ghost_repair_uses_only_receipt_and_artifact_owners(self) -> None:
+    def test_ghost_repair_uses_receipt_manifest_and_artifact_owners_only(self) -> None:
         handler = extract_braced_block(
             self.source,
             "private class AndroidGhostPromotionEvidenceHandler(",
         )
         self.assertIn("AtomicFileGhostPromotionReceiptStore(", handler)
+        self.assertIn("AtomicFileGhostArtifactManifestStore(", handler)
         self.assertIn("GhostPromotionRecoveryCoordinator(", handler)
         self.assertIn("AndroidGhostPromotionArtifactStore(context)", handler)
+        self.assertIn("manifestStore = manifestStore", handler)
         self.assertNotIn("RunOutcomePersistenceCoordinator", handler)
         self.assertNotIn("SharedPreferencesRunOutcomeRecoveryStore", handler)
+
+    def test_ghost_inspection_distinguishes_receipt_and_manifest_corruption(self) -> None:
+        handler = extract_braced_block(
+            self.source,
+            "private class AndroidGhostPromotionEvidenceHandler(",
+        )
+        inspect = extract_braced_block(handler, "override fun inspect()")
+        self.assertIn('"invalid_receipt"', inspect)
+        self.assertIn("inspectManifest()", inspect)
+
+        manifest = extract_braced_block(handler, "private fun inspectManifest()")
+        self.assertIn('"no_evidence"', manifest)
+        self.assertIn('"invalid_manifest"', manifest)
+        self.assertIn('"valid_manifest"', manifest)
+        self.assertIn('"manifest_artifact_mismatch"', manifest)
+        self.assertIn("manifestMatches(loaded.manifest)", manifest)
+
+    def test_ghost_clear_preserves_valid_manifest_but_removes_invalid_identity(self) -> None:
+        handler = extract_braced_block(
+            self.source,
+            "private class AndroidGhostPromotionEvidenceHandler(",
+        )
+        clear = extract_braced_block(handler, "override fun clearEvidence()")
+        self.assertIn("receiptStore.clear()", clear)
+        self.assertIn("manifestStore.clear()", clear)
+        self.assertIn("if (manifestMatches(loaded.manifest)) true", clear)
+        self.assertIn("receiptCleared && manifestCleared", clear)
+
+        matches = extract_braced_block(handler, "private fun manifestMatches(")
+        self.assertIn("SaveManager.loadGhostRun(context)", matches)
+        self.assertIn("GhostRunValidator.isValid(frames)", matches)
+        self.assertIn("GhostRunFingerprint.calculate(frames)", matches)
+
+    def test_manifest_corruption_has_distinct_recovery_status(self) -> None:
+        handler = extract_braced_block(
+            self.source,
+            "private class AndroidGhostPromotionEvidenceHandler(",
+        )
+        recover = extract_braced_block(handler, "override fun recoverSafely()")
+        self.assertIn("GhostPromotionRecoveryDisposition.CORRUPT_RECEIPT", recover)
+        self.assertIn("GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST", recover)
+        self.assertIn('"invalid_manifest_or_artifact"', recover)
 
     def test_clear_verifies_clean_state_after_deletion(self) -> None:
         clear = extract_braced_block(self.source, "private fun clear(")
