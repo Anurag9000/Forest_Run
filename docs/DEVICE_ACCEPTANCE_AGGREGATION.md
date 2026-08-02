@@ -6,7 +6,7 @@ Aggregation is descriptive evidence. It does not weaken the acceptance validator
 
 ## Canonical entrypoint
 
-Use the strict wrapper for operator work:
+Use the fail-closed wrapper for operator work:
 
 ```bash
 bash scripts/aggregate_device_acceptance_bundle.sh \
@@ -15,16 +15,78 @@ bash scripts/aggregate_device_acceptance_bundle.sh \
   release-evidence/baseline/device-acceptance.json
 ```
 
-The baseline argument is optional. The wrapper orders the gates as follows:
+The baseline argument is optional.
 
-1. strict-parse candidate and baseline manifests;
-2. require at least one valid nonempty schema-v2 deterministic trace in each manifest;
-3. independently reconstruct each trace's scenario definition and input script from Kotlin source;
-4. validate candidate, artifact, scenario, hashes, schedules, and actions;
-5. run physical evidence aggregation;
-6. strict-parse the published aggregate.
+The wrapper performs a two-phase publication sequence:
 
-The Python core repeats the material security gates; they are not wrapper-only conveniences. Calling `aggregate_device_acceptance.py` directly still requires an accepted manifest, a nonempty exact trace, immutable manifest identity across acceptance/trace validation, and matching trace plus hardware matrices for candidate/baseline comparison.
+1. strict-parse the candidate and optional baseline manifests;
+2. require at least one valid, nonempty schema-v2 deterministic trace in every manifest;
+3. independently reconstruct trace scenario definitions and input scripts from Kotlin source;
+4. run physical evidence aggregation into a unique same-directory staged file, never directly into the final path;
+5. strict-parse the staged aggregate;
+6. validate the staged aggregate with `validate_device_acceptance_aggregate.py`, an independent consumer-side contract validator;
+7. revalidate candidate and baseline manifests, signed artifacts, every evidence digest, and every exact trace after staging has completed;
+8. bind the staged candidate and optional baseline identities back to those final manifest validations;
+9. recheck staged/output path, symlink, and inode separation from every protected source;
+10. atomically replace the final output and fsync its parent directory.
+
+If any gate fails, the wrapper exits nonzero and the final output is not published. Its cleanup trap removes the staged file. The dedicated publisher API intentionally leaves a failed staged file in place when called directly so an operator can inspect it; the canonical wrapper owns cleanup policy.
+
+## Layered implementation
+
+The aggregation path deliberately separates producer, independent validator, and publisher responsibilities.
+
+### Producer
+
+`scripts/aggregate_device_acceptance.py`:
+
+- strictly parses and accepts every manifest;
+- requires exact deterministic traces in the Python core, not only in the wrapper;
+- verifies manifest bytes, size, modification time, and inode remain stable across acceptance and trace validation;
+- derives the anonymized hardware matrix and metric distributions;
+- compares only exact trace and hardware matrices;
+- refuses candidate/baseline aliases;
+- prevents its output from overwriting manifests, artifacts, or evidence files;
+- emits strict finite JSON through a flushed atomic replacement.
+
+### Independent aggregate validator
+
+`scripts/validate_device_acceptance_aggregate.py` does not import or trust the producer. It independently validates:
+
+- exact root, candidate, class, metric, distribution, trace, and comparison keys;
+- schema version and `status = valid`;
+- canonical application ID;
+- lowercase commit, artifact, certificate, matrix, physical-device, and device-profile digests;
+- the mandatory five-class device matrix;
+- sorted, unique session, physical-device, and profile identifiers;
+- per-class counts and total session consistency;
+- `minimum <= mean <= maximum` for every finite nonnegative distribution;
+- weighted global means and global extrema reconstructed from class summaries;
+- nonnegative absolute-threshold headroom;
+- a freshly reconstructed `comparison_matrix_sha256`;
+- nonempty, sorted, unique exact trace contracts;
+- trace/evidence count consistency;
+- baseline matrix, trace, class, delta, and interpretation bindings.
+
+Unknown fields fail closed. This makes accidental producer schema drift and forged post-processing visible before publication.
+
+### Final publisher
+
+`scripts/publish_device_acceptance_aggregate.py` accepts a staged aggregate and performs the final publication transaction. It:
+
+- rejects staged or output symlinks;
+- requires staged and output paths to be distinct and in the same directory;
+- rejects candidate/baseline path or inode aliasing;
+- independently re-runs physical acceptance and exact trace validation after staging;
+- thereby rehashes the signed artifact and every evidence file after aggregate generation;
+- proves the staged candidate commit/artifact match the final candidate manifest;
+- proves baseline presence and commit/artifact identity match the supplied final baseline manifest;
+- rejects staged/output resolved-path and hard-link aliases to protected sources;
+- rechecks alias separation immediately before publication;
+- atomically moves the already validated staged inode into the final path;
+- fsyncs the destination directory.
+
+This closes the canonical publication window in which a source could otherwise be modified after aggregation but before a report was made final.
 
 ## Preconditions
 
@@ -43,16 +105,11 @@ Both the candidate and optional baseline must be complete manifests accepted by 
 
 An invalid, trace-free, mixed-build, forged-trace, or tampered manifest is rejected before any distribution is calculated. Recomputing the manifest evidence digest after changing a trace action does not bypass the source-reconstructed semantic check.
 
-## Immutable manifest snapshot
+## Immutable manifest reads
 
-The Python core performs a stable bounded manifest read and records size, modification time, and inode identity. After the acceptance and trace validators finish, it reads the manifest again and requires:
+The producer and final publisher perform stable bounded manifest reads. Each records device/inode identity, size, and modification timestamp, reads the complete bytes, then rechecks identity. After acceptance and trace validation, the manifest is read again and must still be byte-identical.
 
-- identical bytes;
-- identical size;
-- identical modification timestamp;
-- identical inode.
-
-A manifest changed between validation passes is rejected. The already validated parsed manifest is then used to derive the protected source set; the publisher does not reread a potentially different manifest to decide which files must be protected.
+The parsed, validated manifest determines the protected source set. Publication never rereads a different manifest merely to decide what must be protected.
 
 ## Anonymized device and comparison identities
 
@@ -67,9 +124,10 @@ For each device class the report retains:
 
 - distinct anonymized physical-device IDs and count;
 - distinct anonymized device-profile IDs;
-- exact session count and session IDs.
+- exact session count and session IDs;
+- per-metric distributions.
 
-A deterministic `comparison_matrix_sha256` covers every class's session count and sorted device-profile IDs.
+A deterministic `comparison_matrix_sha256` covers every class's session count and sorted device-profile IDs. The independent validator reconstructs this hash rather than trusting the serialized value.
 
 ## Candidate-only report
 
@@ -87,18 +145,11 @@ The report contains:
 - unique trace contracts, including scenario, scenario-definition SHA-256, and input-contract SHA-256;
 - comparison-matrix SHA-256;
 - session-duration minimum, mean, and maximum;
-- global minimum, mean, and maximum for:
-  - p95 frame time;
-  - p99 frame time;
-  - slow-frame ratio;
-  - peak PSS memory;
-  - crashes;
-  - ANRs;
+- global and per-class minimum, mean, and maximum for p95/p99 frame time, slow-frame ratio, peak PSS, crashes, and ANRs;
 - worst-case headroom against each frozen acceptance threshold;
-- the same distributions for each required device class;
 - anonymized physical-device IDs, profile IDs, and exact session IDs per class.
 
-A negative threshold-headroom value should be impossible for a valid manifest because the validator rejects threshold failures. Headroom is retained to show how close the worst accepted session came to the frozen boundary.
+A negative threshold-headroom value should be impossible for a valid manifest because the validator rejects threshold failures. The independent aggregate validator also rejects negative serialized headroom.
 
 ## Baseline comparison
 
@@ -111,7 +162,7 @@ The candidate and baseline must expose:
 - the same anonymized device-profile set within each class;
 - the same resulting comparison-matrix SHA-256.
 
-This prevents measured deltas from being confounded by different deterministic scenarios, encounter definitions, input schedules, device substitutions, OS/build changes, refresh configurations, memory tiers, or sample counts. The comparison reports mean and maximum deltas globally and per class and carries both the matched trace-contract set and comparison-matrix hash into the output.
+This prevents measured deltas from being confounded by different deterministic scenarios, encounter definitions, input schedules, device substitutions, OS/build changes, refresh configurations, memory tiers, or sample counts. The comparison reports mean and maximum deltas globally and per class.
 
 For frame time, slow-frame ratio, memory, crashes, and ANRs:
 
@@ -119,45 +170,49 @@ For frame time, slow-frame ratio, memory, crashes, and ANRs:
 - a negative delta is better;
 - zero means no measured change at the reported precision.
 
-The tool deliberately does not decide how much positive change is acceptable. A regression tolerance, when justified, must be separately authored, reviewed, frozen before final measurement, and applied through an explicit release policy rather than silently embedded in aggregation code.
+The fixed interpretation sentence is part of the validated schema. The tool deliberately does not decide how much positive change is acceptable. Any regression tolerance must be separately authored, reviewed, and frozen before final measurement.
 
 ## Interpretation rules
 
 1. Never compare an exploratory local APK with an accepted internal-track candidate.
-2. Do not compare manifests whose device-class matrices differ.
-3. Do not compare manifests whose exact trace-contract sets differ.
-4. Do not compare manifests whose per-class session counts or anonymized profile sets differ.
-5. Examine class-level values before relying on the global mean; an improvement on fast hardware can conceal a regression on the supported device floor.
-6. Use maximum deltas to identify worst-case regressions and mean deltas to understand broad movement.
-7. Review raw traces for material changes. Aggregation cannot explain whether a frame-time increase came from rendering, allocation/GC, I/O, audio, thermal throttling, or another measured subsystem.
-8. A candidate that still passes its absolute thresholds may nevertheless regress relative to the accepted baseline and require investigation.
-9. Do not rewrite an old accepted manifest. Preserve candidate evidence immutably so comparisons remain reproducible.
+2. Do not compare manifests whose device classes, exact trace contracts, per-class session counts, or anonymized profile sets differ.
+3. Examine class-level values before relying on the global mean; fast hardware can conceal a supported-device-floor regression.
+4. Use maximum deltas for worst-case regressions and mean deltas for broad movement.
+5. Review raw traces for material changes; aggregation cannot explain rendering, allocation/GC, I/O, audio, or thermal causes.
+6. A candidate that passes absolute thresholds may still regress relative to the accepted baseline and require investigation.
+7. Preserve accepted manifests, aggregates, traces, and raw evidence immutably.
 
-## Output and source integrity
+## Test coverage
 
-The output is strict finite JSON and is published through a staged, flushed, atomic replacement. Invalid inputs produce a nonzero exit status and no new aggregate file.
+The host-side suites include:
 
-Both the shell wrapper and the Python core reject candidate/baseline aliasing. The Python publisher additionally protects:
-
-- candidate and baseline manifests;
-- signed artifacts;
-- every referenced raw evidence file;
-- symlink-resolved path aliases;
-- existing hard-link aliases.
-
-The separation check runs before temporary publication and immediately before atomic replacement. Aggregate output cannot overwrite any validated source inode. The protected source set is carried from the same parsed manifest snapshot used to calculate the report.
-
-The aggregate contains no user account, save history, relationship history, advertising identifier, or device serial. Raw manufacturer/model/build fields remain only in the accepted source manifest; the aggregate comparison surface uses anonymized SHA-256 identities.
+- producer compatibility with the independent validator;
+- candidate-only and baseline schema acceptance;
+- unknown-field rejection;
+- forged matrix-hash rejection;
+- weighted-global-distribution rejection;
+- identifier ordering, duplicate, count, and mandatory-class failures;
+- negative headroom and impossible trace/evidence counts;
+- baseline matrix, trace, identity, and semantic drift;
+- duplicate-key strict JSON rejection;
+- valid two-phase publication;
+- evidence mutation after staging;
+- candidate and baseline identity substitution;
+- output hard-link and symlink aliasing;
+- cross-directory staging;
+- candidate/baseline manifest aliasing;
+- failed publication preserving the staged file in the direct publisher API.
 
 ## Release relationship
 
 Aggregation adds a review layer after absolute acceptance:
 
 1. validate the candidate manifest and exact trace contract;
-2. aggregate candidate distributions and freeze its comparison-matrix hash;
-3. validate and compare with the last accepted candidate using identical trace and hardware matrices;
-4. investigate material regressions using raw evidence;
-5. remediate and rerun the entire frozen matrix when necessary;
-6. retain the final manifest, aggregate, comparison, exact traces, and raw evidence together.
+2. aggregate to a staged report and freeze its comparison-matrix hash;
+3. independently validate the aggregate schema and arithmetic;
+4. revalidate all source evidence after staging;
+5. publish atomically only when candidate/baseline identities still match;
+6. investigate material regressions using raw evidence;
+7. retain the final manifest, aggregate, comparison, exact traces, and raw evidence together.
 
 A successful aggregate command does not make Forest Run release-ready by itself. Signing, internal delivery, physical testing, visual review, accessibility review, and current store-policy approval remain independent gates.
