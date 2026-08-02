@@ -103,6 +103,70 @@ class PublishDeviceAcceptanceAggregateTest(unittest.TestCase):
             self.assertTrue(staged.is_file())
             self.assertFalse((root / "aggregate.json").exists())
 
+    def test_rejects_staged_mutation_during_final_source_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest, _ = self.materialize(root)
+            staged = self.stage(root, manifest)
+            original = publisher._validate_manifest
+
+            def validate_then_mutate(path: Path):
+                result = original(path)
+                staged.write_text(
+                    staged.read_text(encoding="utf-8") + " ",
+                    encoding="utf-8",
+                )
+                return result
+
+            with patch.object(
+                publisher,
+                "_validate_manifest",
+                side_effect=validate_then_mutate,
+            ):
+                with self.assertRaisesRegex(
+                    publisher.PublicationError,
+                    "staged aggregate changed during final source validation",
+                ):
+                    publisher.publish(manifest, staged, root / "aggregate.json")
+
+            self.assertTrue(staged.is_file())
+            self.assertFalse((root / "aggregate.json").exists())
+
+    def test_rejects_protected_source_mutation_after_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest, bundle = self.materialize(root)
+            staged = self.stage(root, manifest)
+            evidence_entry = bundle["sessions"][1]["scenarios"]["ordinary_play_15m"][
+                "evidence_files"
+            ][0]
+            evidence = root / evidence_entry["path"]
+            original = publisher._load_aggregate
+            calls = 0
+
+            def load_then_mutate(path: Path):
+                nonlocal calls
+                calls += 1
+                result = original(path)
+                if calls == 2:
+                    evidence.write_bytes(b"mutated after source snapshot\n")
+                return result
+
+            with patch.object(
+                publisher,
+                "_load_aggregate",
+                side_effect=load_then_mutate,
+            ):
+                with self.assertRaisesRegex(
+                    publisher.PublicationError,
+                    "protected source changed before publication",
+                ):
+                    publisher.publish(manifest, staged, root / "aggregate.json")
+
+            self.assertEqual(2, calls)
+            self.assertTrue(staged.is_file())
+            self.assertFalse((root / "aggregate.json").exists())
+
     def test_rejects_staged_candidate_identity_substitution(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
