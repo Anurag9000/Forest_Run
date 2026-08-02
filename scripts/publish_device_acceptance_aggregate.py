@@ -80,6 +80,11 @@ def _validate_manifest(
             repository_root=REPOSITORY_ROOT,
             require_at_least_one=True,
         )
+        final_summary = acceptance.validate_bundle(
+            data,
+            source_bytes=raw,
+            evidence_base=resolved.parent,
+        )
     except (
         strict_json.StrictJsonError,
         acceptance.EvidenceError,
@@ -92,14 +97,18 @@ def _validate_manifest(
         raise PublicationError(
             f"acceptance manifest changed during final publication validation: {resolved}"
         )
+    if final_summary != summary:
+        raise PublicationError(
+            "acceptance validation changed across the final trace-validation pass"
+        )
     if (
-        traces["candidate_commit_sha"] != summary.candidate_sha
-        or traces["artifact_sha256"] != summary.artifact_sha256
+        traces["candidate_commit_sha"] != final_summary.candidate_sha
+        or traces["artifact_sha256"] != final_summary.artifact_sha256
     ):
         raise PublicationError(
             "acceptance and trace validators resolved different candidate identities"
         )
-    return data, summary, traces
+    return data, final_summary, traces
 
 
 def _same_file_or_path(first: Path, second: Path) -> bool:
@@ -221,25 +230,34 @@ def publish(
     if not staged.is_file():
         raise PublicationError(f"staged aggregate is missing: {staged}")
 
-    if baseline_path is not None and _same_file_or_path(candidate_resolved, baseline_path):
-        raise PublicationError("candidate and baseline manifests must be distinct files")
+    baseline_resolved = None
+    manifest_paths = [candidate_resolved]
+    if baseline_path is not None:
+        baseline_resolved = baseline_path.expanduser().resolve()
+        if _same_file_or_path(candidate_resolved, baseline_resolved):
+            raise PublicationError("candidate and baseline manifests must be distinct files")
+        manifest_paths.append(baseline_resolved)
 
+    _assert_separate(staged, manifest_paths, "staged aggregate")
+    _assert_separate(output, manifest_paths, "aggregate output")
+    payload, summary = _load_aggregate(staged)
+
+    # Final source validation deliberately happens after staged-report validation.
+    # The second acceptance pass inside _validate_manifest rehashes every artifact
+    # and evidence file after exact trace validation and immediately before binding.
     candidate_data, candidate_summary, _ = _validate_manifest(candidate_resolved)
     protected = list(_protected_paths(candidate_resolved, candidate_data))
     baseline_summary = None
-    if baseline_path is not None:
-        baseline_resolved = baseline_path.expanduser().resolve()
+    if baseline_resolved is not None:
         baseline_data, baseline_summary, _ = _validate_manifest(baseline_resolved)
         protected.extend(_protected_paths(baseline_resolved, baseline_data))
 
     _assert_separate(staged, protected, "staged aggregate")
     _assert_separate(output, protected, "aggregate output")
-
-    payload, summary = _load_aggregate(staged)
     _assert_aggregate_identity(payload, candidate_summary, baseline_summary)
 
-    # Recheck aliases after all expensive hashing/semantic validation and publish
-    # immediately. Any source mutation during hashing is rejected by the validators.
+    # Recheck aliases after all hashing and semantic validation, then replace the
+    # destination immediately with the already validated staged inode.
     _assert_separate(staged, protected, "staged aggregate")
     _assert_separate(output, protected, "aggregate output")
     try:
