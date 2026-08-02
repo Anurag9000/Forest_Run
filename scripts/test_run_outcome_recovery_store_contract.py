@@ -198,15 +198,27 @@ class RunOutcomeRecoveryStoreContractTest(unittest.TestCase):
         for item in required:
             self.assertIn(item, transition)
 
-    def test_route_transition_preserves_none_and_saturates_real_tiers(self) -> None:
+    def test_route_transition_matches_canonical_derived_counter_ceiling(self) -> None:
         transition = extract_between(
             self.source,
             "fun nextRouteTierCount(",
             "fun persistedSummary(",
         )
-        self.assertIn("tier == PacifistRouteTier.NONE", transition)
-        self.assertIn("previous.coerceAtLeast(0)", transition)
-        self.assertIn("saturatingIncrement(previous)", transition)
+        self.assertIn(
+            "internal const val MAX_RECOVERABLE_ROUTE_TIER_COUNT = Int.MAX_VALUE / 16",
+            self.source,
+        )
+        self.assertIn(
+            "previous.coerceIn(0, MAX_RECOVERABLE_ROUTE_TIER_COUNT)",
+            transition,
+        )
+        self.assertIn("tier == PacifistRouteTier.NONE -> boundedPrevious", transition)
+        self.assertIn(
+            "boundedPrevious >= MAX_RECOVERABLE_ROUTE_TIER_COUNT",
+            transition,
+        )
+        self.assertIn("MAX_RECOVERABLE_ROUTE_TIER_COUNT", transition)
+        self.assertIn("else -> boundedPrevious + 1", transition)
 
     def test_persisted_summary_matches_save_manager_sanitization(self) -> None:
         transition = extract_between(
@@ -236,7 +248,10 @@ class RunOutcomeRecoveryStoreContractTest(unittest.TestCase):
         )
         self.assertIn("RunOutcomeRecoveryTransitions.persistedSummary(summary)", save)
         self.assertIn("routeTierKey(persisted.pacifistRouteTier)", save)
-        self.assertIn("editor.putInt(key, routeTierCount.coerceAtLeast(0))", save)
+        self.assertIn(
+            "routeTierCount.coerceIn(0, MAX_RECOVERABLE_ROUTE_TIER_COUNT)",
+            save,
+        )
         self.assertEqual(1, save.count("editor.commit()"))
         self.assertNotIn(".apply()", self.snapshot)
         self.assertNotIn("SaveManager.saveLastRunSummary", self.snapshot)
