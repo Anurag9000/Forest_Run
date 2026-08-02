@@ -2,85 +2,64 @@
 
 ## Goal
 
-A terminal run updates several independent persistence surfaces. Process death between those writes must not:
+A terminal run updates independent persistence surfaces. Process death between writes must not:
 
-- increment forest-mood counters twice;
-- increment rough-run streak twice;
-- increment a pacifist-route count twice;
-- lose the canonical completed summary;
-- advance best distance without the corresponding ghost;
+- increment progression counters twice;
+- lose the completed summary;
+- advance best distance without a corresponding ghost;
 - preserve a newer ghost behind an older threshold;
 - silently overwrite unrelated live state;
 - erase corrupt evidence and continue as though recovery succeeded.
 
-Terminal persistence now uses two purpose-specific recovery protocols:
+Terminal persistence uses two purpose-specific protocols:
 
 1. `RunOutcomePersistenceCoordinator` protects non-ghost progression with a synchronous before/after journal;
-2. `GhostPromotionRecoveryCoordinator` protects ghost and best-distance promotion with an AtomicFile receipt and artifact fingerprint.
+2. `GhostPromotionRecoveryCoordinator` protects ghost publication with a transient receipt and a persistent artifact manifest.
 
-The protocols are independently recoverable. They are not one global transaction spanning every terminal side effect.
+They are independently recoverable rather than one global transaction spanning every terminal side effect.
 
-## Protected state surfaces
+## Protected surfaces
 
-### Non-ghost outcome journal
-
-Protects:
-
-1. `ForestMoodState`;
-2. `ReturnMomentState`;
-3. the completed persisted `RunSummary`;
-4. the summary's KIND, MERCIFUL, or PEACEFUL route counter.
-
-### Ghost promotion receipt
+### Non-ghost journal
 
 Protects:
 
-1. the validated durable ghost frame artifact;
-2. the best-distance threshold associated with an accepted promotion.
+- `ForestMoodState`;
+- `ReturnMomentState`;
+- persisted `RunSummary`;
+- KIND, MERCIFUL, or PEACEFUL route count.
 
-Relationship history and authored presentation occur before these persistence owners and are not replayed by either recovery protocol.
+### Ghost evidence
 
-## Non-ghost journal schema
+Protects:
+
+- the validated ghost frame artifact;
+- the distance associated with that exact artifact;
+- the durable best-distance threshold.
+
+Relationship history and authored presentation occur before these persistence owners and are not replayed by either protocol.
+
+## Non-ghost journal
 
 `RunOutcomeRecoveryRecord` stores:
 
 ```text
 phase
 raw completed summary
-previous forest mood
-expected forest mood
-previous return state
-expected return state
-previous route-tier count
-expected route-tier count
+previous and expected forest mood
+previous and expected return state
+previous and expected route-tier count
 ```
 
-The journal is written by `SharedPreferencesRunOutcomeRecoveryStore` into:
+`SharedPreferencesRunOutcomeRecoveryStore` writes it to:
 
 ```text
 forest_run_outcome_recovery_<sanitized save namespace>
 ```
 
-This namespace binding matters because `SaveManager` may switch to compatibility preferences for a newer save schema. Recovery evidence must follow the same save namespace.
+Schema version 2 includes route-counter snapshots. Unknown schemas, missing fields, wrong types, invalid enums, impossible bounds, or noncanonical expected states fail closed.
 
-Schema version 2 includes route-counter snapshots. Older or unknown journal schemas fail closed as corrupt evidence.
-
-## Non-ghost journal validity
-
-A record is valid only when:
-
-- every serialized summary key is present;
-- enum values decode;
-- preference value types match;
-- the quote is no longer than 8,192 characters;
-- mood counters are non-negative;
-- return timestamps and counters satisfy save bounds;
-- previous route count is within the canonical derived-counter range;
-- expected mood equals the canonical mood transition;
-- expected return state equals the canonical return transition using the recorded completion time;
-- expected route count equals the canonical bounded route transition.
-
-Raw summary numeric fields are intentionally not required to be non-negative or finite. The previous production path sanitized those values at final summary persistence, so the journal preserves them and `persistedSummary(...)` applies the same normalization later.
+Raw malformed summary numerics are retained in the journal because final persistence applies the same normalization as `SaveManager.saveLastRunSummary(...)`.
 
 ## Initial terminal protocol
 
@@ -89,55 +68,44 @@ For a persistent terminal outcome:
 ```text
 claim per-run token
 → reject unresolved older non-ghost recovery
-→ read mood/return/route before-states
-→ compute expected after-states
+→ read and derive non-ghost before/after states
 → synchronously journal PREPARED
-→ evaluate best distance against durable-or-pending ghost floor
-→ submit distance-aware ghost promotion when eligible
-→ ensure mood after-state
-→ journal MOOD_APPLIED
-→ ensure return after-state
-→ journal RETURN_APPLIED
-→ ensure atomic summary/route snapshot
-→ journal SUMMARY_APPLIED
-→ synchronously clear non-ghost journal
+→ evaluate durable-or-pending ghost distance floor
+→ submit a distance-aware ghost candidate when eligible
+→ ensure mood; checkpoint MOOD_APPLIED
+→ ensure return; checkpoint RETURN_APPLIED
+→ ensure atomic summary/route snapshot; checkpoint SUMMARY_APPLIED
+→ clear non-ghost journal
 ```
 
-The PREPARED journal precedes ghost evaluation so every later non-ghost crash window has durable evidence.
-
-The terminal coordinator does not write best distance. Ghost and threshold durability belong to the asynchronous promotion worker.
+The terminal coordinator does not write best distance. Ghost artifact and threshold durability belong to the asynchronous promotion worker.
 
 ## Non-ghost state comparison
 
-Each non-ghost recovery step implements the same three-way decision:
+Each state uses:
 
 ```text
-actual == expected after-state
-    already applied; do not replay
-
-actual == recorded before-state
-    apply expected after-state and verify
-
-otherwise
-    conflict; retain journal and block new permanent writes
+actual == expected after-state  → already applied; continue
+actual == recorded before-state → apply expected state and verify
+otherwise                       → conflict; retain evidence and block
 ```
 
-This handles a write that succeeded immediately before process death or before its checkpoint write.
+This recognizes a write that completed immediately before process death or before its checkpoint.
 
 ## Forest mood
 
-The journal precomputes the same transition as `ForestMoodSystem.recordRun`:
+Recovery precomputes the same transition as `ForestMoodSystem.recordRun(...)`:
 
-- update current mood;
-- continue or reset mood streak;
-- saturating increment total runs;
-- saturating increment exactly one mood-family counter.
+- current mood;
+- streak continue/reset;
+- saturating total-run increment;
+- one mood-family counter increment.
 
-Recovery writes the complete expected `ForestMoodState` rather than invoking the incrementing production method again.
+It writes the complete expected state rather than replaying the incrementing method.
 
 ## Return state
 
-The journal precomputes the same rough-run formula as `ReturnMomentsSystem.recordRunOutcome`:
+Recovery precomputes the same rough-run formula as `ReturnMomentsSystem.recordRunOutcome(...)`:
 
 ```text
 FEARFUL mood
@@ -145,95 +113,81 @@ or at least two hits before 650 m
 or a hit with zero kindness and fewer than four Seeds
 ```
 
-The expected state carries:
-
-- the fixed terminal completion time;
-- the unchanged last Garden greeting day;
-- saturated rough-run increment or zero reset.
-
-Recovery writes the complete expected state and verifies it.
+The expected state carries the fixed completion time, unchanged Garden greeting day, and bounded rough-run streak.
 
 ## Summary and route count
 
-`SaveManager.saveLastRunSummary` combines two behaviors:
+`SaveManager.saveLastRunSummary(...)` also increments a route-tier counter, so replay is not idempotent.
 
-1. overwrite the canonical last-run summary;
-2. increment the summary's route-tier counter.
+`SharedPreferencesRunOutcomeSummarySnapshotStore` instead writes in one synchronous transaction:
 
-Calling it during recovery is unsafe because overwriting the summary is idempotent but incrementing the route count is not.
+- every canonical `last_run_*` field;
+- the exact expected persistent route count.
 
-`SharedPreferencesRunOutcomeSummarySnapshotStore` replaces that recovery step. In one synchronous SharedPreferences transaction it writes:
+`PacifistRouteTier.NONE` writes the summary without changing its compatibility counter.
 
-- all canonical `last_run_*` keys;
-- the exact expected route counter for KIND, MERCIFUL, or PEACEFUL.
+Route counts use the same derived-counter ceiling as `SaveManager`:
 
-It does not increment from live state. It writes the journal's expected value.
+```kotlin
+Int.MAX_VALUE / 16
+```
 
-For `PacifistRouteTier.NONE`, it writes the summary and leaves the compatibility `route_none_runs` key unchanged.
+## Ghost binary compatibility
 
-## Summary sanitization
+The frame payload remains `SaveManager` ghost file version 2. This recovery tranche does not alter that codec.
 
-`RunOutcomeRecoveryTransitions.persistedSummary(...)` matches `SaveManager.saveLastRunSummary` normalization:
-
-- negative integer counters become zero;
-- nonfinite or negative distance becomes zero;
-- identity, quote, mood, route tier, and new-high-score flag remain unchanged.
-
-The recovery comparison uses this persisted image rather than the raw journal summary.
-
-## Ghost promotion receipt
-
-`GhostPromotionReceipt` stores:
+New promotions add two 24-byte AtomicFile sidecars scoped to the active ghost filename:
 
 ```text
-target distance
+<ghost>.promotion  transient in-progress receipt
+<ghost>.manifest   persistent artifact-to-distance association
+```
+
+Both store:
+
+```text
+distance
 frame count
-64-bit frame fingerprint
+64-bit raw-frame fingerprint
 ```
 
-`AtomicFileGhostPromotionReceiptStore` persists it as a versioned, fixed-size 24-byte sidecar:
-
-```text
-<active ghost filename>.promotion
-```
-
-The fingerprint covers the raw persisted bits of every frame field and the frame count. It identifies the local durable artifact expected by the receipt; it is not a cryptographic authenticity mechanism.
+The fingerprint covers frame count and every persisted frame field. It is a local recovery identity, not a cryptographic authenticity mechanism.
 
 ## Ghost promotion sequence
 
-An accepted promotion is immediately published in memory, then one daemon worker performs:
+The single worker performs:
 
 ```text
-write AtomicFile receipt
-→ write AtomicFile ghost
+write transient receipt
+→ write validated ghost
+→ write persistent manifest
 → synchronously commit max(current best, candidate distance)
-→ clear receipt
+→ clear transient receipt
 ```
 
-The best-distance write occurs only after the ghost write succeeds. Receipt clearing occurs only after the threshold is durable.
+Best distance cannot advance unless receipt, ghost, and manifest are durable.
 
-`GhostPersistenceManager.bestDistanceFloor(...)` returns the maximum of:
+The manifest persists after receipt clearing, making future promoted ghost bundles self-describing without changing the frame codec.
 
-- durable best distance;
-- accepted in-memory promotion distance.
+`GhostPersistenceManager.bestDistanceFloor(...)` remains:
 
-Both the terminal coordinator and the manager itself use this floor. A shorter direct or terminal candidate cannot queue behind a longer pending promotion.
+```text
+max(durable best distance, accepted in-memory promotion distance)
+```
 
-## Ghost recovery decisions
+A shorter candidate cannot queue behind a longer accepted promotion.
 
-Recovery loads the durable ghost and compares its frame count and fingerprint with the receipt.
+## Receipt recovery
+
+A pending receipt always validates the durable ghost by frame count and fingerprint.
 
 ### Matching ghost
 
-```text
-current best < receipt distance
-    synchronously repair best distance
+Recovery:
 
-current best >= receipt distance
-    threshold is already applied or superseded
-
-then clear receipt
-```
+1. creates or repairs the persistent manifest;
+2. repairs a lower best distance;
+3. clears the receipt after durable completion.
 
 Results:
 
@@ -242,24 +196,61 @@ Results:
 
 ### Nonmatching ghost
 
-A mismatch means the candidate represented by the receipt did not become the durable ghost. Recovery:
+Recovery:
 
-- does not change best distance;
-- does not modify the existing ghost;
-- clears only the stale uncommitted receipt.
+- clears the stale in-progress receipt;
+- preserves the existing ghost and threshold;
+- reconciles any older manifest.
 
-Result:
+A healthy older artifact yields `ABANDONED_UNWRITTEN_GHOST`. Corrupt older manifest evidence remains fail-closed.
 
-- `ABANDONED_UNWRITTEN_GHOST`.
+## Manifest-only recovery
 
-### Corrupt or inaccessible receipt
+When no receipt remains:
+
+### Already-applied fast path
+
+If:
+
+```text
+best distance >= manifest distance
+```
+
+recovery returns `ALREADY_APPLIED` before loading or hashing the ghost. This avoids repeated full decoding of healthy long ghost files during ordinary startup.
+
+### Repair path
+
+If:
+
+```text
+best distance < manifest distance
+```
+
+recovery must load and validate the ghost, then compare frame count and fingerprint. Only a matching artifact may raise best distance.
 
 Results:
 
+- match and successful write: `REPAIRED_DISTANCE`;
+- mismatch: `CORRUPT_MANIFEST`;
+- failed read/write: `IO_FAILURE`.
+
+Explicit maintenance inspection performs full identity validation even when the threshold is already applied.
+
+## Ghost dispositions
+
+`GhostPromotionRecoveryDisposition` includes:
+
+- `EMPTY`;
+- `REPAIRED_DISTANCE`;
+- `ALREADY_APPLIED`;
+- `ABANDONED_UNWRITTEN_GHOST`;
 - `CORRUPT_RECEIPT`;
+- `CORRUPT_MANIFEST`;
 - `IO_FAILURE`.
 
-These block new ghost promotions but do not prevent the separate non-ghost terminal bundle from completing.
+The last three block new promotions.
+
+`RunOutcomeCommitResult.ghostPromoted` means accepted into the recoverable worker pipeline, not necessarily durable before terminal completion returns.
 
 ## Recovery triggers
 
@@ -267,76 +258,42 @@ These block new ghost promotions but do not prevent the separate non-ghost termi
 
 Recovery runs:
 
-- when `RunOutcomePersistenceCoordinator` is constructed;
-- when `resetForNewRun()` reopens the terminal token.
+- during `RunOutcomePersistenceCoordinator` construction;
+- during `resetForNewRun()`.
 
-### Ghost receipt
+### Ghost receipt and manifest
 
 Recovery runs:
 
-- when `AndroidRunOutcomePersistenceSink` is created;
-- before a new manager request when no worker is active;
-- at the beginning of each worker task;
-- before `loadLatest(...)` falls back to disk.
-
-A successful recovery clears its own evidence. A failed clear leaves an idempotently recognizable record for the next attempt.
-
-## Commit dispositions
-
-`RunOutcomeCommitDisposition` includes:
-
-- `COMMITTED` — non-ghost terminal bundle completed and its journal cleared;
-- `NON_PERSISTENT_RUN` — token consumed without permanent writes;
-- `ALREADY_COMMITTED` — duplicate terminal delivery rejected;
-- `RECOVERY_PENDING` — non-ghost states completed or partially completed but evidence remains;
-- `RECOVERY_BLOCKED` — corrupt or conflicting non-ghost evidence prevents new permanent terminal writes.
-
-`ghostPromoted` means a candidate was accepted into the recoverable worker pipeline. It does not assert worker completion before the terminal commit returns.
-
-Ghost recovery uses its own `GhostPromotionRecoveryDisposition` values because its evidence and retry lifecycle are independent.
+- during `AndroidRunOutcomePersistenceSink` construction;
+- before a manager request when no worker is active;
+- at the start of every worker task;
+- before disk fallback in `loadLatest(...)`;
+- through explicit cold-start maintenance.
 
 ## Corruption and conflicts
 
-The non-ghost journal is never silently cleared when:
+The non-ghost journal remains fail-closed for malformed schema, impossible transitions, third-state conflicts, failed verification, or failed clear.
 
-- its schema is unknown;
-- a key is missing;
-- a preference has the wrong type;
-- an enum is invalid;
-- a stored after-state does not match the canonical transition;
-- live state matches neither the before-state nor after-state;
-- a required write or verification fails.
+Ghost recovery never raises best distance from:
 
-A ghost receipt is never used to advance best distance when:
+- malformed receipt or manifest;
+- invalid distance or frame count;
+- a mismatched artifact;
+- a failed synchronous threshold write.
 
-- its schema or size is invalid;
-- distance or frame count is invalid;
-- the durable ghost count differs;
-- the durable ghost fingerprint differs;
-- threshold persistence fails.
+Automatic recovery never deletes corrupt evidence merely to unblock progress.
 
-Automatic recovery remains fail-closed. Corrupt or conflicting evidence is retained unless a valid ghost receipt proves that its candidate ghost never landed.
+## Explicit maintenance
 
-## Explicit inspection and remediation
-
-`AndroidRecoveryEvidenceMaintenance` exposes deliberate support/debug operations for the two independent domains:
+`AndroidRecoveryEvidenceMaintenance` exposes:
 
 ```text
 RUN_OUTCOME
 GHOST_PROMOTION
 ```
 
-Evidence states:
-
-```text
-CLEAN
-PENDING
-CORRUPT
-BLOCKED
-IO_FAILURE
-```
-
-Operations:
+with:
 
 ```text
 inspect
@@ -345,91 +302,48 @@ discardCorrupt(domain)
 discardUnresolvedPending(domain)
 ```
 
-Safety rules:
+Ghost-domain inspection distinguishes no evidence, valid manifest, pending receipt, corrupt receipt, corrupt manifest, and manifest/artifact mismatch.
 
-- safe recovery never clears `CORRUPT` evidence;
-- corrupt discard requires a fresh confirmed `CORRUPT` state;
-- pending discard retries canonical recovery before deletion;
-- successful retry returns `RECOVERED_INSTEAD` and performs no destructive clear;
-- `IO_FAILURE` never authorizes evidence deletion;
-- each domain uses an isolated production handler;
-- support summaries contain only state and fixed detail codes, never run or frame payloads;
-- deletion verifies the selected domain reports `CLEAN` afterward.
+Targeted ghost cleanup:
 
-The run-outcome maintenance sink does not publish ghosts or advance best distance. The ghost maintenance handler does not open the run-outcome journal.
+- preserves a valid manifest when only the receipt is corrupt;
+- removes a corrupt or mismatched manifest without deleting the ghost frame file;
+- never directly rewrites best distance;
+- never opens the run-outcome journal.
 
-### Debug-only command surface
+Safe retry never clears corrupt evidence, and I/O failure never authorizes deletion.
 
-`MainActivity` accepts:
+Mutating maintenance commands require a debuggable cold start after save repair and before `GameView`. Reused live Activities are inspection-only.
 
-```text
-recovery_action = inspect | recover | discard_corrupt | discard_pending
-recovery_domain = RUN_OUTCOME | GHOST_PROMOTION
-```
-
-The app must be debuggable. Commands are removed from the Intent in `finally` so Activity recreation cannot repeat them.
-
-Because recovery and discard mutate durable evidence, they are accepted only during cold `onCreate`:
-
-```text
-SaveIntegrityManager.repair
-→ maintenance command
-→ GameView construction
-```
-
-A reused `singleTask` Activity accepts `inspect` only. `recover` and both discard commands return `reason=active_session` before constructing maintenance, preventing races with active gameplay or the ghost worker.
-
-Detailed ADB examples and evidence-deletion semantics are in `docs/RECOVERY_EVIDENCE_MAINTENANCE.md`.
+See `docs/RECOVERY_EVIDENCE_MAINTENANCE.md`.
 
 ## Verification surface
 
-Pure non-ghost tests cover normal commit, each already-applied state, route conflicts, corrupt evidence, failed clear, retry, and legacy nonrecoverable sinks.
+Tests and source contracts cover:
 
-Pure ghost tests cover:
+- non-ghost journal transitions and atomic summary/route snapshots;
+- receipt → ghost → manifest → distance → clear ordering;
+- manifest codec corruption and namespace isolation;
+- manifest-write and distance-write crash windows;
+- receipt reconstruction of a missing/stale manifest;
+- receipt-free manifest distance repair;
+- no-ghost-load already-applied fast path;
+- corrupt/mismatched manifest blocking;
+- compatibility-overload manifest replacement;
+- maintenance diagnosis and selective evidence removal;
+- fixed-size codec structure, synchronous critical writes, and key parity.
 
-- receipt → ghost → distance → clear ordering;
-- matching repair and already-applied recognition;
-- mismatched-ghost abandonment;
-- failed ghost and distance writes;
-- corrupt receipt blocking;
-- full frame fingerprint sensitivity.
+Focused Kotlin compilation and executable harnesses passed for the non-ghost recovery owners, manifest-aware ghost coordinator, manager surface, maintenance adapter, and lazy-validation state machine.
 
-Maintenance policy tests cover:
-
-- exact domain-handler cardinality;
-- independent inspection and retry;
-- corrupt-only deletion;
-- recover-before-discard ordering;
-- deliberate blocked-journal removal;
-- no deletion after read failure;
-- clear failure visibility;
-- payload-free support summaries.
-
-Robolectric tests cover:
-
-- non-ghost journal codec and transition parity;
-- summary/route snapshot sanitization and idempotency;
-- production non-ghost startup recovery;
-- promotion receipt codec;
-- immediate ghost playback;
-- durable ghost and distance completion;
-- startup distance repair;
-- mismatch abandonment;
-- pending-distance admission;
-- Android-backed maintenance inspection, recovery, conflict preservation, and domain-specific discard.
-
-Python source contracts lock both recovery owners, ordering, fixed schemas, synchronous critical writes, fingerprint coverage, preference-key parity, stale-candidate admission, exact state comparisons, maintenance operation separation, no-delete-on-I/O, debug-only access, cold-start mutation, one-shot extras, and payload-free logging.
-
-Focused Kotlin compilation and executable harnesses passed for the maintenance policy, production-shaped handlers, and cold/live command routing.
-
-The checked-in Android tests were not executed through an exact-head Gradle environment in this implementation session. Focused evidence does not replace exact-head unit, lint, build, emulator, or physical-device gates.
+Exact-head Gradle/JUnit, Robolectric, lint, build, emulator, physical-device, and ADB execution remain separate evidence gates.
 
 ## Remaining limitations
 
-- Legacy ghost/distance mismatches created before receipt support cannot be reconstructed because the ghost file does not encode distance.
-- The ghost fingerprint is noncryptographic and has a theoretical collision risk.
-- Non-ghost and ghost evidence are not one global atomic transaction.
-- Concurrent switching of compatibility save namespaces during an active worker or maintenance instance remains unsupported.
-- Remediation is debug/support tooling, not an end-user recovery UI.
-- Release builds intentionally reject maintenance intents.
+- Ghosts created before manifests remain load-compatible but cannot reconstruct a mismatch that already existed before this feature.
+- The fingerprint is noncryptographic and theoretically collidable.
+- The already-applied automatic path trusts the manifest/threshold pair and avoids repeated ghost hashing; explicit inspection validates the full identity.
+- Non-ghost and ghost protocols are not one global transaction.
+- Compatibility namespace switching during an active worker or maintenance instance remains unsupported.
+- Remediation is debug/support tooling, not an end-user UI.
+- Release builds reject maintenance intents.
 - Physical-device ADB acceptance remains outstanding.
