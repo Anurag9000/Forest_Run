@@ -84,6 +84,10 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
         none_start = cls.game_view.index("CollisionResult.NONE ->", mercy_start)
         cls.stumble_block = cls.game_view[stumble_start:mercy_start]
         cls.mercy_block = cls.game_view[mercy_start:none_start]
+        cls.effect_adapter = extract_braced_block(
+            cls.game_view,
+            "private inner class GameViewNonTerminalCollisionEffects :",
+        )
         cls.stumble_complete = extract_braced_block(
             cls.coordinator,
             "fun completeStumble(\n        input: StumbleCollisionOutcome,",
@@ -203,15 +207,19 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
     def test_game_view_effect_adapter_owns_live_runtime_calls(self) -> None:
         expected_once = (
             "gameState.recordHit()",
+            "ghostPlayer.suppress(seconds)",
             "player.triggerStumble()",
+            "mercyFlashTimer = mercyFlashDuration",
             "SfxManager.playHit()",
+            "CameraSystem.shakeHit()",
             "HapticManager.mediumPulse()",
             "SfxManager.playMercyMiss()",
             "HapticManager.doubleTap()",
+            "ParticleManager.emit(FxPreset.MERCY_STARS, centerX, centerY)",
             "CameraSystem.shakeMercyMiss()",
         )
         for call in expected_once:
-            self.assertEqual(1, self.game_view.count(call), call)
+            self.assertEqual(1, self.effect_adapter.count(call), call)
 
 
 if __name__ == "__main__":
