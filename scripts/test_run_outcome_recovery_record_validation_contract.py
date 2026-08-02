@@ -125,6 +125,7 @@ class RunOutcomeRecoveryRecordValidationContractTest(unittest.TestCase):
             "private fun isValidSummary(",
         )
         expected = (
+            "record.previousRouteTierCount in 0..MAX_RECOVERABLE_ROUTE_TIER_COUNT",
             "record.nextMood == RunOutcomeRecoveryTransitions.nextForestMood(",
             "record.nextReturn == RunOutcomeRecoveryTransitions.nextReturnMoment(",
             "nowMs = record.nextReturn.lastActiveAtMs",
