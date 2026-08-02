@@ -10,7 +10,7 @@ import org.junit.Test
 class RunOutcomeRecoveryCoordinatorTest {
 
     @Test
-    fun `recoverable commit journals before side effects and clears after summary`() {
+    fun `recoverable commit journals before side effects and clears after atomic snapshot`() {
         val events = mutableListOf<String>()
         val store = MemoryRecoveryStore(events = events)
         val sink = RecoverableRecordingSink(store, events = events)
@@ -26,11 +26,13 @@ class RunOutcomeRecoveryCoordinatorTest {
         assertEquals(FIXED_NOW_MS, sink.returnState.lastActiveAtMs)
         assertEquals(0, sink.returnState.roughRunStreak)
         assertEquals(summary(), sink.lastSummary)
+        assertEquals(1, sink.routeTierCount)
         assertNull(store.record)
         assertEquals(
             listOf(
                 "loadMood",
                 "loadReturn",
+                "loadRoute:MERCIFUL",
                 "journal:PREPARED",
                 "loadBestDistance",
                 "publishGhost:2",
@@ -43,7 +45,11 @@ class RunOutcomeRecoveryCoordinatorTest {
                 "saveReturn:$FIXED_NOW_MS:0",
                 "loadReturn",
                 "journal:RETURN_APPLIED",
-                "saveSummary:480.0",
+                "loadSummary",
+                "loadRoute:MERCIFUL",
+                "saveSnapshot:480.0:1",
+                "loadSummary",
+                "loadRoute:MERCIFUL",
                 "journal:SUMMARY_APPLIED",
                 "journal:clear"
             ),
@@ -62,9 +68,7 @@ class RunOutcomeRecoveryCoordinatorTest {
             FIXED_NOW_MS
         )
         val store = MemoryRecoveryStore(
-            record = RunOutcomeRecoveryRecord(
-                phase = RunOutcomeRecoveryPhase.PREPARED,
-                summary = summary(),
+            record = recoveryRecord(
                 previousMood = previousMood,
                 nextMood = nextMood,
                 previousReturn = previousReturn,
@@ -83,8 +87,28 @@ class RunOutcomeRecoveryCoordinatorTest {
         assertEquals(1, sink.moodState.totalRuns)
         assertEquals(nextReturn, sink.returnState)
         assertEquals(summary(), sink.lastSummary)
+        assertEquals(1, sink.routeTierCount)
         assertNull(store.record)
         assertFalse(sink.events.any { it.startsWith("saveMood:") })
+    }
+
+    @Test
+    fun `startup recovery recognizes an applied atomic summary snapshot`() {
+        val record = recoveryRecord(phase = RunOutcomeRecoveryPhase.RETURN_APPLIED)
+        val store = MemoryRecoveryStore(record = record)
+        val sink = RecoverableRecordingSink(
+            recoveryStore = store,
+            moodState = record.nextMood,
+            returnState = record.nextReturn,
+            lastSummary = RunOutcomeRecoveryTransitions.persistedSummary(record.summary),
+            routeTierCount = record.nextRouteTierCount
+        )
+
+        RunOutcomePersistenceCoordinator(sink)
+
+        assertNull(store.record)
+        assertEquals(record.nextRouteTierCount, sink.routeTierCount)
+        assertFalse(sink.events.any { it.startsWith("saveSnapshot:") })
     }
 
     @Test
@@ -110,6 +134,30 @@ class RunOutcomeRecoveryCoordinatorTest {
     }
 
     @Test
+    fun `conflicting route count blocks summary replay`() {
+        val record = recoveryRecord(
+            phase = RunOutcomeRecoveryPhase.RETURN_APPLIED,
+            previousRouteTierCount = 2,
+            nextRouteTierCount = 3
+        )
+        val store = MemoryRecoveryStore(record = record)
+        val sink = RecoverableRecordingSink(
+            recoveryStore = store,
+            moodState = record.nextMood,
+            returnState = record.nextReturn,
+            routeTierCount = 9
+        )
+        val coordinator = RunOutcomePersistenceCoordinator(sink)
+
+        val result = coordinator.commit(summary(), emptyList(), persistProgress = true)
+
+        assertEquals(RunOutcomeCommitDisposition.RECOVERY_BLOCKED, result.disposition)
+        assertEquals(9, sink.routeTierCount)
+        assertNull(sink.lastSummary)
+        assertFalse(sink.events.any { it.startsWith("saveSnapshot:") })
+    }
+
+    @Test
     fun `corrupt journal blocks writes without being erased`() {
         val store = MemoryRecoveryStore(loadResultOverride = RunOutcomeRecoveryLoadResult.Corrupt)
         val sink = RecoverableRecordingSink(store)
@@ -123,7 +171,7 @@ class RunOutcomeRecoveryCoordinatorTest {
     }
 
     @Test
-    fun `failed journal clear leaves recoverable pending result and reset retries`() {
+    fun `failed journal clear leaves recoverable snapshot and reset does not count twice`() {
         val store = MemoryRecoveryStore(clearSucceeds = false)
         val sink = RecoverableRecordingSink(store)
         val coordinator = RunOutcomePersistenceCoordinator(sink, clock = { FIXED_NOW_MS })
@@ -133,13 +181,16 @@ class RunOutcomeRecoveryCoordinatorTest {
         assertEquals(RunOutcomeCommitDisposition.RECOVERY_PENDING, first.disposition)
         assertEquals(RunOutcomeRecoveryPhase.SUMMARY_APPLIED, store.record?.phase)
         assertEquals(1, sink.moodState.totalRuns)
+        assertEquals(1, sink.routeTierCount)
 
         store.clearSucceeds = true
         coordinator.resetForNewRun()
 
         assertNull(store.record)
         assertEquals(1, sink.moodState.totalRuns)
+        assertEquals(1, sink.routeTierCount)
         assertEquals(summary(), sink.lastSummary)
+        assertEquals(1, sink.events.count { it.startsWith("saveSnapshot:") })
 
         val second = coordinator.commit(summary(distanceM = 300f), emptyList(), persistProgress = false)
         assertEquals(RunOutcomeCommitDisposition.NON_PERSISTENT_RUN, second.disposition)
@@ -180,6 +231,7 @@ class RunOutcomeRecoveryCoordinatorTest {
     }
 
     private fun recoveryRecord(
+        phase: RunOutcomeRecoveryPhase = RunOutcomeRecoveryPhase.PREPARED,
         summary: RunSummary = summary(),
         previousMood: ForestMoodState = ForestMoodState(),
         nextMood: ForestMoodState = RunOutcomeRecoveryTransitions.nextForestMood(
@@ -191,14 +243,21 @@ class RunOutcomeRecoveryCoordinatorTest {
             previousReturn,
             summary,
             FIXED_NOW_MS
+        ),
+        previousRouteTierCount: Int = 0,
+        nextRouteTierCount: Int = RunOutcomeRecoveryTransitions.nextRouteTierCount(
+            previousRouteTierCount,
+            summary.pacifistRouteTier
         )
     ): RunOutcomeRecoveryRecord = RunOutcomeRecoveryRecord(
-        phase = RunOutcomeRecoveryPhase.PREPARED,
+        phase = phase,
         summary = summary,
         previousMood = previousMood,
         nextMood = nextMood,
         previousReturn = previousReturn,
-        nextReturn = nextReturn
+        nextReturn = nextReturn,
+        previousRouteTierCount = previousRouteTierCount,
+        nextRouteTierCount = nextRouteTierCount
     )
 
     private fun summary(
@@ -222,7 +281,8 @@ class RunOutcomeRecoveryCoordinatorTest {
         bloomConversions = 2,
         lastKiller = null,
         restQuote = "Rest.",
-        forestMood = forestMood
+        forestMood = forestMood,
+        pacifistRouteTier = PacifistRouteTier.MERCIFUL
     )
 
     private fun ghostFrames(): List<GhostFrame> = listOf(
@@ -263,10 +323,19 @@ class RunOutcomeRecoveryCoordinatorTest {
         var moodState: ForestMoodState = ForestMoodState(),
         var returnState: ReturnMomentState = ReturnMomentState(),
         private var bestDistanceM: Float = 120f,
+        var lastSummary: RunSummary? = null,
+        var routeTierCount: Int = 0,
         val events: MutableList<String> = recoveryStore.events
     ) : RecoverableRunOutcomePersistenceSink {
-        var lastSummary: RunSummary? = null
-            private set
+        override val summarySnapshotStore: RunOutcomeSummarySnapshotStore =
+            object : RunOutcomeSummarySnapshotStore {
+                override fun save(summary: RunSummary, routeTierCount: Int): Boolean {
+                    lastSummary = summary
+                    this@RecoverableRecordingSink.routeTierCount = routeTierCount
+                    events += "saveSnapshot:${summary.distanceM}:$routeTierCount"
+                    return true
+                }
+            }
 
         override fun loadBestDistanceM(): Float {
             events += "loadBestDistance"
@@ -292,8 +361,7 @@ class RunOutcomeRecoveryCoordinatorTest {
         }
 
         override fun saveLastRunSummary(summary: RunSummary) {
-            lastSummary = summary
-            events += "saveSummary:${summary.distanceM}"
+            error("recoverable path must use the atomic summary snapshot")
         }
 
         override fun loadForestMoodState(): ForestMoodState {
@@ -314,6 +382,16 @@ class RunOutcomeRecoveryCoordinatorTest {
         override fun saveReturnMomentState(state: ReturnMomentState) {
             returnState = state
             events += "saveReturn:${state.lastActiveAtMs}:${state.roughRunStreak}"
+        }
+
+        override fun loadLastRunSummary(): RunSummary? {
+            events += "loadSummary"
+            return lastSummary
+        }
+
+        override fun loadRouteTierCount(tier: PacifistRouteTier): Int {
+            events += "loadRoute:${tier.name}"
+            return routeTierCount
         }
     }
 
