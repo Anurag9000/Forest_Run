@@ -129,12 +129,44 @@ class RunOutcomeRecoveryTransitionIntegrationTest {
         assertEquals(expected, actual)
     }
 
+    @Test
+    fun `journal route transition matches canonical single increment`() {
+        val tier = PacifistRouteTier.KIND
+        val summary = summary(forestMood = ForestMood.STEADY, routeTier = tier)
+        val snapshot = SharedPreferencesRunOutcomeSummarySnapshotStore(
+            context,
+            SaveManager.activePrefsNameForTests
+        )
+        val previous = SaveManager.loadRouteTierCount(context, tier)
+        val expected = RunOutcomeRecoveryTransitions.nextRouteTierCount(previous, tier)
+
+        snapshot.save(summary, expected)
+
+        assertEquals(expected, SaveManager.loadRouteTierCount(context, tier))
+    }
+
+    @Test
+    fun `journal route transition preserves none and saturated counts`() {
+        assertEquals(
+            7,
+            RunOutcomeRecoveryTransitions.nextRouteTierCount(7, PacifistRouteTier.NONE)
+        )
+        assertEquals(
+            Int.MAX_VALUE,
+            RunOutcomeRecoveryTransitions.nextRouteTierCount(
+                Int.MAX_VALUE,
+                PacifistRouteTier.PEACEFUL
+            )
+        )
+    }
+
     private fun summary(
         distanceM: Float = 800f,
         forestMood: ForestMood,
         hitsTaken: Int = 1,
         kindnessChain: Int = 4,
-        seedsCollected: Int = 10
+        seedsCollected: Int = 10,
+        routeTier: PacifistRouteTier = PacifistRouteTier.KIND
     ): RunSummary = RunSummary(
         score = 2_000,
         distanceM = distanceM,
@@ -151,7 +183,7 @@ class RunOutcomeRecoveryTransitionIntegrationTest {
         lastKiller = null,
         restQuote = "Rest.",
         forestMood = forestMood,
-        pacifistRouteTier = PacifistRouteTier.KIND
+        pacifistRouteTier = routeTier
     )
 
     private companion object {
