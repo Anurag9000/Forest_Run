@@ -104,7 +104,7 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
         self.assertLess(complete, transition)
         self.assertNotIn("ghostRecorder.reset()", hit_block)
 
-    def test_each_run_start_reopens_the_coordinator(self) -> None:
+    def test_each_run_start_reopens_and_retries_recovery(self) -> None:
         fresh = extract_braced_block(self.game_view, "private fun prepareFreshRun()")
         scenario = extract_braced_block(
             self.game_view, "private fun prepareEncounterScenario()"
@@ -113,44 +113,136 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
         self.assertEqual(1, scenario.count("runOutcomePersistence.resetForNewRun()"))
         self.assertEqual(2, self.game_view.count("runOutcomePersistence.resetForNewRun()"))
 
-    def test_commit_claims_token_before_mode_gate_and_sink_calls(self) -> None:
+        reset = extract_braced_block(self.coordinator, "fun resetForNewRun()")
+        self.assertLess(
+            reset.index("terminalOutcomeCommitted = false"),
+            reset.index("recoveryBlocked = !recoverPendingOutcome()"),
+        )
+
+    def test_commit_claims_token_before_mode_and_recovery_gates(self) -> None:
         commit = extract_braced_block(
             self.coordinator,
-            "fun commit(\n        summary: RunSummary,",
+            "override fun commit(\n        summary: RunSummary,",
         )
         already = commit.index("if (terminalOutcomeCommitted)")
         claim = commit.index("terminalOutcomeCommitted = true")
         mode_gate = commit.index("if (!persistProgress)")
-        first_sink = commit.index("sink.loadBestDistanceM()")
+        recovery_gate = commit.index("if (recoveryBlocked)")
+        prepare = commit.index("prepareRecoveryRecord(recoverable, summary)")
+        first_ghost_sink = commit.index("sink.loadBestDistanceM()")
         self.assertLess(already, claim)
         self.assertLess(claim, mode_gate)
-        self.assertLess(mode_gate, first_sink)
+        self.assertLess(mode_gate, recovery_gate)
+        self.assertLess(recovery_gate, prepare)
+        self.assertLess(prepare, first_ghost_sink)
 
-    def test_coordinator_is_the_only_production_write_adapter(self) -> None:
+    def test_production_adapter_owns_storage_and_recovery_surfaces(self) -> None:
         expected_once = (
             "GhostPersistenceManager.saveBestRunAsync(appContext, frames)",
             "SaveManager.saveBestDistance(appContext, distanceM)",
             "ForestMoodSystem.recordRun(appContext, summary)",
             "ReturnMomentsSystem.recordRunOutcome(appContext, summary)",
             "SaveManager.saveLastRunSummary(appContext, summary)",
+            "SaveManager.loadForestMoodState(appContext)",
+            "SaveManager.saveForestMoodState(appContext, state)",
+            "SaveManager.loadReturnMomentState(appContext)",
+            "SaveManager.saveReturnMomentState(appContext, state)",
         )
         for call in expected_once:
-            self.assertEqual(1, self.coordinator.count(call))
+            self.assertEqual(1, self.coordinator.count(call), call)
+        self.assertEqual(
+            1,
+            self.coordinator.count("SharedPreferencesRunOutcomeRecoveryStore("),
+        )
+
+    def test_recovery_record_is_durable_before_ghost_evaluation(self) -> None:
+        prepare = extract_braced_block(
+            self.coordinator,
+            "private fun prepareRecoveryRecord(",
+        )
+        order = (
+            "recoverable.loadForestMoodState()",
+            "recoverable.loadReturnMomentState()",
+            "RunOutcomeRecoveryTransitions.nextForestMood(",
+            "RunOutcomeRecoveryTransitions.nextReturnMoment(",
+            "recoverable.recoveryStore.save(it)",
+        )
+        positions = [prepare.index(item) for item in order]
+        self.assertEqual(sorted(positions), positions)
+
+        commit = extract_braced_block(
+            self.coordinator,
+            "override fun commit(\n        summary: RunSummary,",
+        )
+        self.assertLess(
+            commit.index("prepareRecoveryRecord(recoverable, summary)"),
+            commit.index("sink.loadBestDistanceM()"),
+        )
 
     def test_best_distance_advances_only_after_accepted_ghost(self) -> None:
         commit = extract_braced_block(
             self.coordinator,
-            "fun commit(\n        summary: RunSummary,",
+            "override fun commit(\n        summary: RunSummary,",
         )
         promoted = commit.index("val ghostPromoted =")
         publish = commit.index("sink.publishBestGhost(completedGhost)")
         gate = commit.index("if (ghostPromoted)")
         save = commit.index("sink.saveBestDistanceM(completedDistance)")
-        summary_write = commit.index("sink.recordForestMood(summary)")
+        bundle = commit.index("commitRecoveryProtectedBundle(")
         self.assertLess(promoted, publish)
         self.assertLess(publish, gate)
         self.assertLess(gate, save)
-        self.assertLess(save, summary_write)
+        self.assertLess(save, bundle)
+
+    def test_recovery_bundle_orders_states_summary_and_clear(self) -> None:
+        bundle = extract_braced_block(
+            self.coordinator,
+            "private fun commitRecoveryProtectedBundle(",
+        )
+        order = (
+            "ensureMoodState(recoverable, record)",
+            "RunOutcomeRecoveryPhase.MOOD_APPLIED",
+            "ensureReturnState(recoverable, record)",
+            "RunOutcomeRecoveryPhase.RETURN_APPLIED",
+            "sink.saveLastRunSummary(record.summary)",
+            "RunOutcomeRecoveryPhase.SUMMARY_APPLIED",
+            "recoverable.recoveryStore.clear()",
+        )
+        positions = [bundle.index(item) for item in order]
+        self.assertEqual(sorted(positions), positions)
+
+    def test_recovery_recognizes_applied_state_before_reapplying(self) -> None:
+        mood = extract_braced_block(self.coordinator, "private fun ensureMoodState(")
+        return_state = extract_braced_block(
+            self.coordinator,
+            "private fun ensureReturnState(",
+        )
+        for block, next_state, previous_state, save_call in (
+            (
+                mood,
+                "actual == record.nextMood",
+                "actual != record.previousMood",
+                "recoverable.saveForestMoodState(record.nextMood)",
+            ),
+            (
+                return_state,
+                "actual == record.nextReturn",
+                "actual != record.previousReturn",
+                "recoverable.saveReturnMomentState(record.nextReturn)",
+            ),
+        ):
+            self.assertLess(block.index(next_state), block.index(previous_state))
+            self.assertLess(block.index(previous_state), block.index(save_call))
+
+    def test_corrupt_or_conflicting_recovery_fails_closed(self) -> None:
+        recover = extract_braced_block(
+            self.coordinator,
+            "private fun recoverPendingOutcome()",
+        )
+        self.assertIn("RunOutcomeRecoveryLoadResult.Corrupt -> false", recover)
+        self.assertEqual(2, self.coordinator.count("recoveryBlocked = true"))
+        self.assertIn("RunOutcomeCommitDisposition.RECOVERY_BLOCKED", self.coordinator)
+        self.assertIn("RunOutcomeCommitDisposition.RECOVERY_PENDING", self.coordinator)
 
 
 if __name__ == "__main__":
