@@ -229,6 +229,7 @@ class MainMenuScreen(
 
     /** Called on each tap from GameView.onTouchListener. */
     fun onTap(tapX: Float = 0f, tapY: Float = 0f) {
+        if (!FiniteCoordinateAdmission.accepts(tapX, tapY)) return
         if (phase == Phase.IDLE && feedbackSettingsPanel.onTap(tapX, tapY)) return
         // Garden button: bottom-left strip in IDLE phase
         if (phase == Phase.IDLE && tapX < screenW * 0.35f && tapY > screenH * 0.85f) {
