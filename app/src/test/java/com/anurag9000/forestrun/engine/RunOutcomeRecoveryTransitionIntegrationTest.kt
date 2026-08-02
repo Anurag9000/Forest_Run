@@ -146,13 +146,13 @@ class RunOutcomeRecoveryTransitionIntegrationTest {
     }
 
     @Test
-    fun `journal route transition preserves none and saturated counts`() {
+    fun `journal route transition preserves none and canonical ceiling`() {
         assertEquals(
             7,
             RunOutcomeRecoveryTransitions.nextRouteTierCount(7, PacifistRouteTier.NONE)
         )
         assertEquals(
-            Int.MAX_VALUE,
+            MAX_RECOVERABLE_ROUTE_TIER_COUNT,
             RunOutcomeRecoveryTransitions.nextRouteTierCount(
                 Int.MAX_VALUE,
                 PacifistRouteTier.PEACEFUL
