@@ -86,21 +86,22 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
             "SaveManager.saveLastRunSummary(",
             "GhostPersistenceManager.saveBestRunAsync(",
             "SaveManager.saveBestDistance(",
+            "runOutcomePersistence.commit(",
         )
         for call in forbidden:
             self.assertNotIn(call, self.game_view)
-        self.assertEqual(1, self.game_view.count("runOutcomePersistence.commit("))
+        self.assertEqual(1, self.game_view.count("terminalHitOutcome.complete("))
 
-    def test_hit_path_detaches_then_commits_before_death_transition(self) -> None:
+    def test_hit_path_detaches_then_completes_before_death_transition(self) -> None:
         start = self.game_view.index("CollisionResult.HIT ->")
         end = self.game_view.index("CollisionResult.STUMBLE ->", start)
         hit_block = self.game_view[start:end]
 
         detach = hit_block.index("val completedGhost = ghostRecorder.detachSnapshot()")
-        commit = hit_block.index("runOutcomePersistence.commit(")
+        complete = hit_block.index("terminalHitOutcome.complete(")
         transition = hit_block.index("runResetManager.triggerDeath(gameState)")
-        self.assertLess(detach, commit)
-        self.assertLess(commit, transition)
+        self.assertLess(detach, complete)
+        self.assertLess(complete, transition)
         self.assertNotIn("ghostRecorder.reset()", hit_block)
 
     def test_each_run_start_reopens_the_coordinator(self) -> None:
