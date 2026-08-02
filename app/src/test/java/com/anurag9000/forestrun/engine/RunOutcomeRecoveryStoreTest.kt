@@ -42,6 +42,27 @@ class RunOutcomeRecoveryStoreTest {
     }
 
     @Test
+    fun `raw malformed counters remain recoverable for canonical sanitization`() {
+        val valid = record()
+        val malformed = valid.copy(
+            summary = valid.summary.copy(
+                score = -5,
+                distanceM = Float.NEGATIVE_INFINITY,
+                highScore = -7,
+                mercyHearts = -2,
+                hitsTaken = -1
+            )
+        )
+
+        assertTrue(store.save(malformed))
+
+        assertEquals(
+            malformed,
+            (store.load() as RunOutcomeRecoveryLoadResult.Pending).record
+        )
+    }
+
+    @Test
     fun `empty and cleared stores load as empty`() {
         assertEquals(RunOutcomeRecoveryLoadResult.Empty, store.load())
 
@@ -66,7 +87,11 @@ class RunOutcomeRecoveryStoreTest {
     }
 
     @Test
-    fun `missing or negative route counts are corrupt`() {
+    fun `missing summary or route fields are corrupt`() {
+        assertTrue(store.save(record()))
+        rawPrefs().edit().remove("summary_score").commit()
+        assertEquals(RunOutcomeRecoveryLoadResult.Corrupt, store.load())
+
         assertTrue(store.save(record()))
         rawPrefs().edit().remove("next_route_tier_count").commit()
         assertEquals(RunOutcomeRecoveryLoadResult.Corrupt, store.load())
@@ -86,13 +111,23 @@ class RunOutcomeRecoveryStoreTest {
     }
 
     @Test
-    fun `invalid records are rejected without replacing existing evidence`() {
+    fun `inconsistent records are rejected without replacing existing evidence`() {
         val valid = record()
         assertTrue(store.save(valid))
-        val invalidSummary = valid.copy(summary = valid.summary.copy(score = -1))
-        val invalidRouteCount = valid.copy(nextRouteTierCount = -1)
+        val oversizedQuote = valid.copy(
+            summary = valid.summary.copy(restQuote = "x".repeat(8_193))
+        )
+        val invalidMood = valid.copy(
+            nextMood = valid.nextMood.copy(totalRuns = valid.nextMood.totalRuns + 1)
+        )
+        val invalidReturn = valid.copy(
+            nextReturn = valid.nextReturn.copy(roughRunStreak = 1)
+        )
+        val invalidRouteCount = valid.copy(nextRouteTierCount = 9)
 
-        assertFalse(store.save(invalidSummary))
+        assertFalse(store.save(oversizedQuote))
+        assertFalse(store.save(invalidMood))
+        assertFalse(store.save(invalidReturn))
         assertFalse(store.save(invalidRouteCount))
 
         assertEquals(
