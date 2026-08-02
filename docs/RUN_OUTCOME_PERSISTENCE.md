@@ -14,16 +14,19 @@ A terminal collision produces several permanent side effects:
 - the canonical last-run summary;
 - the completed run's pacifist-route counter.
 
-Those responsibilities previously lived directly in one large `GameView` branch. They are now split into explicit owners:
+The responsibilities are split into explicit owners:
 
-- `TerminalHitOutcomeCoordinator` owns behavior-preserving terminal-hit completion;
-- `RunOutcomePersistenceCoordinator` owns the exactly-once terminal persistence token and recovery sequence;
-- `SharedPreferencesRunOutcomeRecoveryStore` owns durable before/after recovery evidence;
-- `SharedPreferencesRunOutcomeSummarySnapshotStore` owns the atomic summary-plus-route-counter snapshot.
+- `TerminalHitOutcomeCoordinator` owns deterministic terminal-hit completion;
+- `RunOutcomePersistenceCoordinator` owns the exactly-once terminal token and non-ghost recovery sequence;
+- `SharedPreferencesRunOutcomeRecoveryStore` owns non-ghost before/after evidence;
+- `SharedPreferencesRunOutcomeSummarySnapshotStore` owns the atomic summary-plus-route snapshot;
+- `GhostPersistenceManager` owns immediate ghost publication and single-worker ordering;
+- `GhostPromotionRecoveryCoordinator` owns durable ghost-plus-distance promotion;
+- `AtomicFileGhostPromotionReceiptStore` owns the promotion receipt.
 
 ## GameView boundary
 
-`GameView` remains responsible only for the immediate impact and run-state sequence:
+`GameView` remains responsible for the live impact and run-state sequence:
 
 1. record the run-level hit;
 2. suppress ghost visibility;
@@ -37,242 +40,279 @@ Those responsibilities previously lived directly in one large `GameView` branch.
 The `HIT` branch must not directly:
 
 ```text
-record PersistentMemoryManager hit history
-compose RunFlavorPresentation collision copy
-spawn the terminal bubble or flavor line
-resolve RestQuoteManager copy
+record relationship hit history
+compose authored HIT copy
+resolve the rest quote
 write terminal persistence stores
 ```
 
-Those operations belong to the extracted terminal-hit and persistence seams.
-
 ## Terminal-hit completion ordering
 
-`TerminalHitOutcomeCoordinator.complete(...)` preserves the authored ordering that existed before extraction:
-
-1. when persistence is allowed and the killer is known, record relationship hit history;
-2. present the canonical HIT dialogue bubble and floating flavor line;
-3. invoke the supplied summary builder exactly once;
-4. resolve the authored rest quote using the summary preview, biome, and killer;
-5. copy that quote into one completed `RunSummary`;
-6. invoke the exactly-once persistence committer;
-7. return the completed summary and persistence result.
-
-The summary builder remains a callback so `GameView` can use the authoritative live `GameStateManager` without making the extracted coordinator depend on the entire mutable game-state owner.
-
-Production side effects are isolated behind:
-
-- `AndroidTerminalHitRelationshipRecorder`;
-- `AndroidTerminalHitFeedbackPresenter`;
-- `AndroidTerminalHitRestQuoteResolver`;
-- `RunOutcomeCommitter`.
-
-Each has a fakeable interface used by pure ordering tests.
-
-## Persistence ownership boundary
-
-`GameView` must not directly call any of the following terminal write APIs:
+`TerminalHitOutcomeCoordinator.complete(...)` preserves:
 
 ```text
-GhostPersistenceManager.saveBestRunAsync
-SaveManager.saveBestDistance
-ForestMoodSystem.recordRun
-ReturnMomentsSystem.recordRunOutcome
-SaveManager.saveLastRunSummary
-RunOutcomePersistenceCoordinator.commit
+known persistent relationship hit
+→ authored HIT presentation
+→ exactly one summary snapshot
+→ rest quote resolution
+→ completed summary copy
+→ exactly one RunOutcomeCommitter call
+→ result return
 ```
 
-`TerminalHitOutcomeCoordinator` invokes the `RunOutcomeCommitter` seam. `RunOutcomePersistenceCoordinator` implements that seam. `AndroidRunOutcomePersistenceSink` is the production adapter for legacy storage APIs and the recoverable state surfaces.
+The summary callback keeps authoritative live `GameStateManager` access in `GameView` without coupling the extracted owner to the complete mutable game loop.
 
-## Exactly-once token
+## Exactly-once terminal token
 
-Each persistence coordinator instance owns one terminal token.
+Each `RunOutcomePersistenceCoordinator` owns one terminal token.
 
-`commit(...)` performs these gates in order:
+`commit(...)`:
 
-1. reject an already-consumed token with `ALREADY_COMMITTED`;
-2. consume the token before any sink access;
-3. return `NON_PERSISTENT_RUN` without writes when permanent progression is disabled;
-4. fail closed with `RECOVERY_BLOCKED` when older recovery evidence is corrupt or conflicts with live state;
-5. otherwise perform the ordered persistence sequence.
+1. rejects duplicate delivery with `ALREADY_COMMITTED`;
+2. consumes the token before any mode or storage gate;
+3. returns `NON_PERSISTENT_RUN` without writes for persistence-disabled runs;
+4. returns `RECOVERY_BLOCKED` when older non-ghost evidence is corrupt or conflicting;
+5. otherwise starts the ordered persistence flow.
 
-Consuming the token before the run-mode gate is intentional. A deterministic or screenshot/profile run cannot later become persistable through a mode change after its terminal outcome was already observed.
+Only `prepareFreshRun()` and `prepareEncounterScenario()` reopen the token. Both retry non-ghost recovery first.
 
-The token is reopened only by:
+## Non-ghost recovery journal
 
-- `GameView.prepareFreshRun()`;
-- `GameView.prepareEncounterScenario()`.
+Before ghost eligibility is evaluated, production synchronously records:
 
-Both paths also retry a pending recovery before accepting a new terminal outcome. A death/restart animation, Garden transition, Activity pause, or duplicate collision delivery does not reopen the token.
+- raw completed summary;
+- forest-mood before and expected after-state;
+- return-state before and expected after-state;
+- pacifist-route count before and expected after-state;
+- current recovery checkpoint.
 
-## Durable recovery record
+The schema-versioned journal is scoped to the active save namespace and uses synchronous SharedPreferences `commit()`.
 
-Before any ghost or progression write, a recoverable production sink synchronously records one schema-versioned journal entry containing:
-
-- the completed raw `RunSummary`;
-- previous and expected forest-mood state;
-- previous and expected return-moment state;
-- previous and expected pacifist-route count;
-- the latest recovery checkpoint.
-
-The journal uses a save-namespace-specific SharedPreferences file and synchronous `commit()` operations. Compatibility preference namespaces therefore receive isolated recovery evidence rather than sharing the primary save's journal.
-
-The stored raw summary preserves malformed numeric values such as negative counters or nonfinite distance. The final summary snapshot applies the same sanitization as `SaveManager.saveLastRunSummary`. Missing keys, oversized quotes, invalid enums, wrong preference types, impossible return bounds, and after-states that do not match the canonical transition formulas are treated as corrupt evidence.
-
-Recovery phases are:
+Recovery compares each live state with both journal snapshots:
 
 ```text
-PREPARED
-MOOD_APPLIED
-RETURN_APPLIED
-SUMMARY_APPLIED
+actual == expected after-state  → accept without replay
+actual == recorded before-state → apply expected state and verify
+otherwise                       → retain evidence and block
 ```
 
-A checkpoint may lag behind a state write. Recovery therefore does not trust the phase alone.
-
-## State-comparison recovery
-
-For each recoverable state surface, the coordinator compares live state against both journal snapshots:
-
-```text
-actual == expected after-state  → already applied; continue
-actual == recorded before-state → apply expected after-state; verify
-otherwise                       → conflict; retain evidence and block
-```
-
-This closes the crash window where a write succeeds but the following checkpoint does not. A restarted coordinator recognizes the already-applied state rather than incrementing it a second time.
-
-The same model covers:
-
-- forest mood and all mood counters;
-- return timestamp and rough-run streak;
-- the completed summary and pacifist-route counter.
+This prevents duplicate counters when a state write succeeds immediately before process death or before its checkpoint.
 
 ## Atomic summary and route snapshot
 
-`SaveManager.saveLastRunSummary` is not a pure overwrite: it also increments the pacifist-route run counter. Replaying that API during recovery could therefore double-count a route even when the summary text itself was harmless to overwrite.
+`SaveManager.saveLastRunSummary(...)` also increments a route-tier counter, so replaying it is not idempotent.
 
-Production recovery instead uses `SharedPreferencesRunOutcomeSummarySnapshotStore`, which:
+`SharedPreferencesRunOutcomeSummarySnapshotStore` instead writes:
 
-1. sanitizes the summary exactly once;
-2. writes every `last_run_*` field;
-3. writes the expected KIND, MERCIFUL, or PEACEFUL route count;
-4. commits the summary and route count in one synchronous SharedPreferences transaction.
+- all sanitized `last_run_*` fields;
+- the exact expected KIND, MERCIFUL, or PEACEFUL count;
+- in one synchronous transaction.
 
-`PacifistRouteTier.NONE` writes the summary but deliberately does not mutate its compatibility counter. Replaying an already-applied atomic snapshot leaves the route count unchanged.
+`PacifistRouteTier.NONE` writes the summary without mutating its compatibility counter.
 
-## Ordered persistence sequence
+Route counts use the same canonical derived-counter ceiling as `SaveManager`:
 
-For a persistent terminal outcome, the production coordinator performs:
-
-1. read mood, return, and route-count before-states;
-2. compute all expected after-states;
-3. synchronously write the `PREPARED` journal before any other persistence side effect;
-4. normalize best-distance comparison values;
-5. attempt ghost publication only when the run is strictly better and the detached ghost is non-empty;
-6. advance best distance only when ghost publication is accepted;
-7. compare/apply/verify forest mood, then checkpoint `MOOD_APPLIED`;
-8. compare/apply/verify return state, then checkpoint `RETURN_APPLIED`;
-9. compare/apply/verify the atomic summary-plus-route snapshot, then checkpoint `SUMMARY_APPLIED`;
-10. synchronously clear the journal.
-
-If the final clear fails, the result is `RECOVERY_PENDING`. A later coordinator construction or run reset replays the evidence and recognizes the already-applied states without counting them twice.
-
-Nonrecoverable test or alternate sinks retain the original direct sequence:
-
-```text
-forest mood → return moment → SaveManager last summary
+```kotlin
+Int.MAX_VALUE / 16
 ```
 
-## Ghost and best-distance boundary
+## Ghost eligibility
 
-The non-ghost progression bundle is now crash recoverable. Ghost publication is intentionally outside that replayable bundle because the detached frame list is not stored in the journal.
+After the non-ghost PREPARED journal is durable, the terminal coordinator:
 
-Consequences:
+1. normalizes completed distance;
+2. reads `GhostPersistenceManager.bestDistanceFloor(...)`;
+3. requires the run to be strictly better;
+4. requires a non-empty detached ghost;
+5. submits one distance-aware promotion request.
 
-- a crash after the journal but before mood/return/summary is recoverable;
-- a crash after any non-ghost state write is recognized through before/after comparison;
-- a crash after summary-plus-route commit but before journal clear is idempotently recoverable;
-- a crash after ghost acceptance but before best-distance advancement may leave a newer ghost with an older threshold;
-- a crash after best-distance advancement cannot reconstruct or republish missing ghost frames from the journal.
+`bestDistanceFloor(...)` is:
 
-A durable ghost-publication identifier or recoverable frame reference remains future work. The coordinator does not claim a cross-store transaction spanning SharedPreferences and asynchronous `AtomicFile` ghost persistence.
+```text
+max(durable best distance, accepted in-memory promotion distance)
+```
+
+A shorter run therefore cannot enter the queue behind a longer pending promotion.
+
+`RunOutcomePersistenceCoordinator` does not write best distance directly.
+
+## Ghost promotion receipt
+
+Before changing the ghost artifact, the worker writes a fixed-size AtomicFile receipt containing:
+
+```text
+target distance
+frame count
+64-bit raw-frame fingerprint
+```
+
+The fingerprint covers frame count and every persisted frame component:
+
+- time;
+- x and y;
+- Player state ordinal;
+- x and y scale.
+
+The sidecar is named from the active ghost artifact:
+
+```text
+<ghost filename>.promotion
+```
+
+## Ghost promotion sequence
+
+The single daemon worker performs:
+
+```text
+AtomicFile promotion receipt
+→ AtomicFile validated ghost
+→ synchronous best-distance commit
+→ promotion receipt clear
+```
+
+The threshold write stores `max(current best, candidate distance)`, preserving monotonicity.
+
+Immediate restart behavior is unchanged: accepted frames are published in memory before worker execution. The in-memory publication also carries distance and fingerprint.
+
+`ghostPromoted == true` means accepted into this recoverable pipeline. It does not claim worker completion before the terminal commit returns.
+
+## Ghost recovery
+
+Recovery loads the durable ghost and verifies:
+
+- frame count;
+- frame validity;
+- fingerprint.
+
+### Matching ghost
+
+When the artifact matches:
+
+- a lower best distance is repaired to the receipt distance;
+- an equal or higher threshold is accepted;
+- the receipt clears only after the threshold is durable.
+
+### Nonmatching ghost
+
+When the artifact does not match:
+
+- best distance is not advanced;
+- the existing ghost is not modified;
+- the stale uncommitted receipt is cleared.
+
+### Corrupt or inaccessible receipt
+
+Corrupt receipt or I/O failure blocks new ghost promotions. It does not block the independent non-ghost terminal bundle.
+
+## Ordered terminal persistence
+
+For a normal persistent terminal outcome:
+
+```text
+claim terminal token
+→ reject unresolved non-ghost recovery
+→ compute and commit PREPARED non-ghost journal
+→ compare against durable-or-pending best-distance floor
+→ optionally accept ghost promotion into worker
+→ ensure mood state; checkpoint MOOD_APPLIED
+→ ensure return state; checkpoint RETURN_APPLIED
+→ ensure atomic summary/route snapshot; checkpoint SUMMARY_APPLIED
+→ clear non-ghost journal
+```
+
+In parallel after acceptance, the single ghost worker performs its receipt-based sequence.
+
+The two protocols are independently recoverable. They are not one global transaction spanning relationship history, presentation, non-ghost progression, ghost storage, and best distance.
+
+## Recovery triggers
+
+Non-ghost recovery runs:
+
+- during `RunOutcomePersistenceCoordinator` construction;
+- during `resetForNewRun()`.
+
+Ghost recovery runs:
+
+- during `AndroidRunOutcomePersistenceSink` construction;
+- before a new manager request when no worker is active;
+- at the start of every worker task;
+- before `loadLatest(...)` uses disk fallback.
 
 ## Failure model
 
-The persistence coordinator is fail-closed against:
+The terminal persistence surface is fail-closed against:
 
 - duplicate and re-entrant terminal delivery;
-- corrupt journal schemas or preference types;
-- missing journal fields;
-- tampered or impossible expected after-states;
-- live state that matches neither the recorded before-state nor expected after-state;
-- failed initial journal creation;
-- failed state verification;
-- failed final journal clear.
+- corrupt or incomplete non-ghost journals;
+- noncanonical expected after-states;
+- live non-ghost conflicts;
+- failed journal or snapshot verification;
+- corrupt or invalid ghost promotion receipts;
+- a receipt whose candidate ghost never became durable;
+- best-distance writes that fail after ghost durability;
+- stale direct ghost candidates below the accepted distance floor.
 
-Corrupt or conflicting evidence is retained for diagnosis rather than silently erased. New permanent terminal writes remain blocked until recovery succeeds or the evidence is deliberately repaired by a future migration/tooling path.
+A failed non-ghost journal clear returns `RECOVERY_PENDING`. A corrupt/conflicting non-ghost journal returns `RECOVERY_BLOCKED`.
 
-## Tests
+Ghost recovery uses separate dispositions because ghost evidence can be repaired or abandoned independently.
 
-`TerminalHitOutcomeCoordinatorTest` covers terminal completion ordering and identity.
+## Test surface
 
-`RunOutcomePersistenceCoordinatorTest` retains compatibility coverage for the original nonrecoverable sink:
+### Terminal completion
 
-- canonical write order;
-- duplicate suppression;
-- deterministic-run token consumption;
-- run-reset reopening;
-- ghost promotion and best-distance rules.
+- `TerminalHitOutcomeCoordinatorTest`
+- `TerminalHitFeedbackPresenterIntegrationTest`
+- `test_terminal_hit_outcome_contract.py`
 
-`RunOutcomeRecoveryCoordinatorTest` covers:
+### Non-ghost terminal persistence
 
-- journal creation before ghost evaluation;
-- mood/return/summary-route ordering;
-- startup recognition of a write that preceded its checkpoint;
-- recognition of an already-applied atomic summary snapshot;
-- conflicting mood and route-count blocking;
-- corrupt evidence blocking;
-- failed-clear retry without duplicate counters;
-- exact rough-run recovery.
+- `RunOutcomePersistenceCoordinatorTest`
+- `RunOutcomeRecoveryCoordinatorTest`
+- `RunOutcomeRecoveryStoreTest`
+- `RunOutcomeRecoveryIntegrationTest`
+- `RunOutcomeRecoveryTransitionIntegrationTest`
+- `RunOutcomeSummarySnapshotStoreTest`
+- `test_run_outcome_persistence_contract.py`
+- `test_run_outcome_recovery_store_contract.py`
+- `test_run_outcome_recovery_record_validation_contract.py`
+- `test_route_counter_ceiling_parity.py`
 
-`RunOutcomeRecoveryStoreTest` covers:
+### Ghost promotion
 
-- complete schema-v2 round-trip;
-- empty and cleared stores;
-- raw malformed numeric preservation;
-- missing fields, invalid schema/enums/types, and negative route counts;
-- deterministic transition consistency;
-- evidence preservation after rejected replacement.
+- `GhostPromotionRecoveryCoordinatorTest`
+- `GhostPromotionReceiptStoreTest`
+- `GhostPersistenceManagerTest`
+- `GhostPersistenceManagerAdmissionTest`
+- `RunOutcomePersistenceIntegrationTest`
+- `test_ghost_promotion_recovery_contract.py`
 
-`RunOutcomeSummarySnapshotStoreTest` covers:
-
-- sanitization parity;
-- summary/route atomic writes;
-- idempotent replay;
-- all persistent route tiers;
-- NONE route behavior;
-- saturated route counts.
-
-`RunOutcomeRecoveryTransitionIntegrationTest` checks the journal's pure mood, return, and route transitions against canonical production systems.
-
-`RunOutcomeRecoveryIntegrationTest` exercises production SharedPreferences recovery for:
-
-- a mood write that completed before its checkpoint;
-- an already-applied summary and route snapshot;
-- conflict retention and blocked new writes.
-
-Source contracts enforce ownership, ordering, codec completeness, synchronous writes, transition formulas, summary sanitization, and loaded-record consistency.
+The ghost tests cover immediate memory publication, durable completion, all major crash windows, startup repair, mismatch abandonment, pending-distance admission, compatibility overload behavior, receipt corruption, and full frame fingerprint sensitivity.
 
 ## Evidence boundary
 
-Performed in this implementation tranche:
+Performed during these persistence tranches:
 
-- focused Kotlin compilation of the initial journal/coordinator surface against Android and engine stubs;
-- compiler-driven correction of the journal load control flow;
-- executable recovery harness covering ordinary commit, already-applied state recognition, conflict blocking, failed-clear retry, and legacy sink compatibility;
-- route-aware executable harness covering summary sanitization, route saturation/NONE behavior, atomic replay recognition, and route conflict blocking;
-- exact key comparison against `SaveManager` summary and route preference constants;
-- source-contract parser corrections for expression-bodied Kotlin functions.
+- focused Kotlin compilation of non-ghost recovery owners against Android and engine stubs;
+- focused Kotlin compilation of ghost recovery primitives and manager surface;
+- executable non-ghost recovery harnesses;
+- executable route-ceiling matrix;
+- executable ghost-promotion crash-window harness;
+- exact source and production diff inspection;
+- representative source-contract parser execution, including overloaded Kotlin method parsing.
 
-The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session. No exact-head unit, lint, release-build, packaging, connected-emulator, or physical-device result is claimed.
+Not performed through an exact-head Android environment:
+
+- complete Gradle/JUnit suite;
+- Robolectric suite;
+- lint;
+- debug or release build;
+- connected emulator;
+- physical device.
+
+## Remaining limitations
+
+- Legacy ghost/distance mismatches created before promotion receipts cannot be reconstructed because the ghost file contains no distance.
+- The frame fingerprint is noncryptographic and has theoretical collision risk.
+- Non-ghost and ghost recovery records are not one global atomic transaction.
+- Concurrent compatibility-namespace switching during an active ghost worker is unsupported maintenance behavior.
+- Corrupt evidence has no automated repair or user-facing remediation path.
