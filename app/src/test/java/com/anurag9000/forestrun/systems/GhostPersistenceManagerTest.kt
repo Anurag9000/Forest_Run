@@ -24,8 +24,14 @@ class GhostPersistenceManagerTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        SaveManager.usePrimaryPreferences()
+        context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
         GhostPersistenceManager.clearMemoryForTests()
         deleteGhostFiles()
+        deletePromotionFiles()
     }
 
     @After
@@ -33,6 +39,12 @@ class GhostPersistenceManagerTest {
         GhostPersistenceManager.awaitPendingWrites()
         GhostPersistenceManager.clearMemoryForTests()
         deleteGhostFiles()
+        deletePromotionFiles()
+        context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+        SaveManager.usePrimaryPreferences()
     }
 
     @Test
@@ -56,15 +68,75 @@ class GhostPersistenceManagerTest {
     }
 
     @Test
-    fun `new best ghost is available before asynchronous disk write completes`() {
+    fun `new best ghost is visible immediately then ghost and distance become durable`() {
         val frames = sampleFrames()
 
-        assertTrue(GhostPersistenceManager.saveBestRunAsync(context, frames))
+        assertTrue(
+            GhostPersistenceManager.saveBestRunAsync(
+                context = context,
+                frames = frames,
+                distanceM = 640f
+            )
+        )
         assertEquals(frames, GhostPersistenceManager.loadLatest(context))
+        assertEquals(640f, GhostPersistenceManager.bestDistanceFloor(context), 0f)
         assertTrue(GhostPersistenceManager.awaitPendingWrites())
+
+        assertEquals(640f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(frames, SaveManager.loadGhostRun(context))
+        assertEquals(
+            GhostPromotionRecoveryDisposition.EMPTY,
+            GhostPersistenceManager.recoverPendingPromotion(context)
+        )
 
         GhostPersistenceManager.clearMemoryForTests()
         assertEquals(frames, GhostPersistenceManager.loadLatest(context))
+    }
+
+    @Test
+    fun `startup recovery repairs distance when durable ghost matches receipt`() {
+        val frames = sampleFrames()
+        val receipt = GhostPromotionReceipt(
+            distanceM = 900f,
+            frameCount = frames.size,
+            fingerprint = GhostRunFingerprint.calculate(frames)
+        )
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        assertTrue(receiptStore().save(receipt))
+
+        val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
+
+        assertEquals(GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE, disposition)
+        assertEquals(900f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(GhostPromotionReceiptLoadResult.Empty, receiptStore().load())
+    }
+
+    @Test
+    fun `startup recovery abandons receipt when candidate ghost never landed`() {
+        val candidate = sampleFrames()
+        val oldGhost = candidate.mapIndexed { index, frame ->
+            if (index == 0) frame.copy(x = frame.x + 10f) else frame
+        }
+        assertTrue(SaveManager.saveGhostRun(context, oldGhost))
+        assertTrue(
+            receiptStore().save(
+                GhostPromotionReceipt(
+                    distanceM = 1_100f,
+                    frameCount = candidate.size,
+                    fingerprint = GhostRunFingerprint.calculate(candidate)
+                )
+            )
+        )
+
+        val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
+
+        assertEquals(
+            GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST,
+            disposition
+        )
+        assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(oldGhost, SaveManager.loadGhostRun(context))
+        assertEquals(GhostPromotionReceiptLoadResult.Empty, receiptStore().load())
     }
 
     @Test
@@ -131,11 +203,29 @@ class GhostPersistenceManagerTest {
         )
     )
 
-    private fun ghostFile(): File = File(context.filesDir, "ghost_run.bin")
+    private fun receiptStore(): AtomicFileGhostPromotionReceiptStore =
+        AtomicFileGhostPromotionReceiptStore(
+            context = context,
+            ghostFilename = SaveManager.activeGhostFilenameForTests
+        )
+
+    private fun ghostFile(): File =
+        File(context.filesDir, SaveManager.activeGhostFilenameForTests)
+
+    private fun promotionFile(): File =
+        File(context.filesDir, "${SaveManager.activeGhostFilenameForTests}.promotion")
 
     private fun deleteGhostFiles() {
-        ghostFile().delete()
-        File(context.filesDir, "ghost_run.bin.bak").delete()
-        File(context.filesDir, "ghost_run.bin.new").delete()
+        val base = ghostFile()
+        base.delete()
+        File(base.path + ".bak").delete()
+        File(base.path + ".new").delete()
+    }
+
+    private fun deletePromotionFiles() {
+        val base = promotionFile()
+        base.delete()
+        File(base.path + ".bak").delete()
+        File(base.path + ".new").delete()
     }
 }
