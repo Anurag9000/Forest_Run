@@ -22,7 +22,9 @@ The responsibilities are split into explicit owners:
 - `SharedPreferencesRunOutcomeSummarySnapshotStore` owns the atomic summary-plus-route snapshot;
 - `GhostPersistenceManager` owns immediate ghost publication and single-worker ordering;
 - `GhostPromotionRecoveryCoordinator` owns durable ghost-plus-distance promotion;
-- `AtomicFileGhostPromotionReceiptStore` owns the promotion receipt.
+- `AtomicFileGhostPromotionReceiptStore` owns the promotion receipt;
+- `RecoveryEvidenceMaintenanceCoordinator` owns explicit inspection, safe retry, and evidence-removal policy;
+- `AndroidRecoveryEvidenceMaintenance` binds maintenance to the active save and ghost namespaces.
 
 ## GameView boundary
 
@@ -238,6 +240,50 @@ Ghost recovery runs:
 - at the start of every worker task;
 - before `loadLatest(...)` uses disk fallback.
 
+## Explicit maintenance and repair
+
+Automatic recovery remains fail-closed. `AndroidRecoveryEvidenceMaintenance` adds a separate support/debug surface for:
+
+```text
+RUN_OUTCOME
+GHOST_PROMOTION
+```
+
+It reports:
+
+```text
+CLEAN
+PENDING
+CORRUPT
+BLOCKED
+IO_FAILURE
+```
+
+It exposes:
+
+```text
+inspect
+recoverSafely
+discardCorrupt(domain)
+discardUnresolvedPending(domain)
+```
+
+Policy guarantees:
+
+- `recoverSafely` leaves corrupt evidence intact;
+- corrupt discard requires a fresh confirmed corrupt state;
+- pending discard retries canonical recovery before deletion;
+- a successful retry returns `RECOVERED_INSTEAD` without clearing;
+- read or recovery I/O failure never authorizes deletion;
+- evidence deletion is domain-specific and verified by reinspection;
+- the run maintenance sink cannot publish a ghost or advance distance;
+- the ghost maintenance handler cannot open or clear the run journal;
+- support summaries and Activity logs contain only states and fixed detail codes.
+
+`MainActivity` exposes this surface only in debuggable builds. `inspect` may run through a reused `singleTask` Activity. Recover and discard operations require cold `onCreate`, after save repair and before `GameView`, to avoid racing active gameplay or the ghost worker.
+
+Intent extras and ADB examples are specified in `docs/RECOVERY_EVIDENCE_MAINTENANCE.md`.
+
 ## Failure model
 
 The terminal persistence surface is fail-closed against:
@@ -250,11 +296,22 @@ The terminal persistence surface is fail-closed against:
 - corrupt or invalid ghost promotion receipts;
 - a receipt whose candidate ghost never became durable;
 - best-distance writes that fail after ghost durability;
-- stale direct ghost candidates below the accepted distance floor.
+- stale direct ghost candidates below the accepted distance floor;
+- maintenance reads or clears that fail;
+- live-session mutation commands.
 
 A failed non-ghost journal clear returns `RECOVERY_PENDING`. A corrupt/conflicting non-ghost journal returns `RECOVERY_BLOCKED`.
 
 Ghost recovery uses separate dispositions because ghost evidence can be repaired or abandoned independently.
+
+Maintenance uses `RecoveryDiscardDisposition`:
+
+```text
+DISCARDED
+NOT_APPLICABLE
+RECOVERED_INSTEAD
+IO_FAILURE
+```
 
 ## Test surface
 
@@ -286,7 +343,14 @@ Ghost recovery uses separate dispositions because ghost evidence can be repaired
 - `RunOutcomePersistenceIntegrationTest`
 - `test_ghost_promotion_recovery_contract.py`
 
-The ghost tests cover immediate memory publication, durable completion, all major crash windows, startup repair, mismatch abandonment, pending-distance admission, compatibility overload behavior, receipt corruption, and full frame fingerprint sensitivity.
+### Maintenance and remediation
+
+- `RecoveryEvidenceMaintenanceCoordinatorTest`
+- `RecoveryEvidenceMaintenanceIntegrationTest`
+- `test_recovery_evidence_maintenance_contract.py`
+- `test_recovery_maintenance_launch_contract.py`
+
+Maintenance coverage includes domain cardinality, independent inspection, safe retry selection, corrupt-only deletion, recover-before-discard, conflicting-live-state preservation, no deletion after I/O failure, matching ghost distance repair, receipt-only removal, debug gating, cold-start mutation, one-shot extras, and payload-free logs.
 
 ## Evidence boundary
 
@@ -294,9 +358,12 @@ Performed during these persistence tranches:
 
 - focused Kotlin compilation of non-ghost recovery owners against Android and engine stubs;
 - focused Kotlin compilation of ghost recovery primitives and manager surface;
+- focused compilation of maintenance policy and production-shaped handlers;
 - executable non-ghost recovery harnesses;
 - executable route-ceiling matrix;
 - executable ghost-promotion crash-window harness;
+- executable maintenance policy harness;
+- executable cold/live command-routing harness;
 - exact source and production diff inspection;
 - representative source-contract parser execution, including overloaded Kotlin method parsing.
 
@@ -307,12 +374,14 @@ Not performed through an exact-head Android environment:
 - lint;
 - debug or release build;
 - connected emulator;
-- physical device.
+- physical-device ADB acceptance.
 
 ## Remaining limitations
 
 - Legacy ghost/distance mismatches created before promotion receipts cannot be reconstructed because the ghost file contains no distance.
 - The frame fingerprint is noncryptographic and has theoretical collision risk.
 - Non-ghost and ghost recovery records are not one global atomic transaction.
-- Concurrent compatibility-namespace switching during an active ghost worker is unsupported maintenance behavior.
-- Corrupt evidence has no automated repair or user-facing remediation path.
+- Concurrent compatibility-namespace switching during an active worker or maintenance instance is unsupported.
+- Remediation is debug/support tooling, not an end-user recovery UI.
+- Release builds reject maintenance intents.
+- Physical-device ADB acceptance remains outstanding.
