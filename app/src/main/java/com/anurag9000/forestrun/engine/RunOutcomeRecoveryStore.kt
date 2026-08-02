@@ -48,37 +48,41 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
         Context.MODE_PRIVATE
     )
 
-    override fun load(): RunOutcomeRecoveryLoadResult = try {
-        if (!prefs.getBoolean(KEY_PRESENT, false)) {
-            RunOutcomeRecoveryLoadResult.Empty
-        } else {
-            val schema = prefs.getInt(KEY_SCHEMA, -1)
-            if (schema != SCHEMA_VERSION) return RunOutcomeRecoveryLoadResult.Corrupt
+    override fun load(): RunOutcomeRecoveryLoadResult {
+        return try {
+            if (!prefs.getBoolean(KEY_PRESENT, false)) {
+                RunOutcomeRecoveryLoadResult.Empty
+            } else {
+                val schema = prefs.getInt(KEY_SCHEMA, -1)
+                if (schema != SCHEMA_VERSION) return RunOutcomeRecoveryLoadResult.Corrupt
 
-            val phase = enumValueOrNull<RunOutcomeRecoveryPhase>(
-                prefs.getString(KEY_PHASE, null)
-            ) ?: return RunOutcomeRecoveryLoadResult.Corrupt
-            val summary = readSummary() ?: return RunOutcomeRecoveryLoadResult.Corrupt
-            val previousMood = readMood(PREVIOUS_MOOD) ?: return RunOutcomeRecoveryLoadResult.Corrupt
-            val nextMood = readMood(NEXT_MOOD) ?: return RunOutcomeRecoveryLoadResult.Corrupt
-            val previousReturn = readReturn(PREVIOUS_RETURN)
-                ?: return RunOutcomeRecoveryLoadResult.Corrupt
-            val nextReturn = readReturn(NEXT_RETURN)
-                ?: return RunOutcomeRecoveryLoadResult.Corrupt
+                val phase = enumValueOrNull<RunOutcomeRecoveryPhase>(
+                    prefs.getString(KEY_PHASE, null)
+                ) ?: return RunOutcomeRecoveryLoadResult.Corrupt
+                val summary = readSummary() ?: return RunOutcomeRecoveryLoadResult.Corrupt
+                val previousMood = readMood(PREVIOUS_MOOD)
+                    ?: return RunOutcomeRecoveryLoadResult.Corrupt
+                val nextMood = readMood(NEXT_MOOD)
+                    ?: return RunOutcomeRecoveryLoadResult.Corrupt
+                val previousReturn = readReturn(PREVIOUS_RETURN)
+                    ?: return RunOutcomeRecoveryLoadResult.Corrupt
+                val nextReturn = readReturn(NEXT_RETURN)
+                    ?: return RunOutcomeRecoveryLoadResult.Corrupt
 
-            RunOutcomeRecoveryLoadResult.Pending(
-                RunOutcomeRecoveryRecord(
-                    phase = phase,
-                    summary = summary,
-                    previousMood = previousMood,
-                    nextMood = nextMood,
-                    previousReturn = previousReturn,
-                    nextReturn = nextReturn
+                RunOutcomeRecoveryLoadResult.Pending(
+                    RunOutcomeRecoveryRecord(
+                        phase = phase,
+                        summary = summary,
+                        previousMood = previousMood,
+                        nextMood = nextMood,
+                        previousReturn = previousReturn,
+                        nextReturn = nextReturn
+                    )
                 )
-            )
+            }
+        } catch (_: ClassCastException) {
+            RunOutcomeRecoveryLoadResult.Corrupt
         }
-    } catch (_: ClassCastException) {
-        RunOutcomeRecoveryLoadResult.Corrupt
     }
 
     override fun save(record: RunOutcomeRecoveryRecord): Boolean {
