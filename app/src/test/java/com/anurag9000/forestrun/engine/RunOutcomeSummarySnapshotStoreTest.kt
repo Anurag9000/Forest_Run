@@ -90,14 +90,14 @@ class RunOutcomeSummarySnapshotStoreTest {
     }
 
     @Test
-    fun `saturated route count remains saturated`() {
+    fun `canonical derived counter ceiling remains saturated`() {
         val summary = summary(tier = PacifistRouteTier.PEACEFUL)
 
         assertTrue(store.save(summary, routeTierCount = Int.MAX_VALUE))
         assertTrue(store.save(summary, routeTierCount = Int.MAX_VALUE))
 
         assertEquals(
-            Int.MAX_VALUE,
+            MAX_RECOVERABLE_ROUTE_TIER_COUNT,
             SaveManager.loadRouteTierCount(context, PacifistRouteTier.PEACEFUL)
         )
     }
