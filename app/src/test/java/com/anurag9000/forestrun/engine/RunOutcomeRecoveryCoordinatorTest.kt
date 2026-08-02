@@ -35,8 +35,7 @@ class RunOutcomeRecoveryCoordinatorTest {
                 "loadRoute:MERCIFUL",
                 "journal:PREPARED",
                 "loadBestDistance",
-                "publishGhost:2",
-                "saveBestDistance:480.0",
+                "publishGhost:2:480.0",
                 "loadMood",
                 "saveMood:1",
                 "loadMood",
@@ -322,7 +321,7 @@ class RunOutcomeRecoveryCoordinatorTest {
         override val recoveryStore: MemoryRecoveryStore,
         var moodState: ForestMoodState = ForestMoodState(),
         var returnState: ReturnMomentState = ReturnMomentState(),
-        private var bestDistanceM: Float = 120f,
+        private val bestDistanceM: Float = 120f,
         var lastSummary: RunSummary? = null,
         var routeTierCount: Int = 0,
         val events: MutableList<String> = recoveryStore.events
@@ -342,14 +341,12 @@ class RunOutcomeRecoveryCoordinatorTest {
             return bestDistanceM
         }
 
-        override fun publishBestGhost(frames: List<GhostFrame>): Boolean {
-            events += "publishGhost:${frames.size}"
+        override fun publishBestGhost(
+            frames: List<GhostFrame>,
+            distanceM: Float
+        ): Boolean {
+            events += "publishGhost:${frames.size}:$distanceM"
             return true
-        }
-
-        override fun saveBestDistanceM(distanceM: Float) {
-            bestDistanceM = distanceM
-            events += "saveBestDistance:$distanceM"
         }
 
         override fun recordForestMood(summary: RunSummary) {
