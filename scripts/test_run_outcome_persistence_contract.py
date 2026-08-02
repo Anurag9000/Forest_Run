@@ -147,13 +147,17 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
             "SaveManager.saveForestMoodState(appContext, state)",
             "SaveManager.loadReturnMomentState(appContext)",
             "SaveManager.saveReturnMomentState(appContext, state)",
+            "SaveManager.loadLastRunSummary(appContext)",
+            "SaveManager.loadRouteTierCount(appContext, tier)",
         )
         for call in expected_once:
             self.assertEqual(1, self.coordinator.count(call), call)
+        self.assertEqual(1, self.coordinator.count("SharedPreferencesRunOutcomeRecoveryStore("))
         self.assertEqual(
             1,
-            self.coordinator.count("SharedPreferencesRunOutcomeRecoveryStore("),
+            self.coordinator.count("SharedPreferencesRunOutcomeSummarySnapshotStore("),
         )
+        self.assertEqual(1, self.coordinator.count("private val persistenceNamespace ="))
 
     def test_recovery_record_is_durable_before_ghost_evaluation(self) -> None:
         prepare = extract_braced_block(
@@ -163,8 +167,10 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
         order = (
             "recoverable.loadForestMoodState()",
             "recoverable.loadReturnMomentState()",
+            "recoverable.loadRouteTierCount(summary.pacifistRouteTier)",
             "RunOutcomeRecoveryTransitions.nextForestMood(",
             "RunOutcomeRecoveryTransitions.nextReturnMoment(",
+            "RunOutcomeRecoveryTransitions.nextRouteTierCount(",
             "recoverable.recoveryStore.save(it)",
         )
         positions = [prepare.index(item) for item in order]
@@ -194,7 +200,7 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
         self.assertLess(gate, save)
         self.assertLess(save, bundle)
 
-    def test_recovery_bundle_orders_states_summary_and_clear(self) -> None:
+    def test_recovery_bundle_orders_states_atomic_snapshot_and_clear(self) -> None:
         bundle = extract_braced_block(
             self.coordinator,
             "private fun commitRecoveryProtectedBundle(",
@@ -204,14 +210,15 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
             "RunOutcomeRecoveryPhase.MOOD_APPLIED",
             "ensureReturnState(recoverable, record)",
             "RunOutcomeRecoveryPhase.RETURN_APPLIED",
-            "sink.saveLastRunSummary(record.summary)",
+            "ensureSummaryState(recoverable, record)",
             "RunOutcomeRecoveryPhase.SUMMARY_APPLIED",
             "recoverable.recoveryStore.clear()",
         )
         positions = [bundle.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
+        self.assertNotIn("sink.saveLastRunSummary(record.summary)", bundle)
 
-    def test_recovery_recognizes_applied_state_before_reapplying(self) -> None:
+    def test_recovery_recognizes_applied_states_before_reapplying(self) -> None:
         mood = extract_braced_block(self.coordinator, "private fun ensureMoodState(")
         return_state = extract_braced_block(
             self.coordinator,
@@ -234,13 +241,28 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
             self.assertLess(block.index(next_state), block.index(previous_state))
             self.assertLess(block.index(previous_state), block.index(save_call))
 
+    def test_summary_recovery_compares_summary_and_route_before_atomic_save(self) -> None:
+        summary = extract_braced_block(self.coordinator, "private fun ensureSummaryState(")
+        order = (
+            "RunOutcomeRecoveryTransitions.persistedSummary(record.summary)",
+            "recoverable.loadLastRunSummary()",
+            "recoverable.loadRouteTierCount(routeTier)",
+            "actualSummary == expectedSummary",
+            "actualRouteTierCount != record.previousRouteTierCount",
+            "recoverable.summarySnapshotStore.save(",
+            "recoverable.loadLastRunSummary() == expectedSummary",
+        )
+        positions = [summary.index(item) for item in order]
+        self.assertEqual(sorted(positions), positions)
+        self.assertIn("routeTierCount = record.nextRouteTierCount", summary)
+
     def test_corrupt_or_conflicting_recovery_fails_closed(self) -> None:
         recover = extract_braced_block(
             self.coordinator,
             "private fun recoverPendingOutcome()",
         )
         self.assertIn("RunOutcomeRecoveryLoadResult.Corrupt -> false", recover)
-        self.assertEqual(5, self.coordinator.count("recoveryBlocked = true"))
+        self.assertEqual(6, self.coordinator.count("recoveryBlocked = true"))
         self.assertIn("RunOutcomeCommitDisposition.RECOVERY_BLOCKED", self.coordinator)
         self.assertIn("RunOutcomeCommitDisposition.RECOVERY_PENDING", self.coordinator)
 
