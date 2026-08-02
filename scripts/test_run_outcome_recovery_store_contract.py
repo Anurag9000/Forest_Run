@@ -76,6 +76,12 @@ def extract_braced_block(source: str, signature: str) -> str:
     raise AssertionError(f"Unbalanced Kotlin block for {signature!r}")
 
 
+def extract_between(source: str, start_signature: str, end_signature: str) -> str:
+    start = source.index(start_signature)
+    end = source.index(end_signature, start)
+    return source[start:end]
+
+
 class RunOutcomeRecoveryStoreContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -193,13 +199,21 @@ class RunOutcomeRecoveryStoreContractTest(unittest.TestCase):
             self.assertIn(item, transition)
 
     def test_route_transition_preserves_none_and_saturates_real_tiers(self) -> None:
-        transition = extract_braced_block(self.source, "fun nextRouteTierCount(")
+        transition = extract_between(
+            self.source,
+            "fun nextRouteTierCount(",
+            "fun persistedSummary(",
+        )
         self.assertIn("tier == PacifistRouteTier.NONE", transition)
         self.assertIn("previous.coerceAtLeast(0)", transition)
         self.assertIn("saturatingIncrement(previous)", transition)
 
     def test_persisted_summary_matches_save_manager_sanitization(self) -> None:
-        transition = extract_braced_block(self.source, "fun persistedSummary(")
+        transition = extract_between(
+            self.source,
+            "fun persistedSummary(",
+            "private fun saturatingIncrement(",
+        )
         self.assertIn("summary.score.coerceAtLeast(0)", transition)
         self.assertIn("summary.distanceM.takeIf { it.isFinite() }", transition)
         for field in (
