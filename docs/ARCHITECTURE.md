@@ -261,7 +261,7 @@ The production adapters are `AndroidTerminalHitRelationshipRecorder`, `AndroidTe
 
 ### Nonterminal outcome owner
 
-`STUMBLE` and `MERCY_MISS` branches now capture immutable inputs and delegate once to `NonTerminalCollisionOutcomeCoordinator`.
+`STUMBLE` and `MERCY_MISS` branches capture immutable inputs and delegate once to `NonTerminalCollisionOutcomeCoordinator`.
 
 For STUMBLE, the coordinator preserves:
 
@@ -293,17 +293,42 @@ green mercy flash
 
 Deterministic or persistence-disabled STUMBLE encounters retain local mechanics and feedback but do not write permanent relationship history.
 
-### Exactly-once persistence owner
+### Exactly-once and recoverable persistence owner
 
 `RunOutcomePersistenceCoordinator` implements `RunOutcomeCommitter` and owns one per-run terminal token:
 
 - it claims the token before checking run mode or touching a sink;
-- non-persistent deterministic runs consume the token without writing, preventing later mode changes from retroactively committing the same outcome;
+- non-persistent deterministic runs consume the token without writing;
 - repeated or re-entrant terminal delivery returns `ALREADY_COMMITTED`;
-- `AndroidRunOutcomePersistenceSink` is the only production adapter for best-ghost publication, best-distance advancement, forest-mood recording, return-moment recording, and last-summary storage;
-- `prepareFreshRun()` and `prepareEncounterScenario()` are the only `GameView` paths that reopen the token.
+- coordinator construction and both run-start paths retry older recovery evidence;
+- corrupt or conflicting evidence returns `RECOVERY_BLOCKED` and prevents new permanent terminal writes;
+- an applied bundle whose final journal clear failed returns `RECOVERY_PENDING`.
 
-This ownership is exactly-once within one process/run, but the underlying writes still span SharedPreferences and asynchronous atomic-file storage. They are ordered and fail-closed against duplicate delivery; they are not a single cross-store transaction. Durable journaling or idempotent recovery after a process failure between individual sink operations remains open architectural work.
+Before any ghost or progression side effect, the production sink synchronously journals:
+
+- the raw completed summary;
+- forest-mood before and expected after-state;
+- return-moment before and expected after-state;
+- pacifist-route count before and expected after-state.
+
+Recovery compares live state with both snapshots. An already-applied state is accepted without replay; an unchanged before-state is advanced and verified; any third state is treated as a conflict.
+
+`SharedPreferencesRunOutcomeSummarySnapshotStore` writes the sanitized last-run summary and expected route counter in one synchronous transaction. This avoids replaying `SaveManager.saveLastRunSummary`, whose hidden route-counter increment is not idempotent.
+
+The recoverable non-ghost order is:
+
+```text
+PREPARED journal
+→ mood state
+→ MOOD_APPLIED
+→ return state
+→ RETURN_APPLIED
+→ atomic summary plus route count
+→ SUMMARY_APPLIED
+→ journal clear
+```
+
+Ghost publication and best-distance advancement remain outside this replayable bundle because detached frame data is not stored in the recovery journal. The architecture is therefore crash-recoverable for non-ghost progression, not a single transaction across SharedPreferences and asynchronous `AtomicFile` ghost persistence.
 
 Deterministic scenarios are isolated from permanent score, encounter, relationship, Garden, summary, and ghost history while still receiving local authored feedback.
 
@@ -368,7 +393,7 @@ Permanent CI is read-only and validates the exact event SHA. It performs:
 - API 35 connected instrumentation;
 - exact assertion of fourteen tests with zero failures, errors, or skips.
 
-The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, and terminal-run exactly-once persistence ownership.
+The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, terminal-run exactly-once ownership, crash recovery, journal validation, transition parity, and atomic summary-route snapshots.
 
 ## 19. Debug scenarios
 
@@ -381,10 +406,11 @@ Debug scenarios are deterministic test aids, not substitutes for ordinary-play a
 The following remain intentionally open:
 
 - `GameView` is still a large coordinator and should be decomposed incrementally after behavioral stability;
-- the complete collision-result `when` dispatcher remains in `GameView`, although each nonterminal result branch now delegates its ordered work;
+- the complete collision-result `when` dispatcher remains in `GameView`, although each nonterminal result branch delegates its ordered work;
 - STUMBLE and MERCY_MISS live effects remain implemented by the private `GameViewNonTerminalCollisionEffects` adapter;
 - immediate HIT impact still directly coordinates Player, ghost, camera, audio, music, and haptic managers before the extracted completion seam;
-- terminal outcome ownership is centralized, but the underlying multi-store commit is not transactional and lacks a durable recovery journal;
+- detached ghost frames lack a durable recovery reference, so ghost publication and best-distance advancement are not one recoverable transaction;
+- corrupt/conflicting recovery evidence has no automated repair or user-facing remediation path;
 - entity mechanic/readability claims need ordinary-play and hardware acceptance;
 - frame, allocation, GC, memory, I/O, audio-thread, thermal, and long-run metrics need measured thresholds on representative hardware;
 - fixed landscape and procedural scenic layers need final product decisions;
