@@ -527,6 +527,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
 
     fun update(deltaTime: Float) {
+        if (!FrameInputAdmission.acceptsDelta(deltaTime)) return
+        updateBounded(FrameInputAdmission.boundedDeltaSeconds(deltaTime))
+    }
+
+    private fun updateBounded(deltaTime: Float) {
         debugFrameCounter++
         // Phase 15: Advance camera shake
         CameraSystem.update(deltaTime)
