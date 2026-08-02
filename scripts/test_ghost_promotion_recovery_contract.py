@@ -177,8 +177,14 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             "internal data class GhostPromotionPersistenceResult(",
         )
         self.assertIn("manifestDurable", result)
-        complete = extract_braced_block(result, "get()")
-        self.assertIn("manifestDurable", complete)
+        self.assertIn(
+            "get() = receiptDurable &&\n"
+            "            ghostDurable &&\n"
+            "            manifestDurable &&\n"
+            "            distanceDurable &&\n"
+            "            receiptCleared",
+            result,
+        )
 
     def test_receipt_recovery_ensures_manifest_before_distance_and_clear(self) -> None:
         recover = extract_braced_block(self.recovery, "private fun recoverReceipt(")
