@@ -240,7 +240,7 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
             "private fun recoverPendingOutcome()",
         )
         self.assertIn("RunOutcomeRecoveryLoadResult.Corrupt -> false", recover)
-        self.assertEqual(2, self.coordinator.count("recoveryBlocked = true"))
+        self.assertEqual(5, self.coordinator.count("recoveryBlocked = true"))
         self.assertIn("RunOutcomeCommitDisposition.RECOVERY_BLOCKED", self.coordinator)
         self.assertIn("RunOutcomeCommitDisposition.RECOVERY_PENDING", self.coordinator)
 
