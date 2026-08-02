@@ -185,6 +185,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         restQuoteResolver = AndroidTerminalHitRestQuoteResolver(context),
         outcomeCommitter = runOutcomePersistence
     )
+    private val nonTerminalCollisionOutcome = NonTerminalCollisionOutcomeCoordinator(
+        effects = GameViewNonTerminalCollisionEffects(),
+        relationshipRecorder = AndroidNonTerminalCollisionRelationshipRecorder(context),
+        feedbackPresenter = AndroidNonTerminalCollisionFeedbackPresenter(context)
+    )
     private val ghostPlayer   = GhostPlayer()
     private val ghostHazardFocusRect = RectF()
     private val reusableGhostVisibilityContext = GhostPlayer.VisibilityContext(
@@ -794,76 +799,37 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         runState = RunState.DYING
                     }
                     CollisionResult.STUMBLE -> {
-                        gameState.recordHit()
                         val killerType = entityManager.entityTypeOf(collision.entity)
-                        if (persistEncounter) {
-                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }
+                        val dominantColor = if (::entityManager.isInitialized) {
+                            entityManager.biomeManager.currentFoliage
+                        } else {
+                            Color.rgb(255, 180, 200)
                         }
-                        ghostPlayer.suppress(0.9f)
-                        // User Prompt "accompanied by a screen-flash of the forest's dominant color"
-                        player.triggerStumble()
-                        mercyFlashTimer = mercyFlashDuration
-                        val dominantColor = if (::entityManager.isInitialized) entityManager.biomeManager.currentFoliage else Color.rgb(255, 180, 200)
-                        mercyFlashPaint.color = Color.argb(200, Color.red(dominantColor), Color.green(dominantColor), Color.blue(dominantColor))
-                        SfxManager.playHit() // Non-lethal hit
-                        CameraSystem.shakeHit()
-                        HapticManager.mediumPulse()
-                        val collisionCue = RunFlavorPresentation.collisionCue(
-                            context = context,
-                            type = killerType,
-                            result = CollisionResult.STUMBLE,
-                            routeTier = gameState.pacifistRouteTier
-                        )
-                        DialogueBubbleManager.spawn(
-                            text = collisionCue.bubbleText,
-                            anchorX = player.x + Player.BASE_WIDTH * 0.5f,
-                            anchorY = player.y - 24f,
-                            fillColor = collisionCue.fillColor,
-                            borderColor = collisionCue.borderColor
-                        )
-                        FlavorTextManager.spawn(
-                            text = collisionCue.flavorText,
-                            x = player.x + Player.BASE_WIDTH * 0.20f,
-                            y = player.y - 10f,
-                            colour = collisionCue.flavorColor,
-                            lifetime = 1.0f,
-                            size = collisionCue.flavorSize
-                        )
-                        // Stumble triggers brief invincibility via the player state machine
-                        collision.entity.isActive = false // Despawn the animal we hit
+                        nonTerminalCollisionOutcome.completeStumble(
+                            input = StumbleCollisionOutcome(
+                                killerType = killerType,
+                                routeTier = gameState.pacifistRouteTier,
+                                playerX = player.x,
+                                playerY = player.y,
+                                dominantColor = dominantColor,
+                                persistEncounter = persistEncounter
+                            )
+                        ) {
+                            // Stumble brief invincibility has already been triggered.
+                            collision.entity.isActive = false
+                        }
                     }
                     CollisionResult.MERCY_MISS -> {
-                        mercyFlashTimer = mercyFlashDuration
-                        mercyFlashPaint.color = Color.argb(200, 60, 240, 80) // reset green
-                        SfxManager.playMercyMiss()    // Phase 20
-                        HapticManager.doubleTap()     // Phase 21 — close call buzz
-                        val mercyCue = RunFlavorPresentation.mercyCue(
-                            context = context,
-                            type = entityManager.entityTypeOf(collision.entity),
-                            mercyHearts = gameState.mercyHearts,
-                            kindnessChain = gameState.kindnessChain,
-                            routeTier = gameState.pacifistRouteTier
+                        nonTerminalCollisionOutcome.completeMercyMiss(
+                            MercyMissCollisionOutcome(
+                                entityType = entityManager.entityTypeOf(collision.entity),
+                                routeTier = gameState.pacifistRouteTier,
+                                mercyHearts = gameState.mercyHearts,
+                                kindnessChain = gameState.kindnessChain,
+                                playerX = player.x,
+                                playerY = player.y
+                            )
                         )
-                        DialogueBubbleManager.spawn(
-                            text = mercyCue.bubbleText,
-                            anchorX = player.x + Player.BASE_WIDTH * 0.5f,
-                            anchorY = player.y - 24f,
-                            fillColor = mercyCue.fillColor,
-                            borderColor = mercyCue.borderColor
-                        )
-                        FlavorTextManager.spawn(
-                            text = mercyCue.flavorText,
-                            x = player.x + Player.BASE_WIDTH * 0.22f,
-                            y = player.y - 12f,
-                            colour = mercyCue.flavorColor,
-                            lifetime = 1.15f,
-                            size = mercyCue.flavorSize
-                        )
-                        // Stars burst at player centre
-                        ParticleManager.emit(FxPreset.MERCY_STARS,
-                            player.x + Player.BASE_WIDTH / 2f,
-                            player.y + Player.BASE_HEIGHT / 2f)
-                        CameraSystem.shakeMercyMiss()
                     }
                     CollisionResult.NONE -> { /* handled above, shouldn't reach here */ }
                 }
@@ -983,19 +949,19 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             // 3. Entities (behind player, above background)
             if (::entityManager.isInitialized) {
                 entityManager.draw(canvas)
-                // 3b. Seed orbs — drawn above entities, below player
+                // 3b: Seed orbs — drawn above entities, below player
                 val bloomFrac = if (::gameState.isInitialized)
                     gameState.bloomMeterFraction
                 else 0f
                 entityManager.drawOrbs(canvas, bloomFrac)
             }
 
-            // 4. Ghost player (behind live player, 40% opacity white-blue) — Phase 19
+            // 4: Ghost player (behind live player, 40% opacity white-blue) — Phase 19
             if (::spriteManager.isInitialized && shouldDrawGhostPlayback()) {
                 ghostPlayer.draw(canvas, spriteManager)
             }
 
-            // 5. Live Player
+            // 5: Live Player
             if (::player.isInitialized) player.draw(canvas)
 
             if (debugToolsEnabled &&
@@ -1005,7 +971,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 drawDebugScenarioLayer(canvas)
             }
 
-            // 5. World-space FX: flavor text + particles
+            // 5: World-space FX: flavor text + particles
             DialogueBubbleManager.draw(canvas)
             FlavorTextManager.draw(canvas)
             ParticleManager.draw(canvas)
@@ -1414,5 +1380,63 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             else -> 0f
         }
         return hypot(dx.toDouble(), dy.toDouble()).toFloat()
+    }
+
+    private inner class GameViewNonTerminalCollisionEffects :
+        NonTerminalCollisionEffectSink {
+        override fun recordRunHit() {
+            gameState.recordHit()
+        }
+
+        override fun suppressGhost(seconds: Float) {
+            ghostPlayer.suppress(seconds)
+        }
+
+        override fun triggerStumble() {
+            player.triggerStumble()
+        }
+
+        override fun showStumbleFlash(dominantColor: Int) {
+            mercyFlashTimer = mercyFlashDuration
+            mercyFlashPaint.color = Color.argb(
+                200,
+                Color.red(dominantColor),
+                Color.green(dominantColor),
+                Color.blue(dominantColor)
+            )
+        }
+
+        override fun playNonLethalHit() {
+            SfxManager.playHit()
+        }
+
+        override fun shakeHit() {
+            CameraSystem.shakeHit()
+        }
+
+        override fun mediumPulse() {
+            HapticManager.mediumPulse()
+        }
+
+        override fun showMercyFlash() {
+            mercyFlashTimer = mercyFlashDuration
+            mercyFlashPaint.color = Color.argb(200, 60, 240, 80)
+        }
+
+        override fun playMercyMiss() {
+            SfxManager.playMercyMiss()
+        }
+
+        override fun doubleTap() {
+            HapticManager.doubleTap()
+        }
+
+        override fun emitMercyStars(centerX: Float, centerY: Float) {
+            ParticleManager.emit(FxPreset.MERCY_STARS, centerX, centerY)
+        }
+
+        override fun shakeMercyMiss() {
+            CameraSystem.shakeMercyMiss()
+        }
     }
 }
