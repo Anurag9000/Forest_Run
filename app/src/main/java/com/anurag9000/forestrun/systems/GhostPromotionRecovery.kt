@@ -42,6 +42,7 @@ internal enum class GhostPromotionRecoveryDisposition {
     ALREADY_APPLIED,
     ABANDONED_UNWRITTEN_GHOST,
     CORRUPT_RECEIPT,
+    CORRUPT_MANIFEST,
     IO_FAILURE;
 
     val allowsNewPromotion: Boolean
@@ -51,6 +52,7 @@ internal enum class GhostPromotionRecoveryDisposition {
             ALREADY_APPLIED,
             ABANDONED_UNWRITTEN_GHOST -> true
             CORRUPT_RECEIPT,
+            CORRUPT_MANIFEST,
             IO_FAILURE -> false
         }
 }
@@ -59,34 +61,35 @@ internal data class GhostPromotionPersistenceResult(
     val receiptDurable: Boolean,
     val ghostDurable: Boolean,
     val distanceDurable: Boolean,
-    val receiptCleared: Boolean
+    val receiptCleared: Boolean,
+    val manifestDurable: Boolean = true
 ) {
     val complete: Boolean
-        get() = receiptDurable && ghostDurable && distanceDurable && receiptCleared
+        get() = receiptDurable &&
+            ghostDurable &&
+            manifestDurable &&
+            distanceDurable &&
+            receiptCleared
 }
 
 /**
  * Makes asynchronous best-ghost publication recoverable across process death.
  *
- * The receipt is durable before the ghost write. Recovery fingerprints the
- * durable ghost before advancing best distance, so a receipt left before an
- * unsuccessful ghost write cannot raise the threshold for an old artifact.
+ * The transient receipt is durable before the ghost write. The persistent
+ * manifest is durable after the ghost write and before best distance, binding
+ * the surviving artifact to its distance after the receipt has been cleared.
  */
 internal class GhostPromotionRecoveryCoordinator(
     private val receiptStore: GhostPromotionReceiptStore,
-    private val artifactStore: GhostPromotionArtifactStore
+    private val artifactStore: GhostPromotionArtifactStore,
+    private val manifestStore: GhostArtifactManifestStore
 ) {
     fun persist(
         frames: List<GhostFrame>,
         distanceM: Float
     ): GhostPromotionPersistenceResult {
         if (!GhostRunValidator.isValid(frames) || !isValidDistance(distanceM)) {
-            return GhostPromotionPersistenceResult(
-                receiptDurable = false,
-                ghostDurable = false,
-                distanceDurable = false,
-                receiptCleared = false
-            )
+            return failedPersistence()
         }
 
         val receipt = GhostPromotionReceipt(
@@ -95,17 +98,23 @@ internal class GhostPromotionRecoveryCoordinator(
             fingerprint = GhostRunFingerprint.calculate(frames)
         )
         if (!receiptStore.save(receipt)) {
-            return GhostPromotionPersistenceResult(
-                receiptDurable = false,
-                ghostDurable = false,
-                distanceDurable = false,
-                receiptCleared = false
-            )
+            return failedPersistence()
         }
         if (!artifactStore.saveGhost(frames)) {
             return GhostPromotionPersistenceResult(
                 receiptDurable = true,
                 ghostDurable = false,
+                manifestDurable = false,
+                distanceDurable = false,
+                receiptCleared = false
+            )
+        }
+
+        if (!manifestStore.save(receipt.toManifest())) {
+            return GhostPromotionPersistenceResult(
+                receiptDurable = true,
+                ghostDurable = true,
+                manifestDurable = false,
                 distanceDurable = false,
                 receiptCleared = false
             )
@@ -117,6 +126,7 @@ internal class GhostPromotionRecoveryCoordinator(
             return GhostPromotionPersistenceResult(
                 receiptDurable = true,
                 ghostDurable = true,
+                manifestDurable = true,
                 distanceDurable = false,
                 receiptCleared = false
             )
@@ -126,6 +136,7 @@ internal class GhostPromotionRecoveryCoordinator(
         return GhostPromotionPersistenceResult(
             receiptDurable = true,
             ghostDurable = true,
+            manifestDurable = true,
             distanceDurable = true,
             receiptCleared = cleared
         )
@@ -134,36 +145,39 @@ internal class GhostPromotionRecoveryCoordinator(
     fun recover(): GhostPromotionRecoveryDisposition {
         return try {
             when (val loaded = receiptStore.load()) {
-                GhostPromotionReceiptLoadResult.Empty ->
-                    GhostPromotionRecoveryDisposition.EMPTY
+                GhostPromotionReceiptLoadResult.Empty -> recoverManifest()
                 GhostPromotionReceiptLoadResult.Corrupt ->
                     GhostPromotionRecoveryDisposition.CORRUPT_RECEIPT
-                is GhostPromotionReceiptLoadResult.Pending -> recover(loaded.receipt)
+                is GhostPromotionReceiptLoadResult.Pending -> recoverReceipt(loaded.receipt)
             }
         } catch (_: Exception) {
             GhostPromotionRecoveryDisposition.IO_FAILURE
         }
     }
 
-    private fun recover(receipt: GhostPromotionReceipt): GhostPromotionRecoveryDisposition {
+    private fun recoverReceipt(
+        receipt: GhostPromotionReceipt
+    ): GhostPromotionRecoveryDisposition {
         val durableGhost = artifactStore.loadGhost()
-        val ghostMatches = durableGhost.size == receipt.frameCount &&
-            GhostRunValidator.isValid(durableGhost) &&
-            GhostRunFingerprint.calculate(durableGhost) == receipt.fingerprint
-
-        if (!ghostMatches) {
-            return if (receiptStore.clear()) {
-                GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST
-            } else {
-                GhostPromotionRecoveryDisposition.IO_FAILURE
+        if (!matches(durableGhost, receipt.frameCount, receipt.fingerprint)) {
+            if (!receiptStore.clear()) {
+                return GhostPromotionRecoveryDisposition.IO_FAILURE
+            }
+            return when (val manifestRecovery = recoverManifest()) {
+                GhostPromotionRecoveryDisposition.EMPTY,
+                GhostPromotionRecoveryDisposition.ALREADY_APPLIED ->
+                    GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST
+                else -> manifestRecovery
             }
         }
 
-        val currentBest = normalizedDistance(artifactStore.loadBestDistanceM())
-        val repaired = currentBest < receipt.distanceM
-        if (repaired && !artifactStore.saveBestDistanceM(receipt.distanceM)) {
+        val expectedManifest = receipt.toManifest()
+        if (!ensureManifest(expectedManifest)) {
             return GhostPromotionRecoveryDisposition.IO_FAILURE
         }
+
+        val repaired = repairDistanceIfNeeded(receipt.distanceM)
+            ?: return GhostPromotionRecoveryDisposition.IO_FAILURE
         if (!receiptStore.clear()) {
             return GhostPromotionRecoveryDisposition.IO_FAILURE
         }
@@ -173,6 +187,76 @@ internal class GhostPromotionRecoveryCoordinator(
             GhostPromotionRecoveryDisposition.ALREADY_APPLIED
         }
     }
+
+    private fun recoverManifest(): GhostPromotionRecoveryDisposition {
+        return when (val loaded = manifestStore.load()) {
+            GhostArtifactManifestLoadResult.Empty ->
+                GhostPromotionRecoveryDisposition.EMPTY
+            GhostArtifactManifestLoadResult.Corrupt ->
+                GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
+            is GhostArtifactManifestLoadResult.Present -> {
+                val manifest = loaded.manifest
+                val durableGhost = artifactStore.loadGhost()
+                if (!matches(
+                        frames = durableGhost,
+                        frameCount = manifest.frameCount,
+                        fingerprint = manifest.fingerprint
+                    )
+                ) {
+                    GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
+                } else {
+                    val repaired = repairDistanceIfNeeded(manifest.distanceM)
+                        ?: return GhostPromotionRecoveryDisposition.IO_FAILURE
+                    if (repaired) {
+                        GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE
+                    } else {
+                        GhostPromotionRecoveryDisposition.ALREADY_APPLIED
+                    }
+                }
+            }
+        }
+    }
+
+    private fun ensureManifest(expected: GhostArtifactManifest): Boolean {
+        return when (val loaded = manifestStore.load()) {
+            is GhostArtifactManifestLoadResult.Present ->
+                loaded.manifest == expected || manifestStore.save(expected)
+            GhostArtifactManifestLoadResult.Empty,
+            GhostArtifactManifestLoadResult.Corrupt -> manifestStore.save(expected)
+        }
+    }
+
+    /** Returns whether a write occurred, or null when the write failed. */
+    private fun repairDistanceIfNeeded(distanceM: Float): Boolean? {
+        val currentBest = normalizedDistance(artifactStore.loadBestDistanceM())
+        if (currentBest >= distanceM) return false
+        return if (artifactStore.saveBestDistanceM(distanceM)) true else null
+    }
+
+    private fun matches(
+        frames: List<GhostFrame>,
+        frameCount: Int,
+        fingerprint: Long
+    ): Boolean =
+        frames.size == frameCount &&
+            GhostRunValidator.isValid(frames) &&
+            GhostRunFingerprint.calculate(frames) == fingerprint
+
+    private fun GhostPromotionReceipt.toManifest(): GhostArtifactManifest =
+        GhostArtifactManifest(
+            distanceM = distanceM,
+            frameCount = frameCount,
+            fingerprint = fingerprint
+        )
+
+    private fun failedPersistence(): GhostPromotionPersistenceResult =
+        GhostPromotionPersistenceResult(
+            receiptDurable = false,
+            ghostDurable = false,
+            manifestDurable = false,
+            distanceDurable = false,
+            receiptCleared = false
+        )
 
     private fun isValidDistance(distanceM: Float): Boolean =
         distanceM.isFinite() && distanceM >= 0f
