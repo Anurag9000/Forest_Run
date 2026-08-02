@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
         configurationHeightDp = resources.configuration.screenHeightDp
 
         SaveIntegrityManager.repair(this)
-        handleRecoveryMaintenanceIntent(intent, allowDestructive = true)
+        handleRecoveryMaintenanceIntent(intent, allowMutation = true)
         FeedbackSettings.init(this)
         RuntimeAssetValidator.validateRelease(this)
         gameView = GameView(this)
@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleRecoveryMaintenanceIntent(intent, allowDestructive = false)
+        handleRecoveryMaintenanceIntent(intent, allowMutation = false)
         val launchToken = debugLaunchGate.begin()
         if (::gameView.isInitialized) {
             gameView.post { applyDebugLaunchWhenReady(Intent(intent), launchToken) }
@@ -146,7 +146,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleRecoveryMaintenanceIntent(
         launchIntent: Intent,
-        allowDestructive: Boolean
+        allowMutation: Boolean
     ) {
         val action = launchIntent.getStringExtra(EXTRA_RECOVERY_ACTION)
             ?.trim()
@@ -163,9 +163,9 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            val maintenance = AndroidRecoveryEvidenceMaintenance(this)
             when (action) {
                 RECOVERY_ACTION_INSPECT -> {
+                    val maintenance = AndroidRecoveryEvidenceMaintenance(this)
                     Log.i(
                         TAG,
                         "$RECOVERY_MAINTENANCE_PREFIX action=$action " +
@@ -173,6 +173,15 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 RECOVERY_ACTION_RECOVER -> {
+                    if (!allowMutation) {
+                        Log.e(
+                            TAG,
+                            "$RECOVERY_MAINTENANCE_PREFIX action=$action " +
+                                "reason=active_session"
+                        )
+                        return
+                    }
+                    val maintenance = AndroidRecoveryEvidenceMaintenance(this)
                     Log.i(
                         TAG,
                         "$RECOVERY_MAINTENANCE_PREFIX action=$action " +
@@ -181,7 +190,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 RECOVERY_ACTION_DISCARD_CORRUPT,
                 RECOVERY_ACTION_DISCARD_PENDING -> {
-                    if (!allowDestructive) {
+                    if (!allowMutation) {
                         Log.e(
                             TAG,
                             "$RECOVERY_MAINTENANCE_PREFIX action=$action " +
@@ -200,6 +209,7 @@ class MainActivity : AppCompatActivity() {
                         )
                         return
                     }
+                    val maintenance = AndroidRecoveryEvidenceMaintenance(this)
                     val result = if (action == RECOVERY_ACTION_DISCARD_CORRUPT) {
                         maintenance.discardCorrupt(domain)
                     } else {
