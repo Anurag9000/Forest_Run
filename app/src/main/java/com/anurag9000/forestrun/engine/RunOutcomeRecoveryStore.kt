@@ -48,10 +48,10 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
         Context.MODE_PRIVATE
     )
 
-    override fun load(): RunOutcomeRecoveryLoadResult {
-        if (!prefs.getBoolean(KEY_PRESENT, false)) return RunOutcomeRecoveryLoadResult.Empty
-
-        return try {
+    override fun load(): RunOutcomeRecoveryLoadResult = try {
+        if (!prefs.getBoolean(KEY_PRESENT, false)) {
+            RunOutcomeRecoveryLoadResult.Empty
+        } else {
             val schema = prefs.getInt(KEY_SCHEMA, -1)
             if (schema != SCHEMA_VERSION) return RunOutcomeRecoveryLoadResult.Corrupt
 
@@ -76,9 +76,9 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
                     nextReturn = nextReturn
                 )
             )
-        } catch (_: ClassCastException) {
-            RunOutcomeRecoveryLoadResult.Corrupt
         }
+    } catch (_: ClassCastException) {
+        RunOutcomeRecoveryLoadResult.Corrupt
     }
 
     override fun save(record: RunOutcomeRecoveryRecord): Boolean {
