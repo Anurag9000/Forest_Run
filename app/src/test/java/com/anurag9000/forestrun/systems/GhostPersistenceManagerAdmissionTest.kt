@@ -117,6 +117,6 @@ class GhostPersistenceManagerAdmissionTest {
             File(ghost.path + ".promotion"),
             File(ghost.path + ".promotion.bak"),
             File(ghost.path + ".promotion.new")
-        ).forEach(File::delete)
+        ).forEach { file -> file.delete() }
     }
 }
