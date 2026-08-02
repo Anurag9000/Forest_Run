@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -59,7 +60,12 @@ def _stable_manifest_bytes(path: Path) -> tuple[bytes, tuple[int, int, int, int]
 
 def _validate_manifest(
     path: Path,
-) -> tuple[dict[str, Any], acceptance.ValidationSummary, Mapping[str, Any]]:
+) -> tuple[
+    dict[str, Any],
+    acceptance.ValidationSummary,
+    Mapping[str, Any],
+    tuple[tuple[Path, tuple[int, int, int, int]], ...],
+]:
     resolved = path.expanduser().resolve()
     raw, identity = _stable_manifest_bytes(resolved)
     try:
@@ -108,7 +114,12 @@ def _validate_manifest(
         raise PublicationError(
             "acceptance and trace validators resolved different candidate identities"
         )
-    return data, final_summary, traces
+    verified_snapshots = _verified_source_snapshots(
+        resolved,
+        confirmed_identity,
+        data,
+    )
+    return data, final_summary, traces, verified_snapshots
 
 
 def _same_file_or_path(first: Path, second: Path) -> bool:
@@ -185,35 +196,77 @@ def _load_aggregate(
     return payload, summary, raw, identity
 
 
-def _snapshot_sources(
-    protected_paths: Sequence[Path],
-) -> tuple[tuple[Path, tuple[int, int, int, int]], ...]:
-    snapshots: list[tuple[Path, tuple[int, int, int, int]]] = []
-    seen: set[Path] = set()
-    for protected in protected_paths:
-        resolved = protected.expanduser().resolve()
-        if resolved in seen:
-            continue
-        seen.add(resolved)
-        try:
-            stat_result = resolved.stat()
-        except OSError as exc:
-            raise PublicationError(
-                f"could not snapshot protected source {resolved}: {exc}"
-            ) from exc
-        if not resolved.is_file():
-            raise PublicationError(f"protected source is not a regular file: {resolved}")
-        snapshots.append(
-            (
-                resolved,
-                (
-                    stat_result.st_dev,
-                    stat_result.st_ino,
-                    stat_result.st_size,
-                    stat_result.st_mtime_ns,
-                ),
-            )
+def _hash_expected_source(
+    path: Path,
+    *,
+    label: str,
+    expected_sha256: str,
+    maximum_bytes: int,
+) -> tuple[Path, tuple[int, int, int, int]]:
+    resolved = path.expanduser().resolve()
+    try:
+        before = resolved.stat()
+    except FileNotFoundError as exc:
+        raise PublicationError(f"{label} is missing: {resolved}") from exc
+    except OSError as exc:
+        raise PublicationError(f"could not inspect {label} {resolved}: {exc}") from exc
+    if not resolved.is_file():
+        raise PublicationError(f"{label} is not a regular file: {resolved}")
+    if before.st_size <= 0 or before.st_size > maximum_bytes:
+        raise PublicationError(
+            f"{label} must be between 1 and {maximum_bytes} bytes: {resolved}"
         )
+
+    digest = hashlib.sha256()
+    try:
+        with resolved.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        after = resolved.stat()
+    except OSError as exc:
+        raise PublicationError(f"could not hash {label} {resolved}: {exc}") from exc
+
+    identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+    after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+    if after_identity != identity:
+        raise PublicationError(f"{label} changed during final digest verification: {resolved}")
+    if digest.hexdigest() != expected_sha256.lower():
+        raise PublicationError(f"{label} digest changed before publication: {resolved}")
+    return resolved, identity
+
+
+def _verified_source_snapshots(
+    manifest_path: Path,
+    manifest_identity: tuple[int, int, int, int],
+    data: Mapping[str, Any],
+) -> tuple[tuple[Path, tuple[int, int, int, int]], ...]:
+    snapshots: list[tuple[Path, tuple[int, int, int, int]]] = [
+        (manifest_path.expanduser().resolve(), manifest_identity)
+    ]
+    base = manifest_path.expanduser().resolve().parent
+    candidate = data["candidate"]
+    snapshots.append(
+        _hash_expected_source(
+            base / candidate["artifact_path"],
+            label="signed artifact",
+            expected_sha256=candidate["artifact_sha256"],
+            maximum_bytes=acceptance.MAX_ARTIFACT_BYTES,
+        )
+    )
+    for session_index, session in enumerate(data["sessions"]):
+        for scenario_name, scenario in session["scenarios"].items():
+            for evidence_index, evidence in enumerate(scenario["evidence_files"]):
+                snapshots.append(
+                    _hash_expected_source(
+                        base / evidence["path"],
+                        label=(
+                            f"sessions[{session_index}].scenarios.{scenario_name}."
+                            f"evidence_files[{evidence_index}]"
+                        ),
+                        expected_sha256=evidence["sha256"],
+                        maximum_bytes=acceptance.MAX_EVIDENCE_FILE_BYTES,
+                    )
+                )
     return tuple(snapshots)
 
 
@@ -328,17 +381,22 @@ def publish(
     # Final source validation deliberately happens after staged-report validation.
     # The second acceptance pass inside _validate_manifest rehashes every artifact
     # and evidence file after exact trace validation and immediately before binding.
-    candidate_data, candidate_summary, _ = _validate_manifest(candidate_resolved)
+    candidate_data, candidate_summary, _, candidate_snapshots = _validate_manifest(
+        candidate_resolved
+    )
     protected = list(_protected_paths(candidate_resolved, candidate_data))
+    source_snapshot = list(candidate_snapshots)
     baseline_summary = None
     if baseline_resolved is not None:
-        baseline_data, baseline_summary, _ = _validate_manifest(baseline_resolved)
+        baseline_data, baseline_summary, _, baseline_snapshots = _validate_manifest(
+            baseline_resolved
+        )
         protected.extend(_protected_paths(baseline_resolved, baseline_data))
+        source_snapshot.extend(baseline_snapshots)
 
     _assert_separate(staged, protected, "staged aggregate")
     _assert_separate(output, protected, "aggregate output")
     _assert_aggregate_identity(payload, candidate_summary, baseline_summary)
-    source_snapshot = _snapshot_sources(protected)
 
     confirmed_payload, confirmed_summary, confirmed_raw, confirmed_identity = (
         _load_aggregate(staged)
