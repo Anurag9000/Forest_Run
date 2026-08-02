@@ -162,6 +162,49 @@ Unknown versions, malformed receipts, and unrecoverable I/O return:
 
 Both block new ghost promotions. Non-ghost terminal progression remains independently recoverable and may still complete.
 
+Automatic recovery never clears corrupt or unreadable evidence merely to unblock the queue.
+
+## Explicit receipt inspection and repair
+
+`AndroidRecoveryEvidenceMaintenance` exposes the ghost domain as:
+
+```text
+GHOST_PROMOTION
+```
+
+It reports:
+
+```text
+CLEAN      no receipt
+PENDING    valid receipt awaits canonical recovery
+CORRUPT    invalid receipt
+IO_FAILURE receipt could not be read or recovered reliably
+```
+
+Operations:
+
+```text
+inspect
+recoverSafely
+discardCorrupt(GHOST_PROMOTION)
+discardUnresolvedPending(GHOST_PROMOTION)
+```
+
+Safety behavior:
+
+- safe recovery delegates to `GhostPromotionRecoveryCoordinator`;
+- a matching receipt repairs or recognizes best distance;
+- a nonmatching receipt is canonically abandoned without modifying the existing ghost or threshold;
+- a corrupt receipt remains retained under safe recovery;
+- `discardCorrupt` clears only a freshly confirmed corrupt sidecar;
+- I/O failure never authorizes deletion;
+- evidence clearing never directly deletes the ghost artifact or rewrites best distance;
+- the run-outcome journal is never opened by the ghost maintenance handler.
+
+The debug command surface accepts receipt mutation only during cold Activity creation before `GameView` and any ghost worker exist. A reused live `singleTask` Activity is inspection-only.
+
+Detailed ADB commands are documented in `docs/RECOVERY_EVIDENCE_MAINTENANCE.md`.
+
 ## Queue ordering
 
 A single daemon executor serializes promotions.
@@ -182,7 +225,7 @@ Recovery is attempted:
 - when a new manager request arrives and no worker is active;
 - at the beginning of every worker task;
 - before disk fallback in `loadLatest(...)`;
-- through the internal test/recovery entry point.
+- through the explicit cold-start maintenance command.
 
 ## Relationship to the terminal outcome journal
 
@@ -205,6 +248,8 @@ Protects:
 - best-distance promotion.
 
 These records are independently recoverable. They do not form one atomic transaction spanning every terminal side effect. A process may complete one recovery protocol before the other, but each protocol prevents its own duplicate or mismatched durable state.
+
+Maintenance preserves the same isolation: receipt inspection or removal does not clear the non-ghost journal.
 
 ## Validation surface
 
@@ -242,12 +287,19 @@ These records are independently recoverable. They do not form one atomic transac
 
 `RunOutcomePersistenceIntegrationTest` covers terminal submission and ensures a shorter next run cannot replace a longer pending promotion.
 
-`test_ghost_promotion_recovery_contract.py` locks ownership, ordering, receipt structure, fingerprint coverage, key parity, stale admission, and matching-publication cleanup.
+`RecoveryEvidenceMaintenanceCoordinatorTest` covers domain isolation, corrupt-only removal, recover-before-discard ordering, and no deletion after read failure.
+
+`RecoveryEvidenceMaintenanceIntegrationTest` covers matching receipt repair, corrupt receipt retention, independent run-journal state, and explicit receipt-only removal.
+
+Source contracts lock ownership, ordering, receipt structure, fingerprint coverage, key parity, stale admission, matching-publication cleanup, maintenance domain isolation, cold-start mutation, and inspection-only live intents.
+
+Focused compilation and executable harnesses passed for the recovery coordinator, manager, maintenance policy, production-shaped handlers, and command router. Exact-head Android Gradle, emulator, and physical-device execution remain separate evidence gates.
 
 ## Remaining limitations
 
 - A mismatch created by an older build before promotion receipts existed cannot be reconstructed because the ghost file itself does not encode its run distance.
 - A 64-bit noncryptographic fingerprint has a theoretical collision risk.
-- Corrupt receipt evidence has no automated repair or user-facing remediation flow.
-- Save compatibility namespaces should not be switched concurrently with an active worker; production does not perform that operation during a run, but the boundary remains an explicit maintenance constraint.
-- Exact-head Android Gradle, emulator, and physical-device execution remain separate evidence gates.
+- Remediation is debug/support tooling rather than an end-user recovery UI.
+- Release builds reject maintenance intents.
+- Save compatibility namespaces should not be switched concurrently with an active worker or maintenance instance.
+- Exact-head Android Gradle, emulator, physical-device, and ADB acceptance remain separate evidence gates.
