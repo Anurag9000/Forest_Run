@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.anurag9000.forestrun.entities.EntityType
 
+internal const val MAX_RECOVERABLE_ROUTE_TIER_COUNT = Int.MAX_VALUE / 16
+
 internal enum class RunOutcomeRecoveryPhase {
     PREPARED,
     MOOD_APPLIED,
@@ -220,7 +222,7 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
             isValidMood(record.nextMood) &&
             isValidReturn(record.previousReturn) &&
             isValidReturn(record.nextReturn) &&
-            record.previousRouteTierCount >= 0 &&
+            record.previousRouteTierCount in 0..MAX_RECOVERABLE_ROUTE_TIER_COUNT &&
             record.nextMood == RunOutcomeRecoveryTransitions.nextForestMood(
                 record.previousMood,
                 record.summary
@@ -379,12 +381,15 @@ internal object RunOutcomeRecoveryTransitions {
         )
     }
 
-    fun nextRouteTierCount(previous: Int, tier: PacifistRouteTier): Int =
-        if (tier == PacifistRouteTier.NONE) {
-            previous.coerceAtLeast(0)
-        } else {
-            saturatingIncrement(previous)
+    fun nextRouteTierCount(previous: Int, tier: PacifistRouteTier): Int {
+        val boundedPrevious = previous.coerceIn(0, MAX_RECOVERABLE_ROUTE_TIER_COUNT)
+        return when {
+            tier == PacifistRouteTier.NONE -> boundedPrevious
+            boundedPrevious >= MAX_RECOVERABLE_ROUTE_TIER_COUNT ->
+                MAX_RECOVERABLE_ROUTE_TIER_COUNT
+            else -> boundedPrevious + 1
         }
+    }
 
     fun persistedSummary(summary: RunSummary): RunSummary = summary.copy(
         score = summary.score.coerceAtLeast(0),
