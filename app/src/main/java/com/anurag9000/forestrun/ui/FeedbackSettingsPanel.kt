@@ -46,7 +46,7 @@ internal object FeedbackSettingsPanelLayout {
     }
 
     fun hitTest(layout: FeedbackSettingsLayout, x: Float, y: Float): FeedbackToggle? {
-        if (!x.isFinite() || !y.isFinite()) return null
+        if (!FiniteCoordinateAdmission.accepts(x, y)) return null
         return when {
             contains(layout.reducedMotion, x, y) -> FeedbackToggle.REDUCED_MOTION
             contains(layout.audio, x, y) -> FeedbackToggle.AUDIO
