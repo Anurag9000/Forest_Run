@@ -42,21 +42,31 @@ internal interface RunOutcomePersistenceSink {
 /** Optional capability that makes the non-ghost bundle crash recoverable. */
 internal interface RecoverableRunOutcomePersistenceSink : RunOutcomePersistenceSink {
     val recoveryStore: RunOutcomeRecoveryStore
+    val summarySnapshotStore: RunOutcomeSummarySnapshotStore
     fun loadForestMoodState(): ForestMoodState
     fun saveForestMoodState(state: ForestMoodState)
     fun loadReturnMomentState(): ReturnMomentState
     fun saveReturnMomentState(state: ReturnMomentState)
+    fun loadLastRunSummary(): RunSummary?
+    fun loadRouteTierCount(tier: PacifistRouteTier): Int
 }
 
 /** Production adapter for the terminal-run persistence surface. */
 internal class AndroidRunOutcomePersistenceSink(context: Context) :
     RecoverableRunOutcomePersistenceSink {
     private val appContext = context.applicationContext
+    private val persistenceNamespace = SaveManager.activePrefsNameForTests
 
     override val recoveryStore: RunOutcomeRecoveryStore =
         SharedPreferencesRunOutcomeRecoveryStore(
             context = appContext,
-            persistenceNamespace = SaveManager.activePrefsNameForTests
+            persistenceNamespace = persistenceNamespace
+        )
+
+    override val summarySnapshotStore: RunOutcomeSummarySnapshotStore =
+        SharedPreferencesRunOutcomeSummarySnapshotStore(
+            context = appContext,
+            persistenceNamespace = persistenceNamespace
         )
 
     override fun loadBestDistanceM(): Float = SaveManager.loadBestDistance(appContext)
@@ -93,6 +103,12 @@ internal class AndroidRunOutcomePersistenceSink(context: Context) :
     override fun saveReturnMomentState(state: ReturnMomentState) {
         SaveManager.saveReturnMomentState(appContext, state)
     }
+
+    override fun loadLastRunSummary(): RunSummary? =
+        SaveManager.loadLastRunSummary(appContext)
+
+    override fun loadRouteTierCount(tier: PacifistRouteTier): Int =
+        SaveManager.loadRouteTierCount(appContext, tier)
 }
 
 /**
@@ -204,6 +220,8 @@ internal class RunOutcomePersistenceCoordinator(
     ): RunOutcomeRecoveryRecord? = try {
         val previousMood = recoverable.loadForestMoodState()
         val previousReturn = recoverable.loadReturnMomentState()
+        val previousRouteTierCount = recoverable.loadRouteTierCount(summary.pacifistRouteTier)
+            .coerceAtLeast(0)
         val record = RunOutcomeRecoveryRecord(
             phase = RunOutcomeRecoveryPhase.PREPARED,
             summary = summary,
@@ -214,6 +232,11 @@ internal class RunOutcomePersistenceCoordinator(
                 previous = previousReturn,
                 summary = summary,
                 nowMs = clock()
+            ),
+            previousRouteTierCount = previousRouteTierCount,
+            nextRouteTierCount = RunOutcomeRecoveryTransitions.nextRouteTierCount(
+                previous = previousRouteTierCount,
+                tier = summary.pacifistRouteTier
             )
         )
         record.takeIf { recoverable.recoveryStore.save(it) }
@@ -242,7 +265,10 @@ internal class RunOutcomePersistenceCoordinator(
             record = record.copy(phase = RunOutcomeRecoveryPhase.RETURN_APPLIED)
             recoverable.recoveryStore.save(record)
 
-            sink.saveLastRunSummary(record.summary)
+            if (!ensureSummaryState(recoverable, record)) {
+                recoveryBlocked = true
+                return recoveryPending(ghostPromoted)
+            }
             record = record.copy(phase = RunOutcomeRecoveryPhase.SUMMARY_APPLIED)
             recoverable.recoveryStore.save(record)
 
@@ -277,7 +303,7 @@ internal class RunOutcomePersistenceCoordinator(
                     record = record.copy(phase = RunOutcomeRecoveryPhase.RETURN_APPLIED)
                     recoverable.recoveryStore.save(record)
 
-                    sink.saveLastRunSummary(record.summary)
+                    if (!ensureSummaryState(recoverable, record)) return false
                     record = record.copy(phase = RunOutcomeRecoveryPhase.SUMMARY_APPLIED)
                     recoverable.recoveryStore.save(record)
                     recoverable.recoveryStore.clear()
@@ -308,6 +334,30 @@ internal class RunOutcomePersistenceCoordinator(
         if (actual != record.previousReturn) return false
         recoverable.saveReturnMomentState(record.nextReturn)
         return recoverable.loadReturnMomentState() == record.nextReturn
+    }
+
+    private fun ensureSummaryState(
+        recoverable: RecoverableRunOutcomePersistenceSink,
+        record: RunOutcomeRecoveryRecord
+    ): Boolean {
+        val expectedSummary = RunOutcomeRecoveryTransitions.persistedSummary(record.summary)
+        val routeTier = expectedSummary.pacifistRouteTier
+        val actualSummary = recoverable.loadLastRunSummary()
+        val actualRouteTierCount = recoverable.loadRouteTierCount(routeTier).coerceAtLeast(0)
+
+        if (actualSummary == expectedSummary &&
+            actualRouteTierCount == record.nextRouteTierCount
+        ) return true
+        if (actualRouteTierCount != record.previousRouteTierCount) return false
+        if (!recoverable.summarySnapshotStore.save(
+                summary = expectedSummary,
+                routeTierCount = record.nextRouteTierCount
+            )
+        ) return false
+
+        return recoverable.loadLastRunSummary() == expectedSummary &&
+            recoverable.loadRouteTierCount(routeTier).coerceAtLeast(0) ==
+            record.nextRouteTierCount
     }
 
     private fun recoveryPending(ghostPromoted: Boolean): RunOutcomeCommitResult =
