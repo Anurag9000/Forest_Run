@@ -92,11 +92,13 @@ internal class RecoveryEvidenceMaintenanceCoordinator(
         }
     }
 
+    @Synchronized
     fun inspect(): RecoveryEvidenceReport = report(
         handlersByDomain.getValue(RecoveryEvidenceDomain.RUN_OUTCOME).inspect(),
         handlersByDomain.getValue(RecoveryEvidenceDomain.GHOST_PROMOTION).inspect()
     )
 
+    @Synchronized
     fun recoverSafely(): RecoveryEvidenceReport {
         val run = recoverIfEligible(
             handlersByDomain.getValue(RecoveryEvidenceDomain.RUN_OUTCOME)
@@ -107,6 +109,7 @@ internal class RecoveryEvidenceMaintenanceCoordinator(
         return report(run, ghost)
     }
 
+    @Synchronized
     fun discardCorrupt(domain: RecoveryEvidenceDomain): RecoveryDiscardResult {
         val handler = handlersByDomain.getValue(domain)
         val before = handler.inspect()
@@ -124,7 +127,9 @@ internal class RecoveryEvidenceMaintenanceCoordinator(
     /**
      * Attempts safe recovery once more before removing unresolved pending data.
      * Valid evidence that becomes recoverable is therefore completed, not erased.
+     * Read failures are never treated as permission to delete unknown evidence.
      */
+    @Synchronized
     fun discardUnresolvedPending(domain: RecoveryEvidenceDomain): RecoveryDiscardResult {
         val handler = handlersByDomain.getValue(domain)
         val before = handler.inspect()
@@ -138,25 +143,39 @@ internal class RecoveryEvidenceMaintenanceCoordinator(
                 after = before
             )
         }
+        if (before.state == RecoveryEvidenceState.IO_FAILURE) {
+            return RecoveryDiscardResult(
+                domain = domain,
+                disposition = RecoveryDiscardDisposition.IO_FAILURE,
+                before = before,
+                after = before
+            )
+        }
 
         val recovered = handler.recoverSafely()
-        if (recovered.state == RecoveryEvidenceState.CLEAN) {
-            return RecoveryDiscardResult(
+        return when (recovered.state) {
+            RecoveryEvidenceState.CLEAN -> RecoveryDiscardResult(
                 domain = domain,
                 disposition = RecoveryDiscardDisposition.RECOVERED_INSTEAD,
                 before = before,
                 after = recovered
             )
-        }
-        if (recovered.state == RecoveryEvidenceState.CORRUPT) {
-            return RecoveryDiscardResult(
+            RecoveryEvidenceState.CORRUPT -> RecoveryDiscardResult(
                 domain = domain,
                 disposition = RecoveryDiscardDisposition.NOT_APPLICABLE,
                 before = before,
                 after = recovered
             )
+            RecoveryEvidenceState.IO_FAILURE -> RecoveryDiscardResult(
+                domain = domain,
+                disposition = RecoveryDiscardDisposition.IO_FAILURE,
+                before = before,
+                after = recovered
+            )
+            RecoveryEvidenceState.PENDING,
+            RecoveryEvidenceState.BLOCKED ->
+                clear(handler, before, RecoveryDiscardDisposition.DISCARDED)
         }
-        return clear(handler, before, RecoveryDiscardDisposition.DISCARDED)
     }
 
     private fun recoverIfEligible(handler: RecoveryEvidenceHandler): RecoveryEvidenceSnapshot {
@@ -267,15 +286,14 @@ private class AndroidRunOutcomeEvidenceHandler(
                     namespace = namespace
                 )
             )
-            when (val after = inspect()) {
-                is RecoveryEvidenceSnapshot -> when (after.state) {
-                    RecoveryEvidenceState.CLEAN -> after.copy(detail = "recovered")
-                    RecoveryEvidenceState.PENDING -> after.copy(
-                        state = RecoveryEvidenceState.BLOCKED,
-                        detail = "journal_conflict_or_write_failure"
-                    )
-                    else -> after
-                }
+            val after = inspect()
+            when (after.state) {
+                RecoveryEvidenceState.CLEAN -> after.copy(detail = "recovered")
+                RecoveryEvidenceState.PENDING -> after.copy(
+                    state = RecoveryEvidenceState.BLOCKED,
+                    detail = "journal_conflict_or_write_failure"
+                )
+                else -> after
             }
         } catch (_: Exception) {
             snapshot(RecoveryEvidenceState.IO_FAILURE, "journal_recovery_failed")
