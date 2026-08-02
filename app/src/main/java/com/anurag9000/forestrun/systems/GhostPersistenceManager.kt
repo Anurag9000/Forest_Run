@@ -44,7 +44,7 @@ object GhostPersistenceManager {
         saveBestRunAsync(
             context = context,
             frames = frames,
-            distanceM = SaveManager.loadBestDistance(context.applicationContext)
+            distanceM = bestDistanceFloor(context.applicationContext)
         )
 
     /**
@@ -66,6 +66,7 @@ object GhostPersistenceManager {
             val recovery = recoveryCoordinator(appContext).recover()
             if (!recovery.allowsNewPromotion) return false
         }
+        if (distanceM < bestDistanceFloor(appContext)) return false
 
         val snapshot = frames.toList()
         val publication = PublishedGhost(
