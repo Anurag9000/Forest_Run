@@ -149,6 +149,31 @@ class TerminalHitOutcomeCoordinatorTest {
         assertEquals(input, observed)
     }
 
+    @Test
+    fun `contradictory killer identity is rejected before side effects`() {
+        val calls = mutableListOf<String>()
+        val coordinator = coordinator(calls, RecordingCommitter(calls))
+        var rejected = false
+
+        try {
+            coordinator.complete(
+                killerType = EntityType.WOLF,
+                biome = Biome.ANCIENT_GROVE,
+                presentation = presentation(EntityType.CAT),
+                completedGhost = ghostFrames(),
+                persistEncounter = true
+            ) {
+                calls += "summary"
+                summary()
+            }
+        } catch (_: IllegalArgumentException) {
+            rejected = true
+        }
+
+        assertTrue(rejected)
+        assertTrue(calls.isEmpty())
+    }
+
     private fun coordinator(
         calls: MutableList<String>,
         committer: RunOutcomeCommitter
