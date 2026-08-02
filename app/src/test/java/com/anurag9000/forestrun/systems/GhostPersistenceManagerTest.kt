@@ -32,6 +32,7 @@ class GhostPersistenceManagerTest {
         GhostPersistenceManager.clearMemoryForTests()
         deleteGhostFiles()
         deletePromotionFiles()
+        deleteManifestFiles()
     }
 
     @After
@@ -40,6 +41,7 @@ class GhostPersistenceManagerTest {
         GhostPersistenceManager.clearMemoryForTests()
         deleteGhostFiles()
         deletePromotionFiles()
+        deleteManifestFiles()
         context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .clear()
@@ -68,7 +70,7 @@ class GhostPersistenceManagerTest {
     }
 
     @Test
-    fun `new best ghost is visible immediately then ghost and distance become durable`() {
+    fun `new best ghost is visible immediately then ghost manifest and distance become durable`() {
         val frames = sampleFrames()
 
         assertTrue(
@@ -85,7 +87,17 @@ class GhostPersistenceManagerTest {
         assertEquals(640f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(frames, SaveManager.loadGhostRun(context))
         assertEquals(
-            GhostPromotionRecoveryDisposition.EMPTY,
+            GhostArtifactManifestLoadResult.Present(
+                GhostArtifactManifest(
+                    distanceM = 640f,
+                    frameCount = frames.size,
+                    fingerprint = GhostRunFingerprint.calculate(frames)
+                )
+            ),
+            manifestStore().load()
+        )
+        assertEquals(
+            GhostPromotionRecoveryDisposition.ALREADY_APPLIED,
             GhostPersistenceManager.recoverPendingPromotion(context)
         )
 
@@ -94,7 +106,7 @@ class GhostPersistenceManagerTest {
     }
 
     @Test
-    fun `startup recovery repairs distance when durable ghost matches receipt`() {
+    fun `startup recovery repairs manifest and distance when durable ghost matches receipt`() {
         val frames = sampleFrames()
         val receipt = GhostPromotionReceipt(
             distanceM = 900f,
@@ -108,6 +120,36 @@ class GhostPersistenceManagerTest {
 
         assertEquals(GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE, disposition)
         assertEquals(900f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(GhostPromotionReceiptLoadResult.Empty, receiptStore().load())
+        assertEquals(
+            GhostArtifactManifestLoadResult.Present(
+                GhostArtifactManifest(
+                    distanceM = 900f,
+                    frameCount = frames.size,
+                    fingerprint = GhostRunFingerprint.calculate(frames)
+                )
+            ),
+            manifestStore().load()
+        )
+    }
+
+    @Test
+    fun `startup recovery repairs distance from manifest after receipt is gone`() {
+        val frames = sampleFrames()
+        val manifest = GhostArtifactManifest(
+            distanceM = 1_050f,
+            frameCount = frames.size,
+            fingerprint = GhostRunFingerprint.calculate(frames)
+        )
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        assertTrue(manifestStore().save(manifest))
+        SaveManager.saveBestDistance(context, 200f)
+
+        val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
+
+        assertEquals(GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE, disposition)
+        assertEquals(1_050f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(GhostArtifactManifestLoadResult.Present(manifest), manifestStore().load())
         assertEquals(GhostPromotionReceiptLoadResult.Empty, receiptStore().load())
     }
 
@@ -137,6 +179,21 @@ class GhostPersistenceManagerTest {
         assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(oldGhost, SaveManager.loadGhostRun(context))
         assertEquals(GhostPromotionReceiptLoadResult.Empty, receiptStore().load())
+        assertEquals(GhostArtifactManifestLoadResult.Empty, manifestStore().load())
+    }
+
+    @Test
+    fun `corrupt manifest blocks new promotion without deleting ghost`() {
+        val frames = sampleFrames()
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        manifestFile().writeBytes(byteArrayOf(1, 2, 3, 4))
+
+        val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
+
+        assertEquals(GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST, disposition)
+        assertFalse(disposition.allowsNewPromotion)
+        assertEquals(frames, SaveManager.loadGhostRun(context))
+        assertTrue(manifestFile().exists())
     }
 
     @Test
@@ -209,11 +266,20 @@ class GhostPersistenceManagerTest {
             ghostFilename = SaveManager.activeGhostFilenameForTests
         )
 
+    private fun manifestStore(): AtomicFileGhostArtifactManifestStore =
+        AtomicFileGhostArtifactManifestStore(
+            context = context,
+            ghostFilename = SaveManager.activeGhostFilenameForTests
+        )
+
     private fun ghostFile(): File =
         File(context.filesDir, SaveManager.activeGhostFilenameForTests)
 
     private fun promotionFile(): File =
         File(context.filesDir, "${SaveManager.activeGhostFilenameForTests}.promotion")
+
+    private fun manifestFile(): File =
+        File(context.filesDir, "${SaveManager.activeGhostFilenameForTests}.manifest")
 
     private fun deleteGhostFiles() {
         val base = ghostFile()
@@ -224,6 +290,13 @@ class GhostPersistenceManagerTest {
 
     private fun deletePromotionFiles() {
         val base = promotionFile()
+        base.delete()
+        File(base.path + ".bak").delete()
+        File(base.path + ".new").delete()
+    }
+
+    private fun deleteManifestFiles() {
+        val base = manifestFile()
         base.delete()
         File(base.path + ".bak").delete()
         File(base.path + ".new").delete()
