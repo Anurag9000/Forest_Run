@@ -211,11 +211,22 @@ Reduced-motion settings are applied at the particle-count boundary. Continuous B
 
 ## 12. Ghost recording, playback, and persistence
 
-`GhostRecorder` samples player pose at 30 Hz for up to twenty minutes. On a terminal hit, the completed buffer is detached in O(1) regardless of run mode. `RunOutcomePersistenceCoordinator` decides whether that detached buffer is eligible to replace the best ghost. Accepted best ghosts are published immediately to playback memory and handed to `GhostPersistenceManager` for dedicated-worker persistence.
+`GhostRecorder` samples player pose at 30 Hz for up to twenty minutes. On a terminal hit, the completed buffer is detached in O(1) regardless of run mode. `RunOutcomePersistenceCoordinator` decides whether the detached buffer is eligible to replace the best ghost.
 
-The best-distance threshold advances only after `GhostPersistenceManager` accepts the ghost publication. An empty, invalid, or unschedulable ghost therefore cannot raise the threshold and permanently block a later valid run from replacing stale playback data.
+Eligibility compares completed distance against `GhostPersistenceManager.bestDistanceFloor(...)`, which includes both durable best distance and any accepted in-memory promotion still awaiting worker completion. A shorter run therefore cannot queue behind and overwrite a longer pending candidate.
 
-Ghost files are written atomically and reject malformed inputs including oversized, truncated, trailing, non-finite, invalid-state, and non-monotonic data. Newer-schema ghost data is preserved rather than destructively rewritten by an older build.
+Accepted frames are published immediately to playback memory. `GhostPersistenceManager` then serializes durable promotion on one daemon worker:
+
+```text
+AtomicFile promotion receipt
+→ AtomicFile ghost write
+→ synchronous monotonic best-distance commit
+→ receipt clear
+```
+
+The versioned receipt stores target distance, frame count, and a raw-bit fingerprint of every persisted frame component. Recovery advances best distance only when the durable ghost count and fingerprint match. A receipt whose ghost never landed is abandoned without changing the existing ghost or threshold. Corrupt or inaccessible receipt evidence blocks new ghost promotions while leaving non-ghost terminal persistence independent.
+
+Ghost files reject malformed inputs including oversized, truncated, trailing, non-finite, invalid-state, and non-monotonic data. Newer-schema ghost data is preserved rather than destructively rewritten by an older build.
 
 `GhostPlayer` provides context-aware visibility around the live player and hazards. Ghosts have no gameplay hitbox.
 
@@ -293,29 +304,29 @@ green mercy flash
 
 Deterministic or persistence-disabled STUMBLE encounters retain local mechanics and feedback but do not write permanent relationship history.
 
-### Exactly-once and recoverable persistence owner
+### Exactly-once and recoverable persistence owners
 
 `RunOutcomePersistenceCoordinator` implements `RunOutcomeCommitter` and owns one per-run terminal token:
 
 - it claims the token before checking run mode or touching a sink;
 - non-persistent deterministic runs consume the token without writing;
 - repeated or re-entrant terminal delivery returns `ALREADY_COMMITTED`;
-- coordinator construction and both run-start paths retry older recovery evidence;
-- corrupt or conflicting evidence returns `RECOVERY_BLOCKED` and prevents new permanent terminal writes;
-- an applied bundle whose final journal clear failed returns `RECOVERY_PENDING`.
+- coordinator construction and both run-start paths retry older non-ghost recovery evidence;
+- corrupt or conflicting non-ghost evidence returns `RECOVERY_BLOCKED`;
+- an applied non-ghost bundle whose final clear failed returns `RECOVERY_PENDING`.
 
-Before any ghost or progression side effect, the production sink synchronously journals:
+Before ghost eligibility or progression writes, the production sink synchronously journals:
 
-- the raw completed summary;
+- raw completed summary;
 - forest-mood before and expected after-state;
 - return-moment before and expected after-state;
 - pacifist-route count before and expected after-state.
 
-Recovery compares live state with both snapshots. An already-applied state is accepted without replay; an unchanged before-state is advanced and verified; any third state is treated as a conflict.
+Recovery compares live state with both snapshots. An already-applied state is accepted without replay; an unchanged before-state is advanced and verified; any third state is a conflict.
 
-`SharedPreferencesRunOutcomeSummarySnapshotStore` writes the sanitized last-run summary and expected route counter in one synchronous transaction. This avoids replaying `SaveManager.saveLastRunSummary`, whose hidden route-counter increment is not idempotent.
+`SharedPreferencesRunOutcomeSummarySnapshotStore` writes the sanitized last-run summary and expected route counter in one synchronous transaction, avoiding replay of the hidden counter increment inside `SaveManager.saveLastRunSummary`.
 
-The recoverable non-ghost order is:
+The non-ghost order is:
 
 ```text
 PREPARED journal
@@ -328,7 +339,7 @@ PREPARED journal
 → journal clear
 ```
 
-Ghost publication and best-distance advancement remain outside this replayable bundle because detached frame data is not stored in the recovery journal. The architecture is therefore crash-recoverable for non-ghost progression, not a single transaction across SharedPreferences and asynchronous `AtomicFile` ghost persistence.
+Ghost and best-distance promotion use the independent receipt protocol described in section 12. The terminal coordinator submits one distance-aware candidate but never writes the threshold itself. The two recovery records protect their own state surfaces; they do not form one global transaction across relationship history, presentation, non-ghost progression, ghost storage, and best distance.
 
 Deterministic scenarios are isolated from permanent score, encounter, relationship, Garden, summary, and ghost history while still receiving local authored feedback.
 
@@ -393,7 +404,7 @@ Permanent CI is read-only and validates the exact event SHA. It performs:
 - API 35 connected instrumentation;
 - exact assertion of fourteen tests with zero failures, errors, or skips.
 
-The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, terminal-run exactly-once ownership, crash recovery, journal validation, transition parity, and atomic summary-route snapshots.
+The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, terminal-run exactly-once ownership, non-ghost crash recovery, ghost-promotion crash recovery, journal and receipt validation, transition parity, atomic summary-route snapshots, pending-distance admission, and frame fingerprint identity.
 
 ## 19. Debug scenarios
 
@@ -409,7 +420,10 @@ The following remain intentionally open:
 - the complete collision-result `when` dispatcher remains in `GameView`, although each nonterminal result branch delegates its ordered work;
 - STUMBLE and MERCY_MISS live effects remain implemented by the private `GameViewNonTerminalCollisionEffects` adapter;
 - immediate HIT impact still directly coordinates Player, ghost, camera, audio, music, and haptic managers before the extracted completion seam;
-- detached ghost frames lack a durable recovery reference, so ghost publication and best-distance advancement are not one recoverable transaction;
+- legacy ghost/distance mismatches created before promotion receipts cannot be reconstructed because ghost files contain no distance;
+- the 64-bit ghost fingerprint is noncryptographic and has a theoretical collision risk;
+- non-ghost and ghost recovery evidence are independently recoverable rather than one global terminal transaction;
+- concurrent compatibility-namespace switching during an active ghost worker is unsupported maintenance behavior;
 - corrupt/conflicting recovery evidence has no automated repair or user-facing remediation path;
 - entity mechanic/readability claims need ordinary-play and hardware acceptance;
 - frame, allocation, GC, memory, I/O, audio-thread, thermal, and long-run metrics need measured thresholds on representative hardware;
