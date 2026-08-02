@@ -211,7 +211,9 @@ Reduced-motion settings are applied at the particle-count boundary. Continuous B
 
 ## 12. Ghost recording, playback, and persistence
 
-`GhostRecorder` samples player pose at 30 Hz for up to twenty minutes. A completed best-run buffer is detached in O(1), published immediately to playback memory, and handed to `GhostPersistenceManager` for dedicated-worker persistence.
+`GhostRecorder` samples player pose at 30 Hz for up to twenty minutes. On a terminal hit, the completed buffer is detached in O(1) regardless of run mode. `RunOutcomePersistenceCoordinator` decides whether that detached buffer is eligible to replace the best ghost. Accepted best ghosts are published immediately to playback memory and handed to `GhostPersistenceManager` for dedicated-worker persistence.
+
+The best-distance threshold advances only after `GhostPersistenceManager` accepts the ghost publication. An empty, invalid, or unschedulable ghost therefore cannot raise the threshold and permanently block a later valid run from replacing stale playback data.
 
 Ghost files are written atomically and reject malformed inputs including oversized, truncated, trailing, non-finite, invalid-state, and non-monotonic data. Newer-schema ghost data is preserved rather than destructively rewritten by an older build.
 
@@ -226,6 +228,17 @@ Persistence is split by responsibility:
 - `SaveManager`: scores, Seeds, run summaries, Garden/costume values, ghost compatibility paths;
 - `PersistentMemoryManager`: encounters, hits, passes, spares, relationships, return/history signals;
 - `SaveIntegrityManager`: schema migration, type repair, bounds, saturating counters, incomplete-summary rejection, and compatibility storage.
+
+Terminal run persistence has one coordinator-level owner:
+
+- `GameView` builds one completed `RunSummary`, detaches one completed ghost, and invokes `RunOutcomePersistenceCoordinator.commit(...)` once;
+- the coordinator claims its per-run token before checking run mode or touching a sink;
+- non-persistent deterministic runs consume the token without writing, preventing a later mode change from retroactively committing the same run;
+- repeated or re-entrant terminal delivery returns `ALREADY_COMMITTED` without repeating counters, summaries, best-distance changes, or ghost publication;
+- `AndroidRunOutcomePersistenceSink` is the only production adapter for best-ghost publication, best-distance advancement, forest-mood recording, return-moment recording, and last-summary storage;
+- `prepareFreshRun()` and `prepareEncounterScenario()` are the only `GameView` paths that reopen the token.
+
+This ownership is exactly-once within one process/run, but the underlying writes still span SharedPreferences and asynchronous atomic-file storage. They are ordered and fail-closed against duplicate delivery; they are not a single cross-store transaction. Durable journaling or idempotent recovery after a process failure between individual sink operations remains open architectural work.
 
 Deterministic scenarios are isolated from permanent score, encounter, relationship, Garden, summary, and ghost history.
 
@@ -290,7 +303,7 @@ Permanent CI is read-only and validates the exact event SHA. It performs:
 - API 35 connected instrumentation;
 - exact assertion of fourteen tests with zero failures, errors, or skips.
 
-The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, and frame telemetry.
+The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, and terminal-run exactly-once persistence ownership.
 
 ## 19. Debug scenarios
 
@@ -303,7 +316,8 @@ Debug scenarios are deterministic test aids, not substitutes for ordinary-play a
 The following remain intentionally open:
 
 - `GameView` is still a large coordinator and should be decomposed incrementally after behavioral stability;
-- persistence ownership is safer but still distributed across managers;
+- terminal outcome ownership is centralized, but the underlying multi-store commit is not transactional and lacks a durable recovery journal;
+- collision feedback, relationship recording, summary construction, and death-state transition still share one large `GameView` branch and should be extracted behind a behavior-preserving outcome seam;
 - entity mechanic/readability claims need ordinary-play and hardware acceptance;
 - frame, allocation, GC, memory, I/O, audio-thread, thermal, and long-run metrics need measured thresholds on representative hardware;
 - fixed landscape and procedural scenic layers need final product decisions;
