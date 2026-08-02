@@ -2,14 +2,12 @@ package com.anurag9000.forestrun.engine
 
 import android.content.Context
 import com.anurag9000.forestrun.entities.CollisionResult
-import com.anurag9000.forestrun.entities.Entity
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.ui.DialogueBubbleManager
 import com.anurag9000.forestrun.ui.FlavorTextManager
 
 internal data class StumbleCollisionOutcome(
-    val entity: Entity,
     val killerType: EntityType?,
     val routeTier: PacifistRouteTier,
     val playerX: Float,
@@ -45,7 +43,6 @@ internal interface NonTerminalCollisionEffectSink {
     fun playNonLethalHit()
     fun shakeHit()
     fun mediumPulse()
-    fun deactivate(entity: Entity)
     fun showMercyFlash()
     fun playMercyMiss()
     fun doubleTap()
@@ -125,7 +122,10 @@ internal class NonTerminalCollisionOutcomeCoordinator(
     private val relationshipRecorder: NonTerminalCollisionRelationshipRecorder,
     private val feedbackPresenter: NonTerminalCollisionFeedbackPresenter
 ) {
-    fun completeStumble(input: StumbleCollisionOutcome) {
+    fun completeStumble(
+        input: StumbleCollisionOutcome,
+        deactivateEntity: () -> Unit
+    ) {
         effects.recordRunHit()
         if (input.persistEncounter && input.killerType != null) {
             relationshipRecorder.recordHit(input.killerType)
@@ -137,7 +137,7 @@ internal class NonTerminalCollisionOutcomeCoordinator(
         effects.shakeHit()
         effects.mediumPulse()
         feedbackPresenter.presentStumble(input)
-        effects.deactivate(input.entity)
+        deactivateEntity()
     }
 
     fun completeMercyMiss(input: MercyMissCollisionOutcome) {
