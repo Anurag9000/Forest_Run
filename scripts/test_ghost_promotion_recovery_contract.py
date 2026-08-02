@@ -15,6 +15,10 @@ RECOVERY = (
     ROOT
     / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPromotionRecovery.kt"
 )
+MANIFEST = (
+    ROOT
+    / "app/src/main/java/com/anurag9000/forestrun/systems/GhostArtifactManifest.kt"
+)
 SAVE_MANAGER = (
     ROOT
     / "app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt"
@@ -101,6 +105,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.manager = MANAGER.read_text(encoding="utf-8")
         cls.recovery = RECOVERY.read_text(encoding="utf-8")
+        cls.manifest = MANIFEST.read_text(encoding="utf-8")
         cls.save_manager = SAVE_MANAGER.read_text(encoding="utf-8")
 
     def test_single_worker_preserves_promotion_order(self) -> None:
@@ -145,7 +150,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn("latestPublication?.distanceM", floor)
         self.assertIn("maxOf(diskDistance, publishedDistance)", floor)
 
-    def test_worker_recovers_previous_receipt_before_new_persist(self) -> None:
+    def test_worker_recovers_previous_evidence_before_new_persist(self) -> None:
         save = extract_braced_overload(self.manager, "fun saveBestRunAsync(")
         worker = save[save.index("pendingWrite = executor.submit") :]
         recover = worker.index("val recovery = coordinator.recover()")
@@ -154,11 +159,12 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertLess(recover, gate)
         self.assertLess(gate, persist)
 
-    def test_receipt_is_durable_before_ghost_and_distance(self) -> None:
+    def test_receipt_ghost_manifest_distance_and_clear_order(self) -> None:
         persist = extract_braced_block(self.recovery, "fun persist(")
         order = (
             "receiptStore.save(receipt)",
             "artifactStore.saveGhost(frames)",
+            "manifestStore.save(receipt.toManifest())",
             "artifactStore.loadBestDistanceM()",
             "artifactStore.saveBestDistanceM(targetBest)",
             "receiptStore.clear()",
@@ -166,43 +172,67 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         positions = [persist.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
 
-    def test_recovery_requires_matching_durable_ghost(self) -> None:
-        recover = extract_braced_block(
+        result = extract_braced_block(
             self.recovery,
-            "private fun recover(receipt: GhostPromotionReceipt)",
+            "internal data class GhostPromotionPersistenceResult(",
         )
-        prefix_order = (
+        self.assertIn("manifestDurable", result)
+        complete = extract_braced_block(result, "get()")
+        self.assertIn("manifestDurable", complete)
+
+    def test_receipt_recovery_ensures_manifest_before_distance_and_clear(self) -> None:
+        recover = extract_braced_block(self.recovery, "private fun recoverReceipt(")
+        order = (
             "artifactStore.loadGhost()",
-            "durableGhost.size == receipt.frameCount",
-            "GhostRunFingerprint.calculate(durableGhost) == receipt.fingerprint",
-            "if (!ghostMatches)",
-        )
-        prefix_positions = [recover.index(item) for item in prefix_order]
-        self.assertEqual(sorted(prefix_positions), prefix_positions)
-
-        mismatch = extract_braced_block(recover, "if (!ghostMatches)")
-        self.assertIn("receiptStore.clear()", mismatch)
-        self.assertIn("ABANDONED_UNWRITTEN_GHOST", mismatch)
-        self.assertNotIn("saveBestDistanceM", mismatch)
-
-        matching = recover[recover.index("val currentBest =") :]
-        matching_order = (
-            "artifactStore.loadBestDistanceM()",
-            "artifactStore.saveBestDistanceM(receipt.distanceM)",
+            "matches(durableGhost, receipt.frameCount, receipt.fingerprint)",
+            "ensureManifest(expectedManifest)",
+            "repairDistanceIfNeeded(receipt.distanceM)",
             "receiptStore.clear()",
         )
-        matching_positions = [matching.index(item) for item in matching_order]
-        self.assertEqual(sorted(matching_positions), matching_positions)
+        positions = [recover.index(item) for item in order]
+        self.assertEqual(sorted(positions), positions)
 
-    def test_corrupt_or_io_failed_receipt_blocks_new_promotion(self) -> None:
+        mismatch = extract_braced_block(
+            recover,
+            "if (!matches(durableGhost, receipt.frameCount, receipt.fingerprint))",
+        )
+        self.assertIn("receiptStore.clear()", mismatch)
+        self.assertIn("recoverManifest()", mismatch)
+        self.assertNotIn("saveBestDistanceM", mismatch)
+
+    def test_manifest_recovers_distance_without_receipt(self) -> None:
+        recover = extract_braced_block(self.recovery, "fun recover()")
+        self.assertIn(
+            "GhostPromotionReceiptLoadResult.Empty -> recoverManifest()",
+            recover,
+        )
+
+        manifest_recovery = extract_braced_block(
+            self.recovery,
+            "private fun recoverManifest()",
+        )
+        order = (
+            "manifestStore.load()",
+            "artifactStore.loadGhost()",
+            "matches(",
+            "repairDistanceIfNeeded(manifest.distanceM)",
+        )
+        positions = [manifest_recovery.index(item) for item in order]
+        self.assertEqual(sorted(positions), positions)
+        self.assertIn("CORRUPT_MANIFEST", manifest_recovery)
+
+    def test_corrupt_receipt_manifest_or_io_blocks_new_promotion(self) -> None:
         enum = extract_braced_block(
             self.recovery,
             "internal enum class GhostPromotionRecoveryDisposition",
         )
-        self.assertIn("CORRUPT_RECEIPT", enum)
-        self.assertIn("IO_FAILURE", enum)
+        for item in ("CORRUPT_RECEIPT", "CORRUPT_MANIFEST", "IO_FAILURE"):
+            self.assertIn(item, enum)
         self.assertIn("allowsNewPromotion", enum)
-        self.assertIn("CORRUPT_RECEIPT,\n            IO_FAILURE -> false", enum)
+        self.assertIn(
+            "CORRUPT_RECEIPT,\n            CORRUPT_MANIFEST,\n            IO_FAILURE -> false",
+            enum,
+        )
 
     def test_receipt_codec_is_versioned_fixed_size_and_atomic(self) -> None:
         store = extract_braced_block(
@@ -217,6 +247,38 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn("atomicFile.finishWrite(stream)", store)
         self.assertIn("atomicFile.failWrite(it)", store)
         self.assertIn("receipt.frameCount in 1..GhostRecorder.MAX_FRAMES", store)
+
+    def test_manifest_codec_is_versioned_fixed_size_and_atomic(self) -> None:
+        store = extract_braced_block(
+            self.manifest,
+            "internal class AtomicFileGhostArtifactManifestStore(",
+        )
+        self.assertIn('"$ghostFilename.manifest"', store)
+        self.assertIn("AtomicFile(baseFile)", store)
+        self.assertIn("const val MAGIC = 0x4652474D", store)
+        self.assertIn("const val VERSION = 1", store)
+        self.assertIn("const val RECORD_BYTES = 24L", store)
+        self.assertIn("atomicFile.startWrite()", store)
+        self.assertIn("atomicFile.finishWrite(stream)", store)
+        self.assertIn("atomicFile.failWrite(it)", store)
+        self.assertIn("manifest.frameCount in 1..GhostRecorder.MAX_FRAMES", store)
+
+    def test_manager_constructs_and_clears_both_evidence_stores(self) -> None:
+        coordinator = extract_braced_block(
+            self.manager,
+            "private fun recoveryCoordinator(",
+        )
+        self.assertIn("AtomicFileGhostPromotionReceiptStore(", coordinator)
+        self.assertIn("AtomicFileGhostArtifactManifestStore(", coordinator)
+        self.assertIn("manifestStore =", coordinator)
+
+        clear = extract_braced_block(
+            self.manager,
+            "internal fun clearPromotionEvidenceForTests(",
+        )
+        self.assertIn("receiptCleared", clear)
+        self.assertIn("manifestCleared", clear)
+        self.assertIn("receiptCleared && manifestCleared", clear)
 
     def test_fingerprint_covers_all_persisted_frame_components(self) -> None:
         fingerprint = extract_braced_block(
