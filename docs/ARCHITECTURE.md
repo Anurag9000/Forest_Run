@@ -221,7 +221,7 @@ Ghost files are written atomically and reject malformed inputs including oversiz
 
 Legacy ghost frames store `PlayerState.ordinal`; therefore PlayerState entries must not be removed or reordered without a schema migration.
 
-## 13. Terminal hit completion and persistent memory
+## 13. Collision outcomes and persistent memory
 
 Persistence remains split by storage responsibility:
 
@@ -229,11 +229,11 @@ Persistence remains split by storage responsibility:
 - `PersistentMemoryManager`: encounters, hits, passes, spares, relationships, return/history signals;
 - `SaveIntegrityManager`: schema migration, type repair, bounds, saturating counters, incomplete-summary rejection, and compatibility storage.
 
-Terminal `HIT` processing now has two explicit coordinator layers.
+Terminal `HIT` processing has two explicit coordinator layers.
 
-### Immediate gameplay owner
+### Immediate terminal gameplay owner
 
-`GameView` retains only the live impact sequence:
+`GameView` retains only the live terminal impact sequence:
 
 - record the run-level hit;
 - suppress the ghost;
@@ -245,7 +245,7 @@ Terminal `HIT` processing now has two explicit coordinator layers.
 - store the returned summary;
 - trigger death timing and enter `RunState.DYING`.
 
-### Completion owner
+### Terminal completion owner
 
 `TerminalHitOutcomeCoordinator` owns the behavior-preserving deterministic completion sequence:
 
@@ -258,6 +258,40 @@ Terminal `HIT` processing now has two explicit coordinator layers.
 7. return the completed summary and commit result.
 
 The production adapters are `AndroidTerminalHitRelationshipRecorder`, `AndroidTerminalHitFeedbackPresenter`, and `AndroidTerminalHitRestQuoteResolver`. Their interfaces are replaced with recording fakes in pure ordering tests.
+
+### Nonterminal outcome owner
+
+`STUMBLE` and `MERCY_MISS` branches now capture immutable inputs and delegate once to `NonTerminalCollisionOutcomeCoordinator`.
+
+For STUMBLE, the coordinator preserves:
+
+```text
+run hit accounting
+→ persistent known-killer relationship hit
+→ 0.9-second ghost suppression
+→ Player stumble
+→ biome-dominant flash
+→ nonlethal hit SFX
+→ hit camera shake
+→ medium haptic
+→ authored STUMBLE bubble/flavor copy
+→ selected-entity deactivation
+```
+
+For MERCY_MISS, it preserves:
+
+```text
+green mercy flash
+→ mercy-miss SFX
+→ double-tap haptic
+→ authored mercy bubble/flavor copy
+→ mercy stars at Player center
+→ mercy camera shake
+```
+
+`AndroidNonTerminalCollisionFeedbackPresenter` owns authored-copy selection and presentation geometry. `AndroidNonTerminalCollisionRelationshipRecorder` owns the extracted STUMBLE relationship write. `GameViewNonTerminalCollisionEffects` is a private inner adapter for live state that remains private to `GameView`, including Player, ghost, flash, camera, audio, haptic, and particle mutations.
+
+Deterministic or persistence-disabled STUMBLE encounters retain local mechanics and feedback but do not write permanent relationship history.
 
 ### Exactly-once persistence owner
 
@@ -334,7 +368,7 @@ Permanent CI is read-only and validates the exact event SHA. It performs:
 - API 35 connected instrumentation;
 - exact assertion of fourteen tests with zero failures, errors, or skips.
 
-The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, and terminal-run exactly-once persistence ownership.
+The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, and terminal-run exactly-once persistence ownership.
 
 ## 19. Debug scenarios
 
@@ -347,7 +381,8 @@ Debug scenarios are deterministic test aids, not substitutes for ordinary-play a
 The following remain intentionally open:
 
 - `GameView` is still a large coordinator and should be decomposed incrementally after behavioral stability;
-- the complete collision-result dispatcher remains inline: STUMBLE and MERCY_MISS still own presentation and effect sequencing in `GameView`;
+- the complete collision-result `when` dispatcher remains in `GameView`, although each nonterminal result branch now delegates its ordered work;
+- STUMBLE and MERCY_MISS live effects remain implemented by the private `GameViewNonTerminalCollisionEffects` adapter;
 - immediate HIT impact still directly coordinates Player, ghost, camera, audio, music, and haptic managers before the extracted completion seam;
 - terminal outcome ownership is centralized, but the underlying multi-store commit is not transactional and lacks a durable recovery journal;
 - entity mechanic/readability claims need ordinary-play and hardware acceptance;
