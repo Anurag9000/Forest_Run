@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.PlayerState
+import com.anurag9000.forestrun.systems.AtomicFileGhostArtifactManifestStore
 import com.anurag9000.forestrun.systems.AtomicFileGhostPromotionReceiptStore
+import com.anurag9000.forestrun.systems.GhostArtifactManifest
+import com.anurag9000.forestrun.systems.GhostArtifactManifestLoadResult
 import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.systems.GhostPromotionReceipt
 import com.anurag9000.forestrun.systems.GhostPromotionReceiptLoadResult
@@ -26,6 +29,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
     private lateinit var context: Context
     private lateinit var runStore: SharedPreferencesRunOutcomeRecoveryStore
     private lateinit var ghostStore: AtomicFileGhostPromotionReceiptStore
+    private lateinit var manifestStore: AtomicFileGhostArtifactManifestStore
 
     @Before
     fun setUp() {
@@ -42,14 +46,20 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
             context,
             SaveManager.activeGhostFilenameForTests
         )
+        manifestStore = AtomicFileGhostArtifactManifestStore(
+            context,
+            SaveManager.activeGhostFilenameForTests
+        )
         runStore.clear()
         ghostStore.clear()
+        manifestStore.clear()
     }
 
     @After
     fun tearDown() {
         runStore.clear()
         ghostStore.clear()
+        manifestStore.clear()
         primaryPrefs().edit().clear().commit()
         recoveryPrefs().edit().clear().commit()
         deleteGhostFiles()
@@ -63,7 +73,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         assertEquals(RecoveryEvidenceState.CLEAN, report.runOutcome.state)
         assertEquals(RecoveryEvidenceState.CLEAN, report.ghostPromotion.state)
         assertEquals(
-            "run_outcome=CLEAN(no_journal); ghost_promotion=CLEAN(no_receipt)",
+            "run_outcome=CLEAN(no_journal); ghost_promotion=CLEAN(no_evidence)",
             report.supportSummary()
         )
     }
@@ -147,8 +157,9 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
     }
 
     @Test
-    fun `matching ghost receipt repairs distance independently`() {
+    fun `matching ghost receipt repairs manifest and distance independently`() {
         val frames = ghostFrames()
+        val expectedManifest = manifest(frames, 900f)
         assertTrue(SaveManager.saveGhostRun(context, frames))
         SaveManager.saveBestDistance(context, 120f)
         assertTrue(
@@ -170,10 +181,39 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         assertEquals(900f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(frames, SaveManager.loadGhostRun(context))
         assertEquals(GhostPromotionReceiptLoadResult.Empty, ghostStore.load())
+        assertEquals(
+            GhostArtifactManifestLoadResult.Present(expectedManifest),
+            manifestStore.load()
+        )
     }
 
     @Test
-    fun `corrupt ghost receipt is retained by safe retry and can be discarded alone`() {
+    fun `manifest without receipt repairs distance and remains inspectable`() {
+        val frames = ghostFrames()
+        val expectedManifest = manifest(frames, 1_050f)
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        assertTrue(manifestStore.save(expectedManifest))
+        SaveManager.saveBestDistance(context, 100f)
+        val maintenance = AndroidRecoveryEvidenceMaintenance(context)
+
+        assertEquals("valid_manifest", maintenance.inspect().ghostPromotion.detail)
+        val report = maintenance.recoverSafely()
+
+        assertEquals(RecoveryEvidenceState.CLEAN, report.ghostPromotion.state)
+        assertEquals("distance_repaired", report.ghostPromotion.detail)
+        assertEquals(1_050f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(
+            GhostArtifactManifestLoadResult.Present(expectedManifest),
+            manifestStore.load()
+        )
+    }
+
+    @Test
+    fun `corrupt ghost receipt is discarded without deleting valid manifest`() {
+        val frames = ghostFrames()
+        val validManifest = manifest(frames, 700f)
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        assertTrue(manifestStore.save(validManifest))
         promotionFile().writeBytes(byteArrayOf(1, 2, 3, 4))
         val maintenance = AndroidRecoveryEvidenceMaintenance(context)
 
@@ -189,8 +229,60 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
 
         assertEquals(RecoveryDiscardDisposition.DISCARDED, discarded.disposition)
         assertEquals(RecoveryEvidenceState.CLEAN, discarded.after.state)
+        assertEquals("valid_manifest", discarded.after.detail)
         assertFalse(promotionFile().exists())
+        assertEquals(
+            GhostArtifactManifestLoadResult.Present(validManifest),
+            manifestStore.load()
+        )
         assertEquals(RecoveryEvidenceState.CLEAN, maintenance.inspect().runOutcome.state)
+    }
+
+    @Test
+    fun `corrupt manifest is retained by safe retry and can be discarded alone`() {
+        val frames = ghostFrames()
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        manifestFile().writeBytes(byteArrayOf(1, 2, 3, 4))
+        val maintenance = AndroidRecoveryEvidenceMaintenance(context)
+
+        val safe = maintenance.recoverSafely()
+
+        assertEquals(RecoveryEvidenceState.CORRUPT, safe.ghostPromotion.state)
+        assertEquals("invalid_manifest", maintenance.inspect().ghostPromotion.detail)
+        assertTrue(manifestFile().exists())
+        assertEquals(frames, SaveManager.loadGhostRun(context))
+
+        val discarded = maintenance.discardCorrupt(
+            RecoveryEvidenceDomain.GHOST_PROMOTION
+        )
+
+        assertEquals(RecoveryDiscardDisposition.DISCARDED, discarded.disposition)
+        assertEquals(RecoveryEvidenceState.CLEAN, discarded.after.state)
+        assertFalse(manifestFile().exists())
+        assertEquals(frames, SaveManager.loadGhostRun(context))
+    }
+
+    @Test
+    fun `manifest artifact mismatch is diagnosed and targeted discard preserves ghost`() {
+        val frames = ghostFrames()
+        val unrelated = frames.mapIndexed { index, frame ->
+            if (index == 0) frame.copy(x = frame.x + 4f) else frame
+        }
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        assertTrue(manifestStore.save(manifest(unrelated, 800f)))
+        val maintenance = AndroidRecoveryEvidenceMaintenance(context)
+
+        val before = maintenance.inspect().ghostPromotion
+
+        assertEquals(RecoveryEvidenceState.CORRUPT, before.state)
+        assertEquals("manifest_artifact_mismatch", before.detail)
+        val discarded = maintenance.discardCorrupt(
+            RecoveryEvidenceDomain.GHOST_PROMOTION
+        )
+        assertEquals(RecoveryDiscardDisposition.DISCARDED, discarded.disposition)
+        assertEquals(RecoveryEvidenceState.CLEAN, discarded.after.state)
+        assertEquals(frames, SaveManager.loadGhostRun(context))
+        assertEquals(GhostArtifactManifestLoadResult.Empty, manifestStore.load())
     }
 
     private fun recoveryRecord(summary: RunSummary): RunOutcomeRecoveryRecord {
@@ -234,6 +326,15 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         pacifistRouteTier = PacifistRouteTier.MERCIFUL
     )
 
+    private fun manifest(
+        frames: List<GhostFrame>,
+        distanceM: Float
+    ): GhostArtifactManifest = GhostArtifactManifest(
+        distanceM = distanceM,
+        frameCount = frames.size,
+        fingerprint = GhostRunFingerprint.calculate(frames)
+    )
+
     private fun ghostFrames(): List<GhostFrame> = listOf(
         GhostFrame(
             t = 0f,
@@ -268,6 +369,11 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         "${SaveManager.activeGhostFilenameForTests}.promotion"
     )
 
+    private fun manifestFile(): File = File(
+        context.filesDir,
+        "${SaveManager.activeGhostFilenameForTests}.manifest"
+    )
+
     private fun deleteGhostFiles() {
         val ghost = File(context.filesDir, SaveManager.activeGhostFilenameForTests)
         listOf(
@@ -276,7 +382,10 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
             File(ghost.path + ".new"),
             File(ghost.path + ".promotion"),
             File(ghost.path + ".promotion.bak"),
-            File(ghost.path + ".promotion.new")
+            File(ghost.path + ".promotion.new"),
+            File(ghost.path + ".manifest"),
+            File(ghost.path + ".manifest.bak"),
+            File(ghost.path + ".manifest.new")
         ).forEach { file -> file.delete() }
     }
 
