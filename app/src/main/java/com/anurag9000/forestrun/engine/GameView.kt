@@ -30,7 +30,6 @@ import com.anurag9000.forestrun.ui.MainMenuScreen
 import com.anurag9000.forestrun.ui.DialogueBubbleManager
 import com.anurag9000.forestrun.ui.DebugEncounterOverlay
 import com.anurag9000.forestrun.ui.DebugOverlayAction
-import com.anurag9000.forestrun.ui.RestQuoteManager
 import kotlin.math.hypot
 
 private const val TAG = "ForestRun"
@@ -180,6 +179,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val ghostRecorder = GhostRecorder()
     private val runOutcomePersistence =
         RunOutcomePersistenceCoordinator(AndroidRunOutcomePersistenceSink(context))
+    private val terminalHitOutcome = TerminalHitOutcomeCoordinator(
+        relationshipRecorder = AndroidTerminalHitRelationshipRecorder(context),
+        feedbackPresenter = AndroidTerminalHitFeedbackPresenter(context),
+        restQuoteResolver = AndroidTerminalHitRestQuoteResolver(context),
+        outcomeCommitter = runOutcomePersistence
+    )
     private val ghostPlayer   = GhostPlayer()
     private val ghostHazardFocusRect = RectF()
     private val reusableGhostVisibilityContext = GhostPlayer.VisibilityContext(
@@ -768,44 +773,22 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         HapticManager.longPulse()     // Phase 21 — strong death feedback
                         val completedGhost = ghostRecorder.detachSnapshot()
                         val killerType = entityManager.entityTypeOf(collision.entity)
-                        if (persistEncounter) {
-                            killerType?.let { PersistentMemoryManager.recordHit(context, it) }
-                        }
-                        val collisionCue = RunFlavorPresentation.collisionCue(
-                            context = context,
-                            type = killerType,
-                            result = CollisionResult.HIT,
-                            routeTier = gameState.pacifistRouteTier
-                        )
-                        DialogueBubbleManager.spawn(
-                            text = collisionCue.bubbleText,
-                            anchorX = player.x + Player.BASE_WIDTH * 0.5f,
-                            anchorY = player.y - 28f,
-                            fillColor = collisionCue.fillColor,
-                            borderColor = collisionCue.borderColor
-                        )
-                        FlavorTextManager.spawn(
-                            text = collisionCue.flavorText,
-                            x = player.x + Player.BASE_WIDTH * 0.18f,
-                            y = player.y - 8f,
-                            colour = collisionCue.flavorColor,
-                            lifetime = 1.25f,
-                            size = collisionCue.flavorSize
-                        )
-                        val summaryPreview = gameState.buildRunSummary(lastKiller = killerType)
-                        currentRestQuote = RestQuoteManager.quoteFor(
-                            context = context,
-                            summary = summaryPreview,
+                        val completedHit = terminalHitOutcome.complete(
+                            killerType = killerType,
                             biome = entityManager.biomeManager.currentBiome,
-                            killer = killerType
-                        )
-                        val completedSummary = summaryPreview.copy(restQuote = currentRestQuote)
-                        currentRunSummary = completedSummary
-                        runOutcomePersistence.commit(
-                            summary = completedSummary,
+                            presentation = TerminalHitPresentation(
+                                killerType = killerType,
+                                routeTier = gameState.pacifistRouteTier,
+                                playerX = player.x,
+                                playerY = player.y
+                            ),
                             completedGhost = completedGhost,
-                            persistProgress = persistEncounter
-                        )
+                            persistEncounter = persistEncounter
+                        ) {
+                            gameState.buildRunSummary(lastKiller = killerType)
+                        }
+                        currentRestQuote = completedHit.summary.restQuote
+                        currentRunSummary = completedHit.summary
                         // Transition to DYING
                         if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
                         runState = RunState.DYING
