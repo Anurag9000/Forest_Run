@@ -26,8 +26,7 @@ class RunOutcomePersistenceCoordinatorTest {
         assertEquals(
             listOf(
                 "loadBestDistance",
-                "publishGhost:2",
-                "saveBestDistance:480.0",
+                "publishGhost:2:480.0",
                 "recordForestMood:480.0",
                 "recordReturnMoment:480.0",
                 "saveLastRunSummary:480.0"
@@ -91,7 +90,7 @@ class RunOutcomePersistenceCoordinatorTest {
     }
 
     @Test
-    fun `rejected ghost does not advance best distance threshold`() {
+    fun `rejected ghost does not create a separate best distance write`() {
         val sink = RecordingSink(bestDistanceM = 100f, publishGhostResult = false)
         val coordinator = RunOutcomePersistenceCoordinator(sink)
 
@@ -101,7 +100,7 @@ class RunOutcomePersistenceCoordinatorTest {
         assertEquals(
             listOf(
                 "loadBestDistance",
-                "publishGhost:2",
+                "publishGhost:2:700.0",
                 "recordForestMood:700.0",
                 "recordReturnMoment:700.0",
                 "saveLastRunSummary:700.0"
@@ -111,7 +110,7 @@ class RunOutcomePersistenceCoordinatorTest {
     }
 
     @Test
-    fun `malformed completed distance cannot promote ghost`() {
+    fun `malformed completed distance cannot enter ghost promotion`() {
         val sink = RecordingSink(bestDistanceM = Float.NaN)
         val coordinator = RunOutcomePersistenceCoordinator(sink)
 
@@ -153,7 +152,7 @@ class RunOutcomePersistenceCoordinatorTest {
     )
 
     private class RecordingSink(
-        private var bestDistanceM: Float,
+        private val bestDistanceM: Float,
         private val publishGhostResult: Boolean = true
     ) : RunOutcomePersistenceSink {
         val calls = mutableListOf<String>()
@@ -163,14 +162,12 @@ class RunOutcomePersistenceCoordinatorTest {
             return bestDistanceM
         }
 
-        override fun publishBestGhost(frames: List<GhostFrame>): Boolean {
-            calls += "publishGhost:${frames.size}"
+        override fun publishBestGhost(
+            frames: List<GhostFrame>,
+            distanceM: Float
+        ): Boolean {
+            calls += "publishGhost:${frames.size}:$distanceM"
             return publishGhostResult
-        }
-
-        override fun saveBestDistanceM(distanceM: Float) {
-            bestDistanceM = distanceM
-            calls += "saveBestDistance:$distanceM"
         }
 
         override fun recordForestMood(summary: RunSummary) {
