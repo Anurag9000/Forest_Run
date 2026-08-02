@@ -17,7 +17,8 @@ Implemented directly on `main`:
    - added terminal presentation/result value objects;
    - added fakeable relationship, feedback, quote, and persistence seams;
    - added Android production adapters;
-   - established the relationship → feedback → summary → quote → persistence order.
+   - established the relationship → feedback → summary → quote → persistence order;
+   - rejects contradictory completion/presentation killer identities before side effects.
 3. `GameView.kt`
    - constructs one terminal-hit coordinator;
    - delegates terminal completion once;
@@ -26,12 +27,13 @@ Implemented directly on `main`:
    - no longer directly resolves the rest quote;
    - no longer directly invokes terminal persistence.
 4. `TerminalHitOutcomeCoordinatorTest.kt`
-   - four pure ordering and identity tests.
+   - five pure ordering, identity, and rejection tests.
 5. `TerminalHitFeedbackPresenterIntegrationTest.kt`
    - two Robolectric production-presenter tests.
 6. Source contracts
    - migrated `test_run_outcome_persistence_contract.py`;
-   - added `test_terminal_hit_outcome_contract.py`.
+   - added `test_terminal_hit_outcome_contract.py`;
+   - locks identity validation before every extracted side effect.
 7. Documentation
    - updated `RUN_OUTCOME_PERSISTENCE.md`;
    - added `TERMINAL_HIT_COMPLETION.md`;
@@ -63,7 +65,7 @@ stores returned rest quote and summary
 
 ## Extracted completion order
 
-The new coordinator performs:
+The new coordinator first verifies that its explicit killer identity matches the presentation identity. It then performs:
 
 ```text
 persistent known-killer relationship hit
