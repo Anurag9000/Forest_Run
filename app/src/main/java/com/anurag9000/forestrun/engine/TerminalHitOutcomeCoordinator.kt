@@ -1,7 +1,9 @@
 package com.anurag9000.forestrun.engine
 
 import android.content.Context
+import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.EntityType
+import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.ui.DialogueBubbleManager
 import com.anurag9000.forestrun.ui.FlavorTextManager
@@ -52,19 +54,19 @@ internal class AndroidTerminalHitFeedbackPresenter(context: Context) :
         val cue = RunFlavorPresentation.collisionCue(
             context = appContext,
             type = input.killerType,
-            result = com.anurag9000.forestrun.entities.CollisionResult.HIT,
+            result = CollisionResult.HIT,
             routeTier = input.routeTier
         )
         DialogueBubbleManager.spawn(
             text = cue.bubbleText,
-            anchorX = input.playerX + com.anurag9000.forestrun.entities.Player.BASE_WIDTH * 0.5f,
+            anchorX = input.playerX + Player.BASE_WIDTH * 0.5f,
             anchorY = input.playerY - 28f,
             fillColor = cue.fillColor,
             borderColor = cue.borderColor
         )
         FlavorTextManager.spawn(
             text = cue.flavorText,
-            x = input.playerX + com.anurag9000.forestrun.entities.Player.BASE_WIDTH * 0.18f,
+            x = input.playerX + Player.BASE_WIDTH * 0.18f,
             y = input.playerY - 8f,
             colour = cue.flavorColor,
             lifetime = 1.25f,
@@ -109,6 +111,10 @@ internal class TerminalHitOutcomeCoordinator(
         persistEncounter: Boolean,
         buildSummaryPreview: () -> RunSummary
     ): TerminalHitCompletionResult {
+        require(presentation.killerType == killerType) {
+            "terminal hit presentation and completion killer identity must match"
+        }
+
         if (persistEncounter && killerType != null) {
             relationshipRecorder.recordHit(killerType)
         }
