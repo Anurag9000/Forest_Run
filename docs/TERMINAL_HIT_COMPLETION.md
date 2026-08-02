@@ -114,7 +114,9 @@ The coordinator does not know Android storage. It calls `RunOutcomeCommitter` wi
 
 `RunOutcomePersistenceCoordinator` implements this interface and retains its exactly-once per-run token.
 
-For production sinks, the coordinator also owns durable recovery of the non-ghost bundle:
+For production sinks, terminal persistence now has two independently recoverable paths.
+
+### Non-ghost progression
 
 ```text
 forest mood
@@ -124,7 +126,24 @@ forest mood
 
 Before those writes it records synchronous before/after evidence. Process restart compares live state with both snapshots so a write that completed before its checkpoint is not applied twice. Corrupt or conflicting evidence blocks new permanent terminal writes.
 
-Detached ghost frames are not stored in that journal, so ghost publication and best-distance advancement remain outside the replayable bundle.
+### Ghost and best distance
+
+The terminal coordinator evaluates the detached ghost against `GhostPersistenceManager.bestDistanceFloor(...)` and submits one distance-aware candidate when the run is strictly better.
+
+It does not write best distance.
+
+The single ghost worker performs:
+
+```text
+AtomicFile promotion receipt
+→ AtomicFile ghost write
+→ synchronous monotonic best-distance commit
+→ receipt clear
+```
+
+The receipt stores target distance, frame count, and a raw-bit frame fingerprint. Recovery advances the threshold only when the durable ghost matches that identity. A valid receipt whose ghost never landed is abandoned without changing the existing threshold.
+
+`ghostPromoted` in the completion result means accepted into this recoverable worker pipeline, not necessarily durable before the completion call returns.
 
 ## Tests
 
@@ -161,7 +180,9 @@ Detached ghost frames are not stored in that journal, so ghost publication and b
 - one summary callback and one persistence call;
 - production adapter ownership.
 
-`test_run_outcome_persistence_contract.py` forbids direct persistence calls from `GameView`, requires one terminal-hit completion call, and locks journal-before-ghost plus mood/return/summary-route recovery ordering.
+`test_run_outcome_persistence_contract.py` forbids direct persistence calls from `GameView`, requires one terminal-hit completion call, and locks non-ghost journal-before-ghost plus mood/return/summary-route recovery ordering.
+
+`test_ghost_promotion_recovery_contract.py` locks distance-aware worker ownership, receipt-before-artifact ordering, pending-distance admission, frame fingerprint coverage, and the absence of a direct best-distance write in the terminal coordinator.
 
 ## Evidence boundary
 
@@ -175,12 +196,12 @@ The complete `GameView` replacement was compared immediately. Its diff contained
 
 No immediate impact, STUMBLE, MERCY_MISS, rendering, input, Bloom, ghost playback, run reset, debug scenario, or death-transition code changed.
 
-The later recovery tranche compiled the journal/coordinator surface against focused stubs and passed executable recovery and route-aware harnesses. The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session.
+Later persistence tranches compiled the non-ghost and ghost recovery surfaces against focused stubs and passed executable recovery, route-aware, route-ceiling, and ghost crash-window harnesses. The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session.
 
 ## Remaining architecture work
 
 - extract the complete collision-result dispatcher without changing severity or effect ordering;
 - consider a typed terminal-impact command rather than direct static manager calls;
-- add a durable ghost artifact reference or recoverable best-ghost transaction;
 - add deliberate repair tooling for corrupt/conflicting recovery evidence;
+- decide whether to encode distance inside a future ghost schema so legacy mismatches become self-describing;
 - continue reducing `GameView` only through diff-bounded, behavior-preserving seams.
