@@ -26,11 +26,14 @@ The wrapper performs a two-phase publication sequence:
 5. strict-parse the staged aggregate;
 6. validate the staged aggregate with `validate_device_acceptance_aggregate.py`, an independent consumer-side contract validator;
 7. revalidate candidate and baseline manifests, signed artifacts, every evidence digest, and every exact trace after staging has completed;
-8. bind the staged candidate and optional baseline identities back to those final manifest validations;
-9. recheck staged/output path, symlink, and inode separation from every protected source;
-10. atomically replace the final output and fsync its parent directory.
+8. run a second physical-acceptance pass after exact trace validation so every artifact and evidence digest is rehashed at the last semantic boundary;
+9. bind the staged candidate and optional baseline identities back to those final manifest validations;
+10. snapshot every protected source's device, inode, size, and modification timestamp;
+11. reread the staged aggregate and require identical bytes, identity, parsed payload, and independent-validation summary;
+12. recheck every protected-source snapshot and staged/output alias boundary;
+13. atomically replace the final output and fsync its parent directory.
 
-If any gate fails, the wrapper exits nonzero and the final output is not published. Its cleanup trap removes the staged file. The dedicated publisher API intentionally leaves a failed staged file in place when called directly so an operator can inspect it; the canonical wrapper owns cleanup policy.
+Every validation, identity, snapshot, and alias failure occurs before atomic replacement, so those failures leave the previous final report untouched. The wrapper exits nonzero and its cleanup trap removes the staged file. A low-level filesystem failure during or after `os.replace` is different: the destination may already be visible even if directory `fsync` fails, so operators must inspect the final path and rerun the complete gate. The dedicated publisher API intentionally leaves a failed staged file in place when called directly so it can be inspected; the canonical wrapper owns cleanup policy.
 
 ## Layered implementation
 
@@ -78,15 +81,18 @@ Unknown fields fail closed. This makes accidental producer schema drift and forg
 - requires staged and output paths to be distinct and in the same directory;
 - rejects candidate/baseline path or inode aliasing;
 - independently re-runs physical acceptance and exact trace validation after staging;
-- thereby rehashes the signed artifact and every evidence file after aggregate generation;
+- immediately runs physical acceptance a second time after trace validation, rehashing the signed artifact and every evidence file at the final semantic boundary;
+- proves both acceptance passes resolve the same candidate summary and that the manifest remains byte- and inode-identical;
 - proves the staged candidate commit/artifact match the final candidate manifest;
 - proves baseline presence and commit/artifact identity match the supplied final baseline manifest;
-- rejects staged/output resolved-path and hard-link aliases to protected sources;
-- rechecks alias separation immediately before publication;
+- snapshots every protected manifest, artifact, and evidence file by device, inode, size, and modification timestamp;
+- rereads the staged aggregate and requires the exact bytes, inode identity, parsed payload, and independent-validation summary to remain unchanged during source validation;
+- rejects staged/output resolved-path, symbolic-link, and hard-link aliases to protected sources;
+- rechecks every protected-source snapshot and alias boundary immediately before replacement;
 - atomically moves the already validated staged inode into the final path;
 - fsyncs the destination directory.
 
-This closes the canonical publication window in which a source could otherwise be modified after aggregation but before a report was made final.
+This closes the canonical publication windows in which either a source or the staged report could otherwise be modified after validation but before replacement. Stat snapshots are a final race detector, while content authenticity remains grounded in the immediately preceding digest and semantic validation passes.
 
 ## Preconditions
 
@@ -197,6 +203,9 @@ The host-side suites include:
 - duplicate-key strict JSON rejection;
 - valid two-phase publication;
 - evidence mutation after staging;
+- non-trace evidence mutation during trace validation, caught by the post-trace acceptance rehash;
+- staged-report mutation during final source validation;
+- protected-source mutation after the final snapshot;
 - candidate and baseline identity substitution;
 - output hard-link and symlink aliasing;
 - cross-directory staging;
@@ -210,9 +219,10 @@ Aggregation adds a review layer after absolute acceptance:
 1. validate the candidate manifest and exact trace contract;
 2. aggregate to a staged report and freeze its comparison-matrix hash;
 3. independently validate the aggregate schema and arithmetic;
-4. revalidate all source evidence after staging;
-5. publish atomically only when candidate/baseline identities still match;
-6. investigate material regressions using raw evidence;
-7. retain the final manifest, aggregate, comparison, exact traces, and raw evidence together.
+4. revalidate all source evidence after staging and rehash it again after exact trace validation;
+5. lock staged-report bytes plus protected-source stat snapshots;
+6. publish atomically only when candidate/baseline identities and all final snapshots still match;
+7. investigate material regressions using raw evidence;
+8. retain the final manifest, aggregate, comparison, exact traces, and raw evidence together.
 
 A successful aggregate command does not make Forest Run release-ready by itself. Signing, internal delivery, physical testing, visual review, accessibility review, and current store-policy approval remain independent gates.
