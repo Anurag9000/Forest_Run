@@ -13,6 +13,7 @@ import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -70,25 +71,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
     @Test
     fun `valid run outcome journal recovers all non ghost state`() {
         val summary = summary()
-        val previousMood = ForestMoodState()
-        val previousReturn = ReturnMomentState()
-        val record = RunOutcomeRecoveryRecord(
-            phase = RunOutcomeRecoveryPhase.PREPARED,
-            summary = summary,
-            previousMood = previousMood,
-            nextMood = RunOutcomeRecoveryTransitions.nextForestMood(previousMood, summary),
-            previousReturn = previousReturn,
-            nextReturn = RunOutcomeRecoveryTransitions.nextReturnMoment(
-                previous = previousReturn,
-                summary = summary,
-                nowMs = FIXED_NOW_MS
-            ),
-            previousRouteTierCount = 0,
-            nextRouteTierCount = RunOutcomeRecoveryTransitions.nextRouteTierCount(
-                previous = 0,
-                tier = summary.pacifistRouteTier
-            )
-        )
+        val record = recoveryRecord(summary)
         assertTrue(runStore.save(record))
         val maintenance = AndroidRecoveryEvidenceMaintenance(context)
         assertEquals(
@@ -132,6 +115,35 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         assertEquals(RecoveryDiscardDisposition.DISCARDED, discarded.disposition)
         assertEquals(RecoveryEvidenceState.CLEAN, discarded.after.state)
         assertFalse(recoveryPrefs().contains("present"))
+    }
+
+    @Test
+    fun `conflicting valid journal is retried before deliberate discard`() {
+        val summary = summary()
+        val record = recoveryRecord(summary)
+        assertTrue(runStore.save(record))
+        val conflictingMood = record.previousMood.copy(
+            totalRuns = 7,
+            steadyRuns = 7
+        )
+        SaveManager.saveForestMoodState(context, conflictingMood)
+        val maintenance = AndroidRecoveryEvidenceMaintenance(context)
+
+        val discarded = maintenance.discardUnresolvedPending(
+            RecoveryEvidenceDomain.RUN_OUTCOME
+        )
+
+        assertEquals(RecoveryDiscardDisposition.DISCARDED, discarded.disposition)
+        assertEquals(RecoveryEvidenceState.PENDING, discarded.before.state)
+        assertEquals(RecoveryEvidenceState.CLEAN, discarded.after.state)
+        assertEquals(conflictingMood, SaveManager.loadForestMoodState(context))
+        assertEquals(ReturnMomentState(), SaveManager.loadReturnMomentState(context))
+        assertNull(SaveManager.loadLastRunSummary(context))
+        assertEquals(
+            0,
+            SaveManager.loadRouteTierCount(context, summary.pacifistRouteTier)
+        )
+        assertEquals(RunOutcomeRecoveryLoadResult.Empty, runStore.load())
     }
 
     @Test
@@ -179,6 +191,28 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         assertEquals(RecoveryEvidenceState.CLEAN, discarded.after.state)
         assertFalse(promotionFile().exists())
         assertEquals(RecoveryEvidenceState.CLEAN, maintenance.inspect().runOutcome.state)
+    }
+
+    private fun recoveryRecord(summary: RunSummary): RunOutcomeRecoveryRecord {
+        val previousMood = ForestMoodState()
+        val previousReturn = ReturnMomentState()
+        return RunOutcomeRecoveryRecord(
+            phase = RunOutcomeRecoveryPhase.PREPARED,
+            summary = summary,
+            previousMood = previousMood,
+            nextMood = RunOutcomeRecoveryTransitions.nextForestMood(previousMood, summary),
+            previousReturn = previousReturn,
+            nextReturn = RunOutcomeRecoveryTransitions.nextReturnMoment(
+                previous = previousReturn,
+                summary = summary,
+                nowMs = FIXED_NOW_MS
+            ),
+            previousRouteTierCount = 0,
+            nextRouteTierCount = RunOutcomeRecoveryTransitions.nextRouteTierCount(
+                previous = 0,
+                tier = summary.pacifistRouteTier
+            )
+        )
     }
 
     private fun summary(): RunSummary = RunSummary(
