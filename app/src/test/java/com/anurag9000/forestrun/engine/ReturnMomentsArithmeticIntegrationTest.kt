@@ -75,7 +75,8 @@ class ReturnMomentsArithmeticIntegrationTest {
                 roughRunStreak = 0
             )
         )
-        val pathologicalNow = Long.MIN_VALUE + 200_000_000L
+        // Raw subtraction would wrap to a large positive duration here.
+        val pathologicalNow = -200_000_000L
 
         val moment = ReturnMomentsSystem.previewGardenMoment(
             context,
