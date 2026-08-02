@@ -68,16 +68,26 @@ def extract_braced_block(source: str, signature: str) -> str:
     raise AssertionError(f"Unbalanced Kotlin block for {signature!r}")
 
 
+def extract_between(source: str, start_signature: str, end_signature: str) -> str:
+    start = source.index(start_signature)
+    end = source.index(end_signature, start)
+    return source[start:end]
+
+
 class RunOutcomeRecoveryRecordValidationContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = SOURCE_PATH.read_text(encoding="utf-8")
 
     def test_summary_reader_requires_every_serialized_key(self) -> None:
-        read = extract_braced_block(cls_source := self.source, "private fun readSummary()")
+        read = extract_braced_block(self.source, "private fun readSummary()")
         self.assertIn("REQUIRED_SUMMARY_KEYS.any", read)
         self.assertIn("!prefs.contains(key)", read)
-        required = extract_braced_block(cls_source, "val REQUIRED_SUMMARY_KEYS = arrayOf(")
+        required = extract_between(
+            self.source,
+            "val REQUIRED_SUMMARY_KEYS = arrayOf(",
+            "const val PREVIOUS_MOOD",
+        )
         for key in (
             "SUMMARY_SCORE",
             "SUMMARY_DISTANCE",
@@ -99,13 +109,21 @@ class RunOutcomeRecoveryRecordValidationContractTest(unittest.TestCase):
             self.assertIn(key, required)
 
     def test_raw_summary_validation_only_bounds_payload_size(self) -> None:
-        valid = extract_braced_block(self.source, "private fun isValidSummary(")
+        valid = extract_between(
+            self.source,
+            "private fun isValidSummary(",
+            "private fun isValidMood(",
+        )
         self.assertIn("summary.restQuote.length <= MAX_QUOTE_LENGTH", valid)
         self.assertNotIn("summary.score >= 0", valid)
         self.assertNotIn("summary.distanceM.isFinite", valid)
 
     def test_record_after_states_must_match_canonical_transitions(self) -> None:
-        valid = extract_braced_block(self.source, "private fun isValid(record:")
+        valid = extract_between(
+            self.source,
+            "private fun isValid(record:",
+            "private fun isValidSummary(",
+        )
         expected = (
             "record.nextMood == RunOutcomeRecoveryTransitions.nextForestMood(",
             "record.nextReturn == RunOutcomeRecoveryTransitions.nextReturnMoment(",
@@ -117,7 +135,11 @@ class RunOutcomeRecoveryRecordValidationContractTest(unittest.TestCase):
             self.assertIn(item, valid)
 
     def test_return_snapshots_match_save_manager_bounds(self) -> None:
-        valid = extract_braced_block(self.source, "private fun isValidReturn(")
+        valid = extract_between(
+            self.source,
+            "private fun isValidReturn(",
+            "private data class NullableEnum",
+        )
         self.assertIn("state.lastActiveAtMs >= 0L", valid)
         self.assertIn("state.lastGardenGreetingDay >= -1L", valid)
         self.assertIn("state.roughRunStreak >= 0", valid)
