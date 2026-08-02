@@ -114,6 +114,18 @@ The coordinator does not know Android storage. It calls `RunOutcomeCommitter` wi
 
 `RunOutcomePersistenceCoordinator` implements this interface and retains its exactly-once per-run token.
 
+For production sinks, the coordinator also owns durable recovery of the non-ghost bundle:
+
+```text
+forest mood
+→ return state
+→ atomic completed summary plus pacifist-route count
+```
+
+Before those writes it records synchronous before/after evidence. Process restart compares live state with both snapshots so a write that completed before its checkpoint is not applied twice. Corrupt or conflicting evidence blocks new permanent terminal writes.
+
+Detached ghost frames are not stored in that journal, so ghost publication and best-distance advancement remain outside the replayable bundle.
+
 ## Tests
 
 ### Pure ordering tests
@@ -149,7 +161,7 @@ The coordinator does not know Android storage. It calls `RunOutcomeCommitter` wi
 - one summary callback and one persistence call;
 - production adapter ownership.
 
-`test_run_outcome_persistence_contract.py` was migrated to the new boundary and now forbids direct persistence calls from `GameView` while requiring one terminal-hit completion call.
+`test_run_outcome_persistence_contract.py` forbids direct persistence calls from `GameView`, requires one terminal-hit completion call, and locks journal-before-ghost plus mood/return/summary-route recovery ordering.
 
 ## Evidence boundary
 
@@ -163,11 +175,12 @@ The complete `GameView` replacement was compared immediately. Its diff contained
 
 No immediate impact, STUMBLE, MERCY_MISS, rendering, input, Bloom, ghost playback, run reset, debug scenario, or death-transition code changed.
 
-The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session.
+The later recovery tranche compiled the journal/coordinator surface against focused stubs and passed executable recovery and route-aware harnesses. The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session.
 
 ## Remaining architecture work
 
 - extract the complete collision-result dispatcher without changing severity or effect ordering;
 - consider a typed terminal-impact command rather than direct static manager calls;
-- add durable persistence journaling for process death between storage operations;
+- add a durable ghost artifact reference or recoverable best-ghost transaction;
+- add deliberate repair tooling for corrupt/conflicting recovery evidence;
 - continue reducing `GameView` only through diff-bounded, behavior-preserving seams.
