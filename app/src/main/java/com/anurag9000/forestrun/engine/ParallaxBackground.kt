@@ -1164,7 +1164,7 @@ class ParallaxBackground(
     // ── Existing tree-silhouette helper (unchanged API) ─────────────────────
 
     /**
-     * Draws a row of simple rounded "tree crown" silhouettes across the bitmap.
+     * Draws a row of simple rounded \"tree crown\" silhouettes across the bitmap.
      */
     private fun drawTreeSilhouettes(
         canvas: Canvas,
