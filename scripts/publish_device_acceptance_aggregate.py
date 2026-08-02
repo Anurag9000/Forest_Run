@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+import aggregate_device_acceptance as aggregate_producer
 import strict_json
 import validate_device_acceptance as acceptance
 import validate_device_acceptance_aggregate as aggregate_validator
@@ -328,6 +329,21 @@ def _assert_aggregate_identity(
         )
 
 
+def _reconstruct_expected_payload(
+    candidate_path: Path,
+    baseline_path: Path | None,
+) -> dict[str, Any]:
+    try:
+        return aggregate_producer.aggregate(
+            candidate_path,
+            baseline_path=baseline_path,
+        )
+    except (OSError, aggregate_producer.AggregationError) as exc:
+        raise PublicationError(
+            f"could not reconstruct final aggregate from validated manifests: {exc}"
+        ) from exc
+
+
 def _fsync_directory(path: Path) -> None:
     flags = os.O_RDONLY
     if hasattr(os, "O_DIRECTORY"):
@@ -398,6 +414,14 @@ def publish(
     _assert_separate(output, protected, "aggregate output")
     _assert_aggregate_identity(payload, candidate_summary, baseline_summary)
 
+    # Reconstruct every serialized metric, matrix, trace contract, count, identity,
+    # headroom value, and baseline delta from the final validated manifests. This
+    # prevents a self-consistent but source-unbound staged report from publishing.
+    expected_payload = _reconstruct_expected_payload(
+        candidate_resolved,
+        baseline_resolved,
+    )
+
     confirmed_payload, confirmed_summary, confirmed_raw, confirmed_identity = (
         _load_aggregate(staged)
     )
@@ -409,6 +433,10 @@ def publish(
     ):
         raise PublicationError(
             "staged aggregate changed during final source validation"
+        )
+    if confirmed_payload != expected_payload:
+        raise PublicationError(
+            "staged aggregate does not exactly match the final validated manifest aggregation"
         )
     _assert_source_snapshot(source_snapshot)
 
