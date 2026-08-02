@@ -196,21 +196,22 @@ internal class GhostPromotionRecoveryCoordinator(
                 GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
             is GhostArtifactManifestLoadResult.Present -> {
                 val manifest = loaded.manifest
-                val durableGhost = artifactStore.loadGhost()
-                if (!matches(
-                        frames = durableGhost,
-                        frameCount = manifest.frameCount,
-                        fingerprint = manifest.fingerprint
-                    )
-                ) {
-                    GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
+                val currentBest = normalizedDistance(artifactStore.loadBestDistanceM())
+                if (currentBest >= manifest.distanceM) {
+                    GhostPromotionRecoveryDisposition.ALREADY_APPLIED
                 } else {
-                    val repaired = repairDistanceIfNeeded(manifest.distanceM)
-                        ?: return GhostPromotionRecoveryDisposition.IO_FAILURE
-                    if (repaired) {
+                    val durableGhost = artifactStore.loadGhost()
+                    if (!matches(
+                            frames = durableGhost,
+                            frameCount = manifest.frameCount,
+                            fingerprint = manifest.fingerprint
+                        )
+                    ) {
+                        GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
+                    } else if (artifactStore.saveBestDistanceM(manifest.distanceM)) {
                         GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE
                     } else {
-                        GhostPromotionRecoveryDisposition.ALREADY_APPLIED
+                        GhostPromotionRecoveryDisposition.IO_FAILURE
                     }
                 }
             }
