@@ -27,7 +27,11 @@ object ReturnMomentsSystem {
             context.applicationContext,
             previous.copy(
                 lastActiveAtMs = nowMs,
-                roughRunStreak = if (roughRun) previous.roughRunStreak + 1 else 0
+                roughRunStreak = if (roughRun) {
+                    SafeProgressionArithmetic.saturatingIncrement(previous.roughRunStreak)
+                } else {
+                    0
+                }
             )
         )
     }
@@ -67,7 +71,12 @@ object ReturnMomentsSystem {
                 PersistentMemoryManager.getHitCount(appContext, it) >= 2
             }
         val repeatedKindnessCreature = PersistentMemoryManager.featuredWarmCreature(appContext)
-        val longAbsence = previous.lastActiveAtMs > 0L && nowMs - previous.lastActiveAtMs >= LONG_ABSENCE_MS
+        val longAbsence = previous.lastActiveAtMs > 0L &&
+            SafeProgressionArithmetic.elapsedAtLeast(
+                nowMs = nowMs,
+                earlierMs = previous.lastActiveAtMs,
+                thresholdMs = LONG_ABSENCE_MS
+            )
 
         val moment = when {
             longAbsence &&
