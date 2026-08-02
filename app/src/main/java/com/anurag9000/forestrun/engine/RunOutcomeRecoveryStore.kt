@@ -17,7 +17,9 @@ internal data class RunOutcomeRecoveryRecord(
     val previousMood: ForestMoodState,
     val nextMood: ForestMoodState,
     val previousReturn: ReturnMomentState,
-    val nextReturn: ReturnMomentState
+    val nextReturn: ReturnMomentState,
+    val previousRouteTierCount: Int,
+    val nextRouteTierCount: Int
 )
 
 internal sealed interface RunOutcomeRecoveryLoadResult {
@@ -68,6 +70,11 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
                     ?: return RunOutcomeRecoveryLoadResult.Corrupt
                 val nextReturn = readReturn(NEXT_RETURN)
                     ?: return RunOutcomeRecoveryLoadResult.Corrupt
+                val previousRouteTierCount = prefs.getInt(PREVIOUS_ROUTE_TIER_COUNT, -1)
+                val nextRouteTierCount = prefs.getInt(NEXT_ROUTE_TIER_COUNT, -1)
+                if (previousRouteTierCount < 0 || nextRouteTierCount < 0) {
+                    return RunOutcomeRecoveryLoadResult.Corrupt
+                }
 
                 RunOutcomeRecoveryLoadResult.Pending(
                     RunOutcomeRecoveryRecord(
@@ -76,7 +83,9 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
                         previousMood = previousMood,
                         nextMood = nextMood,
                         previousReturn = previousReturn,
-                        nextReturn = nextReturn
+                        nextReturn = nextReturn,
+                        previousRouteTierCount = previousRouteTierCount,
+                        nextRouteTierCount = nextRouteTierCount
                     )
                 )
             }
@@ -92,6 +101,8 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
             .putBoolean(KEY_PRESENT, true)
             .putInt(KEY_SCHEMA, SCHEMA_VERSION)
             .putString(KEY_PHASE, record.phase.name)
+            .putInt(PREVIOUS_ROUTE_TIER_COUNT, record.previousRouteTierCount)
+            .putInt(NEXT_ROUTE_TIER_COUNT, record.nextRouteTierCount)
         writeSummary(editor, record.summary)
         writeMood(editor, PREVIOUS_MOOD, record.previousMood)
         writeMood(editor, NEXT_MOOD, record.nextMood)
@@ -207,7 +218,9 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
             isValidMood(record.previousMood) &&
             isValidMood(record.nextMood) &&
             isValidReturn(record.previousReturn) &&
-            isValidReturn(record.nextReturn)
+            isValidReturn(record.nextReturn) &&
+            record.previousRouteTierCount >= 0 &&
+            record.nextRouteTierCount >= 0
 
     private fun isValidSummary(summary: RunSummary): Boolean =
         summary.score >= 0 &&
@@ -247,13 +260,15 @@ internal class SharedPreferencesRunOutcomeRecoveryStore(
         raw?.let { value -> runCatching { enumValueOf<T>(value) }.getOrNull() }
 
     private companion object {
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
         const val MAX_QUOTE_LENGTH = 8_192
         const val NULL_ENUM = "__none__"
 
         const val KEY_PRESENT = "present"
         const val KEY_SCHEMA = "schema"
         const val KEY_PHASE = "phase"
+        const val PREVIOUS_ROUTE_TIER_COUNT = "previous_route_tier_count"
+        const val NEXT_ROUTE_TIER_COUNT = "next_route_tier_count"
 
         const val SUMMARY_SCORE = "summary_score"
         const val SUMMARY_DISTANCE = "summary_distance"
@@ -341,6 +356,27 @@ internal object RunOutcomeRecoveryTransitions {
             }
         )
     }
+
+    fun nextRouteTierCount(previous: Int, tier: PacifistRouteTier): Int =
+        if (tier == PacifistRouteTier.NONE) {
+            previous.coerceAtLeast(0)
+        } else {
+            saturatingIncrement(previous)
+        }
+
+    fun persistedSummary(summary: RunSummary): RunSummary = summary.copy(
+        score = summary.score.coerceAtLeast(0),
+        distanceM = summary.distanceM.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f,
+        highScore = summary.highScore.coerceAtLeast(0),
+        mercyHearts = summary.mercyHearts.coerceAtLeast(0),
+        mercyMisses = summary.mercyMisses.coerceAtLeast(0),
+        kindnessChain = summary.kindnessChain.coerceAtLeast(0),
+        cleanPasses = summary.cleanPasses.coerceAtLeast(0),
+        sparedCount = summary.sparedCount.coerceAtLeast(0),
+        hitsTaken = summary.hitsTaken.coerceAtLeast(0),
+        seedsCollected = summary.seedsCollected.coerceAtLeast(0),
+        bloomConversions = summary.bloomConversions.coerceAtLeast(0)
+    )
 
     private fun saturatingIncrement(value: Int): Int =
         if (value >= Int.MAX_VALUE) Int.MAX_VALUE else value.coerceAtLeast(0) + 1
