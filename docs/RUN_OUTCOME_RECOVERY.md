@@ -315,7 +315,71 @@ A ghost receipt is never used to advance best distance when:
 - the durable ghost fingerprint differs;
 - threshold persistence fails.
 
-Corrupt evidence is retained unless the receipt is valid but proves that its candidate ghost never landed. Automated repair or user-facing recovery tooling is not yet implemented.
+Automatic recovery remains fail-closed. Corrupt or conflicting evidence is retained unless a valid ghost receipt proves that its candidate ghost never landed.
+
+## Explicit inspection and remediation
+
+`AndroidRecoveryEvidenceMaintenance` exposes deliberate support/debug operations for the two independent domains:
+
+```text
+RUN_OUTCOME
+GHOST_PROMOTION
+```
+
+Evidence states:
+
+```text
+CLEAN
+PENDING
+CORRUPT
+BLOCKED
+IO_FAILURE
+```
+
+Operations:
+
+```text
+inspect
+recoverSafely
+discardCorrupt(domain)
+discardUnresolvedPending(domain)
+```
+
+Safety rules:
+
+- safe recovery never clears `CORRUPT` evidence;
+- corrupt discard requires a fresh confirmed `CORRUPT` state;
+- pending discard retries canonical recovery before deletion;
+- successful retry returns `RECOVERED_INSTEAD` and performs no destructive clear;
+- `IO_FAILURE` never authorizes evidence deletion;
+- each domain uses an isolated production handler;
+- support summaries contain only state and fixed detail codes, never run or frame payloads;
+- deletion verifies the selected domain reports `CLEAN` afterward.
+
+The run-outcome maintenance sink does not publish ghosts or advance best distance. The ghost maintenance handler does not open the run-outcome journal.
+
+### Debug-only command surface
+
+`MainActivity` accepts:
+
+```text
+recovery_action = inspect | recover | discard_corrupt | discard_pending
+recovery_domain = RUN_OUTCOME | GHOST_PROMOTION
+```
+
+The app must be debuggable. Commands are removed from the Intent in `finally` so Activity recreation cannot repeat them.
+
+Because recovery and discard mutate durable evidence, they are accepted only during cold `onCreate`:
+
+```text
+SaveIntegrityManager.repair
+→ maintenance command
+→ GameView construction
+```
+
+A reused `singleTask` Activity accepts `inspect` only. `recover` and both discard commands return `reason=active_session` before constructing maintenance, preventing races with active gameplay or the ghost worker.
+
+Detailed ADB examples and evidence-deletion semantics are in `docs/RECOVERY_EVIDENCE_MAINTENANCE.md`.
 
 ## Verification surface
 
@@ -330,6 +394,17 @@ Pure ghost tests cover:
 - corrupt receipt blocking;
 - full frame fingerprint sensitivity.
 
+Maintenance policy tests cover:
+
+- exact domain-handler cardinality;
+- independent inspection and retry;
+- corrupt-only deletion;
+- recover-before-discard ordering;
+- deliberate blocked-journal removal;
+- no deletion after read failure;
+- clear failure visibility;
+- payload-free support summaries.
+
 Robolectric tests cover:
 
 - non-ghost journal codec and transition parity;
@@ -340,16 +415,21 @@ Robolectric tests cover:
 - durable ghost and distance completion;
 - startup distance repair;
 - mismatch abandonment;
-- pending-distance admission.
+- pending-distance admission;
+- Android-backed maintenance inspection, recovery, conflict preservation, and domain-specific discard.
 
-Python source contracts lock both recovery owners, ordering, fixed schemas, synchronous critical writes, fingerprint coverage, preference-key parity, stale-candidate admission, and exact state comparisons.
+Python source contracts lock both recovery owners, ordering, fixed schemas, synchronous critical writes, fingerprint coverage, preference-key parity, stale-candidate admission, exact state comparisons, maintenance operation separation, no-delete-on-I/O, debug-only access, cold-start mutation, one-shot extras, and payload-free logging.
 
-The checked-in Android tests were not executed through an exact-head Gradle environment in this implementation session. Focused Kotlin compilation and executable recovery harnesses are narrower evidence and do not replace exact-head unit, lint, build, emulator, or physical-device gates.
+Focused Kotlin compilation and executable harnesses passed for the maintenance policy, production-shaped handlers, and cold/live command routing.
+
+The checked-in Android tests were not executed through an exact-head Gradle environment in this implementation session. Focused evidence does not replace exact-head unit, lint, build, emulator, or physical-device gates.
 
 ## Remaining limitations
 
 - Legacy ghost/distance mismatches created before receipt support cannot be reconstructed because the ghost file does not encode distance.
 - The ghost fingerprint is noncryptographic and has a theoretical collision risk.
 - Non-ghost and ghost evidence are not one global atomic transaction.
-- Concurrent switching of compatibility save namespaces during an active ghost worker remains unsupported maintenance behavior.
-- Corrupt evidence has no automated repair or user-facing remediation path.
+- Concurrent switching of compatibility save namespaces during an active worker or maintenance instance remains unsupported.
+- Remediation is debug/support tooling, not an end-user recovery UI.
+- Release builds intentionally reject maintenance intents.
+- Physical-device ADB acceptance remains outstanding.
