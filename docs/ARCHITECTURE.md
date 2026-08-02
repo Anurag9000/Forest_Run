@@ -221,26 +221,57 @@ Ghost files are written atomically and reject malformed inputs including oversiz
 
 Legacy ghost frames store `PlayerState.ordinal`; therefore PlayerState entries must not be removed or reordered without a schema migration.
 
-## 13. Save integrity and persistent memory
+## 13. Terminal hit completion and persistent memory
 
-Persistence is split by responsibility:
+Persistence remains split by storage responsibility:
 
 - `SaveManager`: scores, Seeds, run summaries, Garden/costume values, ghost compatibility paths;
 - `PersistentMemoryManager`: encounters, hits, passes, spares, relationships, return/history signals;
 - `SaveIntegrityManager`: schema migration, type repair, bounds, saturating counters, incomplete-summary rejection, and compatibility storage.
 
-Terminal run persistence has one coordinator-level owner:
+Terminal `HIT` processing now has two explicit coordinator layers.
 
-- `GameView` builds one completed `RunSummary`, detaches one completed ghost, and invokes `RunOutcomePersistenceCoordinator.commit(...)` once;
-- the coordinator claims its per-run token before checking run mode or touching a sink;
-- non-persistent deterministic runs consume the token without writing, preventing a later mode change from retroactively committing the same run;
-- repeated or re-entrant terminal delivery returns `ALREADY_COMMITTED` without repeating counters, summaries, best-distance changes, or ghost publication;
+### Immediate gameplay owner
+
+`GameView` retains only the live impact sequence:
+
+- record the run-level hit;
+- suppress the ghost;
+- trigger Player rest;
+- invoke camera, SFX, music, and haptic impact feedback;
+- detach the completed ghost;
+- resolve the killer;
+- call `TerminalHitOutcomeCoordinator.complete(...)` once;
+- store the returned summary;
+- trigger death timing and enter `RunState.DYING`.
+
+### Completion owner
+
+`TerminalHitOutcomeCoordinator` owns the behavior-preserving deterministic completion sequence:
+
+1. record known-killer relationship history when permanent progression is allowed;
+2. present the canonical authored HIT bubble and flavor line;
+3. invoke the live summary builder exactly once;
+4. resolve the rest quote from the preview, biome, and killer;
+5. create one completed summary;
+6. invoke `RunOutcomeCommitter` exactly once;
+7. return the completed summary and commit result.
+
+The production adapters are `AndroidTerminalHitRelationshipRecorder`, `AndroidTerminalHitFeedbackPresenter`, and `AndroidTerminalHitRestQuoteResolver`. Their interfaces are replaced with recording fakes in pure ordering tests.
+
+### Exactly-once persistence owner
+
+`RunOutcomePersistenceCoordinator` implements `RunOutcomeCommitter` and owns one per-run terminal token:
+
+- it claims the token before checking run mode or touching a sink;
+- non-persistent deterministic runs consume the token without writing, preventing later mode changes from retroactively committing the same outcome;
+- repeated or re-entrant terminal delivery returns `ALREADY_COMMITTED`;
 - `AndroidRunOutcomePersistenceSink` is the only production adapter for best-ghost publication, best-distance advancement, forest-mood recording, return-moment recording, and last-summary storage;
 - `prepareFreshRun()` and `prepareEncounterScenario()` are the only `GameView` paths that reopen the token.
 
 This ownership is exactly-once within one process/run, but the underlying writes still span SharedPreferences and asynchronous atomic-file storage. They are ordered and fail-closed against duplicate delivery; they are not a single cross-store transaction. Durable journaling or idempotent recovery after a process failure between individual sink operations remains open architectural work.
 
-Deterministic scenarios are isolated from permanent score, encounter, relationship, Garden, summary, and ghost history.
+Deterministic scenarios are isolated from permanent score, encounter, relationship, Garden, summary, and ghost history while still receiving local authored feedback.
 
 Relationship familiarity from appearances is capped at Recognition. Trust and Bond require meaningful positive outcomes; hits delay progression.
 
@@ -303,7 +334,7 @@ Permanent CI is read-only and validates the exact event SHA. It performs:
 - API 35 connected instrumentation;
 - exact assertion of fourteen tests with zero failures, errors, or skips.
 
-The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, and terminal-run exactly-once persistence ownership.
+The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, and terminal-run exactly-once persistence ownership.
 
 ## 19. Debug scenarios
 
@@ -316,8 +347,9 @@ Debug scenarios are deterministic test aids, not substitutes for ordinary-play a
 The following remain intentionally open:
 
 - `GameView` is still a large coordinator and should be decomposed incrementally after behavioral stability;
+- the complete collision-result dispatcher remains inline: STUMBLE and MERCY_MISS still own presentation and effect sequencing in `GameView`;
+- immediate HIT impact still directly coordinates Player, ghost, camera, audio, music, and haptic managers before the extracted completion seam;
 - terminal outcome ownership is centralized, but the underlying multi-store commit is not transactional and lacks a durable recovery journal;
-- collision feedback, relationship recording, summary construction, and death-state transition still share one large `GameView` branch and should be extracted behind a behavior-preserving outcome seam;
 - entity mechanic/readability claims need ordinary-play and hardware acceptance;
 - frame, allocation, GC, memory, I/O, audio-thread, thermal, and long-run metrics need measured thresholds on representative hardware;
 - fixed landscape and procedural scenic layers need final product decisions;
