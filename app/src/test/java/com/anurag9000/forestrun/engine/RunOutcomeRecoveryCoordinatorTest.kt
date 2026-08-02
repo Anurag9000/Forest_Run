@@ -11,8 +11,9 @@ class RunOutcomeRecoveryCoordinatorTest {
 
     @Test
     fun `recoverable commit journals before side effects and clears after summary`() {
-        val store = MemoryRecoveryStore()
-        val sink = RecoverableRecordingSink(store)
+        val events = mutableListOf<String>()
+        val store = MemoryRecoveryStore(events = events)
+        val sink = RecoverableRecordingSink(store, events = events)
         val coordinator = RunOutcomePersistenceCoordinator(sink, clock = { FIXED_NOW_MS })
 
         val result = coordinator.commit(summary(), ghostFrames(), persistProgress = true)
@@ -46,7 +47,7 @@ class RunOutcomeRecoveryCoordinatorTest {
                 "journal:SUMMARY_APPLIED",
                 "journal:clear"
             ),
-            sink.calls + store.calls
+            events
         )
     }
 
@@ -71,7 +72,7 @@ class RunOutcomeRecoveryCoordinatorTest {
             )
         )
         val sink = RecoverableRecordingSink(
-            store = store,
+            recoveryStore = store,
             moodState = nextMood,
             returnState = previousReturn
         )
@@ -83,7 +84,7 @@ class RunOutcomeRecoveryCoordinatorTest {
         assertEquals(nextReturn, sink.returnState)
         assertEquals(summary(), sink.lastSummary)
         assertNull(store.record)
-        assertFalse(sink.calls.any { it.startsWith("saveMood:") })
+        assertFalse(sink.events.any { it.startsWith("saveMood:") })
     }
 
     @Test
@@ -93,7 +94,10 @@ class RunOutcomeRecoveryCoordinatorTest {
         val record = recoveryRecord(previousMood = previousMood, nextMood = nextMood)
         val store = MemoryRecoveryStore(record = record)
         val conflictingMood = previousMood.copy(totalRuns = 7, steadyRuns = 7)
-        val sink = RecoverableRecordingSink(store = store, moodState = conflictingMood)
+        val sink = RecoverableRecordingSink(
+            recoveryStore = store,
+            moodState = conflictingMood
+        )
         val coordinator = RunOutcomePersistenceCoordinator(sink)
 
         val result = coordinator.commit(summary(), ghostFrames(), persistProgress = true)
@@ -102,7 +106,7 @@ class RunOutcomeRecoveryCoordinatorTest {
         assertFalse(result.committed)
         assertFalse(result.ghostPromoted)
         assertEquals(record, store.record)
-        assertFalse(sink.calls.any { it == "loadBestDistance" })
+        assertFalse(sink.events.any { it == "loadBestDistance" })
     }
 
     @Test
@@ -114,8 +118,8 @@ class RunOutcomeRecoveryCoordinatorTest {
         val result = coordinator.commit(summary(), ghostFrames(), persistProgress = true)
 
         assertEquals(RunOutcomeCommitDisposition.RECOVERY_BLOCKED, result.disposition)
-        assertTrue(store.calls.isEmpty())
-        assertFalse(sink.calls.any { it == "loadBestDistance" })
+        assertTrue(store.journalCalls.isEmpty())
+        assertFalse(sink.events.any { it == "loadBestDistance" })
     }
 
     @Test
@@ -163,7 +167,7 @@ class RunOutcomeRecoveryCoordinatorTest {
         )
         val store = MemoryRecoveryStore(record = record)
         val sink = RecoverableRecordingSink(
-            store = store,
+            recoveryStore = store,
             moodState = record.nextMood,
             returnState = expectedReturn
         )
@@ -172,7 +176,7 @@ class RunOutcomeRecoveryCoordinatorTest {
 
         assertEquals(5, sink.returnState.roughRunStreak)
         assertNull(store.record)
-        assertFalse(sink.calls.any { it.startsWith("saveReturn:") })
+        assertFalse(sink.events.any { it.startsWith("saveReturn:") })
     }
 
     private fun recoveryRecord(
@@ -229,9 +233,10 @@ class RunOutcomeRecoveryCoordinatorTest {
     private class MemoryRecoveryStore(
         var record: RunOutcomeRecoveryRecord? = null,
         private val loadResultOverride: RunOutcomeRecoveryLoadResult? = null,
-        var clearSucceeds: Boolean = true
+        var clearSucceeds: Boolean = true,
+        val events: MutableList<String> = mutableListOf()
     ) : RunOutcomeRecoveryStore {
-        val calls = mutableListOf<String>()
+        val journalCalls = mutableListOf<String>()
 
         override fun load(): RunOutcomeRecoveryLoadResult =
             loadResultOverride ?: record?.let(RunOutcomeRecoveryLoadResult::Pending)
@@ -239,12 +244,15 @@ class RunOutcomeRecoveryCoordinatorTest {
 
         override fun save(record: RunOutcomeRecoveryRecord): Boolean {
             this.record = record
-            calls += "journal:${record.phase.name}"
+            val call = "journal:${record.phase.name}"
+            journalCalls += call
+            events += call
             return true
         }
 
         override fun clear(): Boolean {
-            calls += "journal:clear"
+            journalCalls += "journal:clear"
+            events += "journal:clear"
             if (clearSucceeds) record = null
             return clearSucceeds
         }
@@ -254,25 +262,25 @@ class RunOutcomeRecoveryCoordinatorTest {
         override val recoveryStore: MemoryRecoveryStore,
         var moodState: ForestMoodState = ForestMoodState(),
         var returnState: ReturnMomentState = ReturnMomentState(),
-        private var bestDistanceM: Float = 120f
+        private var bestDistanceM: Float = 120f,
+        val events: MutableList<String> = recoveryStore.events
     ) : RecoverableRunOutcomePersistenceSink {
-        val calls = mutableListOf<String>()
         var lastSummary: RunSummary? = null
             private set
 
         override fun loadBestDistanceM(): Float {
-            calls += "loadBestDistance"
+            events += "loadBestDistance"
             return bestDistanceM
         }
 
         override fun publishBestGhost(frames: List<GhostFrame>): Boolean {
-            calls += "publishGhost:${frames.size}"
+            events += "publishGhost:${frames.size}"
             return true
         }
 
         override fun saveBestDistanceM(distanceM: Float) {
             bestDistanceM = distanceM
-            calls += "saveBestDistance:$distanceM"
+            events += "saveBestDistance:$distanceM"
         }
 
         override fun recordForestMood(summary: RunSummary) {
@@ -285,27 +293,27 @@ class RunOutcomeRecoveryCoordinatorTest {
 
         override fun saveLastRunSummary(summary: RunSummary) {
             lastSummary = summary
-            calls += "saveSummary:${summary.distanceM}"
+            events += "saveSummary:${summary.distanceM}"
         }
 
         override fun loadForestMoodState(): ForestMoodState {
-            calls += "loadMood"
+            events += "loadMood"
             return moodState
         }
 
         override fun saveForestMoodState(state: ForestMoodState) {
             moodState = state
-            calls += "saveMood:${state.totalRuns}"
+            events += "saveMood:${state.totalRuns}"
         }
 
         override fun loadReturnMomentState(): ReturnMomentState {
-            calls += "loadReturn"
+            events += "loadReturn"
             return returnState
         }
 
         override fun saveReturnMomentState(state: ReturnMomentState) {
             returnState = state
-            calls += "saveReturn:${state.lastActiveAtMs}:${state.roughRunStreak}"
+            events += "saveReturn:${state.lastActiveAtMs}:${state.roughRunStreak}"
         }
     }
 
