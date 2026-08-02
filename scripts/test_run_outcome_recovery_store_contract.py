@@ -11,6 +11,10 @@ STORE = (
     ROOT
     / "app/src/main/java/com/anurag9000/forestrun/engine/RunOutcomeRecoveryStore.kt"
 )
+SNAPSHOT = (
+    ROOT
+    / "app/src/main/java/com/anurag9000/forestrun/engine/RunOutcomeSummarySnapshotStore.kt"
+)
 
 
 def extract_braced_block(source: str, signature: str) -> str:
@@ -76,6 +80,7 @@ class RunOutcomeRecoveryStoreContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = STORE.read_text(encoding="utf-8")
+        cls.snapshot = SNAPSHOT.read_text(encoding="utf-8")
 
     def test_store_is_scoped_to_sanitized_persistence_namespace(self) -> None:
         constructor = extract_braced_block(
@@ -91,7 +96,7 @@ class RunOutcomeRecoveryStoreContractTest(unittest.TestCase):
         self.assertIn("take(96)", safe)
         self.assertIn('safe.ifBlank { "default" }', safe)
 
-    def test_load_distinguishes_empty_corrupt_and_pending(self) -> None:
+    def test_load_distinguishes_empty_corrupt_and_pending_schema_two(self) -> None:
         load = extract_braced_block(
             self.source,
             "override fun load(): RunOutcomeRecoveryLoadResult",
@@ -101,6 +106,7 @@ class RunOutcomeRecoveryStoreContractTest(unittest.TestCase):
         self.assertIn("RunOutcomeRecoveryLoadResult.Corrupt", load)
         self.assertIn("RunOutcomeRecoveryLoadResult.Pending(", load)
         self.assertIn("catch (_: ClassCastException)", load)
+        self.assertIn("const val SCHEMA_VERSION = 2", self.source)
 
     def test_record_validation_precedes_destructive_replacement(self) -> None:
         save = extract_braced_block(
@@ -154,8 +160,12 @@ class RunOutcomeRecoveryStoreContractTest(unittest.TestCase):
             "writeMood(editor, NEXT_MOOD, record.nextMood)",
             "writeReturn(editor, PREVIOUS_RETURN, record.previousReturn)",
             "writeReturn(editor, NEXT_RETURN, record.nextReturn)",
+            ".putInt(PREVIOUS_ROUTE_TIER_COUNT, record.previousRouteTierCount)",
+            ".putInt(NEXT_ROUTE_TIER_COUNT, record.nextRouteTierCount)",
         ):
             self.assertIn(item, save)
+        self.assertIn("previousRouteTierCount = previousRouteTierCount", self.source)
+        self.assertIn("nextRouteTierCount = nextRouteTierCount", self.source)
 
     def test_forest_mood_transition_saturates_each_counter(self) -> None:
         transition = extract_braced_block(
@@ -181,6 +191,48 @@ class RunOutcomeRecoveryStoreContractTest(unittest.TestCase):
         )
         for item in required:
             self.assertIn(item, transition)
+
+    def test_route_transition_preserves_none_and_saturates_real_tiers(self) -> None:
+        transition = extract_braced_block(self.source, "fun nextRouteTierCount(")
+        self.assertIn("tier == PacifistRouteTier.NONE", transition)
+        self.assertIn("previous.coerceAtLeast(0)", transition)
+        self.assertIn("saturatingIncrement(previous)", transition)
+
+    def test_persisted_summary_matches_save_manager_sanitization(self) -> None:
+        transition = extract_braced_block(self.source, "fun persistedSummary(")
+        self.assertIn("summary.score.coerceAtLeast(0)", transition)
+        self.assertIn("summary.distanceM.takeIf { it.isFinite() }", transition)
+        for field in (
+            "highScore",
+            "mercyHearts",
+            "mercyMisses",
+            "kindnessChain",
+            "cleanPasses",
+            "sparedCount",
+            "hitsTaken",
+            "seedsCollected",
+            "bloomConversions",
+        ):
+            self.assertIn(f"summary.{field}.coerceAtLeast(0)", transition)
+
+    def test_atomic_snapshot_writes_summary_and_route_in_one_commit(self) -> None:
+        save = extract_braced_block(
+            self.snapshot,
+            "override fun save(summary: RunSummary, routeTierCount: Int)",
+        )
+        self.assertIn("RunOutcomeRecoveryTransitions.persistedSummary(summary)", save)
+        self.assertIn("routeTierKey(persisted.pacifistRouteTier)", save)
+        self.assertIn("editor.putInt(key, routeTierCount.coerceAtLeast(0))", save)
+        self.assertEqual(1, save.count("editor.commit()"))
+        self.assertNotIn(".apply()", self.snapshot)
+        self.assertNotIn("SaveManager.saveLastRunSummary", self.snapshot)
+
+    def test_snapshot_maps_only_persistent_route_tiers(self) -> None:
+        route = extract_braced_block(self.snapshot, "private fun routeTierKey(")
+        self.assertIn("PacifistRouteTier.NONE -> null", route)
+        self.assertIn("PacifistRouteTier.KIND -> KEY_ROUTE_KIND_RUNS", route)
+        self.assertIn("PacifistRouteTier.MERCIFUL -> KEY_ROUTE_MERCIFUL_RUNS", route)
+        self.assertIn("PacifistRouteTier.PEACEFUL -> KEY_ROUTE_PEACEFUL_RUNS", route)
 
 
 if __name__ == "__main__":
