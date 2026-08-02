@@ -200,7 +200,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn("recoverManifest()", mismatch)
         self.assertNotIn("saveBestDistanceM", mismatch)
 
-    def test_manifest_recovers_distance_without_receipt(self) -> None:
+    def test_manifest_repairs_distance_without_receipt(self) -> None:
         recover = extract_braced_block(self.recovery, "fun recover()")
         self.assertIn(
             "GhostPromotionReceiptLoadResult.Empty -> recoverManifest()",
@@ -213,13 +213,29 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         )
         order = (
             "manifestStore.load()",
+            "artifactStore.loadBestDistanceM()",
+            "if (currentBest >= manifest.distanceM)",
             "artifactStore.loadGhost()",
             "matches(",
-            "repairDistanceIfNeeded(manifest.distanceM)",
+            "artifactStore.saveBestDistanceM(manifest.distanceM)",
         )
         positions = [manifest_recovery.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
         self.assertIn("CORRUPT_MANIFEST", manifest_recovery)
+
+    def test_applied_manifest_fast_path_precedes_ghost_loading(self) -> None:
+        recover = extract_braced_block(
+            self.recovery,
+            "private fun recoverManifest()",
+        )
+        best = recover.index("artifactStore.loadBestDistanceM()")
+        gate = recover.index("if (currentBest >= manifest.distanceM)")
+        ghost = recover.index("artifactStore.loadGhost()")
+        self.assertLess(best, gate)
+        self.assertLess(gate, ghost)
+        fast_path = recover[gate:ghost]
+        self.assertIn("ALREADY_APPLIED", fast_path)
+        self.assertNotIn("GhostRunFingerprint", fast_path)
 
     def test_corrupt_receipt_manifest_or_io_blocks_new_promotion(self) -> None:
         enum = extract_braced_block(
