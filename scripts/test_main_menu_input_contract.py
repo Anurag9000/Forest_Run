@@ -1,25 +1,38 @@
 from __future__ import annotations
 
-import re
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt"
+SIGNATURE = "fun onTap(tapX: Float = 0f, tapY: Float = 0f)"
+
+
+def extract_function_body(source: str, signature: str) -> str:
+    signature_index = source.find(signature)
+    if signature_index < 0:
+        raise AssertionError(f"function signature was not found: {signature}")
+    opening = source.find("{", signature_index + len(signature))
+    if opening < 0:
+        raise AssertionError(f"function body was not found: {signature}")
+
+    depth = 0
+    for index in range(opening, len(source)):
+        character = source[index]
+        if character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return source[opening + 1 : index]
+    raise AssertionError(f"function body is unterminated: {signature}")
 
 
 class MainMenuInputContractTest(unittest.TestCase):
     def test_finite_guard_is_first_executable_statement(self) -> None:
         source = SOURCE.read_text(encoding="utf-8")
-        match = re.search(
-            r"fun\s+onTap\s*\(\s*tapX:\s*Float\s*=\s*0f,\s*"
-            r"tapY:\s*Float\s*=\s*0f\s*\)\s*\{(?P<body>.*?)\n\s*\}",
-            source,
-            flags=re.DOTALL,
-        )
-        self.assertIsNotNone(match, "MainMenuScreen.onTap signature was not found")
-        body = match.group("body")
+        body = extract_function_body(source, SIGNATURE)
         statements = [
             line.strip()
             for line in body.splitlines()
@@ -30,25 +43,24 @@ class MainMenuInputContractTest(unittest.TestCase):
             "if (!FiniteCoordinateAdmission.accepts(tapX, tapY)) return",
             statements[0],
         )
-        self.assertLess(
-            body.index("FiniteCoordinateAdmission.accepts"),
-            body.index("feedbackSettingsPanel.onTap"),
-        )
-        self.assertLess(
-            body.index("FiniteCoordinateAdmission.accepts"),
-            body.index("onGardenTap?.invoke"),
-        )
-        self.assertLess(
-            body.index("FiniteCoordinateAdmission.accepts"),
-            body.index("when (phase)"),
-        )
+        guard_index = body.index("FiniteCoordinateAdmission.accepts")
+        self.assertLess(guard_index, body.index("feedbackSettingsPanel.onTap"))
+        self.assertLess(guard_index, body.index("onGardenTap?.invoke"))
+        self.assertLess(guard_index, body.index("when (phase)"))
 
-    def test_guard_uses_both_coordinates(self) -> None:
+    def test_guard_uses_both_coordinates_exactly_once(self) -> None:
         source = SOURCE.read_text(encoding="utf-8")
+        body = extract_function_body(source, SIGNATURE)
         self.assertEqual(
             1,
-            source.count("FiniteCoordinateAdmission.accepts(tapX, tapY)"),
+            body.count("FiniteCoordinateAdmission.accepts(tapX, tapY)"),
         )
+
+    def test_balanced_extractor_includes_nested_branches(self) -> None:
+        sample = "fun onTap(tapX: Float = 0f, tapY: Float = 0f) { if (true) { x() }; y() }"
+        body = extract_function_body(sample, SIGNATURE)
+        self.assertIn("x()", body)
+        self.assertIn("y()", body)
 
 
 if __name__ == "__main__":
