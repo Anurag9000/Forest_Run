@@ -59,8 +59,9 @@ internal class AndroidRunOutcomePersistenceSink(context: Context) : RunOutcomePe
  *
  * The committed flag is claimed before the first sink call. This fail-closed
  * ordering prevents re-entrant or repeated collision delivery from duplicating
- * counters and summaries. [resetForNewRun] is the only operation that reopens
- * the coordinator.
+ * counters and summaries. Non-persistent terminal outcomes also consume the
+ * token so a later mode change cannot retroactively write the same run.
+ * [resetForNewRun] is the only operation that reopens the coordinator.
  */
 internal class RunOutcomePersistenceCoordinator(
     private val sink: RunOutcomePersistenceSink
@@ -78,12 +79,6 @@ internal class RunOutcomePersistenceCoordinator(
         completedGhost: List<GhostFrame>,
         persistProgress: Boolean
     ): RunOutcomeCommitResult {
-        if (!persistProgress) {
-            return RunOutcomeCommitResult(
-                disposition = RunOutcomeCommitDisposition.NON_PERSISTENT_RUN,
-                ghostPromoted = false
-            )
-        }
         if (terminalOutcomeCommitted) {
             return RunOutcomeCommitResult(
                 disposition = RunOutcomeCommitDisposition.ALREADY_COMMITTED,
@@ -92,6 +87,13 @@ internal class RunOutcomePersistenceCoordinator(
         }
 
         terminalOutcomeCommitted = true
+
+        if (!persistProgress) {
+            return RunOutcomeCommitResult(
+                disposition = RunOutcomeCommitDisposition.NON_PERSISTENT_RUN,
+                ghostPromoted = false
+            )
+        }
 
         val completedDistance = summary.distanceM
             .takeIf { it.isFinite() }
