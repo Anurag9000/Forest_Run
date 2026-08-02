@@ -42,7 +42,10 @@ internal class SharedPreferencesRunOutcomeSummarySnapshotStore(
             .putString(KEY_LAST_RUN_PACIFIST_ROUTE, persisted.pacifistRouteTier.name)
 
         routeTierKey(persisted.pacifistRouteTier)?.let { key ->
-            editor.putInt(key, routeTierCount.coerceAtLeast(0))
+            editor.putInt(
+                key,
+                routeTierCount.coerceIn(0, MAX_RECOVERABLE_ROUTE_TIER_COUNT)
+            )
         }
         return editor.commit()
     }
