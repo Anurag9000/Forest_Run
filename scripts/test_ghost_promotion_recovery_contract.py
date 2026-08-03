@@ -218,18 +218,27 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             self.recovery,
             "private fun recoverManifest(",
         )
-        order = (
+        prefix_order = (
             "manifestStore.load()",
             "artifactStore.loadBestDistanceM()",
             "currentBest >= manifest.distanceM ->",
             "knownGhost ?: artifactStore.loadGhost()",
+        )
+        prefix_positions = [manifest_recovery.index(item) for item in prefix_order]
+        self.assertEqual(sorted(prefix_positions), prefix_positions)
+
+        repair_path = manifest_recovery[
+            manifest_recovery.index("val durableGhost = knownGhost ?: artifactStore.loadGhost()") :
+        ]
+        repair_order = (
+            "val durableGhost = knownGhost ?: artifactStore.loadGhost()",
             "matchingIdentity(",
             "distanceM = manifest.distanceM",
             "ensureStrongManifest(manifest, identity)",
             "artifactStore.saveBestDistanceM(manifest.distanceM)",
         )
-        positions = [manifest_recovery.index(item) for item in order]
-        self.assertEqual(sorted(positions), positions)
+        repair_positions = [repair_path.index(item) for item in repair_order]
+        self.assertEqual(sorted(repair_positions), repair_positions)
         self.assertIn("CORRUPT_MANIFEST", manifest_recovery)
 
     def test_applied_manifest_fast_path_precedes_ghost_loading(self) -> None:
