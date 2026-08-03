@@ -135,12 +135,15 @@ Implemented:
 - persistent-memory tie-breaking is deterministic and repeat-killer severity uses `Long` arithmetic;
 - deterministic scenarios cannot contaminate permanent score, relationships, Garden, summaries, or ghosts;
 - ghost files are versioned, bounded, atomically written, and legacy-readable;
-- return-day identity uses the local calendar date.
+- return-day identity uses the local calendar date;
+- `SafeProgressionArithmetic.saturatingIncrement(...)` normalizes restored rough-run streaks and saturates them at `Int.MAX_VALUE / 16`;
+- `ReturnMomentsSystem.recordRunOutcome(...)` uses that shared saturating helper, while non-rough runs reset the streak to zero;
+- `SafeProgressionArithmetic.elapsedAtLeast(...)` rejects negative timestamps, negative thresholds, and clock rollback before subtracting timestamps;
+- long-absence detection uses that rollback-safe predicate with an inclusive 36-hour threshold;
+- unit, Robolectric integration, and source-contract coverage lock saturation, reset, pathological rollback, exact threshold behavior, and production ownership.
 
 Bounded debt:
 
-- `ReturnMomentsSystem.recordRunOutcome()` still performs a raw source-level `roughRunStreak + 1`; persistence preserves saturation when the stored streak is already maximum, but the source arithmetic should eventually use an explicit saturating helper.
-- long-absence detection still uses raw timestamp subtraction. Persisted timestamps are nonnegative and ordinary clock rollback currently evaluates as not absent, but a future refactor should use an explicit overflow-safe elapsed predicate.
 - persistence ownership remains distributed across several managers and should be consolidated only after behavior remains stable.
 
 ## 6. Relationships and authored continuity
@@ -276,12 +279,14 @@ Locally verified during remediation where runtime execution was available:
 - focused Kotlin compilation and executable fake-effect validation for `TerminalHitImpactCoordinator`;
 - terminal impact ordering, exact 1.35-second suppression, capture-last behavior, fail-fast capture suppression, and killer-identity validation;
 - joint execution of the terminal impact and terminal completion source-contract parsers against the exact extracted HIT/capture/adapter structure;
-- exact inspection of the `GameView` replacement commit confirming only three intended hunks.
+- exact inspection of the `GameView` replacement commit confirming only three intended hunks;
+- focused Kotlin compilation and executable return-arithmetic validation for saturation, rollback, pathological timestamps, and the exact 36-hour threshold;
+- source-contract parser validation for return-moment arithmetic ownership and the absence of raw increment/subtraction paths.
 
 Currently not executable or observable from this environment:
 
 - a complete local repository checkout and the full expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
-- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact acceptance;
+- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history acceptance;
 - push-triggered GitHub Actions check-run conclusions for the latest `main` SHA, because the installed connector exposes only pull-request-triggered workflow runs.
 
-Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, and exact-diff review establish the intended ordering boundary but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
+Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, and exact-diff review establish the intended ordering and arithmetic boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
