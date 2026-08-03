@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANAGER = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPersistenceManager.kt"
 NAMESPACE = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPersistenceNamespace.kt"
 INTEGRATION = ROOT / "app/src/test/java/com/anurag9000/forestrun/systems/GhostPersistenceNamespaceIntegrationTest.kt"
+CODEC_TEST = ROOT / "app/src/test/java/com/anurag9000/forestrun/systems/NamespaceBoundGhostPromotionArtifactStoreTest.kt"
 
 
 class GhostPersistenceNamespaceContractTest(unittest.TestCase):
@@ -17,6 +18,7 @@ class GhostPersistenceNamespaceContractTest(unittest.TestCase):
         cls.manager = MANAGER.read_text(encoding="utf-8")
         cls.namespace = NAMESPACE.read_text(encoding="utf-8")
         cls.integration = INTEGRATION.read_text(encoding="utf-8")
+        cls.codec_test = CODEC_TEST.read_text(encoding="utf-8")
 
     def test_namespace_capture_derives_one_coherent_pair_from_one_volatile_read(self) -> None:
         self.assertIn("data class GhostPersistenceNamespace", self.namespace)
@@ -105,6 +107,18 @@ class GhostPersistenceNamespaceContractTest(unittest.TestCase):
             self.integration,
             re.compile(r"assertEquals\(compatFrames, SaveManager\.loadGhostRun\(context\)\)"),
         )
+
+    def test_codec_tests_preserve_versioned_legacy_and_rejection_paths(self) -> None:
+        self.assertIn(
+            "versioned writer matches SaveManager codec header and round trips",
+            self.codec_test,
+        )
+        self.assertIn("SaveManager.GHOST_FILE_MAGIC", self.codec_test)
+        self.assertIn("SaveManager.GHOST_FILE_VERSION", self.codec_test)
+        self.assertIn("legacy raw ordinal ghost remains readable", self.codec_test)
+        self.assertIn("output.writeInt(frame.stateOrdinal)", self.codec_test)
+        self.assertIn("unknown version and trailing bytes are rejected", self.codec_test)
+        self.assertIn("invalid candidate never replaces durable ghost", self.codec_test)
 
 
 if __name__ == "__main__":
