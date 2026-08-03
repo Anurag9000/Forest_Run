@@ -7,9 +7,9 @@ Forest Run fails closed when recovery evidence is corrupt, unreadable, or confli
 `AndroidRecoveryEvidenceMaintenance` covers two independent domains:
 
 - `RUN_OUTCOME` — forest mood, return state, completed summary, and pacifist-route count;
-- `GHOST_PROMOTION` — the transient promotion receipt, persistent artifact manifest, durable ghost, and best-distance threshold.
+- `GHOST_PROMOTION` — transient receipt, persistent artifact manifest, durable ghost, and best-distance threshold.
 
-Inspection, safe retry, and destructive evidence removal are deliberately separate. No destructive operation runs automatically.
+Inspection, safe retry, and destructive evidence removal remain separate. No destructive operation runs automatically.
 
 ## Evidence states
 
@@ -17,20 +17,13 @@ Each domain reports:
 
 ```text
 CLEAN      no unresolved evidence
-PENDING    syntactically valid transient evidence awaits recovery
+PENDING    valid transient evidence awaits recovery
 CORRUPT    evidence cannot be decoded or validated
 BLOCKED    valid run-outcome evidence conflicts with live state or cannot be applied
 IO_FAILURE evidence could not be read, recovered, or cleared reliably
 ```
 
-The support summary includes only domain, state, and fixed detail codes. It excludes:
-
-- scores and distances;
-- summary text;
-- entity identity;
-- ghost frames;
-- fingerprints;
-- timestamps and progression counters.
+Support summaries contain only domain, state, and fixed detail codes. They exclude scores, distances, summary text, entity identity, ghost frames, fingerprints, SHA-256 values, timestamps, and progression counters.
 
 Examples:
 
@@ -77,7 +70,7 @@ This explicit last-resort operation:
 3. attempts canonical recovery once more;
 4. returns `RECOVERED_INSTEAD` when recovery succeeds;
 5. clears only evidence still confirmed `PENDING` or `BLOCKED`;
-6. verifies the domain reports `CLEAN` after deletion.
+6. verifies the domain reports `CLEAN` afterward.
 
 Read failure is never interpreted as permission to erase unknown data.
 
@@ -85,12 +78,7 @@ Read failure is never interpreted as permission to erase unknown data.
 
 ### Run-outcome handler
 
-`MaintenanceRunOutcomePersistenceSink`:
-
-- reads and writes complete mood, return, summary, and route snapshots;
-- never publishes a ghost;
-- never advances best distance;
-- never constructs `AndroidRunOutcomePersistenceSink`, whose production initialization also touches ghost recovery.
+`MaintenanceRunOutcomePersistenceSink` can read and write complete mood, return, summary, and route snapshots. It cannot publish a ghost, advance best distance, or construct `AndroidRunOutcomePersistenceSink`.
 
 ### Ghost handler
 
@@ -101,9 +89,9 @@ The ghost handler owns only:
 - `GhostPromotionRecoveryCoordinator`;
 - `AndroidGhostPromotionArtifactStore`.
 
-It never opens the run-outcome SharedPreferences journal.
+It never opens the run-outcome journal.
 
-A corrupt receipt or manifest therefore cannot prevent non-ghost recovery, and clearing one domain cannot erase the other domain’s evidence.
+A corrupt ghost sidecar therefore cannot prevent non-ghost recovery, and clearing one domain cannot erase the other domain’s evidence.
 
 ## Run-outcome evidence removal
 
@@ -113,16 +101,38 @@ Run-outcome discard clears only:
 forest_run_outcome_recovery_<active save namespace>
 ```
 
-It does not rewrite current:
-
-- forest mood;
-- return state;
-- last-run summary;
-- route counters;
-- ghost data;
-- best distance.
+It does not rewrite current mood, return state, last-run summary, route counters, ghost data, or best distance.
 
 For a valid journal that conflicts with live state, `discardUnresolvedPending(RUN_OUTCOME)` retries first, then removes only the journal while preserving live state exactly as found.
+
+## Ghost sidecar compatibility
+
+Ghost maintenance understands both sidecar generations.
+
+### Version 1
+
+```text
+24 bytes
+accepted distance
+frame count
+64-bit FNV frame fingerprint
+```
+
+Version-1 evidence is readable for compatibility. The legacy fingerprint identifies frames only and does not cryptographically bind distance.
+
+### Version 2
+
+```text
+56 bytes
+accepted distance
+frame count
+64-bit FNV frame fingerprint
+32-byte SHA-256 digest
+```
+
+Version-2 SHA-256 binds accepted distance, frame count, and every persisted frame field. Both FNV and SHA-256 must match during full validation.
+
+Current store APIs write version 2 only. Digest-less objects cannot be emitted as new sidecars.
 
 ## Ghost evidence inspection
 
@@ -138,13 +148,24 @@ CORRUPT(manifest_artifact_mismatch)
 IO_FAILURE(...)
 ```
 
-A valid manifest is checked against the durable ghost by frame count, structural validity, and fingerprint during explicit inspection.
+Explicit inspection always loads the durable ghost and checks the manifest association.
+
+For version 2 it verifies:
+
+- structural frame validity;
+- frame count;
+- FNV fingerprint;
+- SHA-256 over manifest distance and frame payload.
+
+This detects frame-only, digest-only, count-only, and distance-only alteration.
+
+For version 1 it applies the historical FNV compatibility check. Inspection is read-only and does not silently upgrade a healthy legacy manifest.
 
 Canonical safe recovery may:
 
-- reconstruct or replace a manifest from a matching receipt;
-- repair a lower best distance from a matching receipt;
-- repair a lower best distance from a matching manifest after the receipt is gone;
+- reconstruct or replace a strong manifest from a matching receipt;
+- upgrade a matching version-1 receipt or manifest before distance repair;
+- repair a lower best distance;
 - recognize an already-applied threshold;
 - abandon a receipt whose candidate ghost never became durable.
 
@@ -159,19 +180,22 @@ Ghost-domain evidence consists of:
 
 Targeted cleanup is identity-aware:
 
-- corrupt receipt removal preserves a valid manifest that matches the durable ghost;
-- corrupt manifest removal clears the manifest sidecar but preserves the ghost frame file;
+- corrupt receipt removal preserves a valid manifest matching the ghost;
+- corrupt manifest removal clears only the manifest sidecar;
 - manifest/artifact mismatch removal clears only the invalid association;
-- best distance is never rewritten by the discard operation itself;
-- run-outcome evidence is never touched.
-
-The following remain untouched by direct evidence removal:
-
-- the ghost frame artifact and backup;
-- current best distance;
-- forest mood, return state, summary, and route counters.
+- the ghost frame file and backup are preserved;
+- best distance is not rewritten by discard itself;
+- run-outcome evidence is not touched.
 
 Unknown I/O failure remains fail-closed and is not force-cleared.
+
+## Cryptographic boundary
+
+SHA-256 is used as collision-resistant local identity, not as authentication.
+
+Maintenance must not describe a valid digest as proof that a trusted party created the file. A process with filesystem write access can replace both artifact and digest. No secret key, MAC, certificate, or digital signature is involved.
+
+The maintenance surface also never logs the digest itself.
 
 ## Debug-only Activity command surface
 
@@ -190,23 +214,9 @@ Commands are one-shot. Both extras are removed in `finally`, including rejection
 
 ### Live-session rule
 
-Because the manifest uses `singleTask`, ADB can deliver a command through `onNewIntent` while gameplay or the ghost worker is active.
+Because the Activity is `singleTask`, ADB can deliver a command through `onNewIntent` while gameplay or the ghost worker is active.
 
-A reused Activity permits only:
-
-```text
-inspect
-```
-
-It rejects:
-
-```text
-recover
-discard_corrupt
-discard_pending
-```
-
-with `reason=active_session` before constructing maintenance handlers.
+A reused Activity permits only `inspect`. It rejects `recover`, `discard_corrupt`, and `discard_pending` with `reason=active_session` before constructing maintenance handlers.
 
 Mutating commands run only during cold `onCreate`, after `SaveIntegrityManager.repair(...)` and before `GameView` construction.
 
@@ -257,7 +267,7 @@ adb shell am start \
 
 ### Discard confirmed corrupt ghost evidence
 
-The same command handles a corrupt receipt, corrupt manifest, or manifest/artifact mismatch. Healthy matching manifest evidence is preserved when only the receipt is corrupt.
+The same command handles a corrupt receipt, corrupt manifest, or manifest/artifact mismatch. A healthy manifest remains when only the receipt is corrupt.
 
 ```bash
 adb shell am force-stop com.anurag9000.forestrun.debug
@@ -267,7 +277,7 @@ adb shell am start \
   --es recovery_domain GHOST_PROMOTION
 ```
 
-## Log format
+## Logging
 
 Filter:
 
@@ -281,15 +291,7 @@ Prefix:
 FOREST_RUN_RECOVERY_MAINTENANCE
 ```
 
-Inspection and recovery log only the support summary. Discard logs include:
-
-```text
-action
-domain
-disposition
-before state
-after state
-```
+Inspection and recovery log only the support summary. Discard logs include action, domain, disposition, before state, and after state.
 
 Rejected commands use fixed reasons:
 
@@ -302,36 +304,27 @@ unknown_action
 
 ## Tests and contracts
 
-`RecoveryEvidenceMaintenanceCoordinatorTest` covers domain cardinality, independent inspection, status-only output, safe retry, corrupt-only deletion, recover-before-discard ordering, no deletion after read failure, and clear failure reporting.
+Coverage includes:
 
-`RecoveryEvidenceMaintenanceIntegrationTest` covers:
+- exact domain-handler cardinality;
+- independent inspection and retry;
+- corrupt-only deletion;
+- recover-before-discard ordering;
+- no deletion after read failure;
+- complete non-ghost recovery and conflict preservation;
+- version-2 receipt/manifest inspection;
+- version-1 compatibility and recovery upgrade;
+- digest tampering;
+- distance tampering;
+- frame and count mismatch;
+- valid-manifest preservation during receipt cleanup;
+- ghost preservation during manifest cleanup;
+- debug gating, cold-start mutation, one-shot extras, and payload-free logs.
 
-- clean inspection;
-- complete non-ghost journal recovery;
-- corrupt and conflicting run-journal behavior;
-- matching receipt repair and manifest creation;
-- receipt-free manifest repair;
-- corrupt receipt removal that preserves a valid manifest;
-- corrupt manifest retention and explicit removal;
-- manifest/artifact mismatch diagnosis and evidence-only removal.
-
-Source contracts lock:
-
-- safe/destructive separation;
-- domain-isolated adapters;
-- no deletion after I/O failure;
-- distinct receipt and manifest diagnosis;
-- preservation of a valid manifest during receipt cleanup;
-- cold-start mutation;
-- debug-only access;
-- inspection-only reused Activities;
-- one-shot extras;
-- payload-free logs.
+Source contracts require the maintenance adapter to pass manifest distance, frame count, FNV, and optional SHA-256 into `GhostRunIdentity.matches(...)` and forbid a direct fingerprint-only validator.
 
 ## Evidence boundary
 
-Focused Kotlin/JVM compilation passed for the policy core, production-shaped handlers, manifest-aware ghost adapter, and launch dispatcher.
-
-Executable harnesses passed for maintenance policy, cold/live launch behavior, manifest-only distance repair, corrupt manifest blocking, and selective evidence cleanup.
+Focused Kotlin/JVM compilation passed for the identity and recovery core and production manager surface. A production-shaped maintenance adapter compile validates the distance-bound identity call. Executable golden-vector, versioned-codec, state-machine, maintenance-policy, and cold/live launch harnesses passed.
 
 The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session. Physical-device ADB acceptance remains separate.
