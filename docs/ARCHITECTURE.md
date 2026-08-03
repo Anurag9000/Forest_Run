@@ -1,21 +1,18 @@
 # Forest Run — Technical Architecture
 
-This document describes the canonical `main` branch. It distinguishes implemented contracts from release claims that still require physical-device evidence.
+This document describes the canonical `main` branch. It separates implemented contracts from claims that still require exact-head Android, emulator, physical-device, signing, or store evidence.
 
 ## 1. Platform and build
 
-- Language: Kotlin
-- Rendering: custom `SurfaceView`/`Canvas` engine; no Compose
+- Kotlin custom `SurfaceView`/`Canvas` engine; no Compose
 - Namespace/application ID: `com.anurag9000.forestrun`
 - Debug application ID: `com.anurag9000.forestrun.debug`
-- Min SDK: 24
-- Compile/target SDK: 36
-- Android bytecode target: Java 17
-- CI runtime: Java 21
-- Orientation: fixed landscape, pending final product/device acceptance
-- Release build: R8 minification plus resource shrinking
-- Signing: optional external Gradle/environment credentials; no key material is committed
-- Repository workflow: coherent direct commits to `main`; no active development branches or pull requests
+- Min SDK 24; compile/target SDK 36
+- Java 17 Android bytecode target; Java 21 CI runtime
+- Fixed landscape orientation pending final product/device acceptance
+- Release build uses R8 minification and resource shrinking
+- Signing accepts external properties/environment variables only
+- Direct coherent commits to `main`; no active development branches or pull requests
 
 Source layout:
 
@@ -24,439 +21,330 @@ app/src/main/java/com/anurag9000/forestrun/
 ├── MainActivity.kt
 ├── engine/      lifecycle, game loop, state, persistence, audio, haptics
 ├── entities/    Player, Entity base, flora, trees, birds, animals
-├── systems/     particles, seed orbs, ghost recording/playback/persistence
+├── systems/     particles, Seed Orbs, ghost recording/playback/persistence
 ├── ui/          menu, HUD, Garden, rest/game-over, dialogue, debug tools
 └── utils/       bitmap and math helpers
 ```
 
-Sprites are packaged under `app/src/main/assets/sprites/`; audio is packaged under `app/src/main/res/raw/`.
+Sprites are under `app/src/main/assets/sprites/`; audio is under `app/src/main/res/raw/`.
 
 ## 2. Activity and surface lifecycle
 
-`MainActivity` owns Android lifecycle integration, safe-area insets, feedback settings initialization, save repair, repeated `singleTask` intents, and creation/teardown of `GameView`.
+`MainActivity` owns Android lifecycle integration, safe-area insets, settings initialization, save repair, repeated `singleTask` intents, and `GameView` creation/teardown.
 
-The manifest currently uses:
+Manifest behavior includes:
 
 - `launchMode="singleTask"`
 - `screenOrientation="landscape"`
 - `configChanges="orientation|screenSize|keyboardHidden|screenLayout"`
-- immersive/keep-screen-on behavior
+- immersive and keep-screen-on behavior
 - `VIBRATE` permission
 
-Repeated launch intents are handled through `onNewIntent` rather than relying on Activity recreation. Every asynchronous debug-launch retry carries an identity token from `LatestRequestGate`; a newer intent or Activity destruction invalidates all older retries before they can reach `GameView`. Audio and haptic managers have explicit teardown/recreation paths.
+Repeated launch intents flow through `onNewIntent`. `LatestRequestGate` invalidates stale asynchronous debug-scenario retries after a newer intent or Activity destruction. Audio and haptic owners have explicit teardown/recreation paths.
 
-Debug-only recovery maintenance intents are processed after `SaveIntegrityManager.repair(...)`. A cold `onCreate` may inspect, safely retry, or deliberately discard one confirmed recovery-evidence domain before `GameView` exists. A reused `singleTask` Activity is inspection-only: recover and discard commands reject with `reason=active_session` before constructing maintenance handlers, preventing races with gameplay or the ghost worker. Command extras are consumed once in `finally`, and non-debuggable builds reject the surface through `ApplicationInfo.FLAG_DEBUGGABLE`.
+Debug recovery maintenance runs after `SaveIntegrityManager.repair(...)`. Cold `onCreate` may inspect, safely recover, or deliberately discard one confirmed evidence domain before `GameView` exists. A reused live Activity is inspection-only; mutating commands reject with `reason=active_session`. Intent extras are consumed once in `finally`, and non-debuggable builds reject the surface.
 
-## 3. Game thread
+## 3. Game thread and telemetry
 
-`GameThread` drives update and rendering on one dedicated thread:
+`GameThread`:
 
-1. compute a bounded `deltaTime`;
-2. invoke `GameView.update(deltaTime)`;
-3. render through a locked `Canvas`;
-4. record update, render, and total processing durations;
-5. sleep for the remainder of the nominal 60 Hz budget.
+1. computes bounded `deltaTime`;
+2. invokes `GameView.update(...)`;
+3. renders through a locked `Canvas`;
+4. records update, render, and total processing times;
+5. sleeps for the remainder of the nominal 60 Hz budget.
 
-Shutdown uses interruption plus a bounded join. It restores caller interruption and refuses to render a stale frame after a stop request.
+Shutdown uses interruption plus bounded join, restores caller interruption, and refuses to render a stale frame after stop.
 
-### Frame telemetry
+`FramePerformanceMonitor` uses fixed-size primitive ring buffers without per-frame allocation. Process-wide telemetry exposes sampled/cumulative frame counts, mean update/render/processing time, p50/p95/p99 processing time, maximum time, budget overruns, and Java heap observations.
 
-`FramePerformanceMonitor` records primitive nanosecond samples into fixed-size ring buffers without allocating per frame. `FramePerformanceTelemetry` exposes a process-wide context-free monitor so measurements survive Activity and Surface recreation.
-
-Out-of-band snapshots report:
-
-- sampled and cumulative frame counts;
-- mean update/render/processing duration;
-- p50/p95/p99 processing duration;
-- maximum processing duration;
-- frames exceeding the 60 Hz processing budget;
-- current/max Java heap observations.
-
-This instrumentation enables profiling; it does **not** prove performance acceptance. Representative-device frame time, allocation, GC, I/O, audio-thread, thermal, memory, and long-run measurements remain release gates.
+Instrumentation enables measurement but does not prove representative-device performance, allocation, GC, thermal, audio-thread, I/O, memory, or long-run acceptance.
 
 ## 4. Runtime state ownership
 
-Three different concerns are intentionally separate.
+`AppGameState` actively uses `MENU`, `GARDEN`, and `PLAYING`. Legacy `BLOOM` and `REST` entries remain for compatibility and must not drive new runtime flow.
 
-### Active application screen
+`RunState` owns `PLAYING`, `DYING`, `GAME_OVER`, and `RESTARTING`. `RunResetManager` advances death timing, restart fade, reset, and return to the Garden.
 
-`AppGameState` actively uses:
-
-- `MENU`
-- `GARDEN`
-- `PLAYING`
-
-Legacy `BLOOM` and `REST` enum entries are retained only for compatibility and must not drive new runtime flow.
-
-### Death/restart flow
-
-`RunState` owns:
-
-- `PLAYING`
-- `DYING`
-- `GAME_OVER`
-- `RESTARTING`
-
-`RunResetManager` advances death timing, restart fade, reset execution, and return to the Garden.
-
-### Bloom
-
-Bloom is an orthogonal power flag owned by `GameStateManager`. It does not replace locomotion state. Gravity, jumping, falling, landing, and ducking continue while Bloom is active.
+Bloom is an orthogonal flag owned by `GameStateManager`; it does not replace locomotion state.
 
 ## 5. Player locomotion and input
 
-`InputHandler` arbitrates tap, hold, swipe-down, cancellation, and silent reset before mutating player locomotion. Gameplay callbacks are accepted only while both application and run states permit live input.
+`InputHandler` arbitrates tap, hold, swipe-down, cancellation, and silent reset before Player mutation. Input is accepted only when application and run state permit gameplay.
 
-Player jump behavior:
+Jump behavior preserves immediate full-force ascent, hold-dependent release cap, quick-tap minimum force, longer-hold retained force, no upward energy on release, deterministic apex gravity, and deterministic landing.
 
-1. press starts an immediate full-force ascent for responsiveness;
-2. release caps upward velocity according to hold duration;
-3. quick taps approach `MIN_JUMP_FORCE`;
-4. longer holds preserve more of the initial `MAX_JUMP_FORCE`;
-5. release never adds upward energy;
-6. apex gravity and landing transitions remain deterministic.
+Player update rejects nonfinite/nonpositive deltas, caps lifecycle catch-up at 50 ms, repairs poisoned kinematics/timers on the next valid frame, normalizes speed, and keeps Bloom presentation finite.
 
-The public Player update boundary rejects non-finite/non-positive deltas, caps lifecycle catch-up to one 50 ms render budget, repairs poisoned kinematics/timers on the next valid frame, normalizes run speed, and keeps Bloom presentation inputs finite.
+Current locomotion states are running, jump start, jumping, apex, falling, landing, ducking, stumble, and rest. `PlayerState.BLOOM` remains a reserved legacy ordinal because old ghost frames store enum ordinals.
 
-Current locomotion states are running, jump start, jumping, apex, falling, landing, ducking, stumble, and rest. `PlayerState.BLOOM` is a reserved legacy ordinal because old ghost frames store enum ordinals; current Bloom uses `Player.isInvincible` instead.
+## 6. Game state and economy
 
-## 6. Game-state and economy ownership
+`GameStateManager` owns per-run scroll speed, time, distance, score, run/lifetime Seed views, Bloom meter/timer/conversions, input discovery, debuffs, score multipliers, and run mercy/pacifist statistics.
 
-`GameStateManager` owns mutable per-run values such as:
-
-- scroll speed, time, distance, and score;
-- run and lifetime Seed views;
-- Bloom meter, active flag, timer, and conversion count;
-- opening input discovery;
-- debuffs and score multipliers;
-- run-level mercy/pacifist statistics.
-
-Persistent currency remains loaded through save infrastructure. Run resets reload externally changed lifetime Seeds so Garden spending cannot be overwritten by stale in-memory state. Non-finite onboarding hold durations cannot falsely complete input discovery.
+Persistent currency remains authoritative in save infrastructure. Run reset reloads externally changed lifetime Seeds so Garden purchases cannot be overwritten by stale in-memory state. Nonfinite onboarding durations cannot complete discovery falsely.
 
 ## 7. Entity lifecycle and encounter arbitration
 
-`EntityManager` owns spawning, updates, player-reactive mechanics, collision arbitration, terminal outcomes, pass resolution, Bloom conversion, and Seed Orbs.
+`EntityManager` owns spawning, updates, reactive mechanics, collision arbitration, terminal outcomes, pass resolution, Bloom conversion, and Seed Orbs.
 
-Entity pooling is deliberately disabled. Concrete entities contain incompatible timers, projectiles, movement modes, dialogue state, and reward state; reuse is unsafe until every class has a complete reset contract.
+Pooling remains disabled because entity subclasses carry incompatible timers, projectiles, movement modes, dialogue, and reward state without complete reset contracts.
 
-Random spawning is distance-based. `SpawnPacing.requiredGapPx` keeps world-space separation stable as scroll speed changes. Deterministic `EncounterDirector` scenarios bypass ordinary random persistence.
+Random spawning is distance-based. `SpawnPacing.requiredGapPx` stabilizes world-space separation across speed changes. Debug `EncounterDirector` scenarios bypass ordinary persistence.
 
-Every entity begins with `EncounterOutcome.PENDING` and may resolve once to exactly one terminal outcome:
+Each entity resolves once from `PENDING` to one outcome:
 
-- `HIT`
-- `STUMBLE`
-- `MERCY`
-- `CLEAN_PASS`
-- `BLOOM_CONVERTED`
+```text
+HIT
+STUMBLE
+MERCY
+CLEAN_PASS
+BLOOM_CONVERTED
+```
 
-Collision queries are pure. `EntityManager` selects one overlap with deterministic severity:
+Collision queries are pure. Selection severity is deterministic:
 
 ```text
 HIT > STUMBLE > MERCY
 ```
 
-Only the selected entity receives effects. Collision arbitration precedes pass processing. Resolved encounters and ordinary clean passes are persisted centrally and once.
+Only the selected entity receives effects. Collision arbitration precedes pass processing. Resolved encounters and clean passes persist centrally and once.
 
-### Allocation-free mercy geometry
-
-The `Entity` base provides allocation-free expanded-rectangle probes with symmetric, axis-specific, or per-edge padding. Entity-specific safe windows—including Vanilla Orchid, Bamboo, Cherry Blossom, Jacaranda, and Weeping Willow—retain their original geometry without constructing temporary `RectF` objects during collision queries.
+Allocation-free expanded-rectangle probes preserve entity-specific mercy geometry without temporary `RectF` allocation.
 
 ## 8. Seed Orbs and Bloom conversion
 
-`SeedOrbManager` stages collectible Orbs ahead of the player and removes missed Orbs after they leave the screen.
+`SeedOrbManager` stages collectibles ahead of the player and removes missed Orbs after screen exit.
 
-During Bloom, a passed pending entity resolves as `BLOOM_CONVERTED`. Conversion is exclusive: it cannot also award ordinary clean-pass, entity unique-action, or Orb rewards.
+During Bloom, a passed pending entity resolves exclusively as `BLOOM_CONVERTED`; ordinary clean-pass, unique-action, and Orb rewards cannot also occur.
 
-Bloom presentation coordinates:
-
-- player invincibility and continuous aura/trail emitters;
-- world and conversion bursts;
-- HUD readiness/active/afterglow states;
-- camera feedback;
-- SFX, music, and haptics;
-- environment response.
-
-`GameStateManager` owns the only authoritative Bloom timer. Rewards earned while Bloom is already active do not restart it.
+Bloom coordinates Player invincibility, aura/trail emitters, world/conversion bursts, HUD states, camera feedback, SFX, music, haptics, and environment response. `GameStateManager` owns the only authoritative Bloom timer; rewards earned during Bloom do not restart it.
 
 ## 9. Biomes and background
 
-`BiomeManager` selects and blends five biome identities:
-
-- Meadow
-- Orchard
-- Ancient Grove
-- Dusk Canyon
-- Night Forest
+`BiomeManager` blends Meadow, Orchard, Ancient Grove, Dusk Canyon, and Night Forest.
 
 `ParallaxBackground` owns authored/cached scene composition, parallax layers, sky/ground/foliage transitions, mist, leaves, petals, fireflies, horizon light, speed response, and Bloom response.
 
-Some scenic layers remain procedural. Final art-direction acceptance or replacement is explicitly unresolved.
+Some scenic layers remain procedural. Final art-direction acceptance or replacement is unresolved.
 
 ## 10. Rendering and safe content
 
-Essential menu, Garden, HUD, rest, and debug content share one `SafeContentTransform`:
+Menu, Garden, HUD, rest, and debug content share `SafeContentTransform`, which preserves aspect ratio, maps physical cutout/system-bar bounds into logical coordinates, clips essential content to the safe logical rectangle, and inversely maps touch input.
 
-- preserves aspect ratio;
-- maps physical cutout/system-bar bounds into logical coordinates;
-- clips essential content to the safe logical rectangle;
-- inversely maps touch coordinates back into that logical space.
+Menu, HUD, and rest clocks reject malformed deltas, cap lifecycle catch-up, and repair poisoned local animation state. Host geometry tests do not replace phone/tablet/cutout/unusual-aspect acceptance.
 
-Menu, HUD, and Rest presentation clocks reject malformed deltas, cap lifecycle catch-up to 50 ms, and repair previously poisoned local animation state. Geometry is covered by host tests, but phone/tablet/cutout/unusual-aspect acceptance remains a physical-device gate.
-
-Paints, reusable rectangles, cinematic profiles, Bloom presentation objects, hot-path traversals, and one-shot particle emitters are cached or reused where currently audited. These safeguards reduce known churn; they are not a substitute for allocation profiling.
+Reusable paints, rectangles, cinematic profiles, Bloom objects, indexed hot-path traversals, and one-shot particle presets reduce audited churn but do not replace allocation profiling.
 
 ## 11. Particle system
 
-`ParticleManager` owns a fixed-capacity particle pool and continuous emitters. Named one-shot presets reuse cached `ParticleEmitter` instances rather than constructing an emitter for every event. Active particle traversal uses indexed loops to avoid iterator churn.
+`ParticleManager` owns a fixed-capacity pool and continuous emitters. Named one-shot presets reuse cached `ParticleEmitter` objects. Active traversal uses indexed loops.
 
-Reduced-motion settings are applied at the particle-count boundary. Continuous Bloom emitters are attached to the player and explicitly removed on Bloom exit, rest, or reset.
+Reduced-motion settings apply at the particle-count boundary. Continuous Bloom emitters attach to the Player and are removed on Bloom exit, rest, or reset.
 
-## 12. Ghost recording, playback, and persistence
+## 12. Ghost recording, identity, and persistence
 
-`GhostRecorder` samples player pose at 30 Hz for up to twenty minutes. On a terminal hit, the completed buffer is detached in O(1) regardless of run mode. `RunOutcomePersistenceCoordinator` decides whether the detached buffer is eligible to replace the best ghost.
+`GhostRecorder` samples pose at 30 Hz for up to twenty minutes. Terminal HIT detaches the completed buffer in O(1). `RunOutcomePersistenceCoordinator` decides eligibility against `GhostPersistenceManager.bestDistanceFloor(...)`, which includes durable and accepted-pending distance.
 
-Eligibility compares completed distance against `GhostPersistenceManager.bestDistanceFloor(...)`, which includes durable best distance and any accepted in-memory promotion still awaiting worker completion. A shorter run cannot queue behind and overwrite a longer pending candidate.
+The frame file remains `SaveManager` ghost format version 2. `PlayerState` entries must not be removed or reordered without migration.
 
-The validated frame payload remains `SaveManager` ghost format version 2. New promotions add two fixed-size AtomicFile sidecars without changing that codec:
+Two sidecars are scoped to the active ghost filename:
 
 ```text
 <ghost>.promotion  transient in-progress receipt
 <ghost>.manifest   persistent artifact-to-distance identity
 ```
 
-Both store distance, frame count, and a raw-bit fingerprint of every persisted frame component. Accepted frames remain immediately visible in playback memory, while the single daemon worker performs:
+### Sidecar compatibility
+
+Version-1 24-byte sidecars remain readable and contain distance, frame count, and a 64-bit FNV frame fingerprint.
+
+All new writes use version-2 56-byte sidecars that add a 32-byte SHA-256 digest. New writes reject digest-less values.
+
+`GhostRunIdentity` hashes a canonical big-endian stream containing accepted distance raw bits, frame count, and every persisted frame field. Version-2 validation requires both FNV and SHA-256. Changing only distance invalidates the strong association.
+
+SHA-256 provides collision-resistant local identity, not authenticated authorship; no key, MAC, certificate, or signature exists.
+
+### Durable order
+
+Accepted frames publish immediately in memory. The worker performs:
 
 ```text
-AtomicFile promotion receipt
-→ AtomicFile ghost write
-→ AtomicFile artifact manifest
+version-2 AtomicFile receipt
+→ AtomicFile ghost
+→ version-2 AtomicFile manifest
 → synchronous monotonic best-distance commit
 → receipt clear
 ```
 
-The manifest remains after receipt clearing, making newly promoted artifact bundles self-describing. A matching receipt can reconstruct a missing or stale manifest. When only a manifest remains, a lower threshold is repaired only after full ghost validation. When the threshold already meets the manifest distance, automatic recovery returns without loading or hashing the ghost, avoiding repeated long-file work during healthy startup.
+The in-memory publication carries distance, FNV, and SHA-256. Failure cleanup removes only the matching publication across all three dimensions.
 
-Corrupt receipts, corrupt manifests, manifest/artifact mismatch before a required repair, and I/O failure block new promotions. Explicit maintenance inspection performs full manifest identity validation and can remove corrupt association evidence without deleting the ghost frame file.
+### Recovery
 
-Ghost files reject oversized, truncated, trailing, non-finite, invalid-state, and non-monotonic data. Newer-schema ghost data is preserved rather than destructively rewritten by an older build.
+A pending version-2 receipt validates ghost structure, count, FNV, and SHA-256 over receipt distance plus frames. A pending version-1 receipt validates FNV and writes a version-2 manifest before distance repair.
 
-`GhostPlayer` provides context-aware visibility around the live player and hazards. Ghosts have no gameplay hitbox.
+A nonmatching receipt is abandoned without modifying the existing ghost or threshold; any older manifest is validated using the already-loaded ghost.
 
-Legacy ghost frames store `PlayerState.ordinal`; PlayerState entries must not be removed or reordered without a migration.
+A manifest-only repair loads and hashes the ghost only when best distance is below manifest distance. Version-1 manifests upgrade to version 2 before repair. Frame, count, digest, or distance mismatch produces `CORRUPT_MANIFEST`.
+
+When best distance already meets manifest distance, automatic recovery returns without loading the ghost. Explicit maintenance still performs full validation on demand.
+
+Ghost files reject oversized, truncated, trailing, nonfinite, invalid-state, and nonmonotonic data. Newer-schema data is preserved rather than destructively rewritten by an older build.
+
+`GhostPlayer` is contextual visual playback only and has no hitbox.
 
 ## 13. Collision outcomes and persistent memory
 
-Persistence remains split by storage responsibility:
+Persistence remains split among:
 
-- `SaveManager`: scores, Seeds, run summaries, Garden/costume values, ghost compatibility paths;
-- `PersistentMemoryManager`: encounters, hits, passes, spares, relationships, return/history signals;
-- `SaveIntegrityManager`: schema migration, type repair, bounds, saturating counters, incomplete-summary rejection, and compatibility storage.
-
-Terminal `HIT` processing has two explicit coordinator layers.
+- `SaveManager` — scores, Seeds, summaries, Garden/costume values, ghost compatibility paths;
+- `PersistentMemoryManager` — encounters, hits, passes, spares, relationships, return/history signals;
+- `SaveIntegrityManager` — migration, type repair, bounds, saturation, incomplete-summary rejection, compatibility storage.
 
 ### Immediate terminal gameplay owner
 
-`GameView` retains only the live terminal impact sequence:
+`GameView` retains the live HIT sequence:
 
-- record the run-level hit;
-- suppress the ghost;
-- trigger Player rest;
-- invoke camera, SFX, music, and haptic impact feedback;
-- detach the completed ghost;
-- resolve the killer;
-- call `TerminalHitOutcomeCoordinator.complete(...)` once;
-- store the returned summary;
-- trigger death timing and enter `RunState.DYING`.
+```text
+record run hit
+→ suppress ghost
+→ Player rest
+→ camera/SFX/music/haptic feedback
+→ detach ghost
+→ resolve killer
+→ TerminalHitOutcomeCoordinator.complete(...)
+→ store returned summary
+→ trigger death timing and DYING
+```
 
 ### Terminal completion owner
 
-`TerminalHitOutcomeCoordinator` owns the behavior-preserving deterministic completion sequence:
-
-1. record known-killer relationship history when permanent progression is allowed;
-2. present the canonical authored HIT bubble and flavor line;
-3. invoke the live summary builder exactly once;
-4. resolve the rest quote from the preview, biome, and killer;
-5. create one completed summary;
-6. invoke `RunOutcomeCommitter` exactly once;
-7. return the completed summary and commit result.
-
-The production adapters are `AndroidTerminalHitRelationshipRecorder`, `AndroidTerminalHitFeedbackPresenter`, and `AndroidTerminalHitRestQuoteResolver`. Their interfaces are replaced with recording fakes in pure ordering tests.
-
-### Nonterminal outcome owner
-
-`STUMBLE` and `MERCY_MISS` branches capture immutable inputs and delegate once to `NonTerminalCollisionOutcomeCoordinator`.
-
-For STUMBLE, the coordinator preserves:
+`TerminalHitOutcomeCoordinator` owns:
 
 ```text
-run hit accounting
-→ persistent known-killer relationship hit
-→ 0.9-second ghost suppression
-→ Player stumble
-→ biome-dominant flash
-→ nonlethal hit SFX
-→ hit camera shake
-→ medium haptic
-→ authored STUMBLE bubble/flavor copy
-→ selected-entity deactivation
+persistent known-killer relationship hit
+→ authored HIT bubble/flavor
+→ exactly one summary snapshot
+→ rest quote
+→ completed summary
+→ exactly one RunOutcomeCommitter call
+→ result
 ```
 
-For MERCY_MISS, it preserves:
+Production adapters isolate relationship recording, feedback presentation, and rest-quote resolution.
+
+### Nonterminal owner
+
+`NonTerminalCollisionOutcomeCoordinator` owns ordered STUMBLE and MERCY_MISS work.
+
+STUMBLE preserves run hit, optional persistent relationship hit, ghost suppression, Player stumble, flash, SFX, shake, haptic, authored copy, and selected-entity deactivation.
+
+MERCY_MISS preserves flash, SFX, haptic, authored copy, mercy particles, and shake.
+
+`GameViewNonTerminalCollisionEffects` remains a private live-state adapter for Player, ghost, flash, camera, audio, haptic, and particles. Deterministic/persistence-disabled scenarios retain local feedback without permanent relationship writes.
+
+### Exactly-once non-ghost persistence
+
+`RunOutcomePersistenceCoordinator` claims one per-run token before mode/storage checks. Nonpersistent runs consume it without writes; duplicate delivery returns `ALREADY_COMMITTED`; unresolved corrupt/conflicting evidence returns `RECOVERY_BLOCKED`; incomplete final clear returns `RECOVERY_PENDING`.
+
+The production sink synchronously journals raw summary plus mood, return, and route before/after states. Recovery accepts after-state, advances before-state and verifies, or blocks on a third state.
+
+`SharedPreferencesRunOutcomeSummarySnapshotStore` atomically writes sanitized summary plus expected route count, avoiding replay of hidden increment behavior.
 
 ```text
-green mercy flash
-→ mercy-miss SFX
-→ double-tap haptic
-→ authored mercy bubble/flavor copy
-→ mercy stars at Player center
-→ mercy camera shake
-```
-
-`AndroidNonTerminalCollisionFeedbackPresenter` owns authored-copy selection and presentation geometry. `AndroidNonTerminalCollisionRelationshipRecorder` owns the extracted STUMBLE relationship write. `GameViewNonTerminalCollisionEffects` is a private inner adapter for live state that remains private to `GameView`, including Player, ghost, flash, camera, audio, haptic, and particle mutations.
-
-Deterministic or persistence-disabled STUMBLE encounters retain local mechanics and feedback but do not write permanent relationship history.
-
-### Exactly-once and recoverable persistence owners
-
-`RunOutcomePersistenceCoordinator` implements `RunOutcomeCommitter` and owns one per-run terminal token:
-
-- it claims the token before checking run mode or touching a sink;
-- non-persistent deterministic runs consume the token without writing;
-- repeated or re-entrant terminal delivery returns `ALREADY_COMMITTED`;
-- coordinator construction and both run-start paths retry older non-ghost recovery evidence;
-- corrupt or conflicting non-ghost evidence returns `RECOVERY_BLOCKED`;
-- an applied non-ghost bundle whose final clear failed returns `RECOVERY_PENDING`.
-
-Before ghost eligibility or progression writes, the production sink synchronously journals:
-
-- raw completed summary;
-- forest-mood before and expected after-state;
-- return-moment before and expected after-state;
-- pacifist-route count before and expected after-state.
-
-Recovery compares live state with both snapshots. An already-applied state is accepted without replay; an unchanged before-state is advanced and verified; any third state is a conflict.
-
-`SharedPreferencesRunOutcomeSummarySnapshotStore` writes the sanitized last-run summary and expected route counter in one synchronous transaction, avoiding replay of the hidden counter increment inside `SaveManager.saveLastRunSummary`.
-
-The non-ghost order is:
-
-```text
-PREPARED journal
-→ mood state
+PREPARED
+→ mood
 → MOOD_APPLIED
-→ return state
+→ return
 → RETURN_APPLIED
-→ atomic summary plus route count
+→ summary + route
 → SUMMARY_APPLIED
-→ journal clear
+→ clear
 ```
 
-Ghost and best-distance promotion use the independent receipt/manifest protocol described in section 12. The terminal coordinator submits one distance-aware candidate but never writes the threshold itself. The two protocols protect their own state surfaces; they do not form one global transaction across relationship history, presentation, non-ghost progression, ghost storage, and best distance.
+Ghost and non-ghost protocols remain independently recoverable, not one global terminal transaction.
 
-### Recovery evidence maintenance owner
+### Recovery maintenance owner
 
-`RecoveryEvidenceMaintenanceCoordinator` provides one policy layer over the independent `RUN_OUTCOME` and `GHOST_PROMOTION` domains. It reports `CLEAN`, `PENDING`, `CORRUPT`, `BLOCKED`, or `IO_FAILURE`, and separates inspection, safe retry, corrupt-evidence discard, and unresolved-pending discard.
+`RecoveryEvidenceMaintenanceCoordinator` covers `RUN_OUTCOME` and `GHOST_PROMOTION`, reports `CLEAN`, `PENDING`, `CORRUPT`, `BLOCKED`, or `IO_FAILURE`, and separates inspection, safe retry, corrupt discard, and pending discard.
 
-Safe retry never clears corrupt evidence. Corrupt discard requires a fresh confirmed corrupt state. Pending discard retries canonical recovery first, returns `RECOVERED_INSTEAD` when recovery succeeds, and clears only evidence still confirmed pending or blocked. Read/recovery I/O failure never authorizes deletion, and successful clear is verified by reinspection.
+Safe retry preserves corrupt evidence. Pending discard retries canonical recovery. I/O failure never permits deletion. Successful clear is verified.
 
-Production handlers are domain-isolated. `MaintenanceRunOutcomePersistenceSink` can recover complete mood, return, summary, and route snapshots but cannot publish ghosts or advance best distance. The ghost handler owns the promotion receipt, persistent manifest, ghost artifact adapter, and canonical ghost recovery; it never opens the run-outcome journal.
+The run handler cannot publish ghosts or advance distance. The ghost handler never opens the run journal. Ghost inspection validates version-2 distance-bound SHA-256 or version-1 FNV compatibility. Receipt cleanup preserves a valid manifest; manifest cleanup preserves the ghost file. Support output contains only fixed status codes.
 
-Ghost inspection distinguishes valid manifest, pending receipt, corrupt receipt, corrupt manifest, and manifest/artifact mismatch. Targeted receipt cleanup preserves a valid matching manifest. Targeted manifest cleanup preserves the ghost frame file. Support summaries expose only states and fixed detail codes.
+Deterministic scenarios remain isolated from permanent score, encounter, relationship, Garden, summary, and ghost history while receiving local authored feedback.
 
-`MainActivity` exposes maintenance only in debuggable builds. Mutating commands run only during cold `onCreate`, after save repair and before `GameView`; a reused live Activity may inspect but cannot recover or discard evidence.
-
-Deterministic scenarios are isolated from permanent score, encounter, relationship, Garden, summary, and ghost history while still receiving local authored feedback.
-
-Relationship familiarity from appearances is capped at Recognition. Trust and Bond require meaningful positive outcomes; hits delay progression.
+Relationship familiarity from appearance is capped at Recognition. Trust and Bond require positive outcomes; hits delay progression.
 
 ## 14. Garden, return moments, and menu ritual
 
-The Garden uses a shared `GardenLayoutPlanner` for visual panels and touch targets. Catalogue, statistics, last-run, wardrobe, and run regions are tested at multiple landscape sizes.
+`GardenLayoutPlanner` supplies visual panels and touch targets. Catalogue, statistics, last-run, wardrobe, and run regions have multiple landscape-size tests.
 
-Garden spending writes through persistent currency and cannot be refunded by stale game state. Sanctuary counts are clamped non-negative. Garden particles update only while the screen is active.
+Garden spending writes persistent currency and cannot be refunded by stale game state. Sanctuary counts are nonnegative. Garden particles update only while active.
 
-Return moments are consumed on visible Garden entry rather than hidden construction. Day boundaries use the local calendar date. Returning home resets the willow menu ritual.
+Return moments are consumed on visible Garden entry. Day boundaries use local calendar date. Returning home resets the willow ritual.
 
 ## 15. Text and authored presentation
 
-`DialogueBubbleManager` and `FlavorTextManager` use bounded, wrapped, deduplicated, screen-clamped presentation queues. Their hot-path collections are pre-sized/reused.
+`DialogueBubbleManager` and `FlavorTextManager` use bounded, wrapped, deduplicated, screen-clamped queues with pre-sized/reused hot-path collections.
 
-Run-level text is coordinated by `RunFlavorPresentation`; family-specific writing is separated into flora, tree, bird, and animal flavor modules.
-
-Game-over composition and persistence reads are cached rather than rebuilt every draw frame.
+`RunFlavorPresentation` coordinates run copy; flora, tree, bird, and animal writing remain separated. Game-over composition and persistence reads are cached rather than rebuilt every draw frame.
 
 ## 16. Audio, haptics, and feedback settings
 
-`SfxManager` explicitly tracks `SoundPool` sample readiness and failures. Mandatory assets fail non-debug runtime validation; optional Bloom sounds have explicit fallback behavior.
+`SfxManager` tracks `SoundPool` readiness and failure. Mandatory assets fail non-debug validation; optional Bloom sounds have explicit fallback.
 
-`LeitmotifManager` owns music-state transitions and deterministic crossfade ownership. Repeated parameter writes are throttled.
+`LeitmotifManager` owns deterministic music transitions and crossfades; repeated parameter writes are throttled.
 
-Persistent independent settings control:
-
-- reduced motion;
-- music/SFX;
-- haptics.
-
-They are enforced at camera, particle, cinematic, music, SFX, and vibration boundaries. Actual loudness, latency, vibration intensity, and lifecycle behavior still require hardware acceptance.
+Independent persistent settings control reduced motion, music/SFX, and haptics at camera, particle, cinematic, music, SFX, and vibration boundaries. Hardware loudness, latency, vibration intensity, and lifecycle behavior remain acceptance gates.
 
 ## 17. Assets and release contracts
 
-`RuntimeAssetValidator` checks required sprites, mandatory audio, and fonts outside debug execution. Sprite sheets must decode, divide cleanly by frame count, and remain within sane dimensions. Mandatory raw resources must resolve and contain readable data.
+`RuntimeAssetValidator` checks required sprites, audio, and fonts outside debug execution. Sprite sheets must decode, divide by frame count, and remain within sane dimensions. Mandatory raw resources must resolve and be readable.
 
-Generated placeholder sprites are rejected for non-debug runtime. Debug placeholder construction validates frame geometry, detects multiplication overflow, enforces a sixteen-megapixel allocation budget, and reuses paints across frames.
+Generated placeholder sprites are rejected in non-debug runtime. Debug placeholder creation validates geometry, overflow, a sixteen-megapixel allocation budget, and paint reuse.
 
-Release signing values are accepted only from external properties/environment variables:
+Release signing values are external only:
 
-- `FOREST_RUN_KEYSTORE`
-- `FOREST_RUN_STORE_PASSWORD`
-- `FOREST_RUN_KEY_ALIAS`
-- `FOREST_RUN_KEY_PASSWORD`
+```text
+FOREST_RUN_KEYSTORE
+FOREST_RUN_STORE_PASSWORD
+FOREST_RUN_KEY_ALIAS
+FOREST_RUN_KEY_PASSWORD
+```
 
-The unsigned minified bundle is an automated build artifact, not proof that a signed upload artifact works.
+An unsigned minified bundle is a build artifact, not signed-upload proof.
 
 ## 18. Testing and CI
 
-Permanent CI is read-only and validates the exact event SHA. It performs:
+The permanent workflow is read-only and intended to validate the exact event SHA through source contracts, debug/release/unit/instrumentation compilation, JVM/Robolectric tests, lint, APK/AAB assembly, R8-renaming verification, and API-35 instrumentation.
 
-- repository/source contract checks;
-- debug/release/unit/instrumentation compilation;
-- full JVM/Robolectric suite;
-- debug and release lint;
-- debug and instrumentation APK assembly;
-- minified/resource-shrunk AAB build;
-- effective R8-renaming verification;
-- API 35 connected instrumentation;
-- exact assertion of fourteen tests with zero failures, errors, or skips.
+Coverage includes input, physics, malformed frames, Bloom, all entity families, persistence isolation, relationships, Garden, save repair, future schemas, ghost persistence, safe-content geometry, settings, latest-intent lifecycle, shutdown, collision geometry, assets, allocation bounds, telemetry, terminal/nonterminal ordering, exactly-once ownership, non-ghost recovery, v1/v2 receipt/manifest recovery, distance-bound SHA-256 golden identity, legacy upgrade, digest/distance tampering, lazy manifest validation, maintenance policy, cold-start mutation, one-shot commands, and payload-free logging.
 
-The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, terminal-run exactly-once ownership, non-ghost crash recovery, receipt/manifest ghost crash recovery, journal/receipt/manifest validation, transition parity, atomic summary-route snapshots, pending-distance admission, frame fingerprint identity, receipt-free manifest repair, already-applied lazy validation, recovery-evidence maintenance policy and Android integration, cold-start mutation gating, one-shot command consumption, and payload-free maintenance logging.
+This architecture description does not assert that the current commit has attached successful checks.
 
 ## 19. Debug scenarios
 
-Debug-only `EncounterDirector` scenarios mirror the device-acceptance checklist and can be selected through repeated launch intents or the in-game overlay. Scenario entities use persistence-disabled context.
+`EncounterDirector` scenarios mirror device-acceptance cases and are selectable through launch intents or the overlay. Scenario entities use persistence-disabled context.
 
-Recovery maintenance intents are a separate debug support surface. Live reused Activities permit inspection only; recovery or discard requires a cold start before gameplay systems exist.
+Recovery maintenance is a separate debug support surface. Reused Activities permit inspection only; recovery/discard requires cold start before gameplay systems exist.
 
-Debug scenarios are deterministic test aids, not substitutes for ordinary-play and physical-device acceptance.
+Debug scenarios and focused harnesses do not replace ordinary-play or physical-device acceptance.
 
-## 20. Known architectural debt and unresolved release evidence
+## 20. Known debt and unresolved evidence
 
-The following remain intentionally open:
+- `GameView` remains large and requires incremental behavior-preserving decomposition.
+- The complete collision-result `when` dispatcher remains in `GameView`.
+- STUMBLE and MERCY_MISS live effects remain in `GameViewNonTerminalCollisionEffects`.
+- Immediate HIT impact still directly coordinates Player, ghost, camera, audio, music, and haptics.
+- Ghost/distance mismatches predating persistent manifests cannot be reconstructed.
+- Version-1 sidecars retain noncryptographic identity until replay requires strong upgrade.
+- The healthy already-applied path avoids repeated hashing; maintenance performs full validation.
+- SHA-256 identifies content/distance but does not authenticate a trusted writer.
+- Ghost and non-ghost recovery are independent rather than one global transaction.
+- Compatibility namespace switching during an active worker or maintenance instance is unsupported.
+- Automatic recovery remains fail-closed; deliberate remediation is debug/support-only with no end-user UI.
+- Exact-head Gradle, lint, build, emulator, physical-device, ADB, signing, installation, store path, screenshots, metadata, privacy/data-safety, content rating, and current Play-policy evidence remain unresolved.
+- Entity readability, artwork/animation—including Wolf—fixed landscape, procedural scenic layers, audio/haptics, frame time, allocation, GC, memory, I/O, thermal, and long-run behavior require representative-device acceptance.
 
-- `GameView` is still a large coordinator and should be decomposed incrementally after behavioral stability;
-- the complete collision-result `when` dispatcher remains in `GameView`, although each nonterminal result branch delegates its ordered work;
-- STUMBLE and MERCY_MISS live effects remain implemented by the private `GameViewNonTerminalCollisionEffects` adapter;
-- immediate HIT impact still directly coordinates Player, ghost, camera, audio, music, and haptic managers before the extracted completion seam;
-- ghost/distance mismatches that already existed before persistent artifact manifests cannot be reconstructed;
-- the 64-bit ghost fingerprint is noncryptographic and has a theoretical collision risk;
-- healthy already-applied automatic recovery avoids repeated full ghost hashing, while explicit maintenance inspection performs full identity validation;
-- non-ghost and ghost recovery evidence are independently recoverable rather than one global terminal transaction;
-- concurrent compatibility-namespace switching during an active ghost worker or maintenance instance is unsupported;
-- automatic recovery remains fail-closed; deliberate remediation is debug/support-only and has no end-user recovery UI;
-- physical-device ADB maintenance acceptance remains outstanding;
-- entity mechanic/readability claims need ordinary-play and hardware acceptance;
-- frame, allocation, GC, memory, I/O, audio-thread, thermal, and long-run metrics need measured thresholds on representative hardware;
-- fixed landscape and procedural scenic layers need final product decisions;
-- artwork and animation sheets, including Wolf, need visual inspection;
-- real upload credentials, signed artifact installation, store-path testing, screenshots, metadata, privacy/data-safety, content rating, and current Play-policy review remain release gates.
-
-See `docs/RELEASE.md` for the evidence checklist. No documentation statement should promote the project beyond a feature-rich alpha until those gates are complete.
+See `docs/RELEASE.md`. The project remains a feature-rich alpha until those gates are satisfied.
