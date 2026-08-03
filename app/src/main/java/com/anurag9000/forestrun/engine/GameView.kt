@@ -193,6 +193,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         relationshipRecorder = AndroidNonTerminalCollisionRelationshipRecorder(context),
         feedbackPresenter = AndroidNonTerminalCollisionFeedbackPresenter(context)
     )
+    private val collisionOutcomeDispatcher = CollisionOutcomeDispatcher(
+        terminalHitImpact = terminalHitImpact,
+        terminalHitOutcome = terminalHitOutcome,
+        nonTerminalCollisionOutcome = nonTerminalCollisionOutcome
+    )
     private val ghostPlayer   = GhostPlayer()
     private val ghostHazardFocusRect = RectF()
     private val reusableGhostVisibilityContext = GhostPlayer.VisibilityContext(
@@ -249,9 +254,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 }
                 inputHandler.onTouch(view, event)
             } else {
-                // A screen/state transition can occur while a pointer is still
-                // down. Drop that gesture without converting it into a delayed
-                // jump or duck release on the new screen.
                 inputHandler.cancelActiveGesture()
                 if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
                     view.performClick()
@@ -273,56 +275,24 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         screenWidth  = width
         screenHeight = height
         rebuildSafeContentTransform()
-
-        // Phase 5: GameStateManager first (owns scroll speed)
-        if (!::gameState.isInitialized) {
-            gameState = GameStateManager(context)
-        }
-
-        // Phase 4: background (groundY used by Player)
-        if (!::parallaxBackground.isInitialized) {
-            parallaxBackground = ParallaxBackground(screenWidth, screenHeight)
-        }
-
-        // Phase 6: SpriteManager
-        if (!::spriteManager.isInitialized) {
-            spriteManager = SpriteManager(context)
-        }
-
-        // Phase 12: EntityManager (needs spriteManager and screen dimensions)
+        if (!::gameState.isInitialized) gameState = GameStateManager(context)
+        if (!::parallaxBackground.isInitialized) parallaxBackground = ParallaxBackground(screenWidth, screenHeight)
+        if (!::spriteManager.isInitialized) spriteManager = SpriteManager(context)
         if (!::entityManager.isInitialized) {
             entityManager = EntityManager(context, screenWidth.toFloat(), screenHeight.toFloat(), spriteManager)
         }
-
-        // Phase 16: init FlavorTextManager pixel font
         FlavorTextManager.init(context)
         DialogueBubbleManager.init(context)
-
-        // Phase 17: GameOverScreen
-        if (!::gameOverScreen.isInitialized) {
-            gameOverScreen = GameOverScreen(context, screenWidth, screenHeight)
-        }
-
-        // Phase 19: Load ghost run
+        if (!::gameOverScreen.isInitialized) gameOverScreen = GameOverScreen(context, screenWidth, screenHeight)
         if (!ghostPlayer.hasGhost) {
             val frames = SaveManager.loadGhostRun(context)
             if (frames.isNotEmpty()) ghostPlayer.load(frames)
         }
-
-        // Phase 20: Init audio managers
         LeitmotifManager.init(context)
         SfxManager.init(context)
-        // Phase 22: Start with garden music in MENU, run music when PLAYING
-        if (appState == AppGameState.MENU) {
-            LeitmotifManager.transitionTo(LeitmotifManager.MusicState.MENU)
-        } else {
-            LeitmotifManager.playRunStart()
-        }
-
-        // Phase 21: Init haptics
+        if (appState == AppGameState.MENU) LeitmotifManager.transitionTo(LeitmotifManager.MusicState.MENU)
+        else LeitmotifManager.playRunStart()
         HapticManager.init(context)
-
-        // Phase 22: MainMenuScreen
         if (!::mainMenuScreen.isInitialized) {
             mainMenuScreen = MainMenuScreen(context, spriteManager, screenWidth, screenHeight)
             mainMenuScreen.onGardenTap = {
@@ -330,8 +300,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 appState = AppGameState.GARDEN
             }
         }
-
-        // Phase 23: GardenScreen
         if (!::gardenScreen.isInitialized) {
             gardenScreen = GardenScreen(context, spriteManager, screenWidth, screenHeight)
             gardenScreen.onBack = {
@@ -347,22 +315,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
             gardenScreen.load()
         }
-
-        // Phase 5: HUD
-        if (!::hud.isInitialized) {
-            hud = HUD(context, screenWidth, screenHeight)
-        }
-        if (debugToolsEnabled && debugEncounterOverlay == null) {
-            debugEncounterOverlay = DebugEncounterOverlay(screenWidth)
-        }
-
-        // Phase 3: Player
+        if (!::hud.isInitialized) hud = HUD(context, screenWidth, screenHeight)
+        if (debugToolsEnabled && debugEncounterOverlay == null) debugEncounterOverlay = DebugEncounterOverlay(screenWidth)
         if (!::player.isInitialized) {
             player = Player(screenWidth, screenHeight, spriteManager, parallaxBackground.groundY)
             player.setCostume(CostumeManager.activeCostume(context))
             wirePlayerToInput()
         }
-
         gameThread.isRunning = true
         if (gameThread.state == Thread.State.NEW) gameThread.start()
         pendingDebugLaunchIntent?.let {
@@ -372,7 +331,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        screenWidth  = width
+        screenWidth = width
         screenHeight = height
         rebuildSafeContentTransform()
     }
@@ -395,36 +354,21 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         val checkpoint = canvas.save()
         canvas.translate(transform.contentLeft, transform.contentTop)
         canvas.scale(transform.scale, transform.scale)
-        canvas.clipRect(
-            0f,
-            0f,
-            transform.logicalWidth.toFloat(),
-            transform.logicalHeight.toFloat()
-        )
-        try {
-            drawBlock()
-        } finally {
-            canvas.restoreToCount(checkpoint)
-        }
+        canvas.clipRect(0f, 0f, transform.logicalWidth.toFloat(), transform.logicalHeight.toFloat())
+        try { drawBlock() } finally { canvas.restoreToCount(checkpoint) }
     }
 
-    override fun surfaceDestroyed(holder: SurfaceHolder) {
-        stopThread()
-    }
+    override fun surfaceDestroyed(holder: SurfaceHolder) { stopThread() }
 
     fun pause() {
         stopThread()
-        LeitmotifManager.pause()   // Phase 20
-        if (::gameState.isInitialized && runMode.persistsProgress) {
-            gameState.save()   // persist ordinary-play high score only
-        }
+        LeitmotifManager.pause()
+        if (::gameState.isInitialized && runMode.persistsProgress) gameState.save()
     }
 
     fun resume() {
-        LeitmotifManager.resume()  // Phase 20
-        // Re-create thread (Java threads can't be restarted after stop)
+        LeitmotifManager.resume()
         gameThread = GameThread(holder, this)
-        // Thread starts when surfaceCreated fires again (or immediately if surface exists)
         if (holder.surface?.isValid == true) {
             gameThread.isRunning = true
             gameThread.start()
@@ -437,23 +381,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     fun applyDebugLaunchIntent(intent: Intent?) {
         if (!debugToolsEnabled || intent == null) return
-
         val scenarioName = intent.getStringExtra(com.anurag9000.forestrun.MainActivity.EXTRA_DEBUG_SCENARIO)
         val requestedRunMode = intent.getStringExtra(com.anurag9000.forestrun.MainActivity.EXTRA_RUN_MODE)
         val autoStart = intent.getBooleanExtra(com.anurag9000.forestrun.MainActivity.EXTRA_DEBUG_AUTOSTART, false)
         if (scenarioName.isNullOrBlank() && !autoStart) return
-
-        if (!::mainMenuScreen.isInitialized ||
-            !::entityManager.isInitialized ||
-            !::player.isInitialized ||
-            !::gameState.isInitialized ||
-            holder.surface?.isValid != true
+        if (!::mainMenuScreen.isInitialized || !::entityManager.isInitialized ||
+            !::player.isInitialized || !::gameState.isInitialized || holder.surface?.isValid != true
         ) {
             pendingDebugLaunchIntent = Intent(intent)
             postDelayed({ applyDebugLaunchIntent(intent) }, 100L)
             return
         }
-
         if (!scenarioName.isNullOrBlank()) {
             val director = encounterDirector ?: return
             val scenario = EncounterScenario.entries.firstOrNull { it.name == scenarioName } ?: return
@@ -461,18 +399,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             debugScenarioVisualsEnabled = false
             debugScenarioScript.prepare(scenario)
             if (scenario == EncounterScenario.GHOST_READABILITY) {
-                ghostPlayer.load(
-                    listOf(
-                        GhostFrame(0.00f, 520f, 860f, PlayerState.RUNNING.ordinal, 1f, 1f),
-                        GhostFrame(0.35f, 560f, 780f, PlayerState.JUMPING.ordinal, 0.96f, 1.04f),
-                        GhostFrame(0.72f, 610f, 710f, PlayerState.APEX.ordinal, 0.92f, 1.08f),
-                        GhostFrame(1.05f, 660f, 790f, PlayerState.FALLING.ordinal, 1.0f, 1f),
-                        GhostFrame(1.42f, 720f, 860f, PlayerState.RUNNING.ordinal, 1f, 1f),
-                        GhostFrame(1.80f, 780f, 790f, PlayerState.JUMPING.ordinal, 0.96f, 1.04f),
-                        GhostFrame(2.15f, 840f, 860f, PlayerState.RUNNING.ordinal, 1f, 1f)
-                    ),
-                    revealImmediately = true
-                )
+                ghostPlayer.load(listOf(
+                    GhostFrame(0.00f, 520f, 860f, PlayerState.RUNNING.ordinal, 1f, 1f),
+                    GhostFrame(0.35f, 560f, 780f, PlayerState.JUMPING.ordinal, 0.96f, 1.04f),
+                    GhostFrame(0.72f, 610f, 710f, PlayerState.APEX.ordinal, 0.92f, 1.08f),
+                    GhostFrame(1.05f, 660f, 790f, PlayerState.FALLING.ordinal, 1f, 1f),
+                    GhostFrame(1.42f, 720f, 860f, PlayerState.RUNNING.ordinal, 1f, 1f),
+                    GhostFrame(1.80f, 780f, 790f, PlayerState.JUMPING.ordinal, 0.96f, 1.04f),
+                    GhostFrame(2.15f, 840f, 860f, PlayerState.RUNNING.ordinal, 1f, 1f)
+                ), revealImmediately = true)
             }
             director.selectScenario(scenario)
             appState = AppGameState.PLAYING
@@ -480,7 +415,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             prepareEncounterScenario()
             return
         }
-
         if (autoStart) {
             runMode = RunMode.NORMAL
             debugScenarioVisualsEnabled = false
@@ -492,21 +426,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun stopThread() {
-        if (!gameThread.requestStopAndAwait()) {
-            Log.w(TAG, "GameThread did not terminate within the 1 second shutdown bound")
-        }
+        if (!gameThread.requestStopAndAwait()) Log.w(TAG, "GameThread did not terminate within the 1 second shutdown bound")
     }
 
-    // -----------------------------------------------------------------------
-    // Input callback wiring
-    // -----------------------------------------------------------------------
-
     private fun acceptsGameplayInput(): Boolean =
-        appState == AppGameState.PLAYING &&
-            runState == RunState.PLAYING &&
-            ::player.isInitialized
+        appState == AppGameState.PLAYING && runState == RunState.PLAYING && ::player.isInitialized
 
-    /** Called once after [player] is initialized to attach physics callbacks. */
     private fun wirePlayerToInput() {
         inputHandler.onJumpPressed = {
             if (acceptsGameplayInput()) {
@@ -532,14 +457,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 player.onDuckPressed()
             }
         }
-        inputHandler.onDuckReleased = {
-            if (acceptsGameplayInput()) player.onDuckReleased()
-        }
+        inputHandler.onDuckReleased = { if (acceptsGameplayInput()) player.onDuckReleased() }
     }
-
-    // -----------------------------------------------------------------------
-    // Game loop – called by GameThread
-    // -----------------------------------------------------------------------
 
     fun update(deltaTime: Float) {
         if (!FrameInputAdmission.acceptsDelta(deltaTime)) return
@@ -548,36 +467,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun updateBounded(deltaTime: Float) {
         debugFrameCounter++
-        // Phase 15: Advance camera shake
         CameraSystem.update(deltaTime)
-
-        // Gesture time advances only during live gameplay. All other
-        // top-level states silently discard any in-flight pointer state.
-        if (acceptsGameplayInput()) {
-            inputHandler.tick(deltaTime)
-        } else {
-            inputHandler.cancelActiveGesture()
-        }
-
+        if (acceptsGameplayInput()) inputHandler.tick(deltaTime) else inputHandler.cancelActiveGesture()
         if (!::gameState.isInitialized) return
         if (!gameState.isBloomActive && gameState.bloomMeter >= gameState.bloomSeedTarget - 1 && !bloomReadyAnnounced) {
             bloomReadyAnnounced = true
             SfxManager.playBloomReady()
-        } else if (!gameState.isBloomActive && gameState.bloomMeter < gameState.bloomSeedTarget - 1) {
-            bloomReadyAnnounced = false
-        }
+        } else if (!gameState.isBloomActive && gameState.bloomMeter < gameState.bloomSeedTarget - 1) bloomReadyAnnounced = false
         bloomScreenPulse = if (gameState.isBloomActive) bloomScreenPulse + deltaTime * 4.8f else 0f
-        if (bloomActivationFlash > 0f) {
-            bloomActivationFlash = (bloomActivationFlash - deltaTime).coerceAtLeast(0f)
-        }
-        if (bloomAfterglowTimer > 0f) {
-            bloomAfterglowTimer = (bloomAfterglowTimer - deltaTime).coerceAtLeast(0f)
-        }
-        if (bloomPowerSurgeTimer > 0f) {
-            bloomPowerSurgeTimer = (bloomPowerSurgeTimer - deltaTime).coerceAtLeast(0f)
-        }
-
-        // Phase 22: MENU state — update menu screen, gate physics
+        if (bloomActivationFlash > 0f) bloomActivationFlash = (bloomActivationFlash - deltaTime).coerceAtLeast(0f)
+        if (bloomAfterglowTimer > 0f) bloomAfterglowTimer = (bloomAfterglowTimer - deltaTime).coerceAtLeast(0f)
+        if (bloomPowerSurgeTimer > 0f) bloomPowerSurgeTimer = (bloomPowerSurgeTimer - deltaTime).coerceAtLeast(0f)
         if (appState == AppGameState.MENU) {
             if (::mainMenuScreen.isInitialized) {
                 mainMenuScreen.update(deltaTime)
@@ -586,24 +486,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     appState = AppGameState.PLAYING
                 }
             }
-            return   // No physics / entity updates while in menu
+            return
         }
-
-        // Phase 23: GARDEN state
         if (appState == AppGameState.GARDEN) {
-            if (::gardenScreen.isInitialized) {
-                gardenScreen.update(deltaTime)
-            }
-            return   // No physics while in garden
+            if (::gardenScreen.isInitialized) gardenScreen.update(deltaTime)
+            return
         }
-
-        // Phase 17: State gate — freeze physics in DYING / GAME_OVER / RESTARTING
         when (runState) {
             RunState.DYING -> {
                 val next = runResetManager.update(deltaTime, runState)
                 if (next == RunState.GAME_OVER) runState = RunState.GAME_OVER
-                // CameraSystem.update() is already called unconditionally at the top of update() —
-                // calling it a second time here would double-decay shake trauma, halving death-shake duration.
                 ParticleManager.update(deltaTime)
                 FlavorTextManager.update(deltaTime)
                 DialogueBubbleManager.update(deltaTime)
@@ -612,14 +504,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
             RunState.GAME_OVER -> {
                 if (::gameOverScreen.isInitialized) gameOverScreen.update(deltaTime)
-                return   // Hard stop — no physics updates
+                return
             }
             RunState.RESTARTING -> {
                 val next = runResetManager.update(deltaTime, runState)
                 restartFadePaint.alpha = runResetManager.restartFadeAlpha
                 if (next == RunState.PLAYING && runResetManager.restartFadeAlpha >= 255) {
-                    if (::entityManager.isInitialized && ::player.isInitialized &&
-                        ::gameState.isInitialized) {
+                    if (::entityManager.isInitialized && ::player.isInitialized && ::gameState.isInitialized) {
                         runResetManager.executeReset(gameState, entityManager, player)
                         ghostRecorder.reset()
                         reloadGhost()
@@ -631,41 +522,24 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 }
                 return
             }
-            RunState.PLAYING -> { /* fall through to physics */ }
+            RunState.PLAYING -> Unit
         }
-
-        // Phase 5: update game state (scroll speed lives here now)
         gameState.update(deltaTime)
-
         if (::parallaxBackground.isInitialized) {
-            parallaxBackground.setBloomState(
-                isActive = gameState.isBloomActive,
-                activationLevel = bloomActivationFlash / 0.32f,
-                afterglowLevel = bloomAfterglowFraction()
-            )
+            parallaxBackground.setBloomState(gameState.isBloomActive, bloomActivationFlash / 0.32f, bloomAfterglowFraction())
             parallaxBackground.update(deltaTime, gameState.scrollSpeed)
         }
-
-        // Phase 5: update HUD
         if (::hud.isInitialized) hud.update(deltaTime, gameState)
-
-        // Phase 3: update player physics
-        // Phase 13: BiomeManager update (colours, entity pool)
         if (::entityManager.isInitialized) {
             entityManager.biomeManager.update(gameState.distanceMetres)
             gameState.updatePacifistBiome(entityManager.biomeManager.currentBiome)
             if (::parallaxBackground.isInitialized) {
                 val bm = entityManager.biomeManager
                 parallaxBackground.applyBiomeScene(bm.currentBiome)
-                parallaxBackground.applyBiomeColours(
-                    bm.currentSkyTop, bm.currentSkyBottom,
-                    bm.currentGround, bm.currentFoliage
-                )
+                parallaxBackground.applyBiomeColours(bm.currentSkyTop, bm.currentSkyBottom, bm.currentGround, bm.currentFoliage)
             }
         }
-
         if (!::player.isInitialized) return
-
         if (gameState.isBloomActive && !player.isInvincible) {
             player.activateBloom()
             bloomSessionConversionBase = gameState.bloomConversionsThisRun
@@ -681,135 +555,85 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             HapticManager.bloomSurge()
             CameraSystem.shakeBloom()
             bloomActivationFlash = 0.32f
-            player.setBloomPowerPresentation(scaleBoost = 0.02f, auraAlpha = 112)
+            player.setBloomPowerPresentation(0.02f, 112)
             ParticleManager.emit(FxPreset.BLOOM_ACTIVATE, player.x + Player.BASE_WIDTH / 2f, player.y + Player.BASE_HEIGHT / 2f)
             ParticleManager.emit(FxPreset.BLOOM_WORLD_BURST, player.x + Player.BASE_WIDTH / 2f, player.y + Player.BASE_HEIGHT * 0.35f)
         } else if (!gameState.isBloomActive && player.isInvincible) {
             player.deactivateBloom()
-            bloomLastBurstConversions =
-                (gameState.bloomConversionsThisRun - bloomSessionConversionBase).coerceAtLeast(0)
+            bloomLastBurstConversions = (gameState.bloomConversionsThisRun - bloomSessionConversionBase).coerceAtLeast(0)
             bloomAfterglowTimer = if (bloomLastBurstConversions >= 3) 1.8f else 1.2f
             bloomPowerSurgeTimer = 0f
             bloomPowerTier = 0
             bloomPowerSurgeStrength = 0f
-            if (bloomLastBurstConversions > 0) {
-                ParticleManager.emit(
-                    FxPreset.BLOOM_WORLD_BURST,
-                    player.x + Player.BASE_WIDTH / 2f,
-                    player.y + Player.BASE_HEIGHT * 0.38f
-                )
-            } else {
-                ParticleManager.emit(
-                    FxPreset.BLOOM_CONVERT,
-                    player.x + Player.BASE_WIDTH / 2f,
-                    player.y + Player.BASE_HEIGHT * 0.44f
-                )
-            }
+            ParticleManager.emit(
+                if (bloomLastBurstConversions > 0) FxPreset.BLOOM_WORLD_BURST else FxPreset.BLOOM_CONVERT,
+                player.x + Player.BASE_WIDTH / 2f,
+                player.y + Player.BASE_HEIGHT * if (bloomLastBurstConversions > 0) 0.38f else 0.44f
+            )
             SfxManager.playBloomFade(bloomLastBurstConversions)
             LeitmotifManager.endBloom(gameState.distanceMetres)
         }
-
         if (gameState.isBloomActive) {
-            val liveBurstConversions =
-                (gameState.bloomConversionsThisRun - bloomSessionConversionBase).coerceAtLeast(0)
-            val powerState = BloomPowerPresentation.resolveInto(
-                target = reusableBloomPowerState,
-                secondsRemaining = gameState.bloomSecondsRemaining,
-                conversionsInBurst = liveBurstConversions,
-                recentSurgeFraction = bloomPowerSurgeFraction()
-            )
-            player.setBloomPowerPresentation(
-                scaleBoost = powerState.playerScaleBoost,
-                auraAlpha = powerState.auraAlpha
-            )
+            val liveBurstConversions = (gameState.bloomConversionsThisRun - bloomSessionConversionBase).coerceAtLeast(0)
+            val powerState = BloomPowerPresentation.resolveInto(reusableBloomPowerState, gameState.bloomSecondsRemaining, liveBurstConversions, bloomPowerSurgeFraction())
+            player.setBloomPowerPresentation(powerState.playerScaleBoost, powerState.auraAlpha)
             bloomPowerTier = powerState.tier
             bloomPowerSurgeStrength = powerState.surgeStrength
             bloomLastBurstConversions = liveBurstConversions
-            LeitmotifManager.updateBloomSignature(
-                secondsRemaining = gameState.bloomSecondsRemaining,
-                conversions = liveBurstConversions
-            )
+            LeitmotifManager.updateBloomSignature(gameState.bloomSecondsRemaining, liveBurstConversions)
             val audioConversions = gameState.bloomConversionsThisRun
             if (audioConversions > bloomLastAudioConversionCount) {
                 repeat(audioConversions - bloomLastAudioConversionCount) { offset ->
-                    val burstCount = (audioConversions - bloomSessionConversionBase - offset).coerceAtLeast(1)
-                    SfxManager.playBloomConvert(burstCount)
+                    SfxManager.playBloomConvert((audioConversions - bloomSessionConversionBase - offset).coerceAtLeast(1))
                 }
                 bloomPowerSurgeTimer = 0.55f
                 CameraSystem.shakeBloomChain(powerState.tier)
-                if (powerState.tier >= 2) {
-                    ParticleManager.emit(
-                        FxPreset.BLOOM_WORLD_BURST,
-                        player.x + Player.BASE_WIDTH / 2f,
-                        player.y + Player.BASE_HEIGHT * 0.32f
-                    )
-                } else {
-                    ParticleManager.emit(
-                        FxPreset.BLOOM_CONVERT,
-                        player.x + Player.BASE_WIDTH / 2f,
-                        player.y + Player.BASE_HEIGHT * 0.38f
-                    )
-                }
-                if (powerState.tier >= 3) {
-                    bloomActivationFlash = maxOf(bloomActivationFlash, 0.18f)
-                }
+                ParticleManager.emit(
+                    if (powerState.tier >= 2) FxPreset.BLOOM_WORLD_BURST else FxPreset.BLOOM_CONVERT,
+                    player.x + Player.BASE_WIDTH / 2f,
+                    player.y + Player.BASE_HEIGHT * if (powerState.tier >= 2) 0.32f else 0.38f
+                )
+                if (powerState.tier >= 3) bloomActivationFlash = maxOf(bloomActivationFlash, 0.18f)
                 bloomLastAudioConversionCount = audioConversions
             }
-        } else {
-            player.setBloomPowerPresentation(scaleBoost = 0f, auraAlpha = 0)
-        }
-
+        } else player.setBloomPowerPresentation(0f, 0)
         player.update(deltaTime, gameState.scrollSpeed)
-
-        // Phase 12: EntityManager update (spawn, scroll, pass-detection)
         if (::entityManager.isInitialized) {
             entityManager.update(deltaTime, gameState, player, encounterDirector, runMode)
-
-            // Collision loop
             val collision = entityManager.checkCollisions(player, gameState)
             if (collision != null) {
-                val persistEncounter = collision.entity.shouldRecordPersistence &&
-                    runMode.persistsProgress
-                when (collision.result) {
-                    CollisionResult.HIT -> {
-                        val impact = terminalHitImpact.apply {
-                            val completedGhost = ghostRecorder.detachSnapshot()
-                            val killerType = entityManager.entityTypeOf(collision.entity)
-                            TerminalHitImpactCapture(
-                                killerType = killerType,
-                                biome = entityManager.biomeManager.currentBiome,
-                                presentation = TerminalHitPresentation(
+                val persistEncounter = collision.entity.shouldRecordPersistence && runMode.persistsProgress
+                val completedHit = collisionOutcomeDispatcher.dispatch(
+                    result = collision.result,
+                    hit = {
+                        HitCollisionDispatch(
+                            persistEncounter = persistEncounter,
+                            captureAfterImpact = {
+                                val completedGhost = ghostRecorder.detachSnapshot()
+                                val killerType = entityManager.entityTypeOf(collision.entity)
+                                TerminalHitImpactCapture(
                                     killerType = killerType,
-                                    routeTier = gameState.pacifistRouteTier,
-                                    playerX = player.x,
-                                    playerY = player.y
-                                ),
-                                completedGhost = completedGhost
-                            )
-                        }
-                        val completedHit = terminalHitOutcome.complete(
-                            killerType = impact.killerType,
-                            biome = impact.biome,
-                            presentation = impact.presentation,
-                            completedGhost = impact.completedGhost,
-                            persistEncounter = persistEncounter
-                        ) {
-                            gameState.buildRunSummary(lastKiller = impact.killerType)
-                        }
-                        currentRestQuote = completedHit.summary.restQuote
-                        currentRunSummary = completedHit.summary
-                        // Transition to DYING
-                        if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
-                        runState = RunState.DYING
-                    }
-                    CollisionResult.STUMBLE -> {
+                                    biome = entityManager.biomeManager.currentBiome,
+                                    presentation = TerminalHitPresentation(
+                                        killerType = killerType,
+                                        routeTier = gameState.pacifistRouteTier,
+                                        playerX = player.x,
+                                        playerY = player.y
+                                    ),
+                                    completedGhost = completedGhost
+                                )
+                            },
+                            buildSummaryPreview = { killerType ->
+                                gameState.buildRunSummary(lastKiller = killerType)
+                            }
+                        )
+                    },
+                    stumble = {
                         val killerType = entityManager.entityTypeOf(collision.entity)
                         val dominantColor = if (::entityManager.isInitialized) {
                             entityManager.biomeManager.currentFoliage
-                        } else {
-                            Color.rgb(255, 180, 200)
-                        }
-                        nonTerminalCollisionOutcome.completeStumble(
+                        } else Color.rgb(255, 180, 200)
+                        StumbleCollisionDispatch(
                             input = StumbleCollisionOutcome(
                                 killerType = killerType,
                                 routeTier = gameState.pacifistRouteTier,
@@ -817,179 +641,89 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                                 playerY = player.y,
                                 dominantColor = dominantColor,
                                 persistEncounter = persistEncounter
-                            )
-                        ) {
-                            // Stumble brief invincibility has already been triggered.
-                            collision.entity.isActive = false
-                        }
-                    }
-                    CollisionResult.MERCY_MISS -> {
-                        nonTerminalCollisionOutcome.completeMercyMiss(
-                            MercyMissCollisionOutcome(
-                                entityType = entityManager.entityTypeOf(collision.entity),
-                                routeTier = gameState.pacifistRouteTier,
-                                mercyHearts = gameState.mercyHearts,
-                                kindnessChain = gameState.kindnessChain,
-                                playerX = player.x,
-                                playerY = player.y
-                            )
+                            ),
+                            deactivateEntity = {
+                                collision.entity.isActive = false
+                            }
+                        )
+                    },
+                    mercyMiss = {
+                        MercyMissCollisionOutcome(
+                            entityType = entityManager.entityTypeOf(collision.entity),
+                            routeTier = gameState.pacifistRouteTier,
+                            mercyHearts = gameState.mercyHearts,
+                            kindnessChain = gameState.kindnessChain,
+                            playerX = player.x,
+                            playerY = player.y
                         )
                     }
-                    CollisionResult.NONE -> { /* handled above, shouldn't reach here */ }
+                )
+                if (completedHit != null) {
+                    currentRestQuote = completedHit.summary.restQuote
+                    currentRunSummary = completedHit.summary
+                    if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
+                    runState = RunState.DYING
                 }
             }
-
-            // Tick down mercy flash
             if (mercyFlashTimer > 0f) mercyFlashTimer -= deltaTime
         }
-
-        // Phase 19: Record ghost frame + advance ghost playback
-        if (::player.isInitialized && runMode.recordsGhost) {
-            ghostRecorder.record(deltaTime, player)
-        }
-        if (shouldDrawGhostPlayback()) {
-            ghostPlayer.update(deltaTime, ghostVisibilityContext())
-        }
+        if (::player.isInitialized && runMode.recordsGhost) ghostRecorder.record(deltaTime, player)
+        if (shouldDrawGhostPlayback()) ghostPlayer.update(deltaTime, ghostVisibilityContext())
         runDebugScenarioScript()
-
-        // Phase 20: Music layer transition + tempo scaling
         if (::gameState.isInitialized) {
             LeitmotifManager.updateDistance(gameState.distanceMetres)
             LeitmotifManager.updateTempo(gameState.scrollSpeed)
             gameState.consumePacifistReward()?.let { reward ->
-                gameState.addBonus(points = reward.points, seeds = reward.seeds)
-                if (runMode.persistsProgress) {
-                    reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }
-                }
+                gameState.addBonus(reward.points, reward.seeds)
+                if (runMode.persistsProgress) reward.friendBiome?.let { PersistentMemoryManager.recordBiomeFriendship(context, it) }
                 val rewardCue = PacifistPresentation.rewardCue(reward)
-                ParticleManager.emit(
-                    FxPreset.MERCY_STARS,
-                    player.x + Player.BASE_WIDTH * 0.5f,
-                    player.y + Player.BASE_HEIGHT * 0.42f
-                )
-                DialogueBubbleManager.spawn(
-                    text = rewardCue.bubbleText,
-                    anchorX = player.x + Player.BASE_WIDTH * 0.5f,
-                    anchorY = player.y - 28f,
-                    fillColor = rewardCue.fillColor,
-                    borderColor = rewardCue.borderColor
-                )
-                FlavorTextManager.spawn(
-                    text = rewardCue.flavorText,
-                    x = player.x + Player.BASE_WIDTH * 0.18f,
-                    y = player.y - 6f,
-                    colour = rewardCue.flavorColor,
-                    lifetime = 1.2f,
-                    size = rewardCue.flavorSize
-                )
+                ParticleManager.emit(FxPreset.MERCY_STARS, player.x + Player.BASE_WIDTH * 0.5f, player.y + Player.BASE_HEIGHT * 0.42f)
+                DialogueBubbleManager.spawn(rewardCue.bubbleText, player.x + Player.BASE_WIDTH * 0.5f, player.y - 28f, rewardCue.fillColor, rewardCue.borderColor)
+                FlavorTextManager.spawn(rewardCue.flavorText, player.x + Player.BASE_WIDTH * 0.18f, player.y - 6f, rewardCue.flavorColor, 1.2f, rewardCue.flavorSize)
             }
-
-            // Phase 21: 1000-point milestone haptic + camera nudge
             if (gameState.consumeMilestone()) {
                 HapticManager.mediumPulse()
-                CameraSystem.addTrauma(0.3f)   // gentle nudge on 1000-pt milestone
-                val milestoneCue = RunFlavorPresentation.milestoneCue(
-                    context = context,
-                    score = gameState.score,
-                    routeTier = gameState.pacifistRouteTier,
-                    isNewHighScore = gameState.isNewHighScore
-                )
-                DialogueBubbleManager.spawn(
-                    text = milestoneCue.bubbleText,
-                    anchorX = player.x + Player.BASE_WIDTH * 0.5f,
-                    anchorY = player.y - 28f,
-                    fillColor = milestoneCue.fillColor,
-                    borderColor = milestoneCue.borderColor
-                )
-                FlavorTextManager.spawn(
-                    text = milestoneCue.flavorText,
-                    x = player.x + Player.BASE_WIDTH * 0.20f,
-                    y = player.y - 8f,
-                    colour = milestoneCue.flavorColor,
-                    lifetime = 1.1f,
-                    size = milestoneCue.flavorSize
-                )
+                CameraSystem.addTrauma(0.3f)
+                val milestoneCue = RunFlavorPresentation.milestoneCue(context, gameState.score, gameState.pacifistRouteTier, gameState.isNewHighScore)
+                DialogueBubbleManager.spawn(milestoneCue.bubbleText, player.x + Player.BASE_WIDTH * 0.5f, player.y - 28f, milestoneCue.fillColor, milestoneCue.borderColor)
+                FlavorTextManager.spawn(milestoneCue.flavorText, player.x + Player.BASE_WIDTH * 0.20f, player.y - 8f, milestoneCue.flavorColor, 1.1f, milestoneCue.flavorSize)
             }
-
             emitOrdinaryProgressCues()
         }
-
-        // Flavor text float animation
         FlavorTextManager.update(deltaTime)
         DialogueBubbleManager.update(deltaTime)
-
-        // Phase 14: Update all particles
         ParticleManager.update(deltaTime)
     }
 
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
-
-        // 1. Black fill (never shakes — clean border always visible)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
-
-        // Phase 22: MENU renders its own full-screen scene
         if (appState == AppGameState.MENU) {
-            if (::mainMenuScreen.isInitialized) {
-                drawInSafeContent(canvas) { mainMenuScreen.draw(canvas) }
-            }
+            if (::mainMenuScreen.isInitialized) drawInSafeContent(canvas) { mainMenuScreen.draw(canvas) }
             return
         }
-
-        // Phase 23: GARDEN renders plant meta-loop
         if (appState == AppGameState.GARDEN) {
-            if (::gardenScreen.isInitialized) {
-                drawInSafeContent(canvas) { gardenScreen.draw(canvas) }
-            }
+            if (::gardenScreen.isInitialized) drawInSafeContent(canvas) { gardenScreen.draw(canvas) }
             return
         }
-
-        // 2–5: All gameplay layers wrapped in camera shake offset
         CameraSystem.applyTo(canvas) {
-
-            // 2. Parallax background
             if (::parallaxBackground.isInitialized) parallaxBackground.draw(canvas)
-
-            // 3. Entities (behind player, above background)
             if (::entityManager.isInitialized) {
                 entityManager.draw(canvas)
-                // 3b. Seed orbs — drawn above entities, below player
-                val bloomFrac = if (::gameState.isInitialized)
-                    gameState.bloomMeterFraction
-                else 0f
+                val bloomFrac = if (::gameState.isInitialized) gameState.bloomMeterFraction else 0f
                 entityManager.drawOrbs(canvas, bloomFrac)
             }
-
-            // 4. Ghost player (behind live player, 40% opacity white-blue) — Phase 19
-            if (::spriteManager.isInitialized && shouldDrawGhostPlayback()) {
-                ghostPlayer.draw(canvas, spriteManager)
-            }
-
-            // 5. Live Player
+            if (::spriteManager.isInitialized && shouldDrawGhostPlayback()) ghostPlayer.draw(canvas, spriteManager)
             if (::player.isInitialized) player.draw(canvas)
-
-            if (debugToolsEnabled &&
-                debugScenarioVisualsEnabled &&
-                encounterDirector?.isScenarioActive == true
-            ) {
-                drawDebugScenarioLayer(canvas)
-            }
-
-            // 5. World-space FX: flavor text + particles
+            if (debugToolsEnabled && debugScenarioVisualsEnabled && encounterDirector?.isScenarioActive == true) drawDebugScenarioLayer(canvas)
             DialogueBubbleManager.draw(canvas)
             FlavorTextManager.draw(canvas)
             ParticleManager.draw(canvas)
-
-        }   // ← camera shake scope ends here
-
-        // 6. MERCY_MISS green border flash (screen-space — not shaken)
+        }
         if (mercyFlashTimer > 0f) {
-            val alpha = ((mercyFlashTimer / mercyFlashDuration) * 200).toInt().coerceIn(0, 200)
-            mercyFlashPaint.alpha = alpha
+            mercyFlashPaint.alpha = ((mercyFlashTimer / mercyFlashDuration) * 200).toInt().coerceIn(0, 200)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), mercyFlashPaint)
         }
-
-        // 7. Ambient night/dusk darkness overlay (screen-space)
         if (::entityManager.isInitialized) {
             val ambient = entityManager.biomeManager.ambientAlpha
             if (ambient > 0) {
@@ -997,15 +731,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), ambientOverlayPaint)
             }
         }
-
         val bloomAfterglow = bloomAfterglowFraction()
         if (::gameState.isInitialized && (gameState.isBloomActive || bloomAfterglow > 0f)) {
             val pulse = 0.55f + 0.45f * kotlin.math.sin(bloomScreenPulse)
-            val powerBoost = if (gameState.isBloomActive) {
-                bloomPowerSurgeStrength * (0.22f + bloomPowerTier * 0.08f)
-            } else {
-                0f
-            }
+            val powerBoost = if (gameState.isBloomActive) bloomPowerSurgeStrength * (0.22f + bloomPowerTier * 0.08f) else 0f
             val bloomStrength = if (gameState.isBloomActive) 1f + powerBoost else 0.38f * bloomAfterglow
             bloomScreenPaint.alpha = (78f + 72f * pulse * bloomStrength).toInt().coerceIn(0, 255)
             bloomGlowPaint.alpha = (32f + 52f * pulse * (bloomStrength + powerBoost * 0.3f)).toInt().coerceIn(0, 255)
@@ -1025,110 +754,46 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             }
         }
         if (bloomActivationFlash > 0f) {
-            val flashAlpha = ((bloomActivationFlash / 0.32f) * 170f).toInt().coerceIn(0, 170)
-            bloomFlashPaint.alpha = flashAlpha
+            bloomFlashPaint.alpha = ((bloomActivationFlash / 0.32f) * 170f).toInt().coerceIn(0, 170)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bloomFlashPaint)
         }
         if (::gameState.isInitialized) {
             val motif = LeitmotifManager.currentMotifSignature()
-            val nightFactor = if (::entityManager.isInitialized) {
-                (entityManager.biomeManager.ambientAlpha / 255f).coerceIn(0f, 1f)
-            } else {
-                0f
-            }
-            val runLighting = resolveRunLightingIdentity(
-                target = reusableRunLighting,
-                nightFactor = nightFactor,
-                bloomStrength = if (gameState.isBloomActive) 1f else bloomAfterglow * 0.55f
-            )
+            val nightFactor = if (::entityManager.isInitialized) (entityManager.biomeManager.ambientAlpha / 255f).coerceIn(0f, 1f) else 0f
+            val runLighting = resolveRunLightingIdentity(reusableRunLighting, nightFactor, if (gameState.isBloomActive) 1f else bloomAfterglow * 0.55f)
             cinematicOverlay.draw(
-                canvas = canvas,
-                width = width.toFloat(),
-                height = height.toFloat(),
-                profile = resolveCinematicPolishProfile(
-                    target = reusableRunCinematicProfile,
-                    scene = CinematicScene.RUN,
-                    emphasis = ((motif.cadenceLift + motif.shimmer) * 0.5f).coerceIn(0f, 1f),
-                    bloomStrength = if (gameState.isBloomActive) 1f else bloomAfterglow * 0.55f
-                ),
-                elapsedSeconds = debugFrameCounter / 60f,
-                glowColor = runLighting.horizonGlowColor,
-                centerYFraction = 0.47f
+                canvas,
+                width.toFloat(),
+                height.toFloat(),
+                resolveCinematicPolishProfile(reusableRunCinematicProfile, CinematicScene.RUN, ((motif.cadenceLift + motif.shimmer) * 0.5f).coerceIn(0f, 1f), if (gameState.isBloomActive) 1f else bloomAfterglow * 0.55f),
+                debugFrameCounter / 60f,
+                runLighting.horizonGlowColor,
+                0.47f
             )
         }
-
-        // 8. HUD — always screen-space, never shakes
         if (::hud.isInitialized && ::gameState.isInitialized) {
-            val openingCue = when {
-                encounterDirector?.isScenarioActive == true &&
-                    encounterDirector.activeScenario != EncounterScenario.OPENING_READABILITY -> null
-                else -> gameState.openingGuidanceCue
-            }
+            val openingCue = if (encounterDirector?.isScenarioActive == true && encounterDirector.activeScenario != EncounterScenario.OPENING_READABILITY) null else gameState.openingGuidanceCue
             drawInSafeContent(canvas) {
-                hud.draw(
-                    canvas = canvas,
-                    state = gameState,
-                    bloomPresentation = BloomPresentation.resolveInto(
-                        target = reusableBloomHudPresentation,
-                        bloomMeter = gameState.bloomMeter,
-                        seedTarget = gameState.bloomSeedTarget,
-                        isActive = gameState.isBloomActive,
-                        secondsRemaining = gameState.bloomSecondsRemaining,
-                        totalConversions = gameState.bloomConversionsThisRun,
-                        burstConversions = bloomLastBurstConversions,
-                        recentAfterglow = bloomAfterglow
-                    ),
-                    openingCue = openingCue
-                )
+                hud.draw(canvas, gameState, BloomPresentation.resolveInto(reusableBloomHudPresentation, gameState.bloomMeter, gameState.bloomSeedTarget, gameState.isBloomActive, gameState.bloomSecondsRemaining, gameState.bloomConversionsThisRun, bloomLastBurstConversions, bloomAfterglow), openingCue)
             }
         }
-
-        if (debugToolsEnabled &&
-            debugScenarioVisualsEnabled &&
-            ::entityManager.isInitialized &&
-            ::gameState.isInitialized &&
-            debugEncounterOverlay != null &&
-            appState == AppGameState.PLAYING &&
-            runState == RunState.PLAYING
+        if (debugToolsEnabled && debugScenarioVisualsEnabled && ::entityManager.isInitialized && ::gameState.isInitialized &&
+            debugEncounterOverlay != null && appState == AppGameState.PLAYING && runState == RunState.PLAYING
         ) {
-            val director = encounterDirector
-            if (director != null) {
+            encounterDirector?.let { director ->
                 drawInSafeContent(canvas) {
-                    debugEncounterOverlay?.draw(
-                        canvas = canvas,
-                        director = director,
-                        biomeLabel = entityManager.biomeManager.currentBiome.displayName,
-                        activeEntityCount = entityManager.activeEntities.size,
-                        bloomText = "${gameState.bloomMeter}/${gameState.bloomSeedTarget}",
-                        mercyHearts = gameState.mercyHearts,
-                        kindnessChain = gameState.kindnessChain,
-                        bloomConversions = gameState.bloomConversionsThisRun
-                    )
+                    debugEncounterOverlay?.draw(canvas, director, entityManager.biomeManager.currentBiome.displayName, entityManager.activeEntities.size, "${gameState.bloomMeter}/${gameState.bloomSeedTarget}", gameState.mercyHearts, gameState.kindnessChain, gameState.bloomConversionsThisRun)
                 }
             }
         }
-
-        // 9. Game Over overlay (DYING: faint, GAME_OVER: full)
         if (runState == RunState.GAME_OVER || runState == RunState.DYING) {
             if (::gameOverScreen.isInitialized && ::gameState.isInitialized) {
                 drawInSafeContent(canvas) {
-                    gameOverScreen.draw(
-                        canvas = canvas,
-                        summary = currentRunSummary ?: gameState.buildRunSummary(
-                            lastKiller = PersistentMemoryManager.getLastKiller(context),
-                            restQuote = currentRestQuote
-                        ),
-                        isRecovering = runState == RunState.DYING,
-                        recoveryProgress = if (runState == RunState.DYING) runResetManager.dyingFraction else 1f
-                    )
+                    gameOverScreen.draw(canvas, currentRunSummary ?: gameState.buildRunSummary(PersistentMemoryManager.getLastKiller(context), currentRestQuote), runState == RunState.DYING, if (runState == RunState.DYING) runResetManager.dyingFraction else 1f)
                 }
             }
         }
-
-        // 10. RESTARTING — fade to black
-        if (runState == RunState.RESTARTING) {
-            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), restartFadePaint)
-        }
+        if (runState == RunState.RESTARTING) canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), restartFadePaint)
     }
 
     private fun prepareFreshRun() {
@@ -1151,62 +816,27 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun emitOrdinaryProgressCues() {
-        if (!::gameState.isInitialized || !::player.isInitialized) return
-        if (!runMode.allowsOrdinaryProgressCues) return
-
+        if (!::gameState.isInitialized || !::player.isInitialized || !runMode.allowsOrdinaryProgressCues) return
         val mercyTier = progressTier(gameState.mercyHearts, 2, 4, 6)
         if (mercyTier > surfacedMercyTier) {
             surfacedMercyTier = mercyTier
-            spawnOrdinaryProgressCue(
-                RunFlavorPresentation.ordinaryProgressCue(
-                    progressKind = "mercy",
-                    currentValue = gameState.mercyHearts,
-                    routeTier = gameState.pacifistRouteTier
-                )
-            )
+            spawnOrdinaryProgressCue(RunFlavorPresentation.ordinaryProgressCue("mercy", gameState.mercyHearts, gameState.pacifistRouteTier))
         }
-
         val kindnessTier = progressTier(gameState.kindnessChain, 3, 5, 8)
         if (kindnessTier > surfacedKindnessTier) {
             surfacedKindnessTier = kindnessTier
-            spawnOrdinaryProgressCue(
-                RunFlavorPresentation.ordinaryProgressCue(
-                    progressKind = "kindness",
-                    currentValue = gameState.kindnessChain,
-                    routeTier = gameState.pacifistRouteTier
-                )
-            )
+            spawnOrdinaryProgressCue(RunFlavorPresentation.ordinaryProgressCue("kindness", gameState.kindnessChain, gameState.pacifistRouteTier))
         }
-
         val cleanTier = progressTier(gameState.cleanPassesThisRun, 4, 8, 12)
         if (cleanTier > surfacedCleanTier) {
             surfacedCleanTier = cleanTier
-            spawnOrdinaryProgressCue(
-                RunFlavorPresentation.ordinaryProgressCue(
-                    progressKind = "clean",
-                    currentValue = gameState.cleanPassesThisRun,
-                    routeTier = gameState.pacifistRouteTier
-                )
-            )
+            spawnOrdinaryProgressCue(RunFlavorPresentation.ordinaryProgressCue("clean", gameState.cleanPassesThisRun, gameState.pacifistRouteTier))
         }
     }
 
     private fun spawnOrdinaryProgressCue(cue: RunFlavorCue) {
-        DialogueBubbleManager.spawn(
-            text = cue.bubbleText,
-            anchorX = player.x + Player.BASE_WIDTH * 0.5f,
-            anchorY = player.y - 30f,
-            fillColor = cue.fillColor,
-            borderColor = cue.borderColor
-        )
-        FlavorTextManager.spawn(
-            text = cue.flavorText,
-            x = player.x + Player.BASE_WIDTH * 0.18f,
-            y = player.y - 10f,
-            colour = cue.flavorColor,
-            lifetime = 1.05f,
-            size = cue.flavorSize
-        )
+        DialogueBubbleManager.spawn(cue.bubbleText, player.x + Player.BASE_WIDTH * 0.5f, player.y - 30f, cue.fillColor, cue.borderColor)
+        FlavorTextManager.spawn(cue.flavorText, player.x + Player.BASE_WIDTH * 0.18f, player.y - 10f, cue.flavorColor, 1.05f, cue.flavorSize)
     }
 
     private fun resetOrdinaryProgressCueState() {
@@ -1215,12 +845,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         surfacedCleanTier = 0
     }
 
-    private fun progressTier(
-        value: Int,
-        firstThreshold: Int,
-        secondThreshold: Int,
-        thirdThreshold: Int
-    ): Int = when {
+    private fun progressTier(value: Int, firstThreshold: Int, secondThreshold: Int, thirdThreshold: Int): Int = when {
         value >= thirdThreshold -> 3
         value >= secondThreshold -> 2
         value >= firstThreshold -> 1
@@ -1237,24 +862,16 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
         entityManager.biomeManager.forceDebugBiome(scenario.forcedBiome)
-        if (scenario.startsWithBloom) {
-            gameState.debugActivateBloom()
-        } else {
-            gameState.debugPrimeBloomMeter(0)
-        }
+        if (scenario.startsWithBloom) gameState.debugActivateBloom() else gameState.debugPrimeBloomMeter(0)
         ghostRecorder.reset()
         currentRestQuote = "Scenario verification active."
         currentRunSummary = null
         resetBloomPresentationState()
         resetOrdinaryProgressCueState()
         director.startSelectedScenario()
-        if (scenario == EncounterScenario.REST_LOOP) {
-            entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 14f)
-        } else if (scenario == EncounterScenario.WOLF_CHARGE) {
-            entityManager.debugSpawnAt(EntityType.WOLF, player.x + 520f)
-        } else if (scenario == EncounterScenario.EAGLE_MARK) {
-            entityManager.debugSpawnAt(EntityType.EAGLE, player.x + 420f)
-        }
+        if (scenario == EncounterScenario.REST_LOOP) entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 14f)
+        else if (scenario == EncounterScenario.WOLF_CHARGE) entityManager.debugSpawnAt(EntityType.WOLF, player.x + 520f)
+        else if (scenario == EncounterScenario.EAGLE_MARK) entityManager.debugSpawnAt(EntityType.EAGLE, player.x + 420f)
         LeitmotifManager.playRunStart()
     }
 
@@ -1263,13 +880,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         when (action) {
             DebugOverlayAction.PREVIOUS -> director.previousScenario()
             DebugOverlayAction.NEXT -> director.nextScenario()
-            DebugOverlayAction.TOGGLE_RUN -> {
-                if (director.isScenarioActive) {
-                    prepareFreshRun()
-                } else {
-                    prepareEncounterScenario()
-                }
-            }
+            DebugOverlayAction.TOGGLE_RUN -> if (director.isScenarioActive) prepareFreshRun() else prepareEncounterScenario()
         }
     }
 
@@ -1279,8 +890,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         canvas.drawText("PLAYER", player.hitbox.left, player.hitbox.top - 8f, debugLabelPaint)
         for (entity in entityManager.activeEntities) {
             canvas.drawRect(entity.hitbox, debugHitboxPaint)
-            val label = entityManager.entityTypeOf(entity)?.name ?: "ENTITY"
-            canvas.drawText(label, entity.hitbox.left, entity.hitbox.top - 8f, debugLabelPaint)
+            canvas.drawText(entityManager.entityTypeOf(entity)?.name ?: "ENTITY", entity.hitbox.left, entity.hitbox.top - 8f, debugLabelPaint)
         }
     }
 
@@ -1300,31 +910,19 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         bloomPowerSurgeTimer = 0f
         bloomPowerTier = 0
         bloomPowerSurgeStrength = 0f
-        if (::player.isInitialized) {
-            player.setBloomPowerPresentation(scaleBoost = 0f, auraAlpha = 0)
-        }
+        if (::player.isInitialized) player.setBloomPowerPresentation(0f, 0)
     }
 
-    private fun bloomAfterglowFraction(): Float =
-        (bloomAfterglowTimer / 1.8f).coerceIn(0f, 1f)
-
-    private fun bloomPowerSurgeFraction(): Float =
-        (bloomPowerSurgeTimer / 0.55f).coerceIn(0f, 1f)
+    private fun bloomAfterglowFraction(): Float = (bloomAfterglowTimer / 1.8f).coerceIn(0f, 1f)
+    private fun bloomPowerSurgeFraction(): Float = (bloomPowerSurgeTimer / 0.55f).coerceIn(0f, 1f)
 
     private fun runDebugScenarioScript() {
-        if (!debugToolsEnabled ||
-            !::gameState.isInitialized ||
-            !::player.isInitialized ||
-            appState != AppGameState.PLAYING ||
-            runState != RunState.PLAYING
+        if (!debugToolsEnabled || !::gameState.isInitialized || !::player.isInitialized ||
+            appState != AppGameState.PLAYING || runState != RunState.PLAYING
         ) return
-
         debugScenarioScript.advance(gameState.runTimeSeconds) { action ->
             when (action) {
-                DebugScenarioAction.TAP_JUMP -> {
-                    player.onJumpPressed()
-                    player.onJumpReleased(0f)
-                }
+                DebugScenarioAction.TAP_JUMP -> { player.onJumpPressed(); player.onJumpReleased(0f) }
                 DebugScenarioAction.HOLD_JUMP_START -> player.onJumpPressed()
                 DebugScenarioAction.HOLD_JUMP_END -> player.onJumpReleased(0.35f)
                 DebugScenarioAction.DUCK_START -> player.onDuckPressed()
@@ -1343,135 +941,51 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         val liveHitbox = player.hitbox
         var nearbyHazardCount = 0
         var nearestHazardDistancePx = Float.POSITIVE_INFINITY
-
         if (::entityManager.isInitialized) {
-            ghostHazardFocusRect.set(
-                liveHitbox.left - Player.BASE_WIDTH * 1.4f,
-                liveHitbox.top - Player.BASE_HEIGHT * 0.9f,
-                liveHitbox.right + Player.BASE_WIDTH * 4.8f,
-                liveHitbox.bottom + Player.BASE_HEIGHT * 0.9f
-            )
+            ghostHazardFocusRect.set(liveHitbox.left - Player.BASE_WIDTH * 1.4f, liveHitbox.top - Player.BASE_HEIGHT * 0.9f, liveHitbox.right + Player.BASE_WIDTH * 4.8f, liveHitbox.bottom + Player.BASE_HEIGHT * 0.9f)
             entityManager.activeEntities.forEach { entity ->
-                if (!entity.isActive || entity.hitbox.isEmpty) return@forEach
-                if (!RectF.intersects(ghostHazardFocusRect, entity.hitbox)) return@forEach
+                if (!entity.isActive || entity.hitbox.isEmpty || !RectF.intersects(ghostHazardFocusRect, entity.hitbox)) return@forEach
                 nearbyHazardCount++
-                nearestHazardDistancePx = minOf(
-                    nearestHazardDistancePx,
-                    rectGapDistance(liveHitbox, entity.hitbox)
-                )
+                nearestHazardDistancePx = minOf(nearestHazardDistancePx, rectGapDistance(liveHitbox, entity.hitbox))
             }
         }
-
-        return reusableGhostVisibilityContext.set(
-            livePlayerX = player.x,
-            livePlayerY = player.y,
-            livePlayerWidth = player.currentWidth,
-            livePlayerHeight = player.currentHeight,
-            nearbyHazardCount = nearbyHazardCount,
-            nearestHazardDistancePx = nearestHazardDistancePx
-        )
+        return reusableGhostVisibilityContext.set(player.x, player.y, player.currentWidth, player.currentHeight, nearbyHazardCount, nearestHazardDistancePx)
     }
 
     private fun rectGapDistance(a: RectF, b: RectF): Float {
-        val dx = when {
-            a.right < b.left -> b.left - a.right
-            b.right < a.left -> a.left - b.right
-            else -> 0f
-        }
-        val dy = when {
-            a.bottom < b.top -> b.top - a.bottom
-            b.bottom < a.top -> a.top - b.bottom
-            else -> 0f
-        }
+        val dx = when { a.right < b.left -> b.left - a.right; b.right < a.left -> a.left - b.right; else -> 0f }
+        val dy = when { a.bottom < b.top -> b.top - a.bottom; b.bottom < a.top -> a.top - b.bottom; else -> 0f }
         return hypot(dx.toDouble(), dy.toDouble()).toFloat()
     }
 
-    private inner class GameViewTerminalHitImpactEffects :
-        TerminalHitImpactEffectSink {
-        override fun recordRunHit() {
-            gameState.recordHit()
-        }
-
-        override fun suppressGhost(seconds: Float) {
-            ghostPlayer.suppress(seconds)
-        }
-
-        override fun triggerPlayerRest() {
-            player.triggerRest()
-        }
-
-        override fun shakeHit() {
-            CameraSystem.shakeHit()
-        }
-
-        override fun playHit() {
-            SfxManager.playHit()
-        }
-
-        override fun playRest() {
-            LeitmotifManager.playRest()
-        }
-
-        override fun longPulse() {
-            HapticManager.longPulse()
-        }
+    private inner class GameViewTerminalHitImpactEffects : TerminalHitImpactEffectSink {
+        override fun recordRunHit() { gameState.recordHit() }
+        override fun suppressGhost(seconds: Float) { ghostPlayer.suppress(seconds) }
+        override fun triggerPlayerRest() { player.triggerRest() }
+        override fun shakeHit() { CameraSystem.shakeHit() }
+        override fun playHit() { SfxManager.playHit() }
+        override fun playRest() { LeitmotifManager.playRest() }
+        override fun longPulse() { HapticManager.longPulse() }
     }
 
-    private inner class GameViewNonTerminalCollisionEffects :
-        NonTerminalCollisionEffectSink {
-        override fun recordRunHit() {
-            gameState.recordHit()
-        }
-
-        override fun suppressGhost(seconds: Float) {
-            ghostPlayer.suppress(seconds)
-        }
-
-        override fun triggerStumble() {
-            player.triggerStumble()
-        }
-
+    private inner class GameViewNonTerminalCollisionEffects : NonTerminalCollisionEffectSink {
+        override fun recordRunHit() { gameState.recordHit() }
+        override fun suppressGhost(seconds: Float) { ghostPlayer.suppress(seconds) }
+        override fun triggerStumble() { player.triggerStumble() }
         override fun showStumbleFlash(dominantColor: Int) {
             mercyFlashTimer = mercyFlashDuration
-            mercyFlashPaint.color = Color.argb(
-                200,
-                Color.red(dominantColor),
-                Color.green(dominantColor),
-                Color.blue(dominantColor)
-            )
+            mercyFlashPaint.color = Color.argb(200, Color.red(dominantColor), Color.green(dominantColor), Color.blue(dominantColor))
         }
-
-        override fun playNonLethalHit() {
-            SfxManager.playHit()
-        }
-
-        override fun shakeHit() {
-            CameraSystem.shakeHit()
-        }
-
-        override fun mediumPulse() {
-            HapticManager.mediumPulse()
-        }
-
+        override fun playNonLethalHit() { SfxManager.playHit() }
+        override fun shakeHit() { CameraSystem.shakeHit() }
+        override fun mediumPulse() { HapticManager.mediumPulse() }
         override fun showMercyFlash() {
             mercyFlashTimer = mercyFlashDuration
             mercyFlashPaint.color = Color.argb(200, 60, 240, 80)
         }
-
-        override fun playMercyMiss() {
-            SfxManager.playMercyMiss()
-        }
-
-        override fun doubleTap() {
-            HapticManager.doubleTap()
-        }
-
-        override fun emitMercyStars(centerX: Float, centerY: Float) {
-            ParticleManager.emit(FxPreset.MERCY_STARS, centerX, centerY)
-        }
-
-        override fun shakeMercyMiss() {
-            CameraSystem.shakeMercyMiss()
-        }
+        override fun playMercyMiss() { SfxManager.playMercyMiss() }
+        override fun doubleTap() { HapticManager.doubleTap() }
+        override fun emitMercyStars(centerX: Float, centerY: Float) { ParticleManager.emit(FxPreset.MERCY_STARS, centerX, centerY) }
+        override fun shakeMercyMiss() { CameraSystem.shakeMercyMiss() }
     }
 }
