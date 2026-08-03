@@ -179,6 +179,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val ghostRecorder = GhostRecorder()
     private val runOutcomePersistence =
         RunOutcomePersistenceCoordinator(AndroidRunOutcomePersistenceSink(context))
+    private val terminalHitImpact = TerminalHitImpactCoordinator(
+        effects = GameViewTerminalHitImpactEffects()
+    )
     private val terminalHitOutcome = TerminalHitOutcomeCoordinator(
         relationshipRecorder = AndroidTerminalHitRelationshipRecorder(context),
         feedbackPresenter = AndroidTerminalHitFeedbackPresenter(context),
@@ -769,28 +772,29 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     runMode.persistsProgress
                 when (collision.result) {
                     CollisionResult.HIT -> {
-                        gameState.recordHit()
-                        ghostPlayer.suppress(1.35f)
-                        player.triggerRest()  // emits HIT_BURST particles
-                        CameraSystem.shakeHit()
-                        SfxManager.playHit()          // Phase 20
-                        LeitmotifManager.playRest()   // Phase 20
-                        HapticManager.longPulse()     // Phase 21 — strong death feedback
-                        val completedGhost = ghostRecorder.detachSnapshot()
-                        val killerType = entityManager.entityTypeOf(collision.entity)
-                        val completedHit = terminalHitOutcome.complete(
-                            killerType = killerType,
-                            biome = entityManager.biomeManager.currentBiome,
-                            presentation = TerminalHitPresentation(
+                        val impact = terminalHitImpact.apply {
+                            val completedGhost = ghostRecorder.detachSnapshot()
+                            val killerType = entityManager.entityTypeOf(collision.entity)
+                            TerminalHitImpactCapture(
                                 killerType = killerType,
-                                routeTier = gameState.pacifistRouteTier,
-                                playerX = player.x,
-                                playerY = player.y
-                            ),
-                            completedGhost = completedGhost,
+                                biome = entityManager.biomeManager.currentBiome,
+                                presentation = TerminalHitPresentation(
+                                    killerType = killerType,
+                                    routeTier = gameState.pacifistRouteTier,
+                                    playerX = player.x,
+                                    playerY = player.y
+                                ),
+                                completedGhost = completedGhost
+                            )
+                        }
+                        val completedHit = terminalHitOutcome.complete(
+                            killerType = impact.killerType,
+                            biome = impact.biome,
+                            presentation = impact.presentation,
+                            completedGhost = impact.completedGhost,
                             persistEncounter = persistEncounter
                         ) {
-                            gameState.buildRunSummary(lastKiller = killerType)
+                            gameState.buildRunSummary(lastKiller = impact.killerType)
                         }
                         currentRestQuote = completedHit.summary.restQuote
                         currentRunSummary = completedHit.summary
@@ -1380,6 +1384,37 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             else -> 0f
         }
         return hypot(dx.toDouble(), dy.toDouble()).toFloat()
+    }
+
+    private inner class GameViewTerminalHitImpactEffects :
+        TerminalHitImpactEffectSink {
+        override fun recordRunHit() {
+            gameState.recordHit()
+        }
+
+        override fun suppressGhost(seconds: Float) {
+            ghostPlayer.suppress(seconds)
+        }
+
+        override fun triggerPlayerRest() {
+            player.triggerRest()
+        }
+
+        override fun shakeHit() {
+            CameraSystem.shakeHit()
+        }
+
+        override fun playHit() {
+            SfxManager.playHit()
+        }
+
+        override fun playRest() {
+            LeitmotifManager.playRest()
+        }
+
+        override fun longPulse() {
+            HapticManager.longPulse()
+        }
     }
 
     private inner class GameViewNonTerminalCollisionEffects :
