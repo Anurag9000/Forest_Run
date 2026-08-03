@@ -10,8 +10,7 @@ import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.systems.GhostPromotionReceiptLoadResult
 import com.anurag9000.forestrun.systems.GhostPromotionRecoveryCoordinator
 import com.anurag9000.forestrun.systems.GhostPromotionRecoveryDisposition
-import com.anurag9000.forestrun.systems.GhostRunFingerprint
-import com.anurag9000.forestrun.systems.GhostRunValidator
+import com.anurag9000.forestrun.systems.GhostRunIdentity
 
 internal enum class RecoveryEvidenceDomain {
     RUN_OUTCOME,
@@ -474,9 +473,12 @@ private class AndroidGhostPromotionEvidenceHandler(
 
     private fun manifestMatches(manifest: GhostArtifactManifest): Boolean {
         val frames = SaveManager.loadGhostRun(context)
-        return frames.size == manifest.frameCount &&
-            GhostRunValidator.isValid(frames) &&
-            GhostRunFingerprint.calculate(frames) == manifest.fingerprint
+        return GhostRunIdentity.matches(
+            frames = frames,
+            frameCount = manifest.frameCount,
+            fingerprint = manifest.fingerprint,
+            sha256Hex = manifest.sha256Hex
+        )
     }
 
     private fun snapshot(
