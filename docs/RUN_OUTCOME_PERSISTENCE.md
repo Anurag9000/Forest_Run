@@ -2,10 +2,11 @@
 
 ## Purpose
 
-A terminal collision produces permanent side effects across relationship history, authored presentation, completed summary, progression state, ghost publication, and best-distance eligibility.
+A terminal collision produces permanent side effects across immediate game feel, relationship history, authored presentation, completed summary, progression state, ghost publication, and best-distance eligibility.
 
 Responsibilities are split into explicit owners:
 
+- `TerminalHitImpactCoordinator` — immediate terminal HIT effect ordering and post-impact capture boundary;
 - `TerminalHitOutcomeCoordinator` — deterministic terminal completion;
 - `RunOutcomePersistenceCoordinator` — exactly-once token and non-ghost recovery;
 - `SharedPreferencesRunOutcomeRecoveryStore` — non-ghost before/after journal;
@@ -17,20 +18,33 @@ Responsibilities are split into explicit owners:
 - `GhostRunIdentity` — legacy FNV compatibility plus distance-bound SHA-256;
 - `RecoveryEvidenceMaintenanceCoordinator` — explicit inspection and repair policy.
 
-## GameView boundary
+## Live terminal boundary
 
-`GameView` retains the live impact and run-state sequence:
+`TerminalHitImpactCoordinator` owns:
 
-1. record the run hit;
-2. suppress ghost visibility;
-3. trigger Player rest and immediate feedback;
-4. detach the ghost buffer in O(1);
-5. resolve the killer;
-6. call `terminalHitOutcome.complete(...)` once;
-7. accept the completed summary;
-8. enter `DYING`.
+```text
+record run hit
+→ suppress ghost for 1.35 seconds
+→ Player rest
+→ camera shake
+→ hit SFX
+→ rest music
+→ long haptic
+→ post-impact capture callback
+```
 
-The HIT branch does not directly compose authored copy, resolve the rest quote, record persistent relationship history, or write terminal persistence stores.
+The callback then captures detached ghost, killer, biome, route tier, and Player presentation coordinates.
+
+`GameView` retains only collision ownership and run-state orchestration:
+
+1. invoke the impact coordinator once;
+2. capture terminal inputs after impact;
+3. call `terminalHitOutcome.complete(...)` once;
+4. accept the completed summary;
+5. trigger death timing;
+6. enter `DYING`.
+
+The HIT branch does not directly call Player, ghost, camera, SFX, music, or haptic terminal-impact owners. It also does not compose authored copy, resolve the rest quote, record persistent relationship history, or write terminal persistence stores.
 
 ## Completion order
 
@@ -268,6 +282,8 @@ Persistence fails closed against:
 
 Coverage includes:
 
+- immediate terminal-impact ordering and fail-fast capture behavior;
+- post-impact capture before terminal completion;
 - terminal completion ordering and authored presentation;
 - exactly-once token behavior;
 - non-ghost before/after recovery;
@@ -286,12 +302,13 @@ Coverage includes:
 - maintenance diagnosis and selective removal;
 - source ownership, synchronous writes, key parity, and lazy validation.
 
-Focused Kotlin compilation and executable golden-vector, codec, and recovery-state-machine harnesses passed for the strong identity and promotion surfaces.
+Focused Kotlin compilation and executable harnesses passed for the terminal-impact coordinator and strong ghost identity/promotion surfaces. The impact and completion source contracts passed together against the extracted HIT/capture/adapter structure.
 
 Exact-head Gradle/JUnit, Robolectric, lint, build, emulator, physical-device, and ADB execution were not completed in this session.
 
 ## Remaining limitations
 
+- The complete collision dispatcher and nonterminal live-effect adapter remain in `GameView`.
 - Ghosts and mismatches predating manifests cannot be reconstructed retroactively.
 - Version-1 sidecars remain weak until replay requires upgrade.
 - The already-applied automatic path avoids repeated full hashing; maintenance validates fully.
