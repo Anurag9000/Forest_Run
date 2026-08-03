@@ -68,7 +68,7 @@ class GhostPersistenceManagerAdmissionTest {
     }
 
     @Test
-    fun `compatibility overload preserves distance and replaces manifest identity`() {
+    fun `compatibility overload preserves distance and replaces strong manifest identity`() {
         val first = frames(xOffset = 0f)
         val replacement = frames(xOffset = 25f)
         assertTrue(
@@ -95,11 +95,15 @@ class GhostPersistenceManagerAdmissionTest {
     private fun manifest(
         frames: List<GhostFrame>,
         distanceM: Float
-    ): GhostArtifactManifest = GhostArtifactManifest(
-        distanceM = distanceM,
-        frameCount = frames.size,
-        fingerprint = GhostRunFingerprint.calculate(frames)
-    )
+    ): GhostArtifactManifest {
+        val identity = GhostRunIdentity.calculate(frames)
+        return GhostArtifactManifest(
+            distanceM = distanceM,
+            frameCount = frames.size,
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
+        )
+    }
 
     private fun manifestStore(): AtomicFileGhostArtifactManifestStore =
         AtomicFileGhostArtifactManifestStore(
