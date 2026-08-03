@@ -81,7 +81,9 @@ internal class AtomicFileGhostArtifactManifestStore(
                             frameCount = data.readInt(),
                             fingerprint = data.readLong(),
                             sha256Hex = GhostRunIdentity.encodeHex(
-                                ByteArray(GhostRunIdentity.SHA256_BYTE_COUNT).also(data::readFully)
+                                ByteArray(GhostRunIdentity.SHA256_BYTE_COUNT).also { bytes ->
+                                    data.readFully(bytes)
+                                }
                             )
                         )
                     }
