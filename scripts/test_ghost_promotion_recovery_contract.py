@@ -103,11 +103,11 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn('Thread(runnable, "forest-run-ghost-io")', self.manager)
         self.assertIn("pendingWrite = executor.submit", self.manager)
 
-    def test_immediate_publication_carries_strong_identity(self) -> None:
+    def test_immediate_publication_carries_distance_bound_strong_identity(self) -> None:
         save = extract_braced_overload(self.manager, "fun saveBestRunAsync(")
         order = (
             "val snapshot = frames.toList()",
-            "val identity = GhostRunIdentity.calculate(snapshot)",
+            "val identity = GhostRunIdentity.calculate(snapshot, distanceM)",
             "fingerprint = identity.fingerprint",
             "sha256Hex = identity.sha256Hex",
             "latestPublication = publication",
@@ -153,7 +153,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
     def test_receipt_ghost_manifest_distance_and_clear_order(self) -> None:
         persist = extract_braced_block(self.recovery, "fun persist(")
         order = (
-            "val identity = GhostRunIdentity.calculate(frames)",
+            "val identity = GhostRunIdentity.calculate(frames, distanceM)",
             "receiptStore.save(receipt)",
             "artifactStore.saveGhost(frames)",
             "manifestStore.save(receipt.toManifest(identity))",
@@ -178,11 +178,12 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             result,
         )
 
-    def test_receipt_recovery_requires_strong_match_and_manifest_before_distance(self) -> None:
+    def test_receipt_recovery_requires_distance_bound_match_before_manifest_and_distance(self) -> None:
         recover = extract_braced_block(self.recovery, "private fun recoverReceipt(")
         order = (
             "artifactStore.loadGhost()",
             "matchingIdentity(",
+            "distanceM = receipt.distanceM",
             "val expectedManifest = receipt.toManifest(durableIdentity)",
             "ensureManifest(expectedManifest)",
             "repairDistanceIfNeeded(receipt.distanceM)",
@@ -223,6 +224,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             "currentBest >= manifest.distanceM ->",
             "knownGhost ?: artifactStore.loadGhost()",
             "matchingIdentity(",
+            "distanceM = manifest.distanceM",
             "ensureStrongManifest(manifest, identity)",
             "artifactStore.saveBestDistanceM(manifest.distanceM)",
         )
@@ -253,10 +255,11 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         fast_gate = recover.index("currentBest >= manifest.distanceM ->")
         self.assertLess(known_gate, fast_gate)
         prefix = recover[:fast_gate]
+        self.assertIn("distanceM = manifest.distanceM", prefix)
         self.assertIn("sha256Hex = manifest.sha256Hex", prefix)
         self.assertIn("CORRUPT_MANIFEST", prefix)
 
-    def test_sha256_identity_is_canonical_and_covers_persisted_fields(self) -> None:
+    def test_sha256_identity_binds_distance_and_persisted_frame_fields(self) -> None:
         identity = extract_braced_block(
             self.identity,
             "internal object GhostRunIdentity",
@@ -265,6 +268,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn("const val SHA256_BYTE_COUNT = 32", identity)
         self.assertIn("const val SHA256_HEX_LENGTH = SHA256_BYTE_COUNT * 2", identity)
         required = (
+            "distanceM.toRawBits()",
             "frames.size",
             "frame.t.toRawBits()",
             "frame.x.toRawBits()",
@@ -278,13 +282,15 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn("update((value ushr 24).toByte())", identity)
         self.assertIn("character in '0'..'9' || character in 'a'..'f'", identity)
 
-    def test_matching_prefers_sha256_and_falls_back_only_when_absent(self) -> None:
+    def test_matching_prefers_distance_bound_sha256_and_falls_back_only_when_absent(self) -> None:
         matching = extract_braced_block(
             self.recovery,
             "private fun matchingIdentity(",
         )
+        self.assertIn("distanceM: Float", matching)
         self.assertIn("if (sha256Hex == null)", matching)
-        self.assertIn("identity.fingerprint == fingerprint", matching)
+        self.assertIn("GhostRunFingerprint.calculate(frames)", matching)
+        self.assertIn("GhostRunIdentity.calculate(frames, distanceM)", matching)
         self.assertIn("identity.sha256Hex == sha256Hex", matching)
         self.assertIn("GhostRunIdentity.isCanonicalSha256", matching)
 
@@ -349,6 +355,14 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn("current.fingerprint == publication.fingerprint", clear)
         self.assertIn("current.sha256Hex == publication.sha256Hex", clear)
         self.assertIn("latestPublication = null", clear)
+
+    def test_disk_fallback_identity_uses_loaded_distance(self) -> None:
+        load = extract_braced_block(self.manager, "fun loadLatest(")
+        distance = load.index("val loadedDistance = SaveManager.loadBestDistance")
+        identity = load.index("GhostRunIdentity.calculate(loaded, loadedDistance)")
+        publication = load.index("val publication = PublishedGhost(")
+        self.assertLess(distance, identity)
+        self.assertLess(identity, publication)
 
     def test_best_distance_key_matches_save_manager(self) -> None:
         self.assertIn('private const val KEY_BEST_DIST = "best_distance"', self.save_manager)
