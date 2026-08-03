@@ -201,21 +201,26 @@ Persistence remains split among:
 - `PersistentMemoryManager` — encounters, hits, passes, spares, relationships, return/history signals;
 - `SaveIntegrityManager` — migration, type repair, bounds, saturation, incomplete-summary rejection, compatibility storage.
 
-### Immediate terminal gameplay owner
+### Immediate terminal HIT impact owner
 
-`GameView` retains the live HIT sequence:
+`TerminalHitImpactCoordinator` owns the behavior-sensitive immediate sequence:
 
 ```text
 record run hit
-→ suppress ghost
+→ suppress ghost for 1.35 seconds
 → Player rest
-→ camera/SFX/music/haptic feedback
-→ detach ghost
-→ resolve killer
-→ TerminalHitOutcomeCoordinator.complete(...)
-→ store returned summary
-→ trigger death timing and DYING
+→ camera shake
+→ hit SFX
+→ rest music
+→ long haptic
+→ post-impact capture callback
 ```
+
+The private `GameViewTerminalHitImpactEffects` adapter maps those operations one-to-one to `GameStateManager`, `GhostPlayer`, `Player`, `CameraSystem`, `SfxManager`, `LeitmotifManager`, and `HapticManager`.
+
+The capture callback runs only after all effects and captures detached ghost, killer, biome, route tier, and Player coordinates. `TerminalHitImpactCapture` requires presentation and completion killer identities to match.
+
+`GameView` retains one impact invocation, one completion invocation, returned-summary assignment, death-timer trigger, and transition to `DYING`. It no longer calls terminal Player/ghost/camera/audio/music/haptic effects directly.
 
 ### Terminal completion owner
 
@@ -319,7 +324,9 @@ An unsigned minified bundle is a build artifact, not signed-upload proof.
 
 The permanent workflow is read-only and intended to validate the exact event SHA through source contracts, debug/release/unit/instrumentation compilation, JVM/Robolectric tests, lint, APK/AAB assembly, R8-renaming verification, and API-35 instrumentation.
 
-Coverage includes input, physics, malformed frames, Bloom, all entity families, persistence isolation, relationships, Garden, save repair, future schemas, ghost persistence, safe-content geometry, settings, latest-intent lifecycle, shutdown, collision geometry, assets, allocation bounds, telemetry, terminal/nonterminal ordering, exactly-once ownership, non-ghost recovery, v1/v2 receipt/manifest recovery, distance-bound SHA-256 golden identity, legacy upgrade, digest/distance tampering, lazy manifest validation, maintenance policy, cold-start mutation, one-shot commands, and payload-free logging.
+Coverage includes input, physics, malformed frames, Bloom, all entity families, persistence isolation, relationships, Garden, save repair, future schemas, ghost persistence, safe-content geometry, settings, latest-intent lifecycle, shutdown, collision geometry, assets, allocation bounds, telemetry, terminal-impact ordering/failure capture, terminal-completion ordering, nonterminal ordering, exactly-once ownership, non-ghost recovery, v1/v2 receipt/manifest recovery, distance-bound SHA-256 golden identity, legacy upgrade, digest/distance tampering, lazy manifest validation, maintenance policy, cold-start mutation, one-shot commands, and payload-free logging.
+
+All `scripts/test_*.py` files are discovered by the source-contract job, including `test_terminal_hit_impact_contract.py`.
 
 This architecture description does not assert that the current commit has attached successful checks.
 
@@ -336,7 +343,6 @@ Debug scenarios and focused harnesses do not replace ordinary-play or physical-d
 - `GameView` remains large and requires incremental behavior-preserving decomposition.
 - The complete collision-result `when` dispatcher remains in `GameView`.
 - STUMBLE and MERCY_MISS live effects remain in `GameViewNonTerminalCollisionEffects`.
-- Immediate HIT impact still directly coordinates Player, ghost, camera, audio, music, and haptics.
 - Ghost/distance mismatches predating persistent manifests cannot be reconstructed.
 - Version-1 sidecars retain noncryptographic identity until replay requires strong upgrade.
 - The healthy already-applied path avoids repeated hashing; maintenance performs full validation.
