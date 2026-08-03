@@ -11,6 +11,7 @@ import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -70,7 +71,7 @@ class GhostPersistenceManagerTest {
     }
 
     @Test
-    fun `new best ghost is visible immediately then ghost manifest and distance become durable`() {
+    fun `new best ghost is visible immediately then strong sidecars and distance become durable`() {
         val frames = sampleFrames()
 
         assertTrue(
@@ -87,15 +88,11 @@ class GhostPersistenceManagerTest {
         assertEquals(640f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(frames, SaveManager.loadGhostRun(context))
         assertEquals(
-            GhostArtifactManifestLoadResult.Present(
-                GhostArtifactManifest(
-                    distanceM = 640f,
-                    frameCount = frames.size,
-                    fingerprint = GhostRunFingerprint.calculate(frames)
-                )
-            ),
+            GhostArtifactManifestLoadResult.Present(strongManifest(frames, 640f)),
             manifestStore().load()
         )
+        assertEquals(56L, manifestFile().length())
+        assertFalse(promotionFile().exists())
         assertEquals(
             GhostPromotionRecoveryDisposition.ALREADY_APPLIED,
             GhostPersistenceManager.recoverPendingPromotion(context)
@@ -106,15 +103,10 @@ class GhostPersistenceManagerTest {
     }
 
     @Test
-    fun `startup recovery repairs manifest and distance when durable ghost matches receipt`() {
+    fun `startup recovery repairs strong manifest and distance when durable ghost matches receipt`() {
         val frames = sampleFrames()
-        val receipt = GhostPromotionReceipt(
-            distanceM = 900f,
-            frameCount = frames.size,
-            fingerprint = GhostRunFingerprint.calculate(frames)
-        )
         assertTrue(SaveManager.saveGhostRun(context, frames))
-        assertTrue(receiptStore().save(receipt))
+        assertTrue(receiptStore().save(strongReceipt(frames, 900f)))
 
         val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
 
@@ -122,25 +114,32 @@ class GhostPersistenceManagerTest {
         assertEquals(900f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(GhostPromotionReceiptLoadResult.Empty, receiptStore().load())
         assertEquals(
-            GhostArtifactManifestLoadResult.Present(
-                GhostArtifactManifest(
-                    distanceM = 900f,
-                    frameCount = frames.size,
-                    fingerprint = GhostRunFingerprint.calculate(frames)
-                )
-            ),
+            GhostArtifactManifestLoadResult.Present(strongManifest(frames, 900f)),
             manifestStore().load()
         )
     }
 
     @Test
-    fun `startup recovery repairs distance from manifest after receipt is gone`() {
+    fun `startup recovery upgrades legacy receipt to strong manifest`() {
         val frames = sampleFrames()
-        val manifest = GhostArtifactManifest(
-            distanceM = 1_050f,
-            frameCount = frames.size,
-            fingerprint = GhostRunFingerprint.calculate(frames)
-        )
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        writeLegacyReceipt(frames, distanceM = 930f)
+
+        val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
+
+        assertEquals(GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE, disposition)
+        assertEquals(930f, SaveManager.loadBestDistance(context), 0f)
+        val loaded = manifestStore().load()
+        assertTrue(loaded is GhostArtifactManifestLoadResult.Present)
+        assertNotNull((loaded as GhostArtifactManifestLoadResult.Present).manifest.sha256Hex)
+        assertEquals(56L, manifestFile().length())
+        assertEquals(GhostPromotionReceiptLoadResult.Empty, receiptStore().load())
+    }
+
+    @Test
+    fun `startup recovery repairs distance from strong manifest after receipt is gone`() {
+        val frames = sampleFrames()
+        val manifest = strongManifest(frames, distanceM = 1_050f)
         assertTrue(SaveManager.saveGhostRun(context, frames))
         assertTrue(manifestStore().save(manifest))
         SaveManager.saveBestDistance(context, 200f)
@@ -154,32 +153,59 @@ class GhostPersistenceManagerTest {
     }
 
     @Test
-    fun `startup recovery abandons receipt when candidate ghost never landed`() {
+    fun `startup recovery upgrades legacy manifest before distance repair`() {
+        val frames = sampleFrames()
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        writeLegacyManifest(frames, distanceM = 1_075f)
+        SaveManager.saveBestDistance(context, 200f)
+
+        val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
+
+        assertEquals(GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE, disposition)
+        assertEquals(1_075f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(
+            GhostArtifactManifestLoadResult.Present(strongManifest(frames, 1_075f)),
+            manifestStore().load()
+        )
+        assertEquals(56L, manifestFile().length())
+    }
+
+    @Test
+    fun `startup recovery abandons strong receipt when candidate ghost never landed`() {
         val candidate = sampleFrames()
         val oldGhost = candidate.mapIndexed { index, frame ->
             if (index == 0) frame.copy(x = frame.x + 10f) else frame
         }
         assertTrue(SaveManager.saveGhostRun(context, oldGhost))
-        assertTrue(
-            receiptStore().save(
-                GhostPromotionReceipt(
-                    distanceM = 1_100f,
-                    frameCount = candidate.size,
-                    fingerprint = GhostRunFingerprint.calculate(candidate)
-                )
-            )
-        )
+        assertTrue(receiptStore().save(strongReceipt(candidate, 1_100f)))
 
         val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
 
-        assertEquals(
-            GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST,
-            disposition
-        )
+        assertEquals(GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST, disposition)
         assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(oldGhost, SaveManager.loadGhostRun(context))
         assertEquals(GhostPromotionReceiptLoadResult.Empty, receiptStore().load())
         assertEquals(GhostArtifactManifestLoadResult.Empty, manifestStore().load())
+    }
+
+    @Test
+    fun `tampered strong manifest blocks distance repair without deleting ghost`() {
+        val frames = sampleFrames()
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        val valid = strongManifest(frames, 1_200f)
+        val tampered = valid.copy(
+            sha256Hex = flipFirstHex(requireNotNull(valid.sha256Hex))
+        )
+        assertTrue(manifestStore().save(tampered))
+        SaveManager.saveBestDistance(context, 100f)
+
+        val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
+
+        assertEquals(GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST, disposition)
+        assertFalse(disposition.allowsNewPromotion)
+        assertEquals(100f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(frames, SaveManager.loadGhostRun(context))
+        assertTrue(manifestFile().exists())
     }
 
     @Test
@@ -240,6 +266,55 @@ class GhostPersistenceManagerTest {
         assertFalse(SaveManager.saveGhostRun(context, invalid))
         assertTrue(SaveManager.loadGhostRun(context).isEmpty())
     }
+
+    private fun strongReceipt(
+        frames: List<GhostFrame>,
+        distanceM: Float
+    ): GhostPromotionReceipt {
+        val identity = GhostRunIdentity.calculate(frames)
+        return GhostPromotionReceipt(
+            distanceM = distanceM,
+            frameCount = frames.size,
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
+        )
+    }
+
+    private fun strongManifest(
+        frames: List<GhostFrame>,
+        distanceM: Float
+    ): GhostArtifactManifest {
+        val identity = GhostRunIdentity.calculate(frames)
+        return GhostArtifactManifest(
+            distanceM = distanceM,
+            frameCount = frames.size,
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
+        )
+    }
+
+    private fun writeLegacyReceipt(frames: List<GhostFrame>, distanceM: Float) {
+        DataOutputStream(promotionFile().outputStream()).use { output ->
+            output.writeInt(0x46524750)
+            output.writeInt(1)
+            output.writeFloat(distanceM)
+            output.writeInt(frames.size)
+            output.writeLong(GhostRunFingerprint.calculate(frames))
+        }
+    }
+
+    private fun writeLegacyManifest(frames: List<GhostFrame>, distanceM: Float) {
+        DataOutputStream(manifestFile().outputStream()).use { output ->
+            output.writeInt(0x4652474D)
+            output.writeInt(1)
+            output.writeFloat(distanceM)
+            output.writeInt(frames.size)
+            output.writeLong(GhostRunFingerprint.calculate(frames))
+        }
+    }
+
+    private fun flipFirstHex(value: String): String =
+        (if (value.first() == '0') '1' else '0') + value.drop(1)
 
     private fun sampleFrames(): List<GhostFrame> = listOf(
         GhostFrame(
