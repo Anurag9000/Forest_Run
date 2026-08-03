@@ -2,15 +2,13 @@
 
 ## Purpose
 
-The terminal `HIT` branch is behaviorally sensitive because it combines immediate game feel, relationship history, authored copy, summary composition, persistence, and death-state transition. Keeping all of that work inline made `GameView` difficult to verify and made ordering changes easy to introduce accidentally.
-
-`TerminalHitOutcomeCoordinator` extracts the completion half of that branch without changing the immediate impact sequence.
+The terminal `HIT` branch combines immediate game feel, relationship history, authored copy, summary composition, persistence, and death-state transition. `TerminalHitOutcomeCoordinator` extracts the deterministic completion half without changing the immediate impact sequence.
 
 ## Boundary
 
 ### GameView retains
 
-`GameView` still performs the operations that directly mutate live gameplay state:
+`GameView` still performs operations that directly mutate live gameplay state:
 
 1. `gameState.recordHit()`;
 2. suppress ghost playback visibility;
@@ -22,27 +20,26 @@ The terminal `HIT` branch is behaviorally sensitive because it combines immediat
 8. detach the completed ghost buffer;
 9. resolve the killer entity type;
 10. call `terminalHitOutcome.complete(...)` once;
-11. store the returned summary for the game-over presentation;
+11. store the returned summary;
 12. trigger the death timer and set `RunState.DYING`.
 
 ### Extracted coordinator owns
 
 `TerminalHitOutcomeCoordinator` owns:
 
-1. persistent relationship hit history for a known killer;
-2. the canonical authored HIT dialogue bubble;
-3. the canonical authored HIT flavor line;
-4. exactly one live summary snapshot callback;
-5. the authored rest quote;
-6. the completed summary copy;
-7. exactly one call to the terminal persistence seam;
-8. returning the completed summary and persistence result.
+1. persistent known-killer relationship history;
+2. canonical HIT dialogue and flavor presentation;
+3. exactly one live summary callback;
+4. authored rest-quote resolution;
+5. completed summary construction;
+6. exactly one terminal persistence call;
+7. returning the summary and persistence result.
 
-This is a deliberate intermediate architecture. The live impact mechanics remain close to the Player and run-state owners, while the deterministic completion work is isolated behind testable interfaces.
+This remains an intermediate architecture: immediate mechanics stay near Player/run-state owners, while deterministic completion is isolated behind testable interfaces.
 
 ## Interfaces
 
-The coordinator depends on four seams:
+The coordinator depends on:
 
 ```kotlin
 TerminalHitRelationshipRecorder
@@ -51,20 +48,9 @@ TerminalHitRestQuoteResolver
 RunOutcomeCommitter
 ```
 
-Production uses:
-
-```kotlin
-AndroidTerminalHitRelationshipRecorder
-AndroidTerminalHitFeedbackPresenter
-AndroidTerminalHitRestQuoteResolver
-RunOutcomePersistenceCoordinator
-```
-
-Pure tests replace all four with recording fakes.
+Production uses Android adapters plus `RunOutcomePersistenceCoordinator`. Pure tests replace all four with recording fakes.
 
 ## Ordering contract
-
-The completion method must retain this exact order:
 
 ```text
 known persistent relationship hit
@@ -76,45 +62,32 @@ known persistent relationship hit
 → result return
 ```
 
-Why the order matters:
-
-- relationship memory must reflect the terminal encounter before later return copy is selected;
-- the collision cue must remain immediate and precede game-over summary work;
-- the summary must be captured exactly once from the authoritative live state;
-- the quote must be based on that same preview;
-- persistence must receive the completed summary, never the unquoted preview.
+The order preserves relationship memory before later copy selection, immediate collision feedback, one authoritative summary snapshot, quote/summary identity, and persistence of the completed rather than preview summary.
 
 ## Presentation contract
 
-`TerminalHitPresentation` carries only the data needed by the authored collision presenter:
+`TerminalHitPresentation` carries:
 
 - killer type;
 - pacifist route tier;
 - player X;
 - player Y.
 
-`AndroidTerminalHitFeedbackPresenter` delegates text selection to `RunFlavorPresentation.collisionCue(...)` using `CollisionResult.HIT`. It preserves the previous anchors and styling:
+`AndroidTerminalHitFeedbackPresenter` delegates copy selection to `RunFlavorPresentation.collisionCue(...)` with `CollisionResult.HIT` and preserves the existing bubble/flavor anchors, lifetime, color, and size.
 
-- bubble X: player X plus half player width;
-- bubble Y: player Y minus 28 pixels;
-- flavor X: player X plus 18 percent player width;
-- flavor Y: player Y minus 8 pixels;
-- flavor lifetime: 1.25 seconds;
-- authored color and size from the cue.
-
-The underlying dialogue and flavor managers reject nonfinite coordinates, so malformed presentation anchors cannot poison their queues.
+Dialogue and flavor managers reject nonfinite coordinates, preventing malformed anchors from poisoning their queues.
 
 ## Persistence interaction
 
-The coordinator does not know Android storage. It calls `RunOutcomeCommitter` with:
+The coordinator knows no Android storage. It calls `RunOutcomeCommitter` with:
 
-- the one completed summary;
-- the detached ghost list;
+- the completed summary;
+- detached ghost frames;
 - the permanent-progression gate.
 
-`RunOutcomePersistenceCoordinator` implements this interface and retains its exactly-once per-run token.
+`RunOutcomePersistenceCoordinator` implements this seam and retains the exactly-once per-run token.
 
-For production sinks, terminal persistence now has two independently recoverable paths.
+Production persistence has independent recovery paths.
 
 ### Non-ghost progression
 
@@ -124,92 +97,76 @@ forest mood
 → atomic completed summary plus pacifist-route count
 ```
 
-Before those writes it records synchronous before/after evidence. Process restart compares live state with both snapshots so a write that completed before its checkpoint is not applied twice. Corrupt or conflicting evidence blocks new permanent terminal writes.
+Synchronous before/after evidence allows process restart to recognize already-applied writes. Corrupt or conflicting evidence blocks new permanent terminal progression.
 
-### Ghost and best distance
+### Ghost artifact and best distance
 
-The terminal coordinator evaluates the detached ghost against `GhostPersistenceManager.bestDistanceFloor(...)` and submits one distance-aware candidate when the run is strictly better.
+The terminal coordinator evaluates the detached ghost against `GhostPersistenceManager.bestDistanceFloor(...)` and submits one distance-aware candidate only when strictly better. It never writes best distance.
 
-It does not write best distance.
-
-The single ghost worker performs:
+The frame file remains `SaveManager` ghost format version 2. Newly promoted ghosts add a transient receipt and persistent artifact manifest:
 
 ```text
 AtomicFile promotion receipt
 → AtomicFile ghost write
+→ AtomicFile artifact manifest
 → synchronous monotonic best-distance commit
 → receipt clear
 ```
 
-The receipt stores target distance, frame count, and a raw-bit frame fingerprint. Recovery advances the threshold only when the durable ghost matches that identity. A valid receipt whose ghost never landed is abandoned without changing the existing threshold.
+Receipt and manifest store distance, frame count, and a raw-bit fingerprint. The manifest remains after receipt clearing, so future promoted ghost bundles retain their artifact-to-distance association without changing the frame codec.
 
-`ghostPromoted` in the completion result means accepted into this recoverable worker pipeline, not necessarily durable before the completion call returns.
+Receipt recovery reconstructs a missing/stale manifest. Manifest-only recovery can repair a lower threshold after validating the ghost. Healthy already-applied automatic recovery avoids loading and hashing the ghost; explicit maintenance inspection performs full identity validation.
+
+`ghostPromoted` means accepted into the recoverable worker pipeline, not necessarily durable before completion returns.
 
 ### Explicit maintenance
 
-`RecoveryEvidenceMaintenanceCoordinator` provides independent inspection, safe retry, and deliberate evidence removal for the `RUN_OUTCOME` and `GHOST_PROMOTION` domains. Automatic recovery remains fail-closed; corrupt evidence is never cleared by safe retry, pending evidence is retried before deliberate removal, and I/O failure never authorizes deletion.
+`RecoveryEvidenceMaintenanceCoordinator` provides independent inspection, safe retry, and deliberate evidence removal for `RUN_OUTCOME` and `GHOST_PROMOTION`.
 
-`MainActivity` exposes maintenance only in debuggable builds. Mutating commands require a cold start after save repair and before `GameView`; a reused live Activity can inspect but cannot recover or discard evidence.
+Automatic recovery remains fail-closed:
+
+- safe retry never clears corrupt evidence;
+- pending evidence is retried before deliberate removal;
+- I/O failure never authorizes deletion;
+- corrupt receipt cleanup preserves a valid manifest;
+- corrupt/mismatched manifest cleanup preserves the ghost frame file.
+
+`MainActivity` exposes maintenance only in debuggable builds. Mutating commands require a cold start after save repair and before `GameView`; reused live Activities are inspection-only.
 
 ## Tests
 
-### Pure ordering tests
+### Pure ordering
 
-`TerminalHitOutcomeCoordinatorTest` verifies:
+`TerminalHitOutcomeCoordinatorTest` verifies relationship, feedback, summary, quote, persistence, identity, and nonpersistent/null-killer behavior.
 
-- persistent known-killer ordering;
-- exactly one summary callback;
-- deterministic/non-persistent relationship isolation;
-- null-killer behavior;
-- presentation pass-through;
-- quote insertion;
-- persistence input and result propagation.
+### Android presentation
 
-### Android presenter tests
+`TerminalHitFeedbackPresenterIntegrationTest` verifies authored-copy parity, one bubble/line, and rejection of nonfinite anchors.
 
-`TerminalHitFeedbackPresenterIntegrationTest` verifies under Robolectric:
+### Source ownership
 
-- parity with `RunFlavorPresentation.collisionCue(...)`;
-- one dialogue bubble and one flavor line;
-- no queue mutation from NaN or infinite player anchors.
+`test_terminal_hit_outcome_contract.py` locks one completion call, immediate impact before completion, completion before death transition, one summary callback, one persistence call, and absence of direct authored/persistence work in the HIT branch.
 
-### Source ownership tests
+`test_run_outcome_persistence_contract.py` forbids direct terminal writes from `GameView` and locks the non-ghost journal ordering.
 
-`test_terminal_hit_outcome_contract.py` verifies:
+`test_ghost_promotion_recovery_contract.py` locks distance-aware worker ownership, receipt → ghost → manifest → distance → clear ordering, both fixed-size codecs, lazy already-applied validation, pending-distance admission, fingerprint coverage, and absence of a direct terminal best-distance write.
 
-- one completion call in the HIT branch;
-- no direct relationship, authored HIT copy, quote, or persistence work in that branch;
-- immediate game-feel ordering before completion;
-- completion before death transition;
-- identity and presentation inputs;
-- internal completion ordering;
-- one summary callback and one persistence call;
-- production adapter ownership.
-
-`test_run_outcome_persistence_contract.py` forbids direct persistence calls from `GameView`, requires one terminal-hit completion call, and locks non-ghost journal-before-ghost plus mood/return/summary-route recovery ordering.
-
-`test_ghost_promotion_recovery_contract.py` locks distance-aware worker ownership, receipt-before-artifact ordering, pending-distance admission, frame fingerprint coverage, and the absence of a direct best-distance write in the terminal coordinator.
-
-`test_recovery_evidence_maintenance_contract.py` and `test_recovery_maintenance_launch_contract.py` lock domain-isolated repair policy, recover-before-discard ordering, no-delete-on-I/O behavior, debug-only access, cold-start mutation, one-shot extras, and payload-free logging.
+`test_recovery_evidence_maintenance_contract.py` and `test_recovery_maintenance_launch_contract.py` lock domain isolation, selective receipt/manifest cleanup, recover-before-discard, no-delete-on-I/O, debug-only access, cold-start mutation, one-shot extras, and payload-free logging.
 
 ## Evidence boundary
 
-The extracted production files compiled against focused Android/game stubs. An executable fake-seam harness passed the relationship → feedback → summary → quote → persistence order.
+The extracted completion files compiled against focused Android/game stubs, and an executable fake-seam harness passed the relationship → feedback → summary → quote → persistence order.
 
-The complete `GameView` replacement was compared immediately. Its diff contained exactly three intended hunks:
+The original complete `GameView` replacement contained exactly three intended hunks: remove an obsolete quote import, construct the completion coordinator once, and replace inline completion with one coordinator call and returned-summary assignment. Immediate impact, nonterminal collisions, rendering, input, Bloom, ghost playback, resets, debug scenarios, and death timing did not change.
 
-1. remove the obsolete `RestQuoteManager` import;
-2. construct `TerminalHitOutcomeCoordinator` once;
-3. replace inline HIT completion with one coordinator call and returned-summary assignment.
+Later tranches compiled the non-ghost recovery, manifest-aware ghost core, manager, maintenance adapter, and debug-command surfaces against focused stubs. Executable harnesses passed for route ceilings, ghost crash windows, manifest-only repair, lazy validation, maintenance policy, and cold/live launch behavior.
 
-No immediate impact, STUMBLE, MERCY_MISS, rendering, input, Bloom, ghost playback, run reset, debug scenario, or death-transition code changed.
-
-Later persistence and maintenance tranches compiled the non-ghost, ghost, evidence-policy, and debug-command surfaces against focused stubs and passed executable recovery, route-aware, route-ceiling, ghost crash-window, maintenance-policy, and cold/live launch harnesses. The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session.
+Checked-in JUnit/Robolectric tests were not executed through an exact-head Android Gradle environment in this session.
 
 ## Remaining architecture work
 
-- extract the complete collision-result dispatcher without changing severity or effect ordering;
+- extract the complete collision-result dispatcher without changing severity or effect order;
 - consider a typed terminal-impact command rather than direct static manager calls;
-- decide whether an end-user recovery UI is warranted beyond the current debug/support tooling;
-- decide whether to encode distance inside a future ghost schema so legacy mismatches become self-describing;
-- continue reducing `GameView` only through diff-bounded, behavior-preserving seams.
+- decide whether an end-user recovery UI is warranted beyond debug/support tooling;
+- continue reducing `GameView` only through diff-bounded, behavior-preserving seams;
+- retain compatibility for pre-manifest ghosts while acknowledging that already-existing legacy mismatches cannot be reconstructed.
