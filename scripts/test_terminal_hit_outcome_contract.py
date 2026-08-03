@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Source contracts for the behavior-preserving terminal-hit completion seam."""
+"""Source contracts for the terminal HIT impact-to-completion boundary."""
 
 from __future__ import annotations
 
@@ -86,8 +86,13 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
             "fun complete(\n        killerType: EntityType?,",
         )
 
-    def test_game_view_delegates_hit_completion_once(self) -> None:
+    def test_game_view_delegates_impact_and_completion_once(self) -> None:
+        self.assertEqual(1, self.hit_block.count("terminalHitImpact.apply"))
         self.assertEqual(1, self.hit_block.count("terminalHitOutcome.complete("))
+        self.assertLess(
+            self.hit_block.index("terminalHitImpact.apply"),
+            self.hit_block.index("terminalHitOutcome.complete("),
+        )
         forbidden = (
             "PersistentMemoryManager.recordHit(",
             "RunFlavorPresentation.collisionCue(",
@@ -99,40 +104,46 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
         for call in forbidden:
             self.assertNotIn(call, self.hit_block)
 
-    def test_game_view_preserves_immediate_feedback_before_completion(self) -> None:
+    def test_post_impact_capture_precedes_completion_and_death(self) -> None:
         order = (
-            "gameState.recordHit()",
-            "ghostPlayer.suppress(1.35f)",
-            "player.triggerRest()",
-            "CameraSystem.shakeHit()",
-            "SfxManager.playHit()",
-            "LeitmotifManager.playRest()",
-            "HapticManager.longPulse()",
+            "terminalHitImpact.apply",
             "ghostRecorder.detachSnapshot()",
+            "entityManager.entityTypeOf(collision.entity)",
+            "TerminalHitImpactCapture(",
             "terminalHitOutcome.complete(",
+            "currentRestQuote = completedHit.summary.restQuote",
+            "currentRunSummary = completedHit.summary",
             "runResetManager.triggerDeath(gameState)",
             "runState = RunState.DYING",
         )
         positions = [self.hit_block.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
 
-    def test_game_view_passes_identity_and_accepts_completed_summary(self) -> None:
-        required = (
-            "killerType = killerType",
+    def test_game_view_passes_captured_identity_and_accepts_completed_summary(self) -> None:
+        required_once = (
+            "killerType = impact.killerType",
+            "biome = impact.biome",
+            "presentation = impact.presentation",
+            "completedGhost = impact.completedGhost",
+            "persistEncounter = persistEncounter",
+            "gameState.buildRunSummary(lastKiller = impact.killerType)",
+            "currentRestQuote = completedHit.summary.restQuote",
+            "currentRunSummary = completedHit.summary",
+        )
+        for item in required_once:
+            self.assertEqual(1, self.hit_block.count(item), item)
+
+        capture_inputs = (
             "biome = entityManager.biomeManager.currentBiome",
             "routeTier = gameState.pacifistRouteTier",
             "playerX = player.x",
             "playerY = player.y",
             "completedGhost = completedGhost",
-            "persistEncounter = persistEncounter",
-            "gameState.buildRunSummary(lastKiller = killerType)",
-            "currentRestQuote = completedHit.summary.restQuote",
-            "currentRunSummary = completedHit.summary",
         )
-        for item in required:
+        for item in capture_inputs:
             self.assertEqual(1, self.hit_block.count(item), item)
 
-    def test_identity_invariant_precedes_every_side_effect(self) -> None:
+    def test_identity_invariant_precedes_every_completion_side_effect(self) -> None:
         invariant = self.complete.index("require(presentation.killerType == killerType)")
         first_side_effect = self.complete.index("relationshipRecorder.recordHit(killerType)")
         feedback = self.complete.index("feedbackPresenter.present(presentation)")
@@ -166,7 +177,7 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
         self.assertEqual(1, self.complete.count("outcomeCommitter.commit("))
         self.assertEqual(1, self.complete.count("summaryPreview.copy(restQuote = restQuote)"))
 
-    def test_android_adapters_own_the_extracted_side_effects(self) -> None:
+    def test_android_adapters_own_the_extracted_completion_side_effects(self) -> None:
         expected_once = (
             "PersistentMemoryManager.recordHit(appContext, type)",
             "RunFlavorPresentation.collisionCue(",
