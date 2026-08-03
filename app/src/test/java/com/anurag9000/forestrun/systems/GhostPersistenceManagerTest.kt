@@ -189,7 +189,7 @@ class GhostPersistenceManagerTest {
     }
 
     @Test
-    fun `tampered strong manifest blocks distance repair without deleting ghost`() {
+    fun `tampered strong manifest digest blocks distance repair without deleting ghost`() {
         val frames = sampleFrames()
         assertTrue(SaveManager.saveGhostRun(context, frames))
         val valid = strongManifest(frames, 1_200f)
@@ -206,6 +206,21 @@ class GhostPersistenceManagerTest {
         assertEquals(100f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(frames, SaveManager.loadGhostRun(context))
         assertTrue(manifestFile().exists())
+    }
+
+    @Test
+    fun `tampered strong manifest distance blocks repair without deleting ghost`() {
+        val frames = sampleFrames()
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        val valid = strongManifest(frames, 1_200f)
+        assertTrue(manifestStore().save(valid.copy(distanceM = 1_201f)))
+        SaveManager.saveBestDistance(context, 100f)
+
+        val disposition = GhostPersistenceManager.recoverPendingPromotion(context)
+
+        assertEquals(GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST, disposition)
+        assertEquals(100f, SaveManager.loadBestDistance(context), 0f)
+        assertEquals(frames, SaveManager.loadGhostRun(context))
     }
 
     @Test
@@ -271,7 +286,7 @@ class GhostPersistenceManagerTest {
         frames: List<GhostFrame>,
         distanceM: Float
     ): GhostPromotionReceipt {
-        val identity = GhostRunIdentity.calculate(frames)
+        val identity = GhostRunIdentity.calculate(frames, distanceM)
         return GhostPromotionReceipt(
             distanceM = distanceM,
             frameCount = frames.size,
@@ -284,7 +299,7 @@ class GhostPersistenceManagerTest {
         frames: List<GhostFrame>,
         distanceM: Float
     ): GhostArtifactManifest {
-        val identity = GhostRunIdentity.calculate(frames)
+        val identity = GhostRunIdentity.calculate(frames, distanceM)
         return GhostArtifactManifest(
             distanceM = distanceM,
             frameCount = frames.size,
