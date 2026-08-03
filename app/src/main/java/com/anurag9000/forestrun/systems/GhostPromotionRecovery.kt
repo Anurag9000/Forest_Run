@@ -163,7 +163,7 @@ internal class GhostPromotionRecoveryCoordinator(
             if (!receiptStore.clear()) {
                 return GhostPromotionRecoveryDisposition.IO_FAILURE
             }
-            return when (val manifestRecovery = recoverManifest()) {
+            return when (val manifestRecovery = recoverManifest(durableGhost)) {
                 GhostPromotionRecoveryDisposition.EMPTY,
                 GhostPromotionRecoveryDisposition.ALREADY_APPLIED ->
                     GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST
@@ -188,7 +188,9 @@ internal class GhostPromotionRecoveryCoordinator(
         }
     }
 
-    private fun recoverManifest(): GhostPromotionRecoveryDisposition {
+    private fun recoverManifest(
+        knownGhost: List<GhostFrame>? = null
+    ): GhostPromotionRecoveryDisposition {
         return when (val loaded = manifestStore.load()) {
             GhostArtifactManifestLoadResult.Empty ->
                 GhostPromotionRecoveryDisposition.EMPTY
@@ -197,21 +199,28 @@ internal class GhostPromotionRecoveryCoordinator(
             is GhostArtifactManifestLoadResult.Present -> {
                 val manifest = loaded.manifest
                 val currentBest = normalizedDistance(artifactStore.loadBestDistanceM())
-                if (currentBest >= manifest.distanceM) {
-                    GhostPromotionRecoveryDisposition.ALREADY_APPLIED
-                } else {
-                    val durableGhost = artifactStore.loadGhost()
-                    if (!matches(
-                            frames = durableGhost,
-                            frameCount = manifest.frameCount,
-                            fingerprint = manifest.fingerprint
-                        )
-                    ) {
-                        GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
-                    } else if (artifactStore.saveBestDistanceM(manifest.distanceM)) {
-                        GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE
-                    } else {
-                        GhostPromotionRecoveryDisposition.IO_FAILURE
+                when {
+                    knownGhost != null && !matches(
+                        frames = knownGhost,
+                        frameCount = manifest.frameCount,
+                        fingerprint = manifest.fingerprint
+                    ) -> GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
+                    currentBest >= manifest.distanceM ->
+                        GhostPromotionRecoveryDisposition.ALREADY_APPLIED
+                    else -> {
+                        val durableGhost = knownGhost ?: artifactStore.loadGhost()
+                        if (!matches(
+                                frames = durableGhost,
+                                frameCount = manifest.frameCount,
+                                fingerprint = manifest.fingerprint
+                            )
+                        ) {
+                            GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
+                        } else if (artifactStore.saveBestDistanceM(manifest.distanceM)) {
+                            GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE
+                        } else {
+                            GhostPromotionRecoveryDisposition.IO_FAILURE
+                        }
                     }
                 }
             }
