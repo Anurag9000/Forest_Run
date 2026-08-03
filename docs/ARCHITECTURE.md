@@ -215,24 +215,34 @@ Reduced-motion settings are applied at the particle-count boundary. Continuous B
 
 `GhostRecorder` samples player pose at 30 Hz for up to twenty minutes. On a terminal hit, the completed buffer is detached in O(1) regardless of run mode. `RunOutcomePersistenceCoordinator` decides whether the detached buffer is eligible to replace the best ghost.
 
-Eligibility compares completed distance against `GhostPersistenceManager.bestDistanceFloor(...)`, which includes both durable best distance and any accepted in-memory promotion still awaiting worker completion. A shorter run therefore cannot queue behind and overwrite a longer pending candidate.
+Eligibility compares completed distance against `GhostPersistenceManager.bestDistanceFloor(...)`, which includes durable best distance and any accepted in-memory promotion still awaiting worker completion. A shorter run cannot queue behind and overwrite a longer pending candidate.
 
-Accepted frames are published immediately to playback memory. `GhostPersistenceManager` then serializes durable promotion on one daemon worker:
+The validated frame payload remains `SaveManager` ghost format version 2. New promotions add two fixed-size AtomicFile sidecars without changing that codec:
+
+```text
+<ghost>.promotion  transient in-progress receipt
+<ghost>.manifest   persistent artifact-to-distance identity
+```
+
+Both store distance, frame count, and a raw-bit fingerprint of every persisted frame component. Accepted frames remain immediately visible in playback memory, while the single daemon worker performs:
 
 ```text
 AtomicFile promotion receipt
 → AtomicFile ghost write
+→ AtomicFile artifact manifest
 → synchronous monotonic best-distance commit
 → receipt clear
 ```
 
-The versioned receipt stores target distance, frame count, and a raw-bit fingerprint of every persisted frame component. Recovery advances best distance only when the durable ghost count and fingerprint match. A receipt whose ghost never landed is abandoned without changing the existing ghost or threshold. Corrupt or inaccessible receipt evidence blocks new ghost promotions while leaving non-ghost terminal persistence independent.
+The manifest remains after receipt clearing, making newly promoted artifact bundles self-describing. A matching receipt can reconstruct a missing or stale manifest. When only a manifest remains, a lower threshold is repaired only after full ghost validation. When the threshold already meets the manifest distance, automatic recovery returns without loading or hashing the ghost, avoiding repeated long-file work during healthy startup.
 
-Ghost files reject malformed inputs including oversized, truncated, trailing, non-finite, invalid-state, and non-monotonic data. Newer-schema ghost data is preserved rather than destructively rewritten by an older build.
+Corrupt receipts, corrupt manifests, manifest/artifact mismatch before a required repair, and I/O failure block new promotions. Explicit maintenance inspection performs full manifest identity validation and can remove corrupt association evidence without deleting the ghost frame file.
+
+Ghost files reject oversized, truncated, trailing, non-finite, invalid-state, and non-monotonic data. Newer-schema ghost data is preserved rather than destructively rewritten by an older build.
 
 `GhostPlayer` provides context-aware visibility around the live player and hazards. Ghosts have no gameplay hitbox.
 
-Legacy ghost frames store `PlayerState.ordinal`; therefore PlayerState entries must not be removed or reordered without a schema migration.
+Legacy ghost frames store `PlayerState.ordinal`; PlayerState entries must not be removed or reordered without a migration.
 
 ## 13. Collision outcomes and persistent memory
 
@@ -341,15 +351,17 @@ PREPARED journal
 → journal clear
 ```
 
-Ghost and best-distance promotion use the independent receipt protocol described in section 12. The terminal coordinator submits one distance-aware candidate but never writes the threshold itself. The two recovery records protect their own state surfaces; they do not form one global transaction across relationship history, presentation, non-ghost progression, ghost storage, and best distance.
+Ghost and best-distance promotion use the independent receipt/manifest protocol described in section 12. The terminal coordinator submits one distance-aware candidate but never writes the threshold itself. The two protocols protect their own state surfaces; they do not form one global transaction across relationship history, presentation, non-ghost progression, ghost storage, and best distance.
 
 ### Recovery evidence maintenance owner
 
-`RecoveryEvidenceMaintenanceCoordinator` provides one explicit policy layer over the independent `RUN_OUTCOME` and `GHOST_PROMOTION` domains. It reports `CLEAN`, `PENDING`, `CORRUPT`, `BLOCKED`, or `IO_FAILURE`, and separates inspection, safe retry, corrupt-evidence discard, and unresolved-pending discard.
+`RecoveryEvidenceMaintenanceCoordinator` provides one policy layer over the independent `RUN_OUTCOME` and `GHOST_PROMOTION` domains. It reports `CLEAN`, `PENDING`, `CORRUPT`, `BLOCKED`, or `IO_FAILURE`, and separates inspection, safe retry, corrupt-evidence discard, and unresolved-pending discard.
 
-Safe retry never clears corrupt evidence. Corrupt discard requires a fresh confirmed corrupt state. Pending discard retries canonical recovery first, returns `RECOVERED_INSTEAD` when recovery succeeds, and clears only evidence that remains confirmed pending or blocked. Read or recovery I/O failure never authorizes deletion, and every successful clear is verified by reinspection.
+Safe retry never clears corrupt evidence. Corrupt discard requires a fresh confirmed corrupt state. Pending discard retries canonical recovery first, returns `RECOVERED_INSTEAD` when recovery succeeds, and clears only evidence still confirmed pending or blocked. Read/recovery I/O failure never authorizes deletion, and successful clear is verified by reinspection.
 
-Production handlers are domain-isolated. `MaintenanceRunOutcomePersistenceSink` can recover complete mood, return, summary, and route snapshots but cannot publish ghosts or advance best distance. The ghost maintenance handler uses only the promotion receipt and ghost artifact owners and never opens the run-outcome journal. Support summaries expose only states and fixed detail codes.
+Production handlers are domain-isolated. `MaintenanceRunOutcomePersistenceSink` can recover complete mood, return, summary, and route snapshots but cannot publish ghosts or advance best distance. The ghost handler owns the promotion receipt, persistent manifest, ghost artifact adapter, and canonical ghost recovery; it never opens the run-outcome journal.
+
+Ghost inspection distinguishes valid manifest, pending receipt, corrupt receipt, corrupt manifest, and manifest/artifact mismatch. Targeted receipt cleanup preserves a valid matching manifest. Targeted manifest cleanup preserves the ghost frame file. Support summaries expose only states and fixed detail codes.
 
 `MainActivity` exposes maintenance only in debuggable builds. Mutating commands run only during cold `onCreate`, after save repair and before `GameView`; a reused live Activity may inspect but cannot recover or discard evidence.
 
@@ -416,7 +428,7 @@ Permanent CI is read-only and validates the exact event SHA. It performs:
 - API 35 connected instrumentation;
 - exact assertion of fourteen tests with zero failures, errors, or skips.
 
-The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, terminal-run exactly-once ownership, non-ghost crash recovery, ghost-promotion crash recovery, journal and receipt validation, transition parity, atomic summary-route snapshots, pending-distance admission, frame fingerprint identity, recovery-evidence maintenance policy and Android integration, cold-start mutation gating, one-shot command consumption, and payload-free maintenance logging.
+The test suite covers input arbitration, physics, malformed frame boundaries, Bloom, encounter outcomes, all entity families, persistence isolation, relationships, Garden transactions/layout, save repair, future-schema behavior, ghost persistence, safe-content geometry, feedback settings, latest-intent lifecycle ownership, thread shutdown, collision geometry, runtime assets, placeholder allocation bounds, hot-path reuse, frame telemetry, terminal-hit completion ordering/presentation, nonterminal collision ordering/presentation, terminal-run exactly-once ownership, non-ghost crash recovery, receipt/manifest ghost crash recovery, journal/receipt/manifest validation, transition parity, atomic summary-route snapshots, pending-distance admission, frame fingerprint identity, receipt-free manifest repair, already-applied lazy validation, recovery-evidence maintenance policy and Android integration, cold-start mutation gating, one-shot command consumption, and payload-free maintenance logging.
 
 ## 19. Debug scenarios
 
@@ -434,8 +446,9 @@ The following remain intentionally open:
 - the complete collision-result `when` dispatcher remains in `GameView`, although each nonterminal result branch delegates its ordered work;
 - STUMBLE and MERCY_MISS live effects remain implemented by the private `GameViewNonTerminalCollisionEffects` adapter;
 - immediate HIT impact still directly coordinates Player, ghost, camera, audio, music, and haptic managers before the extracted completion seam;
-- legacy ghost/distance mismatches created before promotion receipts cannot be reconstructed because ghost files contain no distance;
+- ghost/distance mismatches that already existed before persistent artifact manifests cannot be reconstructed;
 - the 64-bit ghost fingerprint is noncryptographic and has a theoretical collision risk;
+- healthy already-applied automatic recovery avoids repeated full ghost hashing, while explicit maintenance inspection performs full identity validation;
 - non-ghost and ghost recovery evidence are independently recoverable rather than one global terminal transaction;
 - concurrent compatibility-namespace switching during an active ghost worker or maintenance instance is unsupported;
 - automatic recovery remains fail-closed; deliberate remediation is debug/support-only and has no end-user recovery UI;
