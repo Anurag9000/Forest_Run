@@ -2,28 +2,32 @@ package com.anurag9000.forestrun.systems
 
 import java.security.MessageDigest
 
-/** Canonical identities for one validated ghost frame sequence. */
+/** Canonical identities for one validated ghost artifact and its accepted distance. */
 internal data class GhostRunIdentityValue(
     val fingerprint: Long,
     val sha256Hex: String
 )
 
 /**
- * Computes and verifies ghost identity over exactly the fields persisted by
- * SaveManager's version-2 ghost frame codec.
+ * Computes and verifies ghost identity over the accepted distance and exactly
+ * the frame fields persisted by SaveManager's version-2 ghost codec.
  *
- * SHA-256 provides collision-resistant artifact identity. The historical FNV-1a
- * fingerprint remains available only for reading version-1 receipt/manifest
- * sidecars.
+ * SHA-256 provides collision-resistant artifact-to-distance identity. The
+ * historical FNV-1a fingerprint remains available only for reading version-1
+ * receipt/manifest sidecars, which did not bind distance cryptographically.
  */
 internal object GhostRunIdentity {
     const val SHA256_BYTE_COUNT = 32
     const val SHA256_HEX_LENGTH = SHA256_BYTE_COUNT * 2
 
-    fun calculate(frames: List<GhostFrame>): GhostRunIdentityValue {
+    fun calculate(
+        frames: List<GhostFrame>,
+        distanceM: Float
+    ): GhostRunIdentityValue {
         val digest = MessageDigest.getInstance("SHA-256")
         var fingerprint = FNV_OFFSET_BASIS
 
+        digest.updateInt(distanceM.toRawBits())
         digest.updateInt(frames.size)
         fingerprint = mixInt(fingerprint, frames.size)
         frames.forEach { frame ->
@@ -49,6 +53,7 @@ internal object GhostRunIdentity {
 
     fun matches(
         frames: List<GhostFrame>,
+        distanceM: Float,
         frameCount: Int,
         fingerprint: Long,
         sha256Hex: String?
@@ -57,8 +62,9 @@ internal object GhostRunIdentity {
         if (sha256Hex == null) {
             return GhostRunFingerprint.calculate(frames) == fingerprint
         }
+        if (!distanceM.isFinite() || distanceM < 0f) return false
         if (!isCanonicalSha256(sha256Hex)) return false
-        val identity = calculate(frames)
+        val identity = calculate(frames, distanceM)
         return identity.fingerprint == fingerprint && identity.sha256Hex == sha256Hex
     }
 
@@ -107,7 +113,7 @@ internal object GhostRunIdentity {
     private const val HEX = "0123456789abcdef"
 }
 
-/** Historical 64-bit identity retained strictly for version-1 sidecar reads. */
+/** Historical 64-bit frame identity retained strictly for version-1 sidecar reads. */
 internal object GhostRunFingerprint {
     fun calculate(frames: List<GhostFrame>): Long {
         var hash = FNV_OFFSET_BASIS
