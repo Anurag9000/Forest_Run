@@ -93,6 +93,25 @@ It never opens the run-outcome journal.
 
 A corrupt ghost sidecar therefore cannot prevent non-ghost recovery, and clearing one domain cannot erase the other domain’s evidence.
 
+## Namespace lifetime
+
+`GhostPersistenceManager` workers are now namespace-stable: every queued promotion captures one immutable primary or compatibility namespace, and receipt, ghost, manifest, distance, publication, and cleanup remain bound to it.
+
+A maintenance instance is a narrower, still-unmigrated boundary. Its handlers capture some stores during construction but retain dynamic `SaveManager` access for other state. Therefore:
+
+```text
+select desired namespace
+→ construct AndroidRecoveryEvidenceMaintenance
+→ inspect/recover/discard
+→ discard the maintenance instance
+```
+
+Do not switch the active namespace while that object remains in use.
+
+This rule does not reintroduce the old worker limitation. Primary/compatibility switching while manager work is queued or active is supported and isolated. Only an already-created maintenance instance requires namespace stability.
+
+Mutating maintenance already runs only in a cold-start window after save repair and before `GameView`, which provides the required stable lifetime in the production command path.
+
 ## Run-outcome evidence removal
 
 Run-outcome discard clears only:
@@ -218,7 +237,7 @@ Because the Activity is `singleTask`, ADB can deliver a command through `onNewIn
 
 A reused Activity permits only `inspect`. It rejects `recover`, `discard_corrupt`, and `discard_pending` with `reason=active_session` before constructing maintenance handlers.
 
-Mutating commands run only during cold `onCreate`, after `SaveIntegrityManager.repair(...)` and before `GameView` construction.
+Mutating commands run only during cold `onCreate`, after `SaveIntegrityManager.repair(...)` and before `GameView` construction. The desired save namespace must already be selected and remains unchanged for the maintenance object’s short lifetime.
 
 ## ADB usage
 
@@ -323,8 +342,10 @@ Coverage includes:
 
 Source contracts require the maintenance adapter to pass manifest distance, frame count, FNV, and optional SHA-256 into `GhostRunIdentity.matches(...)` and forbid a direct fingerprint-only validator.
 
+The separate ghost namespace contracts verify manager worker isolation. They intentionally do not claim that live maintenance handlers have already been migrated to immutable namespace-bound artifact and non-ghost state adapters.
+
 ## Evidence boundary
 
-Focused Kotlin/JVM compilation passed for the identity and recovery core and production manager surface. A production-shaped maintenance adapter compile validates the distance-bound identity call. Executable golden-vector, versioned-codec, state-machine, maintenance-policy, and cold/live launch harnesses passed.
+Focused Kotlin/JVM compilation passed for the identity and recovery core and production manager surface. A production-shaped maintenance adapter compile validates the distance-bound identity call. Executable golden-vector, versioned-codec, state-machine, maintenance-policy, cold/live launch, and namespace-isolation harnesses passed.
 
 The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session. Physical-device ADB acceptance remains separate.
