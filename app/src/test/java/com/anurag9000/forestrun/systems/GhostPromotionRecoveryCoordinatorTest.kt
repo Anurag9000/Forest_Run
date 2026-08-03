@@ -132,6 +132,22 @@ class GhostPromotionRecoveryCoordinatorTest {
     }
 
     @Test
+    fun `tampered receipt distance cannot identify the durable ghost`() {
+        val frames = frames()
+        val strong = receipt(frames, 820f)
+        val tampered = strong.copy(distanceM = 821f)
+        val receiptStore = MemoryReceiptStore(receipt = tampered)
+        val artifactStore = MemoryArtifactStore(ghost = frames, bestDistanceM = 200f)
+        val coordinator = coordinator(receiptStore, artifactStore, MemoryManifestStore())
+
+        val disposition = coordinator.recover()
+
+        assertEquals(GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST, disposition)
+        assertEquals(200f, artifactStore.bestDistanceM, 0f)
+        assertEquals(0, artifactStore.distanceSaveCount)
+    }
+
+    @Test
     fun `failed ghost write leaves receipt and never writes manifest or distance`() {
         val receiptStore = MemoryReceiptStore()
         val artifactStore = MemoryArtifactStore(
@@ -300,7 +316,7 @@ class GhostPromotionRecoveryCoordinatorTest {
     }
 
     @Test
-    fun `manifest fingerprint or digest mismatch blocks distance repair`() {
+    fun `manifest fingerprint digest or distance mismatch blocks distance repair`() {
         val durableGhost = frames()
         val unrelated = durableGhost.mapIndexed { index, frame ->
             if (index == 1) frame.copy(y = frame.y + 3f) else frame
@@ -340,9 +356,10 @@ class GhostPromotionRecoveryCoordinatorTest {
     }
 
     @Test
-    fun `strong identity changes for every persisted frame component`() {
+    fun `strong identity changes for every persisted frame component and distance`() {
         val base = frames()
-        val baseIdentity = GhostRunIdentity.calculate(base)
+        val distanceM = 500f
+        val baseIdentity = GhostRunIdentity.calculate(base, distanceM)
         val variants = listOf(
             base.toMutableList().apply { this[0] = this[0].copy(t = 0.01f) },
             base.toMutableList().apply { this[0] = this[0].copy(x = 101f) },
@@ -354,11 +371,14 @@ class GhostPromotionRecoveryCoordinatorTest {
         )
 
         variants.forEach { variant ->
-            val identity = GhostRunIdentity.calculate(variant)
+            val identity = GhostRunIdentity.calculate(variant, distanceM)
             assertFalse(baseIdentity.fingerprint == identity.fingerprint)
             assertFalse(baseIdentity.sha256Hex == identity.sha256Hex)
         }
-        assertEquals(baseIdentity, GhostRunIdentity.calculate(base.toList()))
+        val distanceVariant = GhostRunIdentity.calculate(base, distanceM + 1f)
+        assertEquals(baseIdentity.fingerprint, distanceVariant.fingerprint)
+        assertFalse(baseIdentity.sha256Hex == distanceVariant.sha256Hex)
+        assertEquals(baseIdentity, GhostRunIdentity.calculate(base.toList(), distanceM))
         assertEquals(64, baseIdentity.sha256Hex.length)
     }
 
@@ -373,7 +393,7 @@ class GhostPromotionRecoveryCoordinatorTest {
     )
 
     private fun receipt(frames: List<GhostFrame>, distanceM: Float): GhostPromotionReceipt {
-        val identity = GhostRunIdentity.calculate(frames)
+        val identity = GhostRunIdentity.calculate(frames, distanceM)
         return GhostPromotionReceipt(
             distanceM = distanceM,
             frameCount = frames.size,
@@ -393,7 +413,7 @@ class GhostPromotionRecoveryCoordinatorTest {
     )
 
     private fun manifest(frames: List<GhostFrame>, distanceM: Float): GhostArtifactManifest {
-        val identity = GhostRunIdentity.calculate(frames)
+        val identity = GhostRunIdentity.calculate(frames, distanceM)
         return GhostArtifactManifest(
             distanceM = distanceM,
             frameCount = frames.size,
