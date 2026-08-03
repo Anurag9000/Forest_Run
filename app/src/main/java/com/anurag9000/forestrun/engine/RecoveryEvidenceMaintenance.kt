@@ -475,6 +475,7 @@ private class AndroidGhostPromotionEvidenceHandler(
         val frames = SaveManager.loadGhostRun(context)
         return GhostRunIdentity.matches(
             frames = frames,
+            distanceM = manifest.distanceM,
             frameCount = manifest.frameCount,
             fingerprint = manifest.fingerprint,
             sha256Hex = manifest.sha256Hex
