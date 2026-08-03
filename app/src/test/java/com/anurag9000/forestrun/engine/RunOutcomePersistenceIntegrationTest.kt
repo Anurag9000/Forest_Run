@@ -166,7 +166,7 @@ class RunOutcomePersistenceIntegrationTest {
         frames: List<GhostFrame>,
         distanceM: Float
     ): GhostArtifactManifest {
-        val identity = GhostRunIdentity.calculate(frames)
+        val identity = GhostRunIdentity.calculate(frames, distanceM)
         return GhostArtifactManifest(
             distanceM = distanceM,
             frameCount = frames.size,
