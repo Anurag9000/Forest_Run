@@ -11,7 +11,7 @@ import com.anurag9000.forestrun.systems.GhostArtifactManifestLoadResult
 import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.systems.GhostPromotionReceipt
 import com.anurag9000.forestrun.systems.GhostPromotionReceiptLoadResult
-import com.anurag9000.forestrun.systems.GhostRunFingerprint
+import com.anurag9000.forestrun.systems.GhostRunIdentity
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -84,10 +84,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         val record = recoveryRecord(summary)
         assertTrue(runStore.save(record))
         val maintenance = AndroidRecoveryEvidenceMaintenance(context)
-        assertEquals(
-            RecoveryEvidenceState.PENDING,
-            maintenance.inspect().runOutcome.state
-        )
+        assertEquals(RecoveryEvidenceState.PENDING, maintenance.inspect().runOutcome.state)
 
         val report = maintenance.recoverSafely()
 
@@ -114,10 +111,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
             .commit()
         val maintenance = AndroidRecoveryEvidenceMaintenance(context)
 
-        assertEquals(
-            RecoveryEvidenceState.CORRUPT,
-            maintenance.recoverSafely().runOutcome.state
-        )
+        assertEquals(RecoveryEvidenceState.CORRUPT, maintenance.recoverSafely().runOutcome.state)
         assertTrue(recoveryPrefs().getBoolean("present", false))
 
         val discarded = maintenance.discardCorrupt(RecoveryEvidenceDomain.RUN_OUTCOME)
@@ -132,10 +126,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         val summary = summary()
         val record = recoveryRecord(summary)
         assertTrue(runStore.save(record))
-        val conflictingMood = record.previousMood.copy(
-            totalRuns = 7,
-            steadyRuns = 7
-        )
+        val conflictingMood = record.previousMood.copy(totalRuns = 7, steadyRuns = 7)
         SaveManager.saveForestMoodState(context, conflictingMood)
         val maintenance = AndroidRecoveryEvidenceMaintenance(context)
 
@@ -149,28 +140,17 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         assertEquals(conflictingMood, SaveManager.loadForestMoodState(context))
         assertEquals(ReturnMomentState(), SaveManager.loadReturnMomentState(context))
         assertNull(SaveManager.loadLastRunSummary(context))
-        assertEquals(
-            0,
-            SaveManager.loadRouteTierCount(context, summary.pacifistRouteTier)
-        )
+        assertEquals(0, SaveManager.loadRouteTierCount(context, summary.pacifistRouteTier))
         assertEquals(RunOutcomeRecoveryLoadResult.Empty, runStore.load())
     }
 
     @Test
-    fun `matching ghost receipt repairs manifest and distance independently`() {
+    fun `matching strong ghost receipt repairs manifest and distance independently`() {
         val frames = ghostFrames()
         val expectedManifest = manifest(frames, 900f)
         assertTrue(SaveManager.saveGhostRun(context, frames))
         SaveManager.saveBestDistance(context, 120f)
-        assertTrue(
-            ghostStore.save(
-                GhostPromotionReceipt(
-                    distanceM = 900f,
-                    frameCount = frames.size,
-                    fingerprint = GhostRunFingerprint.calculate(frames)
-                )
-            )
-        )
+        assertTrue(ghostStore.save(receipt(frames, 900f)))
         val maintenance = AndroidRecoveryEvidenceMaintenance(context)
 
         val report = maintenance.recoverSafely()
@@ -188,7 +168,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
     }
 
     @Test
-    fun `manifest without receipt repairs distance and remains inspectable`() {
+    fun `manifest without receipt repairs distance and remains strongly inspectable`() {
         val frames = ghostFrames()
         val expectedManifest = manifest(frames, 1_050f)
         assertTrue(SaveManager.saveGhostRun(context, frames))
@@ -209,7 +189,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
     }
 
     @Test
-    fun `corrupt ghost receipt is discarded without deleting valid manifest`() {
+    fun `corrupt ghost receipt is discarded without deleting valid strong manifest`() {
         val frames = ghostFrames()
         val validManifest = manifest(frames, 700f)
         assertTrue(SaveManager.saveGhostRun(context, frames))
@@ -263,6 +243,28 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
     }
 
     @Test
+    fun `tampered digest is diagnosed and targeted discard preserves ghost`() {
+        val frames = ghostFrames()
+        val valid = manifest(frames, 800f)
+        val tampered = valid.copy(
+            sha256Hex = flipFirstHex(requireNotNull(valid.sha256Hex))
+        )
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        assertTrue(manifestStore.save(tampered))
+        val maintenance = AndroidRecoveryEvidenceMaintenance(context)
+
+        val before = maintenance.inspect().ghostPromotion
+
+        assertEquals(RecoveryEvidenceState.CORRUPT, before.state)
+        assertEquals("manifest_artifact_mismatch", before.detail)
+        val discarded = maintenance.discardCorrupt(RecoveryEvidenceDomain.GHOST_PROMOTION)
+        assertEquals(RecoveryDiscardDisposition.DISCARDED, discarded.disposition)
+        assertEquals(RecoveryEvidenceState.CLEAN, discarded.after.state)
+        assertEquals(frames, SaveManager.loadGhostRun(context))
+        assertEquals(GhostArtifactManifestLoadResult.Empty, manifestStore.load())
+    }
+
+    @Test
     fun `manifest artifact mismatch is diagnosed and targeted discard preserves ghost`() {
         val frames = ghostFrames()
         val unrelated = frames.mapIndexed { index, frame ->
@@ -276,9 +278,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
 
         assertEquals(RecoveryEvidenceState.CORRUPT, before.state)
         assertEquals("manifest_artifact_mismatch", before.detail)
-        val discarded = maintenance.discardCorrupt(
-            RecoveryEvidenceDomain.GHOST_PROMOTION
-        )
+        val discarded = maintenance.discardCorrupt(RecoveryEvidenceDomain.GHOST_PROMOTION)
         assertEquals(RecoveryDiscardDisposition.DISCARDED, discarded.disposition)
         assertEquals(RecoveryEvidenceState.CLEAN, discarded.after.state)
         assertEquals(frames, SaveManager.loadGhostRun(context))
@@ -326,14 +326,34 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         pacifistRouteTier = PacifistRouteTier.MERCIFUL
     )
 
+    private fun receipt(
+        frames: List<GhostFrame>,
+        distanceM: Float
+    ): GhostPromotionReceipt {
+        val identity = GhostRunIdentity.calculate(frames)
+        return GhostPromotionReceipt(
+            distanceM = distanceM,
+            frameCount = frames.size,
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
+        )
+    }
+
     private fun manifest(
         frames: List<GhostFrame>,
         distanceM: Float
-    ): GhostArtifactManifest = GhostArtifactManifest(
-        distanceM = distanceM,
-        frameCount = frames.size,
-        fingerprint = GhostRunFingerprint.calculate(frames)
-    )
+    ): GhostArtifactManifest {
+        val identity = GhostRunIdentity.calculate(frames)
+        return GhostArtifactManifest(
+            distanceM = distanceM,
+            frameCount = frames.size,
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
+        )
+    }
+
+    private fun flipFirstHex(value: String): String =
+        (if (value.first() == '0') '1' else '0') + value.drop(1)
 
     private fun ghostFrames(): List<GhostFrame> = listOf(
         GhostFrame(
