@@ -62,7 +62,9 @@ class GhostPersistenceNamespaceContractTest(unittest.TestCase):
         self.assertIn("latestPublications.remove(publication.namespace, current)", self.manager)
         self.assertNotIn("private var latestPublication:", self.manager)
 
-        worker = self.manager.split("pendingWrite = executor.submit", 1)[1]
+        worker_start = self.manager.index("pendingWrite = executor.submit")
+        worker_end = self.manager.index("\n            true\n        } catch", worker_start)
+        worker = self.manager[worker_start:worker_end]
         self.assertIn("recoveryCoordinator(context, namespace)", worker)
         self.assertIn("clearPublicationIfCurrent(publication)", worker)
         self.assertNotIn("GhostPersistenceNamespace.capture()", worker)
