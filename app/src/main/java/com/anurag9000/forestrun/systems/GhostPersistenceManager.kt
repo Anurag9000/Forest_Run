@@ -20,7 +20,8 @@ object GhostPersistenceManager {
     private data class PublishedGhost(
         val frames: List<GhostFrame>,
         val distanceM: Float,
-        val fingerprint: Long
+        val fingerprint: Long,
+        val sha256Hex: String
     )
 
     private val executor = Executors.newSingleThreadExecutor { runnable ->
@@ -69,10 +70,12 @@ object GhostPersistenceManager {
         if (distanceM < bestDistanceFloor(appContext)) return false
 
         val snapshot = frames.toList()
+        val identity = GhostRunIdentity.calculate(snapshot)
         val publication = PublishedGhost(
             frames = snapshot,
             distanceM = distanceM,
-            fingerprint = GhostRunFingerprint.calculate(snapshot)
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
         )
         latestPublication = publication
         GhostIoTelemetry.recordWriteStarted(snapshot.size)
@@ -145,13 +148,15 @@ object GhostPersistenceManager {
         val loaded = SaveManager.loadGhostRun(appContext)
         if (loaded.isEmpty()) return emptyList()
 
+        val identity = GhostRunIdentity.calculate(loaded)
         val publication = PublishedGhost(
             frames = loaded,
             distanceM = SaveManager.loadBestDistance(appContext)
                 .takeIf { it.isFinite() }
                 ?.coerceAtLeast(0f)
                 ?: 0f,
-            fingerprint = GhostRunFingerprint.calculate(loaded)
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
         )
         synchronized(this) {
             if (latestPublication == null) latestPublication = publication
@@ -213,7 +218,8 @@ object GhostPersistenceManager {
     private fun clearPublicationIfCurrent(publication: PublishedGhost) {
         val current = latestPublication ?: return
         if (current.distanceM == publication.distanceM &&
-            current.fingerprint == publication.fingerprint
+            current.fingerprint == publication.fingerprint &&
+            current.sha256Hex == publication.sha256Hex
         ) {
             latestPublication = null
         }
