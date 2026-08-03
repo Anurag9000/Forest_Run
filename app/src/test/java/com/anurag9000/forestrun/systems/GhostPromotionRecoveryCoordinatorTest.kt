@@ -2,13 +2,14 @@ package com.anurag9000.forestrun.systems
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GhostPromotionRecoveryCoordinatorTest {
 
     @Test
-    fun `promotion persists receipt ghost manifest distance and clear in order`() {
+    fun `promotion persists strong receipt ghost manifest distance and clear in order`() {
         val events = mutableListOf<String>()
         val receiptStore = MemoryReceiptStore(events = events)
         val artifactStore = MemoryArtifactStore(events = events, bestDistanceM = 120f)
@@ -23,6 +24,7 @@ class GhostPromotionRecoveryCoordinatorTest {
         assertEquals(frames, artifactStore.ghost)
         assertEquals(480f, artifactStore.bestDistanceM, 0f)
         assertEquals(manifest(frames, 480f), manifestStore.manifest)
+        assertNotNull(manifestStore.manifest?.sha256Hex)
         assertEquals(null, receiptStore.receipt)
         assertEquals(
             listOf(
@@ -42,10 +44,7 @@ class GhostPromotionRecoveryCoordinatorTest {
         val frames = frames()
         val receipt = receipt(frames, distanceM = 700f)
         val receiptStore = MemoryReceiptStore(receipt = receipt)
-        val artifactStore = MemoryArtifactStore(
-            ghost = frames,
-            bestDistanceM = 200f
-        )
+        val artifactStore = MemoryArtifactStore(ghost = frames, bestDistanceM = 200f)
         val manifestStore = MemoryManifestStore()
         val coordinator = coordinator(receiptStore, artifactStore, manifestStore)
 
@@ -58,14 +57,30 @@ class GhostPromotionRecoveryCoordinatorTest {
     }
 
     @Test
+    fun `legacy receipt recovery upgrades the durable manifest before distance`() {
+        val frames = frames()
+        val receiptStore = MemoryReceiptStore(
+            receipt = legacyReceipt(frames, distanceM = 710f)
+        )
+        val artifactStore = MemoryArtifactStore(ghost = frames, bestDistanceM = 100f)
+        val manifestStore = MemoryManifestStore()
+        val coordinator = coordinator(receiptStore, artifactStore, manifestStore)
+
+        val disposition = coordinator.recover()
+
+        assertEquals(GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE, disposition)
+        assertEquals(manifest(frames, 710f), manifestStore.manifest)
+        assertNotNull(manifestStore.manifest?.sha256Hex)
+        assertEquals(710f, artifactStore.bestDistanceM, 0f)
+        assertEquals(null, receiptStore.receipt)
+    }
+
+    @Test
     fun `already applied promotion only ensures manifest and clears receipt`() {
         val frames = frames()
         val expectedManifest = manifest(frames, 500f)
         val receiptStore = MemoryReceiptStore(receipt = receipt(frames, distanceM = 500f))
-        val artifactStore = MemoryArtifactStore(
-            ghost = frames,
-            bestDistanceM = 900f
-        )
+        val artifactStore = MemoryArtifactStore(ghost = frames, bestDistanceM = 900f)
         val manifestStore = MemoryManifestStore(manifest = expectedManifest)
         val coordinator = coordinator(receiptStore, artifactStore, manifestStore)
 
@@ -87,23 +102,33 @@ class GhostPromotionRecoveryCoordinatorTest {
         }
         val oldManifest = manifest(oldGhost, distanceM = 300f)
         val receiptStore = MemoryReceiptStore(receipt = receipt(candidate, distanceM = 800f))
-        val artifactStore = MemoryArtifactStore(
-            ghost = oldGhost,
-            bestDistanceM = 300f
-        )
+        val artifactStore = MemoryArtifactStore(ghost = oldGhost, bestDistanceM = 300f)
         val manifestStore = MemoryManifestStore(manifest = oldManifest)
         val coordinator = coordinator(receiptStore, artifactStore, manifestStore)
 
         val disposition = coordinator.recover()
 
-        assertEquals(
-            GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST,
-            disposition
-        )
+        assertEquals(GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST, disposition)
         assertEquals(300f, artifactStore.bestDistanceM, 0f)
         assertEquals(0, artifactStore.distanceSaveCount)
         assertEquals(oldManifest, manifestStore.manifest)
         assertEquals(null, receiptStore.receipt)
+    }
+
+    @Test
+    fun `tampered receipt digest cannot identify the durable ghost`() {
+        val frames = frames()
+        val strong = receipt(frames, 820f)
+        val tampered = strong.copy(sha256Hex = flipFirstHex(requireNotNull(strong.sha256Hex)))
+        val receiptStore = MemoryReceiptStore(receipt = tampered)
+        val artifactStore = MemoryArtifactStore(ghost = frames, bestDistanceM = 200f)
+        val coordinator = coordinator(receiptStore, artifactStore, MemoryManifestStore())
+
+        val disposition = coordinator.recover()
+
+        assertEquals(GhostPromotionRecoveryDisposition.ABANDONED_UNWRITTEN_GHOST, disposition)
+        assertEquals(200f, artifactStore.bestDistanceM, 0f)
+        assertEquals(0, artifactStore.distanceSaveCount)
     }
 
     @Test
@@ -125,7 +150,7 @@ class GhostPromotionRecoveryCoordinatorTest {
         assertFalse(result.receiptCleared)
         assertEquals(0, manifestStore.saveCount)
         assertEquals(100f, artifactStore.bestDistanceM, 0f)
-        assertTrue(receiptStore.receipt != null)
+        assertNotNull(receiptStore.receipt?.sha256Hex)
     }
 
     @Test
@@ -145,7 +170,7 @@ class GhostPromotionRecoveryCoordinatorTest {
         assertFalse(result.receiptCleared)
         assertEquals(frames, artifactStore.ghost)
         assertEquals(100f, artifactStore.bestDistanceM, 0f)
-        assertTrue(receiptStore.receipt != null)
+        assertNotNull(receiptStore.receipt?.sha256Hex)
     }
 
     @Test
@@ -164,7 +189,7 @@ class GhostPromotionRecoveryCoordinatorTest {
         assertTrue(result.ghostDurable)
         assertTrue(result.manifestDurable)
         assertFalse(result.distanceDurable)
-        assertTrue(receiptStore.receipt != null)
+        assertNotNull(receiptStore.receipt?.sha256Hex)
         assertEquals(manifest(frames, 600f), manifestStore.manifest)
         assertEquals(frames, artifactStore.ghost)
 
@@ -179,18 +204,9 @@ class GhostPromotionRecoveryCoordinatorTest {
     @Test
     fun `manifest repairs distance after receipt has already cleared`() {
         val frames = frames()
-        val artifactStore = MemoryArtifactStore(
-            ghost = frames,
-            bestDistanceM = 120f
-        )
-        val manifestStore = MemoryManifestStore(
-            manifest = manifest(frames, distanceM = 880f)
-        )
-        val coordinator = coordinator(
-            MemoryReceiptStore(),
-            artifactStore,
-            manifestStore
-        )
+        val artifactStore = MemoryArtifactStore(ghost = frames, bestDistanceM = 120f)
+        val manifestStore = MemoryManifestStore(manifest = manifest(frames, 880f))
+        val coordinator = coordinator(MemoryReceiptStore(), artifactStore, manifestStore)
 
         val disposition = coordinator.recover()
 
@@ -201,12 +217,26 @@ class GhostPromotionRecoveryCoordinatorTest {
     }
 
     @Test
+    fun `legacy manifest is upgraded before receipt free distance repair`() {
+        val frames = frames()
+        val artifactStore = MemoryArtifactStore(ghost = frames, bestDistanceM = 120f)
+        val manifestStore = MemoryManifestStore(
+            manifest = legacyManifest(frames, distanceM = 890f)
+        )
+        val coordinator = coordinator(MemoryReceiptStore(), artifactStore, manifestStore)
+
+        val disposition = coordinator.recover()
+
+        assertEquals(GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE, disposition)
+        assertEquals(manifest(frames, 890f), manifestStore.manifest)
+        assertEquals(1, manifestStore.saveCount)
+        assertEquals(890f, artifactStore.bestDistanceM, 0f)
+    }
+
+    @Test
     fun `matching manifest with current distance skips ghost load`() {
         val frames = frames()
-        val artifactStore = MemoryArtifactStore(
-            ghost = frames,
-            bestDistanceM = 900f
-        )
+        val artifactStore = MemoryArtifactStore(ghost = frames, bestDistanceM = 900f)
         val coordinator = coordinator(
             MemoryReceiptStore(),
             artifactStore,
@@ -219,6 +249,22 @@ class GhostPromotionRecoveryCoordinatorTest {
         assertEquals(0, artifactStore.distanceSaveCount)
         assertEquals(0, artifactStore.ghostLoadCount)
         assertTrue(disposition.allowsNewPromotion)
+    }
+
+    @Test
+    fun `already applied legacy manifest remains lazy until validation is required`() {
+        val frames = frames()
+        val legacy = legacyManifest(frames, 700f)
+        val manifestStore = MemoryManifestStore(manifest = legacy)
+        val artifactStore = MemoryArtifactStore(ghost = frames, bestDistanceM = 900f)
+        val coordinator = coordinator(MemoryReceiptStore(), artifactStore, manifestStore)
+
+        val disposition = coordinator.recover()
+
+        assertEquals(GhostPromotionRecoveryDisposition.ALREADY_APPLIED, disposition)
+        assertEquals(0, artifactStore.ghostLoadCount)
+        assertEquals(0, manifestStore.saveCount)
+        assertEquals(legacy, manifestStore.manifest)
     }
 
     @Test
@@ -254,19 +300,17 @@ class GhostPromotionRecoveryCoordinatorTest {
     }
 
     @Test
-    fun `manifest mismatch blocks distance repair`() {
+    fun `manifest fingerprint or digest mismatch blocks distance repair`() {
         val durableGhost = frames()
         val unrelated = durableGhost.mapIndexed { index, frame ->
             if (index == 1) frame.copy(y = frame.y + 3f) else frame
         }
-        val artifactStore = MemoryArtifactStore(
-            ghost = durableGhost,
-            bestDistanceM = 100f
-        )
+        val artifactStore = MemoryArtifactStore(ghost = durableGhost, bestDistanceM = 100f)
+        val unrelatedManifest = manifest(unrelated, 700f)
         val coordinator = coordinator(
             MemoryReceiptStore(),
             artifactStore,
-            MemoryManifestStore(manifest = manifest(unrelated, 700f))
+            MemoryManifestStore(manifest = unrelatedManifest)
         )
 
         val disposition = coordinator.recover()
@@ -280,10 +324,7 @@ class GhostPromotionRecoveryCoordinatorTest {
     @Test
     fun `matching receipt replaces stale manifest with candidate identity`() {
         val frames = frames()
-        val stale = manifest(
-            frames.map { frame -> frame.copy(x = frame.x + 10f) },
-            200f
-        )
+        val stale = manifest(frames.map { frame -> frame.copy(x = frame.x + 10f) }, 200f)
         val manifestStore = MemoryManifestStore(manifest = stale)
         val coordinator = coordinator(
             MemoryReceiptStore(receipt = receipt(frames, 700f)),
@@ -299,9 +340,9 @@ class GhostPromotionRecoveryCoordinatorTest {
     }
 
     @Test
-    fun `fingerprint changes for every persisted frame component`() {
+    fun `strong identity changes for every persisted frame component`() {
         val base = frames()
-        val baseFingerprint = GhostRunFingerprint.calculate(base)
+        val baseIdentity = GhostRunIdentity.calculate(base)
         val variants = listOf(
             base.toMutableList().apply { this[0] = this[0].copy(t = 0.01f) },
             base.toMutableList().apply { this[0] = this[0].copy(x = 101f) },
@@ -313,9 +354,12 @@ class GhostPromotionRecoveryCoordinatorTest {
         )
 
         variants.forEach { variant ->
-            assertFalse(baseFingerprint == GhostRunFingerprint.calculate(variant))
+            val identity = GhostRunIdentity.calculate(variant)
+            assertFalse(baseIdentity.fingerprint == identity.fingerprint)
+            assertFalse(baseIdentity.sha256Hex == identity.sha256Hex)
         }
-        assertEquals(baseFingerprint, GhostRunFingerprint.calculate(base.toList()))
+        assertEquals(baseIdentity, GhostRunIdentity.calculate(base.toList()))
+        assertEquals(64, baseIdentity.sha256Hex.length)
     }
 
     private fun coordinator(
@@ -328,23 +372,48 @@ class GhostPromotionRecoveryCoordinatorTest {
         manifestStore = manifestStore
     )
 
-    private fun receipt(
+    private fun receipt(frames: List<GhostFrame>, distanceM: Float): GhostPromotionReceipt {
+        val identity = GhostRunIdentity.calculate(frames)
+        return GhostPromotionReceipt(
+            distanceM = distanceM,
+            frameCount = frames.size,
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
+        )
+    }
+
+    private fun legacyReceipt(
         frames: List<GhostFrame>,
         distanceM: Float
     ): GhostPromotionReceipt = GhostPromotionReceipt(
         distanceM = distanceM,
         frameCount = frames.size,
-        fingerprint = GhostRunFingerprint.calculate(frames)
+        fingerprint = GhostRunFingerprint.calculate(frames),
+        sha256Hex = null
     )
 
-    private fun manifest(
+    private fun manifest(frames: List<GhostFrame>, distanceM: Float): GhostArtifactManifest {
+        val identity = GhostRunIdentity.calculate(frames)
+        return GhostArtifactManifest(
+            distanceM = distanceM,
+            frameCount = frames.size,
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
+        )
+    }
+
+    private fun legacyManifest(
         frames: List<GhostFrame>,
         distanceM: Float
     ): GhostArtifactManifest = GhostArtifactManifest(
         distanceM = distanceM,
         frameCount = frames.size,
-        fingerprint = GhostRunFingerprint.calculate(frames)
+        fingerprint = GhostRunFingerprint.calculate(frames),
+        sha256Hex = null
     )
+
+    private fun flipFirstHex(value: String): String =
+        (if (value.first() == '0') '1' else '0') + value.drop(1)
 
     private fun frames(): List<GhostFrame> = listOf(
         GhostFrame(0f, 100f, 200f, 0, 1f, 1f),
