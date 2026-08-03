@@ -126,6 +126,8 @@ Bloom coordinates Player invincibility, aura/trail emitters, world/conversion bu
 
 `ParallaxBackground` owns authored/cached scene composition, parallax layers, sky/ground/foliage transitions, mist, leaves, petals, fireflies, horizon light, speed response, and Bloom response.
 
+Its public frame update rejects malformed delta/speed pairs, applies bounded delta and scroll speed, and repairs poisoned ambience/Bloom clocks before advancement. The separate `setBloomState(...)` mutator still requires explicit nonfinite-input regression coverage before its boundary can be called fully hardened.
+
 Some scenic layers remain procedural. Final art-direction acceptance or replacement is unresolved.
 
 ## 10. Rendering and safe content
@@ -142,18 +144,33 @@ Reusable paints, rectangles, cinematic profiles, Bloom objects, indexed hot-path
 
 Reduced-motion settings apply at the particle-count boundary. Continuous Bloom emitters attach to the Player and are removed on Bloom exit, rest, or reset.
 
-## 12. Ghost recording, identity, and persistence
+## 12. Ghost recording, identity, persistence, and namespaces
 
-`GhostRecorder` samples pose at 30 Hz for up to twenty minutes. Terminal HIT detaches the completed buffer in O(1). `RunOutcomePersistenceCoordinator` decides eligibility against `GhostPersistenceManager.bestDistanceFloor(...)`, which includes durable and accepted-pending distance.
+`GhostRecorder` samples pose at 30 Hz for up to twenty minutes. Terminal HIT detaches the completed buffer in O(1). `RunOutcomePersistenceCoordinator` decides eligibility against `GhostPersistenceManager.bestDistanceFloor(...)`, which includes durable and accepted-pending distance for the captured namespace.
 
 The frame file remains `SaveManager` ghost format version 2. `PlayerState` entries must not be removed or reordered without migration.
 
-Two sidecars are scoped to the active ghost filename:
+Two sidecars are scoped to the captured ghost filename:
 
 ```text
 <ghost>.promotion  transient in-progress receipt
 <ghost>.manifest   persistent artifact-to-distance identity
 ```
+
+### Namespace snapshot
+
+`GhostPersistenceNamespace` contains one preference name and its canonical ghost filename. Capture reads the active preference namespace once and derives the filename rather than independently reading two mutable fields.
+
+Canonical mappings are:
+
+```text
+forest_run_prefs              → ghost_run.bin
+forest_run_prefs_compat_vN    → ghost_run_compat_vN.bin
+```
+
+`NamespaceBoundGhostPromotionArtifactStore` binds `SharedPreferences(namespace.prefsName)` and `AtomicFile(filesDir / namespace.ghostFilename)` at construction. It never consults mutable active namespace state afterward.
+
+Each manager request carries one immutable namespace through recovery, admission, publication, worker execution, receipt, ghost, manifest, distance, and cleanup.
 
 ### Sidecar compatibility
 
@@ -167,7 +184,7 @@ SHA-256 provides collision-resistant local identity, not authenticated authorshi
 
 ### Durable order
 
-Accepted frames publish immediately in memory. The worker performs:
+Accepted frames publish immediately in a concurrent map keyed by namespace. The worker performs:
 
 ```text
 version-2 AtomicFile receipt
@@ -177,7 +194,9 @@ version-2 AtomicFile receipt
 → receipt clear
 ```
 
-The in-memory publication carries distance, FNV, and SHA-256. Failure cleanup removes only the matching publication across all three dimensions.
+The in-memory publication carries namespace, distance, FNV, and SHA-256. Failure cleanup removes only the matching publication across all four dimensions.
+
+Primary and compatibility publications cannot leak into each other. The single executor remains global and serial, but every queued task is permanently bound to its admission namespace.
 
 ### Recovery
 
@@ -189,9 +208,13 @@ A manifest-only repair loads and hashes the ghost only when best distance is bel
 
 When best distance already meets manifest distance, automatic recovery returns without loading the ghost. Explicit maintenance still performs full validation on demand.
 
+Manager disk fallback reads ghost and distance from one bound store before computing and publishing identity.
+
 Ghost files reject oversized, truncated, trailing, nonfinite, invalid-state, and nonmonotonic data. Newer-schema data is preserved rather than destructively rewritten by an older build.
 
 `GhostPlayer` is contextual visual playback only and has no hitbox.
+
+See `docs/GHOST_PROMOTION_RECOVERY.md` and `docs/GHOST_PERSISTENCE_NAMESPACES.md`.
 
 ## 13. Collision outcomes and persistent memory
 
@@ -277,9 +300,11 @@ Safe retry preserves corrupt evidence. Pending discard retries canonical recover
 
 The run handler cannot publish ghosts or advance distance. The ghost handler never opens the run journal. Ghost inspection validates version-2 distance-bound SHA-256 or version-1 FNV compatibility. Receipt cleanup preserves a valid manifest; manifest cleanup preserves the ghost file. Support output contains only fixed status codes.
 
+Manager workers and publications are namespace-stable across active primary/compatibility switching. An already-created maintenance instance is not: its handlers still contain dynamic state adapters, so the active namespace must not change while that maintenance object remains in use.
+
 Deterministic scenarios remain isolated from permanent score, encounter, relationship, Garden, summary, and ghost history while receiving local authored feedback.
 
-Relationship familiarity from appearance is capped at Recognition. Trust and Bond require positive outcomes; hits delay progression.
+Relationship familiarity from appearance is capped at Recognition. Trust and Bond require positive outcomes; hits delay progression. Familiarity warmth delegates to the pure additive `FamiliarityWarmthScoring` model so stage, pass, spare, kindness, and encounter modifiers accumulate independently.
 
 ## 14. Garden, return moments, and menu ritual
 
@@ -287,7 +312,7 @@ Relationship familiarity from appearance is capped at Recognition. Trust and Bon
 
 Garden spending writes persistent currency and cannot be refunded by stale game state. Sanctuary counts are nonnegative. Garden particles update only while active.
 
-Return moments are consumed on visible Garden entry. Day boundaries use local calendar date. Returning home resets the willow ritual.
+Return moments are consumed on visible Garden entry. Day boundaries use local calendar date. Rough-run streaks use saturating arithmetic, and long-absence detection rejects invalid timestamps and clock rollback before subtraction. Returning home resets the willow ritual.
 
 ## 15. Text and authored presentation
 
@@ -324,9 +349,9 @@ An unsigned minified bundle is a build artifact, not signed-upload proof.
 
 The permanent workflow is read-only and intended to validate the exact event SHA through source contracts, debug/release/unit/instrumentation compilation, JVM/Robolectric tests, lint, APK/AAB assembly, R8-renaming verification, and API-35 instrumentation.
 
-Coverage includes input, physics, malformed frames, Bloom, all entity families, persistence isolation, relationships, Garden, save repair, future schemas, ghost persistence, safe-content geometry, settings, latest-intent lifecycle, shutdown, collision geometry, assets, allocation bounds, telemetry, terminal-impact ordering/failure capture, terminal-completion ordering, nonterminal ordering, exactly-once ownership, non-ghost recovery, v1/v2 receipt/manifest recovery, distance-bound SHA-256 golden identity, legacy upgrade, digest/distance tampering, lazy manifest validation, maintenance policy, cold-start mutation, one-shot commands, and payload-free logging.
+Coverage includes input, physics, malformed frames, Bloom, all entity families, persistence isolation, relationships, Garden, save repair, future schemas, ghost persistence, safe-content geometry, settings, latest-intent lifecycle, shutdown, collision geometry, assets, allocation bounds, telemetry, terminal-impact ordering/failure capture, terminal-completion ordering, nonterminal ordering, exactly-once ownership, non-ghost recovery, v1/v2 receipt/manifest recovery, distance-bound SHA-256 golden identity, legacy upgrade, digest/distance tampering, lazy manifest validation, namespace-bound ghost codecs, active primary/compatibility worker isolation, per-namespace publication, maintenance policy, cold-start mutation, one-shot commands, and payload-free logging.
 
-All `scripts/test_*.py` files are discovered by the source-contract job, including `test_terminal_hit_impact_contract.py`.
+All `scripts/test_*.py` files are discovered by the source-contract job, including `test_terminal_hit_impact_contract.py`, `test_ghost_persistence_namespace_contract.py`, and the namespace-aware `test_ghost_promotion_recovery_contract.py`.
 
 This architecture description does not assert that the current commit has attached successful checks.
 
@@ -334,7 +359,7 @@ This architecture description does not assert that the current commit has attach
 
 `EncounterDirector` scenarios mirror device-acceptance cases and are selectable through launch intents or the overlay. Scenario entities use persistence-disabled context.
 
-Recovery maintenance is a separate debug support surface. Reused Activities permit inspection only; recovery/discard requires cold start before gameplay systems exist.
+Recovery maintenance is a separate debug support surface. Reused Activities permit inspection only; recovery/discard requires cold start before gameplay systems exist. Select the desired save namespace before constructing a maintenance instance and keep it stable for that instance's lifetime.
 
 Debug scenarios and focused harnesses do not replace ordinary-play or physical-device acceptance.
 
@@ -343,12 +368,14 @@ Debug scenarios and focused harnesses do not replace ordinary-play or physical-d
 - `GameView` remains large and requires incremental behavior-preserving decomposition.
 - The complete collision-result `when` dispatcher remains in `GameView`.
 - STUMBLE and MERCY_MISS live effects remain in `GameViewNonTerminalCollisionEffects`.
+- `ParallaxBackground.setBloomState(...)` still needs explicit nonfinite-input hardening and regression coverage.
 - Ghost/distance mismatches predating persistent manifests cannot be reconstructed.
 - Version-1 sidecars retain noncryptographic identity until replay requires strong upgrade.
 - The healthy already-applied path avoids repeated hashing; maintenance performs full validation.
 - SHA-256 identifies content/distance but does not authenticate a trusted writer.
 - Ghost and non-ghost recovery are independent rather than one global transaction.
-- Compatibility namespace switching during an active worker or maintenance instance is unsupported.
+- Active and queued `GhostPersistenceManager` work is namespace-stable, but switching during an already-created recovery-maintenance instance remains unsupported.
+- The ghost manager retains one global worker queue and conservatively blocks explicit recovery while any worker is active.
 - Automatic recovery remains fail-closed; deliberate remediation is debug/support-only with no end-user UI.
 - Exact-head Gradle, lint, build, emulator, physical-device, ADB, signing, installation, store path, screenshots, metadata, privacy/data-safety, content rating, and current Play-policy evidence remain unresolved.
 - Entity readability, artwork/animation—including Wolf—fixed landscape, procedural scenic layers, audio/haptics, frame time, allocation, GC, memory, I/O, thermal, and long-run behavior require representative-device acceptance.
