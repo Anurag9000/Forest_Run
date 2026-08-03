@@ -70,7 +70,7 @@ Sanctuary arithmetic:
 - pure tests cover simultaneous modifiers, additions plus subtractions, malformed restored counters, and output bounds;
 - planner integration tests verify exact baseline atmosphere publication.
 
-## 4. Gameplay, encounters, Seed Orbs, and Bloom
+## 4. Gameplay, encounters, Seed Orbs, Bloom, and terminal impact
 
 Implemented:
 
@@ -90,14 +90,34 @@ Implemented:
 - opening guidance replaces zero, negative, NaN, or infinite spawn intervals with a conservative positive cadence rather than permitting a spawn-every-frame loop;
 - deterministic scenarios validate metadata and chronological schedules, have unique titles, cover all 19 entity types, and restrict dog-specific variants to dog steps;
 - unsafe heterogeneous entity pooling remains disabled;
-- entity encounter bounds drive pass/Bloom/shared lifecycle decisions.
+- entity encounter bounds drive pass/Bloom/shared lifecycle decisions;
+- `TerminalHitImpactCoordinator` owns the exact terminal HIT impact order: run-hit accounting, 1.35-second ghost suppression, Player rest, camera shake, hit SFX, rest music, long haptic, then post-impact capture;
+- `TerminalHitImpactCapture` is created only after all immediate effects and carries detached ghost, killer, biome, route tier, and Player presentation coordinates;
+- capture construction rejects killer-identity drift between terminal presentation and completion;
+- `GameViewTerminalHitImpactEffects` maps each coordinator effect one-to-one to the original live owner;
+- the HIT branch no longer calls Player, ghost, camera, SFX, music, or haptic impact owners directly;
+- `GameView` still owns collision selection, one impact invocation, one terminal-completion invocation, summary assignment, death-timer trigger, and `RunState.DYING` transition;
+- the exact `GameView` replacement was inspected and contained only coordinator construction, HIT delegation/capture, and the private adapter.
+
+Automated contracts:
+
+- `TerminalHitImpactCoordinatorTest` covers exact effect order, suppression duration, capture-last behavior, fail-fast capture suppression, and killer-identity validation;
+- `scripts/test_terminal_hit_impact_contract.py` forbids direct impact calls in the HIT branch and locks post-impact capture plus completion/death ordering;
+- `scripts/test_terminal_hit_outcome_contract.py` now locks the impact-to-capture-to-completion boundary rather than expecting obsolete inline calls;
+- CI automatically discovers both contracts through the repository-wide `scripts/test_*.py` pattern.
 
 Still requiring ordinary-play/hardware acceptance:
 
 - high-speed encounter combinations;
 - every telegraph/hitbox/outcome agreement;
+- terminal-impact feel, audio timing, haptic intensity, and death-transition continuity on representative devices;
 - Bloom visual clarity under dense hazards;
 - long-run balance and fairness.
+
+Bounded architecture debt:
+
+- the full collision-result `when` dispatcher remains in `GameView`;
+- STUMBLE and MERCY_MISS live-state effects remain in `GameViewNonTerminalCollisionEffects`.
 
 ## 5. Persistence, progression, and return history
 
@@ -248,15 +268,20 @@ Still required:
 
 ## 11. Validation truth
 
-Locally verified during earlier remediation where runtime execution was available:
+Locally verified during remediation where runtime execution was available:
 
 - pure sanctuary atmosphere Kotlin model compilation and expected combined outputs;
 - Python local-main verifier tests;
-- Python origin/main local-remote repository tests.
+- Python origin/main local-remote repository tests;
+- focused Kotlin compilation and executable fake-effect validation for `TerminalHitImpactCoordinator`;
+- terminal impact ordering, exact 1.35-second suppression, capture-last behavior, fail-fast capture suppression, and killer-identity validation;
+- joint execution of the terminal impact and terminal completion source-contract parsers against the exact extracted HIT/capture/adapter structure;
+- exact inspection of the `GameView` replacement commit confirming only three intended hunks.
 
 Currently not executable or observable from this environment:
 
-- a local repository checkout and the newly expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
+- a complete local repository checkout and the full expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
+- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact acceptance;
 - push-triggered GitHub Actions check-run conclusions for the latest `main` SHA, because the installed connector exposes only pull-request-triggered workflow runs.
 
-Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. The new evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
+Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, and exact-diff review establish the intended ordering boundary but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
