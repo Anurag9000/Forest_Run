@@ -3,6 +3,7 @@ package com.anurag9000.forestrun.systems
 import android.content.Context
 import com.anurag9000.forestrun.engine.GhostIoTelemetry
 import com.anurag9000.forestrun.engine.SaveManager
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeoutException
  */
 object GhostPersistenceManager {
     private data class PublishedGhost(
+        val namespace: GhostPersistenceNamespace,
         val frames: List<GhostFrame>,
         val distanceM: Float,
         val fingerprint: Long,
@@ -31,8 +33,8 @@ object GhostPersistenceManager {
         }
     }
 
-    @Volatile
-    private var latestPublication: PublishedGhost? = null
+    private val latestPublications =
+        ConcurrentHashMap<GhostPersistenceNamespace, PublishedGhost>()
 
     @Volatile
     private var pendingWrite: Future<*>? = null
@@ -41,43 +43,59 @@ object GhostPersistenceManager {
      * Compatibility overload used by direct ghost tests and legacy callers.
      * Production terminal persistence supplies the completed distance explicitly.
      */
-    fun saveBestRunAsync(context: Context, frames: List<GhostFrame>): Boolean =
-        saveBestRunAsync(
-            context = context,
+    fun saveBestRunAsync(context: Context, frames: List<GhostFrame>): Boolean {
+        val appContext = context.applicationContext
+        val namespace = GhostPersistenceNamespace.capture()
+        return saveBestRunAsync(
+            context = appContext,
             frames = frames,
-            distanceM = bestDistanceFloor(context.applicationContext)
+            distanceM = bestDistanceFloor(appContext, namespace),
+            namespace = namespace
         )
+    }
 
     /**
      * Publishes a validated candidate immediately and schedules its recoverable
      * ghost-plus-distance promotion on the single I/O worker.
      */
-    @Synchronized
     fun saveBestRunAsync(
         context: Context,
         frames: List<GhostFrame>,
         distanceM: Float
+    ): Boolean = saveBestRunAsync(
+        context = context.applicationContext,
+        frames = frames,
+        distanceM = distanceM,
+        namespace = GhostPersistenceNamespace.capture()
+    )
+
+    @Synchronized
+    private fun saveBestRunAsync(
+        context: Context,
+        frames: List<GhostFrame>,
+        distanceM: Float,
+        namespace: GhostPersistenceNamespace
     ): Boolean {
         if (!GhostRunValidator.isValid(frames)) return false
         if (!distanceM.isFinite() || distanceM < 0f) return false
 
-        val appContext = context.applicationContext
         val activeTask = pendingWrite
         if (activeTask == null || activeTask.isDone) {
-            val recovery = recoveryCoordinator(appContext).recover()
+            val recovery = recoveryCoordinator(context, namespace).recover()
             if (!recovery.allowsNewPromotion) return false
         }
-        if (distanceM < bestDistanceFloor(appContext)) return false
+        if (distanceM < bestDistanceFloor(context, namespace)) return false
 
         val snapshot = frames.toList()
         val identity = GhostRunIdentity.calculate(snapshot, distanceM)
         val publication = PublishedGhost(
+            namespace = namespace,
             frames = snapshot,
             distanceM = distanceM,
             fingerprint = identity.fingerprint,
             sha256Hex = identity.sha256Hex
         )
-        latestPublication = publication
+        latestPublications[namespace] = publication
         GhostIoTelemetry.recordWriteStarted(snapshot.size)
 
         return try {
@@ -85,7 +103,7 @@ object GhostPersistenceManager {
                 val startedAtNs = System.nanoTime()
                 var ghostDurable = false
                 val succeeded = try {
-                    val coordinator = recoveryCoordinator(appContext)
+                    val coordinator = recoveryCoordinator(context, namespace)
                     val recovery = coordinator.recover()
                     if (!recovery.allowsNewPromotion) {
                         false
@@ -118,51 +136,69 @@ object GhostPersistenceManager {
      * Includes an accepted in-memory promotion in comparisons even while its
      * single-worker durable transaction is pending.
      */
-    fun bestDistanceFloor(context: Context): Float {
-        val diskDistance = SaveManager.loadBestDistance(context.applicationContext)
+    fun bestDistanceFloor(context: Context): Float =
+        bestDistanceFloor(
+            context = context.applicationContext,
+            namespace = GhostPersistenceNamespace.capture()
+        )
+
+    private fun bestDistanceFloor(
+        context: Context,
+        namespace: GhostPersistenceNamespace
+    ): Float {
+        val diskDistance = artifactStore(context, namespace).loadBestDistanceM()
             .takeIf { it.isFinite() }
             ?.coerceAtLeast(0f)
             ?: 0f
-        val publishedDistance = latestPublication?.distanceM ?: 0f
+        val publishedDistance = latestPublications[namespace]?.distanceM ?: 0f
         return maxOf(diskDistance, publishedDistance)
     }
 
     /** Retry any receipt or durable manifest left by a previous process. */
-    @Synchronized
     internal fun recoverPendingPromotion(
         context: Context
+    ): GhostPromotionRecoveryDisposition = recoverPendingPromotion(
+        context = context.applicationContext,
+        namespace = GhostPersistenceNamespace.capture()
+    )
+
+    @Synchronized
+    private fun recoverPendingPromotion(
+        context: Context,
+        namespace: GhostPersistenceNamespace
     ): GhostPromotionRecoveryDisposition {
         val activeTask = pendingWrite
         if (activeTask != null && !activeTask.isDone) {
             return GhostPromotionRecoveryDisposition.IO_FAILURE
         }
-        return recoveryCoordinator(context.applicationContext).recover()
+        return recoveryCoordinator(context, namespace).recover()
     }
 
     /** Returns the latest in-memory run, falling back to recovered disk state. */
     fun loadLatest(context: Context): List<GhostFrame> {
-        latestPublication?.let { return it.frames }
-
         val appContext = context.applicationContext
-        recoverPendingPromotion(appContext)
-        val loaded = SaveManager.loadGhostRun(appContext)
+        val namespace = GhostPersistenceNamespace.capture()
+        latestPublications[namespace]?.let { return it.frames }
+
+        recoverPendingPromotion(appContext, namespace)
+        val store = artifactStore(appContext, namespace)
+        val loaded = store.loadGhost()
         if (loaded.isEmpty()) return emptyList()
 
-        val loadedDistance = SaveManager.loadBestDistance(appContext)
+        val loadedDistance = store.loadBestDistanceM()
             .takeIf { it.isFinite() }
             ?.coerceAtLeast(0f)
             ?: 0f
         val identity = GhostRunIdentity.calculate(loaded, loadedDistance)
         val publication = PublishedGhost(
+            namespace = namespace,
             frames = loaded,
             distanceM = loadedDistance,
             fingerprint = identity.fingerprint,
             sha256Hex = identity.sha256Hex
         )
-        synchronized(this) {
-            if (latestPublication == null) latestPublication = publication
-            return latestPublication?.frames ?: loaded
-        }
+        val current = latestPublications.putIfAbsent(namespace, publication) ?: publication
+        return current.frames
     }
 
     internal fun awaitPendingWrites(timeoutMs: Long = 5_000L): Boolean {
@@ -179,14 +215,14 @@ object GhostPersistenceManager {
 
     internal fun clearPromotionEvidenceForTests(context: Context): Boolean {
         val appContext = context.applicationContext
-        val ghostFilename = SaveManager.activeGhostFilenameForTests
+        val namespace = GhostPersistenceNamespace.capture()
         val receiptCleared = AtomicFileGhostPromotionReceiptStore(
             context = appContext,
-            ghostFilename = ghostFilename
+            ghostFilename = namespace.ghostFilename
         ).clear()
         val manifestCleared = AtomicFileGhostArtifactManifestStore(
             context = appContext,
-            ghostFilename = ghostFilename
+            ghostFilename = namespace.ghostFilename
         ).clear()
         return receiptCleared && manifestCleared
     }
@@ -194,35 +230,40 @@ object GhostPersistenceManager {
     internal fun clearMemoryForTests() {
         awaitPendingWrites()
         synchronized(this) {
-            latestPublication = null
+            latestPublications.clear()
             pendingWrite = null
         }
         GhostIoTelemetry.reset()
     }
 
-    private fun recoveryCoordinator(context: Context): GhostPromotionRecoveryCoordinator {
-        val ghostFilename = SaveManager.activeGhostFilenameForTests
-        return GhostPromotionRecoveryCoordinator(
-            receiptStore = AtomicFileGhostPromotionReceiptStore(
-                context = context,
-                ghostFilename = ghostFilename
-            ),
-            artifactStore = AndroidGhostPromotionArtifactStore(context),
-            manifestStore = AtomicFileGhostArtifactManifestStore(
-                context = context,
-                ghostFilename = ghostFilename
-            )
-        )
-    }
+    private fun artifactStore(
+        context: Context,
+        namespace: GhostPersistenceNamespace
+    ): GhostPromotionArtifactStore =
+        NamespaceBoundGhostPromotionArtifactStore(context, namespace)
 
-    @Synchronized
+    private fun recoveryCoordinator(
+        context: Context,
+        namespace: GhostPersistenceNamespace
+    ): GhostPromotionRecoveryCoordinator = GhostPromotionRecoveryCoordinator(
+        receiptStore = AtomicFileGhostPromotionReceiptStore(
+            context = context,
+            ghostFilename = namespace.ghostFilename
+        ),
+        artifactStore = artifactStore(context, namespace),
+        manifestStore = AtomicFileGhostArtifactManifestStore(
+            context = context,
+            ghostFilename = namespace.ghostFilename
+        )
+    )
+
     private fun clearPublicationIfCurrent(publication: PublishedGhost) {
-        val current = latestPublication ?: return
+        val current = latestPublications[publication.namespace] ?: return
         if (current.distanceM == publication.distanceM &&
             current.fingerprint == publication.fingerprint &&
             current.sha256Hex == publication.sha256Hex
         ) {
-            latestPublication = null
+            latestPublications.remove(publication.namespace, current)
         }
     }
 }
