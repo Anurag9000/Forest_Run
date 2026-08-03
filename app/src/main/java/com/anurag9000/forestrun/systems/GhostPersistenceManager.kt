@@ -70,7 +70,7 @@ object GhostPersistenceManager {
         if (distanceM < bestDistanceFloor(appContext)) return false
 
         val snapshot = frames.toList()
-        val identity = GhostRunIdentity.calculate(snapshot)
+        val identity = GhostRunIdentity.calculate(snapshot, distanceM)
         val publication = PublishedGhost(
             frames = snapshot,
             distanceM = distanceM,
@@ -148,13 +148,14 @@ object GhostPersistenceManager {
         val loaded = SaveManager.loadGhostRun(appContext)
         if (loaded.isEmpty()) return emptyList()
 
-        val identity = GhostRunIdentity.calculate(loaded)
+        val loadedDistance = SaveManager.loadBestDistance(appContext)
+            .takeIf { it.isFinite() }
+            ?.coerceAtLeast(0f)
+            ?: 0f
+        val identity = GhostRunIdentity.calculate(loaded, loadedDistance)
         val publication = PublishedGhost(
             frames = loaded,
-            distanceM = SaveManager.loadBestDistance(appContext)
-                .takeIf { it.isFinite() }
-                ?.coerceAtLeast(0f)
-                ?: 0f,
+            distanceM = loadedDistance,
             fingerprint = identity.fingerprint,
             sha256Hex = identity.sha256Hex
         )
