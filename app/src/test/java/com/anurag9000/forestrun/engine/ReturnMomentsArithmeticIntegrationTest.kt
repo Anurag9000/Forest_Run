@@ -88,6 +88,33 @@ class ReturnMomentsArithmeticIntegrationTest {
         assertEquals("Good To See You", moment?.title)
     }
 
+    @Test
+    fun `long absence starts at exactly thirty six hours`() {
+        val thresholdMs = 36L * 60L * 60L * 1_000L
+        SaveManager.saveReturnMomentState(
+            context,
+            ReturnMomentState(
+                lastActiveAtMs = 1L,
+                lastGardenGreetingDay = -1L,
+                roughRunStreak = 0
+            )
+        )
+
+        val oneMillisecondBefore = ReturnMomentsSystem.previewGardenMoment(
+            context,
+            summary = null,
+            nowMs = thresholdMs
+        )
+        val exactlyAtThreshold = ReturnMomentsSystem.previewGardenMoment(
+            context,
+            summary = null,
+            nowMs = thresholdMs + 1L
+        )
+
+        assertEquals("Good To See You", oneMillisecondBefore?.title)
+        assertEquals("Welcome Back", exactlyAtThreshold?.title)
+    }
+
     private fun roughSummary(): RunSummary = RunSummary(
         score = 100,
         distanceM = 200f,
