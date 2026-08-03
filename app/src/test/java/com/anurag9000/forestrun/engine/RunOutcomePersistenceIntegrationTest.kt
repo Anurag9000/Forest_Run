@@ -9,7 +9,7 @@ import com.anurag9000.forestrun.systems.GhostArtifactManifestLoadResult
 import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.systems.GhostPersistenceManager
 import com.anurag9000.forestrun.systems.GhostPromotionRecoveryDisposition
-import com.anurag9000.forestrun.systems.GhostRunFingerprint
+import com.anurag9000.forestrun.systems.GhostRunIdentity
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -74,15 +74,10 @@ class RunOutcomePersistenceIntegrationTest {
         assertEquals(480f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(ghost, SaveManager.loadGhostRun(context))
         assertEquals(
-            GhostArtifactManifestLoadResult.Present(
-                GhostArtifactManifest(
-                    distanceM = 480f,
-                    frameCount = ghost.size,
-                    fingerprint = GhostRunFingerprint.calculate(ghost)
-                )
-            ),
+            GhostArtifactManifestLoadResult.Present(manifest(ghost, 480f)),
             manifestStore().load()
         )
+        assertEquals(56L, manifestFile().length())
         assertEquals(
             GhostPromotionRecoveryDisposition.ALREADY_APPLIED,
             GhostPersistenceManager.recoverPendingPromotion(context)
@@ -142,13 +137,7 @@ class RunOutcomePersistenceIntegrationTest {
         assertEquals(900f, SaveManager.loadBestDistance(context), 0f)
         assertEquals(firstGhost, SaveManager.loadGhostRun(context))
         assertEquals(
-            GhostArtifactManifestLoadResult.Present(
-                GhostArtifactManifest(
-                    distanceM = 900f,
-                    frameCount = firstGhost.size,
-                    fingerprint = GhostRunFingerprint.calculate(firstGhost)
-                )
-            ),
+            GhostArtifactManifestLoadResult.Present(manifest(firstGhost, 900f)),
             manifestStore().load()
         )
     }
@@ -171,6 +160,19 @@ class RunOutcomePersistenceIntegrationTest {
         assertNull(SaveManager.loadLastRunSummary(context))
         assertEquals(0, SaveManager.loadForestMoodState(context).totalRuns)
         assertEquals(0L, SaveManager.loadReturnMomentState(context).lastActiveAtMs)
+    }
+
+    private fun manifest(
+        frames: List<GhostFrame>,
+        distanceM: Float
+    ): GhostArtifactManifest {
+        val identity = GhostRunIdentity.calculate(frames)
+        return GhostArtifactManifest(
+            distanceM = distanceM,
+            frameCount = frames.size,
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
+        )
     }
 
     private fun summary(distanceM: Float): RunSummary = RunSummary(
