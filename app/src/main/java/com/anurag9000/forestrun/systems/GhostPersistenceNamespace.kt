@@ -27,10 +27,30 @@ internal data class GhostPersistenceNamespace(
     }
 
     companion object {
-        fun capture(): GhostPersistenceNamespace = GhostPersistenceNamespace(
-            prefsName = SaveManager.activePrefsNameForTests,
-            ghostFilename = SaveManager.activeGhostFilenameForTests
-        )
+        fun capture(): GhostPersistenceNamespace {
+            repeat(CAPTURE_ATTEMPTS) {
+                val prefsName = SaveManager.activePrefsNameForTests
+                val expectedGhostFilename = expectedGhostFilename(prefsName)
+                    ?: throw IllegalStateException("Unsupported save namespace: $prefsName")
+                val observedGhostFilename = SaveManager.activeGhostFilenameForTests
+                if (observedGhostFilename == expectedGhostFilename) {
+                    return GhostPersistenceNamespace(
+                        prefsName = prefsName,
+                        ghostFilename = expectedGhostFilename
+                    )
+                }
+                Thread.yield()
+            }
+            throw IllegalStateException("Save namespace changed while ghost namespace was captured.")
+        }
+
+        private fun expectedGhostFilename(prefsName: String): String? {
+            if (prefsName == SaveManager.PREFS_NAME) return PRIMARY_GHOST_FILENAME
+            if (!prefsName.startsWith(COMPAT_PREFS_PREFIX)) return null
+            val version = prefsName.removePrefix(COMPAT_PREFS_PREFIX)
+            if (version.isEmpty() || version.any { !it.isDigit() }) return null
+            return "$COMPAT_GHOST_PREFIX$version.bin"
+        }
 
         private fun isSafeFilename(value: String): Boolean =
             value.isNotBlank() &&
@@ -39,6 +59,11 @@ internal data class GhostPersistenceNamespace(
                 '/' !in value &&
                 '\\' !in value &&
                 '\u0000' !in value
+
+        private const val CAPTURE_ATTEMPTS = 32
+        private const val PRIMARY_GHOST_FILENAME = "ghost_run.bin"
+        private const val COMPAT_PREFS_PREFIX = "forest_run_prefs_compat_v"
+        private const val COMPAT_GHOST_PREFIX = "ghost_run_compat_v"
     }
 }
 
@@ -51,7 +76,7 @@ internal data class GhostPersistenceNamespace(
  */
 internal class NamespaceBoundGhostPromotionArtifactStore(
     context: Context,
-    private val namespace: GhostPersistenceNamespace
+    namespace: GhostPersistenceNamespace
 ) : GhostPromotionArtifactStore {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences(namespace.prefsName, Context.MODE_PRIVATE)
@@ -88,11 +113,10 @@ internal class NamespaceBoundGhostPromotionArtifactStore(
 
                 val frames = ArrayList<GhostFrame>(count)
                 repeat(count) {
-                    val storedState: Int
                     val t = data.readFloat()
                     val x = data.readFloat()
                     val y = data.readFloat()
-                    storedState = data.readInt()
+                    val storedState = data.readInt()
                     val stateOrdinal = if (isVersioned) {
                         GhostStateCodec.decodeToOrdinal(storedState) ?: return emptyList()
                     } else {
