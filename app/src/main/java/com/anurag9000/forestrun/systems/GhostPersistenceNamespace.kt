@@ -13,9 +13,9 @@ import java.io.FileOutputStream
 /**
  * Immutable identity for one primary or compatibility persistence namespace.
  *
- * Capturing both names together prevents a queued ghost transaction from
- * reading one preference namespace while writing another namespace's ghost
- * artifact after test/support compatibility mode changes.
+ * The preference name is one volatile value. Its canonical ghost filename is
+ * derived from that single read, so a queued transaction cannot observe a
+ * mixed pair during SaveManager's brief two-field namespace transition.
  */
 internal data class GhostPersistenceNamespace(
     val prefsName: String,
@@ -28,20 +28,13 @@ internal data class GhostPersistenceNamespace(
 
     companion object {
         fun capture(): GhostPersistenceNamespace {
-            repeat(CAPTURE_ATTEMPTS) {
-                val prefsName = SaveManager.activePrefsNameForTests
-                val expectedGhostFilename = expectedGhostFilename(prefsName)
-                    ?: throw IllegalStateException("Unsupported save namespace: $prefsName")
-                val observedGhostFilename = SaveManager.activeGhostFilenameForTests
-                if (observedGhostFilename == expectedGhostFilename) {
-                    return GhostPersistenceNamespace(
-                        prefsName = prefsName,
-                        ghostFilename = expectedGhostFilename
-                    )
-                }
-                Thread.yield()
-            }
-            throw IllegalStateException("Save namespace changed while ghost namespace was captured.")
+            val prefsName = SaveManager.activePrefsNameForTests
+            val ghostFilename = expectedGhostFilename(prefsName)
+                ?: throw IllegalStateException("Unsupported save namespace: $prefsName")
+            return GhostPersistenceNamespace(
+                prefsName = prefsName,
+                ghostFilename = ghostFilename
+            )
         }
 
         private fun expectedGhostFilename(prefsName: String): String? {
@@ -60,7 +53,6 @@ internal data class GhostPersistenceNamespace(
                 '\\' !in value &&
                 '\u0000' !in value
 
-        private const val CAPTURE_ATTEMPTS = 32
         private const val PRIMARY_GHOST_FILENAME = "ghost_run.bin"
         private const val COMPAT_PREFS_PREFIX = "forest_run_prefs_compat_v"
         private const val COMPAT_GHOST_PREFIX = "ghost_run_compat_v"
