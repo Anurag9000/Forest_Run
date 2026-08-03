@@ -77,8 +77,9 @@ internal data class GhostPromotionPersistenceResult(
  * Makes asynchronous best-ghost publication recoverable across process death.
  *
  * Version-1 sidecars remain readable through their legacy FNV identity. New
- * sidecars use SHA-256, and any legacy evidence that must be replayed is upgraded
- * to a strong version-2 manifest before best distance can advance.
+ * sidecars use SHA-256 over accepted distance plus frame payload, and any legacy
+ * evidence that must be replayed is upgraded to a strong version-2 manifest
+ * before best distance can advance.
  */
 internal class GhostPromotionRecoveryCoordinator(
     private val receiptStore: GhostPromotionReceiptStore,
@@ -93,7 +94,7 @@ internal class GhostPromotionRecoveryCoordinator(
             return failedPersistence()
         }
 
-        val identity = GhostRunIdentity.calculate(frames)
+        val identity = GhostRunIdentity.calculate(frames, distanceM)
         val receipt = GhostPromotionReceipt(
             distanceM = distanceM,
             frameCount = frames.size,
@@ -164,6 +165,7 @@ internal class GhostPromotionRecoveryCoordinator(
         val durableGhost = artifactStore.loadGhost()
         val durableIdentity = matchingIdentity(
             frames = durableGhost,
+            distanceM = receipt.distanceM,
             frameCount = receipt.frameCount,
             fingerprint = receipt.fingerprint,
             sha256Hex = receipt.sha256Hex
@@ -211,6 +213,7 @@ internal class GhostPromotionRecoveryCoordinator(
                 val knownIdentity = knownGhost?.let { frames ->
                     matchingIdentity(
                         frames = frames,
+                        distanceM = manifest.distanceM,
                         frameCount = manifest.frameCount,
                         fingerprint = manifest.fingerprint,
                         sha256Hex = manifest.sha256Hex
@@ -227,6 +230,7 @@ internal class GhostPromotionRecoveryCoordinator(
                         val durableGhost = knownGhost ?: artifactStore.loadGhost()
                         val identity = knownIdentity ?: matchingIdentity(
                             frames = durableGhost,
+                            distanceM = manifest.distanceM,
                             frameCount = manifest.frameCount,
                             fingerprint = manifest.fingerprint,
                             sha256Hex = manifest.sha256Hex
@@ -277,19 +281,23 @@ internal class GhostPromotionRecoveryCoordinator(
 
     private fun matchingIdentity(
         frames: List<GhostFrame>,
+        distanceM: Float,
         frameCount: Int,
         fingerprint: Long,
         sha256Hex: String?
     ): GhostRunIdentityValue? {
         if (frames.size != frameCount || !GhostRunValidator.isValid(frames)) return null
-        val identity = GhostRunIdentity.calculate(frames)
-        val matches = if (sha256Hex == null) {
-            identity.fingerprint == fingerprint
+        val identity = if (sha256Hex == null) {
+            GhostRunIdentityValue(
+                fingerprint = GhostRunFingerprint.calculate(frames),
+                sha256Hex = GhostRunIdentity.calculate(frames, distanceM).sha256Hex
+            )
         } else {
-            GhostRunIdentity.isCanonicalSha256(sha256Hex) &&
-                identity.fingerprint == fingerprint &&
-                identity.sha256Hex == sha256Hex
+            if (!GhostRunIdentity.isCanonicalSha256(sha256Hex)) return null
+            GhostRunIdentity.calculate(frames, distanceM)
         }
+        val matches = identity.fingerprint == fingerprint &&
+            (sha256Hex == null || identity.sha256Hex == sha256Hex)
         return identity.takeIf { matches }
     }
 
