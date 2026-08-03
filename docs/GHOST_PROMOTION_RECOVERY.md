@@ -26,9 +26,49 @@ The frame payload remains `SaveManager` ghost format version 2. This protocol do
 
 It never writes best distance directly.
 
-`GhostPersistenceManager` owns immediate in-memory publication, pending-distance admission, single-worker ordering, startup/pre-write recovery, and I/O telemetry.
+`GhostPersistenceManager` owns immediate per-namespace in-memory publication, pending-distance admission, single-worker ordering, startup/pre-write recovery, namespace-stable disk fallback, and I/O telemetry.
 
-`GhostPromotionRecoveryCoordinator` owns the durable transaction and recovery decisions.
+`GhostPersistenceNamespace` captures the active preference namespace once and derives its canonical ghost filename. `NamespaceBoundGhostPromotionArtifactStore` binds one preference store and one AtomicFile to that immutable snapshot.
+
+`GhostPromotionRecoveryCoordinator` owns the durable transaction and recovery decisions using the receipt, ghost, manifest, and distance adapters supplied to it.
+
+## Namespace ownership
+
+Primary persistence uses:
+
+```text
+preferences: forest_run_prefs
+ghost:       ghost_run.bin
+```
+
+Compatibility schema version `N` uses:
+
+```text
+preferences: forest_run_prefs_compat_vN
+ghost:       ghost_run_compat_vN.bin
+```
+
+A manager request reads the active preference namespace once and derives the matching canonical ghost filename. It does not independently read two mutable namespace fields.
+
+The resulting immutable `GhostPersistenceNamespace` is carried through:
+
+```text
+pre-write recovery
+pending-distance admission
+in-memory publication
+queued worker
+promotion receipt
+ghost artifact
+artifact manifest
+best-distance preferences
+failed-publication cleanup
+```
+
+The worker never recaptures the active namespace.
+
+`NamespaceBoundGhostPromotionArtifactStore` mirrors the SaveManager ghost codec while remaining permanently bound to its constructor namespace. It supports version-2 writes and legacy raw-ordinal reads, validates exact payload size and frame bounds, and commits best distance synchronously. It never calls dynamic active-namespace ghost or distance methods after construction.
+
+See `docs/GHOST_PERSISTENCE_NAMESPACES.md` for the complete isolation contract.
 
 ## Versioned sidecar schemas
 
@@ -39,7 +79,7 @@ Version-1 receipt and manifest records remain readable:
 ```text
 magic       4 bytes
 version     4 bytes
- distance    4 bytes
+distance    4 bytes
 frame count 4 bytes
 FNV-1a      8 bytes
 --------------------
@@ -93,7 +133,7 @@ The digest is serialized as 32 raw bytes and represented in memory as exactly 64
 
 ## Durable worker sequence
 
-For an accepted candidate, the single worker performs:
+For an accepted candidate, the single worker performs inside one captured namespace:
 
 ```text
 write AtomicFile version-2 promotion receipt
@@ -109,26 +149,31 @@ The manifest precedes the threshold write so process death after receipt clearin
 
 The threshold write is monotonic. Repeated or delayed recovery cannot lower progress.
 
+The single executor remains global across namespaces. This preserves promotion order and simple telemetry while immutable snapshots prevent the serialized jobs from cross-writing.
+
 ## Immediate playback and pending floor
 
 Accepted frames are published in memory before worker execution. `PublishedGhost` carries:
 
+- namespace;
 - immutable frames;
 - accepted distance;
 - legacy fingerprint;
 - distance-bound SHA-256 digest.
 
-Failure cleanup removes an in-memory publication only when distance, fingerprint, and digest all identify the same publication.
+Publications are stored in a concurrent map keyed by `GhostPersistenceNamespace`. `loadLatest(...)` can therefore return only the publication belonging to the namespace captured for that call.
 
-`GhostPersistenceManager.bestDistanceFloor(...)` is:
+Failure cleanup removes an in-memory publication only when namespace, distance, fingerprint, and digest all identify the same publication.
+
+`GhostPersistenceManager.bestDistanceFloor(...)` is namespace-specific:
 
 ```text
-max(durable best distance, accepted in-memory promotion distance)
+max(bound durable best distance, accepted in-memory promotion distance for that namespace)
 ```
 
-A shorter candidate cannot queue behind and overwrite a longer accepted promotion.
+A shorter candidate cannot queue behind and overwrite a longer accepted promotion in the same namespace. A primary publication cannot raise a compatibility floor, and a compatibility publication cannot replace primary playback.
 
-The compatibility overload submits at the current floor. It may replace an equal-distance ghost; the resulting manifest receives the replacement frames’ distance-bound digest without lowering best distance.
+The compatibility overload submits at the current namespace floor. It may replace an equal-distance ghost; the resulting manifest receives the replacement frames’ distance-bound digest without lowering best distance.
 
 ## Receipt recovery
 
@@ -250,6 +295,8 @@ Maintenance inspection does not silently upgrade a healthy legacy manifest. Cano
 
 Mutating maintenance commands require a debuggable cold start after save repair and before `GameView`. A reused live Activity is inspection-only.
 
+A maintenance instance remains bound to the namespace selected when its handlers are created. Do not change the active namespace while that instance remains in use. This is a narrower limitation than manager workers: active and queued `GhostPersistenceManager` work is namespace-stable, while live maintenance-instance switching still awaits migration to the same immutable adapters.
+
 ## Recovery triggers
 
 Recovery is attempted:
@@ -260,7 +307,9 @@ Recovery is attempted:
 - before disk fallback in `loadLatest(...)`;
 - through explicit cold-start maintenance.
 
-Disk fallback builds its in-memory publication identity from the loaded best distance and loaded frames, preserving the same distance-bound identity contract.
+Manager recovery and disk fallback use one captured namespace for receipt, manifest, ghost, and distance. Disk fallback builds its in-memory publication identity from the bound best distance and bound frames, preserving the same distance-bound identity contract.
+
+Explicit recovery in another namespace may conservatively return `IO_FAILURE` while any manager worker is active. The global worker gate remains fail-closed even though queued writes themselves are namespace-isolated.
 
 ## Relationship to non-ghost recovery
 
@@ -287,9 +336,16 @@ Coverage includes:
 - manifest-only repair;
 - already-applied no-ghost-load fast path;
 - maintenance diagnosis and selective evidence removal;
-- pending-distance admission and equal-distance replacement.
+- pending-distance admission and equal-distance replacement;
+- canonical primary and compatibility namespace capture;
+- bound-store persistence after an active namespace switch;
+- separate primary and compatibility ghost files and best distances;
+- per-namespace immediate publication and disk fallback;
+- queued primary and compatibility worker isolation;
+- versioned bound-store writes, legacy reads, unknown-version/trailing-byte rejection, and invalid-candidate preservation;
+- source contracts prohibiting mutable namespace recapture inside a queued worker.
 
-Focused Kotlin compilation passed for the identity, codecs, recovery coordinator, and manager surface. Executable golden-vector, codec, and recovery-state-machine harnesses passed. Exact-head Android Gradle, Robolectric, emulator, and physical-device execution remain separate evidence gates.
+Focused Kotlin compilation passed for the identity, codecs, recovery coordinator, namespace adapter, and manager surface. Executable golden-vector, codec, recovery-state-machine, and filesystem namespace-isolation harnesses passed. Exact-head Android Gradle, Robolectric, emulator, and physical-device execution remain separate evidence gates.
 
 ## Remaining limitations
 
@@ -298,5 +354,6 @@ Focused Kotlin compilation passed for the identity, codecs, recovery coordinator
 - The healthy already-applied fast path deliberately avoids repeated full ghost hashing; explicit maintenance performs full validation.
 - SHA-256 establishes collision-resistant identity, not authenticity against a malicious writer with filesystem access.
 - Remediation is debug/support tooling rather than an end-user UI.
-- Compatibility namespaces must not switch during an active worker or maintenance instance.
+- Compatibility namespace switching is supported for active and queued `GhostPersistenceManager` work, but not for an already-created recovery-maintenance instance.
+- The manager retains one global single-worker queue and conservatively blocks explicit recovery while any worker is active.
 - Exact-head Android, emulator, physical-device, and ADB acceptance remain outstanding.
