@@ -9,12 +9,12 @@ import org.junit.Test
 class GhostRunIdentityTest {
 
     @Test
-    fun `canonical SHA-256 matches independent persisted-byte golden vector`() {
-        val identity = GhostRunIdentity.calculate(frames())
+    fun `canonical SHA-256 matches independent distance and frame golden vector`() {
+        val identity = GhostRunIdentity.calculate(frames(), DISTANCE_M)
 
         assertEquals(-4_791_329_882_507_978_193L, identity.fingerprint)
         assertEquals(
-            "1d3081358ab985faef01869defb5c7a2353f547c165d381b2d80a066c461087f",
+            "fbea238ceb98e6c3dd2cb4ff921d988ca14f1322b3cc520e77626c613a1b7cbe",
             identity.sha256Hex
         )
         assertTrue(GhostRunIdentity.isCanonicalSha256(identity.sha256Hex))
@@ -23,7 +23,7 @@ class GhostRunIdentityTest {
     @Test
     fun `strong identity covers frame count and every persisted frame field`() {
         val base = frames()
-        val expected = GhostRunIdentity.calculate(base)
+        val expected = GhostRunIdentity.calculate(base, DISTANCE_M)
         val variants = listOf(
             base.toMutableList().apply { this[0] = this[0].copy(t = 0.01f) },
             base.toMutableList().apply { this[0] = this[0].copy(x = 101f) },
@@ -35,9 +35,19 @@ class GhostRunIdentityTest {
         )
 
         variants.forEach { variant ->
-            val actual = GhostRunIdentity.calculate(variant)
+            val actual = GhostRunIdentity.calculate(variant, DISTANCE_M)
             assertFalse(expected.sha256Hex == actual.sha256Hex)
         }
+    }
+
+    @Test
+    fun `strong identity binds accepted distance while legacy fingerprint remains frame only`() {
+        val frames = frames()
+        val first = GhostRunIdentity.calculate(frames, DISTANCE_M)
+        val second = GhostRunIdentity.calculate(frames, DISTANCE_M + 1f)
+
+        assertEquals(first.fingerprint, second.fingerprint)
+        assertFalse(first.sha256Hex == second.sha256Hex)
     }
 
     @Test
@@ -55,7 +65,7 @@ class GhostRunIdentityTest {
 
     @Test
     fun `canonical digest rejects uppercase malformed and wrong length text`() {
-        val valid = GhostRunIdentity.calculate(frames()).sha256Hex
+        val valid = GhostRunIdentity.calculate(frames(), DISTANCE_M).sha256Hex
 
         assertFalse(GhostRunIdentity.isCanonicalSha256(valid.uppercase()))
         assertFalse(GhostRunIdentity.isCanonicalSha256("g" + valid.drop(1)))
@@ -65,15 +75,16 @@ class GhostRunIdentityTest {
     }
 
     @Test
-    fun `matching uses SHA-256 when present and legacy fingerprint only when absent`() {
+    fun `matching uses distance-bound SHA-256 when present and legacy fingerprint only when absent`() {
         val frames = frames()
-        val identity = GhostRunIdentity.calculate(frames)
+        val identity = GhostRunIdentity.calculate(frames, DISTANCE_M)
         val tamperedDigest = (if (identity.sha256Hex.first() == '0') '1' else '0') +
             identity.sha256Hex.drop(1)
 
         assertTrue(
             GhostRunIdentity.matches(
                 frames,
+                DISTANCE_M,
                 frames.size,
                 identity.fingerprint,
                 identity.sha256Hex
@@ -82,14 +93,25 @@ class GhostRunIdentityTest {
         assertFalse(
             GhostRunIdentity.matches(
                 frames,
+                DISTANCE_M,
                 frames.size,
                 identity.fingerprint,
                 tamperedDigest
             )
         )
+        assertFalse(
+            GhostRunIdentity.matches(
+                frames,
+                DISTANCE_M + 1f,
+                frames.size,
+                identity.fingerprint,
+                identity.sha256Hex
+            )
+        )
         assertTrue(
             GhostRunIdentity.matches(
                 frames,
+                DISTANCE_M + 1f,
                 frames.size,
                 GhostRunFingerprint.calculate(frames),
                 null
@@ -101,4 +123,8 @@ class GhostRunIdentityTest {
         GhostFrame(0f, 100f, 200f, 0, 1f, 1f),
         GhostFrame(0.04f, 104f, 196f, 1, 0.98f, 1.02f)
     )
+
+    private companion object {
+        const val DISTANCE_M = 480f
+    }
 }
