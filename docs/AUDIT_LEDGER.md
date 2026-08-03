@@ -38,11 +38,12 @@ Implemented:
 - Shared sizing, safe-content, cinematic, lighting, parallax, and layout builders reject or normalize malformed geometry.
 - `EntityFactory` gives all 19 entity families one finite positive geometry boundary and preserves valid spawn origins.
 - Global speed, Bloom, mercy, spawn-gap, biome-length, wind, catalogue, costume, biome-cycle, scenario, and pacifist-route assumptions have executable invariant tests.
+- `ParallaxBackground.update(...)` rejects malformed delta/speed pairs, applies bounded values, and repairs poisoned ambience and Bloom clocks before advancement.
 
 Bounded debt:
 
 - `GameView.update()` remains a large coordinator whose direct-call boundary still relies on the render-thread delta contract; production `GameThread` calls are bounded, but the coordinator should eventually be decomposed and given a narrow public admission layer.
-- `ParallaxBackground` still relies on finite production inputs from `GameThread` and `GameStateManager`; malformed direct/debug calls should eventually be normalized at its own public boundary after the large owner is decomposed.
+- `ParallaxBackground.setBloomState(...)` still uses direct `Float.coerceIn(...)` on caller values; nonfinite activation/afterglow inputs require explicit normalization and regression coverage.
 
 ## 3. Garden economy, screen, wardrobe, and sanctuary
 
@@ -117,7 +118,7 @@ Still requiring ordinary-play/hardware acceptance:
 Bounded architecture debt:
 
 - the full collision-result `when` dispatcher remains in `GameView`;
-- STUMBLE and MERCY_MISS live-state effects remain in `GameViewNonTerminalCollisionEffects`.
+- STUMBLE and MERY_MISS live-state effects remain in `GameViewNonTerminalCollisionEffects`.
 
 ## 5. Persistence, progression, and return history
 
@@ -185,7 +186,15 @@ Implemented:
 - legacy raw-ordinal reads;
 - future-version rejection without destructive rewrite;
 - context-aware ghost visibility and no gameplay hitbox;
-- coherent synchronized ghost-I/O telemetry snapshots with concurrent invariant tests.
+- coherent synchronized ghost-I/O telemetry snapshots with concurrent invariant tests;
+- `GhostPersistenceNamespace` captures one preference namespace and derives the canonical primary or compatibility ghost filename from that single value;
+- `NamespaceBoundGhostPromotionArtifactStore` binds ghost AtomicFile and best-distance preferences to the same immutable namespace without later dynamic `SaveManager` namespace reads;
+- queued workers carry one namespace through recovery, receipt, ghost, manifest, distance, and cleanup;
+- immediate publications are stored in a concurrent map keyed by namespace, so primary and compatibility playback/floors cannot leak into one another;
+- failed-worker cleanup requires namespace, distance, FNV fingerprint, and SHA-256 identity;
+- bound-store tests preserve version-2 writes, legacy reads, exact-size rejection, and invalid-candidate durability;
+- integration tests cover immediate primary/compatibility switching, queued writes, durable separation, and switching back and forth after completion;
+- `scripts/test_ghost_persistence_namespace_contract.py` and the migrated recovery contract prevent reintroduction of dynamic worker recapture or a global publication slot.
 
 Still requiring physical evidence:
 
@@ -193,6 +202,11 @@ Still requiring physical evidence:
 - process-death/relaunch behavior across OEM devices;
 - playback readability near dense hazards;
 - disk I/O under thermal and memory pressure.
+
+Bounded debt:
+
+- one global executor serializes all namespace work and explicit recovery conservatively blocks while any worker is active;
+- an already-created `AndroidRecoveryEvidenceMaintenance` instance still requires a stable selected namespace because its handlers have not yet been migrated fully to immutable namespace adapters.
 
 ## 8. Performance, physical-device, and store-delivery evidence
 
@@ -290,12 +304,15 @@ Locally verified during remediation where runtime execution was available:
 - focused Kotlin compilation and executable return-arithmetic validation for saturation, rollback, pathological timestamps, and the exact 36-hour threshold;
 - source-contract parser validation for return-moment arithmetic ownership and the absence of raw increment/subtraction paths;
 - focused Kotlin compilation and executable familiarity-warmth validation for complete accumulation, independent seven-point combinations, negative restored counters, and tier boundaries;
-- source-contract parser validation for pure-scorer delegation, five independent modifiers, stable thresholds, and public BONDED-copy coverage.
+- source-contract parser validation for pure-scorer delegation, five independent modifiers, stable thresholds, and public BONDED-copy coverage;
+- focused Kotlin compilation for `GhostPersistenceNamespace`, the namespace-bound artifact store, and the namespace-aware manager surface;
+- filesystem-backed primary/compatibility ghost and distance isolation, including capture while the separate mutable ghost filename was intentionally stale;
+- source-contract migration preserving recovery ordering, strong identity, legacy upgrade, corruption blocking, and healthy fast-path coverage while adding namespace ownership.
 
 Currently not executable or observable from this environment:
 
 - a complete local repository checkout and the full expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
-- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy acceptance;
+- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy/ghost-namespace acceptance;
 - push-triggered GitHub Actions check-run conclusions for the latest `main` SHA, because the installed connector exposes only pull-request-triggered workflow runs.
 
-Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, and exact-diff review establish the intended ordering, arithmetic, and relationship-scoring boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
+Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, filesystem harnesses, and exact-diff review establish the intended ordering, arithmetic, relationship-scoring, and namespace-isolation boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
