@@ -118,7 +118,7 @@ Still requiring ordinary-play/hardware acceptance:
 Bounded architecture debt:
 
 - the full collision-result `when` dispatcher remains in `GameView`;
-- STUMBLE and MERY_MISS live-state effects remain in `GameViewNonTerminalCollisionEffects`.
+- STUMBLE and MERCY_MISS live-state effects remain in `GameViewNonTerminalCollisionEffects`.
 
 ## 5. Persistence, progression, and return history
 
