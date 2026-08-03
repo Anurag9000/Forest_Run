@@ -18,14 +18,18 @@ class GhostPersistenceNamespaceContractTest(unittest.TestCase):
         cls.namespace = NAMESPACE.read_text(encoding="utf-8")
         cls.integration = INTEGRATION.read_text(encoding="utf-8")
 
-    def test_namespace_capture_requires_coherent_preference_and_file_pair(self) -> None:
+    def test_namespace_capture_derives_one_coherent_pair_from_one_volatile_read(self) -> None:
         self.assertIn("data class GhostPersistenceNamespace", self.namespace)
-        self.assertIn("SaveManager.activePrefsNameForTests", self.namespace)
-        self.assertIn("SaveManager.activeGhostFilenameForTests", self.namespace)
-        self.assertIn("expectedGhostFilename(prefsName)", self.namespace)
-        self.assertIn("observedGhostFilename == expectedGhostFilename", self.namespace)
-        self.assertIn("Thread.yield()", self.namespace)
-        self.assertIn("Save namespace changed while ghost namespace was captured.", self.namespace)
+        capture = self.namespace.split("fun capture(): GhostPersistenceNamespace", 1)[1]
+        capture = capture.split("private fun expectedGhostFilename", 1)[0]
+        self.assertEqual(1, capture.count("SaveManager.activePrefsNameForTests"))
+        self.assertNotIn("SaveManager.activeGhostFilenameForTests", capture)
+        self.assertIn("expectedGhostFilename(prefsName)", capture)
+        self.assertIn("Unsupported save namespace", capture)
+        self.assertIn("PRIMARY_GHOST_FILENAME", self.namespace)
+        self.assertIn("COMPAT_PREFS_PREFIX", self.namespace)
+        self.assertIn("COMPAT_GHOST_PREFIX", self.namespace)
+        self.assertIn("version.any { !it.isDigit() }", self.namespace)
         self.assertIn("'/' !in value", self.namespace)
         self.assertIn("'\\\\' !in value", self.namespace)
 
@@ -41,6 +45,8 @@ class GhostPersistenceNamespaceContractTest(unittest.TestCase):
         self.assertIn("SaveManager.GHOST_FILE_MAGIC", store)
         self.assertIn("SaveManager.GHOST_FILE_VERSION", store)
         self.assertIn("GhostRunValidator.isValid(frames)", store)
+        self.assertIn("GhostStateCodec.decodeToOrdinal", store)
+        self.assertIn("GhostStateCodec.encodeOrdinal", store)
 
     def test_manager_publication_and_workers_are_namespace_keyed(self) -> None:
         self.assertIn(
@@ -68,6 +74,9 @@ class GhostPersistenceNamespaceContractTest(unittest.TestCase):
             self.manager,
         )
         self.assertNotIn("AndroidGhostPromotionArtifactStore(context)", self.manager)
+        self.assertNotIn("SaveManager.loadGhostRun", self.manager)
+        self.assertNotIn("SaveManager.saveGhostRun", self.manager)
+        self.assertNotIn("SaveManager.loadBestDistance", self.manager)
 
     def test_integration_covers_immediate_switch_and_both_durable_namespaces(self) -> None:
         self.assertIn(
