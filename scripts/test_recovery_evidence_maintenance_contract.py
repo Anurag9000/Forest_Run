@@ -153,6 +153,7 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
             "distanceM",
             "restQuote",
             "fingerprint",
+            "sha256Hex",
         ):
             self.assertNotIn(forbidden, report)
 
@@ -213,8 +214,11 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
 
         matches = extract_braced_block(handler, "private fun manifestMatches(")
         self.assertIn("SaveManager.loadGhostRun(context)", matches)
-        self.assertIn("GhostRunValidator.isValid(frames)", matches)
-        self.assertIn("GhostRunFingerprint.calculate(frames)", matches)
+        self.assertIn("GhostRunIdentity.matches(", matches)
+        self.assertIn("frameCount = manifest.frameCount", matches)
+        self.assertIn("fingerprint = manifest.fingerprint", matches)
+        self.assertIn("sha256Hex = manifest.sha256Hex", matches)
+        self.assertNotIn("GhostRunFingerprint.calculate", matches)
 
     def test_manifest_corruption_has_distinct_recovery_status(self) -> None:
         handler = extract_braced_block(
@@ -230,10 +234,7 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
         clear = extract_braced_block(self.source, "private fun clear(")
         self.assertIn("if (!handler.clearEvidence())", clear)
         self.assertIn("val after = handler.inspect()", clear)
-        self.assertIn(
-            "after.state == RecoveryEvidenceState.CLEAN",
-            clear,
-        )
+        self.assertIn("after.state == RecoveryEvidenceState.CLEAN", clear)
         self.assertIn("RecoveryDiscardDisposition.IO_FAILURE", clear)
 
 
