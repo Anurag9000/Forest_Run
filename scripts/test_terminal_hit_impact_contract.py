@@ -78,7 +78,7 @@ class TerminalHitImpactContractTest(unittest.TestCase):
         cls.impact = IMPACT.read_text(encoding="utf-8")
 
     def test_coordinator_owns_exact_impact_order_before_capture(self) -> None:
-        apply = extract_braced_block(cls_source := self.impact, "fun apply(")
+        apply = extract_braced_block(self.impact, "fun apply(")
         order = (
             "effects.recordRunHit()",
             "effects.suppressGhost(GHOST_SUPPRESSION_SECONDS)",
@@ -91,7 +91,10 @@ class TerminalHitImpactContractTest(unittest.TestCase):
         )
         positions = [apply.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
-        self.assertIn("const val GHOST_SUPPRESSION_SECONDS = 1.35f", cls_source)
+        self.assertIn(
+            "const val GHOST_SUPPRESSION_SECONDS = 1.35f",
+            self.impact,
+        )
 
     def test_hit_branch_delegates_impact_once_without_direct_effect_calls(self) -> None:
         start = self.game_view.index("CollisionResult.HIT -> {")
