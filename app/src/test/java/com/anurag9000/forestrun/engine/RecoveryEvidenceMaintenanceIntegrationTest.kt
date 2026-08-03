@@ -265,6 +265,23 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
     }
 
     @Test
+    fun `tampered distance is diagnosed and targeted discard preserves ghost`() {
+        val frames = ghostFrames()
+        val valid = manifest(frames, 800f)
+        assertTrue(SaveManager.saveGhostRun(context, frames))
+        assertTrue(manifestStore.save(valid.copy(distanceM = 801f)))
+        val maintenance = AndroidRecoveryEvidenceMaintenance(context)
+
+        val before = maintenance.inspect().ghostPromotion
+
+        assertEquals(RecoveryEvidenceState.CORRUPT, before.state)
+        assertEquals("manifest_artifact_mismatch", before.detail)
+        val discarded = maintenance.discardCorrupt(RecoveryEvidenceDomain.GHOST_PROMOTION)
+        assertEquals(RecoveryDiscardDisposition.DISCARDED, discarded.disposition)
+        assertEquals(frames, SaveManager.loadGhostRun(context))
+    }
+
+    @Test
     fun `manifest artifact mismatch is diagnosed and targeted discard preserves ghost`() {
         val frames = ghostFrames()
         val unrelated = frames.mapIndexed { index, frame ->
@@ -330,7 +347,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         frames: List<GhostFrame>,
         distanceM: Float
     ): GhostPromotionReceipt {
-        val identity = GhostRunIdentity.calculate(frames)
+        val identity = GhostRunIdentity.calculate(frames, distanceM)
         return GhostPromotionReceipt(
             distanceM = distanceM,
             frameCount = frames.size,
@@ -343,7 +360,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         frames: List<GhostFrame>,
         distanceM: Float
     ): GhostArtifactManifest {
-        val identity = GhostRunIdentity.calculate(frames)
+        val identity = GhostRunIdentity.calculate(frames, distanceM)
         return GhostArtifactManifest(
             distanceM = distanceM,
             frameCount = frames.size,
