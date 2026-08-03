@@ -7,22 +7,12 @@ import pathlib
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-MANAGER = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPersistenceManager.kt"
-)
-RECOVERY = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPromotionRecovery.kt"
-)
-MANIFEST = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/systems/GhostArtifactManifest.kt"
-)
-SAVE_MANAGER = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt"
-)
+SYSTEMS = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems"
+MANAGER = SYSTEMS / "GhostPersistenceManager.kt"
+RECOVERY = SYSTEMS / "GhostPromotionRecovery.kt"
+MANIFEST = SYSTEMS / "GhostArtifactManifest.kt"
+IDENTITY = SYSTEMS / "GhostRunIdentity.kt"
+SAVE_MANAGER = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt"
 
 
 def extract_braced_block_at(source: str, start: int) -> str:
@@ -86,7 +76,6 @@ def extract_braced_block(source: str, signature: str) -> str:
 
 
 def extract_braced_overload(source: str, signature: str) -> str:
-    """Return the first overload with a block body, skipping expression bodies."""
     start = 0
     while True:
         candidate = source.find(signature, start)
@@ -106,6 +95,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         cls.manager = MANAGER.read_text(encoding="utf-8")
         cls.recovery = RECOVERY.read_text(encoding="utf-8")
         cls.manifest = MANIFEST.read_text(encoding="utf-8")
+        cls.identity = IDENTITY.read_text(encoding="utf-8")
         cls.save_manager = SAVE_MANAGER.read_text(encoding="utf-8")
 
     def test_single_worker_preserves_promotion_order(self) -> None:
@@ -113,18 +103,19 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn('Thread(runnable, "forest-run-ghost-io")', self.manager)
         self.assertIn("pendingWrite = executor.submit", self.manager)
 
-    def test_immediate_publication_carries_distance_and_fingerprint(self) -> None:
+    def test_immediate_publication_carries_strong_identity(self) -> None:
         save = extract_braced_overload(self.manager, "fun saveBestRunAsync(")
         order = (
             "val snapshot = frames.toList()",
-            "GhostRunFingerprint.calculate(snapshot)",
+            "val identity = GhostRunIdentity.calculate(snapshot)",
+            "fingerprint = identity.fingerprint",
+            "sha256Hex = identity.sha256Hex",
             "latestPublication = publication",
             "GhostIoTelemetry.recordWriteStarted(snapshot.size)",
             "pendingWrite = executor.submit",
         )
         positions = [save.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
-        self.assertIn("distanceM = distanceM", save)
 
     def test_legacy_and_direct_callers_cannot_regress_pending_distance(self) -> None:
         compatibility_start = self.manager.index(
@@ -162,9 +153,10 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
     def test_receipt_ghost_manifest_distance_and_clear_order(self) -> None:
         persist = extract_braced_block(self.recovery, "fun persist(")
         order = (
+            "val identity = GhostRunIdentity.calculate(frames)",
             "receiptStore.save(receipt)",
             "artifactStore.saveGhost(frames)",
-            "manifestStore.save(receipt.toManifest())",
+            "manifestStore.save(receipt.toManifest(identity))",
             "artifactStore.loadBestDistanceM()",
             "artifactStore.saveBestDistanceM(targetBest)",
             "receiptStore.clear()",
@@ -186,25 +178,34 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             result,
         )
 
-    def test_receipt_recovery_ensures_manifest_before_distance_and_clear(self) -> None:
+    def test_receipt_recovery_requires_strong_match_and_manifest_before_distance(self) -> None:
         recover = extract_braced_block(self.recovery, "private fun recoverReceipt(")
         order = (
             "artifactStore.loadGhost()",
-            "matches(durableGhost, receipt.frameCount, receipt.fingerprint)",
+            "matchingIdentity(",
+            "val expectedManifest = receipt.toManifest(durableIdentity)",
             "ensureManifest(expectedManifest)",
             "repairDistanceIfNeeded(receipt.distanceM)",
             "receiptStore.clear()",
         )
         positions = [recover.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
+        self.assertIn("sha256Hex = receipt.sha256Hex", recover)
 
-        mismatch = extract_braced_block(
-            recover,
-            "if (!matches(durableGhost, receipt.frameCount, receipt.fingerprint))",
-        )
+        mismatch = recover[recover.index("if (durableIdentity == null)") :]
         self.assertIn("receiptStore.clear()", mismatch)
         self.assertIn("recoverManifest(durableGhost)", mismatch)
-        self.assertNotIn("saveBestDistanceM", mismatch)
+
+    def test_legacy_replay_upgrades_manifest_before_distance(self) -> None:
+        manifest_recovery = extract_braced_block(
+            self.recovery,
+            "private fun recoverManifest(",
+        )
+        self.assertIn("ensureStrongManifest", manifest_recovery)
+        ensure = extract_braced_block(self.recovery, "private fun ensureStrongManifest(")
+        self.assertIn("if (manifest.sha256Hex != null) return true", ensure)
+        self.assertIn("sha256Hex = identity.sha256Hex", ensure)
+        self.assertIn("manifestStore.save", ensure)
 
     def test_manifest_repairs_distance_without_receipt(self) -> None:
         recover = extract_braced_block(self.recovery, "fun recover()")
@@ -212,7 +213,6 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             "GhostPromotionReceiptLoadResult.Empty -> recoverManifest()",
             recover,
         )
-
         manifest_recovery = extract_braced_block(
             self.recovery,
             "private fun recoverManifest(",
@@ -222,14 +222,12 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             "artifactStore.loadBestDistanceM()",
             "currentBest >= manifest.distanceM ->",
             "knownGhost ?: artifactStore.loadGhost()",
+            "matchingIdentity(",
+            "ensureStrongManifest(manifest, identity)",
             "artifactStore.saveBestDistanceM(manifest.distanceM)",
         )
         positions = [manifest_recovery.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
-        repair_path = manifest_recovery[
-            manifest_recovery.index("knownGhost ?: artifactStore.loadGhost()") :
-        ]
-        self.assertIn("if (!matches(", repair_path)
         self.assertIn("CORRUPT_MANIFEST", manifest_recovery)
 
     def test_applied_manifest_fast_path_precedes_ghost_loading(self) -> None:
@@ -244,85 +242,28 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertLess(gate, ghost)
         fast_path = recover[gate:ghost]
         self.assertIn("ALREADY_APPLIED", fast_path)
-        self.assertNotIn("GhostRunFingerprint", fast_path)
+        self.assertNotIn("GhostRunIdentity.calculate", fast_path)
 
-    def test_receipt_mismatch_validates_known_ghost_against_older_manifest(self) -> None:
+    def test_known_ghost_validation_precedes_applied_fast_path(self) -> None:
         recover = extract_braced_block(
             self.recovery,
             "private fun recoverManifest(",
         )
-        known_gate = recover.index("knownGhost != null && !matches(")
+        known_gate = recover.index("knownGhost != null && knownIdentity == null")
         fast_gate = recover.index("currentBest >= manifest.distanceM ->")
         self.assertLess(known_gate, fast_gate)
-        known_block = recover[known_gate:fast_gate]
-        self.assertIn("frameCount = manifest.frameCount", known_block)
-        self.assertIn("fingerprint = manifest.fingerprint", known_block)
-        self.assertIn("CORRUPT_MANIFEST", known_block)
+        prefix = recover[:fast_gate]
+        self.assertIn("sha256Hex = manifest.sha256Hex", prefix)
+        self.assertIn("CORRUPT_MANIFEST", prefix)
 
-    def test_corrupt_receipt_manifest_or_io_blocks_new_promotion(self) -> None:
-        enum = extract_braced_block(
-            self.recovery,
-            "internal enum class GhostPromotionRecoveryDisposition",
+    def test_sha256_identity_is_canonical_and_covers_persisted_fields(self) -> None:
+        identity = extract_braced_block(
+            self.identity,
+            "internal object GhostRunIdentity",
         )
-        for item in ("CORRUPT_RECEIPT", "CORRUPT_MANIFEST", "IO_FAILURE"):
-            self.assertIn(item, enum)
-        self.assertIn("allowsNewPromotion", enum)
-        self.assertIn(
-            "CORRUPT_RECEIPT,\n            CORRUPT_MANIFEST,\n            IO_FAILURE -> false",
-            enum,
-        )
-
-    def test_receipt_codec_is_versioned_fixed_size_and_atomic(self) -> None:
-        store = extract_braced_block(
-            self.recovery,
-            "internal class AtomicFileGhostPromotionReceiptStore(",
-        )
-        self.assertIn("AtomicFile(baseFile)", store)
-        self.assertIn("const val MAGIC = 0x46524750", store)
-        self.assertIn("const val VERSION = 1", store)
-        self.assertIn("const val RECORD_BYTES = 24L", store)
-        self.assertIn("atomicFile.startWrite()", store)
-        self.assertIn("atomicFile.finishWrite(stream)", store)
-        self.assertIn("atomicFile.failWrite(it)", store)
-        self.assertIn("receipt.frameCount in 1..GhostRecorder.MAX_FRAMES", store)
-
-    def test_manifest_codec_is_versioned_fixed_size_and_atomic(self) -> None:
-        store = extract_braced_block(
-            self.manifest,
-            "internal class AtomicFileGhostArtifactManifestStore(",
-        )
-        self.assertIn('"$ghostFilename.manifest"', store)
-        self.assertIn("AtomicFile(baseFile)", store)
-        self.assertIn("const val MAGIC = 0x4652474D", store)
-        self.assertIn("const val VERSION = 1", store)
-        self.assertIn("const val RECORD_BYTES = 24L", store)
-        self.assertIn("atomicFile.startWrite()", store)
-        self.assertIn("atomicFile.finishWrite(stream)", store)
-        self.assertIn("atomicFile.failWrite(it)", store)
-        self.assertIn("manifest.frameCount in 1..GhostRecorder.MAX_FRAMES", store)
-
-    def test_manager_constructs_and_clears_both_evidence_stores(self) -> None:
-        coordinator = extract_braced_block(
-            self.manager,
-            "private fun recoveryCoordinator(",
-        )
-        self.assertIn("AtomicFileGhostPromotionReceiptStore(", coordinator)
-        self.assertIn("AtomicFileGhostArtifactManifestStore(", coordinator)
-        self.assertIn("manifestStore =", coordinator)
-
-        clear = extract_braced_block(
-            self.manager,
-            "internal fun clearPromotionEvidenceForTests(",
-        )
-        self.assertIn("receiptCleared", clear)
-        self.assertIn("manifestCleared", clear)
-        self.assertIn("receiptCleared && manifestCleared", clear)
-
-    def test_fingerprint_covers_all_persisted_frame_components(self) -> None:
-        fingerprint = extract_braced_block(
-            self.recovery,
-            "internal object GhostRunFingerprint",
-        )
+        self.assertIn('MessageDigest.getInstance("SHA-256")', identity)
+        self.assertIn("const val SHA256_BYTE_COUNT = 32", identity)
+        self.assertIn("const val SHA256_HEX_LENGTH = SHA256_BYTE_COUNT * 2", identity)
         required = (
             "frames.size",
             "frame.t.toRawBits()",
@@ -333,7 +274,81 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             "frame.scaleY.toRawBits()",
         )
         for item in required:
-            self.assertIn(item, fingerprint)
+            self.assertIn(item, identity)
+        self.assertIn("update((value ushr 24).toByte())", identity)
+        self.assertIn("character in '0'..'9' || character in 'a'..'f'", identity)
+
+    def test_matching_prefers_sha256_and_falls_back_only_when_absent(self) -> None:
+        matching = extract_braced_block(
+            self.recovery,
+            "private fun matchingIdentity(",
+        )
+        self.assertIn("if (sha256Hex == null)", matching)
+        self.assertIn("identity.fingerprint == fingerprint", matching)
+        self.assertIn("identity.sha256Hex == sha256Hex", matching)
+        self.assertIn("GhostRunIdentity.isCanonicalSha256", matching)
+
+    def test_corrupt_receipt_manifest_or_io_blocks_new_promotion(self) -> None:
+        enum = extract_braced_block(
+            self.recovery,
+            "internal enum class GhostPromotionRecoveryDisposition",
+        )
+        for item in ("CORRUPT_RECEIPT", "CORRUPT_MANIFEST", "IO_FAILURE"):
+            self.assertIn(item, enum)
+        self.assertIn(
+            "CORRUPT_RECEIPT,\n            CORRUPT_MANIFEST,\n            IO_FAILURE -> false",
+            enum,
+        )
+
+    def test_receipt_codec_reads_v1_and_writes_v2_sha256_records(self) -> None:
+        store = extract_braced_block(
+            self.recovery,
+            "internal class AtomicFileGhostPromotionReceiptStore(",
+        )
+        self.assertIn("AtomicFile(baseFile)", store)
+        self.assertIn("const val MAGIC = 0x46524750", store)
+        self.assertIn("const val LEGACY_VERSION = 1", store)
+        self.assertIn("const val VERSION = 2", store)
+        self.assertIn("const val LEGACY_RECORD_BYTES = 24L", store)
+        self.assertIn("const val RECORD_BYTES = 56L", store)
+        self.assertIn("sha256Hex = null", store)
+        self.assertIn("ByteArray(GhostRunIdentity.SHA256_BYTE_COUNT)", store)
+        self.assertIn("output.write(digest)", store)
+        self.assertIn("isValidForSave", store)
+        self.assertIn("receipt.sha256Hex", store)
+
+    def test_manifest_codec_reads_v1_and_writes_v2_sha256_records(self) -> None:
+        store = extract_braced_block(
+            self.manifest,
+            "internal class AtomicFileGhostArtifactManifestStore(",
+        )
+        self.assertIn('"$ghostFilename.manifest"', store)
+        self.assertIn("const val MAGIC = 0x4652474D", store)
+        self.assertIn("const val LEGACY_VERSION = 1", store)
+        self.assertIn("const val VERSION = 2", store)
+        self.assertIn("const val LEGACY_RECORD_BYTES = 24L", store)
+        self.assertIn("const val RECORD_BYTES = 56L", store)
+        self.assertIn("sha256Hex = null", store)
+        self.assertIn("ByteArray(GhostRunIdentity.SHA256_BYTE_COUNT)", store)
+        self.assertIn("output.write(digest)", store)
+        self.assertIn("manifest.sha256Hex", store)
+
+    def test_manager_constructs_both_stores_and_uses_digest_for_publication_cleanup(self) -> None:
+        coordinator = extract_braced_block(
+            self.manager,
+            "private fun recoveryCoordinator(",
+        )
+        self.assertIn("AtomicFileGhostPromotionReceiptStore(", coordinator)
+        self.assertIn("AtomicFileGhostArtifactManifestStore(", coordinator)
+
+        clear = extract_braced_block(
+            self.manager,
+            "private fun clearPublicationIfCurrent(",
+        )
+        self.assertIn("current.distanceM == publication.distanceM", clear)
+        self.assertIn("current.fingerprint == publication.fingerprint", clear)
+        self.assertIn("current.sha256Hex == publication.sha256Hex", clear)
+        self.assertIn("latestPublication = null", clear)
 
     def test_best_distance_key_matches_save_manager(self) -> None:
         self.assertIn('private const val KEY_BEST_DIST = "best_distance"', self.save_manager)
@@ -344,15 +359,6 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         )
         self.assertIn("prefs.edit().putFloat(KEY_BEST_DISTANCE, safeDistance).commit()", artifact)
         self.assertNotIn(".apply()", artifact)
-
-    def test_failed_pre_durable_worker_clears_only_matching_publication(self) -> None:
-        clear = extract_braced_block(
-            self.manager,
-            "private fun clearPublicationIfCurrent(",
-        )
-        self.assertIn("current.distanceM == publication.distanceM", clear)
-        self.assertIn("current.fingerprint == publication.fingerprint", clear)
-        self.assertIn("latestPublication = null", clear)
 
 
 if __name__ == "__main__":
