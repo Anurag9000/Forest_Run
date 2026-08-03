@@ -157,12 +157,19 @@ Implemented:
 - every relationship-facing derived counter is clamped by `SaveManager` to `Int.MAX_VALUE / 16` before use;
 - under that cap, the maximum stage, affinity, and strain expressions remain well below `Int.MAX_VALUE`;
 - extreme raw `Int.MAX_VALUE` preference values are regression-tested through stage progression, strongest-bond selection, encounter tuning, and strained dialogue;
-- selector minima and tie-breaking outside the monolithic relationship owner are fail-closed and deterministic.
+- selector minima and tie-breaking outside the monolithic relationship owner are fail-closed and deterministic;
+- `RelationshipArcSystem.familiarityWarmth(...)` delegates stage, pass, spare, kindness-streak, and encounter inputs to the pure `FamiliarityWarmthScoring` model;
+- stage base and all five authored warmth modifiers accumulate independently through explicit `bonus(...)` additions, avoiding Kotlin conditional-expression precedence;
+- restored negative counters normalize to zero before threshold evaluation, while the Boolean score model remains bounded to eight;
+- PERSONAL and BONDED thresholds remain five and seven;
+- pure tests cover every modifier independently and together, and public integration verifies combined Cat history reaches the BONDED line `You came back to our quiet.`;
+- `scripts/test_familiarity_warmth_contract.py` locks scorer delegation, normalization, additive modifiers, thresholds, public copy coverage, and absence of the former inline conditional-chain shape.
 
-Bounded debt:
+Still requiring ordinary-play/hardware acceptance:
 
-- `RelationshipArcSystem.familiarityWarmth()` contains an authored-precedence defect similar to the former sanctuary arithmetic: later warmth modifiers are nested inside preceding `else` branches instead of accumulating independently.
-- The affected function is precisely isolated, but the surrounding file is a roughly 1,400-line authored dialogue catalogue. It requires a verified checkout/patch path or decomposition before changing it without risking unrelated narrative loss.
+- long-run relationship progression and authored-copy cadence across all tracked creatures;
+- visual/readability acceptance of the deepest PERSONAL and BONDED lines during dense encounters;
+- localization review if translated authored relationship copy is introduced.
 
 ## 7. Ghost recording, playback, and I/O
 
@@ -281,12 +288,14 @@ Locally verified during remediation where runtime execution was available:
 - joint execution of the terminal impact and terminal completion source-contract parsers against the exact extracted HIT/capture/adapter structure;
 - exact inspection of the `GameView` replacement commit confirming only three intended hunks;
 - focused Kotlin compilation and executable return-arithmetic validation for saturation, rollback, pathological timestamps, and the exact 36-hour threshold;
-- source-contract parser validation for return-moment arithmetic ownership and the absence of raw increment/subtraction paths.
+- source-contract parser validation for return-moment arithmetic ownership and the absence of raw increment/subtraction paths;
+- focused Kotlin compilation and executable familiarity-warmth validation for complete accumulation, independent seven-point combinations, negative restored counters, and tier boundaries;
+- source-contract parser validation for pure-scorer delegation, five independent modifiers, stable thresholds, and public BONDED-copy coverage.
 
 Currently not executable or observable from this environment:
 
 - a complete local repository checkout and the full expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
-- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history acceptance;
+- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy acceptance;
 - push-triggered GitHub Actions check-run conclusions for the latest `main` SHA, because the installed connector exposes only pull-request-triggered workflow runs.
 
-Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, and exact-diff review establish the intended ordering and arithmetic boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
+Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, and exact-diff review establish the intended ordering, arithmetic, and relationship-scoring boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
