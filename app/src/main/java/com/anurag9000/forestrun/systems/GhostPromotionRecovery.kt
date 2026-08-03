@@ -14,7 +14,8 @@ import kotlin.math.max
 internal data class GhostPromotionReceipt(
     val distanceM: Float,
     val frameCount: Int,
-    val fingerprint: Long
+    val fingerprint: Long,
+    val sha256Hex: String? = null
 )
 
 internal sealed interface GhostPromotionReceiptLoadResult {
@@ -75,9 +76,9 @@ internal data class GhostPromotionPersistenceResult(
 /**
  * Makes asynchronous best-ghost publication recoverable across process death.
  *
- * The transient receipt is durable before the ghost write. The persistent
- * manifest is durable after the ghost write and before best distance, binding
- * the surviving artifact to its distance after the receipt has been cleared.
+ * Version-1 sidecars remain readable through their legacy FNV identity. New
+ * sidecars use SHA-256, and any legacy evidence that must be replayed is upgraded
+ * to a strong version-2 manifest before best distance can advance.
  */
 internal class GhostPromotionRecoveryCoordinator(
     private val receiptStore: GhostPromotionReceiptStore,
@@ -92,10 +93,12 @@ internal class GhostPromotionRecoveryCoordinator(
             return failedPersistence()
         }
 
+        val identity = GhostRunIdentity.calculate(frames)
         val receipt = GhostPromotionReceipt(
             distanceM = distanceM,
             frameCount = frames.size,
-            fingerprint = GhostRunFingerprint.calculate(frames)
+            fingerprint = identity.fingerprint,
+            sha256Hex = identity.sha256Hex
         )
         if (!receiptStore.save(receipt)) {
             return failedPersistence()
@@ -110,7 +113,7 @@ internal class GhostPromotionRecoveryCoordinator(
             )
         }
 
-        if (!manifestStore.save(receipt.toManifest())) {
+        if (!manifestStore.save(receipt.toManifest(identity))) {
             return GhostPromotionPersistenceResult(
                 receiptDurable = true,
                 ghostDurable = true,
@@ -159,7 +162,13 @@ internal class GhostPromotionRecoveryCoordinator(
         receipt: GhostPromotionReceipt
     ): GhostPromotionRecoveryDisposition {
         val durableGhost = artifactStore.loadGhost()
-        if (!matches(durableGhost, receipt.frameCount, receipt.fingerprint)) {
+        val durableIdentity = matchingIdentity(
+            frames = durableGhost,
+            frameCount = receipt.frameCount,
+            fingerprint = receipt.fingerprint,
+            sha256Hex = receipt.sha256Hex
+        )
+        if (durableIdentity == null) {
             if (!receiptStore.clear()) {
                 return GhostPromotionRecoveryDisposition.IO_FAILURE
             }
@@ -171,7 +180,7 @@ internal class GhostPromotionRecoveryCoordinator(
             }
         }
 
-        val expectedManifest = receipt.toManifest()
+        val expectedManifest = receipt.toManifest(durableIdentity)
         if (!ensureManifest(expectedManifest)) {
             return GhostPromotionRecoveryDisposition.IO_FAILURE
         }
@@ -199,23 +208,33 @@ internal class GhostPromotionRecoveryCoordinator(
             is GhostArtifactManifestLoadResult.Present -> {
                 val manifest = loaded.manifest
                 val currentBest = normalizedDistance(artifactStore.loadBestDistanceM())
-                when {
-                    knownGhost != null && !matches(
-                        frames = knownGhost,
+                val knownIdentity = knownGhost?.let { frames ->
+                    matchingIdentity(
+                        frames = frames,
                         frameCount = manifest.frameCount,
-                        fingerprint = manifest.fingerprint
-                    ) -> GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
+                        fingerprint = manifest.fingerprint,
+                        sha256Hex = manifest.sha256Hex
+                    )
+                }
+                when {
+                    knownGhost != null && knownIdentity == null ->
+                        GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
+                    knownIdentity != null && !ensureStrongManifest(manifest, knownIdentity) ->
+                        GhostPromotionRecoveryDisposition.IO_FAILURE
                     currentBest >= manifest.distanceM ->
                         GhostPromotionRecoveryDisposition.ALREADY_APPLIED
                     else -> {
                         val durableGhost = knownGhost ?: artifactStore.loadGhost()
-                        if (!matches(
-                                frames = durableGhost,
-                                frameCount = manifest.frameCount,
-                                fingerprint = manifest.fingerprint
-                            )
-                        ) {
+                        val identity = knownIdentity ?: matchingIdentity(
+                            frames = durableGhost,
+                            frameCount = manifest.frameCount,
+                            fingerprint = manifest.fingerprint,
+                            sha256Hex = manifest.sha256Hex
+                        )
+                        if (identity == null) {
                             GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST
+                        } else if (!ensureStrongManifest(manifest, identity)) {
+                            GhostPromotionRecoveryDisposition.IO_FAILURE
                         } else if (artifactStore.saveBestDistanceM(manifest.distanceM)) {
                             GhostPromotionRecoveryDisposition.REPAIRED_DISTANCE
                         } else {
@@ -236,6 +255,19 @@ internal class GhostPromotionRecoveryCoordinator(
         }
     }
 
+    private fun ensureStrongManifest(
+        manifest: GhostArtifactManifest,
+        identity: GhostRunIdentityValue
+    ): Boolean {
+        if (manifest.sha256Hex != null) return true
+        return manifestStore.save(
+            manifest.copy(
+                fingerprint = identity.fingerprint,
+                sha256Hex = identity.sha256Hex
+            )
+        )
+    }
+
     /** Returns whether a write occurred, or null when the write failed. */
     private fun repairDistanceIfNeeded(distanceM: Float): Boolean? {
         val currentBest = normalizedDistance(artifactStore.loadBestDistanceM())
@@ -243,21 +275,32 @@ internal class GhostPromotionRecoveryCoordinator(
         return if (artifactStore.saveBestDistanceM(distanceM)) true else null
     }
 
-    private fun matches(
+    private fun matchingIdentity(
         frames: List<GhostFrame>,
         frameCount: Int,
-        fingerprint: Long
-    ): Boolean =
-        frames.size == frameCount &&
-            GhostRunValidator.isValid(frames) &&
-            GhostRunFingerprint.calculate(frames) == fingerprint
+        fingerprint: Long,
+        sha256Hex: String?
+    ): GhostRunIdentityValue? {
+        if (frames.size != frameCount || !GhostRunValidator.isValid(frames)) return null
+        val identity = GhostRunIdentity.calculate(frames)
+        val matches = if (sha256Hex == null) {
+            identity.fingerprint == fingerprint
+        } else {
+            GhostRunIdentity.isCanonicalSha256(sha256Hex) &&
+                identity.fingerprint == fingerprint &&
+                identity.sha256Hex == sha256Hex
+        }
+        return identity.takeIf { matches }
+    }
 
-    private fun GhostPromotionReceipt.toManifest(): GhostArtifactManifest =
-        GhostArtifactManifest(
-            distanceM = distanceM,
-            frameCount = frameCount,
-            fingerprint = fingerprint
-        )
+    private fun GhostPromotionReceipt.toManifest(
+        identity: GhostRunIdentityValue
+    ): GhostArtifactManifest = GhostArtifactManifest(
+        distanceM = distanceM,
+        frameCount = frameCount,
+        fingerprint = identity.fingerprint,
+        sha256Hex = identity.sha256Hex
+    )
 
     private fun failedPersistence(): GhostPromotionPersistenceResult =
         GhostPromotionPersistenceResult(
@@ -291,22 +334,45 @@ internal class AtomicFileGhostPromotionReceiptStore(
 
         return try {
             val input = atomicFile.openRead()
-            if (input.channel.size() != RECORD_BYTES) {
+            val fileSize = input.channel.size()
+            if (fileSize != LEGACY_RECORD_BYTES && fileSize != RECORD_BYTES) {
                 input.close()
                 return GhostPromotionReceiptLoadResult.Corrupt
             }
             DataInputStream(BufferedInputStream(input)).use { data ->
                 if (data.readInt() != MAGIC) return GhostPromotionReceiptLoadResult.Corrupt
-                if (data.readInt() != VERSION) return GhostPromotionReceiptLoadResult.Corrupt
-                val receipt = GhostPromotionReceipt(
-                    distanceM = data.readFloat(),
-                    frameCount = data.readInt(),
-                    fingerprint = data.readLong()
-                )
-                if (!isValid(receipt)) {
-                    GhostPromotionReceiptLoadResult.Corrupt
-                } else {
+                val version = data.readInt()
+                val receipt = when (version) {
+                    LEGACY_VERSION -> {
+                        if (fileSize != LEGACY_RECORD_BYTES) {
+                            return GhostPromotionReceiptLoadResult.Corrupt
+                        }
+                        GhostPromotionReceipt(
+                            distanceM = data.readFloat(),
+                            frameCount = data.readInt(),
+                            fingerprint = data.readLong(),
+                            sha256Hex = null
+                        )
+                    }
+                    VERSION -> {
+                        if (fileSize != RECORD_BYTES) {
+                            return GhostPromotionReceiptLoadResult.Corrupt
+                        }
+                        GhostPromotionReceipt(
+                            distanceM = data.readFloat(),
+                            frameCount = data.readInt(),
+                            fingerprint = data.readLong(),
+                            sha256Hex = GhostRunIdentity.encodeHex(
+                                ByteArray(GhostRunIdentity.SHA256_BYTE_COUNT).also(data::readFully)
+                            )
+                        )
+                    }
+                    else -> return GhostPromotionReceiptLoadResult.Corrupt
+                }
+                if (isValidForLoad(receipt)) {
                     GhostPromotionReceiptLoadResult.Pending(receipt)
+                } else {
+                    GhostPromotionReceiptLoadResult.Corrupt
                 }
             }
         } catch (_: Exception) {
@@ -315,7 +381,9 @@ internal class AtomicFileGhostPromotionReceiptStore(
     }
 
     override fun save(receipt: GhostPromotionReceipt): Boolean {
-        if (!isValid(receipt)) return false
+        if (!isValidForSave(receipt)) return false
+        val digest = GhostRunIdentity.decodeSha256(requireNotNull(receipt.sha256Hex))
+            ?: return false
 
         var stream: FileOutputStream? = null
         return try {
@@ -326,6 +394,7 @@ internal class AtomicFileGhostPromotionReceiptStore(
             output.writeFloat(receipt.distanceM)
             output.writeInt(receipt.frameCount)
             output.writeLong(receipt.fingerprint)
+            output.write(digest)
             output.flush()
             atomicFile.finishWrite(stream)
             stream = null
@@ -352,15 +421,26 @@ internal class AtomicFileGhostPromotionReceiptStore(
     private fun hasRecoverableFile(): Boolean =
         baseFile.exists() || File(baseFile.path + ".bak").exists()
 
-    private fun isValid(receipt: GhostPromotionReceipt): Boolean =
+    private fun isValidForLoad(receipt: GhostPromotionReceipt): Boolean =
+        hasValidCommonFields(receipt) &&
+            (receipt.sha256Hex == null ||
+                GhostRunIdentity.isCanonicalSha256(receipt.sha256Hex))
+
+    private fun isValidForSave(receipt: GhostPromotionReceipt): Boolean =
+        hasValidCommonFields(receipt) &&
+            receipt.sha256Hex?.let(GhostRunIdentity::isCanonicalSha256) == true
+
+    private fun hasValidCommonFields(receipt: GhostPromotionReceipt): Boolean =
         receipt.distanceM.isFinite() &&
             receipt.distanceM >= 0f &&
             receipt.frameCount in 1..GhostRecorder.MAX_FRAMES
 
     private companion object {
         const val MAGIC = 0x46524750 // "FRGP"
-        const val VERSION = 1
-        const val RECORD_BYTES = 24L
+        const val LEGACY_VERSION = 1
+        const val VERSION = 2
+        const val LEGACY_RECORD_BYTES = 24L
+        const val RECORD_BYTES = 56L
     }
 }
 
@@ -389,33 +469,4 @@ internal class AndroidGhostPromotionArtifactStore(context: Context) :
     private companion object {
         const val KEY_BEST_DISTANCE = "best_distance"
     }
-}
-
-/** Stable raw-bit fingerprint for one validated ghost artifact. */
-internal object GhostRunFingerprint {
-    fun calculate(frames: List<GhostFrame>): Long {
-        var hash = FNV_OFFSET_BASIS
-        hash = mixInt(hash, frames.size)
-        frames.forEach { frame ->
-            hash = mixInt(hash, frame.t.toRawBits())
-            hash = mixInt(hash, frame.x.toRawBits())
-            hash = mixInt(hash, frame.y.toRawBits())
-            hash = mixInt(hash, frame.stateOrdinal)
-            hash = mixInt(hash, frame.scaleX.toRawBits())
-            hash = mixInt(hash, frame.scaleY.toRawBits())
-        }
-        return hash
-    }
-
-    private fun mixInt(initial: Long, value: Int): Long {
-        var hash = initial
-        repeat(Int.SIZE_BYTES) { index ->
-            val byte = (value ushr (index * Byte.SIZE_BITS)) and 0xff
-            hash = (hash xor byte.toLong()) * FNV_PRIME
-        }
-        return hash
-    }
-
-    private const val FNV_OFFSET_BASIS = -3750763034362895579L
-    private const val FNV_PRIME = 1099511628211L
 }
