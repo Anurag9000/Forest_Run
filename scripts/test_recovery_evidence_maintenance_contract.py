@@ -215,6 +215,7 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
         matches = extract_braced_block(handler, "private fun manifestMatches(")
         self.assertIn("SaveManager.loadGhostRun(context)", matches)
         self.assertIn("GhostRunIdentity.matches(", matches)
+        self.assertIn("distanceM = manifest.distanceM", matches)
         self.assertIn("frameCount = manifest.frameCount", matches)
         self.assertIn("fingerprint = manifest.fingerprint", matches)
         self.assertIn("sha256Hex = manifest.sha256Hex", matches)
