@@ -1,16 +1,17 @@
 package com.anurag9000.forestrun.engine
 
 import android.content.Context
-import com.anurag9000.forestrun.systems.AndroidGhostPromotionArtifactStore
 import com.anurag9000.forestrun.systems.AtomicFileGhostArtifactManifestStore
 import com.anurag9000.forestrun.systems.AtomicFileGhostPromotionReceiptStore
 import com.anurag9000.forestrun.systems.GhostArtifactManifest
 import com.anurag9000.forestrun.systems.GhostArtifactManifestLoadResult
 import com.anurag9000.forestrun.systems.GhostFrame
+import com.anurag9000.forestrun.systems.GhostPersistenceNamespace
 import com.anurag9000.forestrun.systems.GhostPromotionReceiptLoadResult
 import com.anurag9000.forestrun.systems.GhostPromotionRecoveryCoordinator
 import com.anurag9000.forestrun.systems.GhostPromotionRecoveryDisposition
 import com.anurag9000.forestrun.systems.GhostRunIdentity
+import com.anurag9000.forestrun.systems.NamespaceBoundGhostPromotionArtifactStore
 
 internal enum class RecoveryEvidenceDomain {
     RUN_OUTCOME,
@@ -232,10 +233,11 @@ internal class RecoveryEvidenceMaintenanceCoordinator(
 /** Production entrypoint for diagnostics, safe retries, and deliberate repair. */
 internal class AndroidRecoveryEvidenceMaintenance(context: Context) {
     private val appContext = context.applicationContext
+    private val namespace = GhostPersistenceNamespace.capture()
     private val coordinator = RecoveryEvidenceMaintenanceCoordinator(
         listOf(
-            AndroidRunOutcomeEvidenceHandler(appContext),
-            AndroidGhostPromotionEvidenceHandler(appContext)
+            AndroidRunOutcomeEvidenceHandler(appContext, namespace.prefsName),
+            AndroidGhostPromotionEvidenceHandler(appContext, namespace)
         )
     )
 
@@ -251,10 +253,10 @@ internal class AndroidRecoveryEvidenceMaintenance(context: Context) {
 }
 
 private class AndroidRunOutcomeEvidenceHandler(
-    private val context: Context
+    private val context: Context,
+    private val namespace: String
 ) : RecoveryEvidenceHandler {
     override val domain = RecoveryEvidenceDomain.RUN_OUTCOME
-    private val namespace = SaveManager.activePrefsNameForTests
     private val store = SharedPreferencesRunOutcomeRecoveryStore(context, namespace)
 
     override fun inspect(): RecoveryEvidenceSnapshot = try {
@@ -317,14 +319,16 @@ private class AndroidRunOutcomeEvidenceHandler(
 }
 
 private class MaintenanceRunOutcomePersistenceSink(
-    private val context: Context,
+    context: Context,
     override val recoveryStore: RunOutcomeRecoveryStore,
     namespace: String
 ) : RecoverableRunOutcomePersistenceSink {
+    private val stateStore = NamespaceBoundRunOutcomeMaintenanceStateStore(context, namespace)
+
     override val summarySnapshotStore: RunOutcomeSummarySnapshotStore =
         SharedPreferencesRunOutcomeSummarySnapshotStore(context, namespace)
 
-    override fun loadBestDistanceM(): Float = SaveManager.loadBestDistance(context)
+    override fun loadBestDistanceM(): Float = stateStore.loadBestDistanceM()
 
     override fun publishBestGhost(frames: List<GhostFrame>, distanceM: Float): Boolean = false
 
@@ -341,42 +345,47 @@ private class MaintenanceRunOutcomePersistenceSink(
     }
 
     override fun loadForestMoodState(): ForestMoodState =
-        SaveManager.loadForestMoodState(context)
+        stateStore.loadForestMoodState()
 
     override fun saveForestMoodState(state: ForestMoodState) {
-        SaveManager.saveForestMoodState(context, state)
+        check(stateStore.saveForestMoodState(state)) {
+            "Namespace-bound forest mood recovery write failed"
+        }
     }
 
     override fun loadReturnMomentState(): ReturnMomentState =
-        SaveManager.loadReturnMomentState(context)
+        stateStore.loadReturnMomentState()
 
     override fun saveReturnMomentState(state: ReturnMomentState) {
-        SaveManager.saveReturnMomentState(context, state)
+        check(stateStore.saveReturnMomentState(state)) {
+            "Namespace-bound return moment recovery write failed"
+        }
     }
 
     override fun loadLastRunSummary(): RunSummary? =
-        SaveManager.loadLastRunSummary(context)
+        stateStore.loadLastRunSummary()
 
     override fun loadRouteTierCount(tier: PacifistRouteTier): Int =
-        SaveManager.loadRouteTierCount(context, tier)
+        stateStore.loadRouteTierCount(tier)
 }
 
 private class AndroidGhostPromotionEvidenceHandler(
-    private val context: Context
+    private val context: Context,
+    namespace: GhostPersistenceNamespace
 ) : RecoveryEvidenceHandler {
     override val domain = RecoveryEvidenceDomain.GHOST_PROMOTION
-    private val ghostFilename = SaveManager.activeGhostFilenameForTests
+    private val artifactStore = NamespaceBoundGhostPromotionArtifactStore(context, namespace)
     private val receiptStore = AtomicFileGhostPromotionReceiptStore(
         context = context,
-        ghostFilename = ghostFilename
+        ghostFilename = namespace.ghostFilename
     )
     private val manifestStore = AtomicFileGhostArtifactManifestStore(
         context = context,
-        ghostFilename = ghostFilename
+        ghostFilename = namespace.ghostFilename
     )
     private val recovery = GhostPromotionRecoveryCoordinator(
         receiptStore = receiptStore,
-        artifactStore = AndroidGhostPromotionArtifactStore(context),
+        artifactStore = artifactStore,
         manifestStore = manifestStore
     )
 
@@ -472,7 +481,7 @@ private class AndroidGhostPromotionEvidenceHandler(
         }
 
     private fun manifestMatches(manifest: GhostArtifactManifest): Boolean {
-        val frames = SaveManager.loadGhostRun(context)
+        val frames = artifactStore.loadGhost()
         return GhostRunIdentity.matches(
             frames = frames,
             distanceM = manifest.distanceM,
