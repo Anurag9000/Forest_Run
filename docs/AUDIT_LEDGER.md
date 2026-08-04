@@ -118,7 +118,7 @@ Still requiring ordinary-play/hardware acceptance:
 Bounded architecture debt:
 
 - the full collision-result `when` dispatcher remains in `GameView`;
-- STUMBLE and MERCY_MISS live-state effects remain in `GameViewNonTerminalCollisionEffects`.
+- STUMBLE and MERY_MISS live-state effects remain in `GameViewNonTerminalCollisionEffects`.
 
 ## 5. Persistence, progression, and return history
 
@@ -194,19 +194,24 @@ Implemented:
 - failed-worker cleanup requires namespace, distance, FNV fingerprint, and SHA-256 identity;
 - bound-store tests preserve version-2 writes, legacy reads, exact-size rejection, and invalid-candidate durability;
 - integration tests cover immediate primary/compatibility switching, queued writes, durable separation, and switching back and forth after completion;
-- `scripts/test_ghost_persistence_namespace_contract.py` and the migrated recovery contract prevent reintroduction of dynamic worker recapture or a global publication slot.
+- `AndroidRecoveryEvidenceMaintenance` captures one immutable `GhostPersistenceNamespace` and passes it to both domain handlers;
+- `NamespaceBoundRunOutcomeMaintenanceStateStore` binds best-distance, mood, return, summary, and route reads/writes to one preference namespace with synchronous maintenance writes;
+- recovery maintenance receipt, manifest, ghost, and distance operations share one `NamespaceBoundGhostPromotionArtifactStore`;
+- manifest validation loads frames from the captured artifact store rather than dynamic `SaveManager` state;
+- integration tests prove valid-manifest inspection, run-journal replay, and unwritten-receipt abandonment remain on the captured namespace after an active switch;
+- `scripts/test_ghost_persistence_namespace_contract.py`, the migrated promotion contract, and `scripts/test_recovery_evidence_maintenance_contract.py` prevent worker or maintenance namespace recapture and global publication leakage.
 
 Still requiring physical evidence:
 
 - long-run save latency and file size;
 - process-death/relaunch behavior across OEM devices;
 - playback readability near dense hazards;
-- disk I/O under thermal and memory pressure.
+- disk I/O under thermal and memory pressure;
+- physical-device ADB recovery-maintenance behavior across a namespace switch.
 
 Bounded debt:
 
-- one global executor serializes all namespace work and explicit recovery conservatively blocks while any worker is active;
-- an already-created `AndroidRecoveryEvidenceMaintenance` instance still requires a stable selected namespace because its handlers have not yet been migrated fully to immutable namespace adapters.
+- one global executor serializes all namespace work and explicit recovery conservatively blocks while any worker is active.
 
 ## 8. Performance, physical-device, and store-delivery evidence
 
@@ -307,12 +312,16 @@ Locally verified during remediation where runtime execution was available:
 - source-contract parser validation for pure-scorer delegation, five independent modifiers, stable thresholds, and public BONDED-copy coverage;
 - focused Kotlin compilation for `GhostPersistenceNamespace`, the namespace-bound artifact store, and the namespace-aware manager surface;
 - filesystem-backed primary/compatibility ghost and distance isolation, including capture while the separate mutable ghost filename was intentionally stale;
-- source-contract migration preserving recovery ordering, strong identity, legacy upgrade, corruption blocking, and healthy fast-path coverage while adding namespace ownership.
+- source-contract migration preserving recovery ordering, strong identity, legacy upgrade, corruption blocking, and healthy fast-path coverage while adding namespace ownership;
+- focused Kotlin compilation of `NamespaceBoundRunOutcomeMaintenanceStateStore`;
+- executable in-memory primary/compatibility mood and return-state isolation with synchronous maintenance writes;
+- exact production diff inspection confirming only namespace capture, handler wiring, bound state delegation, bound ghost artifact ownership, and bound manifest frame loading changed;
+- maintenance source-contract migration removing obsolete dynamic `SaveManager` and `AndroidGhostPromotionArtifactStore` expectations.
 
 Currently not executable or observable from this environment:
 
 - a complete local repository checkout and the full expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
-- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy/ghost-namespace acceptance;
+- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy/ghost-namespace/recovery-maintenance acceptance;
 - push-triggered GitHub Actions check-run conclusions for the latest `main` SHA, because the installed connector exposes only pull-request-triggered workflow runs.
 
-Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, filesystem harnesses, and exact-diff review establish the intended ordering, arithmetic, relationship-scoring, and namespace-isolation boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
+Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, filesystem and in-memory harnesses, and exact-diff review establish the intended ordering, arithmetic, relationship-scoring, namespace-isolation, and recovery-maintenance boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
