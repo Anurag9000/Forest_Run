@@ -121,7 +121,7 @@ internal fun resolveParallaxAtmosphereProfile(
             Color.red(skyBottom) + Color.green(skyBottom) + Color.blue(skyBottom)
         ) / 6f
     val nightFactor = (1f - skyBrightness / 255f).coerceIn(0f, 1f)
-    val bloom = bloomStrength.coerceIn(0f, 1f)
+    val bloom = BloomPresentationAdmission.level(bloomStrength)
     val speedLift = (speedRatio - 1f).coerceAtLeast(0f)
 
     target.worldScale =
@@ -388,8 +388,8 @@ class ParallaxBackground(
 
     fun setBloomState(isActive: Boolean, activationLevel: Float, afterglowLevel: Float = 0f) {
         bloomTarget = if (isActive) 1f else 0f
-        bloomActivationLevel = activationLevel.coerceIn(0f, 1f)
-        bloomAfterglowLevel = afterglowLevel.coerceIn(0f, 1f)
+        bloomActivationLevel = BloomPresentationAdmission.level(activationLevel)
+        bloomAfterglowLevel = BloomPresentationAdmission.level(afterglowLevel)
     }
 
     /** Tint values set by [applyBiomeColours], applied during draw(). */
@@ -621,9 +621,9 @@ class ParallaxBackground(
         canvas: Canvas,
         lighting: RunLightingIdentity
     ) {
-        val bloomStrength = bloomLevel.coerceIn(0f, 1f)
-        val activationBoost = bloomActivationLevel.coerceIn(0f, 1f)
-        val afterglowStrength = bloomAfterglowLevel.coerceIn(0f, 1f)
+        val bloomStrength = BloomPresentationAdmission.level(bloomLevel)
+        val activationBoost = BloomPresentationAdmission.level(bloomActivationLevel)
+        val afterglowStrength = BloomPresentationAdmission.level(bloomAfterglowLevel)
         if (bloomStrength <= 0.01f && activationBoost <= 0.01f && afterglowStrength <= 0.01f) return
 
         val pulse = 0.62f + 0.38f * sin(bloomPulse)
