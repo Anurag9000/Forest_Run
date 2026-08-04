@@ -39,11 +39,15 @@ Implemented:
 - `EntityFactory` gives all 19 entity families one finite positive geometry boundary and preserves valid spawn origins.
 - Global speed, Bloom, mercy, spawn-gap, biome-length, wind, catalogue, costume, biome-cycle, scenario, and pacifist-route assumptions have executable invariant tests.
 - `ParallaxBackground.update(...)` rejects malformed delta/speed pairs, applies bounded values, and repairs poisoned ambience and Bloom clocks before advancement.
+- `BloomPresentationAdmission.level(...)` maps every non-finite Bloom presentation level to `0f` and preserves ordinary finite `[0, 1]` clamping.
+- `ParallaxBackground.setBloomState(...)` independently admits activation and afterglow through that shared boundary while retaining the existing active/inactive target mapping.
+- `resolveParallaxAtmosphereProfile(...)` and `drawBloomTransformation(...)` reuse the same boundary so direct profile callers and final drawing cannot consume non-finite Bloom strength.
+- pure and Robolectric integration tests cover NaN, both infinities, below/above-range finite values, valid fractional values, stored renderer fields, and target independence.
+- `scripts/test_parallax_bloom_admission_contract.py` locks the shared owner, all production call sites, integration coverage, and removal of the former direct activation/afterglow clamp calls.
 
 Bounded debt:
 
 - `GameView.update()` remains a large coordinator whose direct-call boundary still relies on the render-thread delta contract; production `GameThread` calls are bounded, but the coordinator should eventually be decomposed and given a narrow public admission layer.
-- `ParallaxBackground.setBloomState(...)` still uses direct `Float.coerceIn(...)` on caller values; nonfinite activation/afterglow inputs require explicit normalization and regression coverage.
 
 ## 3. Garden economy, screen, wardrobe, and sanctuary
 
@@ -316,12 +320,15 @@ Locally verified during remediation where runtime execution was available:
 - focused Kotlin compilation of `NamespaceBoundRunOutcomeMaintenanceStateStore`;
 - executable in-memory primary/compatibility mood and return-state isolation with synchronous maintenance writes;
 - exact production diff inspection confirming only namespace capture, handler wiring, bound state delegation, bound ghost artifact ownership, and bound manifest frame loading changed;
-- maintenance source-contract migration removing obsolete dynamic `SaveManager` and `AndroidGhostPromotionArtifactStore` expectations.
+- maintenance source-contract migration removing obsolete dynamic `SaveManager` and `AndroidGhostPromotionArtifactStore` expectations;
+- focused Kotlin compilation and executable Bloom presentation admission checks for NaN, both infinities, finite underflow, valid fractional input, and finite overflow;
+- source-contract syntax and parser execution covering the shared admission owner, public setter, atmosphere profile, final draw path, and integration fixture;
+- exact `ParallaxBackground.kt` diff inspection confirming only one profile line, two public-admission lines, and three draw-defense lines changed.
 
 Currently not executable or observable from this environment:
 
 - a complete local repository checkout and the full expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
-- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy/ghost-namespace/recovery-maintenance acceptance;
+- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy/ghost-namespace/recovery-maintenance/Parallax-Bloom acceptance;
 - push-triggered GitHub Actions check-run conclusions for the latest `main` SHA, because the installed connector exposes only pull-request-triggered workflow runs.
 
-Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, filesystem and in-memory harnesses, and exact-diff review establish the intended ordering, arithmetic, relationship-scoring, namespace-isolation, and recovery-maintenance boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
+Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, filesystem and in-memory harnesses, and exact-diff review establish the intended ordering, arithmetic, relationship-scoring, namespace-isolation, recovery-maintenance, and Bloom-presentation boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
