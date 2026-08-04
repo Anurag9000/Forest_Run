@@ -74,55 +74,101 @@ This explicit last-resort operation:
 
 Read failure is never interpreted as permission to erase unknown data.
 
+## Immutable namespace lifetime
+
+`AndroidRecoveryEvidenceMaintenance` captures one `GhostPersistenceNamespace` exactly once during construction.
+
+That immutable value contains:
+
+```text
+preference namespace
+ghost filename derived from that preference namespace
+```
+
+The same capture is passed to both domain handlers before any inspection, recovery, or cleanup can run.
+
+After construction, changing `SaveManager` to primary or compatibility mode does not redirect the existing maintenance instance. It remains permanently bound to the namespace selected at construction.
+
+This supports the following safely:
+
+```text
+select primary
+→ construct maintenance
+→ switch active SaveManager namespace to compatibility
+→ inspect/recover/discard through existing maintenance
+→ only primary evidence and state are touched
+```
+
+The maintenance object does not change the active namespace itself.
+
 ## Domain isolation
 
 ### Run-outcome handler
 
-`MaintenanceRunOutcomePersistenceSink` can read and write complete mood, return, summary, and route snapshots. It cannot publish a ghost, advance best distance, or construct `AndroidRunOutcomePersistenceSink`.
+The run-outcome handler receives the captured preference namespace explicitly.
+
+It binds:
+
+- `SharedPreferencesRunOutcomeRecoveryStore(namespace)`;
+- `SharedPreferencesRunOutcomeSummarySnapshotStore(namespace)`;
+- `NamespaceBoundRunOutcomeMaintenanceStateStore(namespace)`.
+
+`NamespaceBoundRunOutcomeMaintenanceStateStore` owns the exact non-ghost state needed by recovery:
+
+```text
+best distance read
+forest mood read/write
+return moment read/write
+last-run summary read
+pacifist-route count read
+```
+
+It mirrors the canonical `SaveManager` keys and repair behavior, but explicit recovery writes use synchronous `commit()` so the coordinator can verify the write immediately.
+
+`MaintenanceRunOutcomePersistenceSink` cannot publish a ghost, advance a distance threshold, or construct `AndroidRunOutcomePersistenceSink`.
 
 ### Ghost handler
 
-The ghost handler owns only:
+The ghost handler receives the complete captured `GhostPersistenceNamespace` and binds:
 
-- `AtomicFileGhostPromotionReceiptStore`;
-- `AtomicFileGhostArtifactManifestStore`;
-- `GhostPromotionRecoveryCoordinator`;
-- `AndroidGhostPromotionArtifactStore`.
+- `AtomicFileGhostPromotionReceiptStore(namespace.ghostFilename)`;
+- `AtomicFileGhostArtifactManifestStore(namespace.ghostFilename)`;
+- `NamespaceBoundGhostPromotionArtifactStore(namespace)`;
+- `GhostPromotionRecoveryCoordinator` over those same stores.
 
-It never opens the run-outcome journal.
+Manifest inspection loads frames from the bound artifact store, not from dynamic `SaveManager.loadGhostRun(...)`.
 
-A corrupt ghost sidecar therefore cannot prevent non-ghost recovery, and clearing one domain cannot erase the other domain’s evidence.
+The ghost handler never opens the run-outcome journal. A corrupt ghost sidecar therefore cannot prevent non-ghost recovery, and clearing one domain cannot erase the other domain’s evidence.
 
-## Namespace lifetime
+## Run-outcome recovery
 
-`GhostPersistenceManager` workers are now namespace-stable: every queued promotion captures one immutable primary or compatibility namespace, and receipt, ghost, manifest, distance, publication, and cleanup remain bound to it.
-
-A maintenance instance is a narrower, still-unmigrated boundary. Its handlers capture some stores during construction but retain dynamic `SaveManager` access for other state. Therefore:
+The run-outcome journal stores:
 
 ```text
-select desired namespace
-→ construct AndroidRecoveryEvidenceMaintenance
-→ inspect/recover/discard
-→ discard the maintenance instance
+raw completed summary
+previous and next forest mood snapshots
+previous and next return-moment snapshots
+previous and next route-tier counts
+phase checkpoint
 ```
 
-Do not switch the active namespace while that object remains in use.
+Safe replay compares live bound-namespace state against both snapshots:
 
-This rule does not reintroduce the old worker limitation. Primary/compatibility switching while manager work is queued or active is supported and isolated. Only an already-created maintenance instance requires namespace stability.
+- already at next state → accept;
+- exactly at previous state → apply next state and verify;
+- any third state → block without overwrite.
 
-Mutating maintenance already runs only in a cold-start window after save repair and before `GameView`, which provides the required stable lifetime in the production command path.
-
-## Run-outcome evidence removal
+Summary and route count are written through one synchronous snapshot transaction.
 
 Run-outcome discard clears only:
 
 ```text
-forest_run_outcome_recovery_<active save namespace>
+forest_run_outcome_recovery_<captured save namespace>
 ```
 
 It does not rewrite current mood, return state, last-run summary, route counters, ghost data, or best distance.
 
-For a valid journal that conflicts with live state, `discardUnresolvedPending(RUN_OUTCOME)` retries first, then removes only the journal while preserving live state exactly as found.
+For a valid journal that conflicts with live state, `discardUnresolvedPending(RUN_OUTCOME)` retries first, then removes only the captured journal while preserving live state exactly as found.
 
 ## Ghost sidecar compatibility
 
@@ -167,7 +213,7 @@ CORRUPT(manifest_artifact_mismatch)
 IO_FAILURE(...)
 ```
 
-Explicit inspection always loads the durable ghost and checks the manifest association.
+Explicit inspection always loads the durable ghost from the captured namespace and checks the manifest association.
 
 For version 2 it verifies:
 
@@ -193,18 +239,19 @@ Canonical safe recovery may:
 Ghost-domain evidence consists of:
 
 ```text
-<ghost>.promotion[.bak|.new]
-<ghost>.manifest[.bak|.new]
+<captured ghost>.promotion[.bak|.new]
+<captured ghost>.manifest[.bak|.new]
 ```
 
 Targeted cleanup is identity-aware:
 
-- corrupt receipt removal preserves a valid manifest matching the ghost;
+- corrupt receipt removal preserves a valid manifest matching the captured ghost;
 - corrupt manifest removal clears only the manifest sidecar;
 - manifest/artifact mismatch removal clears only the invalid association;
 - the ghost frame file and backup are preserved;
 - best distance is not rewritten by discard itself;
-- run-outcome evidence is not touched.
+- run-outcome evidence is not touched;
+- another namespace’s sidecars are not touched.
 
 Unknown I/O failure remains fail-closed and is not force-cleared.
 
@@ -237,7 +284,7 @@ Because the Activity is `singleTask`, ADB can deliver a command through `onNewIn
 
 A reused Activity permits only `inspect`. It rejects `recover`, `discard_corrupt`, and `discard_pending` with `reason=active_session` before constructing maintenance handlers.
 
-Mutating commands run only during cold `onCreate`, after `SaveIntegrityManager.repair(...)` and before `GameView` construction. The desired save namespace must already be selected and remains unchanged for the maintenance object’s short lifetime.
+Mutating commands run only during cold `onCreate`, after `SaveIntegrityManager.repair(...)` and before `GameView` construction. This remains the production command policy even though the maintenance object itself is now namespace-stable after construction.
 
 ## ADB usage
 
@@ -338,14 +385,23 @@ Coverage includes:
 - frame and count mismatch;
 - valid-manifest preservation during receipt cleanup;
 - ghost preservation during manifest cleanup;
-- debug gating, cold-start mutation, one-shot extras, and payload-free logs.
+- debug gating, cold-start mutation, one-shot extras, and payload-free logs;
+- valid primary manifest inspection after switching to a different compatibility ghost;
+- primary run-journal recovery while compatibility evidence remains untouched;
+- primary unwritten-receipt abandonment while compatibility evidence remains pending.
 
-Source contracts require the maintenance adapter to pass manifest distance, frame count, FNV, and optional SHA-256 into `GhostRunIdentity.matches(...)` and forbid a direct fingerprint-only validator.
+`test_recovery_evidence_maintenance_contract.py` requires:
 
-The separate ghost namespace contracts verify manager worker isolation. They intentionally do not claim that live maintenance handlers have already been migrated to immutable namespace-bound artifact and non-ghost state adapters.
+- one immutable namespace capture in `AndroidRecoveryEvidenceMaintenance`;
+- the same capture passed to both handlers;
+- namespace-bound run state and summary ownership;
+- namespace-bound receipt, manifest, ghost, and distance ownership;
+- manifest distance, frame count, FNV, and SHA-256 validation;
+- no dynamic `SaveManager` namespace or ghost access inside maintenance handlers;
+- integration coverage for inspection, replay, and abandonment after a namespace switch.
 
 ## Evidence boundary
 
-Focused Kotlin/JVM compilation passed for the identity and recovery core and production manager surface. A production-shaped maintenance adapter compile validates the distance-bound identity call. Executable golden-vector, versioned-codec, state-machine, maintenance-policy, cold/live launch, and namespace-isolation harnesses passed.
+Focused Kotlin/JVM compilation passed for the namespace-bound run-outcome state adapter. An executable in-memory harness verified independent primary/compatibility state, synchronous snapshot writes, and no cross-namespace leakage.
 
-The checked-in JUnit and Robolectric tests were not executed through an exact-head Android Gradle environment in this session. Physical-device ADB acceptance remains separate.
+The checked-in JUnit and Robolectric suites were not executed through an exact-head Android Gradle environment in this session. Emulator and physical-device ADB acceptance remain separate.
