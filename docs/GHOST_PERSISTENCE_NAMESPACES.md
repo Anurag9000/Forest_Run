@@ -11,17 +11,18 @@ ghost frame filename
 promotion receipt and artifact manifest derived from that filename
 ```
 
-A ghost promotion is correct only when all four facts belong to the same namespace for the complete asynchronous transaction.
+A ghost promotion or recovery-maintenance operation is correct only when every related read and write belongs to the same namespace for its complete lifetime.
 
-Before this boundary was added, `GhostPersistenceManager` could capture an active filename at one point while later ghost or distance operations consulted mutable `SaveManager` namespace state. Switching between the primary and compatibility namespaces while a queued worker existed could therefore mix:
+Before these boundaries were added, asynchronous manager work or an already-created maintenance instance could combine stores captured at construction with later dynamic `SaveManager` reads. Switching between primary and compatibility namespaces could therefore mix:
 
 - a receipt from one ghost filename;
 - a frame artifact from another filename;
 - a manifest from the first filename;
 - a best-distance write in whichever preference namespace happened to be active later;
-- a globally published in-memory ghost visible from the wrong namespace.
+- a globally published in-memory ghost visible from the wrong namespace;
+- a run-outcome journal from one namespace with mood, return, summary, or route state from another.
 
-The current implementation removes that cross-namespace ambiguity for manager-owned ghost work.
+The current implementation removes those cross-namespace ambiguities for both manager-owned ghost work and recovery-evidence maintenance.
 
 ## Canonical namespace identities
 
@@ -76,7 +77,7 @@ The namespace constructor also rejects unsafe artifact names:
 
 The captured filename is therefore a plain file inside the application files directory, not a path supplied to traversal-sensitive APIs.
 
-## Bound artifact store
+## Bound ghost artifact store
 
 `NamespaceBoundGhostPromotionArtifactStore` is constructed from one immutable namespace. At construction it binds:
 
@@ -98,6 +99,29 @@ It does not call dynamic `SaveManager.loadGhostRun(...)`, `saveGhostRun(...)`, o
 - synchronous best-distance commit.
 
 The adapter preserves format compatibility rather than introducing a second ghost format.
+
+## Bound run-outcome maintenance state
+
+`NamespaceBoundRunOutcomeMaintenanceStateStore` binds one `SharedPreferences(namespace.prefsName)` instance at construction. It owns only the state required to inspect and replay the run-outcome recovery journal:
+
+```text
+best distance read
+forest mood snapshot read/write
+return moment snapshot read/write
+last-run summary read
+pacifist-route count read
+```
+
+It mirrors the corresponding `SaveManager` keys and normalization rules, but explicit maintenance writes use synchronous `commit()` so recovery can verify durability immediately.
+
+The adapter never consults:
+
+```text
+SaveManager.activePrefsNameForTests
+SaveManager.activeGhostFilenameForTests
+```
+
+`SharedPreferencesRunOutcomeRecoveryStore` and `SharedPreferencesRunOutcomeSummarySnapshotStore` already accept an explicit namespace. The new state adapter closes the remaining dynamic reads around those stores.
 
 ## Manager transaction ownership
 
@@ -149,7 +173,7 @@ A publication contains:
 
 `loadLatest(...)` returns only the publication for the currently captured namespace. A primary ghost cannot become the compatibility ghost merely because it is newer in memory, and vice versa.
 
-`bestDistanceFloor(...)` is now namespace-specific:
+`bestDistanceFloor(...)` is namespace-specific:
 
 ```text
 max(bound durable distance, accepted publication distance for this namespace)
@@ -166,9 +190,41 @@ SHA-256 digest
 
 An older failed primary worker therefore cannot clear a newer compatibility publication.
 
+## Maintenance lifetime ownership
+
+`AndroidRecoveryEvidenceMaintenance` captures one `GhostPersistenceNamespace` exactly once during construction and passes it to both evidence handlers.
+
+The run-outcome handler binds:
+
+```text
+journal store(namespace.prefsName)
+summary snapshot store(namespace.prefsName)
+NamespaceBoundRunOutcomeMaintenanceStateStore(namespace.prefsName)
+```
+
+The ghost handler binds:
+
+```text
+receipt store(namespace.ghostFilename)
+manifest store(namespace.ghostFilename)
+NamespaceBoundGhostPromotionArtifactStore(namespace)
+GhostPromotionRecoveryCoordinator over those same stores
+```
+
+After construction, switching `SaveManager` to another namespace does not redirect:
+
+- inspection;
+- safe replay;
+- manifest-to-artifact validation;
+- corrupt evidence cleanup;
+- unresolved receipt abandonment;
+- mood, return, summary, route, ghost, or distance reads used by recovery.
+
+Maintenance does not switch the active namespace itself. The caller may continue using another namespace while an older maintenance instance remains bound to the namespace it captured.
+
 ## Switching behavior
 
-The following is supported:
+The following manager workflow is supported:
 
 ```text
 queue primary promotion
@@ -182,21 +238,17 @@ queue primary promotion
 → read compatibility publication and durable artifact
 ```
 
-The single executor still serializes writes globally. Namespace isolation changes ownership, not concurrency level. This is deliberately conservative: promotion ordering and telemetry remain simple while cross-namespace writes cannot mix.
+The following maintenance workflow is also supported:
 
-Explicit recovery in a second namespace may still return `IO_FAILURE` while any manager worker is active. That is a fail-closed admission choice, not cross-writing.
+```text
+select primary namespace
+→ create maintenance instance
+→ switch active namespace to compatibility
+→ inspect or recover through the existing maintenance instance
+→ only primary evidence and state are read or mutated
+```
 
-## Maintenance boundary
-
-This implementation closes namespace switching for `GhostPersistenceManager` workers, manager recovery, manager disk fallback, and manager in-memory publication.
-
-A live `AndroidRecoveryEvidenceMaintenance` instance remains a separate boundary. Its handlers capture some stores at construction but still contain dynamic `SaveManager` access for artifact and non-ghost state. Therefore:
-
-- instantiate maintenance only after the desired namespace is selected;
-- do not switch namespaces while that maintenance instance remains in use;
-- mutating recovery/discard remains a debuggable cold-start operation before gameplay owners exist.
-
-This narrower limitation is retained explicitly. The worker limitation is removed; the maintenance-instance limitation is not.
+The single executor still serializes manager writes globally. Namespace isolation changes ownership, not concurrency level. Explicit recovery in a second namespace may still return `IO_FAILURE` while any manager worker is active. That is a fail-closed admission choice, not cross-writing.
 
 ## Validation surface
 
@@ -220,24 +272,31 @@ This narrower limitation is retained explicitly. The worker limitation is remove
 - trailing-byte rejection;
 - invalid-candidate preservation of the existing durable ghost.
 
-`test_ghost_persistence_namespace_contract.py` locks:
+`RecoveryEvidenceMaintenanceNamespaceIntegrationTest` covers:
 
-- one-read namespace derivation;
-- no mutable active namespace access inside the bound store;
-- namespace-keyed publication;
-- no namespace recapture inside queued workers;
-- one namespace shared by receipt, ghost, manifest, and distance;
-- integration and codec coverage.
+- valid primary manifest inspection after switching to a different compatibility ghost;
+- primary run-journal recovery while a compatibility journal remains pending and untouched;
+- primary unwritten-receipt abandonment while the compatibility receipt remains pending;
+- active namespace remaining compatibility after the captured-primary maintenance operation.
 
-`test_ghost_promotion_recovery_contract.py` remains the broader transaction contract and now recognizes namespace-bound publication and artifact ownership while retaining receipt/manifest ordering, legacy upgrades, SHA-256 identity, corruption blocking, and the healthy no-ghost-load path.
+`test_ghost_persistence_namespace_contract.py` locks manager namespace derivation, bound artifact ownership, namespace-keyed publication, and no worker recapture.
 
-Focused Kotlin compilation and a filesystem-backed executable harness passed for the new namespace, artifact, and manager surfaces. The harness deliberately changed the active preference namespace while leaving the separate mutable ghost filename stale and verified that capture still derived the correct compatibility file.
+`test_recovery_evidence_maintenance_contract.py` locks:
+
+- one maintenance namespace capture;
+- the same capture passed to both handlers;
+- namespace-bound non-ghost state access;
+- namespace-bound receipt, manifest, ghost, and distance access;
+- no dynamic `SaveManager` access inside either maintenance handler;
+- cross-namespace integration coverage.
+
+Focused Kotlin compilation and filesystem/in-memory executable harnesses passed for namespace capture, ghost artifacts, manager publication, and run-outcome maintenance state isolation.
 
 ## Remaining evidence and limitations
 
 - Full exact-head Gradle and Robolectric execution remains required.
 - Emulator and physical-device process-death/relaunch behavior remains required.
 - Long-run worker latency and disk-pressure behavior remain device gates.
-- The single executor remains global across namespaces.
-- Live maintenance-instance switching remains unsupported until its artifact and state adapters are migrated to immutable namespace snapshots.
+- The single manager executor remains global across namespaces.
+- Explicit manager recovery still blocks conservatively while any worker is active.
 - SHA-256 identifies local content and distance but does not authenticate a trusted writer.
