@@ -11,6 +11,14 @@ SOURCE = (
     ROOT
     / "app/src/main/java/com/anurag9000/forestrun/engine/RecoveryEvidenceMaintenance.kt"
 )
+STATE_STORE = (
+    ROOT
+    / "app/src/main/java/com/anurag9000/forestrun/engine/NamespaceBoundRunOutcomeMaintenanceStateStore.kt"
+)
+INTEGRATION_TEST = (
+    ROOT
+    / "app/src/test/java/com/anurag9000/forestrun/engine/RecoveryEvidenceMaintenanceNamespaceIntegrationTest.kt"
+)
 
 
 def extract_braced_block(source: str, signature: str) -> str:
@@ -74,6 +82,8 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = SOURCE.read_text(encoding="utf-8")
+        cls.state_store = STATE_STORE.read_text(encoding="utf-8")
+        cls.integration_test = INTEGRATION_TEST.read_text(encoding="utf-8")
 
     def test_each_domain_requires_exactly_one_handler(self) -> None:
         constructor = extract_braced_block(
@@ -157,31 +167,87 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, report)
 
-    def test_run_repair_uses_non_ghost_maintenance_sink(self) -> None:
+    def test_entrypoint_captures_one_namespace_for_both_handlers(self) -> None:
+        entrypoint = extract_braced_block(
+            self.source,
+            "internal class AndroidRecoveryEvidenceMaintenance(",
+        )
+        capture = entrypoint.index(
+            "private val namespace = GhostPersistenceNamespace.capture()"
+        )
+        run_handler = entrypoint.index(
+            "AndroidRunOutcomeEvidenceHandler(appContext, namespace.prefsName)"
+        )
+        ghost_handler = entrypoint.index(
+            "AndroidGhostPromotionEvidenceHandler(appContext, namespace)"
+        )
+        self.assertLess(capture, run_handler)
+        self.assertLess(capture, ghost_handler)
+        self.assertEqual(1, entrypoint.count("GhostPersistenceNamespace.capture()"))
+
+    def test_run_repair_uses_namespace_bound_non_ghost_sink(self) -> None:
         handler = extract_braced_block(
             self.source,
             "private class AndroidRunOutcomeEvidenceHandler(",
         )
+        self.assertIn("private val namespace: String", handler)
         self.assertIn("MaintenanceRunOutcomePersistenceSink(", handler)
+        self.assertNotIn("SaveManager.activePrefsNameForTests", handler)
         self.assertNotIn("AndroidRunOutcomePersistenceSink(", handler)
+
         sink = extract_braced_block(
             self.source,
             "private class MaintenanceRunOutcomePersistenceSink(",
         )
+        self.assertIn(
+            "NamespaceBoundRunOutcomeMaintenanceStateStore(context, namespace)",
+            sink,
+        )
         self.assertIn("publishBestGhost", sink)
         self.assertIn("= false", sink)
+        for method in (
+            "loadBestDistanceM()",
+            "loadForestMoodState()",
+            "saveForestMoodState(state)",
+            "loadReturnMomentState()",
+            "saveReturnMomentState(state)",
+            "loadLastRunSummary()",
+            "loadRouteTierCount(tier)",
+        ):
+            self.assertIn(f"stateStore.{method}", sink)
+        self.assertNotIn("SaveManager.", sink)
         self.assertNotIn("GhostPersistenceManager", sink)
 
-    def test_ghost_repair_uses_receipt_manifest_and_artifact_owners_only(self) -> None:
+    def test_bound_state_store_uses_one_preferences_instance_and_sync_writes(self) -> None:
+        self.assertIn(
+            "context.applicationContext.getSharedPreferences(\n        persistenceNamespace,",
+            self.state_store,
+        )
+        self.assertEqual(1, self.state_store.count("getSharedPreferences("))
+        self.assertIn("fun saveForestMoodState", self.state_store)
+        self.assertIn("fun saveReturnMomentState", self.state_store)
+        self.assertGreaterEqual(self.state_store.count(".commit()"), 2)
+        self.assertNotIn("SaveManager.activePrefsNameForTests", self.state_store)
+        self.assertNotIn("SaveManager.activeGhostFilenameForTests", self.state_store)
+
+    def test_ghost_repair_uses_bound_receipt_manifest_and_artifact_owners(self) -> None:
         handler = extract_braced_block(
             self.source,
             "private class AndroidGhostPromotionEvidenceHandler(",
         )
+        self.assertIn("namespace: GhostPersistenceNamespace", handler)
+        self.assertIn(
+            "NamespaceBoundGhostPromotionArtifactStore(context, namespace)",
+            handler,
+        )
         self.assertIn("AtomicFileGhostPromotionReceiptStore(", handler)
         self.assertIn("AtomicFileGhostArtifactManifestStore(", handler)
+        self.assertIn("ghostFilename = namespace.ghostFilename", handler)
         self.assertIn("GhostPromotionRecoveryCoordinator(", handler)
-        self.assertIn("AndroidGhostPromotionArtifactStore(context)", handler)
+        self.assertIn("artifactStore = artifactStore", handler)
         self.assertIn("manifestStore = manifestStore", handler)
+        self.assertNotIn("AndroidGhostPromotionArtifactStore", handler)
+        self.assertNotIn("SaveManager.activeGhostFilenameForTests", handler)
         self.assertNotIn("RunOutcomePersistenceCoordinator", handler)
         self.assertNotIn("SharedPreferencesRunOutcomeRecoveryStore", handler)
 
@@ -213,12 +279,13 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
         self.assertIn("receiptCleared && manifestCleared", clear)
 
         matches = extract_braced_block(handler, "private fun manifestMatches(")
-        self.assertIn("SaveManager.loadGhostRun(context)", matches)
+        self.assertIn("artifactStore.loadGhost()", matches)
         self.assertIn("GhostRunIdentity.matches(", matches)
         self.assertIn("distanceM = manifest.distanceM", matches)
         self.assertIn("frameCount = manifest.frameCount", matches)
         self.assertIn("fingerprint = manifest.fingerprint", matches)
         self.assertIn("sha256Hex = manifest.sha256Hex", matches)
+        self.assertNotIn("SaveManager.loadGhostRun", matches)
         self.assertNotIn("GhostRunFingerprint.calculate", matches)
 
     def test_manifest_corruption_has_distinct_recovery_status(self) -> None:
@@ -230,6 +297,15 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
         self.assertIn("GhostPromotionRecoveryDisposition.CORRUPT_RECEIPT", recover)
         self.assertIn("GhostPromotionRecoveryDisposition.CORRUPT_MANIFEST", recover)
         self.assertIn('"invalid_manifest_or_artifact"', recover)
+
+    def test_namespace_switch_integration_covers_inspect_recover_and_abandon(self) -> None:
+        for marker in (
+            "manifest inspection keeps captured ghost namespace after compatibility switch",
+            "safe run recovery mutates only captured primary namespace",
+            "unwritten receipt recovery clears only captured primary sidecar",
+            "assertEquals(COMPAT_PREFS, SaveManager.activePrefsNameForTests)",
+        ):
+            self.assertIn(marker, self.integration_test)
 
     def test_clear_verifies_clean_state_after_deletion(self) -> None:
         clear = extract_braced_block(self.source, "private fun clear(")
