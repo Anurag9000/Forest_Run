@@ -5,17 +5,15 @@ import com.anurag9000.forestrun.engine.GhostIoTelemetry
 import com.anurag9000.forestrun.engine.SaveManager
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Owns ghost persistence away from the render thread.
  *
  * The newest accepted run is published in memory before disk work begins, so
  * an immediate restart can use it while the recoverable worker transaction is
- * pending. A single daemon worker preserves promotion order without extending
- * app shutdown.
+ * pending. Work remains FIFO inside each immutable namespace, while primary and
+ * compatibility namespaces may use separate daemon workers concurrently.
  */
 object GhostPersistenceManager {
     private data class PublishedGhost(
@@ -26,19 +24,22 @@ object GhostPersistenceManager {
         val sha256Hex: String
     )
 
-    private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "forest-run-ghost-io").apply {
-            isDaemon = true
-            priority = Thread.NORM_PRIORITY - 1
+    private val workerOrdinal = AtomicInteger(0)
+    private val scheduler = GhostNamespaceSerialScheduler(
+        Executors.newFixedThreadPool(MAX_CONCURRENT_NAMESPACE_WRITES) { runnable ->
+            Thread(
+                runnable,
+                "forest-run-ghost-io-${workerOrdinal.incrementAndGet()}"
+            ).apply {
+                isDaemon = true
+                priority = Thread.NORM_PRIORITY - 1
+            }
         }
-    }
+    )
 
     private val latestPublications =
         ConcurrentHashMap<GhostPersistenceNamespace, PublishedGhost>()
     private val pendingWrites = GhostNamespacePendingWriteRegistry()
-
-    @Volatile
-    private var latestSubmittedWrite: Future<*>? = null
 
     /**
      * Compatibility overload used by direct ghost tests and legacy callers.
@@ -57,7 +58,7 @@ object GhostPersistenceManager {
 
     /**
      * Publishes a validated candidate immediately and schedules its recoverable
-     * ghost-plus-distance promotion on the single I/O worker.
+     * ghost-plus-distance promotion on the namespace-serial I/O scheduler.
      */
     fun saveBestRunAsync(
         context: Context,
@@ -99,7 +100,7 @@ object GhostPersistenceManager {
         GhostIoTelemetry.recordWriteStarted(snapshot.size)
 
         return try {
-            val task = executor.submit {
+            val task = scheduler.submit(namespace) {
                 val startedAtNs = System.nanoTime()
                 var ghostDurable = false
                 val succeeded = try {
@@ -125,7 +126,6 @@ object GhostPersistenceManager {
                 )
             }
             pendingWrites.track(namespace, task)
-            latestSubmittedWrite = task
             true
         } catch (_: RuntimeException) {
             clearPublicationIfCurrent(publication)
@@ -136,7 +136,7 @@ object GhostPersistenceManager {
 
     /**
      * Includes an accepted in-memory promotion in comparisons even while its
-     * single-worker durable transaction is pending.
+     * namespace-serial durable transaction is pending.
      */
     fun bestDistanceFloor(context: Context): Float =
         bestDistanceFloor(
@@ -202,17 +202,8 @@ object GhostPersistenceManager {
         return current.frames
     }
 
-    internal fun awaitPendingWrites(timeoutMs: Long = 5_000L): Boolean {
-        val task = latestSubmittedWrite ?: return true
-        return try {
-            task.get(timeoutMs, TimeUnit.MILLISECONDS)
-            true
-        } catch (_: TimeoutException) {
-            false
-        } catch (_: Exception) {
-            false
-        }
-    }
+    internal fun awaitPendingWrites(timeoutMs: Long = 5_000L): Boolean =
+        pendingWrites.awaitAll(timeoutMs)
 
     internal fun clearPromotionEvidenceForTests(context: Context): Boolean {
         val appContext = context.applicationContext
@@ -233,7 +224,6 @@ object GhostPersistenceManager {
         synchronized(this) {
             latestPublications.clear()
             pendingWrites.clear()
-            latestSubmittedWrite = null
         }
         GhostIoTelemetry.reset()
     }
@@ -268,4 +258,6 @@ object GhostPersistenceManager {
             latestPublications.remove(publication.namespace, current)
         }
     }
+
+    private const val MAX_CONCURRENT_NAMESPACE_WRITES = 2
 }
