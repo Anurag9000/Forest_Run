@@ -22,7 +22,7 @@ Before these boundaries were added, asynchronous manager work or an already-crea
 - a globally published in-memory ghost visible from the wrong namespace;
 - a run-outcome journal from one namespace with mood, return, summary, or route state from another.
 
-The current implementation removes those cross-namespace ambiguities for manager-owned ghost work, manager recovery admission, and recovery-evidence maintenance.
+The current implementation removes those cross-namespace ambiguities for manager-owned ghost work, manager recovery admission, recovery-evidence maintenance, and queued-write scheduling.
 
 ## Canonical namespace identities
 
@@ -190,11 +190,22 @@ SHA-256 digest
 
 An older failed primary worker therefore cannot clear a newer compatibility publication.
 
-## Namespace-scoped activity and recovery admission
+## Namespace-serial scheduling and recovery admission
 
-Queued ghost persistence still uses one global single-thread executor, preserving deterministic promotion order and the existing telemetry model.
+`GhostPersistenceManager` owns a fixed backend of two daemon worker threads. It submits accepted persistence work through `GhostNamespaceSerialScheduler`.
 
-Activity admission is no longer represented by one global `pendingWrite` slot. `GhostNamespacePendingWriteRegistry` stores the latest `Future` independently for each `GhostPersistenceNamespace`:
+The scheduler maintains one lightweight FIFO queue per immutable namespace:
+
+```text
+namespace A → serial queue A
+namespace B → serial queue B
+```
+
+Same-namespace work never overlaps because only one head task from that queue is active. Different namespaces may execute concurrently on the two-thread backend because their receipt, ghost, manifest, distance, publication, and activity owners are disjoint.
+
+The scheduler does not create one thread per namespace. Queue objects share the bounded backend.
+
+`GhostNamespacePendingWriteRegistry` stores the latest `Future` independently for each namespace:
 
 ```text
 namespace A → latest queued task for A
@@ -209,12 +220,15 @@ Consequences:
 - active compatibility work still blocks recovery for that compatibility namespace;
 - active primary work does not block compatibility recovery;
 - active compatibility work does not block primary recovery;
-- two queued writes for the same namespace remain ordered through the single executor;
+- two writes for the same namespace remain FIFO and non-overlapping;
+- primary and compatibility writes may overlap;
 - a later same-namespace task remains authoritative even after an older task completes.
 
-`latestSubmittedWrite` remains a global pointer only for `awaitPendingWrites(...)`. Because the executor is serial, awaiting the latest submitted task drains every task submitted before it. That pointer is not consulted by save admission or recovery admission.
+`awaitPendingWrites(...)` waits for every active namespace's latest task under one shared monotonic timeout budget. Because same-namespace execution is serial, waiting for that namespace's latest task also waits for all earlier work in its queue. The manager no longer has a global `latestSubmittedWrite` shortcut.
 
-Cross-namespace explicit recovery may therefore execute on the caller thread while the executor is processing another namespace. This is safe because receipt, manifest, ghost, and distance stores are namespace-bound and disjoint.
+Cross-namespace explicit recovery may execute on the caller thread while another namespace worker is active. This is safe because receipt, manifest, ghost, and distance stores are namespace-bound and disjoint.
+
+See `docs/GHOST_NAMESPACE_SCHEDULING.md` for the scheduler and waiting contract.
 
 ## Maintenance lifetime ownership
 
@@ -256,9 +270,10 @@ The following manager workflow is supported:
 queue primary promotion
 → switch to compatibility namespace
 → queue compatibility promotion
-→ recover compatibility evidence while primary work is active
+→ primary and compatibility workers may overlap
+→ recover compatibility evidence only when compatibility work is inactive
 → read compatibility in-memory publication
-→ await worker queue
+→ await all active namespace queues
 → switch back to primary
 → read primary publication and durable artifact
 → switch to compatibility
@@ -275,8 +290,6 @@ select primary namespace
 → only primary evidence and state are read or mutated
 ```
 
-The single executor still serializes queued manager writes globally. Namespace isolation changes ownership and admission, not queued-write concurrency.
-
 ## Validation surface
 
 `GhostPersistenceNamespaceIntegrationTest` covers:
@@ -285,15 +298,26 @@ The single executor still serializes queued manager writes globally. Namespace i
 - a bound store remaining on its captured namespace after an active switch;
 - independent primary and compatibility ghosts and distances;
 - immediate manager publication after a namespace switch;
-- queued primary and compatibility writes on the single executor;
+- queued primary and compatibility writes;
 - switching back and forth after durability;
 - traversal-name rejection.
+
+`GhostNamespaceSerialSchedulerTest` covers:
+
+- same-namespace FIFO ordering;
+- maximum same-namespace concurrency of one;
+- overlap across distinct namespaces;
+- exceptional task completion;
+- continuation of later same-namespace work after failure.
 
 `GhostNamespacePendingWriteRegistryTest` covers:
 
 - pending work blocking only its own namespace;
 - completed and cancelled tasks no longer blocking admission;
 - a newer same-namespace task remaining authoritative after an older task completes;
+- waiting for every active namespace under one deadline;
+- negative, zero, and timeout behavior;
+- completed-entry cleanup;
 - clearing all namespace activity markers.
 
 `NamespaceBoundGhostPromotionArtifactStoreTest` covers:
@@ -313,9 +337,9 @@ The single executor still serializes queued manager writes globally. Namespace i
 - primary unwritten-receipt abandonment while the compatibility receipt remains pending;
 - active namespace remaining compatibility after the captured-primary maintenance operation.
 
-`test_ghost_persistence_namespace_contract.py` locks manager namespace derivation, bound artifact ownership, namespace-keyed publication, namespace-scoped activity, drain-only global task tracking, and no worker recapture.
+`test_ghost_persistence_namespace_contract.py` locks manager namespace derivation, bound artifact ownership, namespace-keyed publication, namespace-serial scheduling, bounded parallelism, all-namespace waiting, and no worker recapture.
 
-`test_ghost_promotion_recovery_contract.py` preserves durable ordering, strong identity, legacy upgrade, corruption blocking, and disk-fallback coverage while requiring same-namespace recovery admission.
+`test_ghost_promotion_recovery_contract.py` preserves durable ordering, strong identity, legacy upgrade, corruption blocking, and disk-fallback coverage while requiring namespace-keyed scheduling and same-namespace recovery admission.
 
 `test_recovery_evidence_maintenance_contract.py` locks:
 
@@ -326,13 +350,13 @@ The single executor still serializes queued manager writes globally. Namespace i
 - no dynamic `SaveManager` access inside either maintenance handler;
 - cross-namespace integration coverage.
 
-Focused Kotlin compilation and filesystem/in-memory executable harnesses passed for namespace capture, ghost artifacts, manager publication, pending-write activity, and run-outcome maintenance state isolation.
+Focused Kotlin compilation and filesystem/in-memory executable harnesses passed for namespace capture, ghost artifacts, manager publication, namespace-serial scheduling, pending-write activity/waiting, and run-outcome maintenance state isolation.
 
 ## Remaining evidence and limitations
 
 - Full exact-head Gradle and Robolectric execution remains required.
 - Emulator and physical-device process-death/relaunch behavior remains required.
 - Long-run worker latency and disk-pressure behavior remain device gates.
-- The single manager executor remains global and serial across namespaces.
-- Physical-device cross-namespace recovery while another namespace is writing remains an acceptance gate.
+- The manager intentionally permits at most two namespace workers concurrently.
+- Simultaneous Android AtomicFile activity across two namespaces remains a physical/device acceptance gate.
 - SHA-256 identifies local content and distance but does not authenticate a trusted writer.
