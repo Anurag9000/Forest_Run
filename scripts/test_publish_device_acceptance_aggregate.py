@@ -119,8 +119,8 @@ class PublishDeviceAcceptanceAggregateTest(unittest.TestCase):
                 nonlocal calls
                 calls += 1
                 result = original(*args, **kwargs)
-                if calls == 2:
-                    evidence.write_bytes(b"mutated after second acceptance\n")
+                if calls == 3:
+                    evidence.write_bytes(b"mutated after final acceptance\n")
                 return result
 
             with patch.object(
@@ -134,7 +134,7 @@ class PublishDeviceAcceptanceAggregateTest(unittest.TestCase):
                 ):
                     publisher.publish(manifest, staged, root / "aggregate.json")
 
-            self.assertEqual(2, calls)
+            self.assertEqual(3, calls)
             self.assertTrue(staged.is_file())
             self.assertFalse((root / "aggregate.json").exists())
 
