@@ -97,13 +97,13 @@ class DeviceAcceptanceHardeningTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             bundle = valid_bundle()
+            materialize_files(root, bundle)
             artifact_digest = hashlib.sha256(ARTIFACT_BYTES).hexdigest()
             first_entry = next(
                 iter(bundle["sessions"][0]["scenarios"].values())
             )["evidence_files"][0]
             first_entry["path"] = bundle["candidate"]["artifact_path"]
             first_entry["sha256"] = artifact_digest
-            materialize_files(root, bundle)
             with self.assertRaisesRegex(
                 acceptance.EvidenceError,
                 "physical evidence file is reused by path aliases",
