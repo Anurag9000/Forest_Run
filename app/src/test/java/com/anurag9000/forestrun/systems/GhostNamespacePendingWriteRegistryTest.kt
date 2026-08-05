@@ -1,6 +1,9 @@
 package com.anurag9000.forestrun.systems
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -57,6 +60,51 @@ class GhostNamespacePendingWriteRegistryTest {
 
         newer.run()
 
+        assertFalse(registry.isActive(primary))
+    }
+
+    @Test
+    fun `await all waits for every active namespace`() {
+        val registry = GhostNamespacePendingWriteRegistry()
+        val executor = Executors.newFixedThreadPool(2)
+        val releasePrimary = CountDownLatch(1)
+        val releaseCompatibility = CountDownLatch(1)
+        try {
+            val primaryTask = executor.submit { releasePrimary.await() }
+            val compatibilityTask = executor.submit { releaseCompatibility.await() }
+            registry.track(primary, primaryTask)
+            registry.track(compatibility, compatibilityTask)
+
+            releasePrimary.countDown()
+            assertFalse(registry.awaitAll(100L))
+
+            releaseCompatibility.countDown()
+            assertTrue(registry.awaitAll(1_000L))
+        } finally {
+            releasePrimary.countDown()
+            releaseCompatibility.countDown()
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `await all rejects negative budgets and times out on active work`() {
+        val registry = GhostNamespacePendingWriteRegistry()
+        val task = FutureTask<Unit> { Unit }
+        registry.track(primary, task)
+
+        assertFalse(registry.awaitAll(-1L))
+        assertFalse(registry.awaitAll(0L))
+    }
+
+    @Test
+    fun `await all ignores completed namespaces`() {
+        val registry = GhostNamespacePendingWriteRegistry()
+        val completed = FutureTask<Unit> { Unit }
+        completed.run()
+        registry.track(primary, completed)
+
+        assertTrue(registry.awaitAll(0L))
         assertFalse(registry.isActive(primary))
     }
 
