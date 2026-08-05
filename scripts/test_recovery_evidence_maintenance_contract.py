@@ -68,23 +68,13 @@ def _balanced_block(source: str, start: int, brace: int) -> str:
 
 
 def extract_braced_block(source: str, signature: str) -> str:
-    """Return an implementation body, skipping abstract/interface declarations."""
-    search_from = 0
-    while True:
-        start = source.find(signature, search_from)
-        if start < 0:
-            raise AssertionError(f"Kotlin implementation not found for {signature!r}")
-        brace = source.find("{", start + len(signature))
-        if brace < 0:
-            raise AssertionError(f"Kotlin body not found for {signature!r}")
-        line_end = source.find("\n", start)
-        is_type_declaration = any(
-            token in signature
-            for token in (" class ", " data class ", " object ")
-        )
-        if is_type_declaration or line_end < 0 or brace < line_end:
-            return _balanced_block(source, start, brace)
-        search_from = start + len(signature)
+    """Return the block beginning at a signature known to name an implementation."""
+    try:
+        start = source.index(signature)
+        brace = source.index("{", start + len(signature))
+    except ValueError as exc:
+        raise AssertionError(f"Kotlin implementation not found for {signature!r}") from exc
+    return _balanced_block(source, start, brace)
 
 
 class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
@@ -104,7 +94,10 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
         self.assertIn("RecoveryEvidenceDomain.entries.all(handlersByDomain::containsKey)", constructor)
 
     def test_safe_recovery_never_discards_corrupt_evidence(self) -> None:
-        recover = extract_braced_block(self.source, "fun recoverSafely()")
+        recover = extract_braced_block(
+            self.source,
+            "fun recoverSafely(): RecoveryEvidenceReport",
+        )
         helper = extract_braced_block(self.source, "private fun recoverIfEligible(")
         self.assertIn("recoverIfEligible", recover)
         self.assertIn(
