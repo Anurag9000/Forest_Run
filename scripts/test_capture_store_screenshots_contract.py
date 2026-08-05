@@ -5,12 +5,18 @@ import unittest
 from pathlib import Path
 
 SCRIPT = Path(__file__).with_name("capture_store_screenshots.sh")
+WRITER = Path(__file__).with_name("write_screenshot_capture_evidence.py")
+FINALIZER = Path(__file__).with_name("finalize_screenshot_capture_session.py")
+CURATED_VERIFIER = Path(__file__).with_name("verify_curated_screenshot_set.py")
 
 
 class StoreScreenshotCaptureContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = SCRIPT.read_text(encoding="utf-8")
+        cls.writer = WRITER.read_text(encoding="utf-8")
+        cls.finalizer = FINALIZER.read_text(encoding="utf-8")
+        cls.curated_verifier = CURATED_VERIFIER.read_text(encoding="utf-8")
 
     def test_script_has_valid_bash_syntax(self) -> None:
         result = subprocess.run(
@@ -81,20 +87,24 @@ class StoreScreenshotCaptureContractTest(unittest.TestCase):
             if line.startswith('capture "')
         ]
         self.assertEqual(8, len(capture_lines))
-        self.assertIn('"screenshotCount": 8', self.source)
+        self.assertIn("readonly CAPTURE_COUNT=8", self.source)
+        self.assertIn('--expected-count "${CAPTURE_COUNT}"', self.source)
+        self.assertIn('"screenshotCount": len(png_paths)', self.finalizer)
+        self.assertIn("len(png_paths) != expected_count", self.finalizer)
 
     def test_capture_sidecars_validate_landscape_and_record_session_identity(self) -> None:
-        self.assertIn("width <= height", self.source)
-        self.assertIn("width < 800", self.source)
-        self.assertIn("height < 480", self.source)
+        self.assertIn("write_screenshot_capture_evidence.py", self.source)
+        self.assertIn("finalize_screenshot_capture_session.py", self.source)
+        self.assertIn("width <= height or width < 800 or height < 480", self.curated_verifier)
+        combined_evidence = self.writer + "\n" + self.finalizer
         for field in (
             '"candidateSha": candidate_sha',
-            '"originMainSha": origin_sha',
+            '"originMainSha": origin_main_sha',
             '"apkSha256": apk_sha256',
             '"deviceSerial": device_serial',
             '"capturedAtUtc"',
         ):
-            self.assertIn(field, self.source)
+            self.assertIn(field, combined_evidence)
         self.assertIn("capture-session.json", self.source)
 
     def test_legacy_tracked_only_and_prebuilt_apk_paths_cannot_return(self) -> None:
