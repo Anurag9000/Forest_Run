@@ -119,6 +119,7 @@ class StoreGraphicsVerifierTest(unittest.TestCase):
         with self.assertRaisesRegex(StoreGraphicsError, "dimensions"):
             verify_store_graphics(self.root, self.graphics, self.candidate)
 
+        self.write_manifest()
         payload = json.loads((self.graphics / "graphics_manifest.json").read_text())
         payload["outputs"][0]["mode"] = "RGBA"
         self.write_manifest(outputs=payload["outputs"])
