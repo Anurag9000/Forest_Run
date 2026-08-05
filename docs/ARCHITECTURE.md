@@ -182,9 +182,9 @@ All new writes use version-2 56-byte sidecars that add a 32-byte SHA-256 digest.
 
 SHA-256 provides collision-resistant local identity, not authenticated authorship; no key, MAC, certificate, or signature exists.
 
-### Durable order
+### Durable order and scheduling
 
-Accepted frames publish immediately in a concurrent map keyed by namespace. The worker performs:
+Accepted frames publish immediately in a concurrent map keyed by namespace. Every worker performs:
 
 ```text
 version-2 AtomicFile receipt
@@ -196,9 +196,11 @@ version-2 AtomicFile receipt
 
 The in-memory publication carries namespace, distance, FNV, and SHA-256. Failure cleanup removes only the matching publication across all four dimensions.
 
-Primary and compatibility publications cannot leak into each other. The single executor remains global and serial, but every queued task is permanently bound to its admission namespace.
+Primary and compatibility publications cannot leak into each other. `GhostNamespaceSerialScheduler` preserves FIFO/non-overlap for tasks targeting the same namespace and dispatches different namespace queues onto a fixed two-thread daemon backend. Queues share the bounded backend rather than owning one thread each.
 
-`GhostNamespacePendingWriteRegistry` tracks the latest queued task per namespace. Save admission and explicit recovery block only when that same namespace has unfinished work; an active worker in another namespace no longer causes `IO_FAILURE`. `latestSubmittedWrite` is retained only to drain the serial queue through `awaitPendingWrites(...)`.
+`GhostNamespacePendingWriteRegistry` tracks the latest queued task per namespace. Save admission and explicit recovery block only when that same namespace has unfinished work; an active worker in another namespace does not cause `IO_FAILURE`.
+
+`awaitPendingWrites(...)` waits for every active namespace-latest future under one shared monotonic timeout. Same-namespace FIFO means that latest future also represents all earlier tasks in that queue. The old global `latestSubmittedWrite` shortcut no longer exists.
 
 ### Recovery
 
@@ -216,7 +218,7 @@ Ghost files reject oversized, truncated, trailing, nonfinite, invalid-state, and
 
 `GhostPlayer` is contextual visual playback only and has no hitbox.
 
-See `docs/GHOST_PROMOTION_RECOVERY.md` and `docs/GHOST_PERSISTENCE_NAMESPACES.md`.
+See `docs/GHOST_PROMOTION_RECOVERY.md`, `docs/GHOST_PERSISTENCE_NAMESPACES.md`, and `docs/GHOST_NAMESPACE_SCHEDULING.md`.
 
 ## 13. Collision outcomes and persistent memory
 
@@ -351,7 +353,7 @@ An unsigned minified bundle is a build artifact, not signed-upload proof.
 
 The permanent workflow is read-only and intended to validate the exact event SHA through source contracts, debug/release/unit/instrumentation compilation, JVM/Robolectric tests, lint, APK/AAB assembly, R8-renaming verification, and API-35 instrumentation.
 
-Coverage includes input, physics, malformed frames, Bloom, all entity families, persistence isolation, relationships, Garden, save repair, future schemas, ghost persistence, safe-content geometry, settings, latest-intent lifecycle, shutdown, collision geometry, assets, allocation bounds, telemetry, terminal-impact ordering/failure capture, terminal-completion ordering, nonterminal ordering, exactly-once ownership, non-ghost recovery, v1/v2 receipt/manifest recovery, distance-bound SHA-256 golden identity, legacy upgrade, digest/distance tampering, lazy manifest validation, namespace-bound ghost codecs, active primary/compatibility worker isolation, per-namespace publication, namespace-scoped pending-write admission, maintenance policy, cold-start mutation, one-shot commands, and payload-free logging.
+Coverage includes input, physics, malformed frames, Bloom, all entity families, persistence isolation, relationships, Garden, save repair, future schemas, ghost persistence, safe-content geometry, settings, latest-intent lifecycle, shutdown, collision geometry, assets, allocation bounds, telemetry, terminal-impact ordering/failure capture, terminal-completion ordering, nonterminal ordering, exactly-once ownership, non-ghost recovery, v1/v2 receipt/manifest recovery, distance-bound SHA-256 golden identity, legacy upgrade, digest/distance tampering, lazy manifest validation, namespace-bound ghost codecs, per-namespace publication, namespace-scoped pending-write admission, namespace-serial FIFO, bounded cross-namespace overlap, failed-task continuation, all-namespace waiting, maintenance policy, cold-start mutation, one-shot commands, and payload-free logging.
 
 All `scripts/test_*.py` files are discovered by the source-contract job, including `test_terminal_hit_impact_contract.py`, `test_ghost_persistence_namespace_contract.py`, and the namespace-aware `test_ghost_promotion_recovery_contract.py`.
 
@@ -376,8 +378,8 @@ Debug scenarios and focused harnesses do not replace ordinary-play or physical-d
 - The healthy already-applied path avoids repeated hashing; maintenance performs full validation.
 - SHA-256 identifies content/distance but does not authenticate a trusted writer.
 - Ghost and non-ghost recovery are independent rather than one global transaction.
-- The ghost manager retains one global serial worker queue; queued primary and compatibility writes do not execute in parallel.
 - Automatic recovery remains fail-closed; deliberate remediation is debug/support-only with no end-user UI.
+- Simultaneous two-namespace AtomicFile activity and process-death recovery require exact-head Android and physical-device acceptance.
 - Exact-head Gradle, lint, build, emulator, physical-device, ADB, signing, installation, store path, screenshots, metadata, privacy/data-safety, content rating, and current Play-policy evidence remain unresolved.
 - Entity readability, artwork/animation—including Wolf—fixed landscape, procedural scenic layers, audio/haptics, frame time, allocation, GC, memory, I/O, thermal, and long-run behavior require representative-device acceptance.
 
