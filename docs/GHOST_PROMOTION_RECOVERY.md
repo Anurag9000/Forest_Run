@@ -26,11 +26,13 @@ The frame payload remains `SaveManager` ghost format version 2. This protocol do
 
 It never writes best distance directly.
 
-`GhostPersistenceManager` owns immediate per-namespace in-memory publication, pending-distance admission, namespace-scoped recovery admission, single-worker ordering, startup/pre-write recovery, namespace-stable disk fallback, and I/O telemetry.
+`GhostPersistenceManager` owns immediate per-namespace in-memory publication, pending-distance admission, namespace-scoped recovery admission, namespace-keyed scheduling, startup/pre-write recovery, namespace-stable disk fallback, and I/O telemetry.
 
 `GhostPersistenceNamespace` captures the active preference namespace once and derives its canonical ghost filename. `NamespaceBoundGhostPromotionArtifactStore` binds one preference store and one AtomicFile to that immutable snapshot.
 
-`GhostNamespacePendingWriteRegistry` tracks the latest queued task independently for each immutable namespace. It is an admission owner only; the separate `latestSubmittedWrite` pointer exists solely to drain the global serial queue in tests and lifecycle tooling.
+`GhostNamespaceSerialScheduler` preserves FIFO order within one namespace while allowing bounded overlap across disjoint namespaces on a two-thread daemon backend.
+
+`GhostNamespacePendingWriteRegistry` tracks the latest queued task independently for each immutable namespace and waits for every active namespace under one shared timeout budget.
 
 `GhostPromotionRecoveryCoordinator` owns the durable transaction and recovery decisions using the receipt, ghost, manifest, and distance adapters supplied to it.
 
@@ -59,7 +61,7 @@ pre-write recovery
 pending-write activity admission
 pending-distance admission
 in-memory publication
-queued worker
+namespace-serial worker queue
 promotion receipt
 ghost artifact
 artifact manifest
@@ -71,7 +73,7 @@ The worker never recaptures the active namespace.
 
 `NamespaceBoundGhostPromotionArtifactStore` mirrors the SaveManager ghost codec while remaining permanently bound to its constructor namespace. It supports version-2 writes and legacy raw-ordinal reads, validates exact payload size and frame bounds, and commits best distance synchronously. It never calls dynamic active-namespace ghost or distance methods after construction.
 
-See `docs/GHOST_PERSISTENCE_NAMESPACES.md` for the complete isolation and recovery-admission contract.
+See `docs/GHOST_PERSISTENCE_NAMESPACES.md` and `docs/GHOST_NAMESPACE_SCHEDULING.md` for the complete isolation, scheduling, waiting, and recovery-admission contracts.
 
 ## Versioned sidecar schemas
 
@@ -136,7 +138,7 @@ The digest is serialized as 32 raw bytes and represented in memory as exactly 64
 
 ## Durable worker sequence
 
-For an accepted candidate, the single worker performs inside one captured namespace:
+For an accepted candidate, one namespace-serial worker performs inside one captured namespace:
 
 ```text
 write AtomicFile version-2 promotion receipt
@@ -152,9 +154,13 @@ The manifest precedes the threshold write so process death after receipt clearin
 
 The threshold write is monotonic. Repeated or delayed recovery cannot lower progress.
 
-The single executor remains global across namespaces. This preserves promotion order and simple telemetry while immutable snapshots prevent serialized jobs from cross-writing.
+Same-namespace candidates remain FIFO and cannot overlap. Primary and compatibility candidates may execute concurrently because their durable stores are disjoint. All queues share a fixed backend capped at two daemon threads; no namespace owns a permanent thread.
+
+A failed task completes its `FutureTask` exceptionally and advances the same-namespace queue through `finally`, so later work is not stranded.
 
 `GhostNamespacePendingWriteRegistry` stores the latest submitted task per namespace. A queued or active task blocks only recovery for that same namespace. Completed or cancelled tasks are removed lazily with exact map-value comparison, so completion of an older task cannot clear a newer task registered for the same namespace.
+
+`awaitPendingWrites(...)` waits for every active namespace-latest future under one monotonic deadline. Because each namespace queue is FIFO, the latest future represents all earlier tasks in that namespace.
 
 ## Immediate playback and pending floor
 
@@ -190,11 +196,11 @@ other namespace active → recovery may proceed
 no same-namespace task → recovery may proceed
 ```
 
-The `IO_FAILURE` disposition remains a conservative fail-closed signal for same-namespace concurrent mutation. It is no longer used merely because an unrelated namespace is being written.
+The `IO_FAILURE` disposition remains a conservative fail-closed signal for same-namespace concurrent mutation. It is not used merely because an unrelated namespace is being written.
 
-Cross-namespace recovery may run on the caller thread while the serial worker processes another namespace. Receipt, manifest, ghost, and preference stores are disjoint because both operations use immutable namespace-bound adapters.
+Cross-namespace recovery may run on the caller thread while another namespace worker is active or while another namespace worker executes on the second backend thread. Receipt, manifest, ghost, and preference stores are disjoint because all operations use immutable namespace-bound adapters.
 
-Pre-write recovery uses the same rule. A new candidate attempts synchronous recovery when its own namespace has no active queued task, even if another namespace is currently in the worker.
+Pre-write recovery uses the same rule. A new candidate attempts synchronous recovery when its own namespace has no active queued task, even if another namespace is currently being written.
 
 ## Receipt recovery
 
@@ -330,7 +336,7 @@ Recovery is attempted:
 
 Manager recovery and disk fallback use one captured namespace for receipt, manifest, ghost, and distance. Disk fallback builds its in-memory publication identity from the bound best distance and bound frames, preserving the same distance-bound identity contract.
 
-An active worker in another namespace no longer causes automatic or explicit recovery to return `IO_FAILURE`. Same-namespace activity remains fail-closed.
+An active worker in another namespace does not cause automatic or explicit recovery to return `IO_FAILURE`. Same-namespace activity remains fail-closed.
 
 ## Relationship to non-ghost recovery
 
@@ -362,13 +368,15 @@ Coverage includes:
 - bound-store persistence after an active namespace switch;
 - separate primary and compatibility ghost files and best distances;
 - per-namespace immediate publication and disk fallback;
-- queued primary and compatibility worker isolation;
+- same-namespace FIFO and cross-namespace scheduler overlap;
+- task-failure continuation;
 - namespace-scoped recovery activity and lazy completed-task eviction;
+- all-namespace deadline-bounded waiting;
 - completed, cancelled, older, and newer task registry behavior;
 - versioned bound-store writes, legacy reads, unknown-version/trailing-byte rejection, and invalid-candidate preservation;
-- source contracts prohibiting mutable namespace recapture inside a queued worker or global activity gating.
+- source contracts prohibiting mutable namespace recapture, a global single-thread executor, global activity gating, or single-future waiting.
 
-Focused Kotlin compilation passed for the identity, codecs, recovery coordinator, namespace adapter, pending-write registry, and manager surface. Executable golden-vector, codec, recovery-state-machine, registry, and filesystem namespace-isolation harnesses passed. Exact-head Android Gradle, Robolectric, emulator, and physical-device execution remain separate evidence gates.
+Focused Kotlin compilation passed for the identity, codecs, recovery coordinator, namespace adapter, scheduler, pending-write registry, and manager surface. Executable golden-vector, codec, recovery-state-machine, scheduler, registry, and filesystem namespace-isolation harnesses passed. Exact-head Android Gradle, Robolectric, emulator, and physical-device execution remain separate evidence gates.
 
 ## Remaining limitations
 
@@ -377,6 +385,6 @@ Focused Kotlin compilation passed for the identity, codecs, recovery coordinator
 - The healthy already-applied fast path deliberately avoids repeated full ghost hashing; explicit maintenance performs full validation.
 - SHA-256 establishes collision-resistant identity, not authenticity against a malicious writer with filesystem access.
 - Remediation is debug/support tooling rather than an end-user UI.
-- The manager retains one global single-worker queue, so queued primary and compatibility writes do not execute in parallel.
-- Cross-namespace recovery during an active write still requires exact-head Android and physical-device acceptance.
+- The backend intentionally caps concurrent namespace workers at two.
+- Simultaneous Android AtomicFile and process-death behavior across both worker threads remains a physical-device acceptance gate.
 - Exact-head Android, emulator, physical-device, and ADB acceptance remain outstanding.
