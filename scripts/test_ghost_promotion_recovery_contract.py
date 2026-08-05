@@ -141,7 +141,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         self.assertIn("pendingWrites.isActive(namespace)", recover)
         self.assertIn("GhostPromotionRecoveryDisposition.IO_FAILURE", recover)
         self.assertNotIn("latestSubmittedWrite", recover)
-        self.assertNotIn("pendingWrite", recover)
+        self.assertNotIn("val activeTask = pendingWrite", recover)
 
         self.assertIn(
             "ConcurrentHashMap<GhostPersistenceNamespace, Future<*>>()",
