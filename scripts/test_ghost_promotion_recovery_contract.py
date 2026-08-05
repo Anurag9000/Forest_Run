@@ -10,6 +10,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SYSTEMS = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems"
 MANAGER = SYSTEMS / "GhostPersistenceManager.kt"
 NAMESPACE = SYSTEMS / "GhostPersistenceNamespace.kt"
+PENDING_REGISTRY = SYSTEMS / "GhostNamespacePendingWriteRegistry.kt"
 RECOVERY = SYSTEMS / "GhostPromotionRecovery.kt"
 MANIFEST = SYSTEMS / "GhostArtifactManifest.kt"
 IDENTITY = SYSTEMS / "GhostRunIdentity.kt"
@@ -81,20 +82,25 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.manager = MANAGER.read_text(encoding="utf-8")
         cls.namespace = NAMESPACE.read_text(encoding="utf-8")
+        cls.pending_registry = PENDING_REGISTRY.read_text(encoding="utf-8")
         cls.recovery = RECOVERY.read_text(encoding="utf-8")
         cls.manifest = MANIFEST.read_text(encoding="utf-8")
         cls.identity = IDENTITY.read_text(encoding="utf-8")
         cls.save_manager = SAVE_MANAGER.read_text(encoding="utf-8")
 
-    def test_single_worker_preserves_order_and_publications_are_namespace_keyed(self) -> None:
+    def test_single_worker_preserves_order_and_activity_is_namespace_keyed(self) -> None:
         self.assertEqual(1, self.manager.count("Executors.newSingleThreadExecutor"))
         self.assertIn('Thread(runnable, "forest-run-ghost-io")', self.manager)
-        self.assertIn("pendingWrite = executor.submit", self.manager)
+        self.assertIn("val task = executor.submit", self.manager)
+        self.assertIn("pendingWrites.track(namespace, task)", self.manager)
+        self.assertIn("latestSubmittedWrite = task", self.manager)
+        self.assertIn("GhostNamespacePendingWriteRegistry()", self.manager)
         self.assertIn(
             "ConcurrentHashMap<GhostPersistenceNamespace, PublishedGhost>()",
             self.manager,
         )
         self.assertNotIn("private var latestPublication:", self.manager)
+        self.assertNotIn("private var pendingWrite: Future", self.manager)
 
     def test_immediate_publication_carries_distance_bound_strong_identity(self) -> None:
         save = extract_braced_block(self.manager, "private fun saveBestRunAsync(")
@@ -105,7 +111,9 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
             "sha256Hex = identity.sha256Hex",
             "latestPublications[namespace] = publication",
             "GhostIoTelemetry.recordWriteStarted(snapshot.size)",
-            "pendingWrite = executor.submit",
+            "val task = executor.submit",
+            "pendingWrites.track(namespace, task)",
+            "latestSubmittedWrite = task",
         )
         positions = [save.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
@@ -126,6 +134,21 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
         publication = save.index("val snapshot = frames.toList()")
         self.assertLess(recovery_gate, stale_gate)
         self.assertLess(stale_gate, publication)
+        self.assertIn("if (!pendingWrites.isActive(namespace))", save)
+
+    def test_explicit_recovery_blocks_only_same_namespace_activity(self) -> None:
+        recover = extract_braced_block(self.manager, "private fun recoverPendingPromotion(")
+        self.assertIn("pendingWrites.isActive(namespace)", recover)
+        self.assertIn("GhostPromotionRecoveryDisposition.IO_FAILURE", recover)
+        self.assertNotIn("latestSubmittedWrite", recover)
+        self.assertNotIn("pendingWrite", recover)
+
+        self.assertIn(
+            "ConcurrentHashMap<GhostPersistenceNamespace, Future<*>>()",
+            self.pending_registry,
+        )
+        self.assertIn("latestByNamespace[namespace]", self.pending_registry)
+        self.assertIn("latestByNamespace.remove(namespace, task)", self.pending_registry)
 
     def test_pending_publication_is_part_of_namespace_specific_best_distance_floor(self) -> None:
         floor = extract_braced_block(self.manager, "private fun bestDistanceFloor(")
@@ -136,7 +159,7 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
 
     def test_worker_recovers_previous_evidence_before_new_persist_without_recapturing(self) -> None:
         save = extract_braced_block(self.manager, "private fun saveBestRunAsync(")
-        worker = save[save.index("pendingWrite = executor.submit") :]
+        worker = save[save.index("val task = executor.submit") :]
         recover = worker.index("val recovery = coordinator.recover()")
         gate = worker.index("if (!recovery.allowsNewPromotion)")
         persist = worker.index("coordinator.persist(snapshot, distanceM)")
