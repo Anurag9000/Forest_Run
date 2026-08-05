@@ -209,16 +209,18 @@ class GhostPromotionRecoveryContractTest(unittest.TestCase):
 
     def test_receipt_recovery_requires_distance_bound_match_before_manifest_and_distance(self) -> None:
         recover = extract_braced_block(self.recovery, "private fun recoverReceipt(")
-        order = (
-            "artifactStore.loadGhost()",
-            "matchingIdentity(",
-            "distanceM = receipt.distanceM",
-            "val expectedManifest = receipt.toManifest(durableIdentity)",
-            "ensureManifest(expectedManifest)",
-            "repairDistanceIfNeeded(receipt.distanceM)",
-            "receiptStore.clear()",
+        success_start = recover.index(
+            "val expectedManifest = receipt.toManifest(durableIdentity)"
         )
-        positions = [recover.index(item) for item in order]
+        positions = [
+            recover.index("artifactStore.loadGhost()"),
+            recover.index("matchingIdentity("),
+            recover.index("distanceM = receipt.distanceM"),
+            success_start,
+            recover.index("ensureManifest(expectedManifest)", success_start),
+            recover.index("repairDistanceIfNeeded(receipt.distanceM)", success_start),
+            recover.index("receiptStore.clear()", success_start),
+        ]
         self.assertEqual(sorted(positions), positions)
         self.assertIn("sha256Hex = receipt.sha256Hex", recover)
         mismatch = recover[recover.index("if (durableIdentity == null)") :]
