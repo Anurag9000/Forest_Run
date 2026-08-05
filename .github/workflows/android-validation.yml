@@ -110,17 +110,24 @@ jobs:
           test -f scripts/test_strict_json_overflow.py
           test -f scripts/validate_device_acceptance.py
           test -f scripts/test_validate_device_acceptance.py
-          test -f scripts/test_device_acceptance_hardening.py
           test -f scripts/compile_device_acceptance.py
           test -f scripts/test_compile_device_acceptance.py
           test -f scripts/aggregate_device_acceptance.py
           test -f scripts/test_aggregate_device_acceptance.py
           test -f scripts/test_leitmotif_throttle_contract.py
+          test -f scripts/requirements-ci.txt
           test -f docs/DEVICE_ACCEPTANCE.md
           test -f docs/DEVICE_ACCEPTANCE_AGGREGATION.md
           test -f docs/audits/2026-08-01_post_merge_audit.md
 
           python3 scripts/verify_release_source_assets.py --root .
+
+      - name: Install Python validation dependencies
+        run: >-
+          python3 -m pip install
+          --disable-pip-version-check
+          --no-cache-dir
+          -r scripts/requirements-ci.txt
 
       - name: Test performance, release, and connected-validation tooling
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
