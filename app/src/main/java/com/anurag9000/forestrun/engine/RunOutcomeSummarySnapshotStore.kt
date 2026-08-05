@@ -9,8 +9,8 @@ internal interface RunOutcomeSummarySnapshotStore {
 
 /**
  * Writes the completed summary and its route-tier counter in one synchronous
- * SharedPreferences transaction. This avoids replaying the hidden counter side
- * effect inside SaveManager.saveLastRunSummary during crash recovery.
+ * SharedPreferences transaction. This avoids replaying the legacy summary
+ * writer's hidden counter side effect during crash recovery.
  */
 internal class SharedPreferencesRunOutcomeSummarySnapshotStore(
     context: Context,
