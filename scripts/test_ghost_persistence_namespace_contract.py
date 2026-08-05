@@ -8,7 +8,9 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MANAGER = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPersistenceManager.kt"
 NAMESPACE = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPersistenceNamespace.kt"
+PENDING_REGISTRY = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostNamespacePendingWriteRegistry.kt"
 INTEGRATION = ROOT / "app/src/test/java/com/anurag9000/forestrun/systems/GhostPersistenceNamespaceIntegrationTest.kt"
+REGISTRY_TEST = ROOT / "app/src/test/java/com/anurag9000/forestrun/systems/GhostNamespacePendingWriteRegistryTest.kt"
 CODEC_TEST = ROOT / "app/src/test/java/com/anurag9000/forestrun/systems/NamespaceBoundGhostPromotionArtifactStoreTest.kt"
 
 
@@ -17,7 +19,9 @@ class GhostPersistenceNamespaceContractTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.manager = MANAGER.read_text(encoding="utf-8")
         cls.namespace = NAMESPACE.read_text(encoding="utf-8")
+        cls.pending_registry = PENDING_REGISTRY.read_text(encoding="utf-8")
         cls.integration = INTEGRATION.read_text(encoding="utf-8")
+        cls.registry_test = REGISTRY_TEST.read_text(encoding="utf-8")
         cls.codec_test = CODEC_TEST.read_text(encoding="utf-8")
 
     def test_namespace_capture_derives_one_coherent_pair_from_one_volatile_read(self) -> None:
@@ -62,12 +66,53 @@ class GhostPersistenceNamespaceContractTest(unittest.TestCase):
         self.assertIn("latestPublications.remove(publication.namespace, current)", self.manager)
         self.assertNotIn("private var latestPublication:", self.manager)
 
-        worker_start = self.manager.index("pendingWrite = executor.submit")
-        worker_end = self.manager.index("\n            true\n        } catch", worker_start)
+        worker_start = self.manager.index("val task = executor.submit")
+        worker_end = self.manager.index("pendingWrites.track(namespace, task)", worker_start)
         worker = self.manager[worker_start:worker_end]
         self.assertIn("recoveryCoordinator(context, namespace)", worker)
         self.assertIn("clearPublicationIfCurrent(publication)", worker)
         self.assertNotIn("GhostPersistenceNamespace.capture()", worker)
+        self.assertIn("pendingWrites.track(namespace, task)", self.manager)
+        self.assertIn("latestSubmittedWrite = task", self.manager)
+
+    def test_pending_activity_and_recovery_admission_are_namespace_scoped(self) -> None:
+        self.assertIn(
+            "private val pendingWrites = GhostNamespacePendingWriteRegistry()",
+            self.manager,
+        )
+        self.assertIn("if (!pendingWrites.isActive(namespace))", self.manager)
+        self.assertIn("if (pendingWrites.isActive(namespace))", self.manager)
+        self.assertNotIn("private var pendingWrite: Future", self.manager)
+        self.assertNotIn("val activeTask = pendingWrite", self.manager)
+        self.assertIn("private var latestSubmittedWrite: Future<*>? = null", self.manager)
+
+        recovery = self.manager.split("private fun recoverPendingPromotion(", 1)[1]
+        recovery = recovery.split("/** Returns the latest", 1)[0]
+        self.assertIn("pendingWrites.isActive(namespace)", recovery)
+        self.assertNotIn("latestSubmittedWrite", recovery)
+
+        await_block = self.manager.split("internal fun awaitPendingWrites", 1)[1]
+        await_block = await_block.split("internal fun clearPromotionEvidenceForTests", 1)[0]
+        self.assertIn("latestSubmittedWrite", await_block)
+        self.assertNotIn("pendingWrites.isActive", await_block)
+
+    def test_pending_registry_removes_only_completed_target_namespace_entries(self) -> None:
+        self.assertIn("internal class GhostNamespacePendingWriteRegistry", self.pending_registry)
+        self.assertIn(
+            "ConcurrentHashMap<GhostPersistenceNamespace, Future<*>>()",
+            self.pending_registry,
+        )
+        self.assertIn("latestByNamespace[namespace] = task", self.pending_registry)
+        self.assertIn("val task = latestByNamespace[namespace] ?: return false", self.pending_registry)
+        self.assertIn("if (!task.isDone) return true", self.pending_registry)
+        self.assertIn("latestByNamespace.remove(namespace, task)", self.pending_registry)
+        self.assertIn("latestByNamespace.clear()", self.pending_registry)
+
+        self.assertIn("pending work blocks only its own namespace", self.registry_test)
+        self.assertIn("completed and cancelled tasks stop blocking admission", self.registry_test)
+        self.assertIn("latest same namespace task remains authoritative", self.registry_test)
+        self.assertIn("clear removes every namespace activity marker", self.registry_test)
+        self.assertGreaterEqual(self.registry_test.count("assertFalse(registry.isActive(compatibility))"), 2)
 
     def test_receipt_manifest_ghost_and_distance_share_one_snapshot(self) -> None:
         coordinator = self.manager.split("private fun recoveryCoordinator", 1)[1]
