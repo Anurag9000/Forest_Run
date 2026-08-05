@@ -184,7 +184,7 @@ Implemented:
 - malformed direct/debug pose samples are skipped without poisoning an otherwise valid run;
 - capture, in-memory publication, and persistence share the same frame validation contract;
 - completed best-run buffers detach in O(1);
-- dedicated single-worker atomic persistence;
+- bounded two-worker namespace-serial atomic persistence;
 - corrupt, oversized, truncated, trailing, non-finite, invalid-state, and non-monotonic payload rejection;
 - format magic/version and stable state codes;
 - legacy raw-ordinal reads;
@@ -206,9 +206,12 @@ Implemented:
 - `GhostNamespacePendingWriteRegistry` stores the latest submitted task independently for each immutable namespace;
 - pre-write and explicit recovery admission block only when that same namespace has unfinished work, so active primary work no longer blocks compatibility recovery and vice versa;
 - completed and cancelled tasks are evicted lazily with exact namespace-and-future comparison, preserving a newer same-namespace task when an older task completes;
-- `latestSubmittedWrite` is used only to drain the global serial queue through `awaitPendingWrites(...)`, not as a recovery gate;
-- pure registry tests cover namespace independence, completion, cancellation, latest-task authority, and clearing;
-- `scripts/test_ghost_persistence_namespace_contract.py`, `scripts/test_ghost_promotion_recovery_contract.py`, and `scripts/test_recovery_evidence_maintenance_contract.py` lock namespace capture, worker ownership, recovery admission, transaction order, and maintenance isolation.
+- `GhostNamespaceSerialScheduler` preserves FIFO/non-overlap inside one namespace and permits bounded overlap across different namespaces on a two-thread daemon backend;
+- failed scheduler tasks continue the same-namespace queue through `finally` and cannot strand later work;
+- `awaitPendingWrites(...)` waits for every active namespace-latest future under one shared monotonic timeout budget rather than relying on one global latest task;
+- pure scheduler tests cover same-namespace FIFO, peak concurrency one, cross-namespace peak concurrency two, failure propagation, and failure continuation;
+- registry tests cover namespace independence, completion, cancellation, latest-task authority, all-namespace waiting, timeout behavior, completed-entry cleanup, and clearing;
+- `scripts/test_ghost_persistence_namespace_contract.py`, `scripts/test_ghost_promotion_recovery_contract.py`, and `scripts/test_recovery_evidence_maintenance_contract.py` lock namespace capture, scheduler ownership, bounded concurrency, recovery admission, transaction order, and maintenance isolation.
 
 Still requiring physical evidence:
 
@@ -217,11 +220,8 @@ Still requiring physical evidence:
 - playback readability near dense hazards;
 - disk I/O under thermal and memory pressure;
 - physical-device ADB recovery-maintenance behavior across a namespace switch;
-- physical-device cross-namespace recovery while another namespace is actively writing.
-
-Bounded debt:
-
-- one global serial executor remains shared across namespaces, so queued primary and compatibility writes cannot execute in parallel.
+- physical-device cross-namespace recovery while another namespace is actively writing;
+- simultaneous Android AtomicFile and process-death behavior while both namespace workers are active.
 
 ## 8. Performance, physical-device, and store-delivery evidence
 
@@ -333,12 +333,15 @@ Locally verified during remediation where runtime execution was available:
 - focused Kotlin compilation and executable namespace-pending-write registry validation;
 - registry behavior for cross-namespace independence, completed/cancelled eviction, latest same-namespace authority, and complete clearing;
 - exact `GhostPersistenceManager.kt` diff inspection confirming only activity ownership, namespace-scoped gates, task registration, drain-pointer use, and reset changed;
-- namespace and promotion source-contract migration preserving worker order, durable ordering, SHA-256 identity, corruption blocking, disk fallback, and publication cleanup while removing the obsolete global recovery gate.
+- namespace and promotion source-contract migration preserving worker order, durable ordering, SHA-256 identity, corruption blocking, disk fallback, and publication cleanup while removing the obsolete global recovery gate;
+- focused Kotlin/JVM compilation and executable namespace scheduler/registry validation for same-namespace FIFO, cross-namespace overlap, failed-task continuation, and all-namespace waiting;
+- exact scheduler-integration diff inspection confirming only bounded backend construction, namespace-keyed submission, all-namespace waiting, cleanup, imports, constants, and comments changed;
+- namespace and promotion source-contract migration preserving transaction, identity, corruption, legacy-upgrade, and disk-fallback coverage while prohibiting a global single-thread executor or single-future drain shortcut.
 
 Currently not executable or observable from this environment:
 
 - a complete local repository checkout and the full expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
-- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy/ghost-namespace/recovery-maintenance/Parallax-Bloom/namespace-recovery-admission acceptance;
+- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy/ghost-namespace/recovery-maintenance/Parallax-Bloom/namespace-recovery-admission/parallel-namespace-I/O acceptance;
 - push-triggered GitHub Actions check-run conclusions for the latest `main` SHA, because the installed connector exposes only pull-request-triggered workflow runs.
 
-Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, filesystem and in-memory harnesses, and exact-diff review establish the intended ordering, arithmetic, relationship-scoring, namespace-isolation, recovery-maintenance, Bloom-presentation, and namespace-scoped recovery-admission boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
+Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, filesystem and in-memory harnesses, and exact-diff review establish the intended ordering, arithmetic, relationship-scoring, namespace-isolation, recovery-maintenance, Bloom-presentation, namespace-scoped recovery-admission, and bounded cross-namespace scheduling boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
