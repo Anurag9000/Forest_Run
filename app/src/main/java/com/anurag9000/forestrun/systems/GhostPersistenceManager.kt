@@ -35,9 +35,10 @@ object GhostPersistenceManager {
 
     private val latestPublications =
         ConcurrentHashMap<GhostPersistenceNamespace, PublishedGhost>()
+    private val pendingWrites = GhostNamespacePendingWriteRegistry()
 
     @Volatile
-    private var pendingWrite: Future<*>? = null
+    private var latestSubmittedWrite: Future<*>? = null
 
     /**
      * Compatibility overload used by direct ghost tests and legacy callers.
@@ -79,8 +80,7 @@ object GhostPersistenceManager {
         if (!GhostRunValidator.isValid(frames)) return false
         if (!distanceM.isFinite() || distanceM < 0f) return false
 
-        val activeTask = pendingWrite
-        if (activeTask == null || activeTask.isDone) {
+        if (!pendingWrites.isActive(namespace)) {
             val recovery = recoveryCoordinator(context, namespace).recover()
             if (!recovery.allowsNewPromotion) return false
         }
@@ -99,7 +99,7 @@ object GhostPersistenceManager {
         GhostIoTelemetry.recordWriteStarted(snapshot.size)
 
         return try {
-            pendingWrite = executor.submit {
+            val task = executor.submit {
                 val startedAtNs = System.nanoTime()
                 var ghostDurable = false
                 val succeeded = try {
@@ -124,6 +124,8 @@ object GhostPersistenceManager {
                     succeeded = succeeded
                 )
             }
+            pendingWrites.track(namespace, task)
+            latestSubmittedWrite = task
             true
         } catch (_: RuntimeException) {
             clearPublicationIfCurrent(publication)
@@ -167,8 +169,7 @@ object GhostPersistenceManager {
         context: Context,
         namespace: GhostPersistenceNamespace
     ): GhostPromotionRecoveryDisposition {
-        val activeTask = pendingWrite
-        if (activeTask != null && !activeTask.isDone) {
+        if (pendingWrites.isActive(namespace)) {
             return GhostPromotionRecoveryDisposition.IO_FAILURE
         }
         return recoveryCoordinator(context, namespace).recover()
@@ -202,7 +203,7 @@ object GhostPersistenceManager {
     }
 
     internal fun awaitPendingWrites(timeoutMs: Long = 5_000L): Boolean {
-        val task = pendingWrite ?: return true
+        val task = latestSubmittedWrite ?: return true
         return try {
             task.get(timeoutMs, TimeUnit.MILLISECONDS)
             true
@@ -231,7 +232,8 @@ object GhostPersistenceManager {
         awaitPendingWrites()
         synchronized(this) {
             latestPublications.clear()
-            pendingWrite = null
+            pendingWrites.clear()
+            latestSubmittedWrite = null
         }
         GhostIoTelemetry.reset()
     }
