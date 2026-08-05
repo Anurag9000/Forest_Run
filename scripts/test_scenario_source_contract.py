@@ -11,6 +11,7 @@ import scenario_source_contract as contract
 ROOT = Path(__file__).resolve().parents[1]
 CACTUS_SCENARIO_SHA = "3246dd15f7e694d387d06430537bf1805e8d57a53a9bcd1bdc5dd13e929b524c"
 CACTUS_TRACE_SHA = "edb682a29079ceaebf9c3e56c2f24362ce3335a0c1432e3803305a5dc2b58430"
+CACTUS_STEP = "EncounterStep(0.20f, EntityType.CACTUS, 420f)"
 
 
 class ScenarioSourceContractTest(unittest.TestCase):
@@ -46,10 +47,9 @@ class ScenarioSourceContractTest(unittest.TestCase):
 
     def test_signed_exponent_offsets_match_kotlin_float_and_rounding_semantics(self) -> None:
         source = self.encounter_source(ROOT).read_text(encoding="utf-8")
-        modified = source.replace(
-            "EncounterStep(0.20f, EntityType.CACTUS, 420f)",
+        modified = self.replace_cactus_step(
+            source,
             "EncounterStep(0.20f, EntityType.CACTUS, -1.25e1f)",
-            1,
         )
 
         definition = contract.parse_scenario_definition(modified, "CACTUS_READ")
@@ -62,10 +62,9 @@ class ScenarioSourceContractTest(unittest.TestCase):
 
     def test_negative_time_and_nonrepresentable_float_literals_fail_closed(self) -> None:
         source = self.encounter_source(ROOT).read_text(encoding="utf-8")
-        negative_time = source.replace(
-            "EncounterStep(0.20f, EntityType.CACTUS, 420f)",
+        negative_time = self.replace_cactus_step(
+            source,
             "EncounterStep(-0.20f, EntityType.CACTUS, 420f)",
-            1,
         )
         with self.assertRaisesRegex(
             contract.ScenarioSourceContractError,
@@ -73,10 +72,9 @@ class ScenarioSourceContractTest(unittest.TestCase):
         ):
             contract.parse_scenario_definition(negative_time, "CACTUS_READ")
 
-        overflow = source.replace(
-            "EncounterStep(0.20f, EntityType.CACTUS, 420f)",
+        overflow = self.replace_cactus_step(
+            source,
             "EncounterStep(0.20f, EntityType.CACTUS, 1e100f)",
-            1,
         )
         with self.assertRaisesRegex(
             contract.ScenarioSourceContractError,
@@ -145,6 +143,14 @@ class ScenarioSourceContractTest(unittest.TestCase):
             "steps=listOf",
         ):
             contract.parse_scenario_definition(broken, "OPENING_READABILITY")
+
+    @staticmethod
+    def replace_cactus_step(source: str, replacement: str) -> str:
+        block = contract._extract_scenario_block(source, "CACTUS_READ")
+        updated_block = block.replace(CACTUS_STEP, replacement, 1)
+        if updated_block == block:
+            raise AssertionError("CACTUS_READ fixture no longer contains the canonical first step")
+        return source.replace(block, updated_block, 1)
 
     @staticmethod
     def encounter_source(root: Path) -> Path:
