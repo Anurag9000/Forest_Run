@@ -215,6 +215,7 @@ class CompileDeviceAcceptanceTest(unittest.TestCase):
             draft = draft_bundle()
             materialize(root, draft)
             draft["sessions"][0]["performance"]["p95_frame_ms"] = 40.0
+            draft["sessions"][0]["performance"]["p99_frame_ms"] = 45.0
             with self.assertRaisesRegex(compiler.CompilationError, "exceeds max_p95"):
                 compiler.compile_bundle(draft, base_dir=root)
 
@@ -236,7 +237,7 @@ class CompileDeviceAcceptanceTest(unittest.TestCase):
             draft = draft_bundle()
             materialize(root, draft)
             del draft["sessions"][0]["build"]
-            with self.assertRaisesRegex(compiler.CompilationError, "sessions\[0\]\.build"):
+            with self.assertRaisesRegex(compiler.CompilationError, r"sessions\[0\]\.build"):
                 compiler.compile_bundle(draft, base_dir=root)
 
     def test_compile_file_publishes_manifest_and_summary_transactionally(self) -> None:
