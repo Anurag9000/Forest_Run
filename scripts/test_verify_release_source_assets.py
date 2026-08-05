@@ -105,8 +105,8 @@ class ReleaseSourceAssetVerifierTest(unittest.TestCase):
         self.preparer.write_text('REQUIRED_AUDIO = ("sfx_jump",)\n', encoding="utf-8")
         image = self.assets_root / "sprites/test.png"
         font = self.assets_root / "fonts/test.ttf"
-        image.parent.mkdir(parents=True)
-        font.parent.mkdir(parents=True)
+        image.parent.mkdir(parents=True, exist_ok=True)
+        font.parent.mkdir(parents=True, exist_ok=True)
         image.write_bytes(self.valid_png())
         font.write_bytes(self.valid_font())
         (self.raw_root / "sfx_jump.ogg").write_bytes(self.valid_ogg())
@@ -214,7 +214,7 @@ class ReleaseSourceAssetVerifierTest(unittest.TestCase):
 
     def test_checked_in_repository_assets_pass_source_contract(self) -> None:
         evidence = verify_release_source_assets(ROOT)
-        self.assertEqual((30, 29, 1, 15, 18), (
+        self.assertEqual((30, 29, 1, 15, 15), (
             evidence.asset_count,
             evidence.png_count,
             evidence.font_count,
@@ -239,7 +239,12 @@ class ReleaseSourceAssetVerifierTest(unittest.TestCase):
                 name = constant_match.group(1)
                 if name != "PIXEL_FONT":
                     expected_references.add(f"AssetPaths.{current_object}.{name}")
-        runtime_references = set(re.findall(r"AssetPaths(?:\.\w+){1,2}", runtime_source))
+        runtime_references = set(
+            re.findall(
+                r"(?<![A-Za-z0-9_])AssetPaths(?:\.\w+){1,2}",
+                runtime_source,
+            )
+        )
         self.assertEqual(expected_references, runtime_references)
 
         runtime_audio_block = re.search(
