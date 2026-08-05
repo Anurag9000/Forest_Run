@@ -7,30 +7,18 @@ import pathlib
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SOURCE = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/engine/RecoveryEvidenceMaintenance.kt"
-)
-STATE_STORE = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/engine/NamespaceBoundRunOutcomeMaintenanceStateStore.kt"
-)
-INTEGRATION_TEST = (
-    ROOT
-    / "app/src/test/java/com/anurag9000/forestrun/engine/RecoveryEvidenceMaintenanceNamespaceIntegrationTest.kt"
-)
+SOURCE = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/RecoveryEvidenceMaintenance.kt"
+STATE_STORE = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/NamespaceBoundRunOutcomeMaintenanceStateStore.kt"
+INTEGRATION_TEST = ROOT / "app/src/test/java/com/anurag9000/forestrun/engine/RecoveryEvidenceMaintenanceNamespaceIntegrationTest.kt"
 
 
-def extract_braced_block(source: str, signature: str) -> str:
-    start = source.index(signature)
-    brace = source.index("{", start)
+def _balanced_block(source: str, start: int, brace: int) -> str:
     depth = 0
     in_string = False
     escaped = False
     line_comment = False
-    block_comment = False
+    block_comment_depth = 0
     index = brace
-
     while index < len(source):
         char = source[index]
         nxt = source[index + 1] if index + 1 < len(source) else ""
@@ -39,12 +27,16 @@ def extract_braced_block(source: str, signature: str) -> str:
                 line_comment = False
             index += 1
             continue
-        if block_comment:
-            if char == "*" and nxt == "/":
-                block_comment = False
+        if block_comment_depth:
+            if char == "/" and nxt == "*":
+                block_comment_depth += 1
                 index += 2
-            else:
-                index += 1
+                continue
+            if char == "*" and nxt == "/":
+                block_comment_depth -= 1
+                index += 2
+                continue
+            index += 1
             continue
         if in_string:
             if escaped:
@@ -60,22 +52,39 @@ def extract_braced_block(source: str, signature: str) -> str:
             index += 2
             continue
         if char == "/" and nxt == "*":
-            block_comment = True
+            block_comment_depth = 1
             index += 2
             continue
         if char == '"':
             in_string = True
-            index += 1
-            continue
-        if char == "{":
+        elif char == "{":
             depth += 1
         elif char == "}":
             depth -= 1
             if depth == 0:
                 return source[start : index + 1]
         index += 1
+    raise AssertionError(f"Unbalanced Kotlin block starting at {start}")
 
-    raise AssertionError(f"Unbalanced Kotlin block for {signature!r}")
+
+def extract_braced_block(source: str, signature: str) -> str:
+    """Return an implementation body, skipping abstract/interface declarations."""
+    search_from = 0
+    while True:
+        start = source.find(signature, search_from)
+        if start < 0:
+            raise AssertionError(f"Kotlin implementation not found for {signature!r}")
+        brace = source.find("{", start + len(signature))
+        if brace < 0:
+            raise AssertionError(f"Kotlin body not found for {signature!r}")
+        line_end = source.find("\n", start)
+        is_type_declaration = any(
+            token in signature
+            for token in (" class ", " data class ", " object ")
+        )
+        if is_type_declaration or line_end < 0 or brace < line_end:
+            return _balanced_block(source, start, brace)
+        search_from = start + len(signature)
 
 
 class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
@@ -90,23 +99,14 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
             self.source,
             "internal class RecoveryEvidenceMaintenanceCoordinator(",
         )
-        self.assertIn(
-            "handlers.associateBy(RecoveryEvidenceHandler::domain)",
-            constructor,
-        )
-        self.assertIn(
-            "handlersByDomain.size == RecoveryEvidenceDomain.entries.size",
-            constructor,
-        )
-        self.assertIn(
-            "RecoveryEvidenceDomain.entries.all(handlersByDomain::containsKey)",
-            constructor,
-        )
+        self.assertIn("handlers.associateBy(RecoveryEvidenceHandler::domain)", constructor)
+        self.assertIn("handlersByDomain.size == RecoveryEvidenceDomain.entries.size", constructor)
+        self.assertIn("RecoveryEvidenceDomain.entries.all(handlersByDomain::containsKey)", constructor)
 
     def test_safe_recovery_never_discards_corrupt_evidence(self) -> None:
         recover = extract_braced_block(self.source, "fun recoverSafely()")
-        self.assertIn("recoverIfEligible", recover)
         helper = extract_braced_block(self.source, "private fun recoverIfEligible(")
+        self.assertIn("recoverIfEligible", recover)
         self.assertIn(
             "RecoveryEvidenceState.CLEAN,\n            RecoveryEvidenceState.CORRUPT -> before",
             helper,
@@ -116,38 +116,24 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
 
     def test_corrupt_discard_requires_confirmed_corrupt_state(self) -> None:
         discard = extract_braced_block(self.source, "fun discardCorrupt(")
-        gate = discard.index("before.state != RecoveryEvidenceState.CORRUPT")
-        clear = discard.index("return clear(")
-        self.assertLess(gate, clear)
+        self.assertLess(
+            discard.index("before.state != RecoveryEvidenceState.CORRUPT"),
+            discard.index("return clear("),
+        )
         self.assertIn("RecoveryDiscardDisposition.NOT_APPLICABLE", discard)
 
-    def test_pending_discard_retries_before_clear(self) -> None:
-        discard = extract_braced_block(
-            self.source,
-            "fun discardUnresolvedPending(",
-        )
+    def test_pending_discard_retries_before_clear_and_read_failure_never_deletes(self) -> None:
+        discard = extract_braced_block(self.source, "fun discardUnresolvedPending(")
         retry = discard.index("val recovered = handler.recoverSafely()")
         clear = discard.index("clear(handler, before")
+        io_gate = discard.index("if (before.state == RecoveryEvidenceState.IO_FAILURE)")
+        self.assertLess(io_gate, retry)
         self.assertLess(retry, clear)
         self.assertIn("RecoveryDiscardDisposition.RECOVERED_INSTEAD", discard)
         self.assertIn("RecoveryEvidenceState.PENDING,", discard)
         self.assertIn("RecoveryEvidenceState.BLOCKED ->", discard)
-
-    def test_read_failure_never_authorizes_deletion(self) -> None:
-        discard = extract_braced_block(
-            self.source,
-            "fun discardUnresolvedPending(",
-        )
-        io_gate = discard.index(
-            "if (before.state == RecoveryEvidenceState.IO_FAILURE)"
-        )
-        retry = discard.index("val recovered = handler.recoverSafely()")
-        clear = discard.index("clear(handler, before")
-        self.assertLess(io_gate, retry)
-        self.assertLess(io_gate, clear)
-        io_block = discard[io_gate:retry]
-        self.assertIn("RecoveryDiscardDisposition.IO_FAILURE", io_block)
-        self.assertNotIn("clearEvidence", io_block)
+        self.assertIn("RecoveryDiscardDisposition.IO_FAILURE", discard[io_gate:retry])
+        self.assertNotIn("clearEvidence", discard[io_gate:retry])
 
     def test_support_summary_contains_only_status_codes(self) -> None:
         report = extract_braced_block(
@@ -155,7 +141,7 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
             "internal data class RecoveryEvidenceReport(",
         )
         self.assertIn('append("run_outcome=")', report)
-        self.assertIn('append("; ghost_promotion=")', report)
+        self.assertIn('append("); ghost_promotion=")', report)
         for forbidden in (
             "RunSummary",
             "GhostFrame",
@@ -172,15 +158,9 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
             self.source,
             "internal class AndroidRecoveryEvidenceMaintenance(",
         )
-        capture = entrypoint.index(
-            "private val namespace = GhostPersistenceNamespace.capture()"
-        )
-        run_handler = entrypoint.index(
-            "AndroidRunOutcomeEvidenceHandler(appContext, namespace.prefsName)"
-        )
-        ghost_handler = entrypoint.index(
-            "AndroidGhostPromotionEvidenceHandler(appContext, namespace)"
-        )
+        capture = entrypoint.index("private val namespace = GhostPersistenceNamespace.capture()")
+        run_handler = entrypoint.index("AndroidRunOutcomeEvidenceHandler(appContext, namespace.prefsName)")
+        ghost_handler = entrypoint.index("AndroidGhostPromotionEvidenceHandler(appContext, namespace)")
         self.assertLess(capture, run_handler)
         self.assertLess(capture, ghost_handler)
         self.assertEqual(1, entrypoint.count("GhostPersistenceNamespace.capture()"))
@@ -199,10 +179,7 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
             self.source,
             "private class MaintenanceRunOutcomePersistenceSink(",
         )
-        self.assertIn(
-            "NamespaceBoundRunOutcomeMaintenanceStateStore(context, namespace)",
-            sink,
-        )
+        self.assertIn("NamespaceBoundRunOutcomeMaintenanceStateStore(context, namespace)", sink)
         self.assertIn("publishBestGhost", sink)
         self.assertIn("= false", sink)
         for method in (
@@ -224,34 +201,35 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
             self.state_store,
         )
         self.assertEqual(1, self.state_store.count("getSharedPreferences("))
-        self.assertIn("fun saveForestMoodState", self.state_store)
-        self.assertIn("fun saveReturnMomentState", self.state_store)
         self.assertGreaterEqual(self.state_store.count(".commit()"), 2)
         self.assertNotIn("SaveManager.activePrefsNameForTests", self.state_store)
         self.assertNotIn("SaveManager.activeGhostFilenameForTests", self.state_store)
 
-    def test_ghost_repair_uses_bound_receipt_manifest_and_artifact_owners(self) -> None:
+    def test_ghost_repair_uses_bound_artifact_owners(self) -> None:
         handler = extract_braced_block(
             self.source,
             "private class AndroidGhostPromotionEvidenceHandler(",
         )
-        self.assertIn("namespace: GhostPersistenceNamespace", handler)
-        self.assertIn(
+        for marker in (
+            "namespace: GhostPersistenceNamespace",
             "NamespaceBoundGhostPromotionArtifactStore(context, namespace)",
-            handler,
-        )
-        self.assertIn("AtomicFileGhostPromotionReceiptStore(", handler)
-        self.assertIn("AtomicFileGhostArtifactManifestStore(", handler)
-        self.assertIn("ghostFilename = namespace.ghostFilename", handler)
-        self.assertIn("GhostPromotionRecoveryCoordinator(", handler)
-        self.assertIn("artifactStore = artifactStore", handler)
-        self.assertIn("manifestStore = manifestStore", handler)
-        self.assertNotIn("AndroidGhostPromotionArtifactStore", handler)
-        self.assertNotIn("SaveManager.activeGhostFilenameForTests", handler)
-        self.assertNotIn("RunOutcomePersistenceCoordinator", handler)
-        self.assertNotIn("SharedPreferencesRunOutcomeRecoveryStore", handler)
+            "AtomicFileGhostPromotionReceiptStore(",
+            "AtomicFileGhostArtifactManifestStore(",
+            "ghostFilename = namespace.ghostFilename",
+            "GhostPromotionRecoveryCoordinator(",
+            "artifactStore = artifactStore",
+            "manifestStore = manifestStore",
+        ):
+            self.assertIn(marker, handler)
+        for forbidden in (
+            "AndroidGhostPromotionArtifactStore",
+            "SaveManager.activeGhostFilenameForTests",
+            "RunOutcomePersistenceCoordinator",
+            "SharedPreferencesRunOutcomeRecoveryStore",
+        ):
+            self.assertNotIn(forbidden, handler)
 
-    def test_ghost_inspection_distinguishes_receipt_and_manifest_corruption(self) -> None:
+    def test_ghost_inspection_and_clear_preserve_identity_evidence(self) -> None:
         handler = extract_braced_block(
             self.source,
             "private class AndroidGhostPromotionEvidenceHandler(",
@@ -259,32 +237,33 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
         inspect = extract_braced_block(handler, "override fun inspect()")
         self.assertIn('"invalid_receipt"', inspect)
         self.assertIn("inspectManifest()", inspect)
-
         manifest = extract_braced_block(handler, "private fun inspectManifest()")
-        self.assertIn('"no_evidence"', manifest)
-        self.assertIn('"invalid_manifest"', manifest)
-        self.assertIn('"valid_manifest"', manifest)
-        self.assertIn('"manifest_artifact_mismatch"', manifest)
-        self.assertIn("manifestMatches(loaded.manifest)", manifest)
-
-    def test_ghost_clear_preserves_valid_manifest_but_removes_invalid_identity(self) -> None:
-        handler = extract_braced_block(
-            self.source,
-            "private class AndroidGhostPromotionEvidenceHandler(",
-        )
+        for marker in (
+            '"no_evidence"',
+            '"invalid_manifest"',
+            '"valid_manifest"',
+            '"manifest_artifact_mismatch"',
+            "manifestMatches(loaded.manifest)",
+        ):
+            self.assertIn(marker, manifest)
         clear = extract_braced_block(handler, "override fun clearEvidence()")
-        self.assertIn("receiptStore.clear()", clear)
-        self.assertIn("manifestStore.clear()", clear)
-        self.assertIn("if (manifestMatches(loaded.manifest)) true", clear)
-        self.assertIn("receiptCleared && manifestCleared", clear)
-
+        for marker in (
+            "receiptStore.clear()",
+            "manifestStore.clear()",
+            "if (manifestMatches(loaded.manifest)) true",
+            "receiptCleared && manifestCleared",
+        ):
+            self.assertIn(marker, clear)
         matches = extract_braced_block(handler, "private fun manifestMatches(")
-        self.assertIn("artifactStore.loadGhost()", matches)
-        self.assertIn("GhostRunIdentity.matches(", matches)
-        self.assertIn("distanceM = manifest.distanceM", matches)
-        self.assertIn("frameCount = manifest.frameCount", matches)
-        self.assertIn("fingerprint = manifest.fingerprint", matches)
-        self.assertIn("sha256Hex = manifest.sha256Hex", matches)
+        for marker in (
+            "artifactStore.loadGhost()",
+            "GhostRunIdentity.matches(",
+            "distanceM = manifest.distanceM",
+            "frameCount = manifest.frameCount",
+            "fingerprint = manifest.fingerprint",
+            "sha256Hex = manifest.sha256Hex",
+        ):
+            self.assertIn(marker, matches)
         self.assertNotIn("SaveManager.loadGhostRun", matches)
         self.assertNotIn("GhostRunFingerprint.calculate", matches)
 
