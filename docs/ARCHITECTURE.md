@@ -126,7 +126,7 @@ Bloom coordinates Player invincibility, aura/trail emitters, world/conversion bu
 
 `ParallaxBackground` owns authored/cached scene composition, parallax layers, sky/ground/foliage transitions, mist, leaves, petals, fireflies, horizon light, speed response, and Bloom response.
 
-Its public frame update rejects malformed delta/speed pairs, applies bounded delta and scroll speed, and repairs poisoned ambience/Bloom clocks before advancement. The separate `setBloomState(...)` mutator still requires explicit nonfinite-input regression coverage before its boundary can be called fully hardened.
+Its public frame update rejects malformed delta/speed pairs, applies bounded delta and scroll speed, and repairs poisoned ambience/Bloom clocks before advancement. `BloomPresentationAdmission.level(...)` maps nonfinite Bloom strength to `0f` and clamps finite values to `[0, 1]`; `setBloomState(...)`, atmosphere-profile resolution, and final Bloom drawing all use that shared boundary.
 
 Some scenic layers remain procedural. Final art-direction acceptance or replacement is unresolved.
 
@@ -197,6 +197,8 @@ version-2 AtomicFile receipt
 The in-memory publication carries namespace, distance, FNV, and SHA-256. Failure cleanup removes only the matching publication across all four dimensions.
 
 Primary and compatibility publications cannot leak into each other. The single executor remains global and serial, but every queued task is permanently bound to its admission namespace.
+
+`GhostNamespacePendingWriteRegistry` tracks the latest queued task per namespace. Save admission and explicit recovery block only when that same namespace has unfinished work; an active worker in another namespace no longer causes `IO_FAILURE`. `latestSubmittedWrite` is retained only to drain the serial queue through `awaitPendingWrites(...)`.
 
 ### Recovery
 
@@ -300,7 +302,7 @@ Safe retry preserves corrupt evidence. Pending discard retries canonical recover
 
 The run handler cannot publish ghosts or advance distance. The ghost handler never opens the run journal. Ghost inspection validates version-2 distance-bound SHA-256 or version-1 FNV compatibility. Receipt cleanup preserves a valid manifest; manifest cleanup preserves the ghost file. Support output contains only fixed status codes.
 
-Manager workers and publications are namespace-stable across active primary/compatibility switching. An already-created maintenance instance is not: its handlers still contain dynamic state adapters, so the active namespace must not change while that maintenance object remains in use.
+`AndroidRecoveryEvidenceMaintenance` captures one immutable namespace during construction. Both evidence handlers use namespace-bound stores, so switching the active `SaveManager` namespace afterward does not redirect inspection, recovery, or cleanup performed by that maintenance instance.
 
 Deterministic scenarios remain isolated from permanent score, encounter, relationship, Garden, summary, and ghost history while receiving local authored feedback.
 
@@ -349,7 +351,7 @@ An unsigned minified bundle is a build artifact, not signed-upload proof.
 
 The permanent workflow is read-only and intended to validate the exact event SHA through source contracts, debug/release/unit/instrumentation compilation, JVM/Robolectric tests, lint, APK/AAB assembly, R8-renaming verification, and API-35 instrumentation.
 
-Coverage includes input, physics, malformed frames, Bloom, all entity families, persistence isolation, relationships, Garden, save repair, future schemas, ghost persistence, safe-content geometry, settings, latest-intent lifecycle, shutdown, collision geometry, assets, allocation bounds, telemetry, terminal-impact ordering/failure capture, terminal-completion ordering, nonterminal ordering, exactly-once ownership, non-ghost recovery, v1/v2 receipt/manifest recovery, distance-bound SHA-256 golden identity, legacy upgrade, digest/distance tampering, lazy manifest validation, namespace-bound ghost codecs, active primary/compatibility worker isolation, per-namespace publication, maintenance policy, cold-start mutation, one-shot commands, and payload-free logging.
+Coverage includes input, physics, malformed frames, Bloom, all entity families, persistence isolation, relationships, Garden, save repair, future schemas, ghost persistence, safe-content geometry, settings, latest-intent lifecycle, shutdown, collision geometry, assets, allocation bounds, telemetry, terminal-impact ordering/failure capture, terminal-completion ordering, nonterminal ordering, exactly-once ownership, non-ghost recovery, v1/v2 receipt/manifest recovery, distance-bound SHA-256 golden identity, legacy upgrade, digest/distance tampering, lazy manifest validation, namespace-bound ghost codecs, active primary/compatibility worker isolation, per-namespace publication, namespace-scoped pending-write admission, maintenance policy, cold-start mutation, one-shot commands, and payload-free logging.
 
 All `scripts/test_*.py` files are discovered by the source-contract job, including `test_terminal_hit_impact_contract.py`, `test_ghost_persistence_namespace_contract.py`, and the namespace-aware `test_ghost_promotion_recovery_contract.py`.
 
@@ -359,7 +361,7 @@ This architecture description does not assert that the current commit has attach
 
 `EncounterDirector` scenarios mirror device-acceptance cases and are selectable through launch intents or the overlay. Scenario entities use persistence-disabled context.
 
-Recovery maintenance is a separate debug support surface. Reused Activities permit inspection only; recovery/discard requires cold start before gameplay systems exist. Select the desired save namespace before constructing a maintenance instance and keep it stable for that instance's lifetime.
+Recovery maintenance is a separate debug support surface. Reused Activities permit inspection only; recovery/discard requires cold start before gameplay systems exist. A maintenance instance remains bound to the namespace captured during its construction even if the caller later selects another active namespace.
 
 Debug scenarios and focused harnesses do not replace ordinary-play or physical-device acceptance.
 
@@ -368,14 +370,13 @@ Debug scenarios and focused harnesses do not replace ordinary-play or physical-d
 - `GameView` remains large and requires incremental behavior-preserving decomposition.
 - The complete collision-result `when` dispatcher remains in `GameView`.
 - STUMBLE and MERCY_MISS live effects remain in `GameViewNonTerminalCollisionEffects`.
-- `ParallaxBackground.setBloomState(...)` still needs explicit nonfinite-input hardening and regression coverage.
+- Persistence ownership remains distributed across several managers and should be consolidated only after behavior remains stable.
 - Ghost/distance mismatches predating persistent manifests cannot be reconstructed.
 - Version-1 sidecars retain noncryptographic identity until replay requires strong upgrade.
 - The healthy already-applied path avoids repeated hashing; maintenance performs full validation.
 - SHA-256 identifies content/distance but does not authenticate a trusted writer.
 - Ghost and non-ghost recovery are independent rather than one global transaction.
-- Active and queued `GhostPersistenceManager` work is namespace-stable, but switching during an already-created recovery-maintenance instance remains unsupported.
-- The ghost manager retains one global worker queue and conservatively blocks explicit recovery while any worker is active.
+- The ghost manager retains one global serial worker queue; queued primary and compatibility writes do not execute in parallel.
 - Automatic recovery remains fail-closed; deliberate remediation is debug/support-only with no end-user UI.
 - Exact-head Gradle, lint, build, emulator, physical-device, ADB, signing, installation, store path, screenshots, metadata, privacy/data-safety, content rating, and current Play-policy evidence remain unresolved.
 - Entity readability, artwork/animation—including Wolf—fixed landscape, procedural scenic layers, audio/haptics, frame time, allocation, GC, memory, I/O, thermal, and long-run behavior require representative-device acceptance.
