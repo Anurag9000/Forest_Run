@@ -203,7 +203,12 @@ Implemented:
 - recovery maintenance receipt, manifest, ghost, and distance operations share one `NamespaceBoundGhostPromotionArtifactStore`;
 - manifest validation loads frames from the captured artifact store rather than dynamic `SaveManager` state;
 - integration tests prove valid-manifest inspection, run-journal replay, and unwritten-receipt abandonment remain on the captured namespace after an active switch;
-- `scripts/test_ghost_persistence_namespace_contract.py`, the migrated promotion contract, and `scripts/test_recovery_evidence_maintenance_contract.py` prevent worker or maintenance namespace recapture and global publication leakage.
+- `GhostNamespacePendingWriteRegistry` stores the latest submitted task independently for each immutable namespace;
+- pre-write and explicit recovery admission block only when that same namespace has unfinished work, so active primary work no longer blocks compatibility recovery and vice versa;
+- completed and cancelled tasks are evicted lazily with exact namespace-and-future comparison, preserving a newer same-namespace task when an older task completes;
+- `latestSubmittedWrite` is used only to drain the global serial queue through `awaitPendingWrites(...)`, not as a recovery gate;
+- pure registry tests cover namespace independence, completion, cancellation, latest-task authority, and clearing;
+- `scripts/test_ghost_persistence_namespace_contract.py`, `scripts/test_ghost_promotion_recovery_contract.py`, and `scripts/test_recovery_evidence_maintenance_contract.py` lock namespace capture, worker ownership, recovery admission, transaction order, and maintenance isolation.
 
 Still requiring physical evidence:
 
@@ -211,11 +216,12 @@ Still requiring physical evidence:
 - process-death/relaunch behavior across OEM devices;
 - playback readability near dense hazards;
 - disk I/O under thermal and memory pressure;
-- physical-device ADB recovery-maintenance behavior across a namespace switch.
+- physical-device ADB recovery-maintenance behavior across a namespace switch;
+- physical-device cross-namespace recovery while another namespace is actively writing.
 
 Bounded debt:
 
-- one global executor serializes all namespace work and explicit recovery conservatively blocks while any worker is active.
+- one global serial executor remains shared across namespaces, so queued primary and compatibility writes cannot execute in parallel.
 
 ## 8. Performance, physical-device, and store-delivery evidence
 
@@ -323,12 +329,16 @@ Locally verified during remediation where runtime execution was available:
 - maintenance source-contract migration removing obsolete dynamic `SaveManager` and `AndroidGhostPromotionArtifactStore` expectations;
 - focused Kotlin compilation and executable Bloom presentation admission checks for NaN, both infinities, finite underflow, valid fractional input, and finite overflow;
 - source-contract syntax and parser execution covering the shared admission owner, public setter, atmosphere profile, final draw path, and integration fixture;
-- exact `ParallaxBackground.kt` diff inspection confirming only one profile line, two public-admission lines, and three draw-defense lines changed.
+- exact `ParallaxBackground.kt` diff inspection confirming only one profile line, two public-admission lines, and three draw-defense lines changed;
+- focused Kotlin compilation and executable namespace-pending-write registry validation;
+- registry behavior for cross-namespace independence, completed/cancelled eviction, latest same-namespace authority, and complete clearing;
+- exact `GhostPersistenceManager.kt` diff inspection confirming only activity ownership, namespace-scoped gates, task registration, drain-pointer use, and reset changed;
+- namespace and promotion source-contract migration preserving worker order, durable ordering, SHA-256 identity, corruption blocking, disk fallback, and publication cleanup while removing the obsolete global recovery gate.
 
 Currently not executable or observable from this environment:
 
 - a complete local repository checkout and the full expanded Python/Kotlin/Android test suites, because the container cannot resolve GitHub for cloning;
-- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy/ghost-namespace/recovery-maintenance/Parallax-Bloom acceptance;
+- exact-head Gradle compilation, JUnit/Robolectric, lint, packaging, connected emulator, and physical-device terminal-impact/return-history/relationship-copy/ghost-namespace/recovery-maintenance/Parallax-Bloom/namespace-recovery-admission acceptance;
 - push-triggered GitHub Actions check-run conclusions for the latest `main` SHA, because the installed connector exposes only pull-request-triggered workflow runs.
 
-Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, filesystem and in-memory harnesses, and exact-diff review establish the intended ordering, arithmetic, relationship-scoring, namespace-isolation, recovery-maintenance, and Bloom-presentation boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
+Therefore the current tree must not be described as exact-head green until the host/release and connected-emulator runs are observed for one frozen commit. Focused compilation, source contracts, filesystem and in-memory harnesses, and exact-diff review establish the intended ordering, arithmetic, relationship-scoring, namespace-isolation, recovery-maintenance, Bloom-presentation, and namespace-scoped recovery-admission boundaries but do not replace Android or hardware execution. The evidence compilers and validators prove internal consistency only when run against real evidence; they do not create physical measurements, signed delivery, visual approval, or policy approval. Until all external gates pass, the project remains a feature-rich alpha rather than a release candidate.
