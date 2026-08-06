@@ -123,6 +123,15 @@ jobs:
           test -f docs/DEVICE_ACCEPTANCE_AGGREGATION.md
           test -f docs/audits/2026-08-01_post_merge_audit.md
 
+          test -f SECURITY.md
+          test -f docs/SUPPLY_CHAIN_AND_SBOM.md
+          test -f scripts/build_declared_dependency_inventory.py
+          test -f scripts/test_build_declared_dependency_inventory.py
+          test -f scripts/build_resolved_dependency_sbom.py
+          test -f scripts/test_build_resolved_dependency_sbom.py
+          grep -q 'declared-direct-dependencies-only' scripts/build_declared_dependency_inventory.py
+          grep -q '"bomFormat": "CycloneDX"' scripts/build_resolved_dependency_sbom.py
+
           python3 scripts/verify_release_source_assets.py --root .
 
       - name: Install Python validation dependencies
@@ -162,6 +171,34 @@ jobs:
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
+
+      - name: Build candidate-bound dependency evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_dir='build/supply-chain'
+          mkdir -p "$evidence_dir"
+          ./gradlew :app:dependencies \
+            --configuration releaseRuntimeClasspath \
+            --no-daemon \
+            --console=plain \
+            > "$evidence_dir/releaseRuntimeClasspath.txt"
+          ./gradlew :app:dependencies \
+            --configuration debugAndroidTestRuntimeClasspath \
+            --no-daemon \
+            --console=plain \
+            > "$evidence_dir/debugAndroidTestRuntimeClasspath.txt"
+          python3 scripts/build_declared_dependency_inventory.py \
+            --root . \
+            --candidate-sha "${{ github.sha }}" \
+            --output "$evidence_dir/declared-dependencies.json"
+          python3 scripts/build_resolved_dependency_sbom.py \
+            --candidate-sha "${{ github.sha }}" \
+            --report "releaseRuntimeClasspath=$evidence_dir/releaseRuntimeClasspath.txt" \
+            --report "debugAndroidTestRuntimeClasspath=$evidence_dir/debugAndroidTestRuntimeClasspath.txt" \
+            --output "$evidence_dir/resolved-sbom.cdx.json"
+          test -s "$evidence_dir/declared-dependencies.json"
+          test -s "$evidence_dir/resolved-sbom.cdx.json"
 
       - name: Compile, test, lint, and package the checked-in tree
         run: >-
