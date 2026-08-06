@@ -9,6 +9,7 @@ internal data class RunSessionSnapshot(
 /** Events that are allowed to request a top-level run/session transition. */
 internal enum class RunSessionEvent {
     MENU_RUN_REQUESTED,
+    MENU_GARDEN_REQUESTED,
     GARDEN_RUN_REQUESTED,
     GARDEN_BACK_REQUESTED,
     TERMINAL_COLLISION_COMPLETED,
@@ -61,6 +62,14 @@ internal object RunSessionTransitionPlanner {
                     appState = AppGameState.PLAYING,
                     runState = RunState.PLAYING,
                     effects = listOf(RunSessionEffect.PREPARE_FRESH_RUN)
+                )
+
+            current == RunSessionSnapshot(AppGameState.MENU, RunState.PLAYING) &&
+                event == RunSessionEvent.MENU_GARDEN_REQUESTED ->
+                current.to(
+                    appState = AppGameState.GARDEN,
+                    runState = RunState.PLAYING,
+                    effects = listOf(RunSessionEffect.REFRESH_GARDEN)
                 )
 
             current == RunSessionSnapshot(AppGameState.GARDEN, RunState.PLAYING) &&
