@@ -32,6 +32,21 @@ class RunSessionTransitionPlannerTest {
     }
 
     @Test
+    fun menuGardenRequestRefreshesBeforePublishingGardenState() {
+        val transition = RunSessionTransitionPlanner.plan(
+            RunSessionSnapshot(AppGameState.MENU, RunState.PLAYING),
+            RunSessionEvent.MENU_GARDEN_REQUESTED
+        )
+
+        assertEquals(
+            RunSessionSnapshot(AppGameState.GARDEN, RunState.PLAYING),
+            transition.after
+        )
+        assertEquals(listOf(RunSessionEffect.REFRESH_GARDEN), transition.effects)
+        assertTrue(transition.changed)
+    }
+
+    @Test
     fun terminalRestAndRestartFlowCannotSkipInitializationOrReset() {
         val live = RunSessionSnapshot(AppGameState.PLAYING, RunState.PLAYING)
         val dying = RunSessionTransitionPlanner.plan(
@@ -101,6 +116,8 @@ class RunSessionTransitionPlannerTest {
         val validPairs = setOf(
             RunSessionSnapshot(AppGameState.MENU, RunState.PLAYING) to
                 RunSessionEvent.MENU_RUN_REQUESTED,
+            RunSessionSnapshot(AppGameState.MENU, RunState.PLAYING) to
+                RunSessionEvent.MENU_GARDEN_REQUESTED,
             RunSessionSnapshot(AppGameState.GARDEN, RunState.PLAYING) to
                 RunSessionEvent.GARDEN_RUN_REQUESTED,
             RunSessionSnapshot(AppGameState.GARDEN, RunState.PLAYING) to
