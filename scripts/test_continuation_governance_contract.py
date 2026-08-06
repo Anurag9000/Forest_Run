@@ -34,7 +34,8 @@ class ContinuationGovernanceContractTest(unittest.TestCase):
         self.assertIn('"declared-direct-dependencies-only"', script)
         self.assertIn("not a resolved transitive dependency graph", script)
         self.assertIn("not an SBOM", script)
-        self.assertIn("resolved transitive", document)
+        self.assertIn("Resolved dependency graph", document)
+        self.assertIn("transitive Maven dependencies", document)
         self.assertIn("vulnerability review", document)
         self.assertIn("Fail-closed release rule", document)
 
