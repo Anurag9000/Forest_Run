@@ -236,7 +236,12 @@ class RecoveryEvidenceMaintenanceContractTest(unittest.TestCase):
             '"invalid_manifest"',
             '"valid_manifest"',
             '"manifest_artifact_mismatch"',
-            "manifestMatches(loaded.manifest)",
+            "val manifest = loaded.manifest",
+            "manifestMatches(manifest)",
+            "artifactStore.loadBestDistanceM()",
+            "currentDistance < manifest.distanceM",
+            "RecoveryEvidenceState.PENDING",
+            "RecoveryEvidenceState.CLEAN",
         ):
             self.assertIn(marker, manifest)
         clear = extract_braced_block(handler, "override fun clearEvidence()")
