@@ -4,6 +4,7 @@ set -euo pipefail
 readonly SERIAL="${ANDROID_SERIAL:-emulator-${EMULATOR_PORT:-5554}}"
 readonly READINESS_TIMEOUT_SECONDS="${FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS:-240}"
 readonly POLL_SECONDS=5
+readonly PHYSICAL_PROFILE_ANNOTATION="androidx.test.filters.LargeTest"
 
 if [[ ! "${READINESS_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
   echo "FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS must be a positive integer." >&2
@@ -60,7 +61,11 @@ wait_for_android_services() {
 timeout "${READINESS_TIMEOUT_SECONDS}s" adb -s "${SERIAL}" wait-for-device
 wait_for_android_services
 
+# HardwarePerformanceProfileTest is a physical-device evidence harness. Running
+# it on SwiftShader emulators creates invalid performance evidence and starves
+# its sustained-sample window, so ordinary connected CI excludes @LargeTest.
 ./gradlew connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.notAnnotation="${PHYSICAL_PROFILE_ANNOTATION}" \
   --no-daemon \
   --stacktrace \
   --console=plain
