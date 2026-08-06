@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import unittest
+from collections import defaultdict
 from pathlib import Path
 
 
@@ -30,8 +31,17 @@ class DependencyAuthorityTest(unittest.TestCase):
             APP,
         )
         self.assertGreaterEqual(len(dependencies), 7)
-        coordinates = [coordinate for coordinate, _ in dependencies]
-        self.assertEqual(len(coordinates), len(set(coordinates)))
+
+        versions_by_coordinate: dict[str, set[str]] = defaultdict(set)
+        for coordinate, version in dependencies:
+            versions_by_coordinate[coordinate].add(version)
+        for coordinate, versions in versions_by_coordinate.items():
+            self.assertEqual(
+                1,
+                len(versions),
+                f"{coordinate} is declared with conflicting versions: {sorted(versions)}",
+            )
+
         for version in plugin_versions + [version for _, version in dependencies]:
             self.assertNotIn("+", version)
             self.assertNotIn("SNAPSHOT", version.upper())

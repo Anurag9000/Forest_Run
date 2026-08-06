@@ -26,7 +26,9 @@ class AndroidValidationWorkflowContractTest(unittest.TestCase):
         self.assertNotRegex(self.source, r"\bgit\s+push\b")
 
     def test_both_jobs_checkout_the_exact_event_sha_without_credentials(self) -> None:
-        self.assertEqual(2, self.source.count("uses: actions/checkout@v4"))
+        self.assertEqual(2, self.source.count("uses: actions/checkout@v6"))
+        self.assertNotIn("uses: actions/checkout@v4", self.source)
+        self.assertNotIn("uses: actions/checkout@v5", self.source)
         self.assertEqual(2, self.source.count("ref: ${{ github.sha }}"))
         self.assertEqual(2, self.source.count("fetch-depth: 1"))
         self.assertEqual(2, self.source.count("persist-credentials: false"))
