@@ -12,9 +12,9 @@ The player begins beneath a willow, runs through five atmospheric biomes, collec
 
 **Source-ready feature-rich alpha with the primary correctness-remediation history consolidated on `main`.** The repository has a permanent application identity, current Android target, immutable exact-SHA host/emulator CI, broad invariant coverage, an obfuscated/resource-shrunk release bundle, versioned atomic ghost persistence, cutout-safe essential UI, persistent feedback controls, a physical performance-evidence harness, and a fail-closed physical-device/store acceptance validator.
 
-The source-bearing candidate `f6d1fc1077326e160ddd829cd7279158793616eb` completed Android validation run `31080357879` successfully. That exact candidate passed immutable source contracts, 420 Python tests, debug/release/unit/androidTest compilation, 927 JVM/Robolectric tests, debug and release lint, APK/androidTest APK/AAB packaging, R8 verification, API 35 connected behavior, and post-validation source-immutability checks.
+The source-bearing baseline `f6d1fc1077326e160ddd829cd7279158793616eb` completed Android validation run `31080357879` successfully. The later architecture, release-integrity, build-authority, and privacy continuation head `cc24e86784bd0d6c53114c55e37ff447e1b55bc5` completed run `31105597864` successfully. The continuation passed 445 Python tests, complete Android compilation/JVM testing/lint/packaging, R8 verification, API 35 connected behavior, and post-validation source-immutability checks.
 
-It is not yet a physically accepted or store-release-ready candidate because representative physical-device acceptance, measured performance evidence, signed-artifact installation, final visual/audio/haptic approval, internal-store delivery, and store/policy work remain.
+It is not yet a physically accepted or store-release-ready candidate because representative physical-device acceptance, measured performance evidence, signed-artifact installation, final visual/audio/haptic approval, internal-store delivery, complete screen-reader accessibility, and store/legal/policy work remain.
 
 The canonical `main` branch includes:
 
@@ -23,6 +23,7 @@ The canonical `main` branch includes:
 - one authoritative Bloom timer and exclusive conversion rewards;
 - one terminal outcome per entity with deterministic collision priority;
 - pure collision queries and selected-outcome side effects;
+- a tested exhaustive lazy `CollisionOutcomeDispatcher` seam, pending safe live `GameView` wiring;
 - allocation-free expanded mercy probes preserving custom safe-window geometry;
 - all-entity clean-pass, debug-isolation, and persistence integration coverage;
 - outcome-earned relationship Trust and Bond progression;
@@ -43,6 +44,9 @@ The canonical `main` branch includes:
 - persistent reduced-motion, audio, and haptic settings enforced at manager boundaries;
 - versioned SharedPreferences repair with future-schema compatibility storage;
 - coherent frame, workload, heap, and ghost-I/O profiling snapshots;
+- root- and inode-safe final release-evidence indexing with an independent verifier;
+- maintained GitHub Actions runtimes and one pinned direct-dependency authority;
+- a source-backed offline privacy policy and automated permission/SDK contract;
 - final application ID `com.anurag9000.forestrun`;
 - API 36 host/release validation and API 35 connected validation on exact candidate SHAs;
 - candidate-, artifact-, certificate-, internal-store-, device-, scenario-, threshold-, evidence-hash-, and reviewer-bound physical acceptance validation.
@@ -74,7 +78,7 @@ The canonical `main` branch includes:
 
 Permanent read-only CI checks out and records the exact event SHA, then runs:
 
-- all Python release, provenance, screenshot, metadata, graphics, performance, connected-runner, and physical-acceptance tests under `scripts/test_*.py`;
+- all Python release, provenance, screenshot, metadata, graphics, privacy, dependency, performance, connected-runner, and physical-acceptance tests under `scripts/test_*.py`;
 - debug, release, unit-test, and instrumentation Kotlin compilation;
 - the complete JVM/Robolectric invariant suite;
 - debug and release lint;
@@ -93,23 +97,30 @@ The large hardware-capture and performance-profile tests are compiled but intent
 - capture and review frame-time, allocation/GC, memory, I/O, audio-thread, thermal, battery, and long-run evidence;
 - establish evidence-based performance thresholds and repair any material hotspots found;
 - validate touch latency, transformed safe-content readability, feedback settings, audio, haptics, lifecycle recovery, and density behavior on phones/tablets/cutouts/unusual aspects;
+- implement and test TalkBack/Canvas semantic navigation for essential menu, settings, Garden, Rest, and run state;
 - provide real signing credentials and smoke-test the signed, minified artifact;
 - install through an internal store track and verify the store delivery path;
 - capture, curate, and manually approve final store screenshots and metadata;
 - visually verify artwork and animation frame counts, including the Wolf sheet;
-- revalidate current store-policy, privacy, data-safety, content-rating, and submission requirements;
+- publish the privacy policy at a stable HTTPS URL and align final Data Safety answers;
+- revalidate current store policy, content rating, target audience, and submission requirements;
+- generate trusted Gradle dependency-verification metadata, a resolved SBOM, licence attribution, vulnerability review, and signed-artifact provenance;
+- enable private vulnerability reporting before publishing a formal security-reporting policy;
+- select explicit source-code and asset licensing;
+- write candidate-specific release notes and a changelog entry;
 - decide whether the remaining procedural scenic layers and fixed-landscape policy are final art/product choices;
-- produce the final candidate-bound acceptance manifest, aggregate, release-evidence index, and independent approvals.
+- produce and independently verify the final candidate-bound acceptance manifest, aggregate, release-evidence index, and approvals.
 
 Bounded source architecture work remains desirable but is not presently evidenced as a release-blocking behavior defect:
 
-- extract the complete collision-result dispatcher from `GameView`;
+- wire the tested `CollisionOutcomeDispatcher` into `GameView` through a safe exact patch-capable checkout;
 - move live terminal/nonterminal effect adapters behind a smaller runtime boundary;
 - extract run-session state transition and subsystem sequencing incrementally;
 - add an application-level persistence facade without misrepresenting separate stores as one global transaction;
+- complete descriptor-bound evidence snapshots and evidence-parent symlink rejection as defense in depth;
 - consider a local data-oriented encounter catalogue only after physical acceptance stabilizes behavior.
 
-See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist, [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) for the physical/store evidence contract, and [`docs/audits/2026-08-06_documentation_reconciliation_audit.md`](docs/audits/2026-08-06_documentation_reconciliation_audit.md) for the complete present-tense mission/done/remaining reconciliation.
+See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist, [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) for the physical/store evidence contract, and [`docs/audits/2026-08-06_architecture_release_integrity_privacy_audit.md`](docs/audits/2026-08-06_architecture_release_integrity_privacy_audit.md) for the latest implementation and remaining-work reconciliation.
 
 ## Documentation
 
@@ -120,7 +131,10 @@ See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist,
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Physical-device profiling protocol, report collection, and threshold procedure |
 | [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) | Candidate identity, device/scenario coverage, evidence hashes, thresholds, approvals, and release decision |
 | [`docs/RELEASE.md`](docs/RELEASE.md) | Correctness, validation, packaging, hardware, signing, and store checklist |
+| [`docs/RELEASE_EVIDENCE_INDEX.md`](docs/RELEASE_EVIDENCE_INDEX.md) | Final evidence-set construction, independent verification, alias protection, and review procedure |
+| [`PRIVACY.md`](PRIVACY.md) | Source-backed offline data, permissions, local retention, deletion, and future-change policy |
 | [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) | Detailed remediation history and invariant ledger; dated evidence statements remain historical |
+| [`docs/audits/2026-08-06_architecture_release_integrity_privacy_audit.md`](docs/audits/2026-08-06_architecture_release_integrity_privacy_audit.md) | Collision seam, evidence verification, CI/dependency authority, privacy, exact validation, and expanded remaining queue |
 | [`docs/audits/2026-08-06_documentation_reconciliation_audit.md`](docs/audits/2026-08-06_documentation_reconciliation_audit.md) | Complete documentation inventory, reconstructed mission, current done/partial/external matrix, contradictions, and next order |
 | [`docs/audits/2026-08-06_exact_head_audit.md`](docs/audits/2026-08-06_exact_head_audit.md) | Exact-head implementation audit immediately preceding the final green validation sequence |
 | [`docs/audits/2026-08-01_post_merge_audit.md`](docs/audits/2026-08-01_post_merge_audit.md) | Reconstructed original mission, merged-PR audit, remaining work, and assessed additions |
