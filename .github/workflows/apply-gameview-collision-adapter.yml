@@ -1,17 +1,18 @@
-name: Apply GameView collision adapter
+name: Apply GameView runtime ownership
 
 on:
   push:
     branches: [main]
     paths:
       - scripts/apply_gameview_collision_adapter.py
+      - scripts/apply_gameview_run_session_coordinator.py
       - .github/workflows/apply-gameview-collision-adapter.yml
 
 permissions:
   contents: write
 
 concurrency:
-  group: gameview-collision-adapter-main
+  group: gameview-runtime-ownership-main
   cancel-in-progress: true
 
 jobs:
@@ -24,22 +25,26 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Apply exact-marker migration
+      - name: Apply exact-marker migrations
         run: |
           git fetch origin main
           git reset --hard origin/main
           python3 scripts/apply_gameview_collision_adapter.py
           python3 scripts/apply_gameview_collision_adapter.py --check
+          python3 scripts/apply_gameview_run_session_coordinator.py
+          python3 scripts/apply_gameview_run_session_coordinator.py --check
+          python3 -m unittest scripts.test_gameview_runtime_adoption_migrations
           git diff --check
 
       - name: Commit directly to main and remove migration capability
         run: |
           rm scripts/apply_gameview_collision_adapter.py
+          rm scripts/apply_gameview_run_session_coordinator.py
           rm .github/workflows/apply-gameview-collision-adapter.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --check
-          git commit -m "refactor(collision): adopt shared live effect adapter"
+          git commit -m "refactor(runtime): adopt collision and session coordinators"
           git pull --rebase origin main
           git push origin HEAD:main
