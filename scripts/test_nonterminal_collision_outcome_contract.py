@@ -92,6 +92,16 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             dispatch_start,
         )
         cls.live_inputs = cls.game_view[dispatch_start:transition_start]
+        stumble_start = cls.live_inputs.index("buildStumbleInput = {")
+        deactivate_start = cls.live_inputs.index(
+            "deactivateStumbleEntity = {", stumble_start
+        )
+        mercy_start = cls.live_inputs.index(
+            "buildMercyMissInput = {", deactivate_start
+        )
+        cls.stumble_input = cls.live_inputs[stumble_start:deactivate_start]
+        cls.stumble_deactivation = cls.live_inputs[deactivate_start:mercy_start]
+        cls.mercy_input = cls.live_inputs[mercy_start:]
         cls.effect_adapter = extract_braced_block(
             cls.game_view,
             "private inner class GameViewNonTerminalCollisionEffects :",
@@ -163,10 +173,13 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             "playerY = player.y",
             "dominantColor = dominantColor",
             "persistEncounter = persistEncounter",
-            "collision.entity.isActive = false",
         )
         for item in required:
-            self.assertEqual(1, self.live_inputs.count(item), item)
+            self.assertEqual(1, self.stumble_input.count(item), item)
+        self.assertEqual(
+            1,
+            self.stumble_deactivation.count("collision.entity.isActive = false"),
+        )
 
     def test_game_view_passes_complete_mercy_identity(self) -> None:
         required = (
@@ -178,7 +191,7 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             "playerY = player.y",
         )
         for item in required:
-            self.assertGreaterEqual(self.live_inputs.count(item), 1, item)
+            self.assertEqual(1, self.mercy_input.count(item), item)
 
     def test_dispatcher_preserves_lazy_stumble_deactivation(self) -> None:
         stumble = self.dispatch.index("CollisionResult.STUMBLE ->")
