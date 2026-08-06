@@ -10,18 +10,24 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: gameview-collision-adapter-main
+  cancel-in-progress: true
+
 jobs:
   apply:
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out exact migration commit
+      - name: Check out latest main
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: main
           fetch-depth: 0
 
       - name: Apply exact-marker migration
         run: |
+          git fetch origin main
+          git reset --hard origin/main
           python3 scripts/apply_gameview_collision_adapter.py
           python3 scripts/apply_gameview_collision_adapter.py --check
           git diff --check
@@ -35,4 +41,5 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m "refactor(collision): adopt shared live effect adapter"
+          git pull --rebase origin main
           git push origin HEAD:main
