@@ -160,6 +160,105 @@ def _digest(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _lexical_absolute(path: Path) -> Path:
+    """Return an absolute normalized path without resolving symbolic links."""
+    return Path(os.path.abspath(os.fspath(path.expanduser())))
+
+
+def _assert_no_symlink_components(root: Path, path: Path, *, label: str) -> None:
+    """Reject any existing symbolic-link component between root and path."""
+    try:
+        relative = path.relative_to(root)
+    except ValueError as exc:
+        raise EvidenceIndexError(f"{label} escapes the evidence root") from exc
+    current = root
+    for part in relative.parts:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError:
+            # Once a component is absent, no descendant can currently be a symlink.
+            break
+        except OSError as exc:
+            raise EvidenceIndexError(f"could not inspect {label}: {current}: {exc}") from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise EvidenceIndexError(f"{label} must not traverse a symbolic link: {current}")
+
+
+def _validate_output_path(root: Path, output: Path) -> Path:
+    """Require a lexical and resolved output path inside root without symlinks."""
+    root_resolved = root.expanduser().resolve()
+    output_lexical = _lexical_absolute(output)
+    try:
+        output_lexical.relative_to(root_resolved)
+    except ValueError as exc:
+        raise EvidenceIndexError("output index must remain inside the evidence root") from exc
+    _assert_no_symlink_components(
+        root_resolved,
+        output_lexical,
+        label="output index",
+    )
+    output_resolved = output_lexical.resolve(strict=False)
+    try:
+        output_resolved.relative_to(root_resolved)
+    except ValueError as exc:
+        raise EvidenceIndexError("output index resolves outside the evidence root") from exc
+    return output_resolved
+
+
+def _existing_regular_identity(path: Path, *, label: str) -> tuple[int, int] | None:
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise EvidenceIndexError(f"could not inspect {label}: {path}: {exc}") from exc
+    if stat.S_ISLNK(metadata.st_mode):
+        raise EvidenceIndexError(f"{label} must not be a symbolic link")
+    if not stat.S_ISREG(metadata.st_mode):
+        raise EvidenceIndexError(f"{label} must be a regular file when it exists")
+    return metadata.st_dev, metadata.st_ino
+
+
+def _payload_evidence_identities(
+    root: Path,
+    payload: Mapping[str, object],
+) -> set[tuple[int, int]]:
+    entries = payload.get("entries")
+    if not isinstance(entries, list):
+        raise EvidenceIndexError("release evidence index payload must contain an entries list")
+    identities: set[tuple[int, int]] = set()
+    root_resolved = root.expanduser().resolve()
+    for entry in entries:
+        if not isinstance(entry, Mapping) or not isinstance(entry.get("path"), str):
+            raise EvidenceIndexError("release evidence index payload contains an invalid entry")
+        relative = _safe_relative_path(entry["path"])
+        path = root_resolved / relative
+        try:
+            metadata = path.lstat()
+        except FileNotFoundError as exc:
+            raise EvidenceIndexError(
+                f"indexed evidence file is missing before publication: {relative}"
+            ) from exc
+        except OSError as exc:
+            raise EvidenceIndexError(
+                f"could not inspect indexed evidence before publication: {relative}: {exc}"
+            ) from exc
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+            raise EvidenceIndexError(
+                f"indexed evidence must remain a regular non-symlink file: {relative}"
+            )
+        resolved = path.resolve()
+        try:
+            resolved.relative_to(root_resolved)
+        except ValueError as exc:
+            raise EvidenceIndexError(
+                f"indexed evidence escapes the root before publication: {relative}"
+            ) from exc
+        identities.add((metadata.st_dev, metadata.st_ino))
+    return identities
+
+
 def collect_entries(
     root: Path,
     candidate_sha: str,
@@ -182,7 +281,12 @@ def collect_entries(
             f"at most {MAX_ENTRIES} release evidence entries are allowed"
         )
 
-    output_resolved = output.resolve(strict=False) if output is not None else None
+    output_resolved = _validate_output_path(root, output) if output is not None else None
+    output_identity = (
+        _existing_regular_identity(output_resolved, label="output index")
+        if output_resolved is not None
+        else None
+    )
     seen_kinds: set[str] = set()
     seen_paths: set[str] = set()
     seen_files: set[tuple[int, int]] = set()
@@ -213,15 +317,19 @@ def collect_entries(
             resolved.relative_to(root)
         except ValueError as exc:
             raise EvidenceIndexError(f"evidence file escapes the root: {relative}") from exc
+        identity = (metadata.st_dev, metadata.st_ino)
         if output_resolved is not None and resolved == output_resolved:
             raise EvidenceIndexError(
                 "the output index cannot also be an evidence input"
+            )
+        if output_identity is not None and identity == output_identity:
+            raise EvidenceIndexError(
+                "the output index cannot reuse an evidence input through a hard link"
             )
         if metadata.st_size <= 0 or metadata.st_size > MAX_FILE_BYTES:
             raise EvidenceIndexError(
                 f"evidence file size must be between 1 and {MAX_FILE_BYTES} bytes: {relative}"
             )
-        identity = (metadata.st_dev, metadata.st_ino)
         if identity in seen_files:
             raise EvidenceIndexError(
                 f"one physical evidence file is reused through a hard link: {relative}"
@@ -294,14 +402,38 @@ def build_index(
     }
 
 
-def publish_index(output: Path, payload: Mapping[str, object]) -> None:
-    if output.is_symlink():
-        raise EvidenceIndexError("output index must not be a symbolic link")
-    output = output.resolve(strict=False)
-    output.parent.mkdir(parents=True, exist_ok=True)
+def publish_index(
+    output: Path,
+    payload: Mapping[str, object],
+    *,
+    root: Path | None = None,
+) -> None:
+    publication_root = (
+        root.expanduser().resolve()
+        if root is not None
+        else output.expanduser().resolve(strict=False).parent
+    )
+    output_resolved = _validate_output_path(publication_root, output)
+    protected_identities = (
+        _payload_evidence_identities(publication_root, payload)
+        if root is not None
+        else set()
+    )
+    output_identity = _existing_regular_identity(output_resolved, label="output index")
+    if output_identity is not None and output_identity in protected_identities:
+        raise EvidenceIndexError(
+            "the output index cannot reuse indexed evidence through a hard link"
+        )
+
+    output_resolved.parent.mkdir(parents=True, exist_ok=True)
+    # Recheck after directory creation so a symlinked parent cannot be introduced
+    # through a pre-existing path component and silently redirect publication.
+    output_resolved = _validate_output_path(publication_root, output)
     encoded = _canonical_bytes(payload)
     descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{output.name}.", suffix=".tmp", dir=output.parent
+        prefix=f".{output_resolved.name}.",
+        suffix=".tmp",
+        dir=output_resolved.parent,
     )
     temporary = Path(temporary_name)
     try:
@@ -309,14 +441,26 @@ def publish_index(output: Path, payload: Mapping[str, object]) -> None:
             handle.write(encoded)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temporary, output)
-        directory_fd = os.open(output.parent, os.O_RDONLY)
+
+        output_resolved = _validate_output_path(publication_root, output)
+        output_identity = _existing_regular_identity(
+            output_resolved,
+            label="output index",
+        )
+        if output_identity is not None and output_identity in protected_identities:
+            raise EvidenceIndexError(
+                "the output index became a hard-link alias of indexed evidence"
+            )
+        os.replace(temporary, output_resolved)
+        directory_fd = os.open(output_resolved.parent, os.O_RDONLY)
         try:
             os.fsync(directory_fd)
         finally:
             os.close(directory_fd)
-    except OSError as exc:
+    except (OSError, EvidenceIndexError) as exc:
         temporary.unlink(missing_ok=True)
+        if isinstance(exc, EvidenceIndexError):
+            raise
         raise EvidenceIndexError(f"could not publish evidence index: {exc}") from exc
 
 
@@ -344,7 +488,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             require_bound_kinds=args.require_bound_kind,
             output=output,
         )
-        publish_index(output, payload)
+        publish_index(output, payload, root=root)
     except EvidenceIndexError as exc:
         print(f"release evidence index error: {exc}", file=os.sys.stderr)
         return 1
