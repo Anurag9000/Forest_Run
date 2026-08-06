@@ -1,5 +1,6 @@
 package com.anurag9000.forestrun
 
+import android.app.Activity
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
@@ -12,6 +13,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 
@@ -91,7 +93,9 @@ class ForestRunAccessibilityDelegateTest {
 
     @Test
     fun duckUsesBoundedPressThenRelease() {
-        val host = View(ApplicationProvider.getApplicationContext())
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val host = View(activity)
+        activity.setContentView(host)
         val input = InputHandler()
         val trace = mutableListOf<String>()
         input.onDuckPressed = { trace += "press" }
