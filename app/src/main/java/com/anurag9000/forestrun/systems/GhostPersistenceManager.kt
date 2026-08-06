@@ -16,6 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * compatibility namespaces may use separate daemon workers concurrently.
  */
 object GhostPersistenceManager {
+    private const val MAX_CONCURRENT_NAMESPACE_WRITES = 2
+
     private data class PublishedGhost(
         val namespace: GhostPersistenceNamespace,
         val frames: List<GhostFrame>,
@@ -258,6 +260,4 @@ object GhostPersistenceManager {
             latestPublications.remove(publication.namespace, current)
         }
     }
-
-    private const val MAX_CONCURRENT_NAMESPACE_WRITES = 2
 }
