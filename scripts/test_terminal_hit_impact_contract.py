@@ -8,6 +8,10 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 GAME_VIEW = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
+DISPATCHER = (
+    ROOT
+    / "app/src/main/java/com/anurag9000/forestrun/engine/CollisionOutcomeDispatcher.kt"
+)
 IMPACT = (
     ROOT
     / "app/src/main/java/com/anurag9000/forestrun/engine/TerminalHitImpactCoordinator.kt"
@@ -75,7 +79,25 @@ class TerminalHitImpactContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.game_view = GAME_VIEW.read_text(encoding="utf-8")
+        cls.dispatcher = DISPATCHER.read_text(encoding="utf-8")
         cls.impact = IMPACT.read_text(encoding="utf-8")
+        dispatch_start = cls.game_view.index(
+            "val dispatchResult = collisionOutcomeDispatcher.dispatch("
+        )
+        transition_start = cls.game_view.index(
+            "if (dispatchResult is CollisionOutcomeDispatchResult.Terminal)",
+            dispatch_start,
+        )
+        cls.live_inputs = cls.game_view[dispatch_start:transition_start]
+        cls.live_terminal_transition = cls.game_view[
+            transition_start : cls.game_view.index(
+                "// Tick down mercy flash", transition_start
+            )
+        ]
+        cls.dispatch = extract_braced_block(
+            cls.dispatcher,
+            "fun dispatch(\n        result: CollisionResult,",
+        )
 
     def test_coordinator_owns_exact_impact_order_before_capture(self) -> None:
         apply = extract_braced_block(self.impact, "fun apply(")
@@ -96,12 +118,13 @@ class TerminalHitImpactContractTest(unittest.TestCase):
             self.impact,
         )
 
-    def test_hit_branch_delegates_impact_once_without_direct_effect_calls(self) -> None:
-        start = self.game_view.index("CollisionResult.HIT -> {")
-        end = self.game_view.index("CollisionResult.STUMBLE -> {", start)
-        hit = self.game_view[start:end]
-
-        self.assertEqual(1, hit.count("terminalHitImpact.apply"))
+    def test_dispatcher_delegates_impact_once_without_direct_effect_calls(self) -> None:
+        self.assertEqual(
+            1,
+            self.dispatch.count(
+                "terminalHitImpact.apply(captureTerminalImpact)"
+            ),
+        )
         for forbidden in (
             "gameState.recordHit()",
             "ghostPlayer.suppress(",
@@ -111,12 +134,13 @@ class TerminalHitImpactContractTest(unittest.TestCase):
             "LeitmotifManager.playRest()",
             "HapticManager.longPulse()",
         ):
-            self.assertNotIn(forbidden, hit)
+            self.assertNotIn(forbidden, self.dispatch)
+            self.assertNotIn(forbidden, self.live_inputs)
 
     def test_post_impact_capture_preserves_original_snapshot_order(self) -> None:
-        start = self.game_view.index("val impact = terminalHitImpact.apply")
-        end = self.game_view.index("val completedHit = terminalHitOutcome.complete", start)
-        capture = self.game_view[start:end]
+        start = self.live_inputs.index("captureTerminalImpact = {")
+        end = self.live_inputs.index("buildTerminalSummaryPreview", start)
+        capture = self.live_inputs[start:end]
         order = (
             "ghostRecorder.detachSnapshot()",
             "entityManager.entityTypeOf(collision.entity)",
@@ -128,22 +152,37 @@ class TerminalHitImpactContractTest(unittest.TestCase):
         )
         positions = [capture.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
+        self.assertIn(
+            "terminalHitImpact.apply(captureTerminalImpact)",
+            self.dispatch,
+        )
 
-    def test_completion_summary_and_death_transition_remain_in_game_view(self) -> None:
-        start = self.game_view.index("CollisionResult.HIT -> {")
-        end = self.game_view.index("CollisionResult.STUMBLE -> {", start)
-        hit = self.game_view[start:end]
+    def test_completion_and_death_transition_have_single_explicit_owners(self) -> None:
+        impact = self.dispatch.index(
+            "terminalHitImpact.apply(captureTerminalImpact)"
+        )
+        complete = self.dispatch.index("terminalHitOutcome.complete(")
+        terminal_result = self.dispatch.index(
+            "CollisionOutcomeDispatchResult.Terminal(completion)"
+        )
+        self.assertLess(impact, complete)
+        self.assertLess(complete, terminal_result)
+
         order = (
-            "val impact = terminalHitImpact.apply",
-            "val completedHit = terminalHitOutcome.complete",
+            "val completedHit = dispatchResult.completion",
             "currentRestQuote = completedHit.summary.restQuote",
             "currentRunSummary = completedHit.summary",
             "runResetManager.triggerDeath(gameState)",
             "runState = RunState.DYING",
         )
-        positions = [hit.index(item) for item in order]
+        positions = [
+            self.live_terminal_transition.index(item) for item in order
+        ]
         self.assertEqual(sorted(positions), positions)
-        self.assertIn("gameState.buildRunSummary(lastKiller = impact.killerType)", hit)
+        self.assertIn(
+            "gameState.buildRunSummary(lastKiller = killerType)",
+            self.live_inputs,
+        )
 
     def test_private_adapter_maps_each_effect_to_original_owner(self) -> None:
         adapter = extract_braced_block(
