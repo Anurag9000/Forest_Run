@@ -6,12 +6,11 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import fnmatch
-import json
 import os
 from pathlib import Path
 from typing import Sequence
 
-from strict_json import StrictJsonError, load_strict_json
+from strict_json import StrictJsonError, load_file
 
 ASSET_ROOTS = (
     Path("app/src/main/assets"),
@@ -59,7 +58,7 @@ def regular_json(path: Path) -> dict[str, object]:
     if metadata.st_size <= 0:
         raise AssetProvenanceError("provenance registry must not be empty")
     try:
-        value = load_strict_json(path)
+        value = load_file(path, require_object=True)
     except (StrictJsonError, OSError) as exc:
         raise AssetProvenanceError(f"invalid provenance registry: {exc}") from exc
     if not isinstance(value, dict):
