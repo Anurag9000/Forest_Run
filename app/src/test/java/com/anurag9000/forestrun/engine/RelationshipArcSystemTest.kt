@@ -292,6 +292,7 @@ class RelationshipArcSystemTest {
         repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.FOX) }
         repeat(4) { PersistentMemoryManager.recordPass(context, EntityType.FOX) }
 
+        val stage = RelationshipArcSystem.stageFor(context, EntityType.FOX)
         val passLine = RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.PASS)
         val landingCue = RelationshipArcSystem.encounterCueLine(
             context,
@@ -299,12 +300,10 @@ class RelationshipArcSystemTest {
             RelationshipArcSystem.EncounterCue.FOX_LANDING
         )
 
-        assertTrue(passLine.contains("remember", ignoreCase = true) || passLine.contains("trick", ignoreCase = true))
-        assertTrue(
-            landingCue.contains("remembered", ignoreCase = true) ||
-                landingCue.contains("read", ignoreCase = true) ||
-                landingCue.contains("catch", ignoreCase = true)
-        )
+        assertEquals(RelationshipStage.MILESTONE, stage)
+        assertTrue(RelationshipArcSystem.isWarmBond(context, EntityType.FOX))
+        assertEquals("Knew our line would hold.", passLine)
+        assertEquals("Knew you'd catch our line.", landingCue)
     }
 
     @Test
