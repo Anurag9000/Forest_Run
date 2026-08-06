@@ -33,12 +33,9 @@ SUPPORTED_SUFFIXES = {
     ".webp",
     ".zip",
 }
-CANDIDATE_KEYS = {
-    "candidateSha",
-    "candidate_sha",
-    "commitSha",
-    "commit_sha",
-}
+EXPLICIT_CANDIDATE_KEYS = {"candidateSha", "candidate_sha"}
+CANDIDATE_OBJECT_KEYS = {"candidate", "build"}
+COMMIT_KEYS = {"commitSha", "commit_sha"}
 
 
 class EvidenceIndexError(ValueError):
@@ -73,9 +70,11 @@ def _canonical_bytes(value: object) -> bytes:
 
 
 def _validate_candidate_sha(candidate_sha: str) -> str:
-    normalized = candidate_sha.strip().lower()
-    if not SHA40.fullmatch(normalized):
-        raise EvidenceIndexError("candidate SHA must be exactly 40 lowercase hexadecimal characters")
+    normalized = candidate_sha.strip()
+    if normalized != normalized.lower() or not SHA40.fullmatch(normalized):
+        raise EvidenceIndexError(
+            "candidate SHA must be exactly 40 lowercase hexadecimal characters"
+        )
     return normalized
 
 
@@ -112,16 +111,28 @@ def _parse_spec(spec: str) -> tuple[str, str]:
     return kind, _safe_relative_path(path)
 
 
-def _candidate_bindings(value: object) -> set[str]:
+def _candidate_bindings(
+    value: object,
+    *,
+    candidate_context: bool = False,
+) -> set[str]:
+    """Collect only explicit candidate identities, excluding baseline comparisons."""
     bindings: set[str] = set()
     if isinstance(value, Mapping):
         for key, item in value.items():
-            if key in CANDIDATE_KEYS and isinstance(item, str):
-                bindings.add(item.strip().lower())
-            bindings.update(_candidate_bindings(item))
+            if key in EXPLICIT_CANDIDATE_KEYS and isinstance(item, str):
+                bindings.add(item.strip())
+            elif candidate_context and key in COMMIT_KEYS and isinstance(item, str):
+                bindings.add(item.strip())
+            child_context = key in CANDIDATE_OBJECT_KEYS
+            bindings.update(
+                _candidate_bindings(item, candidate_context=child_context)
+            )
     elif isinstance(value, list):
         for item in value:
-            bindings.update(_candidate_bindings(item))
+            bindings.update(
+                _candidate_bindings(item, candidate_context=candidate_context)
+            )
     return bindings
 
 
@@ -135,7 +146,10 @@ def _load_json_bindings(path: Path) -> tuple[str, ...]:
         value = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise EvidenceIndexError(f"invalid UTF-8 JSON evidence: {path}") from exc
-    return tuple(sorted(_candidate_bindings(value)))
+    bindings = tuple(sorted(_candidate_bindings(value)))
+    if any(not SHA40.fullmatch(binding) for binding in bindings):
+        raise EvidenceIndexError(f"JSON evidence contains a malformed candidate SHA: {path}")
+    return bindings
 
 
 def _digest(path: Path) -> str:
@@ -158,11 +172,15 @@ def collect_entries(
     root = root.resolve()
     required = set(require_bound_kinds)
     if any(not KIND.fullmatch(kind) for kind in required):
-        raise EvidenceIndexError("required candidate-bound kinds must be lowercase identifiers")
+        raise EvidenceIndexError(
+            "required candidate-bound kinds must be lowercase identifiers"
+        )
     if not specs:
         raise EvidenceIndexError("at least one release evidence entry is required")
     if len(specs) > MAX_ENTRIES:
-        raise EvidenceIndexError(f"at most {MAX_ENTRIES} release evidence entries are allowed")
+        raise EvidenceIndexError(
+            f"at most {MAX_ENTRIES} release evidence entries are allowed"
+        )
 
     output_resolved = output.resolve(strict=False) if output is not None else None
     seen_kinds: set[str] = set()
@@ -185,7 +203,9 @@ def collect_entries(
         except FileNotFoundError as exc:
             raise EvidenceIndexError(f"evidence file is missing: {relative}") from exc
         if stat.S_ISLNK(metadata.st_mode):
-            raise EvidenceIndexError(f"evidence file must not be a symbolic link: {relative}")
+            raise EvidenceIndexError(
+                f"evidence file must not be a symbolic link: {relative}"
+            )
         if not stat.S_ISREG(metadata.st_mode):
             raise EvidenceIndexError(f"evidence path is not a regular file: {relative}")
         resolved = path.resolve()
@@ -194,14 +214,18 @@ def collect_entries(
         except ValueError as exc:
             raise EvidenceIndexError(f"evidence file escapes the root: {relative}") from exc
         if output_resolved is not None and resolved == output_resolved:
-            raise EvidenceIndexError("the output index cannot also be an evidence input")
+            raise EvidenceIndexError(
+                "the output index cannot also be an evidence input"
+            )
         if metadata.st_size <= 0 or metadata.st_size > MAX_FILE_BYTES:
             raise EvidenceIndexError(
                 f"evidence file size must be between 1 and {MAX_FILE_BYTES} bytes: {relative}"
             )
         identity = (metadata.st_dev, metadata.st_ino)
         if identity in seen_files:
-            raise EvidenceIndexError(f"one physical evidence file is reused through a hard link: {relative}")
+            raise EvidenceIndexError(
+                f"one physical evidence file is reused through a hard link: {relative}"
+            )
         seen_files.add(identity)
 
         bindings = _load_json_bindings(path)
@@ -254,7 +278,9 @@ def build_index(
         output=output,
     )
     entry_payload = [entry.as_json() for entry in entries]
-    evidence_set_sha256 = hashlib.sha256(_canonical_bytes(entry_payload)).hexdigest()
+    evidence_set_sha256 = hashlib.sha256(
+        _canonical_bytes(entry_payload)
+    ).hexdigest()
     return {
         "schemaVersion": SCHEMA_VERSION,
         "candidateSha": candidate_sha,
@@ -269,10 +295,10 @@ def build_index(
 
 
 def publish_index(output: Path, payload: Mapping[str, object]) -> None:
-    output = output.resolve(strict=False)
-    output.parent.mkdir(parents=True, exist_ok=True)
     if output.is_symlink():
         raise EvidenceIndexError("output index must not be a symbolic link")
+    output = output.resolve(strict=False)
+    output.parent.mkdir(parents=True, exist_ok=True)
     encoded = _canonical_bytes(payload)
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{output.name}.", suffix=".tmp", dir=output.parent
