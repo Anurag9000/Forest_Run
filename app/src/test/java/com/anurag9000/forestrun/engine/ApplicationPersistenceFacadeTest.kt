@@ -87,12 +87,14 @@ class ApplicationPersistenceFacadeTest {
 
         assertMarker("inspect") { facade.inspectRecoveryEvidence() }
         assertMarker("recover") { facade.recoverSafely() }
-        assertMarker("discardCorrupt:GHOST") {
-            facade.discardCorruptRecoveryEvidence(RecoveryEvidenceDomain.GHOST)
+        assertMarker("discardCorrupt:GHOST_PROMOTION") {
+            facade.discardCorruptRecoveryEvidence(
+                RecoveryEvidenceDomain.GHOST_PROMOTION
+            )
         }
-        assertMarker("discardPending:NON_GHOST") {
+        assertMarker("discardPending:RUN_OUTCOME") {
             facade.discardUnresolvedPendingRecoveryEvidence(
-                RecoveryEvidenceDomain.NON_GHOST
+                RecoveryEvidenceDomain.RUN_OUTCOME
             )
         }
 
@@ -100,8 +102,8 @@ class ApplicationPersistenceFacadeTest {
             listOf(
                 "inspect",
                 "recover",
-                "discardCorrupt:GHOST",
-                "discardPending:NON_GHOST"
+                "discardCorrupt:GHOST_PROMOTION",
+                "discardPending:RUN_OUTCOME"
             ),
             calls
         )
@@ -140,29 +142,21 @@ class ApplicationPersistenceFacadeTest {
     }
 
     private fun sampleSummary(): RunSummary = RunSummary(
-        distance = 120,
         score = 300,
-        seeds = 8,
-        avoided = 4,
-        familiar = 1,
-        bonded = listOf("Cat"),
-        runDurationSec = 45,
-        killer = "Wolf",
-        killerType = "WOLF",
-        biome = Biome.MEADOW,
-        forestMood = ForestMood.STEADY,
+        distanceM = 120f,
+        isNewHighScore = false,
+        highScore = 500,
+        mercyHearts = 3,
+        mercyMisses = 1,
+        kindnessChain = 2,
+        cleanPasses = 4,
+        sparedCount = 5,
+        hitsTaken = 1,
+        seedsCollected = 8,
+        bloomConversions = 2,
+        lastKiller = null,
         restQuote = "Rest beneath the willow.",
-        gardenProgressBefore = 1,
-        pacifist = false,
-        newGardenPlant = false,
-        nextGardenPlantIndex = null,
-        routeHistoryBefore = emptyList(),
-        routeHistoryAfter = emptyList(),
-        newRouteDiscovered = false,
-        newRouteId = null,
-        returnVisitCountBefore = 0,
-        returnVisitCountAfter = 1,
-        returnMomentId = "return-1"
+        forestMood = ForestMood.STEADY
     )
 
     private fun assertMarker(expected: String, block: () -> Unit) {
