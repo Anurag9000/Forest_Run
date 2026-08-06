@@ -10,9 +10,11 @@ The player begins beneath a willow, runs through five atmospheric biomes, collec
 
 ## Current Status
 
-**Feature-rich alpha with the primary correctness-remediation history consolidated on `main`.** The repository has a permanent application identity, current Android target, immutable exact-SHA host/emulator CI, broad invariant coverage, an obfuscated/resource-shrunk release bundle, versioned atomic ghost persistence, cutout-safe essential UI, persistent feedback controls, a physical performance-evidence harness, and a fail-closed physical-device/store acceptance validator.
+**Source-ready feature-rich alpha with the primary correctness-remediation history consolidated on `main`.** The repository has a permanent application identity, current Android target, immutable exact-SHA host/emulator CI, broad invariant coverage, an obfuscated/resource-shrunk release bundle, versioned atomic ghost persistence, cutout-safe essential UI, persistent feedback controls, a physical performance-evidence harness, and a fail-closed physical-device/store acceptance validator.
 
-It is not yet a release candidate because representative physical-device acceptance, measured performance thresholds, signed-artifact installation, final visual approval, and store/policy work remain.
+The source-bearing candidate `f6d1fc1077326e160ddd829cd7279158793616eb` completed Android validation run `31080357879` successfully. That exact candidate passed immutable source contracts, 420 Python tests, debug/release/unit/androidTest compilation, 927 JVM/Robolectric tests, debug and release lint, APK/androidTest APK/AAB packaging, R8 verification, API 35 connected behavior, and post-validation source-immutability checks.
+
+It is not yet a physically accepted or store-release-ready candidate because representative physical-device acceptance, measured performance evidence, signed-artifact installation, final visual/audio/haptic approval, internal-store delivery, and store/policy work remain.
 
 The canonical `main` branch includes:
 
@@ -35,6 +37,8 @@ The canonical `main` branch includes:
 - strict runtime asset checks and hardened audio/music lifecycle handling;
 - 30 Hz, twenty-minute ghost capture with atomic off-thread persistence;
 - ghost binary format v2 with magic/version headers, stable state codes, and legacy-file reads;
+- recoverable ghost promotion with receipts, persistent manifests, monotonic best distance, and distance-bound SHA-256 identity;
+- immutable persistence namespaces, same-namespace serial scheduling, and bounded cross-namespace concurrency;
 - one aspect-preserving safe-content transform for menu, Garden, HUD, debug, and rest UI;
 - persistent reduced-motion, audio, and haptic settings enforced at manager boundaries;
 - versioned SharedPreferences repair with future-schema compatibility storage;
@@ -85,9 +89,8 @@ The large hardware-capture and performance-profile tests are compiled but intent
 
 ## Remaining Release Blockers
 
-- observe host/release and connected-emulator validation for one exact frozen `main` SHA;
 - run deterministic scenarios and ordinary play on representative physical devices;
-- capture and review frame-time, allocation/GC, memory, I/O, audio-thread, thermal, and long-run evidence;
+- capture and review frame-time, allocation/GC, memory, I/O, audio-thread, thermal, battery, and long-run evidence;
 - establish evidence-based performance thresholds and repair any material hotspots found;
 - validate touch latency, transformed safe-content readability, feedback settings, audio, haptics, lifecycle recovery, and density behavior on phones/tablets/cutouts/unusual aspects;
 - provide real signing credentials and smoke-test the signed, minified artifact;
@@ -95,9 +98,18 @@ The large hardware-capture and performance-profile tests are compiled but intent
 - capture, curate, and manually approve final store screenshots and metadata;
 - visually verify artwork and animation frame counts, including the Wolf sheet;
 - revalidate current store-policy, privacy, data-safety, content-rating, and submission requirements;
-- decide whether the remaining procedural scenic layers and fixed-landscape policy are final art/product choices.
+- decide whether the remaining procedural scenic layers and fixed-landscape policy are final art/product choices;
+- produce the final candidate-bound acceptance manifest, aggregate, release-evidence index, and independent approvals.
 
-See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist, [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) for the physical/store evidence contract, and [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) for the exhaustive implemented/remaining audit.
+Bounded source architecture work remains desirable but is not presently evidenced as a release-blocking behavior defect:
+
+- extract the complete collision-result dispatcher from `GameView`;
+- move live terminal/nonterminal effect adapters behind a smaller runtime boundary;
+- extract run-session state transition and subsystem sequencing incrementally;
+- add an application-level persistence facade without misrepresenting separate stores as one global transaction;
+- consider a local data-oriented encounter catalogue only after physical acceptance stabilizes behavior.
+
+See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist, [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) for the physical/store evidence contract, and [`docs/audits/2026-08-06_documentation_reconciliation_audit.md`](docs/audits/2026-08-06_documentation_reconciliation_audit.md) for the complete present-tense mission/done/remaining reconciliation.
 
 ## Documentation
 
@@ -108,7 +120,9 @@ See [`docs/RELEASE.md`](docs/RELEASE.md) for the evidence-backed exit checklist,
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Physical-device profiling protocol, report collection, and threshold procedure |
 | [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) | Candidate identity, device/scenario coverage, evidence hashes, thresholds, approvals, and release decision |
 | [`docs/RELEASE.md`](docs/RELEASE.md) | Correctness, validation, packaging, hardware, signing, and store checklist |
-| [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) | Exhaustive remediation status, validation truth, bounded debt, and remaining gates |
+| [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) | Detailed remediation history and invariant ledger; dated evidence statements remain historical |
+| [`docs/audits/2026-08-06_documentation_reconciliation_audit.md`](docs/audits/2026-08-06_documentation_reconciliation_audit.md) | Complete documentation inventory, reconstructed mission, current done/partial/external matrix, contradictions, and next order |
+| [`docs/audits/2026-08-06_exact_head_audit.md`](docs/audits/2026-08-06_exact_head_audit.md) | Exact-head implementation audit immediately preceding the final green validation sequence |
 | [`docs/audits/2026-08-01_post_merge_audit.md`](docs/audits/2026-08-01_post_merge_audit.md) | Reconstructed original mission, merged-PR audit, remaining work, and assessed additions |
 
 ## Build and Test
