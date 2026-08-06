@@ -49,6 +49,7 @@ class RecoveryEvidenceMaintenanceNamespaceIntegrationTest {
             primaryNamespace
         )
         assertTrue(primaryArtifactStore.saveGhost(primaryFrames))
+        assertTrue(primaryArtifactStore.saveBestDistanceM(primaryDistance))
         assertTrue(
             AtomicFileGhostArtifactManifestStore(
                 context,
