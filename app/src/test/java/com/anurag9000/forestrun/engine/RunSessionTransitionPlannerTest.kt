@@ -7,7 +7,7 @@ import org.junit.Test
 
 class RunSessionTransitionPlannerTest {
     @Test
-    fun menuAndGardenRunRequestsPrepareFreshPlayingSessions() {
+    fun menuAndGardenRunRequestsPrepareFreshPlayingSessionsWithoutDuplicateMusic() {
         val menu = RunSessionTransitionPlanner.plan(
             RunSessionSnapshot(AppGameState.MENU, RunState.PLAYING),
             RunSessionEvent.MENU_RUN_REQUESTED
@@ -23,18 +23,16 @@ class RunSessionTransitionPlannerTest {
                 transition.after
             )
             assertEquals(
-                listOf(
-                    RunSessionEffect.PREPARE_FRESH_RUN,
-                    RunSessionEffect.PLAY_RUN_MUSIC
-                ),
+                listOf(RunSessionEffect.PREPARE_FRESH_RUN),
                 transition.effects
             )
             assertTrue(transition.changed)
         }
+        assertFalse(RunSessionEffect.entries.any { it.name == "PLAY_RUN_MUSIC" })
     }
 
     @Test
-    fun terminalRestAndRestartFlowCannotSkipAState() {
+    fun terminalRestAndRestartFlowCannotSkipInitializationOrReset() {
         val live = RunSessionSnapshot(AppGameState.PLAYING, RunState.PLAYING)
         val dying = RunSessionTransitionPlanner.plan(
             live,
@@ -55,6 +53,7 @@ class RunSessionTransitionPlannerTest {
             RunSessionEvent.REST_TAPPED
         )
         assertEquals(RunState.RESTARTING, restarting.after.runState)
+        assertEquals(listOf(RunSessionEffect.BEGIN_RESTART), restarting.effects)
 
         val garden = RunSessionTransitionPlanner.plan(
             restarting.after,
