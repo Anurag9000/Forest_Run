@@ -45,4 +45,11 @@ class PackedArgbTest {
         assertEquals(0xFF90D2FF.toInt(), Biome.MEADOW.skyTopColour)
         assertEquals(0xFF0A0A28.toInt(), Biome.NIGHT_FOREST.skyTopColour)
     }
+
+    @Test
+    fun `forest mood catalogue loads without Android framework color calls`() {
+        assertEquals(4, ForestMood.entries.size)
+        assertEquals(0xFF6CAC7A.toInt(), ForestMood.GENTLE.skyTopColor)
+        assertEquals(0xFFE8F6D4.toInt(), ForestMood.STEADY.accentColor)
+    }
 }
