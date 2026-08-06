@@ -61,20 +61,21 @@ internal class RecoveryEvidenceUserController(
         }
 
         return try {
-            val refreshed = when (action) {
-                RecoveryUiAction.SAFE_RETRY -> recoverSafely()
-                RecoveryUiAction.DISCARD_CORRUPT -> {
+            val execution = when (action) {
+                RecoveryUiAction.SAFE_RETRY -> RecoveryExecution(
+                    disposition = RecoveryUserActionDisposition.COMPLETED,
+                    report = recoverSafely()
+                )
+                RecoveryUiAction.DISCARD_CORRUPT -> discardExecution(
                     discardCorrupt(domain)
-                    inspectEvidence()
-                }
-                RecoveryUiAction.DISCARD_UNRESOLVED_PENDING -> {
+                )
+                RecoveryUiAction.DISCARD_UNRESOLVED_PENDING -> discardExecution(
                     discardUnresolvedPending(domain)
-                    inspectEvidence()
-                }
+                )
             }
             RecoveryUserActionResult(
-                disposition = RecoveryUserActionDisposition.COMPLETED,
-                model = RecoveryEvidencePresentation.present(refreshed),
+                disposition = execution.disposition,
+                model = RecoveryEvidencePresentation.present(execution.report),
                 domain = domain,
                 action = action
             )
@@ -88,6 +89,22 @@ internal class RecoveryEvidenceUserController(
         }
     }
 
+    private fun discardExecution(result: RecoveryDiscardResult): RecoveryExecution {
+        val disposition = when (result.disposition) {
+            RecoveryDiscardDisposition.DISCARDED,
+            RecoveryDiscardDisposition.RECOVERED_INSTEAD ->
+                RecoveryUserActionDisposition.COMPLETED
+            RecoveryDiscardDisposition.NOT_APPLICABLE ->
+                RecoveryUserActionDisposition.NOT_AVAILABLE
+            RecoveryDiscardDisposition.IO_FAILURE ->
+                RecoveryUserActionDisposition.ACTION_FAILED
+        }
+        return RecoveryExecution(
+            disposition = disposition,
+            report = inspectEvidence()
+        )
+    }
+
     companion object {
         fun from(facade: ApplicationPersistenceFacade): RecoveryEvidenceUserController =
             RecoveryEvidenceUserController(
@@ -98,6 +115,11 @@ internal class RecoveryEvidenceUserController(
                     facade::discardUnresolvedPendingRecoveryEvidence
             )
     }
+
+    private data class RecoveryExecution(
+        val disposition: RecoveryUserActionDisposition,
+        val report: RecoveryEvidenceReport
+    )
 
     private val RecoveryUiAction.isDestructive: Boolean
         get() = this == RecoveryUiAction.DISCARD_CORRUPT ||
