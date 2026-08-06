@@ -8,6 +8,10 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 GAME_VIEW = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
+DISPATCHER = (
+    ROOT
+    / "app/src/main/java/com/anurag9000/forestrun/engine/CollisionOutcomeDispatcher.kt"
+)
 COORDINATOR = (
     ROOT
     / "app/src/main/java/com/anurag9000/forestrun/engine/RunOutcomePersistenceCoordinator.kt"
@@ -77,7 +81,17 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.game_view = GAME_VIEW.read_text(encoding="utf-8")
+        cls.dispatcher = DISPATCHER.read_text(encoding="utf-8")
         cls.coordinator = COORDINATOR.read_text(encoding="utf-8")
+        dispatch_start = cls.game_view.index(
+            "val dispatchResult = collisionOutcomeDispatcher.dispatch("
+        )
+        flash_start = cls.game_view.index("// Tick down mercy flash", dispatch_start)
+        cls.live_collision = cls.game_view[dispatch_start:flash_start]
+        cls.dispatch = extract_braced_block(
+            cls.dispatcher,
+            "fun dispatch(\n        result: CollisionResult,",
+        )
 
     def test_game_view_has_no_direct_terminal_persistence_writes(self) -> None:
         forbidden = (
@@ -87,22 +101,43 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
             "GhostPersistenceManager.saveBestRunAsync(",
             "SaveManager.saveBestDistance(",
             "runOutcomePersistence.commit(",
+            "terminalHitOutcome.complete(",
         )
         for call in forbidden:
             self.assertNotIn(call, self.game_view)
-        self.assertEqual(1, self.game_view.count("terminalHitOutcome.complete("))
+        self.assertEqual(1, self.game_view.count("collisionOutcomeDispatcher.dispatch("))
+        self.assertEqual(1, self.dispatcher.count("terminalHitOutcome.complete("))
 
-    def test_hit_path_detaches_then_completes_before_death_transition(self) -> None:
-        start = self.game_view.index("CollisionResult.HIT ->")
-        end = self.game_view.index("CollisionResult.STUMBLE ->", start)
-        hit_block = self.game_view[start:end]
+    def test_hit_path_keeps_lazy_capture_completion_and_death_order(self) -> None:
+        self.assertEqual(
+            1,
+            self.live_collision.count(
+                "val completedGhost = ghostRecorder.detachSnapshot()"
+            ),
+        )
+        self.assertEqual(1, self.live_collision.count("captureTerminalImpact = {"))
+        self.assertEqual(
+            1,
+            self.live_collision.count("buildTerminalSummaryPreview = { killerType ->"),
+        )
+        self.assertEqual(
+            1,
+            self.live_collision.count(
+                "dispatchResult is CollisionOutcomeDispatchResult.Terminal"
+            ),
+        )
+        detach = self.live_collision.index("ghostRecorder.detachSnapshot()")
+        summary_builder = self.live_collision.index("buildTerminalSummaryPreview")
+        transition = self.live_collision.index("runResetManager.triggerDeath(gameState)")
+        self.assertLess(detach, summary_builder)
+        self.assertLess(summary_builder, transition)
+        self.assertNotIn("ghostRecorder.reset()", self.live_collision)
 
-        detach = hit_block.index("val completedGhost = ghostRecorder.detachSnapshot()")
-        complete = hit_block.index("terminalHitOutcome.complete(")
-        transition = hit_block.index("runResetManager.triggerDeath(gameState)")
-        self.assertLess(detach, complete)
-        self.assertLess(complete, transition)
-        self.assertNotIn("ghostRecorder.reset()", hit_block)
+        impact = self.dispatch.index(
+            "terminalHitImpact.apply(captureTerminalImpact)"
+        )
+        complete = self.dispatch.index("terminalHitOutcome.complete(")
+        self.assertLess(impact, complete)
 
     def test_each_run_start_reopens_and_retries_recovery(self) -> None:
         fresh = extract_braced_block(self.game_view, "private fun prepareFreshRun()")
