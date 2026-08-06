@@ -193,6 +193,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         relationshipRecorder = AndroidNonTerminalCollisionRelationshipRecorder(context),
         feedbackPresenter = AndroidNonTerminalCollisionFeedbackPresenter(context)
     )
+    private val collisionOutcomeDispatcher = CollisionOutcomeDispatcher(
+        terminalHitImpact = terminalHitImpact,
+        terminalHitOutcome = terminalHitOutcome,
+        nonTerminalOutcome = nonTerminalCollisionOutcome
+    )
     private val ghostPlayer   = GhostPlayer()
     private val ghostHazardFocusRect = RectF()
     private val reusableGhostVisibilityContext = GhostPlayer.VisibilityContext(
@@ -770,72 +775,65 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (collision != null) {
                 val persistEncounter = collision.entity.shouldRecordPersistence &&
                     runMode.persistsProgress
-                when (collision.result) {
-                    CollisionResult.HIT -> {
-                        val impact = terminalHitImpact.apply {
-                            val completedGhost = ghostRecorder.detachSnapshot()
-                            val killerType = entityManager.entityTypeOf(collision.entity)
-                            TerminalHitImpactCapture(
+                val dispatchResult = collisionOutcomeDispatcher.dispatch(
+                    result = collision.result,
+                    persistEncounter = persistEncounter,
+                    captureTerminalImpact = {
+                        val completedGhost = ghostRecorder.detachSnapshot()
+                        val killerType = entityManager.entityTypeOf(collision.entity)
+                        TerminalHitImpactCapture(
+                            killerType = killerType,
+                            biome = entityManager.biomeManager.currentBiome,
+                            presentation = TerminalHitPresentation(
                                 killerType = killerType,
-                                biome = entityManager.biomeManager.currentBiome,
-                                presentation = TerminalHitPresentation(
-                                    killerType = killerType,
-                                    routeTier = gameState.pacifistRouteTier,
-                                    playerX = player.x,
-                                    playerY = player.y
-                                ),
-                                completedGhost = completedGhost
-                            )
-                        }
-                        val completedHit = terminalHitOutcome.complete(
-                            killerType = impact.killerType,
-                            biome = impact.biome,
-                            presentation = impact.presentation,
-                            completedGhost = impact.completedGhost,
-                            persistEncounter = persistEncounter
-                        ) {
-                            gameState.buildRunSummary(lastKiller = impact.killerType)
-                        }
-                        currentRestQuote = completedHit.summary.restQuote
-                        currentRunSummary = completedHit.summary
-                        // Transition to DYING
-                        if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
-                        runState = RunState.DYING
-                    }
-                    CollisionResult.STUMBLE -> {
+                                routeTier = gameState.pacifistRouteTier,
+                                playerX = player.x,
+                                playerY = player.y
+                            ),
+                            completedGhost = completedGhost
+                        )
+                    },
+                    buildTerminalSummaryPreview = { killerType ->
+                        gameState.buildRunSummary(lastKiller = killerType)
+                    },
+                    buildStumbleInput = {
                         val killerType = entityManager.entityTypeOf(collision.entity)
                         val dominantColor = if (::entityManager.isInitialized) {
                             entityManager.biomeManager.currentFoliage
                         } else {
                             Color.rgb(255, 180, 200)
                         }
-                        nonTerminalCollisionOutcome.completeStumble(
-                            input = StumbleCollisionOutcome(
-                                killerType = killerType,
-                                routeTier = gameState.pacifistRouteTier,
-                                playerX = player.x,
-                                playerY = player.y,
-                                dominantColor = dominantColor,
-                                persistEncounter = persistEncounter
-                            )
-                        ) {
-                            // Stumble brief invincibility has already been triggered.
-                            collision.entity.isActive = false
-                        }
-                    }
-                    CollisionResult.MERCY_MISS -> {
-                        nonTerminalCollisionOutcome.completeMercyMiss(
-                            MercyMissCollisionOutcome(
-                                entityType = entityManager.entityTypeOf(collision.entity),
-                                routeTier = gameState.pacifistRouteTier,
-                                mercyHearts = gameState.mercyHearts,
-                                kindnessChain = gameState.kindnessChain,
-                                playerX = player.x,
-                                playerY = player.y
-                            )
+                        StumbleCollisionOutcome(
+                            killerType = killerType,
+                            routeTier = gameState.pacifistRouteTier,
+                            playerX = player.x,
+                            playerY = player.y,
+                            dominantColor = dominantColor,
+                            persistEncounter = persistEncounter
+                        )
+                    },
+                    deactivateStumbleEntity = {
+                        // Stumble brief invincibility has already been triggered.
+                        collision.entity.isActive = false
+                    },
+                    buildMercyMissInput = {
+                        MercyMissCollisionOutcome(
+                            entityType = entityManager.entityTypeOf(collision.entity),
+                            routeTier = gameState.pacifistRouteTier,
+                            mercyHearts = gameState.mercyHearts,
+                            kindnessChain = gameState.kindnessChain,
+                            playerX = player.x,
+                            playerY = player.y
                         )
                     }
-                    CollisionResult.NONE -> { /* handled above, shouldn't reach here */ }
+                )
+                if (dispatchResult is CollisionOutcomeDispatchResult.Terminal) {
+                    val completedHit = dispatchResult.completion
+                    currentRestQuote = completedHit.summary.restQuote
+                    currentRunSummary = completedHit.summary
+                    // Transition to DYING
+                    if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
+                    runState = RunState.DYING
                 }
             }
 
