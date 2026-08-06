@@ -82,7 +82,7 @@ class EncounterFamilyCatalogueContractTest(unittest.TestCase):
     def test_factory_contains_one_branch_for_every_catalogued_type(self) -> None:
         for entity_type in MAPPINGS:
             self.assertEqual(1, FACTORY.count(f"EntityType.{entity_type} ->"))
-        self.assertEqual(19, FACTORY.count("EntityType.") - 3)
+        self.assertEqual(19, FACTORY.count("EntityType."))
         self.assertEqual(1, FACTORY.count("return when (type)"))
 
 
