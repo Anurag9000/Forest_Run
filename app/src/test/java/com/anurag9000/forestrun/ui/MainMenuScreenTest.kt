@@ -1,8 +1,8 @@
 package com.anurag9000.forestrun.ui
 
 import android.content.Context
-import android.graphics.Canvas
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.engine.SpriteManager
 import org.junit.Assert.assertEquals
@@ -36,7 +36,7 @@ class MainMenuScreenTest {
         screen.onTap(960f, 540f)
         assertEquals(MainMenuScreen.Phase.STANDING_UP, screen.phase)
 
-        screen.update(2.0f)
+        advanceToReady(screen)
         assertEquals(MainMenuScreen.Phase.READY, screen.phase)
 
         screen.onTap(960f, 540f)
@@ -50,10 +50,10 @@ class MainMenuScreenTest {
         val screen = MainMenuScreen(context, spriteManager, 1_920, 1_080)
 
         screen.onTap(960f, 540f)
-        screen.update(2.0f)
+        advanceToReady(screen)
         screen.onTap(960f, 540f)
 
-        screen.update(0.016f)
+        screen.update(FRAME_SECONDS)
 
         assertTrue(screen.shouldStartRun)
         assertTrue(screen.consumeStartRunRequest())
@@ -69,8 +69,16 @@ class MainMenuScreenTest {
         screen.draw(canvas)
         assertEquals(MainMenuScreen.Phase.STANDING_UP, screen.phase)
 
-        screen.update(2.0f)
+        advanceToReady(screen)
         screen.draw(canvas)
         assertEquals(MainMenuScreen.Phase.READY, screen.phase)
+    }
+
+    private fun advanceToReady(screen: MainMenuScreen) {
+        repeat(40) { screen.update(FRAME_SECONDS) }
+    }
+
+    private companion object {
+        const val FRAME_SECONDS = 0.05f
     }
 }
