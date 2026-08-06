@@ -1,7 +1,6 @@
 package com.anurag9000.forestrun.engine
 
 import android.content.Context
-import android.graphics.Color
 
 enum class ForestMood(
     val displayName: String,
@@ -16,37 +15,37 @@ enum class ForestMood(
         displayName = "Gentle",
         gardenLine = "The grove exhales around you.",
         restLine = "The path felt gentle.",
-        skyTopColor = Color.rgb(108, 172, 122),
-        skyBottomColor = Color.rgb(212, 240, 184),
-        groundColor = Color.rgb(78, 154, 84),
-        accentColor = Color.rgb(206, 255, 196)
+        skyTopColor = PackedArgb.rgb(108, 172, 122),
+        skyBottomColor = PackedArgb.rgb(212, 240, 184),
+        groundColor = PackedArgb.rgb(78, 154, 84),
+        accentColor = PackedArgb.rgb(206, 255, 196)
     ),
     RECKLESS(
         displayName = "Reckless",
         gardenLine = "The wind still remembers your rush.",
         restLine = "The grove is still catching its breath.",
-        skyTopColor = Color.rgb(176, 110, 68),
-        skyBottomColor = Color.rgb(242, 190, 118),
-        groundColor = Color.rgb(146, 96, 52),
-        accentColor = Color.rgb(255, 218, 132)
+        skyTopColor = PackedArgb.rgb(176, 110, 68),
+        skyBottomColor = PackedArgb.rgb(242, 190, 118),
+        groundColor = PackedArgb.rgb(146, 96, 52),
+        accentColor = PackedArgb.rgb(255, 218, 132)
     ),
     FEARFUL(
         displayName = "Fearful",
         gardenLine = "The willow keeps the quiet close.",
         restLine = "The forest noticed your hurry.",
-        skyTopColor = Color.rgb(70, 92, 124),
-        skyBottomColor = Color.rgb(154, 174, 196),
-        groundColor = Color.rgb(66, 96, 88),
-        accentColor = Color.rgb(198, 218, 255)
+        skyTopColor = PackedArgb.rgb(70, 92, 124),
+        skyBottomColor = PackedArgb.rgb(154, 174, 196),
+        groundColor = PackedArgb.rgb(66, 96, 88),
+        accentColor = PackedArgb.rgb(198, 218, 255)
     ),
     STEADY(
         displayName = "Steady",
         gardenLine = "The grove keeps an even pulse.",
         restLine = "The trail held steady.",
-        skyTopColor = Color.rgb(60, 140, 230),
-        skyBottomColor = Color.rgb(180, 230, 160),
-        groundColor = Color.rgb(80, 160, 70),
-        accentColor = Color.rgb(232, 246, 212)
+        skyTopColor = PackedArgb.rgb(60, 140, 230),
+        skyBottomColor = PackedArgb.rgb(180, 230, 160),
+        groundColor = PackedArgb.rgb(80, 160, 70),
+        accentColor = PackedArgb.rgb(232, 246, 212)
     );
 }
 
