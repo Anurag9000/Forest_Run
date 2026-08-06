@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity() {
         FeedbackSettings.init(this)
         RuntimeAssetValidator.validateRelease(this)
         gameView = GameView(this)
+        attachForestRunAccessibility(gameView, gameView.inputHandler)
         setContentView(gameView)
         configureSafeAreaInsets()
         val launchToken = debugLaunchGate.begin()
