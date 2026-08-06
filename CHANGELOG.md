@@ -1,6 +1,6 @@
 # Changelog
 
-All notable Forest Run changes are recorded here. This repository uses an `Unreleased` section until one exact signed candidate has completed physical-device, accessibility, store-delivery, policy, and evidence acceptance.
+All notable Forest Run changes are recorded here. This repository uses an `Unreleased` section until one exact signed candidate has completed physical-device, accessibility, store-delivery, policy, provenance, and evidence acceptance.
 
 ## Unreleased
 
@@ -8,31 +8,44 @@ All notable Forest Run changes are recorded here. This repository uses an `Unrel
 
 - deterministic root accessibility actions for Menu/Rest navigation and run controls;
 - a pure semantic accessibility tree for Menu, Settings, live Run, Garden, and Rest surfaces;
-- a rate-limited accessibility announcement policy that prioritizes surface and Bloom changes without frame-driven score chatter;
+- a fail-closed semantic action router and rate-limited announcement policy that prioritize meaningful state changes without frame-driven score chatter;
 - exhaustive lazy collision-outcome dispatch wired into the live run loop;
-- a shared live collision-effect adapter that preserves coordinator-owned ordering;
-- a reconciled run-session transition table and fail-closed effect coordinator;
+- a shared live collision-effect adapter and exact-marker adoption contract that preserve coordinator-owned ordering;
+- a reconciled run-session transition table, fail-closed effect coordinator, live effect adapter, and exact-marker adoption contract;
 - an application persistence facade that preserves independent durability domains;
-- privacy-safe recovery presentation and a confirmation-gated user action controller;
+- privacy-safe recovery presentation, confirmation-gated user actions, discard-result mapping, and a live recovery dialog entry point;
 - an exhaustive structural catalogue for all nineteen encounter families;
 - descriptor-bound stable release-evidence snapshots and independent post-publication verification;
-- a candidate-bound declared direct-dependency inventory;
+- candidate-bound declared direct-dependency inventory and resolved CycloneDX 1.6 dependency evidence;
 - a packaged Android native-library/page-size risk verifier wired to the release AAB build;
-- source-backed privacy, dependency-provenance, accessibility, recovery, content, and security/licensing governance documentation.
+- complete source-asset provenance coverage, strict schema/adversarial validation, and a release-blocking approval mode;
+- source-backed privacy, dependency, accessibility, recovery, content, security, supply-chain, and asset-provenance governance documentation.
 
 ### Changed
 
 - validation actions use maintained Node-runtime generations while preserving read-only exact-SHA behavior;
+- the canonical host workflow builds declared and resolved dependency evidence before compilation and packaging;
+- release preparation now fails before store graphics or metadata generation while any packaged source asset lacks reviewed provenance and distribution approval;
 - release-evidence indexing rejects path aliasing, hard-link reuse, symlink traversal, and mutation during review;
 - dependency declarations have one pinned authoritative source with no stale parallel catalogue;
 - terminal, stumble, and mercy collision source contracts now follow dispatcher ownership while retaining original ordering and persistence guarantees;
-- run-session effects no longer duplicate run-start music and now model restart initialization explicitly.
+- run-session effects no longer duplicate run-start music, now model menu-to-Garden and restart initialization explicitly, and have one planned state-publication boundary;
+- recovery maintenance now distinguishes completed discard, recovery instead of deletion, no-longer-applicable races, and I/O failure.
 
 ### Fixed
 
-- malformed or stale accessibility, persistence, release-evidence, dependency, collision, recovery, and encounter-catalogue test fixtures now fail at their owning boundaries without weakening production behavior;
-- pending valid ghost manifests now produce pending-recovery copy rather than a false healthy message.
+- malformed or stale accessibility, persistence, release-evidence, dependency, collision, recovery, provenance, and encounter-catalogue fixtures now fail at their owning boundaries without weakening production behavior;
+- pending valid ghost manifests now produce pending-recovery copy rather than a false healthy message;
+- failed destructive recovery maintenance no longer reports completion to the user;
+- recovery dialogs never expose journal payloads, ghost frames, local paths, hashes, or exception messages.
+
+### Validation status
+
+- earlier source-bearing baselines passed host compilation, JVM/Robolectric tests, lint, APK/androidTest APK/AAB packaging, R8, package-shape inspection, source immutability, and API 35 connected behavior;
+- the current exact head must pass the same canonical workflow before this section can be promoted into a dated release entry;
+- physical-device, TalkBack/Switch Access, performance, signing, store-delivery, licence, vulnerability, policy, and final independent-review gates remain separate and unresolved;
+- every current asset is registry-covered, but all provenance rules remain intentionally `review-required`, so strict release preparation is expected to fail until real review is recorded.
 
 ## Release-note rule
 
-A dated/versioned section must not be added until the accepted candidate is frozen. At that point, copy only verified player-visible changes from `Unreleased`, record the exact version name/code, `main` SHA, signed artifact SHA-256, certificate SHA-256, known limitations, and matching Play `What's new` text. The final changelog entry is part of the candidate-bound release evidence.
+A dated/versioned section must not be added until the accepted candidate is frozen. At that point, copy only verified player-visible changes from `Unreleased`, record the exact version name/code, `main` SHA, signed artifact SHA-256, certificate SHA-256, known limitations, dependency/SBOM evidence, asset-provenance approval, reviewer identities, and matching Play `What's new` text. The final changelog entry is part of the candidate-bound release evidence.
