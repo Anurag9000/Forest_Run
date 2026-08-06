@@ -32,6 +32,7 @@ import com.anurag9000.forestrun.engine.SurfaceResizePolicy
 /** Single full-screen Activity hosting the custom SurfaceView game. */
 class MainActivity : AppCompatActivity() {
     private lateinit var gameView: GameView
+    private lateinit var recoveryEvidenceDialog: RecoveryEvidenceDialogCoordinator
     private var hasPaused = false
     private var configurationWidthDp = 0
     private var configurationHeightDp = 0
@@ -69,6 +70,8 @@ class MainActivity : AppCompatActivity() {
         gameView = GameView(this)
         attachForestRunAccessibility(gameView, gameView.inputHandler)
         setContentView(gameView)
+        recoveryEvidenceDialog = RecoveryEvidenceDialogCoordinator(this)
+        gameView.post(recoveryEvidenceDialog::showIfNeeded)
         configureSafeAreaInsets()
         val launchToken = debugLaunchGate.begin()
         gameView.post {
@@ -138,6 +141,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         debugLaunchGate.cancel()
+        if (::recoveryEvidenceDialog.isInitialized) recoveryEvidenceDialog.dismiss()
         if (::gameView.isInitialized) gameView.pause()
         HapticManager.release()
         LeitmotifManager.destroy()
