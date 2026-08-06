@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "pattern": "app/src/main/assets/fonts/**",
+      "assetKind": "font",
+      "status": "review-required",
+      "source": "",
+      "license": "",
+      "attribution": "",
+      "reviewer": "",
+      "reviewedAt": ""
+    },
+    {
+      "pattern": "app/src/main/assets/sprites/**",
+      "assetKind": "sprite-or-vfx",
+      "status": "review-required",
+      "source": "",
+      "license": "",
+      "attribution": "",
+      "reviewer": "",
+      "reviewedAt": ""
+    },
+    {
+      "pattern": "app/src/main/res/raw/**",
+      "assetKind": "audio-or-raw-media",
+      "status": "review-required",
+      "source": "",
+      "license": "",
+      "attribution": "",
+      "reviewer": "",
+      "reviewedAt": ""
+    },
+    {
+      "pattern": "app/src/main/res/drawable/**",
+      "assetKind": "drawable",
+      "status": "review-required",
+      "source": "",
+      "license": "",
+      "attribution": "",
+      "reviewer": "",
+      "reviewedAt": ""
+    },
+    {
+      "pattern": "app/src/main/res/mipmap-*/**",
+      "assetKind": "launcher-icon",
+      "status": "review-required",
+      "source": "",
+      "license": "",
+      "attribution": "",
+      "reviewer": "",
+      "reviewedAt": ""
+    }
+  ]
+}
