@@ -469,13 +469,23 @@ private class AndroidGhostPromotionEvidenceHandler(
                 "invalid_manifest"
             )
             is GhostArtifactManifestLoadResult.Present -> {
-                if (manifestMatches(loaded.manifest)) {
-                    snapshot(RecoveryEvidenceState.CLEAN, "valid_manifest")
-                } else {
+                val manifest = loaded.manifest
+                if (!manifestMatches(manifest)) {
                     snapshot(
                         RecoveryEvidenceState.CORRUPT,
                         "manifest_artifact_mismatch"
                     )
+                } else {
+                    val currentDistance = artifactStore.loadBestDistanceM()
+                        .takeIf { it.isFinite() }
+                        ?.coerceAtLeast(0f)
+                        ?: 0f
+                    val state = if (currentDistance < manifest.distanceM) {
+                        RecoveryEvidenceState.PENDING
+                    } else {
+                        RecoveryEvidenceState.CLEAN
+                    }
+                    snapshot(state, "valid_manifest")
                 }
             }
         }
