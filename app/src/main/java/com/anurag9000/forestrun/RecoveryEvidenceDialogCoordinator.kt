@@ -20,7 +20,9 @@ import com.anurag9000.forestrun.engine.RecoveryUserActionResult
 internal class RecoveryEvidenceDialogCoordinator(
     private val activity: AppCompatActivity,
     private val controller: RecoveryEvidenceUserController =
-        RecoveryEvidenceUserController.from(ApplicationPersistenceFacade(activity))
+        RecoveryEvidenceUserController.from(
+            ApplicationPersistenceFacade.android(activity)
+        )
 ) {
     private var activeDialog: AlertDialog? = null
 
