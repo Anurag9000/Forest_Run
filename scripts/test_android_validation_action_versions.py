@@ -15,12 +15,15 @@ class AndroidValidationActionVersionsTest(unittest.TestCase):
     def test_maintained_node_runtime_actions_are_used(self) -> None:
         self.assertEqual(2, WORKFLOW.count("uses: actions/checkout@v6"))
         self.assertEqual(2, WORKFLOW.count("uses: actions/setup-java@v5"))
+        self.assertEqual(2, WORKFLOW.count("uses: android-actions/setup-android@v4"))
+        self.assertEqual(2, WORKFLOW.count("cmdline-tools-version: '12266719'"))
         self.assertEqual(2, WORKFLOW.count("uses: gradle/actions/setup-gradle@v6"))
         self.assertEqual(1, WORKFLOW.count("uses: gradle/actions/wrapper-validation@v6"))
         for obsolete in (
             "actions/checkout@v4",
             "actions/checkout@v5",
             "actions/setup-java@v4",
+            "android-actions/setup-android@v3",
             "gradle/actions/setup-gradle@v4",
             "gradle/actions/setup-gradle@v5",
             "gradle/actions/wrapper-validation@v4",
@@ -40,7 +43,6 @@ class AndroidValidationActionVersionsTest(unittest.TestCase):
         self.assertNotRegex(WORKFLOW, re.compile(r"\bgit\s+push\b"))
 
     def test_android_and_emulator_owners_remain_explicit(self) -> None:
-        self.assertEqual(2, WORKFLOW.count("uses: android-actions/setup-android@v3"))
         self.assertEqual(
             1,
             WORKFLOW.count("uses: reactivecircus/android-emulator-runner@v2"),

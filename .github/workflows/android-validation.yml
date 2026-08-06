@@ -139,7 +139,9 @@ jobs:
           java-version: '21'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: '12266719'
 
       - name: Install Android API 36
         shell: bash
@@ -212,7 +214,9 @@ jobs:
           java-version: '21'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: '12266719'
 
       - name: Install Android API 36
         shell: bash
