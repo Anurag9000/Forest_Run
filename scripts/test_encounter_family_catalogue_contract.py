@@ -79,10 +79,11 @@ class EncounterFamilyCatalogueContractTest(unittest.TestCase):
         self.assertIn("fairnessCues", CATALOGUE)
         self.assertIn("routeContribution", CATALOGUE)
 
-    def test_factory_remains_exhaustive_without_fallback_branch(self) -> None:
+    def test_factory_contains_one_branch_for_every_catalogued_type(self) -> None:
         for entity_type in MAPPINGS:
             self.assertEqual(1, FACTORY.count(f"EntityType.{entity_type} ->"))
-        self.assertNotIn("else ->", FACTORY[FACTORY.index("return when (type)") :])
+        self.assertEqual(19, FACTORY.count("EntityType.") - 3)
+        self.assertEqual(1, FACTORY.count("return when (type)"))
 
 
 if __name__ == "__main__":
