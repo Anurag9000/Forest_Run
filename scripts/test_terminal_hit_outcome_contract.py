@@ -8,6 +8,10 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 GAME_VIEW = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
+DISPATCHER = (
+    ROOT
+    / "app/src/main/java/com/anurag9000/forestrun/engine/CollisionOutcomeDispatcher.kt"
+)
 TERMINAL = (
     ROOT
     / "app/src/main/java/com/anurag9000/forestrun/engine/TerminalHitOutcomeCoordinator.kt"
@@ -77,21 +81,33 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.game_view = GAME_VIEW.read_text(encoding="utf-8")
+        cls.dispatcher = DISPATCHER.read_text(encoding="utf-8")
         cls.terminal = TERMINAL.read_text(encoding="utf-8")
-        start = cls.game_view.index("CollisionResult.HIT ->")
-        end = cls.game_view.index("CollisionResult.STUMBLE ->", start)
-        cls.hit_block = cls.game_view[start:end]
+        dispatch_start = cls.game_view.index(
+            "val dispatchResult = collisionOutcomeDispatcher.dispatch("
+        )
+        flash_start = cls.game_view.index("// Tick down mercy flash", dispatch_start)
+        cls.live_collision = cls.game_view[dispatch_start:flash_start]
+        cls.dispatch = extract_braced_block(
+            cls.dispatcher,
+            "fun dispatch(\n        result: CollisionResult,",
+        )
         cls.complete = extract_braced_block(
             cls.terminal,
             "fun complete(\n        killerType: EntityType?,",
         )
 
-    def test_game_view_delegates_impact_and_completion_once(self) -> None:
-        self.assertEqual(1, self.hit_block.count("terminalHitImpact.apply"))
-        self.assertEqual(1, self.hit_block.count("terminalHitOutcome.complete("))
+    def test_dispatcher_delegates_impact_and_completion_once(self) -> None:
+        self.assertEqual(
+            1,
+            self.dispatch.count(
+                "terminalHitImpact.apply(captureTerminalImpact)"
+            ),
+        )
+        self.assertEqual(1, self.dispatch.count("terminalHitOutcome.complete("))
         self.assertLess(
-            self.hit_block.index("terminalHitImpact.apply"),
-            self.hit_block.index("terminalHitOutcome.complete("),
+            self.dispatch.index("terminalHitImpact.apply(captureTerminalImpact)"),
+            self.dispatch.index("terminalHitOutcome.complete("),
         )
         forbidden = (
             "PersistentMemoryManager.recordHit(",
@@ -102,46 +118,65 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
             "FlavorTextManager.spawn(",
         )
         for call in forbidden:
-            self.assertNotIn(call, self.hit_block)
+            self.assertNotIn(call, self.dispatch)
+            self.assertNotIn(call, self.live_collision)
 
     def test_post_impact_capture_precedes_completion_and_death(self) -> None:
-        order = (
-            "terminalHitImpact.apply",
+        capture_order = (
+            "captureTerminalImpact = {",
             "ghostRecorder.detachSnapshot()",
             "entityManager.entityTypeOf(collision.entity)",
             "TerminalHitImpactCapture(",
+            "buildTerminalSummaryPreview = { killerType ->",
+        )
+        positions = [self.live_collision.index(item) for item in capture_order]
+        self.assertEqual(sorted(positions), positions)
+
+        dispatch_order = (
+            "terminalHitImpact.apply(captureTerminalImpact)",
             "terminalHitOutcome.complete(",
+            "buildTerminalSummaryPreview(impact.killerType)",
+            "CollisionOutcomeDispatchResult.Terminal(completion)",
+        )
+        positions = [self.dispatch.index(item) for item in dispatch_order]
+        self.assertEqual(sorted(positions), positions)
+
+        transition_order = (
+            "val completedHit = dispatchResult.completion",
             "currentRestQuote = completedHit.summary.restQuote",
             "currentRunSummary = completedHit.summary",
             "runResetManager.triggerDeath(gameState)",
             "runState = RunState.DYING",
         )
-        positions = [self.hit_block.index(item) for item in order]
+        positions = [
+            self.live_collision.index(item) for item in transition_order
+        ]
         self.assertEqual(sorted(positions), positions)
 
-    def test_game_view_passes_captured_identity_and_accepts_completed_summary(self) -> None:
+    def test_game_view_passes_live_identity_and_accepts_completed_summary(self) -> None:
         required_once = (
-            "killerType = impact.killerType",
-            "biome = impact.biome",
-            "presentation = impact.presentation",
-            "completedGhost = impact.completedGhost",
             "persistEncounter = persistEncounter",
-            "gameState.buildRunSummary(lastKiller = impact.killerType)",
+            "gameState.buildRunSummary(lastKiller = killerType)",
             "currentRestQuote = completedHit.summary.restQuote",
             "currentRunSummary = completedHit.summary",
-        )
-        for item in required_once:
-            self.assertEqual(1, self.hit_block.count(item), item)
-
-        capture_inputs = (
             "biome = entityManager.biomeManager.currentBiome",
             "routeTier = gameState.pacifistRouteTier",
             "playerX = player.x",
             "playerY = player.y",
             "completedGhost = completedGhost",
         )
-        for item in capture_inputs:
-            self.assertEqual(1, self.hit_block.count(item), item)
+        for item in required_once:
+            self.assertGreaterEqual(self.live_collision.count(item), 1, item)
+
+        dispatcher_inputs = (
+            "killerType = impact.killerType",
+            "biome = impact.biome",
+            "presentation = impact.presentation",
+            "completedGhost = impact.completedGhost",
+            "persistEncounter = persistEncounter",
+        )
+        for item in dispatcher_inputs:
+            self.assertEqual(1, self.dispatch.count(item), item)
 
     def test_identity_invariant_precedes_every_completion_side_effect(self) -> None:
         invariant = self.complete.index("require(presentation.killerType == killerType)")
