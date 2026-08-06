@@ -26,114 +26,95 @@ class StoryFragmentCatalogueInvariantTest {
     }
 
     @Test
-    fun `every entity weathering fragment has safe unique authored identity`() {
+    fun `every entity exposes stable readable thought copy and a safe memory identity`() {
         EntityType.entries.forEach { type ->
-            repeat(4) { PersistentMemoryManager.recordEncounter(context, type) }
-            repeat(2) { PersistentMemoryManager.recordPass(context, type) }
+            repeat(5) { PersistentMemoryManager.recordEncounter(context, type) }
+            repeat(3) { PersistentMemoryManager.recordPass(context, type) }
+            if (RelationshipArcSystem.isTracked(type)) {
+                repeat(3) { PersistentMemoryManager.recordSpare(context, type) }
+                RelationshipArcSystem.refreshStage(context, type)
+            }
+
+            val first = StoryFragmentSystem.creatureThought(context, type)
+            val second = StoryFragmentSystem.creatureThought(context, type)
+
+            assertNotNull("expected authored creature thought for $type", first)
+            assertEquals("creature thought must be deterministic for $type", first, second)
+            assertSafeText(requireNotNull(first))
         }
 
-        val pages = EntityType.entries.map { type ->
-            requireNotNull(StoryFragmentSystem.weatheringPage(context, type))
+        val pageIds = StoryFragmentSystem.unlockedMemoryPages(context)
+        EntityType.entries.forEach { type ->
+            assertTrue(
+                "missing creature memory page for $type",
+                pageIds.contains("page_thought_${type.name.lowercase()}")
+            )
         }
-
-        assertPageCatalogue(pages)
-        assertEquals(EntityType.entries.size, pages.size)
+        assertSafePageIds(pageIds)
     }
 
     @Test
-    fun `rich warm history emits collision free relationship and active history catalogues`() {
-        trackedRelationships().forEach { type ->
-            repeat(6) { PersistentMemoryManager.recordEncounter(context, type) }
-            repeat(3) { PersistentMemoryManager.recordSpare(context, type) }
-            repeat(5) { PersistentMemoryManager.recordPass(context, type) }
-            RelationshipArcSystem.refreshStage(context, type)
-        }
+    fun `rest garden and weather paths publish only safe persistent page identities`() {
         repeat(5) { PersistentMemoryManager.recordBiomeFriendship(context, Biome.NIGHT_FOREST) }
-        PersistentMemoryManager.saveRunMemory(
-            context,
-            lastKiller = EntityType.OWL,
-            forestMood = ForestMood.GENTLE,
-            pacifistRouteTier = PacifistRouteTier.PEACEFUL
-        )
+        repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordSpare(context, EntityType.OWL) }
+        repeat(3) { PersistentMemoryManager.recordPass(context, EntityType.OWL) }
+        RelationshipArcSystem.refreshStage(context, EntityType.OWL)
         val summary = richSummary(
             lastKiller = EntityType.OWL,
             forestMood = ForestMood.GENTLE,
             pacifistRouteTier = PacifistRouteTier.PEACEFUL
         )
 
-        val newlyUnlocked = StoryFragmentSystem.unlockPersistentPages(context)
-        val timeline = StoryFragmentSystem.relationshipTimelinePages(context)
-        val activePages = StoryFragmentSystem.activeHistoryPages(context, summary)
-        val marks = StoryFragmentSystem.activeHistoryMarks(context, summary)
+        Biome.entries.forEach { biome ->
+            assertSafeText(
+                StoryFragmentSystem.restQuote(context, summary, biome, summary.lastKiller)
+            )
+        }
+        assertSafeText(requireNotNull(StoryFragmentSystem.gardenReflection(context, summary)))
+        assertSafeText(StoryFragmentSystem.weatherThought(context, summary))
 
-        assertPageCatalogue(newlyUnlocked)
-        assertPageCatalogue(timeline)
-        assertPageCatalogue(activePages)
-        assertMarkCatalogue(marks)
-        assertNotNull(StoryFragmentSystem.repeatFriendPage(context))
-        assertNotNull(StoryFragmentSystem.biomeFriendshipPage(context))
+        val pageIds = StoryFragmentSystem.unlockedMemoryPages(context)
+        assertTrue(pageIds.isNotEmpty())
+        assertSafePageIds(pageIds)
+        assertEquals(pageIds.size, StoryFragmentSystem.memoryPageCount(context))
     }
 
     @Test
-    fun `strained history catalogue remains safe and distinct from empty history`() {
-        val emptyPages = StoryFragmentSystem.activeHistoryPages(context, null)
-        val emptyMarks = StoryFragmentSystem.activeHistoryMarks(context, null)
-        assertTrue(emptyPages.isEmpty())
-        assertTrue(emptyMarks.isEmpty())
+    fun `empty and strained histories remain readable without unsafe page identifiers`() {
+        assertSafeText(StoryFragmentSystem.weatherThought(context, null))
 
         repeat(6) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
         repeat(2) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
         repeat(5) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
         RelationshipArcSystem.refreshStage(context, EntityType.WOLF)
-        PersistentMemoryManager.saveRunMemory(
-            context,
-            lastKiller = EntityType.WOLF,
-            forestMood = ForestMood.FEARFUL,
-            pacifistRouteTier = PacifistRouteTier.NONE
-        )
         val summary = richSummary(
             lastKiller = EntityType.WOLF,
             forestMood = ForestMood.FEARFUL,
             pacifistRouteTier = PacifistRouteTier.NONE
         )
 
-        val strained = requireNotNull(StoryFragmentSystem.strainedBondPage(context))
-        val pages = StoryFragmentSystem.activeHistoryPages(context, summary)
-        val marks = StoryFragmentSystem.activeHistoryMarks(context, summary)
-
-        assertSafePage(strained)
-        assertPageCatalogue(pages)
-        assertMarkCatalogue(marks)
+        assertSafeText(requireNotNull(StoryFragmentSystem.creatureThought(context, EntityType.WOLF)))
+        assertSafeText(requireNotNull(StoryFragmentSystem.gardenReflection(context, summary)))
+        assertSafeText(StoryFragmentSystem.weatherThought(context, summary))
+        assertSafePageIds(StoryFragmentSystem.unlockedMemoryPages(context))
     }
 
-    private fun assertPageCatalogue(pages: List<StoryFragment>) {
-        assertEquals(pages.size, pages.map { it.id }.toSet().size)
-        pages.forEach(::assertSafePage)
-    }
-
-    private fun assertSafePage(page: StoryFragment) {
-        assertTrue(page.id.matches(Regex("[a-z0-9_]+")))
-        assertTrue(page.id.length in 1..128)
-        assertTrue(page.title.isNotBlank())
-        assertTrue(page.body.isNotBlank())
-        assertTrue(page.title == page.title.trim())
-        assertTrue(page.body == page.body.trim())
-    }
-
-    private fun assertMarkCatalogue(marks: List<RunHistoryMark>) {
-        assertEquals(marks.size, marks.map { it.id }.toSet().size)
-        marks.forEach { mark ->
-            assertTrue(mark.id.matches(Regex("[a-z0-9_]+")))
-            assertTrue(mark.id.length in 1..128)
-            assertTrue(mark.title.isNotBlank())
-            assertTrue(mark.line.isNotBlank())
-            assertTrue(mark.title == mark.title.trim())
-            assertTrue(mark.line == mark.line.trim())
+    private fun assertSafePageIds(pageIds: Set<String>) {
+        assertEquals(pageIds.size, pageIds.toSet().size)
+        pageIds.forEach { pageId ->
+            assertTrue(pageId.matches(Regex("[a-z0-9_]+")))
+            assertTrue(pageId.length in 1..128)
+            assertEquals(pageId.trim(), pageId)
         }
     }
 
-    private fun trackedRelationships(): List<EntityType> =
-        EntityType.entries.filter(RelationshipArcSystem::isTracked)
+    private fun assertSafeText(text: String) {
+        assertTrue(text.isNotBlank())
+        assertEquals(text.trim(), text)
+        assertTrue(text.length in 1..512)
+        assertTrue(text.none { character -> character.code < 32 && character != '\n' })
+    }
 
     private fun richSummary(
         lastKiller: EntityType?,
