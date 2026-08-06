@@ -156,10 +156,17 @@ class DeclaredDependencyInventoryTest(unittest.TestCase):
             inventory.publish(output, payload)
 
             raw = output.read_bytes()
-            self.assertTrue(raw.endswith(b"\n"))
+            expected = (
+                json.dumps(
+                    payload,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                )
+                + "\n"
+            ).encode("utf-8")
+            self.assertEqual(expected, raw)
             self.assertEqual(payload, json.loads(raw.decode("utf-8")))
-            self.assertNotIn(b": ", raw)
-            self.assertNotIn(b", ", raw)
 
 
 if __name__ == "__main__":
