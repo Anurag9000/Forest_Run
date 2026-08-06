@@ -59,7 +59,7 @@ internal class RecoveryEvidenceDialogCoordinator(
                 confirmDiscard(row.domain, action, row.title)
             }
         }
-        activeDialog = builder.create().also(AlertDialog::show)
+        activeDialog = builder.create().also { it.show() }
     }
 
     private fun confirmDiscard(
@@ -81,7 +81,7 @@ internal class RecoveryEvidenceDialogCoordinator(
             }
             .setOnCancelListener { activeDialog = null }
             .create()
-            .also(AlertDialog::show)
+            .also { it.show() }
     }
 
     private fun handleResult(result: RecoveryUserActionResult) {
@@ -113,7 +113,7 @@ internal class RecoveryEvidenceDialogCoordinator(
             .setPositiveButton("OK") { _, _ -> activeDialog = null }
             .setOnCancelListener { activeDialog = null }
             .create()
-            .also(AlertDialog::show)
+            .also { it.show() }
     }
 
     private fun destructiveAction(row: RecoveryEvidenceUiRow): RecoveryUiAction? =
