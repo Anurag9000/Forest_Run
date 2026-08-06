@@ -1,7 +1,7 @@
 package com.anurag9000.forestrun.engine
 
-import kotlin.test.assertFailsWith
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -46,20 +46,20 @@ class FramePerformanceReportTest {
 
     @Test
     fun `contradictory frame evidence is rejected`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             report(snapshot = validSnapshot().copy(slowFrames = 721L))
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             report(snapshot = validSnapshot().copy(p95ProcessingNs = 4_000_000L))
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             report(snapshot = validSnapshot().copy(maxHeapBytes = 1L))
         }
     }
 
     @Test
     fun `workload current counts cannot exceed peaks`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             report(
                 workload = RuntimeWorkloadSnapshot.EMPTY.copy(
                     currentParticles = 5,
@@ -71,7 +71,7 @@ class FramePerformanceReportTest {
 
     @Test
     fun `ghost completions failures and latest values require matching maxima`() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             report(
                 ghostIo = GhostIoTelemetrySnapshot.EMPTY.copy(
                     writesStarted = 1L,
@@ -79,7 +79,7 @@ class FramePerformanceReportTest {
                 )
             )
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             report(
                 ghostIo = GhostIoTelemetrySnapshot.EMPTY.copy(
                     writesStarted = 2L,
@@ -88,7 +88,7 @@ class FramePerformanceReportTest {
                 )
             )
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             report(
                 ghostIo = GhostIoTelemetrySnapshot.EMPTY.copy(
                     latestWriteDurationNs = 10L,
