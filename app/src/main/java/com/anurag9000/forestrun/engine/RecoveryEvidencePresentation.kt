@@ -92,7 +92,7 @@ internal object RecoveryEvidencePresentation {
         state: RecoveryEvidenceState,
         detail: String
     ): String = when (detail) {
-        "no_journal", "no_evidence", "already_applied", "valid_manifest" ->
+        "no_journal", "no_evidence", "already_applied" ->
             "No recovery action is needed."
         "recovered", "distance_repaired" ->
             "Saved progress was repaired successfully."
