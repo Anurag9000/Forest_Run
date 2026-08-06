@@ -116,7 +116,7 @@ class CollisionOutcomeDispatcherTest {
                 "nonterminal:mercySound",
                 "nonterminal:doubleTap",
                 "feedback:mercy:EAGLE",
-                "nonterminal:stars:352.0:768.0",
+                "nonterminal:stars:356.0:770.0",
                 "nonterminal:mercyShake"
             ),
             fixture.calls
