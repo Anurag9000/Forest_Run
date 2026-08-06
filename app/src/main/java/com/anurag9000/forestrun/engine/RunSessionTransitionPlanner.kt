@@ -23,11 +23,11 @@ internal enum class RunSessionEffect {
     RESET_MENU_RITUAL,
     REFRESH_MENU_COPY,
     TRIGGER_DEATH,
+    BEGIN_RESTART,
     EXECUTE_RUN_RESET,
     RESET_GHOST_RECORDER,
     RELOAD_GHOST,
     REFRESH_GARDEN,
-    PLAY_RUN_MUSIC,
     PLAY_MENU_MUSIC
 }
 
@@ -46,6 +46,8 @@ internal data class RunSessionTransition(
  * Bloom is intentionally absent because it remains an orthogonal power flag.
  * Invalid or stale events fail closed as complete no-ops, preventing a delayed
  * tap or duplicated callback from skipping required terminal/reset phases.
+ * PREPARE_FRESH_RUN retains run-start music ownership to match the current live
+ * reset boundary; the table therefore never emits a duplicate music effect.
  */
 internal object RunSessionTransitionPlanner {
     fun plan(
@@ -58,10 +60,7 @@ internal object RunSessionTransitionPlanner {
                 current.to(
                     appState = AppGameState.PLAYING,
                     runState = RunState.PLAYING,
-                    effects = listOf(
-                        RunSessionEffect.PREPARE_FRESH_RUN,
-                        RunSessionEffect.PLAY_RUN_MUSIC
-                    )
+                    effects = listOf(RunSessionEffect.PREPARE_FRESH_RUN)
                 )
 
             current == RunSessionSnapshot(AppGameState.GARDEN, RunState.PLAYING) &&
@@ -69,10 +68,7 @@ internal object RunSessionTransitionPlanner {
                 current.to(
                     appState = AppGameState.PLAYING,
                     runState = RunState.PLAYING,
-                    effects = listOf(
-                        RunSessionEffect.PREPARE_FRESH_RUN,
-                        RunSessionEffect.PLAY_RUN_MUSIC
-                    )
+                    effects = listOf(RunSessionEffect.PREPARE_FRESH_RUN)
                 )
 
             current == RunSessionSnapshot(AppGameState.GARDEN, RunState.PLAYING) &&
@@ -106,7 +102,8 @@ internal object RunSessionTransitionPlanner {
                 event == RunSessionEvent.REST_TAPPED ->
                 current.to(
                     appState = AppGameState.PLAYING,
-                    runState = RunState.RESTARTING
+                    runState = RunState.RESTARTING,
+                    effects = listOf(RunSessionEffect.BEGIN_RESTART)
                 )
 
             current == RunSessionSnapshot(AppGameState.PLAYING, RunState.RESTARTING) &&
