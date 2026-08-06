@@ -194,6 +194,7 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         val validManifest = manifest(frames, 700f)
         assertTrue(SaveManager.saveGhostRun(context, frames))
         assertTrue(manifestStore.save(validManifest))
+        SaveManager.saveBestDistance(context, validManifest.distanceM)
         promotionFile().writeBytes(byteArrayOf(1, 2, 3, 4))
         val maintenance = AndroidRecoveryEvidenceMaintenance(context)
 
