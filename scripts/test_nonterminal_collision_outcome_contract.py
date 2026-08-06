@@ -8,6 +8,10 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 GAME_VIEW = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
+DISPATCHER = (
+    ROOT
+    / "app/src/main/java/com/anurag9000/forestrun/engine/CollisionOutcomeDispatcher.kt"
+)
 COORDINATOR = (
     ROOT
     / "app/src/main/java/com/anurag9000/forestrun/engine/NonTerminalCollisionOutcomeCoordinator.kt"
@@ -77,16 +81,24 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.game_view = GAME_VIEW.read_text(encoding="utf-8")
+        cls.dispatcher = DISPATCHER.read_text(encoding="utf-8")
         cls.coordinator = COORDINATOR.read_text(encoding="utf-8")
 
-        stumble_start = cls.game_view.index("CollisionResult.STUMBLE ->")
-        mercy_start = cls.game_view.index("CollisionResult.MERCY_MISS ->", stumble_start)
-        none_start = cls.game_view.index("CollisionResult.NONE ->", mercy_start)
-        cls.stumble_block = cls.game_view[stumble_start:mercy_start]
-        cls.mercy_block = cls.game_view[mercy_start:none_start]
+        dispatch_start = cls.game_view.index(
+            "val dispatchResult = collisionOutcomeDispatcher.dispatch("
+        )
+        transition_start = cls.game_view.index(
+            "if (dispatchResult is CollisionOutcomeDispatchResult.Terminal)",
+            dispatch_start,
+        )
+        cls.live_inputs = cls.game_view[dispatch_start:transition_start]
         cls.effect_adapter = extract_braced_block(
             cls.game_view,
             "private inner class GameViewNonTerminalCollisionEffects :",
+        )
+        cls.dispatch = extract_braced_block(
+            cls.dispatcher,
+            "fun dispatch(\n        result: CollisionResult,",
         )
         cls.stumble_complete = extract_braced_block(
             cls.coordinator,
@@ -97,11 +109,27 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             "fun completeMercyMiss(input: MercyMissCollisionOutcome)",
         )
 
-    def test_game_view_delegates_each_nonterminal_result_once(self) -> None:
-        self.assertEqual(1, self.stumble_block.count("nonTerminalCollisionOutcome.completeStumble("))
-        self.assertEqual(1, self.mercy_block.count("nonTerminalCollisionOutcome.completeMercyMiss("))
+    def test_dispatcher_delegates_each_nonterminal_result_once(self) -> None:
+        self.assertEqual(
+            1,
+            self.dispatch.count("nonTerminalOutcome.completeStumble("),
+        )
+        self.assertEqual(
+            1,
+            self.dispatch.count("nonTerminalOutcome.completeMercyMiss("),
+        )
+        self.assertIn("CollisionResult.STUMBLE ->", self.dispatch)
+        self.assertIn("CollisionResult.MERCY_MISS ->", self.dispatch)
 
-    def test_stumble_branch_has_no_direct_effect_or_presentation_ownership(self) -> None:
+    def test_game_view_only_supplies_lazy_nonterminal_inputs(self) -> None:
+        self.assertEqual(1, self.live_inputs.count("buildStumbleInput = {"))
+        self.assertEqual(1, self.live_inputs.count("deactivateStumbleEntity = {"))
+        self.assertEqual(1, self.live_inputs.count("buildMercyMissInput = {"))
+        self.assertNotIn("nonTerminalCollisionOutcome.completeStumble(", self.game_view)
+        self.assertNotIn("nonTerminalCollisionOutcome.completeMercyMiss(", self.game_view)
+        self.assertNotIn("when (collision.result)", self.game_view)
+
+    def test_live_inputs_have_no_direct_effect_or_presentation_ownership(self) -> None:
         forbidden = (
             "gameState.recordHit()",
             "PersistentMemoryManager.recordHit(",
@@ -111,19 +139,9 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             "SfxManager.playHit()",
             "CameraSystem.shakeHit()",
             "HapticManager.mediumPulse()",
-            "RunFlavorPresentation.collisionCue(",
-            "DialogueBubbleManager.spawn(",
-            "FlavorTextManager.spawn(",
-        )
-        for call in forbidden:
-            self.assertNotIn(call, self.stumble_block)
-        self.assertEqual(1, self.stumble_block.count("collision.entity.isActive = false"))
-
-    def test_mercy_branch_has_no_direct_effect_or_presentation_ownership(self) -> None:
-        forbidden = (
-            "mercyFlashTimer =",
             "SfxManager.playMercyMiss()",
             "HapticManager.doubleTap()",
+            "RunFlavorPresentation.collisionCue(",
             "RunFlavorPresentation.mercyCue(",
             "DialogueBubbleManager.spawn(",
             "FlavorTextManager.spawn(",
@@ -131,7 +149,11 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             "CameraSystem.shakeMercyMiss()",
         )
         for call in forbidden:
-            self.assertNotIn(call, self.mercy_block)
+            self.assertNotIn(call, self.live_inputs)
+        self.assertEqual(
+            1,
+            self.live_inputs.count("collision.entity.isActive = false"),
+        )
 
     def test_game_view_passes_complete_stumble_identity(self) -> None:
         required = (
@@ -144,7 +166,7 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             "collision.entity.isActive = false",
         )
         for item in required:
-            self.assertEqual(1, self.stumble_block.count(item), item)
+            self.assertEqual(1, self.live_inputs.count(item), item)
 
     def test_game_view_passes_complete_mercy_identity(self) -> None:
         required = (
@@ -156,7 +178,16 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             "playerY = player.y",
         )
         for item in required:
-            self.assertEqual(1, self.mercy_block.count(item), item)
+            self.assertGreaterEqual(self.live_inputs.count(item), 1, item)
+
+    def test_dispatcher_preserves_lazy_stumble_deactivation(self) -> None:
+        stumble = self.dispatch.index("CollisionResult.STUMBLE ->")
+        mercy = self.dispatch.index("CollisionResult.MERCY_MISS ->", stumble)
+        block = self.dispatch[stumble:mercy]
+        self.assertLess(
+            block.index("input = buildStumbleInput()"),
+            block.index("deactivateEntity = deactivateStumbleEntity"),
+        )
 
     def test_stumble_coordinator_preserves_canonical_order(self) -> None:
         order = (
