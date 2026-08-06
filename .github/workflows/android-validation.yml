@@ -90,6 +90,9 @@ jobs:
           test -f scripts/test_verify_release_source_assets.py
           test -f scripts/release_artifact_verifier.py
           test -f scripts/test_release_artifact_verifier.py
+          test -f scripts/verify_android_page_size_package.py
+          test -f scripts/test_verify_android_page_size_package.py
+          test -f docs/ANDROID_PAGE_SIZE_COMPATIBILITY.md
           test -f scripts/prepare_main_release.sh
           grep -q 'verify_origin_main.sh' scripts/prepare_main_release.sh
           grep -q 'verify_release_source_assets.py' scripts/prepare_main_release.sh
@@ -176,6 +179,15 @@ jobs:
           --no-daemon
           --stacktrace
           --console=plain
+
+      - name: Inspect packaged 16 KB page-size risk
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_android_page_size_package.py \
+            app/build/outputs/bundle/release/app-release.aab \
+            --candidate-sha "${{ github.sha }}" \
+            --require-no-native-code
 
       - name: Verify R8 output and source immutability
         shell: bash
