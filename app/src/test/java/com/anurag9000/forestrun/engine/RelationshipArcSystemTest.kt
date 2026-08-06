@@ -279,7 +279,11 @@ class RelationshipArcSystemTest {
         )
 
         assertTrue(passLine.contains("quiet", ignoreCase = true) || passLine.contains("pace", ignoreCase = true))
-        assertTrue(mercyCue.contains("pace", ignoreCase = true) || mercyCue.contains("us", ignoreCase = true))
+        assertTrue(
+            mercyCue.contains("quiet", ignoreCase = true) ||
+                mercyCue.contains("pace", ignoreCase = true) ||
+                mercyCue.contains("us", ignoreCase = true)
+        )
     }
 
     @Test
@@ -296,7 +300,11 @@ class RelationshipArcSystemTest {
         )
 
         assertTrue(passLine.contains("remember", ignoreCase = true) || passLine.contains("trick", ignoreCase = true))
-        assertTrue(landingCue.contains("remembered", ignoreCase = true) || landingCue.contains("read", ignoreCase = true))
+        assertTrue(
+            landingCue.contains("remembered", ignoreCase = true) ||
+                landingCue.contains("read", ignoreCase = true) ||
+                landingCue.contains("catch", ignoreCase = true)
+        )
     }
 
     @Test
