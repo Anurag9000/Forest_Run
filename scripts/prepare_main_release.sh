@@ -30,6 +30,9 @@ if [[ "${candidate_sha}" != "${origin_sha}" ]]; then
 fi
 
 python3 "${ROOT}/scripts/verify_release_source_assets.py" --root "${ROOT}"
+python3 "${ROOT}/scripts/validate_asset_provenance.py" \
+  --root "${ROOT}" \
+  --require-approved
 python3 "${ROOT}/scripts/verify_store_graphics.py" \
   --root "${ROOT}" \
   --graphics-dir "${ROOT}/release/google-play/graphics" \
