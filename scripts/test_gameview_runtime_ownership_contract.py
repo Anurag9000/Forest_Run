@@ -79,19 +79,25 @@ class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, source)
 
-    def test_migration_capability_is_temporary_and_self_removing(self) -> None:
-        if not WRITE_WORKFLOW.exists():
-            self.assertFalse(COLLISION_MIGRATION.exists())
-            self.assertFalse(SESSION_MIGRATION.exists())
+    def test_unadopted_migrations_are_inert_and_adopted_source_needs_no_scripts(self) -> None:
+        self.assertFalse(WRITE_WORKFLOW.exists())
+        live_source = GAME_VIEW_PATH.read_text(encoding="utf-8")
+        adopted = "private val runSessionTransitions =" in live_source
+        if adopted:
+            self.assertIn(
+                "private val liveCollisionEffects = LiveCollisionEffects(",
+                live_source,
+            )
             return
 
-        workflow = WRITE_WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("rm scripts/apply_gameview_collision_adapter.py", workflow)
-        self.assertIn("rm scripts/apply_gameview_run_session_coordinator.py", workflow)
-        self.assertIn("rm .github/workflows/apply-gameview-collision-adapter.yml", workflow)
-        self.assertIn("git pull --rebase origin main", workflow)
-        self.assertNotIn("--force", workflow)
-        self.assertNotIn("force-with-lease", workflow)
+        self.assertTrue(COLLISION_MIGRATION.is_file())
+        self.assertTrue(SESSION_MIGRATION.is_file())
+        for path in (COLLISION_MIGRATION, SESSION_MIGRATION):
+            script = path.read_text(encoding="utf-8")
+            self.assertNotIn("git push", script)
+            self.assertNotIn("contents: write", script)
+            self.assertNotIn("--force", script)
+            self.assertNotIn("force-with-lease", script)
 
 
 if __name__ == "__main__":
