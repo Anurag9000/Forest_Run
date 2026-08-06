@@ -8,6 +8,17 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.path = Path(__file__).with_name("run_connected_validation.sh")
         cls.script = cls.path.read_text(encoding="utf-8")
+        cls.hardware_profile = (
+            cls.path.parent.parent
+            / "app"
+            / "src"
+            / "androidTest"
+            / "java"
+            / "com"
+            / "anurag9000"
+            / "forestrun"
+            / "HardwarePerformanceProfileTest.kt"
+        ).read_text(encoding="utf-8")
 
     def test_runner_has_valid_bash_syntax(self) -> None:
         result = subprocess.run(
@@ -54,6 +65,17 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
         command_tail = self.script.split(gradle_command, maxsplit=1)[1]
         self.assertNotIn("|| true", command_tail)
         self.assertIn("trap dump_emulator_diagnostics EXIT", self.script)
+
+    def test_emulator_gate_excludes_only_physical_device_profiles(self) -> None:
+        annotation = "androidx.test.filters.LargeTest"
+        self.assertIn(f'PHYSICAL_PROFILE_ANNOTATION="{annotation}"', self.script)
+        self.assertIn(
+            '-Pandroid.testInstrumentationRunnerArguments.notAnnotation="${PHYSICAL_PROFILE_ANNOTATION}"',
+            self.script,
+        )
+        self.assertIn("@LargeTest", self.hardware_profile)
+        self.assertIn("class HardwarePerformanceProfileTest", self.hardware_profile)
+        self.assertIn("profiling window contains sustained samples", self.hardware_profile)
 
     def test_runner_targets_the_action_emulator_port(self) -> None:
         self.assertIn("emulator-${EMULATOR_PORT:-5554}", self.script)
