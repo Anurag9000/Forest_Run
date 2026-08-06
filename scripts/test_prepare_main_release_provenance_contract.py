@@ -23,19 +23,20 @@ class PrepareMainReleaseProvenanceContractTest(unittest.TestCase):
         self.assertLess(graphics, metadata)
         self.assertLess(metadata, prepare)
 
-    def test_release_gate_remains_candidate_and_origin_bound() -> None:
+    def test_release_gate_remains_candidate_and_origin_bound(self) -> None:
         self.assertIn("verify_origin_main.sh", SCRIPT)
         self.assertIn("verify_main_candidate.py", SCRIPT)
         self.assertIn('if [[ "${candidate_sha}" != "${origin_sha}" ]]', SCRIPT)
         self.assertIn('if [[ "${final_origin_sha}" != "${candidate_sha}" ]]', SCRIPT)
 
     def test_provenance_validation_cannot_be_soft_failed(self) -> None:
-        command = (
-            'python3 "${ROOT}/scripts/validate_asset_provenance.py" '
-            '\\\n  --root "${ROOT}" \\\n  --require-approved'
-        )
-        self.assertIn(command, SCRIPT)
-        self.assertNotIn("validate_asset_provenance.py || true", SCRIPT)
+        provenance_start = SCRIPT.index("validate_asset_provenance.py")
+        provenance_end = SCRIPT.index("verify_store_graphics.py", provenance_start)
+        command = SCRIPT[provenance_start:provenance_end]
+
+        self.assertIn('--root "${ROOT}"', command)
+        self.assertIn("--require-approved", command)
+        self.assertNotIn("|| true", command)
         self.assertNotIn("set +e", SCRIPT)
 
 
