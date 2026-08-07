@@ -1,0 +1,39 @@
+name: Debug session state ownership migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/migrate_debug_session_state_ownership.py
+      - .github/workflows/debug-session-state-migration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+      - run: python3 scripts/migrate_debug_session_state_ownership.py
+      - shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          test ! -e scripts/migrate_debug_session_state_ownership.py
+          test ! -e .github/workflows/debug-session-state-migration.yml
+          test "$(grep -c 'RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt)" -eq 2
+          test "$(grep -c 'appState = result.transition.after.appState' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt)" -eq 1
+          test "$(grep -c 'runState = result.transition.after.runState' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt)" -eq 1
+      - shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'forest-run-migration-bot'
+          git config user.email 'forest-run-migration-bot@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(session): centralize debug state publication'
+          git push origin HEAD:main
