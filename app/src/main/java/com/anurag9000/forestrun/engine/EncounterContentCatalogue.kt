@@ -102,14 +102,13 @@ internal object EncounterContentCatalogue {
             .filterTo(linkedSetOf()) { scenario ->
                 scenario.steps.all { it.type == type }
             }
-        val authoredVariants = coverage
-            .flatMapTo(linkedSetOf()) { scenario ->
-                scenario.steps.asSequence()
-                    .filter { it.type == type }
-                    .map { it.variant }
-                    .asIterable()
+        val authoredVariants = linkedSetOf(EncounterVariant.DEFAULT).apply {
+            coverage.forEach { scenario ->
+                scenario.steps.forEach { step ->
+                    if (step.type == type) add(step.variant)
+                }
             }
-            .apply { add(EncounterVariant.DEFAULT) }
+        }
         val biomes = Biome.entries
             .filterTo(linkedSetOf()) { biome -> type in biome.preferredPool }
 
@@ -119,7 +118,9 @@ internal object EncounterContentCatalogue {
             displayName = type.name
                 .lowercase()
                 .split('_')
-                .joinToString(" ") { token -> token.replaceFirstChar(Char::uppercaseChar) },
+                .joinToString(" ") { token ->
+                    token.replaceFirstChar { character -> character.titlecase() }
+                },
             preferredBiomes = biomes,
             scenarioCoverage = coverage,
             focusedFairnessScenarios = focused,
