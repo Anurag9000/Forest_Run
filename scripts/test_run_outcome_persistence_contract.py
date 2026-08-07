@@ -126,10 +126,11 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
         detach = self.live_collision.index("ghostRecorder.detachSnapshot()")
         summary_builder = self.live_collision.index("buildTerminalSummaryPreview")
         transition = self.live_collision.index(
-            "applyRunSessionEvent(RunSessionEvent.TERMINAL_COLLISION_COMPLETED)"
+            "RunSessionEvent.TERMINAL_COLLISION_COMPLETED"
         )
         self.assertLess(detach, summary_builder)
         self.assertLess(summary_builder, transition)
+        self.assertIn("applyRunSessionEvent(", self.live_collision)
         self.assertNotIn("ghostRecorder.reset()", self.live_collision)
         self.assertNotIn("runResetManager.triggerDeath(gameState)", self.live_collision)
 
