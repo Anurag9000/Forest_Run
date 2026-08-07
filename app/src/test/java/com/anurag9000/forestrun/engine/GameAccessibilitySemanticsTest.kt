@@ -1,5 +1,6 @@
 package com.anurag9000.forestrun.engine
 
+import com.anurag9000.forestrun.entities.CostumeStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -79,8 +80,7 @@ class GameAccessibilitySemanticsTest {
                 seeds = 10,
                 gardenUnlockedPlants = 3,
                 gardenTotalPlants = 9,
-                nextPlantCost = 8,
-                wardrobeUnlocked = false
+                nextPlantCost = 8
             )
         )
         val plantNodes = nodes.filter {
@@ -98,8 +98,39 @@ class GameAccessibilitySemanticsTest {
         assertTrue(plantNodes.drop(4).all { it.actions.isEmpty() && !it.enabled })
 
         val wardrobe = nodes.single { it.id == AccessibilityNodeIds.GARDEN_WARDROBE }
-        assertFalse(wardrobe.enabled)
-        assertEquals("Locked", wardrobe.stateDescription)
+        assertTrue(wardrobe.enabled)
+        assertTrue(wardrobe.actions.isEmpty())
+        assertEquals("Classic style only", wardrobe.stateDescription)
+    }
+
+    @Test
+    fun wardrobePublishesEachStyleAndOnlyUnlockedStylesAreActionable() {
+        val unlocked = setOf(CostumeStyle.NONE, CostumeStyle.FLOWER_CROWN)
+        val nodes = GameAccessibilitySemantics.build(
+            AccessibilitySemanticSnapshot(
+                surface = AccessibilitySurface.GARDEN,
+                gardenUnlockedPlants = 1,
+                wardrobeUnlocked = true,
+                wardrobeUnlockedCostumes = unlocked,
+                activeCostume = CostumeStyle.FLOWER_CROWN
+            )
+        )
+        val costumes = nodes.filter {
+            it.id in AccessibilityNodeIds.GARDEN_FIRST_COSTUME until
+                AccessibilityNodeIds.GARDEN_FIRST_COSTUME + CostumeStyle.entries.size
+        }
+
+        assertEquals(CostumeStyle.entries.size, costumes.size)
+        assertEquals("Available", costumes[CostumeStyle.NONE.ordinal].stateDescription)
+        assertEquals("Equipped", costumes[CostumeStyle.FLOWER_CROWN.ordinal].stateDescription)
+        assertEquals(
+            setOf(AccessibilitySemanticAction.ACTIVATE),
+            costumes[CostumeStyle.FLOWER_CROWN.ordinal].actions
+        )
+        val locked = costumes[CostumeStyle.MOON_CAPE.ordinal]
+        assertEquals(CostumeStyle.MOON_CAPE.unlockLabel, locked.stateDescription)
+        assertTrue(locked.enabled)
+        assertTrue(locked.actions.isEmpty())
     }
 
     @Test
@@ -143,7 +174,21 @@ class GameAccessibilitySemanticsTest {
     }
 
     @Test
-    fun malformedNumericStateFailsClosed() {
+    fun dyingRestDoesNotExposeContinueActionEarly() {
+        val continueNode = GameAccessibilitySemantics.build(
+            AccessibilitySemanticSnapshot(
+                surface = AccessibilitySurface.REST,
+                restContinueEnabled = false
+            )
+        ).single { it.id == AccessibilityNodeIds.REST_CONTINUE }
+
+        assertFalse(continueNode.enabled)
+        assertTrue(continueNode.actions.isEmpty())
+        assertEquals("Recovering before Garden", continueNode.label)
+    }
+
+    @Test
+    fun malformedStateFailsClosed() {
         val invalid = listOf(
             AccessibilitySemanticSnapshot(
                 surface = AccessibilitySurface.PLAYING,
@@ -156,6 +201,14 @@ class GameAccessibilitySemanticsTest {
             AccessibilitySemanticSnapshot(
                 surface = AccessibilitySurface.GARDEN,
                 nextPlantCost = -1
+            ),
+            AccessibilitySemanticSnapshot(
+                surface = AccessibilitySurface.GARDEN,
+                wardrobeUnlockedCostumes = setOf(CostumeStyle.FLOWER_CROWN)
+            ),
+            AccessibilitySemanticSnapshot(
+                surface = AccessibilitySurface.GARDEN,
+                activeCostume = CostumeStyle.FLOWER_CROWN
             )
         )
 
