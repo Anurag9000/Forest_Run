@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import com.anurag9000.forestrun.engine.ApplicationPersistenceFacade
 import com.anurag9000.forestrun.engine.AssetPaths
 import com.anurag9000.forestrun.engine.GardenSanctuaryPlanner
 import com.anurag9000.forestrun.engine.GardenSanctuaryState
@@ -40,7 +41,9 @@ class MainMenuScreen(
     private val context: Context,
     private val spriteManager: SpriteManager,
     private val screenW: Int,
-    private val screenH: Int
+    private val screenH: Int,
+    private val persistenceFacade: ApplicationPersistenceFacade =
+        ApplicationPersistenceFacade.android(context)
 ) {
     enum class Phase { IDLE, STANDING_UP, READY }
 
@@ -219,7 +222,9 @@ class MainMenuScreen(
     private val cinematicProfile = CinematicPolishProfile()
     private val menuLighting = buildSanctuaryLightingIdentity(SanctuaryLightingScene.MENU)
     private val launchCueRect = RectF()
-    private val feedbackSettingsPanel = FeedbackSettingsPanel(context, screenW, screenH)
+    private val feedbackSettingsPanel = FeedbackSettingsPanel(
+        context, screenW, screenH, persistenceFacade
+    )
 
     init {
         refreshCopy()

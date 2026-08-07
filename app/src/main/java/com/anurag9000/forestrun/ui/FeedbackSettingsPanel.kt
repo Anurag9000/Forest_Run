@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import com.anurag9000.forestrun.engine.ApplicationPersistenceFacade
 import com.anurag9000.forestrun.engine.AssetPaths
 import com.anurag9000.forestrun.engine.FeedbackSettings
 
@@ -78,7 +79,9 @@ internal object FeedbackSettingsPanelLayout {
 internal class FeedbackSettingsPanel(
     private val context: Context,
     screenWidth: Int,
-    screenHeight: Int
+    screenHeight: Int,
+    private val persistenceFacade: ApplicationPersistenceFacade =
+        ApplicationPersistenceFacade.android(context)
 ) {
     private val layout = FeedbackSettingsPanelLayout.build(screenWidth.toFloat(), screenHeight.toFloat())
     private val pixelFont: Typeface = runCatching {
@@ -109,17 +112,20 @@ internal class FeedbackSettingsPanel(
 
     fun onTap(x: Float, y: Float): Boolean {
         when (FeedbackSettingsPanelLayout.hitTest(layout, x, y)) {
-            FeedbackToggle.REDUCED_MOTION -> FeedbackSettings.setReducedMotion(
-                context,
-                !FeedbackSettings.reducedMotion
+            FeedbackToggle.REDUCED_MOTION -> persistenceFacade.saveFeedbackPreferences(
+                FeedbackSettings.snapshot().copy(
+                    reducedMotion = !FeedbackSettings.reducedMotion
+                )
             )
-            FeedbackToggle.AUDIO -> FeedbackSettings.setAudioEnabled(
-                context,
-                !FeedbackSettings.audioEnabled
+            FeedbackToggle.AUDIO -> persistenceFacade.saveFeedbackPreferences(
+                FeedbackSettings.snapshot().copy(
+                    audioEnabled = !FeedbackSettings.audioEnabled
+                )
             )
-            FeedbackToggle.HAPTICS -> FeedbackSettings.setHapticsEnabled(
-                context,
-                !FeedbackSettings.hapticsEnabled
+            FeedbackToggle.HAPTICS -> persistenceFacade.saveFeedbackPreferences(
+                FeedbackSettings.snapshot().copy(
+                    hapticsEnabled = !FeedbackSettings.hapticsEnabled
+                )
             )
             null -> return false
         }

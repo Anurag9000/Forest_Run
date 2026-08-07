@@ -37,6 +37,7 @@ class ApplicationPersistenceFacadeTest {
                 calls += "wardrobe:${style.name}"
                 true
             },
+            encounterPersistence = RecordingEncounterPersistence(calls),
             recoveryMaintenance = ThrowingRecoveryMaintenance(calls)
         )
 
@@ -82,6 +83,7 @@ class ApplicationPersistenceFacadeTest {
             wardrobeWriter = {
                 error("wardrobe must not run")
             },
+            encounterPersistence = RecordingEncounterPersistence(calls),
             recoveryMaintenance = ThrowingRecoveryMaintenance(calls)
         )
 
@@ -126,6 +128,7 @@ class ApplicationPersistenceFacadeTest {
                 calls += "wardrobe"
                 false
             },
+            encounterPersistence = RecordingEncounterPersistence(calls),
             recoveryMaintenance = ThrowingRecoveryMaintenance(calls)
         )
 
@@ -190,6 +193,22 @@ class ApplicationPersistenceFacadeTest {
                 disposition = RunOutcomeCommitDisposition.COMMITTED,
                 ghostPromoted = false
             )
+        }
+    }
+
+    private class RecordingEncounterPersistence(
+        private val calls: MutableList<String>
+    ) : ApplicationEncounterPersistence {
+        override fun recordEncounter(type: com.anurag9000.forestrun.entities.EntityType) {
+            calls += "encounter:${type.name}"
+        }
+
+        override fun recordPass(type: com.anurag9000.forestrun.entities.EntityType) {
+            calls += "pass:${type.name}"
+        }
+
+        override fun recordHit(type: com.anurag9000.forestrun.entities.EntityType) {
+            calls += "hit:${type.name}"
         }
     }
 

@@ -222,8 +222,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     // ── Phase 19: Ghost Run ───────────────────────────────────────────────
     private val ghostRecorder = GhostRecorder()
-    private val runOutcomePersistence =
-        RunOutcomePersistenceCoordinator(AndroidRunOutcomePersistenceSink(context))
+    private val applicationPersistence = ApplicationPersistenceFacade.android(context)
+    private val runOutcomePersistence: ApplicationRunOutcomePort = applicationPersistence
     private val ghostPlayer = GhostPlayer()
     private val liveCollisionEffects = LiveCollisionEffects(
         recordRunHitAction = { gameState.recordHit() },
@@ -259,14 +259,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         effects = liveCollisionEffects
     )
     private val terminalHitOutcome = TerminalHitOutcomeCoordinator(
-        relationshipRecorder = AndroidTerminalHitRelationshipRecorder(context),
+        relationshipRecorder = applicationPersistence,
         feedbackPresenter = AndroidTerminalHitFeedbackPresenter(context),
         restQuoteResolver = AndroidTerminalHitRestQuoteResolver(context),
         outcomeCommitter = runOutcomePersistence
     )
     private val nonTerminalCollisionOutcome = NonTerminalCollisionOutcomeCoordinator(
         effects = liveCollisionEffects,
-        relationshipRecorder = AndroidNonTerminalCollisionRelationshipRecorder(context),
+        relationshipRecorder = applicationPersistence,
         feedbackPresenter = AndroidNonTerminalCollisionFeedbackPresenter(context)
     )
     private val collisionOutcomeDispatcher = CollisionOutcomeDispatcher(
@@ -408,7 +408,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 12: EntityManager (needs spriteManager and screen dimensions)
         if (!::entityManager.isInitialized) {
-            entityManager = EntityManager(context, screenWidth.toFloat(), screenHeight.toFloat(), spriteManager)
+            entityManager = EntityManager(
+                context,
+                screenWidth.toFloat(),
+                screenHeight.toFloat(),
+                spriteManager,
+                encounterPersistence = applicationPersistence
+            )
         }
 
         // Phase 16: init FlavorTextManager pixel font
@@ -441,7 +447,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 22: MainMenuScreen
         if (!::mainMenuScreen.isInitialized) {
-            mainMenuScreen = MainMenuScreen(context, spriteManager, screenWidth, screenHeight)
+            mainMenuScreen = MainMenuScreen(
+                context, spriteManager, screenWidth, screenHeight, applicationPersistence
+            )
             mainMenuScreen.onGardenTap = {
                 applyRunSessionEvent(RunSessionEvent.MENU_GARDEN_REQUESTED)
             }
@@ -449,7 +457,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 23: GardenScreen
         if (!::gardenScreen.isInitialized) {
-            gardenScreen = GardenScreen(context, spriteManager, screenWidth, screenHeight)
+            gardenScreen = GardenScreen(
+                context, spriteManager, screenWidth, screenHeight, applicationPersistence
+            )
             gardenScreen.onBack = {
                 applyRunSessionEvent(RunSessionEvent.GARDEN_BACK_REQUESTED)
             }
@@ -778,21 +788,33 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun toggleAccessibilityReducedMotion(): Boolean {
         if (appState != AppGameState.MENU || !accessibilitySettingsOpen) return false
-        FeedbackSettings.setReducedMotion(context, !FeedbackSettings.reducedMotion)
+        applicationPersistence.saveFeedbackPreferences(
+            FeedbackSettings.snapshot().copy(
+                reducedMotion = !FeedbackSettings.reducedMotion
+            )
+        )
         notifyAccessibilityTreeChanged()
         return true
     }
 
     private fun toggleAccessibilityAudio(): Boolean {
         if (appState != AppGameState.MENU || !accessibilitySettingsOpen) return false
-        FeedbackSettings.setAudioEnabled(context, !FeedbackSettings.audioEnabled)
+        applicationPersistence.saveFeedbackPreferences(
+            FeedbackSettings.snapshot().copy(
+                audioEnabled = !FeedbackSettings.audioEnabled
+            )
+        )
         notifyAccessibilityTreeChanged()
         return true
     }
 
     private fun toggleAccessibilityHaptics(): Boolean {
         if (appState != AppGameState.MENU || !accessibilitySettingsOpen) return false
-        FeedbackSettings.setHapticsEnabled(context, !FeedbackSettings.hapticsEnabled)
+        applicationPersistence.saveFeedbackPreferences(
+            FeedbackSettings.snapshot().copy(
+                hapticsEnabled = !FeedbackSettings.hapticsEnabled
+            )
+        )
         notifyAccessibilityTreeChanged()
         return true
     }
@@ -824,7 +846,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun performAccessibilityPlantPurchase(index: Int): Boolean {
         if (appState != AppGameState.GARDEN || !::gardenScreen.isInitialized) return false
-        val result = GardenPurchaseManager.purchaseNext(context, index)
+        val result = applicationPersistence.purchaseNextGardenPlant(index)
         gardenScreen.load()
         if (result.purchased) notifyAccessibilityTreeChanged()
         return result.purchased
@@ -832,7 +854,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun performAccessibilityCostumeEquip(style: CostumeStyle): Boolean {
         if (appState != AppGameState.GARDEN || !::gardenScreen.isInitialized) return false
-        val equipped = CostumeManager.equip(context, style)
+        val equipped = applicationPersistence.equipCostume(style)
         if (equipped) {
             gardenScreen.load()
             notifyAccessibilityTreeChanged()

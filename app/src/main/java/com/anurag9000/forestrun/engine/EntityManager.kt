@@ -39,7 +39,9 @@ class EntityManager(
     private val screenWidth: Float,
     private val screenHeight: Float,
     private val spriteManager: SpriteManager,
-    val biomeManager: BiomeManager = BiomeManager()
+    val biomeManager: BiomeManager = BiomeManager(),
+    private val encounterPersistence: ApplicationEncounterPersistence =
+        AndroidApplicationEncounterPersistence(context)
 ) {
     @Volatile
     internal var debugActiveEntityCount: Int = 0
@@ -249,7 +251,7 @@ class EntityManager(
 
         entityTypeOf(entity)?.let { type ->
             if (entity.shouldRecordPersistence) {
-                PersistentMemoryManager.recordPass(context, type)
+                encounterPersistence.recordPass(type)
             }
             val passCue = RunFlavorPresentation.passCue(
                 context = context,
@@ -295,7 +297,7 @@ class EntityManager(
     private fun recordResolvedEncounter(entity: Entity) {
         if (!entity.shouldRecordPersistence) return
         entityTypeOf(entity)?.let { type ->
-            PersistentMemoryManager.recordEncounter(context, type)
+            encounterPersistence.recordEncounter(type)
         }
     }
 

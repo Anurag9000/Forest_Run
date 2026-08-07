@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import com.anurag9000.forestrun.engine.ApplicationPersistenceFacade
 import com.anurag9000.forestrun.engine.AssetPaths
 import com.anurag9000.forestrun.engine.CostumeManager
 import com.anurag9000.forestrun.engine.CinematicOverlayRenderer
@@ -64,7 +65,9 @@ class GardenScreen(
     private val context: Context,
     private val spriteManager: SpriteManager,
     private val screenW: Int,
-    private val screenH: Int
+    private val screenH: Int,
+    private val persistenceFacade: ApplicationPersistenceFacade =
+        ApplicationPersistenceFacade.android(context)
 ) {
     // ── Plant catalogue ───────────────────────────────────────────────────
 
@@ -393,7 +396,7 @@ class GardenScreen(
             val index = wardrobeCardRects.indexOf(tappedRect)
             val style = CostumeStyle.entries[index]
             if (style == CostumeStyle.NONE || style in unlockedCostumes) {
-                if (CostumeManager.equip(context, style)) {
+                if (persistenceFacade.equipCostume(style)) {
                     activeCostume = style
                     wardrobeMessage = CostumeManager.activePresentation(context)?.activeLine
                         ?: "${style.displayName} equipped"
@@ -418,10 +421,7 @@ class GardenScreen(
             if (tapX in cx - CARD_W / 2f..cx + CARD_W / 2f &&
                 tapY in cy - CARD_H / 2f..cy + CARD_H / 2f) {
                 if (i == unlockedCount) {
-                    val result = GardenPurchaseManager.purchaseNext(
-                        context = context,
-                        requestedIndex = i
-                    )
+                    val result = persistenceFacade.purchaseNextGardenPlant(i)
                     unlockedCount = result.unlockedCount.coerceIn(1, catalogue.size)
                     lifeSeeds = result.remainingSeeds.coerceAtLeast(0)
                     if (result.purchased) {
