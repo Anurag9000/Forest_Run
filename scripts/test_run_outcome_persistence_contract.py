@@ -7,15 +7,11 @@ import pathlib
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-GAME_VIEW = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
-DISPATCHER = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/engine/CollisionOutcomeDispatcher.kt"
-)
-COORDINATOR = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/engine/RunOutcomePersistenceCoordinator.kt"
-)
+ENGINE = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine"
+GAME_VIEW = ENGINE / "GameView.kt"
+DISPATCHER = ENGINE / "CollisionOutcomeDispatcher.kt"
+COORDINATOR = ENGINE / "RunOutcomePersistenceCoordinator.kt"
+SESSION_PLANNER = ENGINE / "RunSessionTransitionPlanner.kt"
 
 
 def extract_braced_block(source: str, signature: str) -> str:
@@ -83,6 +79,7 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
         cls.game_view = GAME_VIEW.read_text(encoding="utf-8")
         cls.dispatcher = DISPATCHER.read_text(encoding="utf-8")
         cls.coordinator = COORDINATOR.read_text(encoding="utf-8")
+        cls.session_planner = SESSION_PLANNER.read_text(encoding="utf-8")
         dispatch_start = cls.game_view.index(
             "val dispatchResult = collisionOutcomeDispatcher.dispatch("
         )
@@ -108,7 +105,7 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
         self.assertEqual(1, self.game_view.count("collisionOutcomeDispatcher.dispatch("))
         self.assertEqual(1, self.dispatcher.count("terminalHitOutcome.complete("))
 
-    def test_hit_path_keeps_lazy_capture_completion_and_death_order(self) -> None:
+    def test_hit_path_keeps_lazy_capture_completion_and_session_handoff_order(self) -> None:
         self.assertEqual(
             1,
             self.live_collision.count(
@@ -128,16 +125,24 @@ class RunOutcomePersistenceContractTest(unittest.TestCase):
         )
         detach = self.live_collision.index("ghostRecorder.detachSnapshot()")
         summary_builder = self.live_collision.index("buildTerminalSummaryPreview")
-        transition = self.live_collision.index("runResetManager.triggerDeath(gameState)")
+        transition = self.live_collision.index(
+            "applyRunSessionEvent(RunSessionEvent.TERMINAL_COLLISION_COMPLETED)"
+        )
         self.assertLess(detach, summary_builder)
         self.assertLess(summary_builder, transition)
         self.assertNotIn("ghostRecorder.reset()", self.live_collision)
+        self.assertNotIn("runResetManager.triggerDeath(gameState)", self.live_collision)
 
         impact = self.dispatch.index(
             "terminalHitImpact.apply(captureTerminalImpact)"
         )
         complete = self.dispatch.index("terminalHitOutcome.complete(")
         self.assertLess(impact, complete)
+        self.assertIn(
+            "event == RunSessionEvent.TERMINAL_COLLISION_COMPLETED",
+            self.session_planner,
+        )
+        self.assertIn("effects = listOf(RunSessionEffect.TRIGGER_DEATH)", self.session_planner)
 
     def test_each_run_start_reopens_and_retries_recovery(self) -> None:
         fresh = extract_braced_block(self.game_view, "private fun prepareFreshRun()")
