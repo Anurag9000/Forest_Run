@@ -1,0 +1,52 @@
+name: Live accessibility migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/migrate_live_accessibility_provider.py
+      - .github/workflows/live-accessibility-migration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-accessibility-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Apply exact accessibility migration
+        run: python3 scripts/migrate_live_accessibility_provider.py
+
+      - name: Verify narrow source result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          test ! -e app/src/main/java/com/anurag9000/forestrun/ForestRunAccessibilityDelegate.kt
+          test ! -e app/src/test/java/com/anurag9000/forestrun/ForestRunAccessibilityDelegateTest.kt
+          test ! -e scripts/migrate_live_accessibility_provider.py
+          test ! -e .github/workflows/live-accessibility-migration.yml
+          grep -q 'override fun getAccessibilityNodeProvider(): AccessibilityNodeProvider' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
+          grep -q 'performAccessibilityPrimaryAction' app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt
+          ! grep -R --line-number 'attachForestRunAccessibility\|MotionEvent.obtain' app/src/main/java/com/anurag9000/forestrun app/src/test/java/com/anurag9000/forestrun
+
+      - name: Commit directly to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'forest-run-migration-bot'
+          git config user.email 'forest-run-migration-bot@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat(accessibility): adopt virtual semantic nodes live'
+          git push origin HEAD:main
