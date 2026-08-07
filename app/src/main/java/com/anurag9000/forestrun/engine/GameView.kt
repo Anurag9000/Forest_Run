@@ -90,7 +90,45 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // ── Run State (Phase 17) ──────────────────────────────────────────────
     @Volatile
     private var runState: RunState = RunState.PLAYING
-    private val runResetManager    = RunResetManager()
+    private val runResetManager = RunResetManager()
+    private val runSessionTransitions = RunSessionTransitionCoordinator(
+        effects = LiveRunSessionEffects(
+            prepareFreshRunAction = {
+                check(::entityManager.isInitialized)
+                check(::player.isInitialized)
+                check(::gameState.isInitialized)
+                prepareFreshRun()
+            },
+            resetMenuRitualAction = {
+                check(::mainMenuScreen.isInitialized)
+                mainMenuScreen.resetRitual()
+            },
+            refreshMenuCopyAction = {
+                check(::mainMenuScreen.isInitialized)
+                mainMenuScreen.refreshCopy()
+            },
+            triggerDeathAction = {
+                check(::gameState.isInitialized)
+                runResetManager.triggerDeath(gameState)
+            },
+            beginRestartAction = { runResetManager.beginRestart() },
+            executeRunResetAction = {
+                check(::entityManager.isInitialized)
+                check(::player.isInitialized)
+                check(::gameState.isInitialized)
+                runResetManager.executeReset(gameState, entityManager, player)
+            },
+            resetGhostRecorderAction = { ghostRecorder.reset() },
+            reloadGhostAction = { reloadGhost() },
+            refreshGardenAction = {
+                check(::gardenScreen.isInitialized)
+                gardenScreen.refresh()
+            },
+            playMenuMusicAction = {
+                LeitmotifManager.transitionTo(LeitmotifManager.MusicState.MENU)
+            }
+        )
+    )
 
     @Volatile
     internal var runMode: RunMode = RunMode.NORMAL
@@ -179,8 +217,39 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val ghostRecorder = GhostRecorder()
     private val runOutcomePersistence =
         RunOutcomePersistenceCoordinator(AndroidRunOutcomePersistenceSink(context))
+    private val ghostPlayer = GhostPlayer()
+    private val liveCollisionEffects = LiveCollisionEffects(
+        recordRunHitAction = { gameState.recordHit() },
+        suppressGhostAction = { seconds -> ghostPlayer.suppress(seconds) },
+        triggerPlayerRestAction = { player.triggerRest() },
+        triggerStumbleAction = { player.triggerStumble() },
+        showStumbleFlashAction = { dominantColor ->
+            mercyFlashTimer = mercyFlashDuration
+            mercyFlashPaint.color = Color.argb(
+                200,
+                Color.red(dominantColor),
+                Color.green(dominantColor),
+                Color.blue(dominantColor)
+            )
+        },
+        playHitAction = { SfxManager.playHit() },
+        shakeHitAction = { CameraSystem.shakeHit() },
+        playRestAction = { LeitmotifManager.playRest() },
+        longPulseAction = { HapticManager.longPulse() },
+        mediumPulseAction = { HapticManager.mediumPulse() },
+        showMercyFlashAction = {
+            mercyFlashTimer = mercyFlashDuration
+            mercyFlashPaint.color = Color.argb(200, 60, 240, 80)
+        },
+        playMercyMissAction = { SfxManager.playMercyMiss() },
+        doubleTapAction = { HapticManager.doubleTap() },
+        emitMercyStarsAction = { centerX, centerY ->
+            ParticleManager.emit(FxPreset.MERCY_STARS, centerX, centerY)
+        },
+        shakeMercyMissAction = { CameraSystem.shakeMercyMiss() }
+    )
     private val terminalHitImpact = TerminalHitImpactCoordinator(
-        effects = GameViewTerminalHitImpactEffects()
+        effects = liveCollisionEffects
     )
     private val terminalHitOutcome = TerminalHitOutcomeCoordinator(
         relationshipRecorder = AndroidTerminalHitRelationshipRecorder(context),
@@ -189,7 +258,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         outcomeCommitter = runOutcomePersistence
     )
     private val nonTerminalCollisionOutcome = NonTerminalCollisionOutcomeCoordinator(
-        effects = GameViewNonTerminalCollisionEffects(),
+        effects = liveCollisionEffects,
         relationshipRecorder = AndroidNonTerminalCollisionRelationshipRecorder(context),
         feedbackPresenter = AndroidNonTerminalCollisionFeedbackPresenter(context)
     )
@@ -198,7 +267,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         terminalHitOutcome = terminalHitOutcome,
         nonTerminalOutcome = nonTerminalCollisionOutcome
     )
-    private val ghostPlayer   = GhostPlayer()
     private val ghostHazardFocusRect = RectF()
     private val reusableGhostVisibilityContext = GhostPlayer.VisibilityContext(
         livePlayerX = 0f,
@@ -266,7 +334,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                         appState == AppGameState.GARDEN && ::gardenScreen.isInitialized ->
                             gardenScreen.onTap(logicalTouch.x, logicalTouch.y)
                         runState == RunState.GAME_OVER ->
-                            runState = runResetManager.beginRestart()
+                            applyRunSessionEvent(RunSessionEvent.REST_TAPPED)
                     }
                 }
                 true
@@ -331,8 +399,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!::mainMenuScreen.isInitialized) {
             mainMenuScreen = MainMenuScreen(context, spriteManager, screenWidth, screenHeight)
             mainMenuScreen.onGardenTap = {
-                if (::gardenScreen.isInitialized) gardenScreen.refresh()
-                appState = AppGameState.GARDEN
+                applyRunSessionEvent(RunSessionEvent.MENU_GARDEN_REQUESTED)
             }
         }
 
@@ -340,15 +407,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!::gardenScreen.isInitialized) {
             gardenScreen = GardenScreen(context, spriteManager, screenWidth, screenHeight)
             gardenScreen.onBack = {
-                if (::mainMenuScreen.isInitialized) {
-                    mainMenuScreen.resetRitual()
-                    mainMenuScreen.refreshCopy()
-                }
-                appState = AppGameState.MENU
+                applyRunSessionEvent(RunSessionEvent.GARDEN_BACK_REQUESTED)
             }
             gardenScreen.onRun = {
-                prepareFreshRun()
-                appState = AppGameState.PLAYING
+                applyRunSessionEvent(RunSessionEvent.GARDEN_RUN_REQUESTED)
             }
             gardenScreen.load()
         }
@@ -511,6 +573,17 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             runState == RunState.PLAYING &&
             ::player.isInitialized
 
+    private fun applyRunSessionEvent(event: RunSessionEvent): Boolean {
+        val result = runSessionTransitions.execute(
+            current = RunSessionSnapshot(appState, runState),
+            event = event
+        )
+        if (!result.mayAdoptAfterState) return false
+        appState = result.transition.after.appState
+        runState = result.transition.after.runState
+        return true
+    }
+
     /** Called once after [player] is initialized to attach physics callbacks. */
     private fun wirePlayerToInput() {
         inputHandler.onJumpPressed = {
@@ -587,8 +660,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (::mainMenuScreen.isInitialized) {
                 mainMenuScreen.update(deltaTime)
                 if (mainMenuScreen.consumeStartRunRequest()) {
-                    prepareFreshRun()
-                    appState = AppGameState.PLAYING
+                    applyRunSessionEvent(RunSessionEvent.MENU_RUN_REQUESTED)
                 }
             }
             return   // No physics / entity updates while in menu
@@ -606,7 +678,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         when (runState) {
             RunState.DYING -> {
                 val next = runResetManager.update(deltaTime, runState)
-                if (next == RunState.GAME_OVER) runState = RunState.GAME_OVER
+                if (next == RunState.GAME_OVER) {
+                    applyRunSessionEvent(RunSessionEvent.DYING_DURATION_COMPLETED)
+                }
                 // CameraSystem.update() is already called unconditionally at the top of update() —
                 // calling it a second time here would double-decay shake trauma, halving death-shake duration.
                 ParticleManager.update(deltaTime)
@@ -623,16 +697,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 val next = runResetManager.update(deltaTime, runState)
                 restartFadePaint.alpha = runResetManager.restartFadeAlpha
                 if (next == RunState.PLAYING && runResetManager.restartFadeAlpha >= 255) {
-                    if (::entityManager.isInitialized && ::player.isInitialized &&
-                        ::gameState.isInitialized) {
-                        runResetManager.executeReset(gameState, entityManager, player)
-                        ghostRecorder.reset()
-                        reloadGhost()
-                    }
-                    if (::gardenScreen.isInitialized) gardenScreen.refresh()
-                    appState = AppGameState.GARDEN
-                    LeitmotifManager.transitionTo(LeitmotifManager.MusicState.MENU)
-                    runState = RunState.PLAYING
+                    applyRunSessionEvent(RunSessionEvent.RESTART_FADE_COMPLETED)
                 }
                 return
             }
@@ -831,9 +896,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     val completedHit = dispatchResult.completion
                     currentRestQuote = completedHit.summary.restQuote
                     currentRunSummary = completedHit.summary
-                    // Transition to DYING
-                    if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)
-                    runState = RunState.DYING
+                    // Transition to DYING through the authoritative session table.
+                    applyRunSessionEvent(
+                        RunSessionEvent.TERMINAL_COLLISION_COMPLETED
+                    )
                 }
             }
 
@@ -1384,92 +1450,4 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         return hypot(dx.toDouble(), dy.toDouble()).toFloat()
     }
 
-    private inner class GameViewTerminalHitImpactEffects :
-        TerminalHitImpactEffectSink {
-        override fun recordRunHit() {
-            gameState.recordHit()
-        }
-
-        override fun suppressGhost(seconds: Float) {
-            ghostPlayer.suppress(seconds)
-        }
-
-        override fun triggerPlayerRest() {
-            player.triggerRest()
-        }
-
-        override fun shakeHit() {
-            CameraSystem.shakeHit()
-        }
-
-        override fun playHit() {
-            SfxManager.playHit()
-        }
-
-        override fun playRest() {
-            LeitmotifManager.playRest()
-        }
-
-        override fun longPulse() {
-            HapticManager.longPulse()
-        }
-    }
-
-    private inner class GameViewNonTerminalCollisionEffects :
-        NonTerminalCollisionEffectSink {
-        override fun recordRunHit() {
-            gameState.recordHit()
-        }
-
-        override fun suppressGhost(seconds: Float) {
-            ghostPlayer.suppress(seconds)
-        }
-
-        override fun triggerStumble() {
-            player.triggerStumble()
-        }
-
-        override fun showStumbleFlash(dominantColor: Int) {
-            mercyFlashTimer = mercyFlashDuration
-            mercyFlashPaint.color = Color.argb(
-                200,
-                Color.red(dominantColor),
-                Color.green(dominantColor),
-                Color.blue(dominantColor)
-            )
-        }
-
-        override fun playNonLethalHit() {
-            SfxManager.playHit()
-        }
-
-        override fun shakeHit() {
-            CameraSystem.shakeHit()
-        }
-
-        override fun mediumPulse() {
-            HapticManager.mediumPulse()
-        }
-
-        override fun showMercyFlash() {
-            mercyFlashTimer = mercyFlashDuration
-            mercyFlashPaint.color = Color.argb(200, 60, 240, 80)
-        }
-
-        override fun playMercyMiss() {
-            SfxManager.playMercyMiss()
-        }
-
-        override fun doubleTap() {
-            HapticManager.doubleTap()
-        }
-
-        override fun emitMercyStars(centerX: Float, centerY: Float) {
-            ParticleManager.emit(FxPreset.MERCY_STARS, centerX, centerY)
-        }
-
-        override fun shakeMercyMiss() {
-            CameraSystem.shakeMercyMiss()
-        }
-    }
 }
