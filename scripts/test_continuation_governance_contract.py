@@ -61,12 +61,15 @@ class ContinuationGovernanceContractTest(unittest.TestCase):
         self.assertIn("not complete TalkBack support", document)
         self.assertIn("Physical acceptance", document)
 
-    def test_security_policy_is_not_claimed_before_private_reporting_exists(self) -> None:
+    def test_security_policy_is_conditional_until_private_reporting_is_verified(self) -> None:
+        policy = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
         governance = (
             ROOT / "docs/SECURITY_AND_LICENSING_GOVERNANCE.md"
         ).read_text(encoding="utf-8")
-        self.assertFalse((ROOT / "SECURITY.md").exists())
-        self.assertIn("must be enabled before", governance)
+        self.assertIn("when it is available", policy)
+        self.assertIn("Otherwise, contact the repository owner privately", policy)
+        self.assertIn("does not assert that GitHub private vulnerability reporting is enabled", governance)
+        self.assertIn("must be enabled and verified before a public release candidate is accepted", governance)
         self.assertIn("No software or asset licence is selected automatically", governance)
         self.assertIn("Release-blocking rule", governance)
 
