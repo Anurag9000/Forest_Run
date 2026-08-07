@@ -31,7 +31,9 @@ class ApplicationPersistenceFacadeAdoptionContractTest(unittest.TestCase):
             "inspectRecoveryEvidence",
             "recoverSafely",
             "recoverable durability domain",
-            "do not form one ACID transaction",
+            "without pretending that",
+            "form one",
+            "ACID transaction",
         )
         for token in required:
             self.assertIn(token, self.facade, token)
