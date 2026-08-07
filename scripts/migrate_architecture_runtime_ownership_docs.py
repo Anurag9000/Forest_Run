@@ -76,8 +76,33 @@ The facade deliberately does **not** claim a global ACID transaction across Shar
     maintenance_new = maintenance_anchor + "\nOrdinary players also have a fail-closed recovery surface: `RecoveryEvidencePresentation` produces privacy-safe rows, `RecoveryEvidenceUserController` revalidates every requested action through `ApplicationPersistenceFacade`, and `RecoveryEvidenceDialogCoordinator` is attached by `MainActivity`. Safe retry is non-destructive; corrupt/pending discard requires a second explicit confirmation. Debug/ADB maintenance remains a separate acceptance/support surface.\n"
     text = replace_once(text, maintenance_anchor, maintenance_new, "user recovery ownership")
 
+    old_debt = '''## 20. Known debt and unresolved evidence
+
+- `GameView` remains large and requires incremental behavior-preserving decomposition.
+- The complete collision-result `when` dispatcher remains in `GameView`.
+- STUMBLE and MERCY_MISS live effects remain in `GameViewNonTerminalCollisionEffects`.
+- Persistence ownership remains distributed across several managers and should be consolidated only after behavior remains stable.
+- Ghost/distance mismatches predating persistent manifests cannot be reconstructed.
+- Version-1 sidecars retain noncryptographic identity until replay requires strong upgrade.
+- The healthy already-applied path avoids repeated hashing; maintenance performs full validation.
+- SHA-256 identifies content/distance but does not authenticate a trusted writer.
+'''
+    new_debt = '''## 20. Known debt and unresolved evidence
+
+- `GameView` remains a large SurfaceView orchestration host, but the previously identified collision-result dispatcher, live collision-effect adapters, and top-level run-session transition table/effect execution have been extracted. Further decomposition should be driven by measured maintainability or device findings rather than broad rewrites.
+- Low-level persistence remains intentionally separated by durability domain behind `ApplicationPersistenceFacade`; there is no global transaction across SharedPreferences and AtomicFile protocols.
+- Ghost/distance mismatches predating persistent manifests cannot be reconstructed.
+- Version-1 sidecars retain noncryptographic identity until replay requires strong upgrade.
+- The healthy already-applied path avoids repeated hashing; maintenance performs full validation.
+- SHA-256 identifies content/distance but does not authenticate a trusted writer.
+- Source integration does not replace physical-device fairness, TalkBack, performance/thermal/battery, signed-install, store-delivery, or final asset/policy acceptance evidence.
+'''
+    text = replace_once(text, old_debt, new_debt, "known debt reconciliation")
+
     if "GameViewTerminalHitImpactEffects" in text or "GameViewNonTerminalCollisionEffects" in text:
         raise SystemExit("stale private GameView collision adapter claim survived")
+    if "complete collision-result `when` dispatcher remains in `GameView`" in text:
+        raise SystemExit("stale GameView dispatcher debt survived")
     if "CollisionOutcomeDispatcher" not in text or "ApplicationPersistenceFacade" not in text:
         raise SystemExit("current runtime ownership missing after architecture reconciliation")
 
