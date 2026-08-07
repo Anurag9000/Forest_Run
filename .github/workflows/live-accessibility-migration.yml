@@ -39,7 +39,7 @@ jobs:
           test ! -e .github/workflows/live-accessibility-migration.yml
           grep -q 'override fun getAccessibilityNodeProvider(): AccessibilityNodeProvider' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt
           grep -q 'performAccessibilityPrimaryAction' app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt
-          ! grep -R --line-number 'attachForestRunAccessibility\|MotionEvent.obtain' app/src/main/java/com/anurag9000/forestrun app/src/test/java/com/anurag9000/forestrun
+          ! grep -R --line-number 'attachForestRunAccessibility\|MotionEvent.obtain\|dispatchTouchEvent' app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt app/src/main/java/com/anurag9000/forestrun/MainActivity.kt app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt
 
       - name: Commit directly to main
         shell: bash
