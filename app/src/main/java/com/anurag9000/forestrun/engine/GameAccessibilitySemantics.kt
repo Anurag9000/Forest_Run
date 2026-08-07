@@ -1,5 +1,7 @@
 package com.anurag9000.forestrun.engine
 
+import com.anurag9000.forestrun.entities.CostumeStyle
+
 /** High-level Canvas surfaces that need deterministic screen-reader semantics. */
 internal enum class AccessibilitySurface {
     MENU,
@@ -38,6 +40,7 @@ internal object AccessibilityNodeIds {
     const val GARDEN_WARDROBE = 500
     const val GARDEN_RUN = 510
     const val GARDEN_HOME = 520
+    const val GARDEN_FIRST_COSTUME = 530
     const val REST_SUMMARY = 600
     const val REST_CONTINUE = 610
 }
@@ -67,8 +70,11 @@ internal data class AccessibilitySemanticSnapshot(
     val gardenTotalPlants: Int = 9,
     val nextPlantCost: Int? = null,
     val wardrobeUnlocked: Boolean = false,
+    val wardrobeUnlockedCostumes: Set<CostumeStyle> = setOf(CostumeStyle.NONE),
+    val activeCostume: CostumeStyle = CostumeStyle.NONE,
     val restQuote: String = "",
-    val restSummary: String = ""
+    val restSummary: String = "",
+    val restContinueEnabled: Boolean = true
 )
 
 /**
@@ -76,8 +82,9 @@ internal data class AccessibilitySemanticSnapshot(
  *
  * The result is sorted by explicit focus order and validates stable IDs. It is
  * intentionally independent from draw order, animation, touch geometry, and
- * translated safe-content coordinates. A future AccessibilityNodeProvider can
- * expose this tree without re-encoding product wording or state rules.
+ * translated safe-content coordinates. Android exposes this tree through
+ * [GameAccessibilityNodeProvider] without re-encoding product wording or state
+ * rules.
  */
 internal object GameAccessibilitySemantics {
     fun build(snapshot: AccessibilitySemanticSnapshot): List<AccessibilitySemanticNode> {
@@ -92,6 +99,12 @@ internal object GameAccessibilitySemantics {
         }
         require(snapshot.nextPlantCost == null || snapshot.nextPlantCost >= 0) {
             "next plant cost must be non-negative"
+        }
+        require(CostumeStyle.NONE in snapshot.wardrobeUnlockedCostumes) {
+            "Classic costume must always be accessible"
+        }
+        require(snapshot.activeCostume in snapshot.wardrobeUnlockedCostumes) {
+            "active costume must be unlocked"
         }
 
         val nodes = when (snapshot.surface) {
@@ -239,24 +252,47 @@ internal object GameAccessibilitySemantics {
                 )
             )
         }
+
+        val availableCount = snapshot.wardrobeUnlockedCostumes.size
         add(
             AccessibilitySemanticNode(
                 id = AccessibilityNodeIds.GARDEN_WARDROBE,
                 focusOrder = 40,
                 label = "Wardrobe",
-                stateDescription = if (snapshot.wardrobeUnlocked) "Unlocked" else "Locked",
-                actions = if (snapshot.wardrobeUnlocked) {
-                    setOf(AccessibilitySemanticAction.ACTIVATE)
+                stateDescription = if (snapshot.wardrobeUnlocked || availableCount > 1) {
+                    "$availableCount of ${CostumeStyle.entries.size} styles available"
                 } else {
-                    emptySet()
-                },
-                enabled = snapshot.wardrobeUnlocked
+                    "Classic style only"
+                }
             )
         )
+        CostumeStyle.entries.forEachIndexed { index, style ->
+            val unlocked = style in snapshot.wardrobeUnlockedCostumes
+            val active = style == snapshot.activeCostume
+            val state = when {
+                active -> "Equipped"
+                unlocked -> "Available"
+                else -> style.unlockLabel
+            }
+            add(
+                AccessibilitySemanticNode(
+                    id = AccessibilityNodeIds.GARDEN_FIRST_COSTUME + style.ordinal,
+                    focusOrder = 41 + index,
+                    label = style.displayName,
+                    stateDescription = state,
+                    actions = if (unlocked) {
+                        setOf(AccessibilitySemanticAction.ACTIVATE)
+                    } else {
+                        emptySet()
+                    },
+                    enabled = true
+                )
+            )
+        }
         add(
             node(
                 id = AccessibilityNodeIds.GARDEN_RUN,
-                order = 50,
+                order = 60,
                 label = "Begin another run",
                 action = AccessibilitySemanticAction.ACTIVATE
             )
@@ -264,7 +300,7 @@ internal object GameAccessibilitySemantics {
         add(
             node(
                 id = AccessibilityNodeIds.GARDEN_HOME,
-                order = 60,
+                order = 70,
                 label = "Return home",
                 action = AccessibilitySemanticAction.ACTIVATE
             )
@@ -283,11 +319,20 @@ internal object GameAccessibilitySemantics {
                     "${snapshot.seeds} Seeds"
             }
         ),
-        node(
+        AccessibilitySemanticNode(
             id = AccessibilityNodeIds.REST_CONTINUE,
-            order = 20,
-            label = "Continue to Garden",
-            action = AccessibilitySemanticAction.ACTIVATE
+            focusOrder = 20,
+            label = if (snapshot.restContinueEnabled) {
+                "Continue to Garden"
+            } else {
+                "Recovering before Garden"
+            },
+            actions = if (snapshot.restContinueEnabled) {
+                setOf(AccessibilitySemanticAction.ACTIVATE)
+            } else {
+                emptySet()
+            },
+            enabled = snapshot.restContinueEnabled
         )
     )
 
