@@ -138,17 +138,20 @@ def build_sbom(
         )
 
     coordinates = sorted(all_coordinates)
-    components = [
-        {
-            "type": "library",
-            "bom-ref": purl(group, name, version),
-            "group": group,
-            "name": name,
-            "version": version,
-            "purl": purl(group, name, version),
-        }
-        for group, name, version in coordinates
-    ]
+    components = sorted(
+        (
+            {
+                "type": "library",
+                "bom-ref": purl(group, name, version),
+                "group": group,
+                "name": name,
+                "version": version,
+                "purl": purl(group, name, version),
+            }
+            for group, name, version in coordinates
+        ),
+        key=lambda component: component["purl"],
+    )
     identity = hashlib.sha256(canonical_bytes(components)).hexdigest()
     serial = uuid.uuid5(
         NAMESPACE,
