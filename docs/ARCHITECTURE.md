@@ -383,7 +383,7 @@ Debug scenarios and focused harnesses do not replace ordinary-play or physical-d
 - SHA-256 identifies content/distance but does not authenticate a trusted writer.
 - Source integration does not replace physical-device fairness, TalkBack, performance/thermal/battery, signed-install, store-delivery, or final asset/policy acceptance evidence.
 - Ghost and non-ghost recovery are independent rather than one global transaction.
-- Automatic recovery remains fail-closed; deliberate remediation is debug/support-only with no end-user UI.
+- Automatic recovery remains fail-closed; ordinary players now have a privacy-safe retry/discard UI with explicit destructive confirmation, while debug/support maintenance remains available for acceptance and diagnosis.
 - Simultaneous two-namespace AtomicFile activity and process-death recovery require exact-head Android and physical-device acceptance.
 - Exact-head Gradle, lint, build, emulator, physical-device, ADB, signing, installation, store path, screenshots, metadata, privacy/data-safety, content rating, and current Play-policy evidence remain unresolved.
 - Entity readability, artwork/animation—including Wolf—fixed landscape, procedural scenic layers, audio/haptics, frame time, allocation, GC, memory, I/O, thermal, and long-run behavior require representative-device acceptance.
