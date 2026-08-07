@@ -2,9 +2,11 @@
 
 Forest Run is a public source repository, but public release governance is not complete until the repository owner makes and records the decisions below. This document is an explicit gate; it is not a substitute for those decisions.
 
-## Private vulnerability reporting
+## Vulnerability reporting
 
-GitHub private vulnerability reporting must be enabled before the repository publishes a `SECURITY.md` that promises a private reporting channel.
+The repository now contains a deliberately conditional `SECURITY.md`. It tells reporters to use GitHub private vulnerability reporting **when that feature is available** and otherwise to contact the repository owner privately through the contact method on the owner's GitHub profile. That wording is an interim source-repository policy; it does not assert that GitHub private vulnerability reporting is enabled today.
+
+GitHub private vulnerability reporting must be enabled and verified before a public release candidate is accepted. The accepted release policy must then name the actually enabled private reporting mechanism without conditional or aspirational wording.
 
 Required owner action:
 
@@ -12,13 +14,13 @@ Required owner action:
 2. Enable private vulnerability reporting.
 3. Confirm that a test draft advisory can be created by an authorized maintainer.
 4. Record the enabled state and reviewer in the final candidate approval evidence.
-5. Only then add `SECURITY.md` with the actual supported private-reporting path.
+5. Update `SECURITY.md` so the accepted release policy points to the verified private-reporting path rather than the interim fallback.
 
-Until that setting is enabled, security reports must not be directed to public issues by default, and repository documentation must not claim that a private channel exists.
+Until that setting is enabled, repository documentation must not claim that GitHub private vulnerability reporting is active. Security reports must not be directed to public issues by default.
 
-## Future `SECURITY.md` minimum contents
+## Accepted-release `SECURITY.md` minimum contents
 
-The eventual policy must state:
+Before public distribution, the policy must state:
 
 - which released versions are supported;
 - the private reporting mechanism actually enabled for the repository;
@@ -28,6 +30,8 @@ The eventual policy must state:
 - treatment of duplicate, invalid, low-impact, and out-of-scope reports;
 - safe-harbor language reviewed by the owner or counsel;
 - an explicit prohibition on publishing active exploit details before a fix is available.
+
+The current alpha policy is therefore useful for responsible contact but is not evidence that the final release reporting channel has been enabled or accepted.
 
 ## Source-code and creative-asset licensing
 
@@ -92,7 +96,8 @@ Do not copy release notes from a different candidate or publish placeholders. Th
 
 Public release remains blocked while any of these are unresolved:
 
-- private vulnerability reporting is disabled but a private channel is claimed;
+- GitHub private vulnerability reporting has not been enabled and verified for the accepted candidate;
+- `SECURITY.md` still uses an interim fallback instead of the verified accepted-release reporting path;
 - code, assets, audio, fonts, or third-party content lack an owner-approved licence position;
 - required notices are missing or disagree with the resolved SBOM;
 - release notes are not bound to the exact accepted signed artifact;
