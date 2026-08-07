@@ -20,6 +20,9 @@ internal fun interface AccessibilityNodeBoundsResolver {
  * The provider never invents actions: it rebuilds the current semantic tree for
  * every query and delegates activation through [GameAccessibilityActionRouter].
  * This makes stale virtual IDs fail closed after screen/state transitions.
+ * Mutation owners are responsible for publishing semantic-tree changes after a
+ * successful write or transition; the provider emits only interaction/focus
+ * events itself.
  */
 internal class GameAccessibilityNodeProvider(
     private val hostView: View,
@@ -62,9 +65,7 @@ internal class GameAccessibilityNodeProvider(
         action: Int,
         arguments: Bundle?
     ): Boolean {
-        if (virtualViewId == HOST_VIEW_ID) {
-            return hostView.performAccessibilityAction(action, arguments)
-        }
+        if (virtualViewId == HOST_VIEW_ID) return false
 
         return when (action) {
             AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS -> requestAccessibilityFocus(virtualViewId)
@@ -147,7 +148,6 @@ internal class GameAccessibilityNodeProvider(
         val result = router.perform(nodeId, semanticAction)
         if (!result.performed) return false
         sendEvent(nodeId, AccessibilityEvent.TYPE_VIEW_CLICKED)
-        notifySemanticTreeChanged()
         return true
     }
 
