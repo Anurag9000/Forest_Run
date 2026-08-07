@@ -30,13 +30,13 @@ class ApplicationPersistenceFacadeAdoptionContractTest(unittest.TestCase):
             "equipCostume",
             "inspectRecoveryEvidence",
             "recoverSafely",
-            "independently recoverable durability domain",
+            "recoverable durability domain",
+            "do not form one ACID transaction",
         )
         for token in required:
             self.assertIn(token, self.facade, token)
         self.assertIn("RunOutcomePersistenceCoordinator(", self.facade)
         self.assertIn("AndroidApplicationEncounterPersistence(appContext)", self.facade)
-        self.assertNotIn("global transaction", self.facade.lower().replace("one global transaction", ""))
 
     def test_game_view_shares_one_facade_across_run_collision_ui_and_accessibility_writes(self) -> None:
         required = (
