@@ -40,9 +40,8 @@ The Rest surface is exposed during the DYING/GAME_OVER/RESTARTING sequence so th
 `GameView` samples accessibility announcement state only while Android accessibility and touch exploration are enabled, and only once every 30 rendered frames. `AccessibilityAnnouncementPolicy` then applies the stricter semantic cadence:
 
 - announce an initial/surface transition;
-- prioritize Bloom state changes;
-- coalesce ordinary Playing distance into 120 m buckets with an 8 s minimum interval;
-- coalesce Garden progress with its own slower state-change interval;
+- prioritize Bloom, Garden-progression, wardrobe-unlock, and feedback-setting state changes immediately;
+- coalesce ordinary Playing distance into 100 m buckets with a 10 s minimum routine interval;
 - ignore frame-driven score churn and unchanged semantic snapshots.
 
 The game therefore never calls `announceForAccessibility` for every rendered frame or score increment. Real TalkBack testing must still judge whether the resulting cadence is understandable and non-intrusive on actual devices.
