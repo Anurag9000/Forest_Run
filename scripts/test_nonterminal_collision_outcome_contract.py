@@ -102,10 +102,14 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
         cls.stumble_input = cls.live_inputs[stumble_start:deactivate_start]
         cls.stumble_deactivation = cls.live_inputs[deactivate_start:mercy_start]
         cls.mercy_input = cls.live_inputs[mercy_start:]
-        cls.effect_adapter = extract_braced_block(
-            cls.game_view,
-            "private inner class GameViewNonTerminalCollisionEffects :",
+        effects_start = cls.game_view.index(
+            "private val liveCollisionEffects = LiveCollisionEffects("
         )
+        effects_end = cls.game_view.index(
+            "private val terminalHitImpact = TerminalHitImpactCoordinator(",
+            effects_start,
+        )
+        cls.effect_adapter = cls.game_view[effects_start:effects_end]
         cls.dispatch = extract_braced_block(
             cls.dispatcher,
             "fun dispatch(\n        result: CollisionResult,",
@@ -248,18 +252,18 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
         self.assertEqual(2, self.coordinator.count("DialogueBubbleManager.spawn("))
         self.assertEqual(2, self.coordinator.count("FlavorTextManager.spawn("))
 
-    def test_game_view_effect_adapter_owns_live_runtime_calls(self) -> None:
+    def test_shared_live_effect_adapter_owns_runtime_calls(self) -> None:
         expected_once = (
-            "gameState.recordHit()",
-            "ghostPlayer.suppress(seconds)",
-            "player.triggerStumble()",
-            "SfxManager.playHit()",
-            "CameraSystem.shakeHit()",
-            "HapticManager.mediumPulse()",
-            "SfxManager.playMercyMiss()",
-            "HapticManager.doubleTap()",
+            "recordRunHitAction = { gameState.recordHit() }",
+            "suppressGhostAction = { seconds -> ghostPlayer.suppress(seconds) }",
+            "triggerStumbleAction = { player.triggerStumble() }",
+            "playHitAction = { SfxManager.playHit() }",
+            "shakeHitAction = { CameraSystem.shakeHit() }",
+            "mediumPulseAction = { HapticManager.mediumPulse() }",
+            "playMercyMissAction = { SfxManager.playMercyMiss() }",
+            "doubleTapAction = { HapticManager.doubleTap() }",
             "ParticleManager.emit(FxPreset.MERCY_STARS, centerX, centerY)",
-            "CameraSystem.shakeMercyMiss()",
+            "shakeMercyMissAction = { CameraSystem.shakeMercyMiss() }",
         )
         for call in expected_once:
             self.assertEqual(1, self.effect_adapter.count(call), call)
@@ -267,6 +271,7 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
             2,
             self.effect_adapter.count("mercyFlashTimer = mercyFlashDuration"),
         )
+        self.assertEqual(2, self.game_view.count("effects = liveCollisionEffects"))
 
 
 if __name__ == "__main__":
