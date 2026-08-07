@@ -15,7 +15,8 @@ internal enum class RunSessionEvent {
     TERMINAL_COLLISION_COMPLETED,
     DYING_DURATION_COMPLETED,
     REST_TAPPED,
-    RESTART_FADE_COMPLETED
+    RESTART_FADE_COMPLETED,
+    DEBUG_PLAYING_STATE_REQUESTED
 }
 
 /** Ordered effects the live owner must apply around a planned transition. */
@@ -42,11 +43,17 @@ internal data class RunSessionTransition(
 }
 
 /**
- * Pure transition table for screen, death, Rest, restart, and Garden routing.
+ * Pure transition table for screen, death, Rest, restart, Garden, and debug
+ * state publication routing.
  *
  * Bloom is intentionally absent because it remains an orthogonal power flag.
- * Invalid or stale events fail closed as complete no-ops, preventing a delayed
- * tap or duplicated callback from skipping required terminal/reset phases.
+ * Invalid or stale ordinary events fail closed as complete no-ops, preventing a
+ * delayed tap or duplicated callback from skipping required terminal/reset
+ * phases. DEBUG_PLAYING_STATE_REQUESTED is the sole deliberately state-agnostic
+ * event: only debuggable launch code emits it, after validating/preparing its
+ * scenario or auto-start payload, so debug tooling does not mutate the two
+ * top-level state fields behind the planner's back.
+ *
  * PREPARE_FRESH_RUN retains run-start music ownership to match the current live
  * reset boundary; the table therefore never emits a duplicate music effect.
  */
@@ -56,6 +63,12 @@ internal object RunSessionTransitionPlanner {
         event: RunSessionEvent
     ): RunSessionTransition {
         val transition = when {
+            event == RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED ->
+                current.to(
+                    appState = AppGameState.PLAYING,
+                    runState = RunState.PLAYING
+                )
+
             current == RunSessionSnapshot(AppGameState.MENU, RunState.PLAYING) &&
                 event == RunSessionEvent.MENU_RUN_REQUESTED ->
                 current.to(
