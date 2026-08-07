@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import unittest
 from pathlib import Path
 
@@ -10,53 +9,42 @@ GAME_VIEW_PATH = (
     ROOT
     / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
 )
-COLLISION_MIGRATION = ROOT / "scripts/apply_gameview_collision_adapter.py"
-SESSION_MIGRATION = ROOT / "scripts/apply_gameview_run_session_coordinator.py"
-WRITE_WORKFLOW = ROOT / ".github/workflows/apply-gameview-collision-adapter.yml"
-
-
-def load_module(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Unable to load {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def adopted_source() -> str:
-    source = GAME_VIEW_PATH.read_text(encoding="utf-8")
-    if COLLISION_MIGRATION.exists():
-        collision = load_module("runtime_collision_contract", COLLISION_MIGRATION)
-        if "private val liveCollisionEffects = LiveCollisionEffects(" not in source:
-            source = collision.apply_migration(source)
-        collision.verify_adopted(source)
-    if SESSION_MIGRATION.exists():
-        session = load_module("runtime_session_contract", SESSION_MIGRATION)
-        if "private val runSessionTransitions =" not in source:
-            source = session.apply_migration(source)
-        session.verify_adopted(source)
-    return source
+PLANNER_PATH = (
+    ROOT
+    / "app/src/main/java/com/anurag9000/forestrun/engine/RunSessionTransitionPlanner.kt"
+)
+TEMPORARY_MIGRATION_PATHS = (
+    ROOT / "scripts/apply_gameview_collision_adapter.py",
+    ROOT / "scripts/apply_gameview_run_session_coordinator.py",
+    ROOT / "scripts/test_gameview_runtime_adoption_migrations.py",
+    ROOT / ".github/workflows/apply-gameview-collision-adapter.yml",
+    ROOT / ".github/workflows/apply-gameview-runtime-ownership.yml",
+)
 
 
 class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.source = GAME_VIEW_PATH.read_text(encoding="utf-8")
+        cls.planner = PLANNER_PATH.read_text(encoding="utf-8")
+
     def test_collision_effect_ownership_is_shared_and_private_adapters_are_gone(self) -> None:
-        source = adopted_source()
         self.assertEqual(
             1,
-            source.count("private val liveCollisionEffects = LiveCollisionEffects("),
+            self.source.count("private val liveCollisionEffects = LiveCollisionEffects("),
         )
-        self.assertEqual(2, source.count("effects = liveCollisionEffects"))
-        self.assertNotIn("GameViewTerminalHitImpactEffects", source)
-        self.assertNotIn("GameViewNonTerminalCollisionEffects", source)
-        self.assertEqual(1, source.count("collisionOutcomeDispatcher.dispatch("))
+        self.assertEqual(2, self.source.count("effects = liveCollisionEffects"))
+        self.assertNotIn("GameViewTerminalHitImpactEffects", self.source)
+        self.assertNotIn("GameViewNonTerminalCollisionEffects", self.source)
+        self.assertEqual(1, self.source.count("collisionOutcomeDispatcher.dispatch("))
 
     def test_ordinary_session_routes_have_one_state_publication_boundary(self) -> None:
-        source = adopted_source()
-        self.assertEqual(1, source.count("private val runSessionTransitions ="))
-        self.assertEqual(1, source.count("private fun applyRunSessionEvent("))
-        self.assertEqual(1, source.count("appState = result.transition.after.appState"))
-        self.assertEqual(1, source.count("runState = result.transition.after.runState"))
+        self.assertEqual(1, self.source.count("private val runSessionTransitions ="))
+        self.assertEqual(1, self.source.count("private fun applyRunSessionEvent("))
+        self.assertEqual(1, self.source.count("appState = result.transition.after.appState"))
+        self.assertEqual(1, self.source.count("runState = result.transition.after.runState"))
+        self.assertIn("if (!result.mayAdoptAfterState) return false", self.source)
+
         for event in (
             "MENU_RUN_REQUESTED",
             "MENU_GARDEN_REQUESTED",
@@ -67,37 +55,33 @@ class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
             "REST_TAPPED",
             "RESTART_FADE_COMPLETED",
         ):
-            self.assertIn(f"RunSessionEvent.{event}", source)
+            self.assertIn(f"RunSessionEvent.{event}", self.source)
+            self.assertIn(event, self.planner)
 
     def test_old_direct_ordinary_transition_fragments_cannot_return(self) -> None:
-        source = adopted_source()
         for forbidden in (
             "runState = runResetManager.beginRestart()",
             "if (next == RunState.GAME_OVER) runState = RunState.GAME_OVER",
             "if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)",
             "mainMenuScreen.resetRitual()\n                    mainMenuScreen.refreshCopy()",
+            "prepareFreshRun()\n                    appState = AppGameState.PLAYING",
         ):
-            self.assertNotIn(forbidden, source)
+            self.assertNotIn(forbidden, self.source)
 
-    def test_unadopted_migrations_are_inert_and_adopted_source_needs_no_scripts(self) -> None:
-        self.assertFalse(WRITE_WORKFLOW.exists())
-        live_source = GAME_VIEW_PATH.read_text(encoding="utf-8")
-        adopted = "private val runSessionTransitions =" in live_source
-        if adopted:
-            self.assertIn(
-                "private val liveCollisionEffects = LiveCollisionEffects(",
-                live_source,
-            )
-            return
+    def test_debug_launch_state_forcing_remains_explicitly_outside_ordinary_session_routing(self) -> None:
+        self.assertIn("fun applyDebugLaunchIntent(intent: Intent?)", self.source)
+        self.assertGreaterEqual(
+            self.source.count("appState = AppGameState.PLAYING"),
+            1,
+        )
+        self.assertGreaterEqual(
+            self.source.count("runState = RunState.PLAYING"),
+            1,
+        )
 
-        self.assertTrue(COLLISION_MIGRATION.is_file())
-        self.assertTrue(SESSION_MIGRATION.is_file())
-        for path in (COLLISION_MIGRATION, SESSION_MIGRATION):
-            script = path.read_text(encoding="utf-8")
-            self.assertNotIn("git push", script)
-            self.assertNotIn("contents: write", script)
-            self.assertNotIn("--force", script)
-            self.assertNotIn("force-with-lease", script)
+    def test_temporary_write_capability_and_migration_scripts_are_gone(self) -> None:
+        for path in TEMPORARY_MIGRATION_PATHS:
+            self.assertFalse(path.exists(), str(path))
 
 
 if __name__ == "__main__":
