@@ -243,6 +243,20 @@ class MainMenuScreen(
         }
     }
 
+    /** Accessibility equivalent of the primary willow ritual action. */
+    fun performAccessibilityPrimaryAction(): Boolean = when (phase) {
+        Phase.IDLE -> {
+            phase = Phase.STANDING_UP
+            standTimer = 0f
+            true
+        }
+        Phase.STANDING_UP -> false
+        Phase.READY -> {
+            startRunRequested = true
+            true
+        }
+    }
+
     fun update(deltaTime: Float) {
         if (!deltaTime.isFinite() || deltaTime <= 0f) return
         val dt = deltaTime.coerceAtMost(0.05f)

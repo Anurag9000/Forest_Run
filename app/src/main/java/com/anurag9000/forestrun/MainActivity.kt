@@ -68,7 +68,6 @@ class MainActivity : AppCompatActivity() {
         FeedbackSettings.init(this)
         RuntimeAssetValidator.validateRelease(this)
         gameView = GameView(this)
-        attachForestRunAccessibility(gameView, gameView.inputHandler)
         setContentView(gameView)
         recoveryEvidenceDialog = RecoveryEvidenceDialogCoordinator(this)
         gameView.post(recoveryEvidenceDialog::showIfNeeded)
