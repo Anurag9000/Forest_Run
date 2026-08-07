@@ -34,7 +34,7 @@ import kotlin.random.Random
  * complete reset contract. Persistent encounter counts are written only when
  * an encounter actually resolves, never merely because an entity spawned.
  */
-class EntityManager(
+class EntityManager internal constructor(
     private val context: Context,
     private val screenWidth: Float,
     private val screenHeight: Float,

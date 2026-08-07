@@ -61,7 +61,7 @@ import kotlin.math.sin
  * After unlock: bloom burst particle effect fires at the card centre.
  * GardenPurchaseManager atomically persists progress and remaining Seeds.
  */
-class GardenScreen(
+class GardenScreen internal constructor(
     private val context: Context,
     private val spriteManager: SpriteManager,
     private val screenW: Int,

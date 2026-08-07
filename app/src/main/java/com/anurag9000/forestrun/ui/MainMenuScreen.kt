@@ -37,7 +37,7 @@ import kotlin.math.sin
  *
  * The main forest colour palette used here matches the Spring Orchard biome.
  */
-class MainMenuScreen(
+class MainMenuScreen internal constructor(
     private val context: Context,
     private val spriteManager: SpriteManager,
     private val screenW: Int,
