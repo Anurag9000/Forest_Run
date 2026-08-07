@@ -47,9 +47,10 @@ jobs:
           grep -q 'val workload: RuntimeWorkloadSnapshot' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceReport.kt
           grep -q 'workload = RuntimeWorkloadTelemetry.snapshot()' app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt
 
-          grep -q 'GardenPurchaseManager.purchaseNext' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
-          if grep -q 'SaveManager.saveGardenProgress\|SaveManager.saveLifetimeSeeds' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt; then
-            echo "GardenScreen must use the single atomic purchase boundary." >&2
+          grep -q 'persistenceFacade.purchaseNextGardenPlant' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
+          grep -q 'GardenPurchaseManager.purchaseNext' app/src/main/java/com/anurag9000/forestrun/engine/ApplicationPersistenceFacade.kt
+          if grep -q 'SaveManager.saveGardenProgress\|SaveManager.saveLifetimeSeeds\|GardenPurchaseManager.purchaseNext' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt; then
+            echo "GardenScreen must use the application facade and its single atomic purchase boundary." >&2
             exit 1
           fi
           grep -q 'buildSanctuaryAtmosphere' app/src/main/java/com/anurag9000/forestrun/engine/GardenSanctuaryPlanner.kt
