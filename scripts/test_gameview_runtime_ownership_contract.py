@@ -19,6 +19,8 @@ TEMPORARY_MIGRATION_PATHS = (
     ROOT / "scripts/test_gameview_runtime_adoption_migrations.py",
     ROOT / ".github/workflows/apply-gameview-collision-adapter.yml",
     ROOT / ".github/workflows/apply-gameview-runtime-ownership.yml",
+    ROOT / "scripts/migrate_debug_session_state_ownership.py",
+    ROOT / ".github/workflows/debug-session-state-migration.yml",
 )
 
 
@@ -38,7 +40,7 @@ class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
         self.assertNotIn("GameViewNonTerminalCollisionEffects", self.source)
         self.assertEqual(1, self.source.count("collisionOutcomeDispatcher.dispatch("))
 
-    def test_ordinary_session_routes_have_one_state_publication_boundary(self) -> None:
+    def test_session_routes_have_one_state_publication_boundary(self) -> None:
         self.assertEqual(1, self.source.count("private val runSessionTransitions ="))
         self.assertEqual(1, self.source.count("private fun applyRunSessionEvent("))
         self.assertEqual(1, self.source.count("appState = result.transition.after.appState"))
@@ -54,29 +56,32 @@ class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
             "DYING_DURATION_COMPLETED",
             "REST_TAPPED",
             "RESTART_FADE_COMPLETED",
+            "DEBUG_PLAYING_STATE_REQUESTED",
         ):
             self.assertIn(f"RunSessionEvent.{event}", self.source)
             self.assertIn(event, self.planner)
 
-    def test_old_direct_ordinary_transition_fragments_cannot_return(self) -> None:
+    def test_old_direct_transition_fragments_cannot_return(self) -> None:
         for forbidden in (
             "runState = runResetManager.beginRestart()",
             "if (next == RunState.GAME_OVER) runState = RunState.GAME_OVER",
             "if (::gameState.isInitialized) runResetManager.triggerDeath(gameState)",
             "mainMenuScreen.resetRitual()\n                    mainMenuScreen.refreshCopy()",
             "prepareFreshRun()\n                    appState = AppGameState.PLAYING",
+            "appState = AppGameState.PLAYING",
+            "runState = RunState.PLAYING",
         ):
             self.assertNotIn(forbidden, self.source)
 
-    def test_debug_launch_state_forcing_remains_explicitly_outside_ordinary_session_routing(self) -> None:
+    def test_debug_launches_use_the_explicit_state_agnostic_session_event(self) -> None:
         self.assertIn("fun applyDebugLaunchIntent(intent: Intent?)", self.source)
-        self.assertGreaterEqual(
-            self.source.count("appState = AppGameState.PLAYING"),
-            1,
+        self.assertEqual(
+            2,
+            self.source.count("RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED"),
         )
-        self.assertGreaterEqual(
-            self.source.count("runState = RunState.PLAYING"),
-            1,
+        self.assertIn(
+            "event == RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED",
+            self.planner,
         )
 
     def test_temporary_write_capability_and_migration_scripts_are_gone(self) -> None:
