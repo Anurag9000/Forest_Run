@@ -7,15 +7,12 @@ import pathlib
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-GAME_VIEW = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
-DISPATCHER = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/engine/CollisionOutcomeDispatcher.kt"
-)
-IMPACT = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/engine/TerminalHitImpactCoordinator.kt"
-)
+ENGINE = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine"
+GAME_VIEW = ENGINE / "GameView.kt"
+DISPATCHER = ENGINE / "CollisionOutcomeDispatcher.kt"
+IMPACT = ENGINE / "TerminalHitImpactCoordinator.kt"
+SESSION_PLANNER = ENGINE / "RunSessionTransitionPlanner.kt"
+SESSION_EFFECTS = ENGINE / "LiveRunSessionEffects.kt"
 
 
 def extract_braced_block(source: str, signature: str) -> str:
@@ -81,6 +78,8 @@ class TerminalHitImpactContractTest(unittest.TestCase):
         cls.game_view = GAME_VIEW.read_text(encoding="utf-8")
         cls.dispatcher = DISPATCHER.read_text(encoding="utf-8")
         cls.impact = IMPACT.read_text(encoding="utf-8")
+        cls.session_planner = SESSION_PLANNER.read_text(encoding="utf-8")
+        cls.session_effects = SESSION_EFFECTS.read_text(encoding="utf-8")
         dispatch_start = cls.game_view.index(
             "val dispatchResult = collisionOutcomeDispatcher.dispatch("
         )
@@ -94,6 +93,14 @@ class TerminalHitImpactContractTest(unittest.TestCase):
                 "// Tick down mercy flash", transition_start
             )
         ]
+        effects_start = cls.game_view.index(
+            "private val liveCollisionEffects = LiveCollisionEffects("
+        )
+        effects_end = cls.game_view.index(
+            "private val terminalHitImpact = TerminalHitImpactCoordinator(",
+            effects_start,
+        )
+        cls.live_effects = cls.game_view[effects_start:effects_end]
         cls.dispatch = extract_braced_block(
             cls.dispatcher,
             "fun dispatch(\n        result: CollisionResult,",
@@ -157,7 +164,7 @@ class TerminalHitImpactContractTest(unittest.TestCase):
             self.dispatch,
         )
 
-    def test_completion_and_death_transition_have_single_explicit_owners(self) -> None:
+    def test_completion_then_typed_session_event_preserves_death_order(self) -> None:
         impact = self.dispatch.index(
             "terminalHitImpact.apply(captureTerminalImpact)"
         )
@@ -172,34 +179,46 @@ class TerminalHitImpactContractTest(unittest.TestCase):
             "val completedHit = dispatchResult.completion",
             "currentRestQuote = completedHit.summary.restQuote",
             "currentRunSummary = completedHit.summary",
-            "runResetManager.triggerDeath(gameState)",
-            "runState = RunState.DYING",
+            "applyRunSessionEvent(RunSessionEvent.TERMINAL_COLLISION_COMPLETED)",
         )
         positions = [
             self.live_terminal_transition.index(item) for item in order
         ]
         self.assertEqual(sorted(positions), positions)
+        self.assertNotIn("runState = RunState.DYING", self.live_terminal_transition)
         self.assertIn(
             "gameState.buildRunSummary(lastKiller = killerType)",
             self.live_inputs,
         )
-
-    def test_private_adapter_maps_each_effect_to_original_owner(self) -> None:
-        adapter = extract_braced_block(
-            self.game_view,
-            "private inner class GameViewTerminalHitImpactEffects",
+        self.assertIn(
+            "event == RunSessionEvent.TERMINAL_COLLISION_COMPLETED",
+            self.session_planner,
         )
+        self.assertIn("runState = RunState.DYING", self.session_planner)
+        self.assertIn("effects = listOf(RunSessionEffect.TRIGGER_DEATH)", self.session_planner)
+        self.assertIn(
+            "RunSessionEffect.TRIGGER_DEATH -> triggerDeathAction()",
+            self.session_effects,
+        )
+        self.assertIn(
+            "triggerDeathAction = { runResetManager.triggerDeath(gameState) }",
+            self.game_view,
+        )
+
+    def test_shared_adapter_maps_terminal_effects_to_original_owners(self) -> None:
         required = (
-            "gameState.recordHit()",
-            "ghostPlayer.suppress(seconds)",
-            "player.triggerRest()",
-            "CameraSystem.shakeHit()",
-            "SfxManager.playHit()",
-            "LeitmotifManager.playRest()",
-            "HapticManager.longPulse()",
+            "recordRunHitAction = { gameState.recordHit() }",
+            "suppressGhostAction = { seconds -> ghostPlayer.suppress(seconds) }",
+            "triggerPlayerRestAction = { player.triggerRest() }",
+            "shakeHitAction = { CameraSystem.shakeHit() }",
+            "playHitAction = { SfxManager.playHit() }",
+            "playRestAction = { LeitmotifManager.playRest() }",
+            "longPulseAction = { HapticManager.longPulse() }",
         )
         for item in required:
-            self.assertEqual(1, adapter.count(item), item)
+            self.assertEqual(1, self.live_effects.count(item), item)
+        self.assertEqual(2, self.game_view.count("effects = liveCollisionEffects"))
+        self.assertNotIn("GameViewTerminalHitImpactEffects", self.game_view)
 
     def test_capture_rejects_killer_identity_drift(self) -> None:
         capture = extract_braced_block(
