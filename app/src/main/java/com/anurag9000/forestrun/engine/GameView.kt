@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.os.SystemClock
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -38,6 +39,7 @@ import kotlin.math.floor
 import kotlin.math.hypot
 
 private const val TAG = "ForestRun"
+private const val ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES = 30L
 
 /**
  * The top-level game view.
@@ -306,6 +308,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var safeContentTransform = SafeContentTransform.create(1, 1)
     private var accessibilitySettingsOpen = false
     private val accessibilityManager = context.getSystemService(AccessibilityManager::class.java)
+    private val accessibilityAnnouncementPolicy = AccessibilityAnnouncementPolicy()
     private val liveAccessibilityActions by lazy {
         LiveGameAccessibilityActions(
             menuPrimaryAction = ::performAccessibilityMenuPrimary,
@@ -729,9 +732,26 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun notifyAccessibilityTreeChanged() {
-        if (accessibilityManager?.isEnabled == true) {
-            gameAccessibilityNodeProvider.notifySemanticTreeChanged()
+        val manager = accessibilityManager ?: return
+        if (!manager.isEnabled) return
+        gameAccessibilityNodeProvider.notifySemanticTreeChanged()
+        if (manager.isTouchExplorationEnabled) {
+            announceAccessibilitySnapshot(buildAccessibilitySnapshot())
         }
+    }
+
+    private fun updateAccessibilityAnnouncements() {
+        val manager = accessibilityManager ?: return
+        if (!manager.isEnabled || !manager.isTouchExplorationEnabled) return
+        if (debugFrameCounter % ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES != 0L) return
+        announceAccessibilitySnapshot(buildAccessibilitySnapshot())
+    }
+
+    private fun announceAccessibilitySnapshot(snapshot: AccessibilitySemanticSnapshot) {
+        accessibilityAnnouncementPolicy.next(
+            snapshot = snapshot,
+            nowMs = SystemClock.uptimeMillis().coerceAtLeast(0L)
+        )?.let(::announceForAccessibility)
     }
 
     private fun performAccessibilityMenuPrimary(): Boolean {
@@ -1220,6 +1240,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 14: Update all particles
         ParticleManager.update(deltaTime)
+
+        // Screen-reader run status is sampled, then coalesced by the policy into
+        // surface/Bloom changes or spaced distance milestones. Never announce
+        // frame-driven score/distance mutations directly.
+        updateAccessibilityAnnouncements()
     }
 
     override fun draw(canvas: Canvas) {
