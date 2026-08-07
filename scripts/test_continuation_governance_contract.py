@@ -72,7 +72,7 @@ class ContinuationGovernanceContractTest(unittest.TestCase):
         self.assertIn("AccessibilityNodeProvider", provider)
         self.assertIn("AccessibilityNodeIds", semantics)
         self.assertIn("stable IDs", document)
-        self.assertIn("provider is live in source", document)
+        self.assertIn("virtual-node provider and coalesced announcement policy are live in source", document)
         self.assertIn("Physical acceptance", document)
         self.assertIn("must still **not** be described as fully screen-reader accepted", document)
 
