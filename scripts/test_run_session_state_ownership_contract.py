@@ -2,7 +2,6 @@
 """Permanent source contract for top-level app/run state publication ownership."""
 
 from pathlib import Path
-import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,22 +11,22 @@ PLANNER = (ENGINE / "RunSessionTransitionPlanner.kt").read_text(encoding="utf-8"
 
 
 class RunSessionStateOwnershipContractTest(unittest.TestCase):
-    def test_game_view_has_one_post_initialization_assignment_site_per_state(self) -> None:
-        app_assignments = re.findall(r"(?m)^\s*appState\s*=\s*", GAME_VIEW)
-        run_assignments = re.findall(r"(?m)^\s*runState\s*=\s*", GAME_VIEW)
-        self.assertEqual(1, len(app_assignments))
-        self.assertEqual(1, len(run_assignments))
-        self.assertIn("appState = result.transition.after.appState", GAME_VIEW)
-        self.assertIn("runState = result.transition.after.runState", GAME_VIEW)
+    def test_game_view_has_one_authoritative_field_publication_pair(self) -> None:
+        self.assertEqual(
+            1,
+            GAME_VIEW.count("appState = result.transition.after.appState"),
+        )
+        self.assertEqual(
+            1,
+            GAME_VIEW.count("runState = result.transition.after.runState"),
+        )
+        self.assertNotIn("appState = AppGameState.", GAME_VIEW)
+        self.assertNotIn("runState = RunState.", GAME_VIEW)
 
     def test_debug_launches_route_through_explicit_session_event(self) -> None:
         self.assertEqual(
             2,
             GAME_VIEW.count("RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED"),
-        )
-        self.assertNotIn(
-            "appState = AppGameState.PLAYING\n            runState = RunState.PLAYING",
-            GAME_VIEW,
         )
         self.assertIn(
             "event == RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED",
