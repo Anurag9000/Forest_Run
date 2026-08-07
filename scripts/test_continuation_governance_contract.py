@@ -44,9 +44,14 @@ class ContinuationGovernanceContractTest(unittest.TestCase):
             ROOT
             / "app/src/main/java/com/anurag9000/forestrun/MainActivity.kt"
         ).read_text(encoding="utf-8")
-        root_delegate = (
+        game_view = (
             ROOT
-            / "app/src/main/java/com/anurag9000/forestrun/ForestRunAccessibilityDelegate.kt"
+            / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
+        ).read_text(encoding="utf-8")
+        provider = (
+            ROOT
+            / "app/src/main/java/com/anurag9000/forestrun/engine/"
+            "GameAccessibilityNodeProvider.kt"
         ).read_text(encoding="utf-8")
         semantics = (
             ROOT
@@ -54,12 +59,22 @@ class ContinuationGovernanceContractTest(unittest.TestCase):
             "GameAccessibilitySemantics.kt"
         ).read_text(encoding="utf-8")
         document = (ROOT / "docs/ACCESSIBILITY.md").read_text(encoding="utf-8")
-        self.assertIn("attachForestRunAccessibility", activity)
-        self.assertIn("dispatchTouchEvent", root_delegate)
+        self.assertNotIn("attachForestRunAccessibility", activity)
+        self.assertFalse(
+            (
+                ROOT
+                / "app/src/main/java/com/anurag9000/forestrun/"
+                "ForestRunAccessibilityDelegate.kt"
+            ).exists()
+        )
+        self.assertIn("getAccessibilityNodeProvider", game_view)
+        self.assertIn("GameAccessibilityActionRouter", game_view)
+        self.assertIn("AccessibilityNodeProvider", provider)
         self.assertIn("AccessibilityNodeIds", semantics)
         self.assertIn("stable IDs", document)
-        self.assertIn("not complete TalkBack support", document)
+        self.assertIn("provider is live in source", document)
         self.assertIn("Physical acceptance", document)
+        self.assertIn("must still **not** be described as fully screen-reader accepted", document)
 
     def test_security_policy_is_conditional_until_private_reporting_is_verified(self) -> None:
         policy = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
