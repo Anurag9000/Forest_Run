@@ -57,6 +57,12 @@ internal object GameAccessibilityGeometry {
                 gardenBox(width, height) { it.plantCards[index] }
             }
 
+            in AccessibilityNodeIds.GARDEN_FIRST_COSTUME until
+                AccessibilityNodeIds.GARDEN_FIRST_COSTUME + CostumeStyle.entries.size -> {
+                val index = nodeId - AccessibilityNodeIds.GARDEN_FIRST_COSTUME
+                gardenBox(width, height) { it.wardrobeCards[index] }
+            }
+
             else -> box(width, height, 0.05f, 0.05f, 0.95f, 0.95f)
         }
     }
