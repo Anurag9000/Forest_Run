@@ -7,15 +7,11 @@ import pathlib
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-GAME_VIEW = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
-DISPATCHER = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/engine/CollisionOutcomeDispatcher.kt"
-)
-TERMINAL = (
-    ROOT
-    / "app/src/main/java/com/anurag9000/forestrun/engine/TerminalHitOutcomeCoordinator.kt"
-)
+ENGINE = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine"
+GAME_VIEW = ENGINE / "GameView.kt"
+DISPATCHER = ENGINE / "CollisionOutcomeDispatcher.kt"
+TERMINAL = ENGINE / "TerminalHitOutcomeCoordinator.kt"
+SESSION_PLANNER = ENGINE / "RunSessionTransitionPlanner.kt"
 
 
 def extract_braced_block(source: str, signature: str) -> str:
@@ -83,6 +79,7 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
         cls.game_view = GAME_VIEW.read_text(encoding="utf-8")
         cls.dispatcher = DISPATCHER.read_text(encoding="utf-8")
         cls.terminal = TERMINAL.read_text(encoding="utf-8")
+        cls.session_planner = SESSION_PLANNER.read_text(encoding="utf-8")
         dispatch_start = cls.game_view.index(
             "val dispatchResult = collisionOutcomeDispatcher.dispatch("
         )
@@ -121,7 +118,7 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
             self.assertNotIn(call, self.dispatch)
             self.assertNotIn(call, self.live_collision)
 
-    def test_post_impact_capture_precedes_completion_and_death(self) -> None:
+    def test_post_impact_capture_precedes_completion_and_typed_death_handoff(self) -> None:
         capture_order = (
             "captureTerminalImpact = {",
             "ghostRecorder.detachSnapshot()",
@@ -145,13 +142,19 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
             "val completedHit = dispatchResult.completion",
             "currentRestQuote = completedHit.summary.restQuote",
             "currentRunSummary = completedHit.summary",
-            "runResetManager.triggerDeath(gameState)",
-            "runState = RunState.DYING",
+            "applyRunSessionEvent(RunSessionEvent.TERMINAL_COLLISION_COMPLETED)",
         )
         positions = [
             self.live_collision.index(item) for item in transition_order
         ]
         self.assertEqual(sorted(positions), positions)
+        self.assertNotIn("runResetManager.triggerDeath(gameState)", self.live_collision)
+        self.assertNotIn("runState = RunState.DYING", self.live_collision)
+        self.assertIn(
+            "event == RunSessionEvent.TERMINAL_COLLISION_COMPLETED",
+            self.session_planner,
+        )
+        self.assertIn("runState = RunState.DYING", self.session_planner)
 
     def test_game_view_passes_live_identity_and_accepts_completed_summary(self) -> None:
         required_once = (
