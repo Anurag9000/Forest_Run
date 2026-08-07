@@ -112,7 +112,29 @@ class RunSessionTransitionPlannerTest {
     }
 
     @Test
-    fun everyInvalidStateEventPairIsACompleteNoOp() {
+    fun debugPlayingStateRequestIsTheOnlyStateAgnosticTransition() {
+        val snapshots = AppGameState.entries.flatMap { app ->
+            RunState.entries.map { run -> RunSessionSnapshot(app, run) }
+        }
+        snapshots.forEach { snapshot ->
+            val transition = RunSessionTransitionPlanner.plan(
+                snapshot,
+                RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED
+            )
+            assertEquals(
+                RunSessionSnapshot(AppGameState.PLAYING, RunState.PLAYING),
+                transition.after
+            )
+            assertTrue(transition.effects.isEmpty())
+            assertEquals(
+                snapshot != RunSessionSnapshot(AppGameState.PLAYING, RunState.PLAYING),
+                transition.changed
+            )
+        }
+    }
+
+    @Test
+    fun everyInvalidOrdinaryStateEventPairIsACompleteNoOp() {
         val validPairs = setOf(
             RunSessionSnapshot(AppGameState.MENU, RunState.PLAYING) to
                 RunSessionEvent.MENU_RUN_REQUESTED,
@@ -136,13 +158,15 @@ class RunSessionTransitionPlannerTest {
             RunState.entries.map { run -> RunSessionSnapshot(app, run) }
         }
         snapshots.forEach { snapshot ->
-            RunSessionEvent.entries.forEach { event ->
-                if ((snapshot to event) in validPairs) return@forEach
-                val transition = RunSessionTransitionPlanner.plan(snapshot, event)
-                assertEquals(snapshot, transition.after)
-                assertTrue(transition.effects.isEmpty())
-                assertFalse(transition.changed)
-            }
+            RunSessionEvent.entries
+                .filterNot { it == RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED }
+                .forEach { event ->
+                    if ((snapshot to event) in validPairs) return@forEach
+                    val transition = RunSessionTransitionPlanner.plan(snapshot, event)
+                    assertEquals(snapshot, transition.after)
+                    assertTrue(transition.effects.isEmpty())
+                    assertFalse(transition.changed)
+                }
         }
     }
 }
