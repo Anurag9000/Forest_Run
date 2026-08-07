@@ -64,7 +64,7 @@ Instrumentation enables measurement but does not prove representative-device per
 
 `AppGameState` actively uses `MENU`, `GARDEN`, and `PLAYING`. Legacy `BLOOM` and `REST` entries remain for compatibility and must not drive new runtime flow.
 
-`RunState` owns `PLAYING`, `DYING`, `GAME_OVER`, and `RESTARTING`. `RunResetManager` advances death timing, restart fade, reset, and return to the Garden.
+`RunState` owns `PLAYING`, `DYING`, `GAME_OVER`, and `RESTARTING`. `RunResetManager` advances death timing and restart mechanics. `RunSessionTransitionPlanner` is the pure transition table, `RunSessionTransitionCoordinator` executes its ordered effects, and `LiveRunSessionEffects` adapts those effects to the current Android/game owners. `GameView` adopts a transition only after all required effects succeed, so screen/run state cannot advance after a failed live effect.
 
 Bloom is an orthogonal flag owned by `GameStateManager`; it does not replace locomotion state.
 
@@ -108,7 +108,7 @@ Collision queries are pure. Selection severity is deterministic:
 HIT > STUMBLE > MERCY
 ```
 
-Only the selected entity receives effects. Collision arbitration precedes pass processing. Resolved encounters and clean passes persist centrally and once.
+Only the selected entity receives effects. Collision arbitration precedes pass processing. `CollisionOutcomeDispatcher` is the single result dispatcher for terminal HIT, STUMBLE, MERCY_MISS, and NONE; it delegates ordered behavior to the terminal-impact, terminal-completion, and nonterminal coordinators. Resolved encounters and clean passes persist centrally and once.
 
 Allocation-free expanded-rectangle probes preserve entity-specific mercy geometry without temporary `RectF` allocation.
 
@@ -222,11 +222,15 @@ See `docs/GHOST_PROMOTION_RECOVERY.md`, `docs/GHOST_PERSISTENCE_NAMESPACES.md`, 
 
 ## 13. Collision outcomes and persistent memory
 
-Persistence remains split among:
+Low-level persistence remains split among specialized durability owners, while live application mutations share `ApplicationPersistenceFacade`:
 
 - `SaveManager` — scores, Seeds, summaries, Garden/costume values, ghost compatibility paths;
 - `PersistentMemoryManager` — encounters, hits, passes, spares, relationships, return/history signals;
-- `SaveIntegrityManager` — migration, type repair, bounds, saturation, incomplete-summary rejection, compatibility storage.
+- `RunOutcomePersistenceCoordinator` and ghost promotion stores — independently recoverable terminal/ghost protocols;
+- `SaveIntegrityManager` — migration, type repair, bounds, saturation, incomplete-summary rejection, compatibility storage;
+- `ApplicationPersistenceFacade` — the live application boundary for terminal outcome commits, encounter/pass/hit memory, Garden purchases, wardrobe writes, feedback settings, and recovery maintenance.
+
+The facade deliberately does **not** claim a global ACID transaction across SharedPreferences, AtomicFile ghost artifacts, and recovery journals. Each durability domain retains its own atomic/recovery protocol.
 
 ### Immediate terminal HIT impact owner
 
@@ -243,11 +247,11 @@ record run hit
 → post-impact capture callback
 ```
 
-The private `GameViewTerminalHitImpactEffects` adapter maps those operations one-to-one to `GameStateManager`, `GhostPlayer`, `Player`, `CameraSystem`, `SfxManager`, `LeitmotifManager`, and `HapticManager`.
+The shared `LiveCollisionEffects` adapter maps terminal and nonterminal live effects one-to-one to `GameStateManager`, `GhostPlayer`, `Player`, camera, audio, haptic, particle, and flash owners. The former private terminal/nonterminal `GameView` effect adapters no longer exist.
 
 The capture callback runs only after all effects and captures detached ghost, killer, biome, route tier, and Player coordinates. `TerminalHitImpactCapture` requires presentation and completion killer identities to match.
 
-`GameView` retains one impact invocation, one completion invocation, returned-summary assignment, death-timer trigger, and transition to `DYING`. It no longer calls terminal Player/ghost/camera/audio/music/haptic effects directly.
+`GameView` captures the live collision inputs once and calls `CollisionOutcomeDispatcher`. A terminal dispatch result supplies the completed summary; `GameView` stores that presentation state and emits `RunSessionEvent.TERMINAL_COLLISION_COMPLETED`. The session transition coordinator owns the death effect and `DYING` transition. `GameView` no longer invokes terminal impact/completion coordinators or death state mutation directly.
 
 ### Terminal completion owner
 
@@ -273,7 +277,7 @@ STUMBLE preserves run hit, optional persistent relationship hit, ghost suppressi
 
 MERCY_MISS preserves flash, SFX, haptic, authored copy, mercy particles, and shake.
 
-`GameViewNonTerminalCollisionEffects` remains a private live-state adapter for Player, ghost, flash, camera, audio, haptic, and particles. Deterministic/persistence-disabled scenarios retain local feedback without permanent relationship writes.
+STUMBLE and MERCY_MISS share the same `LiveCollisionEffects` adapter as terminal HIT. Deterministic/persistence-disabled scenarios retain local feedback without permanent relationship writes, while persistent relationship writes flow through the shared application facade.
 
 ### Exactly-once non-ghost persistence
 
@@ -305,6 +309,8 @@ Safe retry preserves corrupt evidence. Pending discard retries canonical recover
 The run handler cannot publish ghosts or advance distance. The ghost handler never opens the run journal. Ghost inspection validates version-2 distance-bound SHA-256 or version-1 FNV compatibility. Receipt cleanup preserves a valid manifest; manifest cleanup preserves the ghost file. Support output contains only fixed status codes.
 
 `AndroidRecoveryEvidenceMaintenance` captures one immutable namespace during construction. Both evidence handlers use namespace-bound stores, so switching the active `SaveManager` namespace afterward does not redirect inspection, recovery, or cleanup performed by that maintenance instance.
+
+Ordinary players also have a fail-closed recovery surface: `RecoveryEvidencePresentation` produces privacy-safe rows, `RecoveryEvidenceUserController` revalidates every requested action through `ApplicationPersistenceFacade`, and `RecoveryEvidenceDialogCoordinator` is attached by `MainActivity`. Safe retry is non-destructive; corrupt/pending discard requires a second explicit confirmation. Debug/ADB maintenance remains a separate acceptance/support surface.
 
 Deterministic scenarios remain isolated from permanent score, encounter, relationship, Garden, summary, and ghost history while receiving local authored feedback.
 
@@ -369,14 +375,13 @@ Debug scenarios and focused harnesses do not replace ordinary-play or physical-d
 
 ## 20. Known debt and unresolved evidence
 
-- `GameView` remains large and requires incremental behavior-preserving decomposition.
-- The complete collision-result `when` dispatcher remains in `GameView`.
-- STUMBLE and MERCY_MISS live effects remain in `GameViewNonTerminalCollisionEffects`.
-- Persistence ownership remains distributed across several managers and should be consolidated only after behavior remains stable.
+- `GameView` remains a large SurfaceView orchestration host, but the previously identified collision-result dispatcher, live collision-effect adapters, and top-level run-session transition table/effect execution have been extracted. Further decomposition should be driven by measured maintainability or device findings rather than broad rewrites.
+- Low-level persistence remains intentionally separated by durability domain behind `ApplicationPersistenceFacade`; there is no global transaction across SharedPreferences and AtomicFile protocols.
 - Ghost/distance mismatches predating persistent manifests cannot be reconstructed.
 - Version-1 sidecars retain noncryptographic identity until replay requires strong upgrade.
 - The healthy already-applied path avoids repeated hashing; maintenance performs full validation.
 - SHA-256 identifies content/distance but does not authenticate a trusted writer.
+- Source integration does not replace physical-device fairness, TalkBack, performance/thermal/battery, signed-install, store-delivery, or final asset/policy acceptance evidence.
 - Ghost and non-ghost recovery are independent rather than one global transaction.
 - Automatic recovery remains fail-closed; deliberate remediation is debug/support-only with no end-user UI.
 - Simultaneous two-namespace AtomicFile activity and process-death recovery require exact-head Android and physical-device acceptance.
