@@ -148,9 +148,10 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
         for token in required_live:
             self.assertIn(token, self.game_view, token)
         for token in (
-            "RUN_DISTANCE_BUCKET_METRES = 120",
-            "RUN_MIN_INTERVAL_MS = 8_000L",
-            "GARDEN_MIN_INTERVAL_MS = 2_500L",
+            "DEFAULT_ROUTINE_INTERVAL_MS = 10_000L",
+            "DEFAULT_DISTANCE_STEP_M = 100",
+            "current.gardenUnlockedPlants > old.gardenUnlockedPlants",
+            "current.wardrobeUnlocked && !old.wardrobeUnlocked",
         ):
             self.assertIn(token, self.announcements, token)
         self.assertNotIn("announceForAccessibility", self.provider)
