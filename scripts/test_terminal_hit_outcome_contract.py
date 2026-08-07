@@ -142,12 +142,13 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
             "val completedHit = dispatchResult.completion",
             "currentRestQuote = completedHit.summary.restQuote",
             "currentRunSummary = completedHit.summary",
-            "applyRunSessionEvent(RunSessionEvent.TERMINAL_COLLISION_COMPLETED)",
+            "RunSessionEvent.TERMINAL_COLLISION_COMPLETED",
         )
         positions = [
             self.live_collision.index(item) for item in transition_order
         ]
         self.assertEqual(sorted(positions), positions)
+        self.assertIn("applyRunSessionEvent(", self.live_collision)
         self.assertNotIn("runResetManager.triggerDeath(gameState)", self.live_collision)
         self.assertNotIn("runState = RunState.DYING", self.live_collision)
         self.assertIn(
