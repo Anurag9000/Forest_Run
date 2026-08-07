@@ -596,8 +596,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 )
             }
             director.selectScenario(scenario)
-            appState = AppGameState.PLAYING
-            runState = RunState.PLAYING
+            check(applyRunSessionEvent(RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED)) {
+                "Debug scenario state publication was rejected"
+            }
             prepareEncounterScenario()
             return
         }
@@ -607,8 +608,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             debugScenarioVisualsEnabled = false
             debugScenarioScript.clear()
             prepareFreshRun()
-            appState = AppGameState.PLAYING
-            runState = RunState.PLAYING
+            check(applyRunSessionEvent(RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED)) {
+                "Debug auto-start state publication was rejected"
+            }
         }
     }
 
