@@ -17,6 +17,7 @@ PROVIDER = ENGINE / "GameAccessibilityNodeProvider.kt"
 SEMANTICS = ENGINE / "GameAccessibilitySemantics.kt"
 ACTIONS = ENGINE / "LiveGameAccessibilityActions.kt"
 GEOMETRY = ENGINE / "GameAccessibilityGeometry.kt"
+ANNOUNCEMENTS = ENGINE / "AccessibilityAnnouncementPolicy.kt"
 
 
 class LiveAccessibilityProviderContractTest(unittest.TestCase):
@@ -29,13 +30,16 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
         cls.semantics = SEMANTICS.read_text(encoding="utf-8")
         cls.actions = ACTIONS.read_text(encoding="utf-8")
         cls.geometry = GEOMETRY.read_text(encoding="utf-8")
+        cls.announcements = ANNOUNCEMENTS.read_text(encoding="utf-8")
 
-    def test_legacy_root_delegate_and_one_shot_migration_are_absent(self) -> None:
+    def test_legacy_root_delegate_and_one_shot_migrations_are_absent(self) -> None:
         forbidden_paths = (
             APP / "ForestRunAccessibilityDelegate.kt",
             TESTS / "ForestRunAccessibilityDelegateTest.kt",
             ROOT / "scripts/migrate_live_accessibility_provider.py",
             ROOT / ".github/workflows/live-accessibility-migration.yml",
+            ROOT / "scripts/migrate_live_accessibility_announcements.py",
+            ROOT / ".github/workflows/live-accessibility-announcement-migration.yml",
         )
         for path in forbidden_paths:
             self.assertFalse(path.exists(), str(path))
@@ -80,15 +84,13 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
         self.assertIn("AccessibilitySurface.GARDEN", self.game_view)
         self.assertIn("AccessibilitySurface.REST", self.game_view)
 
-    def test_live_actions_route_to_real_owners(self) -> None:
+    def test_live_actions_route_to_real_owners_and_shared_persistence_facade(self) -> None:
         required = (
             "sessionEventAction = ::applyRunSessionEvent",
             "mainMenuScreen.performAccessibilityPrimaryAction()",
-            "FeedbackSettings.setReducedMotion(",
-            "FeedbackSettings.setAudioEnabled(",
-            "FeedbackSettings.setHapticsEnabled(",
-            "GardenPurchaseManager.purchaseNext(context, index)",
-            "CostumeManager.equip(context, style)",
+            "applicationPersistence.saveFeedbackPreferences(",
+            "applicationPersistence.purchaseNextGardenPlant(index)",
+            "applicationPersistence.equipCostume(style)",
             "inputHandler.onJumpPressed",
             "inputHandler.onJumpReleased",
             "inputHandler.onDuckPressed",
@@ -96,6 +98,14 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
         )
         for token in required:
             self.assertIn(token, self.game_view, token)
+        for forbidden in (
+            "GardenPurchaseManager.purchaseNext(context, index)",
+            "CostumeManager.equip(context, style)",
+            "FeedbackSettings.setReducedMotion(context",
+            "FeedbackSettings.setAudioEnabled(context",
+            "FeedbackSettings.setHapticsEnabled(context",
+        ):
+            self.assertNotIn(forbidden, self.game_view, forbidden)
         self.assertIn("RunSessionEvent.REST_TAPPED", self.actions)
         self.assertIn("RunSessionEvent.GARDEN_RUN_REQUESTED", self.actions)
         self.assertIn("RunSessionEvent.GARDEN_BACK_REQUESTED", self.actions)
@@ -122,8 +132,28 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
 
     def test_state_mutation_owners_publish_semantic_tree_changes(self) -> None:
         self.assertIn("notifyAccessibilityTreeChanged()", self.game_view)
-        self.assertIn("accessibilityManager?.isEnabled == true", self.game_view)
+        self.assertIn("if (!manager.isEnabled) return", self.game_view)
         self.assertNotIn("notifySemanticTreeChanged()\n        return true", self.provider)
+
+    def test_live_announcements_are_touch_exploration_only_sampled_and_coalesced(self) -> None:
+        required_live = (
+            "AccessibilityAnnouncementPolicy()",
+            "ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES = 30L",
+            "manager.isTouchExplorationEnabled",
+            "debugFrameCounter % ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES != 0L",
+            "SystemClock.uptimeMillis()",
+            "announceAccessibilitySnapshot(buildAccessibilitySnapshot())",
+            "?.let(::announceForAccessibility)",
+        )
+        for token in required_live:
+            self.assertIn(token, self.game_view, token)
+        for token in (
+            "RUN_DISTANCE_BUCKET_METRES = 120",
+            "RUN_MIN_INTERVAL_MS = 8_000L",
+            "GARDEN_MIN_INTERVAL_MS = 2_500L",
+        ):
+            self.assertIn(token, self.announcements, token)
+        self.assertNotIn("announceForAccessibility", self.provider)
 
 
 if __name__ == "__main__":
