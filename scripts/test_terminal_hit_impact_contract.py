@@ -101,6 +101,13 @@ class TerminalHitImpactContractTest(unittest.TestCase):
             effects_start,
         )
         cls.live_effects = cls.game_view[effects_start:effects_end]
+        session_start = cls.game_view.index(
+            "private val runSessionTransitions = RunSessionTransitionCoordinator("
+        )
+        session_end = cls.game_view.index(
+            "@Volatile\n    internal var runMode", session_start
+        )
+        cls.live_session = cls.game_view[session_start:session_end]
         cls.dispatch = extract_braced_block(
             cls.dispatcher,
             "fun dispatch(\n        result: CollisionResult,",
@@ -201,9 +208,14 @@ class TerminalHitImpactContractTest(unittest.TestCase):
             "RunSessionEffect.TRIGGER_DEATH -> triggerDeathAction()",
             self.session_effects,
         )
-        self.assertIn(
-            "triggerDeathAction = { runResetManager.triggerDeath(gameState) }",
-            self.game_view,
+        self.assertIn("triggerDeathAction = {", self.live_session)
+        self.assertEqual(
+            1,
+            self.live_session.count("runResetManager.triggerDeath(gameState)"),
+        )
+        self.assertLess(
+            self.live_session.index("check(::gameState.isInitialized)"),
+            self.live_session.index("runResetManager.triggerDeath(gameState)"),
         )
 
     def test_shared_adapter_maps_terminal_effects_to_original_owners(self) -> None:
