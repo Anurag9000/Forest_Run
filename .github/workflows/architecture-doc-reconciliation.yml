@@ -1,0 +1,48 @@
+name: Architecture documentation reconciliation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/migrate_architecture_runtime_ownership_docs.py
+      - .github/workflows/architecture-doc-reconciliation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: architecture-doc-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Apply exact architecture reconciliation
+        run: python3 scripts/migrate_architecture_runtime_ownership_docs.py
+      - name: Verify result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          test ! -e scripts/migrate_architecture_runtime_ownership_docs.py
+          test ! -e .github/workflows/architecture-doc-reconciliation.yml
+          grep -q 'CollisionOutcomeDispatcher' docs/ARCHITECTURE.md
+          grep -q 'ApplicationPersistenceFacade' docs/ARCHITECTURE.md
+          grep -q 'RecoveryEvidenceDialogCoordinator' docs/ARCHITECTURE.md
+          ! grep -q 'GameViewTerminalHitImpactEffects\|GameViewNonTerminalCollisionEffects' docs/ARCHITECTURE.md
+      - name: Commit directly to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'forest-run-migration-bot'
+          git config user.email 'forest-run-migration-bot@users.noreply.github.com'
+          git add -A
+          git commit -m 'docs(architecture): reconcile live runtime ownership'
+          git push origin HEAD:main
