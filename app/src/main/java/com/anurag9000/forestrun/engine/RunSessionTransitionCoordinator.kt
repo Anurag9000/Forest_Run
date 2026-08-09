@@ -17,15 +17,21 @@ internal data class RunSessionExecutionResult(
     val disposition: RunSessionExecutionDisposition,
     val failedEffect: RunSessionEffect? = null
 ) {
-    /** Caller may publish [RunSessionTransition.after] only when this is true. */
+    /**
+     * Caller may publish [RunSessionTransition.after] only when the route was
+     * accepted and no effect failed. Accepted idempotent routes deliberately
+     * allow same-state publication; unaccepted stale/invalid no-ops do not.
+     */
     val mayAdoptAfterState: Boolean
-        get() = disposition == RunSessionExecutionDisposition.APPLIED
+        get() = transition.accepted &&
+            disposition != RunSessionExecutionDisposition.EFFECT_FAILED
 }
 
 /**
  * Applies planned effects in declared order and leaves state publication to the
  * live owner. If an effect fails, later effects are skipped and the caller must
- * retain the original snapshot.
+ * retain the original snapshot. Accepted idempotent routes remain NO_OP at the
+ * effect layer but may still be acknowledged by the state owner.
  */
 internal class RunSessionTransitionCoordinator(
     private val effects: RunSessionEffectSink
