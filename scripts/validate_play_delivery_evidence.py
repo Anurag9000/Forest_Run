@@ -262,13 +262,14 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> P
         "branch": "main",
         "application_id": "com.anurag9000.forestrun",
         "commit_sha": matrix_summary.candidate_sha,
-        "version_code": None,
+        "version_code": matrix_summary.version_code,
         "artifact_sha256": matrix_summary.artifact_sha256,
         "upload_certificate_sha256": matrix_summary.upload_certificate_sha256,
         "app_signing_certificate_sha256": matrix_summary.app_signing_certificate_sha256,
     }
     version_code = _integer(candidate["version_code"], "candidate.version_code", minimum=1)
-    expected_candidate["version_code"] = version_code
+    if version_code != matrix_summary.version_code:
+        raise PlayDeliveryError("candidate.version_code does not match installed identity matrix")
     for key in (
         "repository",
         "branch",
@@ -289,11 +290,6 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> P
             raise PlayDeliveryError(f"candidate.{key} does not match installed identity matrix")
     if not SHA40_RE.fullmatch(matrix_summary.candidate_sha):
         raise PlayDeliveryError("matrix candidate SHA is invalid")
-
-    # The matrix intentionally does not carry version code in its summary; read it
-    # from its bound device manifest indirectly by requiring the delivery record's
-    # release version to be positive and cross-checking the same value again in the
-    # governance/device layer. This schema does not invent it.
 
     delivery = _mapping(root["delivery"], "delivery")
     _require_exact_keys(

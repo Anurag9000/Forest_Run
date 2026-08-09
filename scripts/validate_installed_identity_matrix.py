@@ -33,6 +33,7 @@ class InstalledIdentityMatrixError(ValueError):
 @dataclass(frozen=True)
 class InstalledIdentityMatrixSummary:
     candidate_sha: str
+    version_code: int
     artifact_sha256: str
     upload_certificate_sha256: str
     app_signing_certificate_sha256: str
@@ -45,6 +46,7 @@ class InstalledIdentityMatrixSummary:
         return {
             "status": "valid",
             "candidate_sha": self.candidate_sha,
+            "version_code": self.version_code,
             "artifact_sha256": self.artifact_sha256,
             "upload_certificate_sha256": self.upload_certificate_sha256,
             "app_signing_certificate_sha256": self.app_signing_certificate_sha256,
@@ -318,6 +320,7 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> I
 
     return InstalledIdentityMatrixSummary(
         candidate_sha=device_summary.candidate_sha,
+        version_code=_integer(device_candidate.get("version_code"), "device candidate.version_code", minimum=1),
         artifact_sha256=device_summary.artifact_sha256,
         upload_certificate_sha256=device_summary.upload_certificate_sha256,
         app_signing_certificate_sha256=device_summary.app_signing_certificate_sha256,

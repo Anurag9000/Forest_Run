@@ -64,6 +64,7 @@ class InstalledIdentityMatrixTest(unittest.TestCase):
             root = Path(temporary)
             compiled, summary = self.compile_valid(root)
             self.assertEqual(device_fixture.SHA, summary.candidate_sha)
+            self.assertEqual(7, summary.version_code)
             self.assertEqual(device_fixture.ARTIFACT_SHA, summary.artifact_sha256)
             self.assertEqual(device_fixture.UPLOAD_CERT_SHA, summary.upload_certificate_sha256)
             self.assertEqual(device_fixture.APP_SIGNING_CERT_SHA, summary.app_signing_certificate_sha256)
