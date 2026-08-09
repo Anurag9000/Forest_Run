@@ -8,7 +8,9 @@ import unittest
 from pathlib import Path
 
 import compile_human_acceptance
+import compile_installed_identity_matrix
 import compile_release_governance as compiler
+import test_installed_identity_matrix as matrix_fixture
 import test_validate_human_acceptance as human_fixture
 import validate_release_governance as governance
 
@@ -31,8 +33,20 @@ def _prepare_human(root: Path) -> tuple[dict, Path, Path]:
 
 def _governance_draft(root: Path) -> dict:
     candidate, _, _ = _prepare_human(root)
+    matrix_draft, _ = matrix_fixture.prepare(root)
+    matrix_draft_path = root / "installed-identity-matrix-draft.json"
+    matrix_path = root / "installed-identity-matrix.json"
+    matrix_draft_path.write_text(
+        json.dumps(matrix_draft, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    compile_installed_identity_matrix.compile_file(matrix_draft_path, matrix_path)
+
     evidence: dict[str, str] = {}
     for kind in sorted(governance.REQUIRED_EVIDENCE_KINDS):
+        if kind == "installed_identity_matrix":
+            evidence[kind] = "installed-identity-matrix.json"
+            continue
         suffix = ".md" if kind in {"release_notes", "changelog", "third_party_notices"} else ".txt"
         relative = f"governance-evidence/{kind}{suffix}"
         path = root / relative
@@ -93,6 +107,7 @@ class ReleaseGovernanceTest(unittest.TestCase):
             self.assertEqual(20, summary.decision_count)
             self.assertEqual(len(governance.REQUIRED_EVIDENCE_KINDS), summary.evidence_file_count)
             self.assertEqual(2, summary.reviewer_count)
+            self.assertRegex(summary.installed_identity_matrix_sha256, r"^[0-9a-f]{64}$")
             self.assertRegex(compiled["device_acceptance"]["sha256"], r"^[0-9a-f]{64}$")
             self.assertRegex(compiled["human_acceptance"]["sha256"], r"^[0-9a-f]{64}$")
             for reference in compiled["evidence"].values():

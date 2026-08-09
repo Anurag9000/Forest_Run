@@ -24,6 +24,7 @@ from typing import Any, Mapping, Sequence
 import strict_json
 import validate_device_acceptance as device_acceptance
 import validate_human_acceptance as human_acceptance
+import validate_installed_identity_matrix as installed_matrix
 import validate_release_governance as governance
 import verify_release_evidence_index as evidence_index
 
@@ -38,6 +39,7 @@ REQUIRED_BOUND_KINDS = frozenset(
         "device_acceptance",
         "device_aggregate",
         "human_acceptance",
+        "installed_identity_matrix",
         "release_governance",
         "screenshot_manifest",
         "graphics_manifest",
@@ -58,6 +60,7 @@ class ReleaseReadinessSummary:
     app_signing_certificate_sha256: str
     device_acceptance_sha256: str
     human_acceptance_sha256: str
+    installed_identity_matrix_sha256: str
     governance_sha256: str
     evidence_index_sha256: str
     evidence_set_sha256: str
@@ -72,6 +75,7 @@ class ReleaseReadinessSummary:
             "app_signing_certificate_sha256": self.app_signing_certificate_sha256,
             "device_acceptance_sha256": self.device_acceptance_sha256,
             "human_acceptance_sha256": self.human_acceptance_sha256,
+            "installed_identity_matrix_sha256": self.installed_identity_matrix_sha256,
             "governance_sha256": self.governance_sha256,
             "evidence_index_sha256": self.evidence_index_sha256,
             "evidence_set_sha256": self.evidence_set_sha256,
@@ -184,6 +188,7 @@ def validate_readiness(
     expected_candidate_sha: str,
     device_manifest: Path,
     human_manifest: Path,
+    installed_identity_matrix: Path,
     governance_manifest: Path,
     release_index: Path,
 ) -> ReleaseReadinessSummary:
@@ -194,6 +199,9 @@ def validate_readiness(
     )
     human_relative, human_path = _safe_relative_path(
         human_manifest, root, "human acceptance manifest"
+    )
+    installed_matrix_relative, installed_matrix_path = _safe_relative_path(
+        installed_identity_matrix, root, "installed identity matrix"
     )
     governance_relative, governance_path = _safe_relative_path(
         governance_manifest, root, "release governance manifest"
@@ -209,6 +217,10 @@ def validate_readiness(
     except (OSError, human_acceptance.HumanAcceptanceError) as exc:
         raise ReleaseReadinessError(f"human acceptance failed: {exc}") from exc
     try:
+        installed_matrix_summary = installed_matrix.load_and_validate(installed_matrix_path)
+    except (OSError, installed_matrix.InstalledIdentityMatrixError) as exc:
+        raise ReleaseReadinessError(f"installed identity matrix failed: {exc}") from exc
+    try:
         governance_summary = governance.load_and_validate(governance_path)
     except (OSError, governance.GovernanceError) as exc:
         raise ReleaseReadinessError(f"release governance failed: {exc}") from exc
@@ -216,6 +228,7 @@ def validate_readiness(
     candidate_values = {
         device_summary.candidate_sha,
         human_summary.candidate_sha,
+        installed_matrix_summary.candidate_sha,
         governance_summary.candidate_sha,
     }
     if candidate_values != {expected}:
@@ -225,6 +238,7 @@ def validate_readiness(
     artifact_values = {
         device_summary.artifact_sha256,
         human_summary.artifact_sha256,
+        installed_matrix_summary.artifact_sha256,
         governance_summary.artifact_sha256,
     }
     if len(artifact_values) != 1:
@@ -234,6 +248,7 @@ def validate_readiness(
     upload_certificates = {
         device_summary.upload_certificate_sha256,
         human_summary.upload_certificate_sha256,
+        installed_matrix_summary.upload_certificate_sha256,
         governance_summary.upload_certificate_sha256,
     }
     if len(upload_certificates) != 1:
@@ -243,6 +258,7 @@ def validate_readiness(
     app_signing_certificates = {
         device_summary.app_signing_certificate_sha256,
         human_summary.app_signing_certificate_sha256,
+        installed_matrix_summary.app_signing_certificate_sha256,
         governance_summary.app_signing_certificate_sha256,
     }
     if len(app_signing_certificates) != 1:
@@ -252,6 +268,7 @@ def validate_readiness(
 
     device_digest = _sha256_file(device_path)
     human_digest = _sha256_file(human_path)
+    installed_matrix_digest = _sha256_file(installed_matrix_path)
     governance_digest = _sha256_file(governance_path)
     if device_digest != device_summary.bundle_sha256:
         raise ReleaseReadinessError("device acceptance digest changed after validation")
@@ -263,6 +280,12 @@ def validate_readiness(
         raise ReleaseReadinessError("human acceptance digest changed after validation")
     if human_digest != governance_summary.human_acceptance_sha256:
         raise ReleaseReadinessError("governance references a different human manifest")
+    if installed_matrix_digest != installed_matrix_summary.manifest_sha256:
+        raise ReleaseReadinessError("installed identity matrix digest changed after validation")
+    if installed_matrix_summary.device_acceptance_sha256 != device_digest:
+        raise ReleaseReadinessError("installed identity matrix references a different device manifest")
+    if installed_matrix_digest != governance_summary.installed_identity_matrix_sha256:
+        raise ReleaseReadinessError("governance references a different installed identity matrix")
     if governance_digest != governance_summary.manifest_sha256:
         raise ReleaseReadinessError("governance digest changed after validation")
 
@@ -299,6 +322,12 @@ def validate_readiness(
     )
     _require_index_reference(
         entries,
+        kind="installed_identity_matrix",
+        expected_path=installed_matrix_relative,
+        expected_sha256=installed_matrix_digest,
+    )
+    _require_index_reference(
+        entries,
         kind="release_governance",
         expected_path=governance_relative,
         expected_sha256=governance_digest,
@@ -321,6 +350,7 @@ def validate_readiness(
         app_signing_certificate_sha256=governance_summary.app_signing_certificate_sha256,
         device_acceptance_sha256=device_digest,
         human_acceptance_sha256=human_digest,
+        installed_identity_matrix_sha256=installed_matrix_digest,
         governance_sha256=governance_digest,
         evidence_index_sha256=str(index_summary["indexSha256"]),
         evidence_set_sha256=str(index_summary["evidenceSetSha256"]),
@@ -358,6 +388,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--expected-candidate-sha", required=True)
     parser.add_argument("--device-acceptance", type=Path, required=True)
     parser.add_argument("--human-acceptance", type=Path, required=True)
+    parser.add_argument("--installed-identity-matrix", type=Path, required=True)
     parser.add_argument("--release-governance", type=Path, required=True)
     parser.add_argument("--release-evidence-index", type=Path, required=True)
     parser.add_argument("--summary-output", type=Path)
@@ -368,6 +399,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             expected_candidate_sha=args.expected_candidate_sha,
             device_manifest=args.device_acceptance,
             human_manifest=args.human_acceptance,
+            installed_identity_matrix=args.installed_identity_matrix,
             governance_manifest=args.release_governance,
             release_index=args.release_evidence_index,
         )

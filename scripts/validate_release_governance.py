@@ -27,6 +27,7 @@ from urllib.parse import urlsplit
 import strict_json
 import validate_device_acceptance as device_acceptance
 import validate_human_acceptance as human_acceptance
+import validate_installed_identity_matrix as installed_matrix
 
 SCHEMA_VERSION = 2
 MAX_MANIFEST_BYTES = 16 * 1024 * 1024
@@ -66,6 +67,7 @@ REQUIRED_EVIDENCE_KINDS = frozenset(
         "dependency_license_report",
         "dependency_vulnerability_report",
         "dependency_verification_report",
+        "installed_identity_matrix",
         "asset_provenance",
         "security_reporting_record",
         "license_decision_record",
@@ -99,6 +101,7 @@ class GovernanceSummary:
     app_signing_certificate_sha256: str
     device_acceptance_sha256: str
     human_acceptance_sha256: str
+    installed_identity_matrix_sha256: str
     decision_count: int
     evidence_file_count: int
     reviewer_count: int
@@ -113,6 +116,7 @@ class GovernanceSummary:
             "app_signing_certificate_sha256": self.app_signing_certificate_sha256,
             "device_acceptance_sha256": self.device_acceptance_sha256,
             "human_acceptance_sha256": self.human_acceptance_sha256,
+            "installed_identity_matrix_sha256": self.installed_identity_matrix_sha256,
             "decision_count": self.decision_count,
             "evidence_file_count": self.evidence_file_count,
             "reviewer_count": self.reviewer_count,
@@ -478,13 +482,30 @@ def validate_bundle(
     evidence = _mapping(root["evidence"], "evidence")
     _require_exact_keys(evidence, REQUIRED_EVIDENCE_KINDS, "evidence")
     seen_paths: dict[str, tuple[str, tuple[int, int] | None]] = {}
+    evidence_results: dict[str, tuple[str, str, Path]] = {}
     for kind in sorted(REQUIRED_EVIDENCE_KINDS):
-        _validate_file_reference(
+        evidence_results[kind] = _validate_file_reference(
             evidence[kind],
             label=f"evidence.{kind}",
             base=evidence_base,
             seen_paths=seen_paths,
         )
+
+    _, installed_matrix_digest, installed_matrix_path = evidence_results["installed_identity_matrix"]
+    try:
+        installed_matrix_summary = installed_matrix.load_and_validate(installed_matrix_path)
+    except installed_matrix.InstalledIdentityMatrixError as exc:
+        raise GovernanceError(f"installed identity matrix is invalid: {exc}") from exc
+    if installed_matrix_summary.candidate_sha != candidate_sha:
+        raise GovernanceError("installed identity matrix candidate does not match governance candidate")
+    if installed_matrix_summary.artifact_sha256 != artifact_sha:
+        raise GovernanceError("installed identity matrix artifact does not match governance candidate")
+    if installed_matrix_summary.upload_certificate_sha256 != upload_certificate_sha:
+        raise GovernanceError("installed identity matrix upload certificate does not match governance candidate")
+    if installed_matrix_summary.app_signing_certificate_sha256 != app_signing_certificate_sha:
+        raise GovernanceError("installed identity matrix app-signing certificate does not match governance candidate")
+    if installed_matrix_summary.device_acceptance_sha256 != device_digest:
+        raise GovernanceError("installed identity matrix references a different device acceptance manifest")
 
     decisions = _mapping(root["decisions"], "decisions")
     _require_exact_keys(decisions, DECISION_DOMAINS, "decisions")
@@ -563,6 +584,7 @@ def validate_bundle(
         app_signing_certificate_sha256=app_signing_certificate_sha,
         device_acceptance_sha256=device_digest,
         human_acceptance_sha256=human_digest,
+        installed_identity_matrix_sha256=installed_matrix_digest,
         decision_count=len(decisions),
         evidence_file_count=len(seen_paths),
         reviewer_count=len(decision_reviewers),
