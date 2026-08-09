@@ -1,0 +1,45 @@
+name: Candidate evidence reconciliation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/migrate_candidate_evidence_layers.py
+      - .github/workflows/candidate-evidence-reconciliation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Apply guarded reconciliation
+        run: python3 scripts/migrate_candidate_evidence_layers.py
+      - name: Verify migration result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          python3 -m unittest scripts.test_validate_human_acceptance scripts.test_validate_release_governance scripts.test_performance_collection_contract
+          test ! -e scripts/migrate_candidate_evidence_layers.py
+          test ! -e .github/workflows/candidate-evidence-reconciliation.yml
+          grep -q 'must not traverse a symbolic link' scripts/validate_human_acceptance.py
+          grep -q 'must not traverse a symbolic link' scripts/validate_release_governance.py
+          grep -q 'human_acceptance=release/evidence/human-acceptance.json' docs/RELEASE_EVIDENCE_INDEX.md
+          grep -q 'release_governance=release/evidence/release-governance.json' docs/RELEASE_EVIDENCE_INDEX.md
+          grep -q 'FOREST_RUN_CAPTURE_PERFETTO' docs/PERFORMANCE.md
+      - name: Commit descendant to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'forest-run-migration-bot'
+          git config user.email 'forest-run-migration-bot@users.noreply.github.com'
+          git add -A
+          git commit -m 'docs(evidence): reconcile candidate acceptance layers'
+          git push origin HEAD:main
