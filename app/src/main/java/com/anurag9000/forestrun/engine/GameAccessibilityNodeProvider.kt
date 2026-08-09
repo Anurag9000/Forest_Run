@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityNodeProvider
 import kotlin.math.ceil
@@ -22,7 +23,9 @@ internal fun interface AccessibilityNodeBoundsResolver {
  * This makes stale virtual IDs fail closed after screen/state transitions.
  * Mutation owners are responsible for publishing semantic-tree changes after a
  * successful write or transition; the provider emits only interaction/focus
- * events itself.
+ * events itself. Framework accessibility events are emitted only while Android's
+ * accessibility service is enabled; direct semantic routing remains safe and
+ * deterministic when tests or other callers query the provider while it is off.
  */
 internal class GameAccessibilityNodeProvider(
     private val hostView: View,
@@ -30,6 +33,8 @@ internal class GameAccessibilityNodeProvider(
     private val boundsResolver: AccessibilityNodeBoundsResolver
 ) : AccessibilityNodeProvider() {
     private var accessibilityFocusedNodeId: Int = View.NO_ID
+    private val accessibilityManager: AccessibilityManager? =
+        hostView.context.getSystemService(AccessibilityManager::class.java)
 
     override fun createAccessibilityNodeInfo(virtualViewId: Int): AccessibilityNodeInfo? =
         if (virtualViewId == HOST_VIEW_ID) {
@@ -76,10 +81,12 @@ internal class GameAccessibilityNodeProvider(
     }
 
     fun notifySemanticTreeChanged() {
+        if (!accessibilityEventsEnabled()) return
         hostView.sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
     }
 
     fun notifyNodeChanged(nodeId: Int) {
+        if (!accessibilityEventsEnabled()) return
         if (createVirtualNode(nodeId) == null) return
         sendEvent(nodeId, AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
     }
@@ -173,6 +180,7 @@ internal class GameAccessibilityNodeProvider(
     }
 
     private fun sendEvent(nodeId: Int, eventType: Int) {
+        if (!accessibilityEventsEnabled()) return
         val node = currentNodesOrEmpty().firstOrNull { it.id == nodeId } ?: return
         val event = AccessibilityEvent.obtain(eventType)
         event.packageName = hostView.context.packageName
@@ -187,6 +195,8 @@ internal class GameAccessibilityNodeProvider(
             hostView.sendAccessibilityEventUnchecked(event)
         }
     }
+
+    private fun accessibilityEventsEnabled(): Boolean = accessibilityManager?.isEnabled == true
 
     private fun currentNodesOrEmpty(): List<AccessibilitySemanticNode> = try {
         router.currentNodes()
