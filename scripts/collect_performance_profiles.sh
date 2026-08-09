@@ -63,6 +63,9 @@ TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUTPUT_DIR="${1:-performance-profiles/${SERIAL}/${TIMESTAMP}}"
 TEST_SELECTOR="${FOREST_RUN_PROFILE_TEST:-com.anurag9000.forestrun.HardwarePerformanceProfileTest}"
 THRESHOLDS="${FOREST_RUN_PERFORMANCE_THRESHOLDS:-}"
+CAPTURE_PERFETTO="${FOREST_RUN_CAPTURE_PERFETTO:-0}"
+PERFETTO_DURATION="${FOREST_RUN_PERFETTO_DURATION:-120s}"
+PERFETTO_CATEGORIES="${FOREST_RUN_PERFETTO_CATEGORIES:-sched freq idle am wm gfx view binder_driver hal dalvik input res memory power}"
 THRESHOLDS_ABS=""
 THRESHOLDS_SHA256=""
 if [[ -n "$THRESHOLDS" ]]; then
@@ -74,8 +77,43 @@ if [[ -n "$THRESHOLDS" ]]; then
   THRESHOLDS_SHA256="$($PYTHON -c 'import hashlib, pathlib, sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())' "$THRESHOLDS_ABS")"
 fi
 
+if [[ "$CAPTURE_PERFETTO" != "0" && "$CAPTURE_PERFETTO" != "1" ]]; then
+  echo "FOREST_RUN_CAPTURE_PERFETTO must be 0 or 1." >&2
+  exit 1
+fi
+if [[ "$CAPTURE_PERFETTO" == "1" && ! "$PERFETTO_DURATION" =~ ^[1-9][0-9]*(ms|s|m|h)$ ]]; then
+  echo "FOREST_RUN_PERFETTO_DURATION must be a positive perfetto duration such as 30s or 2m." >&2
+  exit 1
+fi
+
 mkdir -p "$OUTPUT_DIR"
 "${ADB_DEVICE[@]}" shell rm -rf "$REMOTE_DIR"
+
+capture_shell_diagnostic() {
+  local output_name="$1"
+  shift
+  {
+    printf '# candidate_sha=%s\n' "$CANDIDATE_SHA"
+    printf '# captured_at_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf '# command='
+    printf '%q ' "$@"
+    printf '\n'
+    "${ADB_DEVICE[@]}" shell "$@"
+  } > "${OUTPUT_DIR}/${output_name}" 2>&1 || {
+    printf 'Diagnostic command failed; inspect output above.\n' >> "${OUTPUT_DIR}/${output_name}"
+    return 0
+  }
+}
+
+capture_device_health_snapshot() {
+  local phase="$1"
+  capture_shell_diagnostic "battery-${phase}.txt" dumpsys battery
+  capture_shell_diagnostic "thermalservice-${phase}.txt" dumpsys thermalservice
+  capture_shell_diagnostic "power-${phase}.txt" dumpsys power
+  capture_shell_diagnostic "cpuinfo-${phase}.txt" dumpsys cpuinfo
+  capture_shell_diagnostic "audio-${phase}.txt" dumpsys audio
+  capture_shell_diagnostic "audio-flinger-${phase}.txt" dumpsys media.audio_flinger
+}
 
 {
   echo "candidate_sha=$CANDIDATE_SHA"
@@ -89,6 +127,11 @@ mkdir -p "$OUTPUT_DIR"
   echo "device=$("${ADB_DEVICE[@]}" shell getprop ro.product.device | tr -d '\r')"
   echo "sdk=$("${ADB_DEVICE[@]}" shell getprop ro.build.version.sdk | tr -d '\r')"
   echo "build_fingerprint=$("${ADB_DEVICE[@]}" shell getprop ro.build.fingerprint | tr -d '\r')"
+  echo "perfetto_capture=$CAPTURE_PERFETTO"
+  if [[ "$CAPTURE_PERFETTO" == "1" ]]; then
+    echo "perfetto_duration=$PERFETTO_DURATION"
+    echo "perfetto_categories=$PERFETTO_CATEGORIES"
+  fi
   if [[ -n "$THRESHOLDS_ABS" ]]; then
     echo "threshold_manifest=$THRESHOLDS_ABS"
     echo "threshold_manifest_sha256=$THRESHOLDS_SHA256"
@@ -97,10 +140,58 @@ mkdir -p "$OUTPUT_DIR"
   fi
 } > "${OUTPUT_DIR}/device.properties"
 
+capture_device_health_snapshot before
+
+PERFETTO_HOST_PID=""
+PERFETTO_REMOTE_TRACE="/data/misc/perfetto-traces/forest-run-${TIMESTAMP}.perfetto-trace"
+if [[ "$CAPTURE_PERFETTO" == "1" ]]; then
+  # Perfetto tracing is intentionally opt-in because tracing itself can perturb
+  # the timing run. Use it for a separate diagnostic capture of scheduling,
+  # CPU/frequency, graphics/input, Dalvik/GC, memory, and power activity.
+  read -r -a PERFETTO_CATEGORY_ARGS <<< "$PERFETTO_CATEGORIES"
+  (
+    "${ADB_DEVICE[@]}" shell perfetto \
+      -o "$PERFETTO_REMOTE_TRACE" \
+      -t "$PERFETTO_DURATION" \
+      "${PERFETTO_CATEGORY_ARGS[@]}"
+  ) > "${OUTPUT_DIR}/perfetto.log" 2>&1 &
+  PERFETTO_HOST_PID="$!"
+fi
+
+set +e
 ./gradlew connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class="$TEST_SELECTOR" \
   --no-daemon --stacktrace --console=plain \
   | tee "${OUTPUT_DIR}/instrumentation.log"
+GRADLE_STATUS="${PIPESTATUS[0]}"
+set -e
+
+if [[ -n "$PERFETTO_HOST_PID" ]]; then
+  if ! wait "$PERFETTO_HOST_PID"; then
+    echo "Requested Perfetto capture failed; inspect ${OUTPUT_DIR}/perfetto.log" >&2
+    exit 1
+  fi
+  if ! "${ADB_DEVICE[@]}" pull "$PERFETTO_REMOTE_TRACE" "${OUTPUT_DIR}/system-trace.perfetto-trace"; then
+    echo "Requested Perfetto trace could not be pulled from $PERFETTO_REMOTE_TRACE" >&2
+    exit 1
+  fi
+  "${ADB_DEVICE[@]}" shell rm -f "$PERFETTO_REMOTE_TRACE" || true
+  if [[ ! -s "${OUTPUT_DIR}/system-trace.perfetto-trace" ]]; then
+    echo "Requested Perfetto trace is empty." >&2
+    exit 1
+  fi
+fi
+
+capture_device_health_snapshot after
+capture_shell_diagnostic "gfxinfo-framestats-after.txt" dumpsys gfxinfo "$APP_ID" framestats
+capture_shell_diagnostic "meminfo-after.txt" dumpsys meminfo "$APP_ID"
+capture_shell_diagnostic "procstats-after.txt" dumpsys procstats --hours 3 "$APP_ID"
+capture_shell_diagnostic "package-after.txt" dumpsys package "$APP_ID"
+
+if [[ "$GRADLE_STATUS" -ne 0 ]]; then
+  echo "Physical profiling instrumentation failed; diagnostics were retained in $OUTPUT_DIR" >&2
+  exit "$GRADLE_STATUS"
+fi
 
 mkdir -p "${OUTPUT_DIR}/reports"
 if ! "${ADB_DEVICE[@]}" pull "$REMOTE_DIR/." "${OUTPUT_DIR}/reports/"; then
@@ -115,8 +206,9 @@ if [[ "$REPORT_COUNT" -lt 1 ]]; then
   exit 1
 fi
 
-"${ADB_DEVICE[@]}" shell dumpsys gfxinfo "$APP_ID" > "${OUTPUT_DIR}/gfxinfo.txt" || true
-"${ADB_DEVICE[@]}" shell dumpsys meminfo "$APP_ID" > "${OUTPUT_DIR}/meminfo.txt" || true
+# Backward-compatible names used by existing operator notes and evidence tooling.
+cp "${OUTPUT_DIR}/gfxinfo-framestats-after.txt" "${OUTPUT_DIR}/gfxinfo.txt"
+cp "${OUTPUT_DIR}/meminfo-after.txt" "${OUTPUT_DIR}/meminfo.txt"
 "${ADB_DEVICE[@]}" shell dumpsys display > "${OUTPUT_DIR}/display.txt" || true
 
 if [[ -n "$THRESHOLDS_ABS" ]]; then
