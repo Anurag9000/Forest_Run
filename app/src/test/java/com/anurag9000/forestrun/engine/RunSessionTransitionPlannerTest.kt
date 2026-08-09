@@ -26,6 +26,7 @@ class RunSessionTransitionPlannerTest {
                 listOf(RunSessionEffect.PREPARE_FRESH_RUN),
                 transition.effects
             )
+            assertTrue(transition.accepted)
             assertTrue(transition.changed)
         }
         assertFalse(RunSessionEffect.entries.any { it.name == "PLAY_RUN_MUSIC" })
@@ -43,6 +44,7 @@ class RunSessionTransitionPlannerTest {
             transition.after
         )
         assertEquals(listOf(RunSessionEffect.REFRESH_GARDEN), transition.effects)
+        assertTrue(transition.accepted)
         assertTrue(transition.changed)
     }
 
@@ -55,6 +57,7 @@ class RunSessionTransitionPlannerTest {
         )
         assertEquals(RunState.DYING, dying.after.runState)
         assertEquals(listOf(RunSessionEffect.TRIGGER_DEATH), dying.effects)
+        assertTrue(dying.accepted)
 
         val gameOver = RunSessionTransitionPlanner.plan(
             dying.after,
@@ -62,6 +65,7 @@ class RunSessionTransitionPlannerTest {
         )
         assertEquals(RunState.GAME_OVER, gameOver.after.runState)
         assertTrue(gameOver.effects.isEmpty())
+        assertTrue(gameOver.accepted)
 
         val restarting = RunSessionTransitionPlanner.plan(
             gameOver.after,
@@ -69,6 +73,7 @@ class RunSessionTransitionPlannerTest {
         )
         assertEquals(RunState.RESTARTING, restarting.after.runState)
         assertEquals(listOf(RunSessionEffect.BEGIN_RESTART), restarting.effects)
+        assertTrue(restarting.accepted)
 
         val garden = RunSessionTransitionPlanner.plan(
             restarting.after,
@@ -88,6 +93,7 @@ class RunSessionTransitionPlannerTest {
             ),
             garden.effects
         )
+        assertTrue(garden.accepted)
     }
 
     @Test
@@ -109,10 +115,12 @@ class RunSessionTransitionPlannerTest {
             ),
             transition.effects
         )
+        assertTrue(transition.accepted)
     }
 
     @Test
-    fun debugPlayingStateRequestIsTheOnlyStateAgnosticTransition() {
+    fun debugPlayingStateRequestIsAcceptedAndStateAgnosticEvenWhenIdempotent() {
+        val playing = RunSessionSnapshot(AppGameState.PLAYING, RunState.PLAYING)
         val snapshots = AppGameState.entries.flatMap { app ->
             RunState.entries.map { run -> RunSessionSnapshot(app, run) }
         }
@@ -121,20 +129,15 @@ class RunSessionTransitionPlannerTest {
                 snapshot,
                 RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED
             )
-            assertEquals(
-                RunSessionSnapshot(AppGameState.PLAYING, RunState.PLAYING),
-                transition.after
-            )
+            assertEquals(playing, transition.after)
             assertTrue(transition.effects.isEmpty())
-            assertEquals(
-                snapshot != RunSessionSnapshot(AppGameState.PLAYING, RunState.PLAYING),
-                transition.changed
-            )
+            assertTrue(transition.accepted)
+            assertEquals(snapshot != playing, transition.changed)
         }
     }
 
     @Test
-    fun everyInvalidOrdinaryStateEventPairIsACompleteNoOp() {
+    fun everyInvalidOrdinaryStateEventPairIsAnUnacceptedCompleteNoOp() {
         val validPairs = setOf(
             RunSessionSnapshot(AppGameState.MENU, RunState.PLAYING) to
                 RunSessionEvent.MENU_RUN_REQUESTED,
@@ -165,6 +168,7 @@ class RunSessionTransitionPlannerTest {
                     val transition = RunSessionTransitionPlanner.plan(snapshot, event)
                     assertEquals(snapshot, transition.after)
                     assertTrue(transition.effects.isEmpty())
+                    assertFalse(transition.accepted)
                     assertFalse(transition.changed)
                 }
         }
