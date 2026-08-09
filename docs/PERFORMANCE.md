@@ -109,7 +109,10 @@ The collector also:
 - captures `dumpsys gfxinfo`, `meminfo`, and display diagnostics;
 - records whether acceptance thresholds were supplied;
 - hashes the supplied threshold manifest with Python's portable SHA-256 implementation;
-- writes an explicit accepted, failed, or pending result.
+- writes an explicit accepted, failed, or pending result;
+- captures before/after `dumpsys battery`, `thermalservice`, `power`, `cpuinfo`, `audio`, and `media.audio_flinger` snapshots;
+- captures post-run `gfxinfo ... framestats`, `meminfo`, `procstats`, package identity, and display diagnostics even when the instrumentation workload fails;
+- can optionally overlap the physical workload with a Perfetto system trace when `FOREST_RUN_CAPTURE_PERFETTO=1`, retaining the trace only as diagnostic evidence rather than silently mixing traced and untraced threshold runs.
 
 ## Candidate-specific threshold manifest
 
@@ -208,9 +211,19 @@ A collection directory contains:
 device.properties
 instrumentation.log
 reports/*.json
-gfxinfo.txt
-meminfo.txt
+battery-before.txt / battery-after.txt
+thermalservice-before.txt / thermalservice-after.txt
+power-before.txt / power-after.txt
+cpuinfo-before.txt / cpuinfo-after.txt
+audio-before.txt / audio-after.txt
+audio-flinger-before.txt / audio-flinger-after.txt
+gfxinfo-framestats-after.txt
+meminfo-after.txt
+procstats-after.txt
+package-after.txt
 display.txt
+gfxinfo.txt / meminfo.txt   # backward-compatible aliases
+system-trace.perfetto-trace # only when explicitly requested
 acceptance.txt
 ```
 
@@ -266,13 +279,12 @@ Do not mark a device/scenario row accepted merely because instrumentation comple
 
 ## Remaining physical performance work
 
-The repository still requires:
+The source collector now has explicit capture surfaces for frame/memory/process diagnostics, before/after battery/thermal/power/CPU/audio state, and an opt-in Perfetto trace for deeper scheduling/GC/memory/power investigation. Those capabilities are **not physical evidence until they are actually run on the frozen signed candidate**. The repository still requires:
 
-- representative physical-device runs;
+- representative physical-device runs across the accepted matrix;
 - approved candidate-specific threshold values;
-- long ordinary-play scenarios;
-- allocation and GC tracing beyond heap snapshots;
-- audio-thread tracing;
+- long ordinary-play scenarios in addition to deterministic stress profiles;
+- reviewer inspection of allocation/GC, audio-thread, thermal, battery, CPU/frequency, and workload-correlated traces/diagnostics, using the opt-in trace when deeper evidence is needed;
 - captured maximum ghost-save evidence on the physical device matrix;
-- thermal and battery behaviour;
-- remediation and repeated measurement of any material hotspots found.
+- remediation and repeated measurement of every material hotspot found;
+- archival of the accepted diagnostics together with the exact candidate, device, threshold, and reviewer records.

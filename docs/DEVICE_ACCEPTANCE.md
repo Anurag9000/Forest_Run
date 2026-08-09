@@ -113,6 +113,8 @@ Allowed states are `pass` or a justified `not_applicable`. The final bundle addi
 
 At least two distinct named reviewers are required for final visual/store approval.
 
+These seven per-session manual fields are intentionally coarse physical-session gates. They do **not** replace the detailed human gameplay, fairness, TalkBack/accessibility, Garden/wardrobe/ghost, and presentation matrix. After this device manifest validates, compile and validate the separate candidate-bound human layer described in [`HUMAN_ACCEPTANCE.md`](HUMAN_ACCEPTANCE.md) with `scripts/compile_human_acceptance.py` and `scripts/validate_human_acceptance.py`. Every human review is bound back to one real session ID from this physical manifest.
+
 ## 7. Deterministic manifest compilation
 
 Use [`scripts/compile_device_acceptance.py`](../scripts/compile_device_acceptance.py) to build the final manifest from a human-entered draft. In the draft:

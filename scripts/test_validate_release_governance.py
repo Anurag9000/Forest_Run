@@ -255,5 +255,28 @@ class ReleaseGovernanceTest(unittest.TestCase):
             self.assertEqual(result.manifest_sha256, revalidated.manifest_sha256)
 
 
+    def test_symlink_component_cannot_alias_governance_evidence(self) -> None:
+        if not hasattr(Path, "symlink_to"):
+            self.skipTest("symbolic links are unavailable")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            compiled, _ = self.compile_valid(root)
+            real_dir = root / "governance-evidence"
+            alias = root / "governance-alias"
+            try:
+                alias.symlink_to(real_dir, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            reference = compiled["evidence"]["asset_provenance"]
+            reference["path"] = "governance-alias/asset_provenance.txt"
+            with self.assertRaises(governance.GovernanceError) as raised:
+                governance.validate_bundle(
+                    compiled,
+                    source_bytes=json.dumps(compiled).encode(),
+                    evidence_base=root,
+                )
+            self.assertIn("must not traverse a symbolic link", str(raised.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

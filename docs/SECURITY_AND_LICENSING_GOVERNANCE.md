@@ -1,6 +1,6 @@
 # Security, licensing, and disclosure governance
 
-Forest Run is a public source repository, but public release governance is not complete until the repository owner makes and records the decisions below. This document is an explicit gate; it is not a substitute for those decisions.
+Forest Run is a public source repository, but public release governance is not complete until the repository owner makes and records the decisions below. This document is an explicit gate; it is not a substitute for those decisions. The source now also provides [`compile_release_governance.py`](../scripts/compile_release_governance.py) and [`validate_release_governance.py`](../scripts/validate_release_governance.py), which require candidate-bound evidence for every listed security/licensing/privacy/store/presentation decision while deliberately refusing to invent those external approvals. See [`RELEASE_GOVERNANCE_EVIDENCE.md`](RELEASE_GOVERNANCE_EVIDENCE.md).
 
 ## Vulnerability reporting
 

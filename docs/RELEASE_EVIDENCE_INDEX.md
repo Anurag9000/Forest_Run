@@ -20,10 +20,11 @@ The release process produces evidence through independent pipelines:
 - declared and resolved dependency provenance;
 - internal-store delivery verification;
 - physical-device acceptance sessions;
-- performance profiles;
+- detailed human gameplay/accessibility/presentation acceptance;
+- performance profiles and physical diagnostics;
 - screenshot capture and curation;
 - graphics and metadata generation;
-- manual visual, audio, haptic, accessibility, privacy, audience, content-rating, and store-policy approvals.
+- candidate-bound security/licensing/privacy/store/presentation governance and final approvals.
 
 Without a final index, each file can be internally valid while the folder remains vulnerable to omission, candidate mixing, path aliasing, hard-link reuse, replacement during review, or inconsistent reads while a file changes. The index records the exact path, byte count, SHA-256 digest, candidate-binding status, and discovered candidate identities for every selected file. It hashes the canonical entry list into `evidenceSetSha256`.
 
@@ -40,6 +41,8 @@ python3 scripts/build_stable_release_evidence_index.py \
   --entry sbom=release/evidence/sbom.cdx.json \
   --entry device_acceptance=release/evidence/device-acceptance.json \
   --entry device_aggregate=release/evidence/device-acceptance-aggregate.json \
+  --entry human_acceptance=release/evidence/human-acceptance.json \
+  --entry release_governance=release/evidence/release-governance.json \
   --entry screenshot_manifest=release/google-play/screenshots/screenshot_manifest.json \
   --entry graphics_manifest=release/google-play/graphics/graphics_manifest.json \
   --entry policy_approval=release/evidence/policy-approval.json \
@@ -48,6 +51,8 @@ python3 scripts/build_stable_release_evidence_index.py \
   --require-bound-kind sbom \
   --require-bound-kind device_acceptance \
   --require-bound-kind device_aggregate \
+  --require-bound-kind human_acceptance \
+  --require-bound-kind release_governance \
   --require-bound-kind screenshot_manifest \
   --require-bound-kind graphics_manifest \
   --require-bound-kind policy_approval \
@@ -72,6 +77,8 @@ python3 scripts/verify_release_evidence_index.py \
   --require-bound-kind sbom \
   --require-bound-kind device_acceptance \
   --require-bound-kind device_aggregate \
+  --require-bound-kind human_acceptance \
+  --require-bound-kind release_governance \
   --require-bound-kind screenshot_manifest \
   --require-bound-kind graphics_manifest \
   --require-bound-kind policy_approval

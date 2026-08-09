@@ -15,6 +15,7 @@ import json
 import math
 import os
 import re
+import stat
 import sys
 import tempfile
 import unicodedata
@@ -224,9 +225,24 @@ def _resolve_inside(base: Path, relative: str, label: str) -> Path:
     base = base.resolve()
     lexical = base / relative
     try:
-        lexical.relative_to(base)
+        path_parts = lexical.relative_to(base).parts
     except ValueError as exc:
         raise HumanAcceptanceError(f"{label} escapes the evidence root") from exc
+
+    current = base
+    for part in path_parts:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError:
+            break
+        except OSError as exc:
+            raise HumanAcceptanceError(f"could not inspect {label}: {current}: {exc}") from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise HumanAcceptanceError(
+                f"{label} must not traverse a symbolic link: {current}"
+            )
+
     resolved = lexical.resolve()
     try:
         resolved.relative_to(base)

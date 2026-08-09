@@ -227,5 +227,30 @@ class HumanAcceptanceTest(unittest.TestCase):
             self.assertEqual(summary.candidate_sha, revalidated.candidate_sha)
 
 
+    def test_symlink_component_cannot_alias_human_evidence(self) -> None:
+        if not hasattr(Path, "symlink_to"):
+            self.skipTest("symbolic links are unavailable")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            compiled, _ = self.compile_valid(root)
+            alias = root / "human-alias"
+            try:
+                alias.symlink_to(root / "human", target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            review = next(
+                item for item in compiled["reviews"]
+                if item["device_class"] == "older_phone"
+            )
+            review["evidence_files"][0]["path"] = "human-alias/older_phone.txt"
+            with self.assertRaises(human.HumanAcceptanceError) as raised:
+                human.validate_bundle(
+                    compiled,
+                    source_bytes=json.dumps(compiled).encode(),
+                    evidence_base=root,
+                )
+            self.assertIn("must not traverse a symbolic link", str(raised.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

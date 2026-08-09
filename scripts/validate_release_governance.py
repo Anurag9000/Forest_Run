@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import sys
 import tempfile
 import unicodedata
@@ -194,12 +195,32 @@ def _normalized_name(value: str) -> str:
 
 def _resolve_inside(base: Path, relative: str, label: str) -> Path:
     canonical = base.resolve()
-    path = (canonical / relative).resolve()
+    lexical = canonical / relative
     try:
-        path.relative_to(canonical)
+        path_parts = lexical.relative_to(canonical).parts
+    except ValueError as exc:
+        raise GovernanceError(f"{label} escapes the governance evidence root") from exc
+
+    current = canonical
+    for part in path_parts:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError:
+            break
+        except OSError as exc:
+            raise GovernanceError(f"could not inspect {label}: {current}: {exc}") from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise GovernanceError(
+                f"{label} must not traverse a symbolic link: {current}"
+            )
+
+    resolved = lexical.resolve()
+    try:
+        resolved.relative_to(canonical)
     except ValueError as exc:
         raise GovernanceError(f"{label} resolves outside the governance evidence root") from exc
-    return path
+    return resolved
 
 
 def _hash_regular_file(path: Path, label: str, maximum_bytes: int) -> tuple[str, os.stat_result]:

@@ -10,7 +10,7 @@ Native Android endless runner in Kotlin using a custom `SurfaceView` game loop. 
 
 The exact source-bearing checkpoint `414bf30b36ce051f0d5ef75f6143ed6bf8fa5884` passed Android validation run `31297723150`: the full host/release/lint/package/R8/source-immutability job and API-35 connected-behavior/source-immutability job both succeeded. The current exhaustive closure and remaining-gates record is [`docs/audits/2026-08-09_source_completion_and_remaining_gates.md`](docs/audits/2026-08-09_source_completion_and_remaining_gates.md).
 
-That does **not** make Forest Run a physically accepted release candidate or a store-ready production release. Representative-device performance/fairness/accessibility evidence, real signing and signed-install verification, internal-store delivery, final asset/audio/haptic review, privacy/store-policy decisions, dependency/licence/security review, and final candidate-bound approvals remain external gates.
+That does **not** make Forest Run a physically accepted release candidate or a store-ready production release. Source tooling now also captures extended physical diagnostics and compiles fail-closed human-acceptance plus release-governance evidence, but representative-device performance/fairness/accessibility runs, real signing and signed-install verification, internal-store delivery, final asset/audio/haptic review, privacy/store-policy decisions, dependency/licence/security review, and accountable final approvals remain external gates.
 
 ## Implemented product surface
 
@@ -159,6 +159,8 @@ These are not hidden source TODOs and should not be misreported as solved:
 | [`docs/RECOVERY_EVIDENCE_MAINTENANCE.md`](docs/RECOVERY_EVIDENCE_MAINTENANCE.md) | Low-level fail-closed recovery evidence and debug/support maintenance |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Physical profiling protocol and threshold/evidence procedure |
 | [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) | Candidate identity, device/scenario evidence, thresholds, approvals, and release decision |
+| [`docs/HUMAN_ACCEPTANCE.md`](docs/HUMAN_ACCEPTANCE.md) | Candidate-bound gameplay, TalkBack/accessibility, and presentation review matrix |
+| [`docs/RELEASE_GOVERNANCE_EVIDENCE.md`](docs/RELEASE_GOVERNANCE_EVIDENCE.md) | Security, licensing, privacy, store, provenance, release-note, and final decision evidence |
 | [`docs/RELEASE.md`](docs/RELEASE.md) | Correctness, validation, packaging, hardware, signing, and store checklist |
 | [`docs/RELEASE_EVIDENCE_INDEX.md`](docs/RELEASE_EVIDENCE_INDEX.md) | Final evidence-set construction and independent verification |
 | [`docs/SUPPLY_CHAIN_AND_SBOM.md`](docs/SUPPLY_CHAIN_AND_SBOM.md) | Dependency/SBOM/provenance boundaries |
