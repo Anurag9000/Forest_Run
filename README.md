@@ -8,6 +8,8 @@ Native Android endless runner in Kotlin using a custom `SurfaceView` game loop. 
 
 **Source-ready feature-rich alpha.** The previously identified source-architecture remediation queue is implemented on `main`: collision-result dispatch, shared live collision effects, typed run-session transitions, application persistence facade adoption, a real virtual-node accessibility provider with coalesced announcements, canonical encounter-family catalogue coverage, and an ordinary-player fail-closed recovery UI are all live rather than merely test seams or future plans.
 
+The exact source-bearing checkpoint `414bf30b36ce051f0d5ef75f6143ed6bf8fa5884` passed Android validation run `31297723150`: the full host/release/lint/package/R8/source-immutability job and API-35 connected-behavior/source-immutability job both succeeded. The current exhaustive closure and remaining-gates record is [`docs/audits/2026-08-09_source_completion_and_remaining_gates.md`](docs/audits/2026-08-09_source_completion_and_remaining_gates.md).
+
 That does **not** make Forest Run a physically accepted release candidate or a store-ready production release. Representative-device performance/fairness/accessibility evidence, real signing and signed-install verification, internal-store delivery, final asset/audio/haptic review, privacy/store-policy decisions, dependency/licence/security review, and final candidate-bound approvals remain external gates.
 
 ## Implemented product surface
@@ -44,7 +46,7 @@ That does **not** make Forest Run a physically accepted release candidate or a s
 
 `RunSessionTransitionPlanner` is the pure transition table for Menu, Garden, Playing, DYING, GAME_OVER, and RESTARTING boundaries. `RunSessionTransitionCoordinator` executes ordered effects through `LiveRunSessionEffects`. `GameView` adopts the after-state only when the transition is valid and all required effects complete successfully.
 
-Terminal collision completion therefore hands off through `RunSessionEvent.TERMINAL_COLLISION_COMPLETED`; the session layer owns death triggering and the transition to `DYING`.
+Terminal collision completion therefore hands off through `RunSessionEvent.TERMINAL_COLLISION_COMPLETED`; the session layer owns death triggering and the transition to `DYING`. Debug scenario/autostart publication also routes through the same owner via `DEBUG_PLAYING_STATE_REQUESTED`, which is explicitly accepted when idempotent without turning invalid ordinary events into successful no-ops.
 
 ### Persistence boundary
 
@@ -68,6 +70,7 @@ The custom Canvas UI exposes a real Android virtual-node hierarchy:
 - `LiveGameAccessibilityActions` routes virtual actions to real session/input/persistence owners;
 - `GameAccessibilityGeometry` binds settings/Garden nodes to the same layout planners used by touch UI and supplies bounded semantic regions for run/Rest controls;
 - `GameAccessibilityNodeProvider` exposes virtual descendants, focus, state, bounds, clicks, and checkable settings without synthesizing fixed-coordinate touch events;
+- framework accessibility events are emitted only while Android accessibility is enabled, while semantic queries/actions remain safe if it is off;
 - all nine Garden plants and all wardrobe styles have truthful virtual state;
 - Rest continuation is disabled until `GAME_OVER`;
 - `AccessibilityAnnouncementPolicy` is live, sampled only under accessibility + touch exploration, and coalesces routine Playing distance to 100 m buckets with a 10 s minimum interval while prioritizing important surface/Bloom/Garden/settings changes.
@@ -161,7 +164,8 @@ These are not hidden source TODOs and should not be misreported as solved:
 | [`docs/SUPPLY_CHAIN_AND_SBOM.md`](docs/SUPPLY_CHAIN_AND_SBOM.md) | Dependency/SBOM/provenance boundaries |
 | [`docs/SECURITY_AND_LICENSING_GOVERNANCE.md`](docs/SECURITY_AND_LICENSING_GOVERNANCE.md) | Security reporting and licensing release gates |
 | [`PRIVACY.md`](PRIVACY.md) | Source-backed offline privacy/data behavior |
-| [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) | Detailed remediation history; dated evidence remains historical |
+| [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) | Chronological remediation history with a current reconciliation preface |
+| [`docs/audits/2026-08-09_source_completion_and_remaining_gates.md`](docs/audits/2026-08-09_source_completion_and_remaining_gates.md) | Current exhaustive source-closure checkpoint and remaining candidate/external gates |
 | [`docs/audits/2026-08-06_documentation_reconciliation_audit.md`](docs/audits/2026-08-06_documentation_reconciliation_audit.md) | Prior full documentation reconciliation and reconstructed mission |
 
 Dated audit documents are provenance records. Later source/tests/current canonical docs supersede historical “remaining” statements without rewriting history.
