@@ -275,5 +275,68 @@ class DeviceAcceptanceTest(unittest.TestCase):
             self.assertEqual(1, MODULE.main([str(manifest)]))
 
 
+    def test_load_rejects_duplicate_json_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / "device-acceptance.json"
+            path.write_text('{"schema_version":1,"schema_version":1}\n', encoding="utf-8")
+            with self.assertRaises(MODULE.EvidenceError) as raised:
+                MODULE.load_and_validate(path)
+            self.assertIn("duplicate JSON object key", str(raised.exception))
+
+    def test_manifest_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = valid_bundle()
+            materialize_files(root, bundle)
+            real = root / "real.json"
+            real.write_text(json.dumps(bundle) + "\n", encoding="utf-8")
+            alias = root / "alias.json"
+            try:
+                alias.symlink_to(real)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            with self.assertRaises(MODULE.EvidenceError) as raised:
+                MODULE.load_and_validate(alias)
+            self.assertIn("must not be a symbolic link", str(raised.exception))
+
+    def test_artifact_symlink_component_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = valid_bundle()
+            materialize_files(root, bundle)
+            real_dir = root / "artifact"
+            alias_dir = root / "artifact-alias"
+            try:
+                alias_dir.symlink_to(real_dir, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            bundle["candidate"]["artifact_path"] = "artifact-alias/app-release.aab"
+            raw = json.dumps(bundle, sort_keys=True).encode()
+            with self.assertRaises(MODULE.EvidenceError) as raised:
+                MODULE.validate_bundle(bundle, source_bytes=raw, evidence_base=root)
+            self.assertIn("must not traverse a symbolic link", str(raised.exception))
+
+    def test_scenario_evidence_symlink_component_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = valid_bundle()
+            materialize_files(root, bundle)
+            first_session = bundle["sessions"][0]
+            first_scenario = next(iter(first_session["scenarios"].values()))
+            original = first_scenario["evidence_files"][0]["path"]
+            real_parent = (root / original).parent
+            alias_parent = root / "evidence-alias"
+            try:
+                alias_parent.symlink_to(real_parent, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            first_scenario["evidence_files"][0]["path"] = f"evidence-alias/{Path(original).name}"
+            raw = json.dumps(bundle, sort_keys=True).encode()
+            with self.assertRaises(MODULE.EvidenceError) as raised:
+                MODULE.validate_bundle(bundle, source_bytes=raw, evidence_base=root)
+            self.assertIn("must not traverse a symbolic link", str(raised.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

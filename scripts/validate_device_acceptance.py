@@ -15,6 +15,7 @@ import json
 import math
 import os
 import re
+import stat
 import sys
 import tempfile
 import unicodedata
@@ -22,6 +23,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
+
+import strict_json
 
 SCHEMA_VERSION = 1
 CANONICAL_REPOSITORY = "Anurag9000/Forest_Run"
@@ -191,14 +194,44 @@ def _safe_evidence_path(value: Any, label: str) -> str:
     return text
 
 
+def _resolve_evidence_file(base: Path, relative: str, label: str) -> Path:
+    canonical = base.resolve()
+    lexical = canonical / relative
+    try:
+        parts = lexical.relative_to(canonical).parts
+    except ValueError as exc:
+        raise EvidenceError(f"{label} escapes evidence base") from exc
+
+    current = canonical
+    for part in parts:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError:
+            break
+        except OSError as exc:
+            raise EvidenceError(f"could not inspect {label}: {current}: {exc}") from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise EvidenceError(f"{label} must not traverse a symbolic link: {current}")
+
+    resolved = lexical.resolve()
+    try:
+        resolved.relative_to(canonical)
+    except ValueError as exc:
+        raise EvidenceError(f"{label} resolves outside evidence base") from exc
+    return resolved
+
+
 def _hash_bounded_file(path: Path, label: str, maximum_bytes: int) -> tuple[str, os.stat_result]:
     try:
-        stat_result = path.stat()
+        stat_result = path.lstat()
     except FileNotFoundError as exc:
         raise EvidenceError(f"{label} is missing: {path}") from exc
     except OSError as exc:
         raise EvidenceError(f"could not inspect {label} {path}: {exc}") from exc
-    if not path.is_file():
+    if stat.S_ISLNK(stat_result.st_mode):
+        raise EvidenceError(f"{label} must not be a symbolic link: {path}")
+    if not stat.S_ISREG(stat_result.st_mode):
         raise EvidenceError(f"{label} is not a regular file: {path}")
     if stat_result.st_size <= 0:
         raise EvidenceError(f"{label} is empty: {path}")
@@ -214,7 +247,7 @@ def _hash_bounded_file(path: Path, label: str, maximum_bytes: int) -> tuple[str,
     except OSError as exc:
         raise EvidenceError(f"could not hash {label} {path}: {exc}") from exc
     try:
-        after = path.stat()
+        after = path.lstat()
     except OSError as exc:
         raise EvidenceError(f"could not re-inspect {label} {path}: {exc}") from exc
     if (
@@ -724,13 +757,11 @@ def validate_bundle(
 
     if evidence_base is not None:
         canonical_base = evidence_base.resolve()
-        resolved_artifact = (canonical_base / artifact_path).resolve()
-        try:
-            resolved_artifact.relative_to(canonical_base)
-        except ValueError as exc:
-            raise EvidenceError(
-                "candidate.artifact_path escapes manifest directory"
-            ) from exc
+        resolved_artifact = _resolve_evidence_file(
+            canonical_base,
+            artifact_path,
+            "candidate.artifact_path",
+        )
         actual_artifact_sha, artifact_stat = _hash_bounded_file(
             resolved_artifact,
             "candidate artifact",
@@ -746,13 +777,11 @@ def validate_bundle(
         if artifact_stat.st_ino:
             seen_file_identities[(artifact_stat.st_dev, artifact_stat.st_ino)] = artifact_path
         for relative_path, expected_digest in evidence_paths.items():
-            candidate_path = (canonical_base / relative_path).resolve()
-            try:
-                candidate_path.relative_to(canonical_base)
-            except ValueError as exc:
-                raise EvidenceError(
-                    f"evidence path escapes evidence base: {relative_path}"
-                ) from exc
+            candidate_path = _resolve_evidence_file(
+                canonical_base,
+                relative_path,
+                f"evidence path {relative_path}",
+            )
             prior_path = seen_canonical_paths.get(candidate_path)
             if prior_path is not None:
                 raise EvidenceError(
@@ -822,21 +851,39 @@ def validate_bundle(
 
 def load_and_validate(path: Path) -> ValidationSummary:
     try:
-        size = path.stat().st_size
+        before = path.lstat()
     except FileNotFoundError as exc:
         raise EvidenceError(f"acceptance manifest is missing: {path}") from exc
     except OSError as exc:
         raise EvidenceError(f"could not inspect acceptance manifest {path}: {exc}") from exc
-    if size <= 0 or size > MAX_MANIFEST_BYTES:
+    if stat.S_ISLNK(before.st_mode):
+        raise EvidenceError("acceptance manifest must not be a symbolic link")
+    if not stat.S_ISREG(before.st_mode):
+        raise EvidenceError("acceptance manifest must be a regular file")
+    if before.st_size <= 0 or before.st_size > MAX_MANIFEST_BYTES:
         raise EvidenceError(
             f"acceptance manifest must be between 1 and {MAX_MANIFEST_BYTES} bytes"
         )
-    raw = path.read_bytes()
-    if len(raw) != size:
+    try:
+        raw = path.read_bytes()
+        after = path.lstat()
+    except OSError as exc:
+        raise EvidenceError(f"could not read acceptance manifest {path}: {exc}") from exc
+    if (
+        len(raw) != before.st_size
+        or after.st_size != before.st_size
+        or after.st_mtime_ns != before.st_mtime_ns
+        or (before.st_ino and after.st_ino != before.st_ino)
+    ):
         raise EvidenceError(f"acceptance manifest changed while being read: {path}")
     try:
-        data = json.loads(raw)
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        data = strict_json.loads(
+            raw,
+            label=str(path),
+            maximum_bytes=MAX_MANIFEST_BYTES,
+            require_object=True,
+        )
+    except strict_json.StrictJsonError as exc:
         raise EvidenceError(f"invalid JSON: {exc}") from exc
     return validate_bundle(data, source_bytes=raw, evidence_base=path.parent)
 
