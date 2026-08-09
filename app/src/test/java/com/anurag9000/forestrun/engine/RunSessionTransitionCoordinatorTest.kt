@@ -21,6 +21,7 @@ class RunSessionTransitionCoordinatorTest {
         )
 
         assertEquals(RunSessionExecutionDisposition.APPLIED, result.disposition)
+        assertTrue(result.transition.accepted)
         assertTrue(result.mayAdoptAfterState)
         assertNull(result.failedEffect)
         assertEquals(result.transition.effects, calls)
@@ -28,6 +29,27 @@ class RunSessionTransitionCoordinatorTest {
             RunSessionSnapshot(AppGameState.GARDEN, RunState.PLAYING),
             result.transition.after
         )
+    }
+
+    @Test
+    fun acceptedIdempotentDebugRequestCallsNoEffectsButMayBeAcknowledged() {
+        var calls = 0
+        val coordinator = RunSessionTransitionCoordinator {
+            calls += 1
+            true
+        }
+        val snapshot = RunSessionSnapshot(AppGameState.PLAYING, RunState.PLAYING)
+
+        val result = coordinator.execute(
+            current = snapshot,
+            event = RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED
+        )
+
+        assertEquals(0, calls)
+        assertEquals(RunSessionExecutionDisposition.NO_OP, result.disposition)
+        assertEquals(snapshot, result.transition.after)
+        assertTrue(result.transition.accepted)
+        assertTrue(result.mayAdoptAfterState)
     }
 
     @Test
@@ -56,6 +78,7 @@ class RunSessionTransitionCoordinatorTest {
             result.disposition
         )
         assertEquals(RunSessionEffect.RELOAD_GHOST, result.failedEffect)
+        assertTrue(result.transition.accepted)
         assertFalse(result.mayAdoptAfterState)
     }
 
@@ -87,11 +110,12 @@ class RunSessionTransitionCoordinatorTest {
             result.disposition
         )
         assertEquals(RunSessionEffect.REFRESH_MENU_COPY, result.failedEffect)
+        assertTrue(result.transition.accepted)
         assertFalse(result.mayAdoptAfterState)
     }
 
     @Test
-    fun invalidEventDoesNotCallEffectSink() {
+    fun invalidEventDoesNotCallEffectSinkOrAllowStateAdoption() {
         var calls = 0
         val coordinator = RunSessionTransitionCoordinator {
             calls += 1
@@ -107,6 +131,7 @@ class RunSessionTransitionCoordinatorTest {
         assertEquals(0, calls)
         assertEquals(RunSessionExecutionDisposition.NO_OP, result.disposition)
         assertEquals(snapshot, result.transition.after)
+        assertFalse(result.transition.accepted)
         assertFalse(result.mayAdoptAfterState)
     }
 }
