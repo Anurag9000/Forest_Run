@@ -1,0 +1,37 @@
+name: Architecture validation reconciliation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/migrate_architecture_validation_reconciliation.py
+      - .github/workflows/architecture-validation-reconciliation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+      - run: python3 scripts/migrate_architecture_validation_reconciliation.py
+      - shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          test ! -e scripts/migrate_architecture_validation_reconciliation.py
+          test ! -e .github/workflows/architecture-validation-reconciliation.yml
+          grep -q 'Exact source/build/emulator validation is green at source-bearing checkpoint' docs/ARCHITECTURE.md
+      - shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'forest-run-migration-bot'
+          git config user.email 'forest-run-migration-bot@users.noreply.github.com'
+          git add -A
+          git commit -m 'docs(architecture): reconcile exact-head validation status'
+          git push origin HEAD:main
