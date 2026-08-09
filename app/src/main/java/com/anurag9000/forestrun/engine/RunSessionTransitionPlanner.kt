@@ -36,7 +36,9 @@ internal enum class RunSessionEffect {
 internal data class RunSessionTransition(
     val before: RunSessionSnapshot,
     val after: RunSessionSnapshot,
-    val effects: List<RunSessionEffect>
+    val effects: List<RunSessionEffect>,
+    /** True only when the event/state pair is a declared planner route. */
+    val accepted: Boolean
 ) {
     val changed: Boolean
         get() = before != after || effects.isNotEmpty()
@@ -47,12 +49,14 @@ internal data class RunSessionTransition(
  * state publication routing.
  *
  * Bloom is intentionally absent because it remains an orthogonal power flag.
- * Invalid or stale ordinary events fail closed as complete no-ops, preventing a
- * delayed tap or duplicated callback from skipping required terminal/reset
+ * Invalid or stale ordinary events fail closed as unaccepted no-ops, preventing
+ * a delayed tap or duplicated callback from skipping required terminal/reset
  * phases. DEBUG_PLAYING_STATE_REQUESTED is the sole deliberately state-agnostic
  * event: only debuggable launch code emits it, after validating/preparing its
  * scenario or auto-start payload, so debug tooling does not mutate the two
- * top-level state fields behind the planner's back.
+ * top-level state fields behind the planner's back. It remains accepted even
+ * when PLAYING/PLAYING is already published, making repeated singleTask debug
+ * intents idempotent without making invalid ordinary events look successful.
  *
  * PREPARE_FRESH_RUN retains run-start music ownership to match the current live
  * reset boundary; the table therefore never emits a duplicate music effect.
@@ -142,7 +146,12 @@ internal object RunSessionTransitionPlanner {
                     )
                 )
 
-            else -> RunSessionTransition(current, current, emptyList())
+            else -> RunSessionTransition(
+                before = current,
+                after = current,
+                effects = emptyList(),
+                accepted = false
+            )
         }
         return transition
     }
@@ -154,6 +163,7 @@ internal object RunSessionTransitionPlanner {
     ): RunSessionTransition = RunSessionTransition(
         before = this,
         after = RunSessionSnapshot(appState, runState),
-        effects = effects
+        effects = effects,
+        accepted = true
     )
 }
