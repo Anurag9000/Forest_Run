@@ -53,6 +53,46 @@ class PerformanceCollectionContractTest(unittest.TestCase):
         self.assertNotIn("git diff --quiet", self.source)
         self.assertNotIn("git diff --cached --quiet", self.source)
 
+    def test_health_snapshots_cover_thermal_battery_cpu_audio_and_power(self) -> None:
+        self.assertIn("capture_device_health_snapshot before", self.source)
+        self.assertIn("capture_device_health_snapshot after", self.source)
+        for command in (
+            "dumpsys battery",
+            "dumpsys thermalservice",
+            "dumpsys power",
+            "dumpsys cpuinfo",
+            "dumpsys audio",
+            "dumpsys media.audio_flinger",
+        ):
+            self.assertIn(command, self.source)
+
+    def test_post_run_app_diagnostics_cover_frames_memory_process_and_package(self) -> None:
+        for output in (
+            '"gfxinfo-framestats-after.txt" dumpsys gfxinfo "$APP_ID" framestats',
+            '"meminfo-after.txt" dumpsys meminfo "$APP_ID"',
+            '"procstats-after.txt" dumpsys procstats --hours 3 "$APP_ID"',
+            '"package-after.txt" dumpsys package "$APP_ID"',
+        ):
+            self.assertIn(output, self.source)
+        self.assertIn('cp "${OUTPUT_DIR}/gfxinfo-framestats-after.txt" "${OUTPUT_DIR}/gfxinfo.txt"', self.source)
+        self.assertIn('cp "${OUTPUT_DIR}/meminfo-after.txt" "${OUTPUT_DIR}/meminfo.txt"', self.source)
+
+    def test_perfetto_is_opt_in_and_fail_closed_when_requested(self) -> None:
+        self.assertIn('CAPTURE_PERFETTO="${FOREST_RUN_CAPTURE_PERFETTO:-0}"', self.source)
+        self.assertIn('FOREST_RUN_PERFETTO_DURATION', self.source)
+        self.assertIn('FOREST_RUN_PERFETTO_CATEGORIES', self.source)
+        self.assertIn('shell perfetto', self.source)
+        self.assertIn('system-trace.perfetto-trace', self.source)
+        self.assertIn('Requested Perfetto capture failed', self.source)
+        self.assertIn('Requested Perfetto trace is empty.', self.source)
+
+    def test_instrumentation_failure_retains_diagnostics_before_failing(self) -> None:
+        gradle_index = self.source.index("./gradlew connectedDebugAndroidTest")
+        after_snapshot_index = self.source.index("capture_device_health_snapshot after")
+        failure_index = self.source.index('if [[ "$GRADLE_STATUS" -ne 0 ]]')
+        self.assertLess(gradle_index, after_snapshot_index)
+        self.assertLess(after_snapshot_index, failure_index)
+
 
 if __name__ == "__main__":
     unittest.main()
