@@ -30,12 +30,33 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         for relative in (
             "scripts/migrate_candidate_evidence_layers.py",
             "scripts/finalize_candidate_evidence_reconciliation.py",
+            "scripts/migrate_device_acceptance_path_integrity.py",
             ".github/workflows/candidate-evidence-reconciliation.yml",
             ".github/workflows/candidate-evidence-reconciliation-v2.yml",
             ".github/workflows/candidate-evidence-reconciliation-v3.yml",
             ".github/workflows/candidate-evidence-reconciliation-v4.yml",
+            ".github/workflows/device-acceptance-path-integrity.yml",
         ):
             self.assertFalse((ROOT / relative).exists(), relative)
+
+    def test_physical_acceptance_rejects_weak_json_and_path_aliasing(self) -> None:
+        source = (SCRIPTS / "validate_device_acceptance.py").read_text(encoding="utf-8")
+        for token in (
+            "strict_json.loads(",
+            "must not traverse a symbolic link",
+            "acceptance manifest must not be a symbolic link",
+            "path.lstat()",
+            "candidate.artifact_path",
+        ):
+            self.assertIn(token, source)
+        tests = (SCRIPTS / "test_validate_device_acceptance.py").read_text(encoding="utf-8")
+        for test_name in (
+            "test_load_rejects_duplicate_json_keys",
+            "test_manifest_symlink_is_rejected",
+            "test_artifact_symlink_component_is_rejected",
+            "test_scenario_evidence_symlink_component_is_rejected",
+        ):
+            self.assertIn(test_name, tests)
 
     def test_physical_collector_retains_extended_diagnostics_and_optional_trace(self) -> None:
         source = (SCRIPTS / "collect_performance_profiles.sh").read_text(encoding="utf-8")
