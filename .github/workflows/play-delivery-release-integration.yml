@@ -1,0 +1,44 @@
+name: Play delivery release integration migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/migrate_play_delivery_release_integration.py
+      - .github/workflows/play-delivery-release-integration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Apply exact Play-delivery integration
+        run: python3 scripts/migrate_play_delivery_release_integration.py
+      - name: Install validation dependencies
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir -r scripts/requirements-ci.txt
+      - name: Verify complete evidence stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          test ! -e scripts/migrate_play_delivery_release_integration.py
+          test ! -e .github/workflows/play-delivery-release-integration.yml
+          grep -q 'play_delivery_record' scripts/validate_release_governance.py
+          grep -q 'play_delivery' scripts/validate_release_readiness.py
+      - name: Commit descendant to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'forest-run-migration-bot'
+          git config user.email 'forest-run-migration-bot@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat(release): require Play delivery evidence'
+          git push origin HEAD:main
