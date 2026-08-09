@@ -1,0 +1,47 @@
+name: Candidate evidence reconciliation v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/finalize_candidate_evidence_reconciliation.py
+      - .github/workflows/candidate-evidence-reconciliation-v2.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Apply final guarded reconciliation
+        run: python3 scripts/finalize_candidate_evidence_reconciliation.py
+      - name: Verify final migration result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          python3 -m unittest scripts.test_validate_human_acceptance scripts.test_validate_release_governance scripts.test_performance_collection_contract
+          test ! -e scripts/migrate_candidate_evidence_layers.py
+          test ! -e scripts/finalize_candidate_evidence_reconciliation.py
+          test ! -e .github/workflows/candidate-evidence-reconciliation.yml
+          test ! -e .github/workflows/candidate-evidence-reconciliation-v2.yml
+          grep -q 'must not traverse a symbolic link' scripts/validate_human_acceptance.py
+          grep -q 'must not traverse a symbolic link' scripts/validate_release_governance.py
+          test "$(grep -c -- '--require-bound-kind human_acceptance' docs/RELEASE_EVIDENCE_INDEX.md)" -eq 2
+          test "$(grep -c -- '--require-bound-kind release_governance' docs/RELEASE_EVIDENCE_INDEX.md)" -eq 2
+          grep -q 'FOREST_RUN_CAPTURE_PERFETTO' docs/PERFORMANCE.md
+      - name: Commit descendant to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'forest-run-migration-bot'
+          git config user.email 'forest-run-migration-bot@users.noreply.github.com'
+          git add -A
+          git commit -m 'docs(evidence): reconcile candidate acceptance layers'
+          git push origin HEAD:main
