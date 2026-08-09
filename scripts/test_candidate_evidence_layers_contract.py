@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import unittest
 from pathlib import Path
 
@@ -19,8 +18,11 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
             "scripts/compile_release_governance.py",
             "scripts/validate_release_governance.py",
             "scripts/test_validate_release_governance.py",
+            "scripts/validate_release_readiness.py",
+            "scripts/test_validate_release_readiness.py",
             "docs/HUMAN_ACCEPTANCE.md",
             "docs/RELEASE_GOVERNANCE_EVIDENCE.md",
+            "docs/RELEASE_READINESS.md",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
 
@@ -86,12 +88,28 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         ):
             self.assertIn(token, source)
 
+    def test_readiness_revalidates_layers_and_binds_the_signed_bundle(self) -> None:
+        source = (SCRIPTS / "validate_release_readiness.py").read_text(encoding="utf-8")
+        for token in (
+            "device_acceptance.load_and_validate",
+            "human_acceptance.load_and_validate",
+            "governance.load_and_validate",
+            "evidence_index.verify_index",
+            'kind="device_acceptance"',
+            'kind="human_acceptance"',
+            'kind="release_governance"',
+            'entries["signed_bundle"]',
+            "indexed signed_bundle digest does not match the accepted signed artifact",
+        ):
+            self.assertIn(token, source)
+
     def test_canonical_docs_describe_new_layers_and_index_requires_them(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         performance = (DOCS / "PERFORMANCE.md").read_text(encoding="utf-8")
         device = (DOCS / "DEVICE_ACCEPTANCE.md").read_text(encoding="utf-8")
         index = (DOCS / "RELEASE_EVIDENCE_INDEX.md").read_text(encoding="utf-8")
         security = (DOCS / "SECURITY_AND_LICENSING_GOVERNANCE.md").read_text(encoding="utf-8")
+        readiness_doc = (DOCS / "RELEASE_READINESS.md").read_text(encoding="utf-8")
 
         self.assertIn("docs/HUMAN_ACCEPTANCE.md", readme)
         self.assertIn("docs/RELEASE_GOVERNANCE_EVIDENCE.md", readme)
@@ -99,8 +117,12 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         self.assertIn("HUMAN_ACCEPTANCE.md", device)
         self.assertEqual(2, index.count("--require-bound-kind human_acceptance"))
         self.assertEqual(2, index.count("--require-bound-kind release_governance"))
+        self.assertNotIn("--require-bound-kind policy_approval", index)
+        self.assertNotIn("--entry policy_approval=", index)
+        self.assertIn("validate_release_readiness.py", index)
         self.assertIn("compile_release_governance.py", security)
         self.assertIn("validate_release_governance.py", security)
+        self.assertIn("validate_release_readiness.py", readiness_doc)
 
 
 if __name__ == "__main__":
