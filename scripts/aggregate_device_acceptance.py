@@ -25,7 +25,7 @@ import strict_json
 import validate_device_acceptance as acceptance
 import validate_manifest_scenario_traces as manifest_traces
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 METRICS = (
     "p95_frame_ms",
@@ -279,7 +279,8 @@ def _summarize_manifest(
             "artifact_sha256": validation.artifact_sha256,
             "application_id": candidate["application_id"],
             "version_code": candidate["version_code"],
-            "certificate_sha256": candidate["certificate_sha256"],
+            "upload_certificate_sha256": validation.upload_certificate_sha256,
+            "app_signing_certificate_sha256": validation.app_signing_certificate_sha256,
         },
         "session_count": validation.session_count,
         "evidence_file_count": validation.evidence_file_count,

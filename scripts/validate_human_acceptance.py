@@ -27,7 +27,7 @@ from typing import Any, Iterable, Mapping, Sequence
 import strict_json
 import validate_device_acceptance as device_acceptance
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 MAX_EVIDENCE_FILE_BYTES = 2 * 1024 * 1024 * 1024
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -105,6 +105,8 @@ class HumanAcceptanceError(ValueError):
 class HumanAcceptanceSummary:
     candidate_sha: str
     artifact_sha256: str
+    upload_certificate_sha256: str
+    app_signing_certificate_sha256: str
     device_acceptance_sha256: str
     review_count: int
     reviewer_count: int
@@ -117,6 +119,8 @@ class HumanAcceptanceSummary:
             "status": "valid",
             "candidate_sha": self.candidate_sha,
             "artifact_sha256": self.artifact_sha256,
+            "upload_certificate_sha256": self.upload_certificate_sha256,
+            "app_signing_certificate_sha256": self.app_signing_certificate_sha256,
             "device_acceptance_sha256": self.device_acceptance_sha256,
             "review_count": self.review_count,
             "reviewer_count": self.reviewer_count,
@@ -251,7 +255,7 @@ def _resolve_inside(base: Path, relative: str, label: str) -> Path:
     return resolved
 
 
-def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, int]:
+def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, str, int]:
     _require_exact_keys(
         candidate,
         {
@@ -261,7 +265,8 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, in
             "commit_sha",
             "version_code",
             "artifact_sha256",
-            "certificate_sha256",
+            "upload_certificate_sha256",
+            "app_signing_certificate_sha256",
         },
         "candidate",
     )
@@ -273,15 +278,22 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, in
         raise HumanAcceptanceError("candidate.application_id is not canonical")
     sha = _string(candidate["commit_sha"], "candidate.commit_sha", maximum=40).lower()
     artifact = _string(candidate["artifact_sha256"], "candidate.artifact_sha256", maximum=64).lower()
-    certificate = _string(candidate["certificate_sha256"], "candidate.certificate_sha256", maximum=64).lower()
+    upload_certificate = _string(
+        candidate["upload_certificate_sha256"], "candidate.upload_certificate_sha256", maximum=64
+    ).lower()
+    app_signing_certificate = _string(
+        candidate["app_signing_certificate_sha256"], "candidate.app_signing_certificate_sha256", maximum=64
+    ).lower()
     version_code = _integer(candidate["version_code"], "candidate.version_code", minimum=1)
     if not SHA40_RE.fullmatch(sha):
         raise HumanAcceptanceError("candidate.commit_sha must be lowercase 40-hex")
     if not SHA256_RE.fullmatch(artifact):
         raise HumanAcceptanceError("candidate.artifact_sha256 must be lowercase 64-hex")
-    if not SHA256_RE.fullmatch(certificate):
-        raise HumanAcceptanceError("candidate.certificate_sha256 must be lowercase 64-hex")
-    return sha, artifact, certificate, version_code
+    if not SHA256_RE.fullmatch(upload_certificate):
+        raise HumanAcceptanceError("candidate.upload_certificate_sha256 must be lowercase 64-hex")
+    if not SHA256_RE.fullmatch(app_signing_certificate):
+        raise HumanAcceptanceError("candidate.app_signing_certificate_sha256 must be lowercase 64-hex")
+    return sha, artifact, upload_certificate, app_signing_certificate, version_code
 
 
 def _validate_check_group(
@@ -315,7 +327,8 @@ def _load_bound_device_acceptance(
     base: Path,
     candidate_sha: str,
     artifact_sha: str,
-    certificate_sha: str,
+    upload_certificate_sha: str,
+    app_signing_certificate_sha: str,
     version_code: int,
 ) -> tuple[str, dict[str, str]]:
     _require_exact_keys(reference, {"path", "sha256"}, "device_acceptance")
@@ -340,8 +353,10 @@ def _load_bound_device_acceptance(
     candidate = _mapping(data.get("candidate"), "device candidate")
     if summary.candidate_sha != candidate_sha or summary.artifact_sha256 != artifact_sha:
         raise HumanAcceptanceError("device acceptance candidate does not match human candidate")
-    if _string(candidate.get("certificate_sha256"), "device candidate.certificate_sha256").lower() != certificate_sha:
-        raise HumanAcceptanceError("device acceptance certificate does not match human candidate")
+    if summary.upload_certificate_sha256 != upload_certificate_sha:
+        raise HumanAcceptanceError("device acceptance upload certificate does not match human candidate")
+    if summary.app_signing_certificate_sha256 != app_signing_certificate_sha:
+        raise HumanAcceptanceError("device acceptance app-signing certificate does not match human candidate")
     if _integer(candidate.get("version_code"), "device candidate.version_code", minimum=1) != version_code:
         raise HumanAcceptanceError("device acceptance version does not match human candidate")
     sessions: dict[str, str] = {}
@@ -379,7 +394,10 @@ def validate_bundle(
     if _integer(root["schema_version"], "schema_version", minimum=1) != SCHEMA_VERSION:
         raise HumanAcceptanceError(f"schema_version must be {SCHEMA_VERSION}")
     generated_at = _parse_utc(root["generated_at_utc"], "generated_at_utc")
-    candidate_sha, artifact_sha, certificate_sha, version_code = _validate_candidate(
+    (
+        candidate_sha, artifact_sha, upload_certificate_sha,
+        app_signing_certificate_sha, version_code,
+    ) = _validate_candidate(
         _mapping(root["candidate"], "candidate")
     )
     device_digest, device_sessions = _load_bound_device_acceptance(
@@ -387,7 +405,8 @@ def validate_bundle(
         base=evidence_base,
         candidate_sha=candidate_sha,
         artifact_sha=artifact_sha,
-        certificate_sha=certificate_sha,
+        upload_certificate_sha=upload_certificate_sha,
+        app_signing_certificate_sha=app_signing_certificate_sha,
         version_code=version_code,
     )
 
@@ -532,6 +551,8 @@ def validate_bundle(
     return HumanAcceptanceSummary(
         candidate_sha=candidate_sha,
         artifact_sha256=artifact_sha,
+        upload_certificate_sha256=upload_certificate_sha,
+        app_signing_certificate_sha256=app_signing_certificate_sha,
         device_acceptance_sha256=device_digest,
         review_count=len(reviews),
         reviewer_count=len(reviewers),

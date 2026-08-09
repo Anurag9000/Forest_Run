@@ -19,7 +19,9 @@ ARTIFACT_BYTES = b"forest-run-signed-aab-v1\n"
 EVIDENCE_BYTES = b"forest-run-device-evidence-v1\n"
 ARTIFACT_SHA = hashlib.sha256(ARTIFACT_BYTES).hexdigest()
 EVIDENCE_SHA = hashlib.sha256(EVIDENCE_BYTES).hexdigest()
-CERT_SHA = "3" * 64
+UPLOAD_CERT_SHA = "3" * 64
+APP_SIGNING_CERT_SHA = "4" * 64
+CERT_SHA = UPLOAD_CERT_SHA  # compatibility alias for tests importing this fixture
 SHA = "1" * 40
 SCENARIOS = (
     "ordinary_play_15m",
@@ -62,7 +64,7 @@ def session(device_class: str, index: int) -> dict:
         "build": {
             "commit_sha": SHA,
             "artifact_sha256": ARTIFACT_SHA,
-            "certificate_sha256": CERT_SHA,
+            "app_signing_certificate_sha256": APP_SIGNING_CERT_SHA,
             "version_code": 7,
             "signed": True,
             "installed_via": "internal_store",
@@ -101,7 +103,7 @@ def session(device_class: str, index: int) -> dict:
 
 def valid_bundle() -> dict:
     return {
-        "schema_version": 1,
+        "schema_version": MODULE.SCHEMA_VERSION,
         "generated_at_utc": "2026-08-01T12:00:00Z",
         "candidate": {
             "repository": "Anurag9000/Forest_Run",
@@ -112,14 +114,14 @@ def valid_bundle() -> dict:
             "artifact_sha256": ARTIFACT_SHA,
             "artifact_path": "artifact/app-release.aab",
             "signed": True,
-            "certificate_sha256": CERT_SHA,
+            "upload_certificate_sha256": UPLOAD_CERT_SHA,
             "store_delivery": {
                 "track": "internal",
                 "installed": True,
                 "package_name": "com.anurag9000.forestrun",
                 "version_code": 7,
                 "artifact_sha256": ARTIFACT_SHA,
-                "certificate_sha256": CERT_SHA,
+                "app_signing_certificate_sha256": APP_SIGNING_CERT_SHA,
             },
         },
         "policy": {
@@ -336,6 +338,38 @@ class DeviceAcceptanceTest(unittest.TestCase):
             with self.assertRaises(MODULE.EvidenceError) as raised:
                 MODULE.validate_bundle(bundle, source_bytes=raw, evidence_base=root)
             self.assertIn("must not traverse a symbolic link", str(raised.exception))
+
+
+    def test_upload_and_app_signing_certificates_are_distinct_identities(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = valid_bundle()
+            materialize_files(root, bundle)
+            raw = json.dumps(bundle, sort_keys=True).encode()
+            summary = MODULE.validate_bundle(bundle, source_bytes=raw, evidence_base=root)
+            self.assertEqual(UPLOAD_CERT_SHA, summary.upload_certificate_sha256)
+            self.assertEqual(APP_SIGNING_CERT_SHA, summary.app_signing_certificate_sha256)
+            self.assertNotEqual(summary.upload_certificate_sha256, summary.app_signing_certificate_sha256)
+
+    def test_session_must_match_delivered_app_signing_certificate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = valid_bundle()
+            materialize_files(root, bundle)
+            bundle["sessions"][0]["build"]["app_signing_certificate_sha256"] = "5" * 64
+            with self.assertRaises(MODULE.EvidenceError) as raised:
+                MODULE.validate_bundle(bundle, source_bytes=json.dumps(bundle).encode(), evidence_base=root)
+            self.assertIn("does not match store delivery", str(raised.exception))
+
+    def test_legacy_ambiguous_certificate_fields_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = valid_bundle()
+            materialize_files(root, bundle)
+            bundle["candidate"]["certificate_sha256"] = bundle["candidate"].pop("upload_certificate_sha256")
+            with self.assertRaises(MODULE.EvidenceError) as raised:
+                MODULE.validate_bundle(bundle, source_bytes=json.dumps(bundle).encode(), evidence_base=root)
+            self.assertIn("candidate is missing", str(raised.exception))
 
 
 if __name__ == "__main__":

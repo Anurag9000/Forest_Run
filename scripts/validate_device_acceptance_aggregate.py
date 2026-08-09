@@ -13,7 +13,7 @@ from typing import Any, Mapping, Sequence
 
 import strict_json
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MAX_AGGREGATE_BYTES = 16 * 1024 * 1024
 CANONICAL_APPLICATION_ID = "com.anurag9000.forestrun"
 MANDATORY_DEVICE_CLASSES = {
@@ -381,7 +381,8 @@ def _validate_candidate_summary(value: Any) -> dict[str, Any]:
             "artifact_sha256",
             "application_id",
             "version_code",
-            "certificate_sha256",
+            "upload_certificate_sha256",
+            "app_signing_certificate_sha256",
         },
         f"{label}.candidate",
     )
@@ -404,9 +405,14 @@ def _validate_candidate_summary(value: Any) -> dict[str, Any]:
         f"{label}.candidate.version_code",
         minimum=1,
     )
-    certificate_sha256 = _sha(
-        candidate["certificate_sha256"],
-        f"{label}.candidate.certificate_sha256",
+    upload_certificate_sha256 = _sha(
+        candidate["upload_certificate_sha256"],
+        f"{label}.candidate.upload_certificate_sha256",
+        SHA256_RE,
+    )
+    app_signing_certificate_sha256 = _sha(
+        candidate["app_signing_certificate_sha256"],
+        f"{label}.candidate.app_signing_certificate_sha256",
         SHA256_RE,
     )
 
@@ -491,7 +497,8 @@ def _validate_candidate_summary(value: Any) -> dict[str, Any]:
             "artifact_sha256": artifact_sha256,
             "application_id": application_id,
             "version_code": version_code,
-            "certificate_sha256": certificate_sha256,
+            "upload_certificate_sha256": upload_certificate_sha256,
+            "app_signing_certificate_sha256": app_signing_certificate_sha256,
         },
         "session_count": session_count,
         "evidence_file_count": evidence_file_count,

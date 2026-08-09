@@ -26,7 +26,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 import strict_json
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 CANONICAL_REPOSITORY = "Anurag9000/Forest_Run"
 CANONICAL_BRANCH = "main"
 CANONICAL_APPLICATION_ID = "com.anurag9000.forestrun"
@@ -94,6 +94,8 @@ class Thresholds:
 class ValidationSummary:
     candidate_sha: str
     artifact_sha256: str
+    upload_certificate_sha256: str
+    app_signing_certificate_sha256: str
     session_count: int
     covered_device_classes: tuple[str, ...]
     covered_scenarios: tuple[str, ...]
@@ -105,6 +107,8 @@ class ValidationSummary:
             "status": "valid",
             "candidate_sha": self.candidate_sha,
             "artifact_sha256": self.artifact_sha256,
+            "upload_certificate_sha256": self.upload_certificate_sha256,
+            "app_signing_certificate_sha256": self.app_signing_certificate_sha256,
             "session_count": self.session_count,
             "covered_device_classes": list(self.covered_device_classes),
             "covered_scenarios": list(self.covered_scenarios),
@@ -320,7 +324,16 @@ def _require_exact_keys(
         raise EvidenceError(f"{label} contains unrecognized keys: {', '.join(extras)}")
 
 
-def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, str, int]:
+def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, str, str, int]:
+    _require_exact_keys(
+        candidate,
+        {
+            "repository", "branch", "application_id", "commit_sha", "version_code",
+            "artifact_sha256", "artifact_path", "signed",
+            "upload_certificate_sha256", "store_delivery",
+        },
+        "candidate",
+    )
     repository = _string(candidate.get("repository"), "candidate.repository")
     branch = _string(candidate.get("branch"), "candidate.branch")
     application_id = _string(candidate.get("application_id"), "candidate.application_id")
@@ -356,16 +369,24 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, st
     if not _bool(candidate.get("signed"), "candidate.signed"):
         raise EvidenceError("candidate.signed must be true")
 
-    certificate_sha = _string(
-        candidate.get("certificate_sha256"),
-        "candidate.certificate_sha256",
+    upload_certificate_sha = _string(
+        candidate.get("upload_certificate_sha256"),
+        "candidate.upload_certificate_sha256",
     ).lower()
-    if not SHA256_RE.fullmatch(certificate_sha):
+    if not SHA256_RE.fullmatch(upload_certificate_sha):
         raise EvidenceError(
-            "candidate.certificate_sha256 must be a lowercase 64-hex digest"
+            "candidate.upload_certificate_sha256 must be a lowercase 64-hex digest"
         )
 
     store = _mapping(candidate.get("store_delivery"), "candidate.store_delivery")
+    _require_exact_keys(
+        store,
+        {
+            "track", "installed", "package_name", "version_code",
+            "artifact_sha256", "app_signing_certificate_sha256",
+        },
+        "candidate.store_delivery",
+    )
     if _string(store.get("track"), "candidate.store_delivery.track") != "internal":
         raise EvidenceError("candidate.store_delivery.track must be internal")
     if not _bool(store.get("installed"), "candidate.store_delivery.installed"):
@@ -398,17 +419,18 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, st
         raise EvidenceError(
             "candidate.store_delivery.artifact_sha256 does not match candidate"
         )
-    if (
-        _string(
-            store.get("certificate_sha256"),
-            "candidate.store_delivery.certificate_sha256",
-        ).lower()
-        != certificate_sha
-    ):
+    app_signing_certificate_sha = _string(
+        store.get("app_signing_certificate_sha256"),
+        "candidate.store_delivery.app_signing_certificate_sha256",
+    ).lower()
+    if not SHA256_RE.fullmatch(app_signing_certificate_sha):
         raise EvidenceError(
-            "candidate.store_delivery.certificate_sha256 does not match candidate"
+            "candidate.store_delivery.app_signing_certificate_sha256 must be a lowercase 64-hex digest"
         )
-    return sha, artifact_sha, artifact_path, certificate_sha, version_code
+    return (
+        sha, artifact_sha, artifact_path, upload_certificate_sha,
+        app_signing_certificate_sha, version_code,
+    )
 
 
 def _validate_session(
@@ -417,7 +439,7 @@ def _validate_session(
     index: int,
     candidate_sha: str,
     artifact_sha: str,
-    certificate_sha: str,
+    app_signing_certificate_sha: str,
     version_code: int,
     required_scenarios: tuple[str, ...],
     thresholds: Thresholds,
@@ -490,6 +512,14 @@ def _validate_session(
         raise EvidenceError(f"{label}.device dimensions must describe a non-square display")
 
     build = _mapping(session.get("build"), f"{label}.build")
+    _require_exact_keys(
+        build,
+        {
+            "commit_sha", "artifact_sha256", "app_signing_certificate_sha256",
+            "version_code", "signed", "installed_via",
+        },
+        f"{label}.build",
+    )
     if (
         _string(build.get("commit_sha"), f"{label}.build.commit_sha").lower()
         != candidate_sha
@@ -514,13 +544,13 @@ def _validate_session(
         raise EvidenceError(f"{label}.build.version_code does not match candidate")
     if (
         _string(
-            build.get("certificate_sha256"),
-            f"{label}.build.certificate_sha256",
+            build.get("app_signing_certificate_sha256"),
+            f"{label}.build.app_signing_certificate_sha256",
         ).lower()
-        != certificate_sha
+        != app_signing_certificate_sha
     ):
         raise EvidenceError(
-            f"{label}.build.certificate_sha256 does not match candidate"
+            f"{label}.build.app_signing_certificate_sha256 does not match store delivery"
         )
     if not _bool(build.get("signed"), f"{label}.build.signed"):
         raise EvidenceError(f"{label}.build.signed must be true")
@@ -662,7 +692,8 @@ def validate_bundle(
         candidate_sha,
         artifact_sha,
         artifact_path,
-        certificate_sha,
+        upload_certificate_sha,
+        app_signing_certificate_sha,
         version_code,
     ) = _validate_candidate(candidate)
 
@@ -719,7 +750,7 @@ def validate_bundle(
             index=index,
             candidate_sha=candidate_sha,
             artifact_sha=artifact_sha,
-            certificate_sha=certificate_sha,
+            app_signing_certificate_sha=app_signing_certificate_sha,
             version_code=version_code,
             required_scenarios=required_scenarios,
             thresholds=thresholds,
@@ -841,6 +872,8 @@ def validate_bundle(
     return ValidationSummary(
         candidate_sha=candidate_sha,
         artifact_sha256=artifact_sha,
+        upload_certificate_sha256=upload_certificate_sha,
+        app_signing_certificate_sha256=app_signing_certificate_sha,
         session_count=len(sessions),
         covered_device_classes=tuple(sorted(class_counts)),
         covered_scenarios=tuple(sorted(covered_scenarios)),

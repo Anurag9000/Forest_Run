@@ -14,11 +14,12 @@ Every bundle must identify exactly one candidate:
 - full lowercase 40-hex commit SHA;
 - positive version code;
 - signed artifact path and SHA-256, verified against the actual file beside the manifest;
-- signing-certificate SHA-256;
+- upload-certificate SHA-256 for the signed AAB submitted to Play;
 - successful install from the internal store track;
-- delivered package name, version, artifact digest, and certificate digest matching the candidate.
+- delivered package name and version plus the **Play app-signing certificate SHA-256** observed on the installed APK;
+- the uploaded AAB digest repeated in the store-delivery record so the delivery receipt remains tied to the exact submitted artifact.
 
-Every device session must repeat the same commit, artifact, version, signing, and internal-store installation identity. Mixing local APKs, different commits, or different bundles in one acceptance set is rejected.
+The upload certificate and Play app-signing certificate are intentionally separate identities and may differ. Under Play App Signing, the upload key authenticates the bundle submitted by the developer while Play signs delivered APKs with the app-signing key. Every device session must repeat the same commit, uploaded artifact, version, delivered app-signing certificate, signing state, and internal-store installation identity. Mixing local APKs, different commits, different bundles, or a locally signed APK certificate into the Play-delivery field is rejected.
 
 ## 2. Minimum device classes
 
@@ -119,9 +120,9 @@ These seven per-session manual fields are intentionally coarse physical-session 
 
 Use [`scripts/compile_device_acceptance.py`](../scripts/compile_device_acceptance.py) to build the final manifest from a human-entered draft. In the draft:
 
-- keep candidate identity, certificate, version, signed status, and internal-track installation facts explicit;
-- record the package, version, artifact digest, and certificate digest captured from the internal-store delivery path;
-- record every session's captured commit, artifact digest, version, certificate, signing state, and installation path;
+- keep candidate identity, **upload certificate**, version, signed status, and internal-track installation facts explicit;
+- record the package, version, uploaded AAB digest, and **app-signing certificate** captured from the internal-store delivery path;
+- record every session's captured commit, uploaded artifact digest, version, delivered app-signing certificate, signing state, and installation path;
 - record all device/scenario/performance/manual-review facts;
 - list each scenario's `evidence_files` as plain relative path strings;
 - do not type the candidate-file or raw-evidence-file SHA-256 values that the compiler derives from local bytes.

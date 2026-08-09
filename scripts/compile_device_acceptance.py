@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+import strict_json
 import validate_device_acceptance as acceptance
 
 
@@ -47,12 +48,15 @@ def _read_object(path: Path) -> dict[str, Any]:
     if len(raw) != size:
         raise CompilationError(f"draft changed while being read: {path}")
     try:
-        value = json.loads(raw)
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        value = strict_json.loads(
+            raw,
+            label=str(path),
+            maximum_bytes=acceptance.MAX_MANIFEST_BYTES,
+            require_object=True,
+        )
+    except strict_json.StrictJsonError as exc:
         raise CompilationError(f"invalid JSON in {path}: {exc}") from exc
-    if not isinstance(value, dict):
-        raise CompilationError(f"{path} must contain a JSON object")
-    return value
+    return dict(value)
 
 
 def _hash_file(path: Path, label: str, maximum_bytes: int) -> str:
@@ -73,11 +77,10 @@ def _resolve_relative(base: Path, value: Any, label: str) -> tuple[str, Path]:
     except acceptance.EvidenceError as exc:
         raise CompilationError(str(exc)) from exc
     canonical_base = base.resolve()
-    resolved = (canonical_base / relative).resolve()
     try:
-        resolved.relative_to(canonical_base)
-    except ValueError as exc:
-        raise CompilationError(f"{label} escapes the draft directory") from exc
+        resolved = acceptance._resolve_evidence_file(canonical_base, relative, label)
+    except acceptance.EvidenceError as exc:
+        raise CompilationError(str(exc)) from exc
     return relative, resolved
 
 

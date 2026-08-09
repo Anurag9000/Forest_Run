@@ -13,7 +13,8 @@ ARTIFACT_BYTES = b"signed forest run candidate\n"
 EVIDENCE_BYTES = b"physical evidence\n"
 ARTIFACT_SHA = hashlib.sha256(ARTIFACT_BYTES).hexdigest()
 EVIDENCE_SHA = hashlib.sha256(EVIDENCE_BYTES).hexdigest()
-CERTIFICATE_SHA = "3" * 64
+UPLOAD_CERTIFICATE_SHA = "3" * 64
+APP_SIGNING_CERTIFICATE_SHA = "4" * 64
 COMMIT_SHA = "1" * 40
 SCENARIOS = (
     "ordinary_play_15m",
@@ -38,7 +39,7 @@ def captured_build() -> dict:
         "commit_sha": COMMIT_SHA,
         "artifact_sha256": ARTIFACT_SHA,
         "version_code": 7,
-        "certificate_sha256": CERTIFICATE_SHA,
+        "app_signing_certificate_sha256": APP_SIGNING_CERTIFICATE_SHA,
         "signed": True,
         "installed_via": "internal_store",
     }
@@ -105,14 +106,14 @@ def draft_bundle() -> dict:
             "version_code": 7,
             "artifact_path": "artifact/app-release.aab",
             "signed": True,
-            "certificate_sha256": CERTIFICATE_SHA,
+            "upload_certificate_sha256": UPLOAD_CERTIFICATE_SHA,
             "store_delivery": {
                 "track": "internal",
                 "installed": True,
                 "package_name": "com.anurag9000.forestrun",
                 "version_code": 7,
                 "artifact_sha256": ARTIFACT_SHA,
-                "certificate_sha256": CERTIFICATE_SHA,
+                "app_signing_certificate_sha256": APP_SIGNING_CERTIFICATE_SHA,
             },
         },
         "policy": {

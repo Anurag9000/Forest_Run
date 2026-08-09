@@ -54,7 +54,8 @@ class ReleaseReadinessError(ValueError):
 class ReleaseReadinessSummary:
     candidate_sha: str
     artifact_sha256: str
-    certificate_sha256: str
+    upload_certificate_sha256: str
+    app_signing_certificate_sha256: str
     device_acceptance_sha256: str
     human_acceptance_sha256: str
     governance_sha256: str
@@ -67,7 +68,8 @@ class ReleaseReadinessSummary:
             "status": "valid",
             "candidate_sha": self.candidate_sha,
             "artifact_sha256": self.artifact_sha256,
-            "certificate_sha256": self.certificate_sha256,
+            "upload_certificate_sha256": self.upload_certificate_sha256,
+            "app_signing_certificate_sha256": self.app_signing_certificate_sha256,
             "device_acceptance_sha256": self.device_acceptance_sha256,
             "human_acceptance_sha256": self.human_acceptance_sha256,
             "governance_sha256": self.governance_sha256,
@@ -229,6 +231,24 @@ def validate_readiness(
         raise ReleaseReadinessError(
             "device, human, and governance artifact SHA-256 values do not match"
         )
+    upload_certificates = {
+        device_summary.upload_certificate_sha256,
+        human_summary.upload_certificate_sha256,
+        governance_summary.upload_certificate_sha256,
+    }
+    if len(upload_certificates) != 1:
+        raise ReleaseReadinessError(
+            "device, human, and governance upload-certificate SHA-256 values do not match"
+        )
+    app_signing_certificates = {
+        device_summary.app_signing_certificate_sha256,
+        human_summary.app_signing_certificate_sha256,
+        governance_summary.app_signing_certificate_sha256,
+    }
+    if len(app_signing_certificates) != 1:
+        raise ReleaseReadinessError(
+            "device, human, and governance app-signing-certificate SHA-256 values do not match"
+        )
 
     device_digest = _sha256_file(device_path)
     human_digest = _sha256_file(human_path)
@@ -297,7 +317,8 @@ def validate_readiness(
     return ReleaseReadinessSummary(
         candidate_sha=expected,
         artifact_sha256=governance_summary.artifact_sha256,
-        certificate_sha256=governance_summary.certificate_sha256,
+        upload_certificate_sha256=governance_summary.upload_certificate_sha256,
+        app_signing_certificate_sha256=governance_summary.app_signing_certificate_sha256,
         device_acceptance_sha256=device_digest,
         human_acceptance_sha256=human_digest,
         governance_sha256=governance_digest,

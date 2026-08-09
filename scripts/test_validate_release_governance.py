@@ -44,7 +44,8 @@ def _governance_draft(root: Path) -> dict:
                 f"version code: {candidate['version_code']}\n"
                 f"candidate commit: {candidate['commit_sha']}\n"
                 f"artifact sha256: {candidate['artifact_sha256']}\n"
-                f"certificate sha256: {candidate['certificate_sha256']}\n"
+                f"upload certificate sha256: {candidate['upload_certificate_sha256']}\n"
+                f"app signing certificate sha256: {candidate['app_signing_certificate_sha256']}\n"
             )
         path.write_text(content, encoding="utf-8")
         evidence[kind] = relative

@@ -33,6 +33,8 @@ A ready result requires:
 
 - expected SHA = physical candidate SHA = human candidate SHA = governance candidate SHA = evidence-index candidate SHA;
 - physical artifact SHA-256 = human artifact SHA-256 = governance artifact SHA-256;
+- physical upload-certificate SHA-256 = human upload-certificate SHA-256 = governance upload-certificate SHA-256;
+- physical app-signing-certificate SHA-256 = human app-signing-certificate SHA-256 = governance app-signing-certificate SHA-256;
 - the human manifest's recorded physical-manifest digest equals the exact revalidated physical manifest;
 - the governance manifest's physical-manifest digest equals that same physical manifest;
 - the governance manifest's human-manifest digest equals the exact revalidated human manifest;

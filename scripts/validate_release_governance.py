@@ -28,7 +28,7 @@ import strict_json
 import validate_device_acceptance as device_acceptance
 import validate_human_acceptance as human_acceptance
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 MAX_EVIDENCE_FILE_BYTES = 2 * 1024 * 1024 * 1024
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -95,7 +95,8 @@ class GovernanceError(ValueError):
 class GovernanceSummary:
     candidate_sha: str
     artifact_sha256: str
-    certificate_sha256: str
+    upload_certificate_sha256: str
+    app_signing_certificate_sha256: str
     device_acceptance_sha256: str
     human_acceptance_sha256: str
     decision_count: int
@@ -108,7 +109,8 @@ class GovernanceSummary:
             "status": "valid",
             "candidate_sha": self.candidate_sha,
             "artifact_sha256": self.artifact_sha256,
-            "certificate_sha256": self.certificate_sha256,
+            "upload_certificate_sha256": self.upload_certificate_sha256,
+            "app_signing_certificate_sha256": self.app_signing_certificate_sha256,
             "device_acceptance_sha256": self.device_acceptance_sha256,
             "human_acceptance_sha256": self.human_acceptance_sha256,
             "decision_count": self.decision_count,
@@ -253,7 +255,7 @@ def _hash_regular_file(path: Path, label: str, maximum_bytes: int) -> tuple[str,
     return digest.hexdigest(), after
 
 
-def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, int, str]:
+def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, str, int, str]:
     _require_exact_keys(
         candidate,
         {
@@ -264,7 +266,8 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, in
             "version_code",
             "version_name",
             "artifact_sha256",
-            "certificate_sha256",
+            "upload_certificate_sha256",
+            "app_signing_certificate_sha256",
         },
         "candidate",
     )
@@ -276,16 +279,23 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, in
         raise GovernanceError("candidate.application_id is not canonical")
     sha = _string(candidate["commit_sha"], "candidate.commit_sha", maximum=40).lower()
     artifact = _string(candidate["artifact_sha256"], "candidate.artifact_sha256", maximum=64).lower()
-    certificate = _string(candidate["certificate_sha256"], "candidate.certificate_sha256", maximum=64).lower()
+    upload_certificate = _string(
+        candidate["upload_certificate_sha256"], "candidate.upload_certificate_sha256", maximum=64
+    ).lower()
+    app_signing_certificate = _string(
+        candidate["app_signing_certificate_sha256"], "candidate.app_signing_certificate_sha256", maximum=64
+    ).lower()
     version_code = _integer(candidate["version_code"], "candidate.version_code", minimum=1)
     version_name = _string(candidate["version_name"], "candidate.version_name", maximum=120)
     if not SHA40_RE.fullmatch(sha):
         raise GovernanceError("candidate.commit_sha must be lowercase 40-hex")
     if not SHA256_RE.fullmatch(artifact):
         raise GovernanceError("candidate.artifact_sha256 must be lowercase 64-hex")
-    if not SHA256_RE.fullmatch(certificate):
-        raise GovernanceError("candidate.certificate_sha256 must be lowercase 64-hex")
-    return sha, artifact, certificate, version_code, version_name
+    if not SHA256_RE.fullmatch(upload_certificate):
+        raise GovernanceError("candidate.upload_certificate_sha256 must be lowercase 64-hex")
+    if not SHA256_RE.fullmatch(app_signing_certificate):
+        raise GovernanceError("candidate.app_signing_certificate_sha256 must be lowercase 64-hex")
+    return sha, artifact, upload_certificate, app_signing_certificate, version_code, version_name
 
 
 def _validate_file_reference(
@@ -320,7 +330,8 @@ def _load_device_reference(
     base: Path,
     candidate_sha: str,
     artifact_sha: str,
-    certificate_sha: str,
+    upload_certificate_sha: str,
+    app_signing_certificate_sha: str,
     version_code: int,
 ) -> str:
     reference = _mapping(raw, "device_acceptance")
@@ -342,8 +353,10 @@ def _load_device_reference(
     device_candidate = _mapping(data.get("candidate"), "device candidate")
     if summary.candidate_sha != candidate_sha or summary.artifact_sha256 != artifact_sha:
         raise GovernanceError("device acceptance candidate does not match governance candidate")
-    if _string(device_candidate.get("certificate_sha256"), "device candidate.certificate_sha256").lower() != certificate_sha:
-        raise GovernanceError("device acceptance certificate does not match governance candidate")
+    if summary.upload_certificate_sha256 != upload_certificate_sha:
+        raise GovernanceError("device acceptance upload certificate does not match governance candidate")
+    if summary.app_signing_certificate_sha256 != app_signing_certificate_sha:
+        raise GovernanceError("device acceptance app-signing certificate does not match governance candidate")
     if _integer(device_candidate.get("version_code"), "device candidate.version_code", minimum=1) != version_code:
         raise GovernanceError("device acceptance version does not match governance candidate")
     return actual
@@ -355,7 +368,8 @@ def _load_human_reference(
     base: Path,
     candidate_sha: str,
     artifact_sha: str,
-    certificate_sha: str,
+    upload_certificate_sha: str,
+    app_signing_certificate_sha: str,
     version_code: int,
     device_digest: str,
 ) -> str:
@@ -379,8 +393,10 @@ def _load_human_reference(
         raise GovernanceError("human acceptance references a different device acceptance manifest")
     data = strict_json.load_file(path, maximum_bytes=MAX_MANIFEST_BYTES, require_object=True)
     human_candidate = _mapping(data.get("candidate"), "human candidate")
-    if _string(human_candidate.get("certificate_sha256"), "human candidate.certificate_sha256").lower() != certificate_sha:
-        raise GovernanceError("human acceptance certificate does not match governance candidate")
+    if summary.upload_certificate_sha256 != upload_certificate_sha:
+        raise GovernanceError("human acceptance upload certificate does not match governance candidate")
+    if summary.app_signing_certificate_sha256 != app_signing_certificate_sha:
+        raise GovernanceError("human acceptance app-signing certificate does not match governance candidate")
     if _integer(human_candidate.get("version_code"), "human candidate.version_code", minimum=1) != version_code:
         raise GovernanceError("human acceptance version does not match governance candidate")
     return actual
@@ -426,7 +442,10 @@ def validate_bundle(
     if _integer(root["schema_version"], "schema_version", minimum=1) != SCHEMA_VERSION:
         raise GovernanceError(f"schema_version must be {SCHEMA_VERSION}")
     generated_at = _parse_utc(root["generated_at_utc"], "generated_at_utc")
-    candidate_sha, artifact_sha, certificate_sha, version_code, version_name = _validate_candidate(
+    (
+        candidate_sha, artifact_sha, upload_certificate_sha,
+        app_signing_certificate_sha, version_code, version_name,
+    ) = _validate_candidate(
         _mapping(root["candidate"], "candidate")
     )
     _validate_https_url(root["privacy_policy_url"], "privacy_policy_url")
@@ -441,7 +460,8 @@ def validate_bundle(
         base=evidence_base,
         candidate_sha=candidate_sha,
         artifact_sha=artifact_sha,
-        certificate_sha=certificate_sha,
+        upload_certificate_sha=upload_certificate_sha,
+        app_signing_certificate_sha=app_signing_certificate_sha,
         version_code=version_code,
     )
     human_digest = _load_human_reference(
@@ -449,7 +469,8 @@ def validate_bundle(
         base=evidence_base,
         candidate_sha=candidate_sha,
         artifact_sha=artifact_sha,
-        certificate_sha=certificate_sha,
+        upload_certificate_sha=upload_certificate_sha,
+        app_signing_certificate_sha=app_signing_certificate_sha,
         version_code=version_code,
         device_digest=device_digest,
     )
@@ -500,7 +521,8 @@ def validate_bundle(
     for required_literal, label in (
         (candidate_sha, "candidate commit SHA"),
         (artifact_sha, "artifact SHA-256"),
-        (certificate_sha, "certificate SHA-256"),
+        (upload_certificate_sha, "upload certificate SHA-256"),
+        (app_signing_certificate_sha, "app-signing certificate SHA-256"),
         (str(version_code), "version code"),
         (version_name, "version name"),
     ):
@@ -537,7 +559,8 @@ def validate_bundle(
     return GovernanceSummary(
         candidate_sha=candidate_sha,
         artifact_sha256=artifact_sha,
-        certificate_sha256=certificate_sha,
+        upload_certificate_sha256=upload_certificate_sha,
+        app_signing_certificate_sha256=app_signing_certificate_sha,
         device_acceptance_sha256=device_digest,
         human_acceptance_sha256=human_digest,
         decision_count=len(decisions),

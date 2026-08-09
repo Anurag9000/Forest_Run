@@ -22,7 +22,8 @@ The same candidate must match across both layers:
 - full commit SHA;
 - version code;
 - signed artifact SHA-256;
-- signing-certificate SHA-256.
+- upload-certificate SHA-256 for the submitted AAB;
+- app-signing-certificate SHA-256 for the Play-delivered APK.
 
 A human review cannot be attached to a stale local APK, an emulator-only run, or a different device session.
 
@@ -123,7 +124,8 @@ The draft uses plain relative paths so reviewers do not manually type file hashe
     "commit_sha": "<40-hex>",
     "version_code": 1,
     "artifact_sha256": "<64-hex>",
-    "certificate_sha256": "<64-hex>"
+    "upload_certificate_sha256": "<64-hex>",
+    "app_signing_certificate_sha256": "<64-hex>"
   },
   "device_acceptance": "device-acceptance.json",
   "reviews": [

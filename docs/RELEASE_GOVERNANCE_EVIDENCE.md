@@ -24,7 +24,8 @@ The validator revalidates both manifests and rejects disagreement in:
 - candidate commit SHA;
 - version code;
 - signed artifact SHA-256;
-- signing-certificate SHA-256;
+- upload-certificate SHA-256 for the submitted AAB;
+- app-signing-certificate SHA-256 for the Play-delivered APK;
 - device-acceptance digest referenced by human acceptance.
 
 Governance therefore cannot be approved against one artifact while physical or human acceptance describes another.
@@ -99,7 +100,8 @@ The `release_notes` evidence must be readable UTF-8 text and contain the exact:
 
 - candidate commit SHA;
 - artifact SHA-256;
-- certificate SHA-256;
+- upload-certificate SHA-256;
+- app-signing-certificate SHA-256;
 - version code;
 - version name.
 
