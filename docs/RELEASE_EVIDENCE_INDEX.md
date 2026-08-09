@@ -34,7 +34,7 @@ Without a final index, each file can be internally valid while the folder remain
 python3 scripts/build_stable_release_evidence_index.py \
   --root . \
   --candidate-sha "$CANDIDATE_SHA" \
-  --generated-at-utc "2026-08-06T06:00:00Z" \
+  --generated-at-utc "2026-08-09T18:00:00Z" \
   --entry signed_bundle=release/evidence/app-release.aab \
   --entry artifact_verification=release/evidence/artifact-verification.json \
   --entry declared_dependencies=release/evidence/declared-dependency-inventory.json \
@@ -45,7 +45,6 @@ python3 scripts/build_stable_release_evidence_index.py \
   --entry release_governance=release/evidence/release-governance.json \
   --entry screenshot_manifest=release/google-play/screenshots/screenshot_manifest.json \
   --entry graphics_manifest=release/google-play/graphics/graphics_manifest.json \
-  --entry policy_approval=release/evidence/policy-approval.json \
   --require-bound-kind artifact_verification \
   --require-bound-kind declared_dependencies \
   --require-bound-kind sbom \
@@ -55,11 +54,12 @@ python3 scripts/build_stable_release_evidence_index.py \
   --require-bound-kind release_governance \
   --require-bound-kind screenshot_manifest \
   --require-bound-kind graphics_manifest \
-  --require-bound-kind policy_approval \
   --output release/evidence/release-evidence-index.json
 ```
 
-Use the exact lowercase 40-character candidate SHA and an actual canonical UTC timestamp with second precision. Add one unique `kind=relative/path` entry for every file used in the release decision.
+Use the exact lowercase 40-character candidate SHA and an actual canonical UTC timestamp with second precision. Add one unique `kind=relative/path` entry for every file used in the release decision. In particular, index the individual governance evidence files, performance diagnostics/traces, store-delivery records, and reviewer records whenever they materially participate in the go/no-go decision; the command above shows the minimum principal manifests rather than the maximum evidence set.
+
+The prior generic `policy_approval` example is intentionally removed. There is no separate `policy_approval` source format in the repository: policy/privacy/security/licensing/presentation decisions now belong to the strict candidate-bound `release_governance` manifest defined in [`RELEASE_GOVERNANCE_EVIDENCE.md`](RELEASE_GOVERNANCE_EVIDENCE.md). Keeping both as mandatory kinds would create an unsupported duplicate authority.
 
 The command succeeds only after independent verification of the published output. It prints the reconstructed entry count, candidate SHA, and evidence-set digest.
 
@@ -80,8 +80,7 @@ python3 scripts/verify_release_evidence_index.py \
   --require-bound-kind human_acceptance \
   --require-bound-kind release_governance \
   --require-bound-kind screenshot_manifest \
-  --require-bound-kind graphics_manifest \
-  --require-bound-kind policy_approval
+  --require-bound-kind graphics_manifest
 ```
 
 A valid result includes:
@@ -149,16 +148,24 @@ The verifier rejects:
 - missing or unbound required evidence kinds;
 - replacement of the index during the full verification interval.
 
+## Final readiness orchestration
+
+After the index independently verifies, run [`validate_release_readiness.py`](../scripts/validate_release_readiness.py) as described in [`RELEASE_READINESS.md`](RELEASE_READINESS.md). The readiness gate re-runs the device, human, governance, and index validators and then proves that the exact revalidated manifest paths/digests are the exact indexed files and that the indexed `signed_bundle` digest equals the artifact approved by all acceptance layers.
+
+That final cross-check is intentionally separate from the index format. The index owns evidence-set integrity; readiness owns semantic cross-layer consistency.
+
 ## Review procedure
 
 1. Freeze one exact clean `main` SHA.
 2. Build, sign, deliver, capture, and test that candidate only.
 3. Validate every evidence format with its owning verifier.
 4. Build the declared inventory, resolved SBOM, licence review, and vulnerability report for the same candidate.
-5. Run `build_stable_release_evidence_index.py` with every selected file.
-6. Have an independent reviewer run `verify_release_evidence_index.py` separately.
-7. Record `indexSha256` and `evidenceSetSha256` in the final approval record.
-8. Review entry count, kinds, paths, candidate-bound count, and reviewer coverage.
-9. Do not modify an indexed file after approval. Any required change creates a new candidate and evidence set.
+5. Compile/validate physical acceptance, then human acceptance, then release governance for the same artifact.
+6. Run `build_stable_release_evidence_index.py` with every selected file.
+7. Have an independent reviewer run `verify_release_evidence_index.py` separately.
+8. Run `validate_release_readiness.py` against the same evidence root and exact candidate SHA.
+9. Record `indexSha256`, `evidenceSetSha256`, and the readiness summary in the final approval record.
+10. Review entry count, kinds, paths, candidate-bound count, reviewer coverage, underlying evidence, and external console state.
+11. Do not modify an indexed file after approval. Any required change creates a new candidate and evidence set.
 
-The index is an integrity boundary, not an approval substitute. Physical-device sessions, subjective presentation review, signing custody, legal decisions, and store-console checks still require real people and real systems.
+The index and readiness gate are integrity/orchestration boundaries, not approval substitutes. Physical-device sessions, subjective presentation review, signing custody, legal decisions, and store-console checks still require real people and real systems.
