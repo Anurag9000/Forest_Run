@@ -313,6 +313,7 @@ def validate_bundle(
     if not apk_set:
         raise InstalledIdentityError("installed_package.apk_set must not be empty")
     names: set[str] = set()
+    apk_observations: dict[str, tuple[str, int]] = {}
     seen_base = False
     for index, raw_apk in enumerate(apk_set):
         label = f"installed_package.apk_set[{index}]"
@@ -325,7 +326,8 @@ def validate_bundle(
         digest = _string(apk["sha256"], f"{label}.sha256", maximum=64).lower()
         if not SHA256_RE.fullmatch(digest):
             raise InstalledIdentityError(f"{label}.sha256 must be lowercase 64-hex")
-        _integer(apk["size_bytes"], f"{label}.size_bytes", minimum=1)
+        size_bytes = _integer(apk["size_bytes"], f"{label}.size_bytes", minimum=1)
+        apk_observations[name] = (digest, size_bytes)
         signer = _string(
             apk["signing_certificate_sha256"],
             f"{label}.signing_certificate_sha256",
@@ -358,6 +360,7 @@ def validate_bundle(
         raise InstalledIdentityError("evidence_files must not be empty")
     seen_paths: set[str] = set()
     seen_inodes: set[tuple[int, int]] = set()
+    evidence_observations: dict[str, tuple[str, int]] = {}
     for index, raw_reference in enumerate(raw_files):
         label = f"evidence_files[{index}]"
         reference = _mapping(raw_reference, label)
@@ -373,11 +376,19 @@ def validate_bundle(
         actual, metadata = _hash_regular_file(path, "installed identity evidence", MAX_EVIDENCE_FILE_BYTES)
         if actual != expected:
             raise InstalledIdentityError(f"evidence digest mismatch: {relative}")
+        evidence_observations[relative] = (actual, metadata.st_size)
         if metadata.st_ino:
             identity = (metadata.st_dev, metadata.st_ino)
             if identity in seen_inodes:
                 raise InstalledIdentityError(f"evidence file is reused through a hard link: {relative}")
             seen_inodes.add(identity)
+
+    for name, observation in apk_observations.items():
+        evidence_path = f"apks/{name}"
+        if evidence_observations.get(evidence_path) != observation:
+            raise InstalledIdentityError(
+                f"installed_package.apk_set entry {name} does not match pulled APK evidence {evidence_path}"
+            )
 
     return InstalledIdentitySummary(
         candidate_sha=candidate_sha,
