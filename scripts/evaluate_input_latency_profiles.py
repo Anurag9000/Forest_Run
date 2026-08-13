@@ -130,27 +130,34 @@ def load_thresholds(path: Path) -> tuple[ThresholdProfile, ...]:
             raise InputLatencyConfigurationError(
                 f"{label}.maxDroppedActionRatio must be between 0 and 1"
             )
-        profile = ThresholdProfile(
-            name=_string(item, "name", label),
-            manufacturer=_string(item, "manufacturer", label),
-            model=_string(item, "model", label),
-            min_refresh_rate_hz=minimum,
-            max_refresh_rate_hz=maximum,
-            min_sampled_actions=_integer(item, "minSampledActions", label),
-            max_dropped_action_ratio=dropped_ratio,
-            max_p95_touch_to_decision_ns=_integer(item, "maxP95TouchToDecisionNs", label),
-            max_p95_decision_to_response_ns=_integer(item, "maxP95DecisionToResponseNs", label),
-            max_p95_response_to_render_ns=_integer(item, "maxP95ResponseToRenderNs", label),
-            max_p95_touch_to_render_ns=_integer(item, "maxP95TouchToRenderNs", label),
-        )
-        if profile.max_p95_touch_to_render_ns < (
-            profile.max_p95_touch_to_decision_ns
-            + profile.max_p95_decision_to_response_ns
-        ):
+        min_samples = _integer(item, "minSampledActions", label)
+        if min_samples < 1:
             raise InputLatencyConfigurationError(
-                f"{label}.maxP95TouchToRenderNs cannot be below the decision+response limits"
+                f"{label}.minSampledActions must be at least 1"
             )
-        profiles.append(profile)
+        profiles.append(
+            ThresholdProfile(
+                name=_string(item, "name", label),
+                manufacturer=_string(item, "manufacturer", label),
+                model=_string(item, "model", label),
+                min_refresh_rate_hz=minimum,
+                max_refresh_rate_hz=maximum,
+                min_sampled_actions=min_samples,
+                max_dropped_action_ratio=dropped_ratio,
+                max_p95_touch_to_decision_ns=_integer(
+                    item, "maxP95TouchToDecisionNs", label
+                ),
+                max_p95_decision_to_response_ns=_integer(
+                    item, "maxP95DecisionToResponseNs", label
+                ),
+                max_p95_response_to_render_ns=_integer(
+                    item, "maxP95ResponseToRenderNs", label
+                ),
+                max_p95_touch_to_render_ns=_integer(
+                    item, "maxP95TouchToRenderNs", label
+                ),
+            )
+        )
     names = [profile.name for profile in profiles]
     if len(names) != len(set(names)):
         raise InputLatencyConfigurationError("threshold profile names must be unique")
@@ -179,6 +186,8 @@ def validate_report(report: Mapping[str, Any]) -> None:
     injected = _integer(report, "injectedActions", "report")
     sampled = _integer(report, "sampledActions", "report")
     dropped = _integer(report, "droppedActions", "report")
+    if injected < 1:
+        raise InputLatencyConfigurationError("report.injectedActions must be at least 1")
     if sampled > injected:
         raise InputLatencyConfigurationError(
             "report.sampledActions cannot exceed injectedActions"
@@ -201,18 +210,21 @@ def validate_report(report: Mapping[str, Any]) -> None:
             raise InputLatencyConfigurationError(
                 f"report {prefix} percentiles must satisfy p50 <= p95 <= p99"
             )
-    if _integer(report, "p95TouchToRenderNs", "report") < _integer(
-        report, "p95TouchToDecisionNs", "report"
-    ):
-        raise InputLatencyConfigurationError(
-            "report.p95TouchToRenderNs cannot be below p95TouchToDecisionNs"
-        )
-    if _integer(report, "p95TouchToRenderNs", "report") < _integer(
-        report, "p95ResponseToRenderNs", "report"
-    ):
-        raise InputLatencyConfigurationError(
-            "report.p95TouchToRenderNs cannot be below p95ResponseToRenderNs"
-        )
+    for percentile in ("p50", "p95", "p99"):
+        total = _integer(report, f"{percentile}TouchToRenderNs", "report")
+        for component in (
+            "TouchToDecision",
+            "DecisionToResponse",
+            "ResponseToRender",
+        ):
+            component_value = _integer(
+                report, f"{percentile}{component}Ns", "report"
+            )
+            if total < component_value:
+                raise InputLatencyConfigurationError(
+                    f"report.{percentile}TouchToRenderNs cannot be below "
+                    f"{percentile}{component}Ns"
+                )
 
 
 def select_profile(
@@ -260,13 +272,33 @@ def evaluate_report(
     sampled = _integer(report, "sampledActions", "report")
     dropped = _integer(report, "droppedActions", "report")
     injected = _integer(report, "injectedActions", "report")
-    dropped_ratio = 0.0 if injected == 0 else dropped / injected
+    dropped_ratio = dropped / injected
     checks = (
         ("sampledActions", sampled, profile.min_sampled_actions, "minimum"),
-        ("p95TouchToDecisionNs", _integer(report, "p95TouchToDecisionNs", "report"), profile.max_p95_touch_to_decision_ns, "maximum"),
-        ("p95DecisionToResponseNs", _integer(report, "p95DecisionToResponseNs", "report"), profile.max_p95_decision_to_response_ns, "maximum"),
-        ("p95ResponseToRenderNs", _integer(report, "p95ResponseToRenderNs", "report"), profile.max_p95_response_to_render_ns, "maximum"),
-        ("p95TouchToRenderNs", _integer(report, "p95TouchToRenderNs", "report"), profile.max_p95_touch_to_render_ns, "maximum"),
+        (
+            "p95TouchToDecisionNs",
+            _integer(report, "p95TouchToDecisionNs", "report"),
+            profile.max_p95_touch_to_decision_ns,
+            "maximum",
+        ),
+        (
+            "p95DecisionToResponseNs",
+            _integer(report, "p95DecisionToResponseNs", "report"),
+            profile.max_p95_decision_to_response_ns,
+            "maximum",
+        ),
+        (
+            "p95ResponseToRenderNs",
+            _integer(report, "p95ResponseToRenderNs", "report"),
+            profile.max_p95_response_to_render_ns,
+            "maximum",
+        ),
+        (
+            "p95TouchToRenderNs",
+            _integer(report, "p95TouchToRenderNs", "report"),
+            profile.max_p95_touch_to_render_ns,
+            "maximum",
+        ),
     )
     violations: list[str] = []
     for name, actual, limit, direction in checks:
