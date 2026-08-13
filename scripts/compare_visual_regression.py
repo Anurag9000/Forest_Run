@@ -70,6 +70,10 @@ class VisualRegressionSummary:
         }
 
 
+def _absolute_unresolved(path: Path) -> Path:
+    return Path(os.path.abspath(os.fspath(path.expanduser())))
+
+
 def _reject_symlink(path: Path, label: str) -> None:
     try:
         metadata = path.lstat()
@@ -85,6 +89,67 @@ def _reject_symlink(path: Path, label: str) -> None:
         raise VisualRegressionError(
             f"{label} has invalid file size: {path} is {metadata.st_size} bytes"
         )
+
+
+def _trusted_regular_file(root: Path, path: Path, label: str) -> Path:
+    """Return a regular file that is lexically and physically confined to root.
+
+    The manifest currently permits only leaf file names, but this boundary also
+    rejects symlinked roots/descendants so a future nested-path change cannot
+    silently turn the visual comparator into an arbitrary-file reader.
+    """
+    root_path = _absolute_unresolved(root)
+    target_path = _absolute_unresolved(path)
+    try:
+        root_metadata = root_path.lstat()
+    except FileNotFoundError as exc:
+        raise VisualRegressionError(f"missing trusted screenshot root: {root_path}") from exc
+    except OSError as exc:
+        raise VisualRegressionError(
+            f"could not inspect trusted screenshot root {root_path}: {exc}"
+        ) from exc
+    if stat.S_ISLNK(root_metadata.st_mode) or not stat.S_ISDIR(root_metadata.st_mode):
+        raise VisualRegressionError(
+            f"trusted screenshot root must be a regular directory, not a symbolic link: {root_path}"
+        )
+
+    try:
+        relative = target_path.relative_to(root_path)
+    except ValueError as exc:
+        raise VisualRegressionError(
+            f"{label} escapes its trusted screenshot root: {target_path}"
+        ) from exc
+    if not relative.parts:
+        raise VisualRegressionError(f"{label} must name a file below {root_path}")
+
+    current = root_path
+    for component in relative.parts[:-1]:
+        current = current / component
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError as exc:
+            raise VisualRegressionError(f"missing {label} parent: {current}") from exc
+        except OSError as exc:
+            raise VisualRegressionError(
+                f"could not inspect {label} parent {current}: {exc}"
+            ) from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise VisualRegressionError(
+                f"{label} parent must not be a symbolic link: {current}"
+            )
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise VisualRegressionError(f"{label} parent is not a directory: {current}")
+
+    _reject_symlink(target_path, label)
+    try:
+        resolved_root = root_path.resolve(strict=True)
+        resolved_target = target_path.resolve(strict=True)
+        resolved_target.relative_to(resolved_root)
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        raise VisualRegressionError(
+            f"{label} does not resolve inside its trusted screenshot root: {target_path}"
+        ) from exc
+    return target_path
 
 
 def _sha256(path: Path) -> str:
@@ -226,10 +291,20 @@ def compare_manifest_set(
     results: list[ImageRegressionResult] = []
     for item in items:
         file_name = item[filename_field]
+        baseline_path = _trusted_regular_file(
+            baseline_dir,
+            baseline_dir / file_name,
+            "baseline screenshot",
+        )
+        candidate_path = _trusted_regular_file(
+            candidate_dir,
+            candidate_dir / file_name,
+            "candidate screenshot",
+        )
         results.append(
             compare_image(
-                baseline_path=baseline_dir / file_name,
-                candidate_path=candidate_dir / file_name,
+                baseline_path=baseline_path,
+                candidate_path=candidate_path,
                 scenario=item["scenario"],
                 per_channel_tolerance=per_channel_tolerance,
                 max_mean_absolute_channel_delta=max_mean_absolute_channel_delta,
