@@ -12,6 +12,7 @@ import android.view.View
  * releases the jump together on finger-up.
  */
 class InputHandler : View.OnTouchListener {
+    var onGestureClassified: ((InputGestureKind) -> Unit)? = null
     var onJumpPressed: (() -> Unit)? = null
     var onJumpHeld: ((holdSeconds: Float) -> Unit)? = null
     var onJumpReleased: ((holdSeconds: Float) -> Unit)? = null
@@ -132,6 +133,7 @@ class InputHandler : View.OnTouchListener {
             isChargingJump = false
             holdDuration = 0f
             lastGestureLabel = "DUCK"
+            onGestureClassified?.invoke(InputGestureKind.DUCK)
             onDuckPressed?.invoke()
         }
         return true
@@ -162,6 +164,7 @@ class InputHandler : View.OnTouchListener {
     private fun startJump() {
         if (jumpStarted || isDucking || !isChargingJump) return
         jumpStarted = true
+        onGestureClassified?.invoke(InputGestureKind.JUMP)
         onJumpPressed?.invoke()
     }
 
@@ -191,7 +194,10 @@ class InputHandler : View.OnTouchListener {
             }
 
             wasCharging -> {
-                if (!hadStartedJump) onJumpPressed?.invoke()
+                if (!hadStartedJump) {
+                    onGestureClassified?.invoke(InputGestureKind.JUMP)
+                    onJumpPressed?.invoke()
+                }
                 lastGestureLabel = if (finalHold < 0.12f) {
                     "JUMP:TAP"
                 } else {
