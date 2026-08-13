@@ -68,8 +68,8 @@ internal object EncounterActionFeasibility {
             )
         }
 
-        val contactTime = finiteRatio(lead, speed)
-        val maxRise = finiteRatio(
+        val contactTime = finiteFloatRatio(lead, speed)
+        val maxRise = finiteDoubleRatio(
             jumpSpeed.toDouble() * jumpSpeed.toDouble(),
             2.0 * gravity.toDouble()
         )
@@ -124,7 +124,7 @@ internal object EncounterActionFeasibility {
             .toFloat()
     }
 
-    private fun finiteRatio(numerator: Float, denominator: Float): Float {
+    private fun finiteFloatRatio(numerator: Float, denominator: Float): Float {
         if (numerator <= 0f) return 0f
         if (denominator <= 0f) return 0f
         return (numerator.toDouble() / denominator.toDouble())
@@ -132,7 +132,7 @@ internal object EncounterActionFeasibility {
             .toFloat()
     }
 
-    private fun finiteRatio(numerator: Double, denominator: Double): Float {
+    private fun finiteDoubleRatio(numerator: Double, denominator: Double): Float {
         if (!numerator.isFinite() || numerator <= 0.0) return 0f
         if (!denominator.isFinite() || denominator <= 0.0) return 0f
         return (numerator / denominator)
