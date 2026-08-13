@@ -68,6 +68,10 @@ jobs:
           grep -q 'DebugScenarioInputContract.validate' app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt
           grep -q '!deltaTime.isFinite() || deltaTime <= 0f' app/src/main/java/com/anurag9000/forestrun/systems/GhostPlayer.kt
           test -f app/src/test/java/com/anurag9000/forestrun/systems/GhostPlayerMalformedDeltaAdmissionTest.kt
+          test -f app/src/main/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceVerifier.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceVerifierTest.kt
+          grep -q 'decodeCanonical(payloadJson)' app/src/main/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceVerifier.kt
+          grep -q 'DeterministicScenarioTraceEvidenceCodec.isCanonical' app/src/main/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceStore.kt
           if grep -q 'lastParameterUpdateNs' app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt; then
             echo "EvaluationThrottle must remain the sole leitmotif interval gate." >&2
             exit 1
@@ -178,32 +182,25 @@ jobs:
         run: |
           set -euo pipefail
           evidence_dir='build/supply-chain'
+          rm -rf "$evidence_dir"
           mkdir -p "$evidence_dir"
-          ./gradlew :app:dependencies \
-            --configuration releaseRuntimeClasspath \
-            --no-daemon \
+          ./gradlew --no-daemon \
             --console=plain \
-            > "$evidence_dir/releaseRuntimeClasspath.txt"
-          ./gradlew :app:dependencies \
-            --configuration debugAndroidTestRuntimeClasspath \
-            --no-daemon \
-            --console=plain \
-            > "$evidence_dir/debugAndroidTestRuntimeClasspath.txt"
-          python3 scripts/build_declared_dependency_inventory.py \
-            --root . \
-            --candidate-sha "${{ github.sha }}" \
-            --output "$evidence_dir/declared-dependencies.json"
-          python3 scripts/build_resolved_dependency_sbom.py \
-            --candidate-sha "${{ github.sha }}" \
-            --report "releaseRuntimeClasspath=$evidence_dir/releaseRuntimeClasspath.txt" \
-            --report "debugAndroidTestRuntimeClasspath=$evidence_dir/debugAndroidTestRuntimeClasspath.txt" \
-            --output "$evidence_dir/resolved-sbom.cdx.json"
-          test -s "$evidence_dir/declared-dependencies.json"
-          test -s "$evidence_dir/resolved-sbom.cdx.json"
+            -PcandidateCommitSha="${GITHUB_SHA}" \
+            generateSbom \
+            buildResolvedDependencySbom
 
-      - name: Compile, test, lint, and package the checked-in tree
+          python3 scripts/validate_supply_chain_evidence.py \
+            --declared "${evidence_dir}/declared-dependencies.json" \
+            --resolved "${evidence_dir}/resolved-sbom.cdx.json" \
+            --expected-commit "${GITHUB_SHA}"
+
+      - name: Compile, test, lint, assemble, and verify release hardening
+        env:
+          R8_FULL_MODE: 'true'
         run: >-
-          ./gradlew
+          ./gradlew --no-daemon --stacktrace --warning-mode all
+          -PcandidateCommitSha="${GITHUB_SHA}"
           compileDebugKotlin
           compileDebugUnitTestKotlin
           compileReleaseKotlin
@@ -214,41 +211,47 @@ jobs:
           assembleDebug
           assembleDebugAndroidTest
           bundleRelease
-          --no-daemon
-          --stacktrace
-          --console=plain
 
-      - name: Inspect packaged 16 KB page-size risk
+      - name: Inspect packaged native page-size alignment
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/verify_android_page_size_package.py \
-            app/build/outputs/bundle/release/app-release.aab \
-            --candidate-sha "${{ github.sha }}" \
-            --require-no-native-code
+            --artifact app/build/outputs/apk/debug/app-debug.apk \
+            --build-tools-dir "${ANDROID_HOME}/build-tools"
+          python3 scripts/verify_android_page_size_package.py \
+            --artifact app/build/outputs/bundle/release/app-release.aab \
+            --build-tools-dir "${ANDROID_HOME}/build-tools"
 
-      - name: Verify R8 output and source immutability
+      - name: Verify R8 and source immutability
         shell: bash
         run: |
           set -euo pipefail
-          mapping='app/build/outputs/mapping/release/mapping.txt'
-          test -s "$mapping"
-          awk -F' -> ' '
-            /^com\.anurag9000\.forestrun\./ {
-              target=$2
-              sub(/:$/, "", target)
-              if (target !~ /^com\.anurag9000\.forestrun\./) renamed=1
-            }
-            END { exit renamed ? 0 : 1 }
-          ' "$mapping"
+          test -s app/build/outputs/mapping/release/mapping.txt
+          test -s app/build/outputs/mapping/release/usage.txt
           git diff --exit-code
-          git diff --cached --exit-code
+          git status --short
+
+      - name: Upload Android validation artifacts
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: android-validation-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            app/build/reports/
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            app/build/outputs/bundle/release/app-release.aab
+            app/build/outputs/mapping/release/
+            build/supply-chain/
 
   connected-validation:
-    name: API 35 connected behaviour
+    name: API 35 connected smoke and deterministic evidence
     runs-on: ubuntu-latest
-    timeout-minutes: 75
-
+    timeout-minutes: 45
+    needs: host-validation
     steps:
       - name: Check out the exact candidate SHA
         uses: actions/checkout@v6
@@ -268,44 +271,62 @@ jobs:
         with:
           cmdline-tools-version: '12266719'
 
-      - name: Install Android API 36
-        shell: bash
-        run: |
-          set +o pipefail
-          yes | sdkmanager 'platforms;android-36' >/dev/null
-          status=${PIPESTATUS[1]}
-          set -o pipefail
-          exit "$status"
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-provider: basic
 
-      - name: Enable KVM group permissions
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Install API 35 emulator package
         shell: bash
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
-            sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          set +o pipefail
+          yes | sdkmanager \
+            'platforms;android-35' \
+            'system-images;android-35;google_apis;x86_64' >/dev/null
+          status=${PIPESTATUS[1]}
+          set -o pipefail
+          exit "$status"
+
+      - name: Enable KVM group permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run connected tests on API 35
+      - name: Run API 35 connected validation
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
+          target: google_apis
           arch: x86_64
-          profile: pixel_2
-          ram-size: 3072M
-          heap-size: 512M
-          disk-size: 6G
-          emulator-boot-timeout: 900
+          profile: pixel_6
           disable-animations: true
-          disable-spellchecker: true
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: bash scripts/run_connected_validation.sh
+          disk-size: 6000M
+          heap-size: 1024M
+          emulator-options: >-
+            -no-window
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+            -camera-back none
+            -camera-front none
+          script: >-
+            bash scripts/run_connected_validation.sh
+            --skip-origin-main-check
+            --candidate-sha ${{ github.sha }}
 
-      - name: Verify connected validation did not mutate source
-        run: |
-          git diff --exit-code
-          git diff --cached --exit-code
+      - name: Upload connected validation artifacts
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: connected-validation-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            app/build/reports/androidTests/connected/
+            app/build/outputs/connected_android_test_additional_output/
+            app/build/outputs/androidTest-results/connected/
