@@ -1,6 +1,7 @@
 package com.anurag9000.forestrun.engine
 
 import android.graphics.Canvas
+import android.os.SystemClock
 import android.util.Log
 import android.view.SurfaceHolder
 import java.util.concurrent.TimeUnit
@@ -126,6 +127,12 @@ class GameThread internal constructor(
                 val renderStartedAtNs = System.nanoTime()
                 try {
                     renderFrame()
+                    // renderSurfaceFrame returns only after unlockCanvasAndPost,
+                    // so this closes an app/render latency sample at the first
+                    // posted frame following the gameplay response.
+                    InputLatencyTelemetryRegistry.recordFrameRendered(
+                        SystemClock.elapsedRealtimeNanos()
+                    )
                 } catch (failure: Exception) {
                     val renderFailedAtNs = System.nanoTime()
                     performanceMonitor?.record(
