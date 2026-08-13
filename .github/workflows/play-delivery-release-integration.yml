@@ -19,6 +19,25 @@ jobs:
         with:
           ref: main
           fetch-depth: 1
+      - name: Reconcile stale guarded test-anchor cardinality
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/migrate_play_delivery_release_integration.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''        3,
+                  "readiness Play validate calls",
+          '''
+          new = '''        1,
+                  "readiness Play validate calls",
+          '''
+          if text.count(old) != 1:
+              raise SystemExit("expected exactly one stale readiness Play call-count guard")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
       - name: Apply exact Play-delivery integration
         run: python3 scripts/migrate_play_delivery_release_integration.py
       - name: Install validation dependencies
