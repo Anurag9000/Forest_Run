@@ -13,12 +13,14 @@ The compiler derives hashes from existing files and preserves entered decisions.
 
 ## Prerequisites
 
-A governance manifest is downstream of both:
+A governance manifest is downstream of four independently valid principal manifests:
 
-1. a valid `device-acceptance.json`; and
-2. a valid `human-acceptance.json` that references that exact device manifest.
+1. `device-acceptance.json`;
+2. `installed-identity-matrix.json`, with one measured Play-delivered APK identity per physical session;
+3. `play-delivery.json`, with the external internal-track upload/install/update record bound to that matrix; and
+4. `human-acceptance.json` referencing the same physical candidate.
 
-The validator revalidates both manifests and rejects disagreement in:
+The validator revalidates all four layers and rejects disagreement in:
 
 - repository/branch/application ID;
 - candidate commit SHA;
@@ -28,7 +30,7 @@ The validator revalidates both manifests and rejects disagreement in:
 - app-signing-certificate SHA-256 for the Play-delivered APK;
 - device-acceptance digest referenced by human acceptance.
 
-Governance therefore cannot be approved against one artifact while physical or human acceptance describes another.
+Governance therefore cannot be approved against one artifact while physical, installed-package, Play-delivery, or human evidence describes another. The Play-delivery validator explicitly requires the `internal` track plus upload/release/tester-install/update assertions and hashes the corresponding external Play Console/receipt evidence; it never infers a track from the package installer.
 
 ## Mandatory external conditions
 
@@ -72,6 +74,8 @@ The governance manifest also hashes one unique file for every required evidence 
 - `dependency_license_report`;
 - `dependency_vulnerability_report`;
 - `dependency_verification_report`;
+- `installed_identity_matrix`;
+- `play_delivery_record`;
 - `asset_provenance`;
 - `security_reporting_record`;
 - `license_decision_record`;

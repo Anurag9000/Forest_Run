@@ -8,7 +8,9 @@ It does **not** create physical, human, signing, store, legal, policy, security,
 
 One evidence root must contain:
 
-- a compiled, valid physical/store `device-acceptance.json`;
+- a compiled, valid physical `device-acceptance.json`;
+- a compiled, valid `installed-identity-matrix.json`;
+- a compiled, valid `play-delivery.json`;
 - a compiled, valid `human-acceptance.json`;
 - a compiled, valid `release-governance.json`;
 - a published, independently verifiable `release-evidence-index.json`;
@@ -20,10 +22,12 @@ The command also requires the exact expected lowercase 40-character candidate SH
 
 The orchestrator delegates rather than reimplementing the four owning formats:
 
-1. `validate_device_acceptance.load_and_validate(...)` revalidates physical/store acceptance.
-2. `validate_human_acceptance.load_and_validate(...)` revalidates detailed human gameplay/accessibility/presentation acceptance.
-3. `validate_release_governance.load_and_validate(...)` revalidates candidate-bound security/licensing/privacy/store/presentation governance.
-4. `verify_release_evidence_index.verify_index(...)` independently reconstructs and verifies the final evidence index.
+1. `validate_device_acceptance.load_and_validate(...)` revalidates physical acceptance.
+2. `validate_installed_identity_matrix.load_and_validate(...)` revalidates one measured Play-delivered package identity per physical session.
+3. `validate_play_delivery_evidence.load_and_validate(...)` revalidates the external internal-track upload/install/update evidence.
+4. `validate_human_acceptance.load_and_validate(...)` revalidates detailed human gameplay/accessibility/presentation acceptance.
+5. `validate_release_governance.load_and_validate(...)` revalidates candidate-bound security/licensing/privacy/store/presentation governance.
+6. `verify_release_evidence_index.verify_index(...)` independently reconstructs and verifies the final evidence index.
 
 It then applies cross-layer invariants that no one individual format can prove alone.
 
@@ -52,6 +56,8 @@ Required candidate-bound index kinds are:
 - `sbom`;
 - `device_acceptance`;
 - `device_aggregate`;
+- `installed_identity_matrix`;
+- `play_delivery`;
 - `human_acceptance`;
 - `release_governance`;
 - `screenshot_manifest`;
@@ -70,6 +76,8 @@ python3 scripts/validate_release_readiness.py \
   --root release/evidence-root \
   --expected-candidate-sha "$CANDIDATE_SHA" \
   --device-acceptance release/evidence-root/device-acceptance.json \
+  --installed-identity-matrix release/evidence-root/installed-identity-matrix.json \
+  --play-delivery release/evidence-root/play-delivery.json \
   --human-acceptance release/evidence-root/human-acceptance.json \
   --release-governance release/evidence-root/release-governance.json \
   --release-evidence-index release/evidence-root/release-evidence-index.json \
@@ -102,11 +110,13 @@ The release-owner sequence is:
 2. build and sign that exact candidate;
 3. deliver/install it through the accepted internal-store path;
 4. run the physical device/scenario/performance matrix and compile `device-acceptance.json`;
-5. run detailed gameplay, TalkBack/accessibility, Garden/ghost, art/audio/haptic human review and compile `human-acceptance.json`;
-6. complete security/licensing/privacy/Play/presentation/provenance decisions and compile `release-governance.json`;
-7. build the stable release-evidence index containing the signed bundle and every material evidence file;
-8. independently verify the index;
-9. run `validate_release_readiness.py` against the same evidence root;
-10. have the final independent reviewer inspect the readiness summary, underlying evidence, and external consoles/records before the release/tag decision.
+5. collect one installed-package identity record per physical session and compile `installed-identity-matrix.json`;
+6. retain Play Console/upload/tester/install/update evidence and compile `play-delivery.json`;
+7. run detailed gameplay, TalkBack/accessibility, Garden/ghost, art/audio/haptic human review and compile `human-acceptance.json`;
+8. complete security/licensing/privacy/Play/presentation/provenance decisions and compile `release-governance.json`;
+9. build the stable release-evidence index containing the signed bundle and every material evidence file;
+10. independently verify the index;
+11. run `validate_release_readiness.py` against the same evidence root;
+12. have the final independent reviewer inspect the readiness summary, underlying evidence, and external consoles/records before the release/tag decision.
 
 Any source, artifact, store-delivery, evidence, or approval change after acceptance creates a new candidate/evidence set. Do not edit an accepted evidence set in place.

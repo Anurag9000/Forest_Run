@@ -160,7 +160,9 @@ These are not hidden source TODOs and should not be misreported as solved:
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Physical profiling protocol and threshold/evidence procedure |
 | [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) | Candidate identity, device/scenario evidence, thresholds, approvals, and release decision |
 | [`docs/HUMAN_ACCEPTANCE.md`](docs/HUMAN_ACCEPTANCE.md) | Candidate-bound gameplay, TalkBack/accessibility, and presentation review matrix |
+| [`docs/INSTALLED_CANDIDATE_IDENTITY.md`](docs/INSTALLED_CANDIDATE_IDENTITY.md) | Measured Play-delivered package/split/signing identity and five-device installed matrix |
 | [`docs/RELEASE_GOVERNANCE_EVIDENCE.md`](docs/RELEASE_GOVERNANCE_EVIDENCE.md) | Security, licensing, privacy, store, provenance, release-note, and final decision evidence |
+| [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) | Final cross-layer physical/install/Play/human/governance/index readiness gate |
 | [`docs/RELEASE.md`](docs/RELEASE.md) | Correctness, validation, packaging, hardware, signing, and store checklist |
 | [`docs/RELEASE_EVIDENCE_INDEX.md`](docs/RELEASE_EVIDENCE_INDEX.md) | Final evidence-set construction and independent verification |
 | [`docs/SUPPLY_CHAIN_AND_SBOM.md`](docs/SUPPLY_CHAIN_AND_SBOM.md) | Dependency/SBOM/provenance boundaries |

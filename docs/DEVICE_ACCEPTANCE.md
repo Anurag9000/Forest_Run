@@ -173,3 +173,7 @@ A release candidate may advance only when:
 7. the accepted commit is tagged without rewriting history.
 
 Until then, the honest classification remains **feature-rich alpha**, not release candidate.
+
+## Installed-package identity follow-up
+
+The physical manifest records the expected internal-store and delivered app-signing identity, but those fields remain operator-entered acceptance facts. For every accepted physical session, additionally run `scripts/collect_installed_candidate_identity.py` and then compile all records with `scripts/compile_installed_identity_matrix.py`. See [`INSTALLED_CANDIDATE_IDENTITY.md`](INSTALLED_CANDIDATE_IDENTITY.md). The installed layer objectively verifies Google Play installer attribution, package/version, pulled base/split APK bytes, and the Play app-signing certificate; it deliberately does not infer the specific Play track. The separate `play-delivery.json` layer retains and reviews the external Play Console internal-track/upload/install/update evidence.

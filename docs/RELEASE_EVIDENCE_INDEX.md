@@ -20,6 +20,8 @@ The release process produces evidence through independent pipelines:
 - declared and resolved dependency provenance;
 - internal-store delivery verification;
 - physical-device acceptance sessions;
+- objective installed-package identity on every physical device;
+- candidate-bound Play internal-track upload/install/update delivery evidence;
 - detailed human gameplay/accessibility/presentation acceptance;
 - performance profiles and physical diagnostics;
 - screenshot capture and curation;
@@ -41,6 +43,8 @@ python3 scripts/build_stable_release_evidence_index.py \
   --entry sbom=release/evidence/sbom.cdx.json \
   --entry device_acceptance=release/evidence/device-acceptance.json \
   --entry device_aggregate=release/evidence/device-acceptance-aggregate.json \
+  --entry installed_identity_matrix=release/evidence/installed-identity-matrix.json \
+  --entry play_delivery=release/evidence/play-delivery.json \
   --entry human_acceptance=release/evidence/human-acceptance.json \
   --entry release_governance=release/evidence/release-governance.json \
   --entry screenshot_manifest=release/google-play/screenshots/screenshot_manifest.json \
@@ -50,6 +54,8 @@ python3 scripts/build_stable_release_evidence_index.py \
   --require-bound-kind sbom \
   --require-bound-kind device_acceptance \
   --require-bound-kind device_aggregate \
+  --require-bound-kind installed_identity_matrix \
+  --require-bound-kind play_delivery \
   --require-bound-kind human_acceptance \
   --require-bound-kind release_governance \
   --require-bound-kind screenshot_manifest \
@@ -77,6 +83,8 @@ python3 scripts/verify_release_evidence_index.py \
   --require-bound-kind sbom \
   --require-bound-kind device_acceptance \
   --require-bound-kind device_aggregate \
+  --require-bound-kind installed_identity_matrix \
+  --require-bound-kind play_delivery \
   --require-bound-kind human_acceptance \
   --require-bound-kind release_governance \
   --require-bound-kind screenshot_manifest \
@@ -150,7 +158,7 @@ The verifier rejects:
 
 ## Final readiness orchestration
 
-After the index independently verifies, run [`validate_release_readiness.py`](../scripts/validate_release_readiness.py) as described in [`RELEASE_READINESS.md`](RELEASE_READINESS.md). The readiness gate re-runs the device, human, governance, and index validators and then proves that the exact revalidated manifest paths/digests are the exact indexed files and that the indexed `signed_bundle` digest equals the artifact approved by all acceptance layers.
+After the index independently verifies, run [`validate_release_readiness.py`](../scripts/validate_release_readiness.py) as described in [`RELEASE_READINESS.md`](RELEASE_READINESS.md). The readiness gate re-runs the device, installed-identity-matrix, Play-delivery, human, governance, and index validators and then proves that the exact revalidated manifest paths/digests are the exact indexed files and that the indexed `signed_bundle` digest equals the artifact approved by all acceptance layers.
 
 That final cross-check is intentionally separate from the index format. The index owns evidence-set integrity; readiness owns semantic cross-layer consistency.
 
