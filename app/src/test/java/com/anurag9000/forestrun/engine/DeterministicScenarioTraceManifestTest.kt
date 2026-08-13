@@ -84,7 +84,7 @@ class DeterministicScenarioTraceManifestTest {
                 "\"entry_count\":${manifest.entries.size + 1}"
             ),
             manifest.payloadJson.replaceFirst(
-                firstEntry.payloadSha256,
+                firstEntry.scenarioDefinitionSha256,
                 "e".repeat(64)
             ),
             manifest.payloadJson.replaceFirst(
