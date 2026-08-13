@@ -47,6 +47,14 @@ jobs:
           grep -q 'val workload: RuntimeWorkloadSnapshot' app/src/main/java/com/anurag9000/forestrun/engine/FramePerformanceReport.kt
           grep -q 'workload = RuntimeWorkloadTelemetry.snapshot()' app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt
 
+          test -f app/src/main/java/com/anurag9000/forestrun/engine/InputLatencyTelemetry.kt
+          test -f app/src/main/java/com/anurag9000/forestrun/engine/InputLatencyReport.kt
+          test -f app/src/androidTest/java/com/anurag9000/forestrun/HardwareInputLatencyProfileTest.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/InputLatencyTelemetryTest.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/InputLatencyReportTest.kt
+          grep -q 'InputLatencyTelemetryRegistry.recordFrameRendered' app/src/main/java/com/anurag9000/forestrun/engine/GameThread.kt
+          grep -q 'InputLatencyTelemetryRegistry.recordTouchReceived' app/src/main/java/com/anurag9000/forestrun/engine/InputHandler.kt
+
           grep -q 'persistenceFacade.purchaseNextGardenPlant' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
           grep -q 'GardenPurchaseManager.purchaseNext' app/src/main/java/com/anurag9000/forestrun/engine/ApplicationPersistenceFacade.kt
           if grep -q 'SaveManager.saveGardenProgress\|SaveManager.saveLifetimeSeeds\|GardenPurchaseManager.purchaseNext' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt; then
@@ -77,12 +85,28 @@ jobs:
             exit 1
           fi
 
+          test -f app/src/main/java/com/anurag9000/forestrun/engine/EncounterActionFeasibility.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/EncounterActionFeasibilityTest.kt
+          test -f app/src/test/java/com/anurag9000/forestrun/engine/CollisionArbitrationPropertyTest.kt
+
           test -f scripts/evaluate_performance_profiles.py
           test -f scripts/test_evaluate_performance_profiles.py
           test -f scripts/collect_performance_profiles.sh
           test -f scripts/test_performance_collection_contract.py
           grep -q 'verify_origin_main.sh' scripts/collect_performance_profiles.sh
           grep -q 'verify_main_candidate.py' scripts/collect_performance_profiles.sh
+
+          test -f scripts/evaluate_input_latency_profiles.py
+          test -f scripts/test_evaluate_input_latency_profiles.py
+          test -f scripts/collect_input_latency_profile.sh
+          test -f docs/INPUT_LATENCY_EXPERIMENT.md
+          grep -q 'verify_origin_main.sh' scripts/collect_input_latency_profile.sh
+          grep -q 'verify_main_candidate.py' scripts/collect_input_latency_profile.sh
+          grep -q 'app_touch_to_posted_frame' scripts/evaluate_input_latency_profiles.py
+
+          test -f scripts/compare_visual_regression.py
+          test -f scripts/test_compare_visual_regression.py
+          test -f docs/VISUAL_REGRESSION.md
 
           test -f scripts/run_connected_validation.sh
           test -f scripts/test_connected_validation_runner.py
@@ -148,6 +172,13 @@ jobs:
 
       - name: Test performance, release, and connected-validation tooling
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
+
+      - name: Verify source immutability after host tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          git diff --cached --exit-code
 
       - name: Set up Java 21
         uses: actions/setup-java@v5
@@ -227,9 +258,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -s app/build/outputs/mapping/release/mapping.txt
-          test -s app/build/outputs/mapping/release/usage.txt
+          mapping='app/build/outputs/mapping/release/mapping.txt'
+          usage='app/build/outputs/mapping/release/usage.txt'
+          test -s "$mapping"
+          test -s "$usage"
           git diff --exit-code
+          git diff --cached --exit-code
           git status --short
 
       - name: Upload Android validation artifacts
@@ -250,7 +284,7 @@ jobs:
   connected-validation:
     name: API 35 connected smoke and deterministic evidence
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     needs: host-validation
     steps:
       - name: Check out the exact candidate SHA
@@ -276,14 +310,12 @@ jobs:
         with:
           cache-provider: basic
 
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v6
-
-      - name: Install API 35 emulator package
+      - name: Install compile SDK and API 35 emulator package
         shell: bash
         run: |
           set +o pipefail
           yes | sdkmanager \
+            'platforms;android-36' \
             'platforms;android-35' \
             'system-images;android-35;google_apis;x86_64' >/dev/null
           status=${PIPESTATUS[1]}
@@ -305,6 +337,8 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          disable-spellchecker: true
+          emulator-boot-timeout: 900
           disk-size: 6000M
           heap-size: 1024M
           emulator-options: >-
@@ -312,12 +346,10 @@ jobs:
             -gpu swiftshader_indirect
             -noaudio
             -no-boot-anim
+            -no-snapshot
             -camera-back none
             -camera-front none
-          script: >-
-            bash scripts/run_connected_validation.sh
-            --skip-origin-main-check
-            --candidate-sha ${{ github.sha }}
+          script: bash scripts/run_connected_validation.sh --skip-origin-main-check --candidate-sha ${{ github.sha }}
 
       - name: Upload connected validation artifacts
         uses: actions/upload-artifact@v6
