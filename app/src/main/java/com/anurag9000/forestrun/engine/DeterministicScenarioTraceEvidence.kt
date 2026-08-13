@@ -22,6 +22,9 @@ internal object DeterministicScenarioTraceEvidenceCodec {
     private const val MICROS_PER_SECOND = 1_000_000.0
     private val commitPattern = Regex("^[0-9a-f]{40}$")
     private val sha256Pattern = Regex("^[0-9a-f]{64}$")
+    private val eventPattern = Regex(
+        """\{"sequence":(\d+),"scheduled_at_micros":(\d+),"dispatched_at_micros":(\d+),"lateness_micros":(\d+),"action":"([A-Z_]+)"\}"""
+    )
 
     fun encode(
         snapshot: DeterministicScenarioTraceSnapshot,
@@ -41,22 +44,18 @@ internal object DeterministicScenarioTraceEvidenceCodec {
         val scenario = snapshot.scenario ?: return null
         val scenarioDefinitionSha = EncounterScenarioFingerprint.sha256(scenario)
         val traceContractSha = EncounterScenarioFingerprint.traceContractSha256(scenario)
+        val prefix = metadataPrefix(
+            candidateCommitSha = commit,
+            artifactSha256 = artifact,
+            capturedAtUtcMs = capturedAtUtcMs,
+            scenario = scenario,
+            scenarioDefinitionSha256 = scenarioDefinitionSha,
+            traceContractSha256 = traceContractSha,
+            eventCount = snapshot.events.size
+        )
 
-        val payload = buildString(384 + snapshot.events.size * 128) {
-            append('{')
-            append("\"schema_version\":").append(SCHEMA_VERSION)
-            append(",\"candidate_commit_sha\":\"").append(commit).append('"')
-            append(",\"artifact_sha256\":\"").append(artifact).append('"')
-            append(",\"captured_at_utc_ms\":").append(capturedAtUtcMs)
-            append(",\"scenario\":\"").append(scenario.name).append('"')
-            append(",\"scenario_definition_sha256\":\"")
-                .append(scenarioDefinitionSha)
-                .append('"')
-            append(",\"trace_contract_sha256\":\"")
-                .append(traceContractSha)
-                .append('"')
-            append(",\"event_count\":").append(snapshot.events.size)
-            append(",\"events\":[")
+        val payload = buildString(prefix.length + snapshot.events.size * 128 + 2) {
+            append(prefix)
             snapshot.events.forEachIndexed { index, event ->
                 if (index > 0) append(',')
                 val scheduledMicros = secondsToMicros(event.scheduledAtSeconds)
@@ -88,6 +87,106 @@ internal object DeterministicScenarioTraceEvidenceCodec {
             payloadJson = payload,
             payloadSha256 = sha256(payloadBytes)
         )
+    }
+
+    /**
+     * Revalidates an evidence object at the persistence boundary.
+     *
+     * This rejects objects whose envelope metadata no longer describes their
+     * payload, as well as payloads whose event sequence, authored schedule,
+     * action, or lateness arithmetic has been modified and re-hashed.
+     */
+    fun isCanonical(evidence: DeterministicScenarioTraceEvidence): Boolean {
+        if (!commitPattern.matches(evidence.candidateCommitSha) ||
+            !sha256Pattern.matches(evidence.artifactSha256) ||
+            !sha256Pattern.matches(evidence.scenarioDefinitionSha256) ||
+            !sha256Pattern.matches(evidence.traceContractSha256) ||
+            !sha256Pattern.matches(evidence.payloadSha256) ||
+            evidence.capturedAtUtcMs < 0L ||
+            evidence.eventCount < 0
+        ) {
+            return false
+        }
+
+        val expectedDefinitionSha = EncounterScenarioFingerprint.sha256(evidence.scenario)
+        val expectedTraceContractSha = EncounterScenarioFingerprint.traceContractSha256(evidence.scenario)
+        if (evidence.scenarioDefinitionSha256 != expectedDefinitionSha ||
+            evidence.traceContractSha256 != expectedTraceContractSha
+        ) {
+            return false
+        }
+
+        val steps = DebugScenarioScript.stepsFor(evidence.scenario)
+        if (steps.isEmpty() || evidence.eventCount != steps.size) return false
+
+        val payloadBytes = evidence.payloadJson.toByteArray(Charsets.UTF_8)
+        if (payloadBytes.isEmpty() ||
+            payloadBytes.size > MAX_PAYLOAD_BYTES ||
+            sha256(payloadBytes) != evidence.payloadSha256
+        ) {
+            return false
+        }
+
+        val prefix = metadataPrefix(
+            candidateCommitSha = evidence.candidateCommitSha,
+            artifactSha256 = evidence.artifactSha256,
+            capturedAtUtcMs = evidence.capturedAtUtcMs,
+            scenario = evidence.scenario,
+            scenarioDefinitionSha256 = evidence.scenarioDefinitionSha256,
+            traceContractSha256 = evidence.traceContractSha256,
+            eventCount = evidence.eventCount
+        )
+        if (!evidence.payloadJson.startsWith(prefix) || !evidence.payloadJson.endsWith("]}")) {
+            return false
+        }
+
+        val eventText = evidence.payloadJson.substring(prefix.length, evidence.payloadJson.length - 2)
+        val matches = eventPattern.findAll(eventText).toList()
+        if (matches.size != evidence.eventCount ||
+            matches.joinToString(separator = ",") { it.value } != eventText
+        ) {
+            return false
+        }
+
+        return matches.indices.all { index ->
+            val groups = matches[index].groupValues
+            val sequence = groups[1].toIntOrNull() ?: return@all false
+            val scheduledMicros = groups[2].toLongOrNull() ?: return@all false
+            val dispatchedMicros = groups[3].toLongOrNull() ?: return@all false
+            val latenessMicros = groups[4].toLongOrNull() ?: return@all false
+            val expectedScheduledMicros = secondsToMicros(steps[index].atSeconds) ?: return@all false
+
+            sequence == index &&
+                scheduledMicros == expectedScheduledMicros &&
+                dispatchedMicros >= scheduledMicros &&
+                latenessMicros == dispatchedMicros - scheduledMicros &&
+                groups[5] == steps[index].action.name
+        }
+    }
+
+    private fun metadataPrefix(
+        candidateCommitSha: String,
+        artifactSha256: String,
+        capturedAtUtcMs: Long,
+        scenario: EncounterScenario,
+        scenarioDefinitionSha256: String,
+        traceContractSha256: String,
+        eventCount: Int
+    ): String = buildString(384) {
+        append('{')
+        append("\"schema_version\":").append(SCHEMA_VERSION)
+        append(",\"candidate_commit_sha\":\"").append(candidateCommitSha).append('"')
+        append(",\"artifact_sha256\":\"").append(artifactSha256).append('"')
+        append(",\"captured_at_utc_ms\":").append(capturedAtUtcMs)
+        append(",\"scenario\":\"").append(scenario.name).append('"')
+        append(",\"scenario_definition_sha256\":\"")
+            .append(scenarioDefinitionSha256)
+            .append('"')
+        append(",\"trace_contract_sha256\":\"")
+            .append(traceContractSha256)
+            .append('"')
+        append(",\"event_count\":").append(eventCount)
+        append(",\"events\":[")
     }
 
     private fun secondsToMicros(seconds: Float): Long? {
