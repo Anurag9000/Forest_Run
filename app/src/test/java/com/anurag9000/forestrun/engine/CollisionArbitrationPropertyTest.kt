@@ -8,7 +8,6 @@ import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Entity
 import com.anurag9000.forestrun.entities.Player
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -76,7 +75,9 @@ class CollisionArbitrationPropertyTest {
             val probes = permutation.map { ProbeEntity(context, it) }
             manager.activeEntities += probes
 
-            val frame = assertNotNull(manager.checkCollisions(player, gameState))
+            val frame = requireNotNull(manager.checkCollisions(player, gameState)) {
+                "case=$caseIndex permutation=$permutation should resolve a collision"
+            }
             assertEquals("case=$caseIndex result", CollisionResult.HIT, frame.result)
             assertEquals(
                 "case=$caseIndex selected count",
@@ -121,7 +122,9 @@ class CollisionArbitrationPropertyTest {
             val probes = permutation.map { ProbeEntity(context, it) }
             manager.activeEntities += probes
 
-            val frame = assertNotNull(manager.checkCollisions(player, gameState))
+            val frame = requireNotNull(manager.checkCollisions(player, gameState)) {
+                "case=$caseIndex permutation=$permutation should resolve a collision"
+            }
             assertEquals("case=$caseIndex permutation=$permutation", expected, frame.result)
             assertEquals("case=$caseIndex exactly one selection", 1, probes.sumOf { it.selectedCount })
             assertEquals(expected, probes.single { it.selectedCount == 1 }.collisionResult)
