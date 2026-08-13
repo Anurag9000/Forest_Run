@@ -9,8 +9,10 @@ from pathlib import Path
 
 import compile_human_acceptance
 import compile_installed_identity_matrix
+import compile_play_delivery_evidence
 import compile_release_governance as compiler
 import test_installed_identity_matrix as matrix_fixture
+import test_play_delivery_evidence as play_fixture
 import test_validate_human_acceptance as human_fixture
 import validate_release_governance as governance
 
@@ -42,10 +44,22 @@ def _governance_draft(root: Path) -> dict:
     )
     compile_installed_identity_matrix.compile_file(matrix_draft_path, matrix_path)
 
+    play_draft = play_fixture.prepare(root)
+    play_draft_path = root / "play-delivery-draft.json"
+    play_path = root / "play-delivery.json"
+    play_draft_path.write_text(
+        json.dumps(play_draft, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    compile_play_delivery_evidence.compile_file(play_draft_path, play_path)
+
     evidence: dict[str, str] = {}
     for kind in sorted(governance.REQUIRED_EVIDENCE_KINDS):
         if kind == "installed_identity_matrix":
             evidence[kind] = "installed-identity-matrix.json"
+            continue
+        if kind == "play_delivery_record":
+            evidence[kind] = "play-delivery.json"
             continue
         suffix = ".md" if kind in {"release_notes", "changelog", "third_party_notices"} else ".txt"
         relative = f"governance-evidence/{kind}{suffix}"
@@ -108,6 +122,7 @@ class ReleaseGovernanceTest(unittest.TestCase):
             self.assertEqual(len(governance.REQUIRED_EVIDENCE_KINDS), summary.evidence_file_count)
             self.assertEqual(2, summary.reviewer_count)
             self.assertRegex(summary.installed_identity_matrix_sha256, r"^[0-9a-f]{64}$")
+            self.assertRegex(summary.play_delivery_sha256, r"^[0-9a-f]{64}$")
             self.assertRegex(compiled["device_acceptance"]["sha256"], r"^[0-9a-f]{64}$")
             self.assertRegex(compiled["human_acceptance"]["sha256"], r"^[0-9a-f]{64}$")
             for reference in compiled["evidence"].values():

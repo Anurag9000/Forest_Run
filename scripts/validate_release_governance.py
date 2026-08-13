@@ -28,6 +28,7 @@ import strict_json
 import validate_device_acceptance as device_acceptance
 import validate_human_acceptance as human_acceptance
 import validate_installed_identity_matrix as installed_matrix
+import validate_play_delivery_evidence as play_delivery
 
 SCHEMA_VERSION = 2
 MAX_MANIFEST_BYTES = 16 * 1024 * 1024
@@ -68,6 +69,7 @@ REQUIRED_EVIDENCE_KINDS = frozenset(
         "dependency_vulnerability_report",
         "dependency_verification_report",
         "installed_identity_matrix",
+        "play_delivery_record",
         "asset_provenance",
         "security_reporting_record",
         "license_decision_record",
@@ -102,6 +104,7 @@ class GovernanceSummary:
     device_acceptance_sha256: str
     human_acceptance_sha256: str
     installed_identity_matrix_sha256: str
+    play_delivery_sha256: str
     decision_count: int
     evidence_file_count: int
     reviewer_count: int
@@ -117,6 +120,7 @@ class GovernanceSummary:
             "device_acceptance_sha256": self.device_acceptance_sha256,
             "human_acceptance_sha256": self.human_acceptance_sha256,
             "installed_identity_matrix_sha256": self.installed_identity_matrix_sha256,
+            "play_delivery_sha256": self.play_delivery_sha256,
             "decision_count": self.decision_count,
             "evidence_file_count": self.evidence_file_count,
             "reviewer_count": self.reviewer_count,
@@ -507,6 +511,22 @@ def validate_bundle(
     if installed_matrix_summary.device_acceptance_sha256 != device_digest:
         raise GovernanceError("installed identity matrix references a different device acceptance manifest")
 
+    _, play_delivery_digest, play_delivery_path = evidence_results["play_delivery_record"]
+    try:
+        play_delivery_summary = play_delivery.load_and_validate(play_delivery_path)
+    except play_delivery.PlayDeliveryError as exc:
+        raise GovernanceError(f"Play delivery evidence is invalid: {exc}") from exc
+    if play_delivery_summary.candidate_sha != candidate_sha:
+        raise GovernanceError("Play delivery candidate does not match governance candidate")
+    if play_delivery_summary.artifact_sha256 != artifact_sha:
+        raise GovernanceError("Play delivery artifact does not match governance candidate")
+    if play_delivery_summary.upload_certificate_sha256 != upload_certificate_sha:
+        raise GovernanceError("Play delivery upload certificate does not match governance candidate")
+    if play_delivery_summary.app_signing_certificate_sha256 != app_signing_certificate_sha:
+        raise GovernanceError("Play delivery app-signing certificate does not match governance candidate")
+    if play_delivery_summary.installed_identity_matrix_sha256 != installed_matrix_digest:
+        raise GovernanceError("Play delivery references a different installed identity matrix")
+
     decisions = _mapping(root["decisions"], "decisions")
     _require_exact_keys(decisions, DECISION_DOMAINS, "decisions")
     decision_reviewers: dict[str, str] = {}
@@ -585,6 +605,7 @@ def validate_bundle(
         device_acceptance_sha256=device_digest,
         human_acceptance_sha256=human_digest,
         installed_identity_matrix_sha256=installed_matrix_digest,
+        play_delivery_sha256=play_delivery_digest,
         decision_count=len(decisions),
         evidence_file_count=len(seen_paths),
         reviewer_count=len(decision_reviewers),

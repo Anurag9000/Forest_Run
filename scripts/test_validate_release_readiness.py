@@ -56,6 +56,7 @@ def prepare_complete_evidence(root: Path, *, signed_bundle_path: str = "artifact
         "device_acceptance=device-acceptance.json",
         "human_acceptance=human-acceptance.json",
         "installed_identity_matrix=installed-identity-matrix.json",
+        "play_delivery=play-delivery.json",
         "release_governance=release-governance.json",
     ] + [f"{kind}={generic_paths[kind]}" for kind in GENERIC_BOUND_KINDS]
     index_path = root / "release-evidence-index.json"
@@ -72,6 +73,7 @@ def prepare_complete_evidence(root: Path, *, signed_bundle_path: str = "artifact
         "device": root / "device-acceptance.json",
         "human": root / "human-acceptance.json",
         "matrix": root / "installed-identity-matrix.json",
+        "play": root / "play-delivery.json",
         "governance": governance_path,
         "index": index_path,
     }
@@ -85,6 +87,7 @@ class ReleaseReadinessTest(unittest.TestCase):
             device_manifest=paths["device"],
             human_manifest=paths["human"],
             installed_identity_matrix=paths["matrix"],
+            play_delivery_manifest=paths["play"],
             governance_manifest=paths["governance"],
             release_index=paths["index"],
         )
@@ -99,7 +102,8 @@ class ReleaseReadinessTest(unittest.TestCase):
             self.assertEqual(device_fixture.UPLOAD_CERT_SHA, summary.upload_certificate_sha256)
             self.assertEqual(device_fixture.APP_SIGNING_CERT_SHA, summary.app_signing_certificate_sha256)
             self.assertRegex(summary.installed_identity_matrix_sha256, r"^[0-9a-f]{64}$")
-            self.assertGreaterEqual(summary.evidence_entry_count, 11)
+            self.assertRegex(summary.play_delivery_sha256, r"^[0-9a-f]{64}$")
+            self.assertGreaterEqual(summary.evidence_entry_count, 12)
             self.assertRegex(summary.evidence_index_sha256, r"^[0-9a-f]{64}$")
             self.assertRegex(summary.evidence_set_sha256, r"^[0-9a-f]{64}$")
 
@@ -114,6 +118,7 @@ class ReleaseReadinessTest(unittest.TestCase):
                     device_manifest=paths["device"],
                     human_manifest=paths["human"],
                     installed_identity_matrix=paths["matrix"],
+                    play_delivery_manifest=paths["play"],
                     governance_manifest=paths["governance"],
                     release_index=paths["index"],
                 )
@@ -164,6 +169,7 @@ class ReleaseReadinessTest(unittest.TestCase):
                 "device_acceptance=final-index/copied-device.json",
                 "human_acceptance=human-acceptance.json",
                 "installed_identity_matrix=installed-identity-matrix.json",
+                "play_delivery=play-delivery.json",
                 "release_governance=release-governance.json",
             ] + [f"{kind}={generic[kind]}" for kind in GENERIC_BOUND_KINDS]
             payload = index_builder.build_index(
@@ -213,6 +219,7 @@ class ReleaseReadinessTest(unittest.TestCase):
                     device_manifest=alias / "device-acceptance.json",
                     human_manifest=paths["human"],
                     installed_identity_matrix=paths["matrix"],
+                    play_delivery_manifest=paths["play"],
                     governance_manifest=paths["governance"],
                     release_index=paths["index"],
                 )

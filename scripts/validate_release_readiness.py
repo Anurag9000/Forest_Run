@@ -25,6 +25,7 @@ import strict_json
 import validate_device_acceptance as device_acceptance
 import validate_human_acceptance as human_acceptance
 import validate_installed_identity_matrix as installed_matrix
+import validate_play_delivery_evidence as play_delivery
 import validate_release_governance as governance
 import verify_release_evidence_index as evidence_index
 
@@ -40,6 +41,7 @@ REQUIRED_BOUND_KINDS = frozenset(
         "device_aggregate",
         "human_acceptance",
         "installed_identity_matrix",
+        "play_delivery",
         "release_governance",
         "screenshot_manifest",
         "graphics_manifest",
@@ -61,6 +63,7 @@ class ReleaseReadinessSummary:
     device_acceptance_sha256: str
     human_acceptance_sha256: str
     installed_identity_matrix_sha256: str
+    play_delivery_sha256: str
     governance_sha256: str
     evidence_index_sha256: str
     evidence_set_sha256: str
@@ -76,6 +79,7 @@ class ReleaseReadinessSummary:
             "device_acceptance_sha256": self.device_acceptance_sha256,
             "human_acceptance_sha256": self.human_acceptance_sha256,
             "installed_identity_matrix_sha256": self.installed_identity_matrix_sha256,
+            "play_delivery_sha256": self.play_delivery_sha256,
             "governance_sha256": self.governance_sha256,
             "evidence_index_sha256": self.evidence_index_sha256,
             "evidence_set_sha256": self.evidence_set_sha256,
@@ -189,6 +193,7 @@ def validate_readiness(
     device_manifest: Path,
     human_manifest: Path,
     installed_identity_matrix: Path,
+    play_delivery_manifest: Path,
     governance_manifest: Path,
     release_index: Path,
 ) -> ReleaseReadinessSummary:
@@ -202,6 +207,9 @@ def validate_readiness(
     )
     installed_matrix_relative, installed_matrix_path = _safe_relative_path(
         installed_identity_matrix, root, "installed identity matrix"
+    )
+    play_delivery_relative, play_delivery_path = _safe_relative_path(
+        play_delivery_manifest, root, "Play delivery manifest"
     )
     governance_relative, governance_path = _safe_relative_path(
         governance_manifest, root, "release governance manifest"
@@ -221,6 +229,10 @@ def validate_readiness(
     except (OSError, installed_matrix.InstalledIdentityMatrixError) as exc:
         raise ReleaseReadinessError(f"installed identity matrix failed: {exc}") from exc
     try:
+        play_delivery_summary = play_delivery.load_and_validate(play_delivery_path)
+    except (OSError, play_delivery.PlayDeliveryError) as exc:
+        raise ReleaseReadinessError(f"Play delivery evidence failed: {exc}") from exc
+    try:
         governance_summary = governance.load_and_validate(governance_path)
     except (OSError, governance.GovernanceError) as exc:
         raise ReleaseReadinessError(f"release governance failed: {exc}") from exc
@@ -229,6 +241,7 @@ def validate_readiness(
         device_summary.candidate_sha,
         human_summary.candidate_sha,
         installed_matrix_summary.candidate_sha,
+        play_delivery_summary.candidate_sha,
         governance_summary.candidate_sha,
     }
     if candidate_values != {expected}:
@@ -239,6 +252,7 @@ def validate_readiness(
         device_summary.artifact_sha256,
         human_summary.artifact_sha256,
         installed_matrix_summary.artifact_sha256,
+        play_delivery_summary.artifact_sha256,
         governance_summary.artifact_sha256,
     }
     if len(artifact_values) != 1:
@@ -249,6 +263,7 @@ def validate_readiness(
         device_summary.upload_certificate_sha256,
         human_summary.upload_certificate_sha256,
         installed_matrix_summary.upload_certificate_sha256,
+        play_delivery_summary.upload_certificate_sha256,
         governance_summary.upload_certificate_sha256,
     }
     if len(upload_certificates) != 1:
@@ -259,6 +274,7 @@ def validate_readiness(
         device_summary.app_signing_certificate_sha256,
         human_summary.app_signing_certificate_sha256,
         installed_matrix_summary.app_signing_certificate_sha256,
+        play_delivery_summary.app_signing_certificate_sha256,
         governance_summary.app_signing_certificate_sha256,
     }
     if len(app_signing_certificates) != 1:
@@ -269,6 +285,7 @@ def validate_readiness(
     device_digest = _sha256_file(device_path)
     human_digest = _sha256_file(human_path)
     installed_matrix_digest = _sha256_file(installed_matrix_path)
+    play_delivery_digest = _sha256_file(play_delivery_path)
     governance_digest = _sha256_file(governance_path)
     if device_digest != device_summary.bundle_sha256:
         raise ReleaseReadinessError("device acceptance digest changed after validation")
@@ -286,6 +303,12 @@ def validate_readiness(
         raise ReleaseReadinessError("installed identity matrix references a different device manifest")
     if installed_matrix_digest != governance_summary.installed_identity_matrix_sha256:
         raise ReleaseReadinessError("governance references a different installed identity matrix")
+    if play_delivery_digest != play_delivery_summary.manifest_sha256:
+        raise ReleaseReadinessError("Play delivery digest changed after validation")
+    if play_delivery_summary.installed_identity_matrix_sha256 != installed_matrix_digest:
+        raise ReleaseReadinessError("Play delivery references a different installed identity matrix")
+    if play_delivery_digest != governance_summary.play_delivery_sha256:
+        raise ReleaseReadinessError("governance references a different Play delivery manifest")
     if governance_digest != governance_summary.manifest_sha256:
         raise ReleaseReadinessError("governance digest changed after validation")
 
@@ -328,6 +351,12 @@ def validate_readiness(
     )
     _require_index_reference(
         entries,
+        kind="play_delivery",
+        expected_path=play_delivery_relative,
+        expected_sha256=play_delivery_digest,
+    )
+    _require_index_reference(
+        entries,
         kind="release_governance",
         expected_path=governance_relative,
         expected_sha256=governance_digest,
@@ -351,6 +380,7 @@ def validate_readiness(
         device_acceptance_sha256=device_digest,
         human_acceptance_sha256=human_digest,
         installed_identity_matrix_sha256=installed_matrix_digest,
+        play_delivery_sha256=play_delivery_digest,
         governance_sha256=governance_digest,
         evidence_index_sha256=str(index_summary["indexSha256"]),
         evidence_set_sha256=str(index_summary["evidenceSetSha256"]),
@@ -389,6 +419,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--device-acceptance", type=Path, required=True)
     parser.add_argument("--human-acceptance", type=Path, required=True)
     parser.add_argument("--installed-identity-matrix", type=Path, required=True)
+    parser.add_argument("--play-delivery", type=Path, required=True)
     parser.add_argument("--release-governance", type=Path, required=True)
     parser.add_argument("--release-evidence-index", type=Path, required=True)
     parser.add_argument("--summary-output", type=Path)
@@ -400,6 +431,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             device_manifest=args.device_acceptance,
             human_manifest=args.human_acceptance,
             installed_identity_matrix=args.installed_identity_matrix,
+            play_delivery_manifest=args.play_delivery,
             governance_manifest=args.release_governance,
             release_index=args.release_evidence_index,
         )
