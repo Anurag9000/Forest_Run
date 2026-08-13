@@ -79,7 +79,7 @@ class InputLatencyProfileEvaluatorTest(unittest.TestCase):
     def test_impossible_sample_accounting_is_rejected(self) -> None:
         with self.assertRaisesRegex(latency.InputLatencyConfigurationError, "sampledActions"):
             latency.validate_report(dict(self.report, sampledActions=41))
-        with self.assertRaisesRegex(latency.InputLatencyConfigurationError, "sampled\+dropped"):
+        with self.assertRaisesRegex(latency.InputLatencyConfigurationError, r"sampled\+dropped"):
             latency.validate_report(dict(self.report, sampledActions=39, droppedActions=0))
 
     def test_percentiles_and_total_relationships_are_rejected_when_impossible(self) -> None:
