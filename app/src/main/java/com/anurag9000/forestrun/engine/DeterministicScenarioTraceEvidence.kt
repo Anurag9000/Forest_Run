@@ -18,12 +18,15 @@ internal data class DeterministicScenarioTraceEvidence(
 /** Stable, bounded, privacy-preserving encoding for deterministic input traces. */
 internal object DeterministicScenarioTraceEvidenceCodec {
     private const val SCHEMA_VERSION = 2
-    private const val MAX_PAYLOAD_BYTES = 256 * 1024
+    internal const val MAX_PAYLOAD_BYTES = 256 * 1024
     private const val MICROS_PER_SECOND = 1_000_000.0
     private val commitPattern = Regex("^[0-9a-f]{40}$")
     private val sha256Pattern = Regex("^[0-9a-f]{64}$")
     private val eventPattern = Regex(
         """\{"sequence":(\d+),"scheduled_at_micros":(\d+),"dispatched_at_micros":(\d+),"lateness_micros":(\d+),"action":"([A-Z_]+)"\}"""
+    )
+    private val payloadPattern = Regex(
+        """\{"schema_version":(\d+),"candidate_commit_sha":"([0-9a-f]{40})","artifact_sha256":"([0-9a-f]{64})","captured_at_utc_ms":(\d+),"scenario":"([A-Z0-9_]+)","scenario_definition_sha256":"([0-9a-f]{64})","trace_contract_sha256":"([0-9a-f]{64})","event_count":(\d+),"events":\[(.*)]\}"""
     )
 
     fun encode(
@@ -87,6 +90,36 @@ internal object DeterministicScenarioTraceEvidenceCodec {
             payloadJson = payload,
             payloadSha256 = sha256(payloadBytes)
         )
+    }
+
+    /**
+     * Parses a persisted payload without trusting an in-memory evidence envelope.
+     * Only the exact current canonical schema is admitted; isCanonical then
+     * rechecks authored scenario fingerprints, event order, schedule and action.
+     */
+    fun decodeCanonical(payloadJson: String): DeterministicScenarioTraceEvidence? {
+        val payloadBytes = payloadJson.toByteArray(Charsets.UTF_8)
+        if (payloadBytes.isEmpty() || payloadBytes.size > MAX_PAYLOAD_BYTES) return null
+
+        val match = payloadPattern.matchEntire(payloadJson) ?: return null
+        val groups = match.groupValues
+        if (groups[1].toIntOrNull() != SCHEMA_VERSION) return null
+        val capturedAtUtcMs = groups[4].toLongOrNull() ?: return null
+        val scenario = EncounterScenario.entries.firstOrNull { it.name == groups[5] } ?: return null
+        val eventCount = groups[8].toIntOrNull() ?: return null
+
+        val evidence = DeterministicScenarioTraceEvidence(
+            candidateCommitSha = groups[2],
+            artifactSha256 = groups[3],
+            capturedAtUtcMs = capturedAtUtcMs,
+            scenario = scenario,
+            scenarioDefinitionSha256 = groups[6],
+            traceContractSha256 = groups[7],
+            eventCount = eventCount,
+            payloadJson = payloadJson,
+            payloadSha256 = sha256(payloadBytes)
+        )
+        return evidence.takeIf(::isCanonical)
     }
 
     /**
