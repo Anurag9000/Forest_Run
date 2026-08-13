@@ -16,6 +16,7 @@ class GameStateManager(context: Context) {
     private val pacifistTracker = PacifistTracker()
     private val mercySystem = MercySystem()
     private var openingInputState = OpeningInputState()
+    private val encounterSelectionBag = EncounterSelectionBag()
 
     var scrollSpeed: Float = GameConstants.BASE_SCROLL_SPEED
         private set
@@ -293,8 +294,11 @@ class GameStateManager(context: Context) {
     fun openingSpawnInterval(defaultInterval: Float): Float =
         OpeningReadabilityGuide.adjustedSpawnInterval(runTimeSeconds, defaultInterval)
 
-    fun openingSpawnPool(defaultPool: List<EntityType>): List<EntityType> =
-        OpeningReadabilityGuide.spawnPoolFor(runTimeSeconds, defaultPool)
+    fun openingSpawnPool(defaultPool: List<EntityType>): List<EntityType> {
+        val authorizedPool = OpeningReadabilityGuide.spawnPoolFor(runTimeSeconds, defaultPool)
+        val selected = encounterSelectionBag.next(authorizedPool) ?: return emptyList()
+        return listOf(selected)
+    }
 
     fun recordJumpInput() {
         openingInputState = openingInputState.copy(jumpSeen = true)
@@ -333,6 +337,7 @@ class GameStateManager(context: Context) {
         milestoneReady = false
         pacifistTracker.reset()
         openingInputState = OpeningInputState()
+        encounterSelectionBag.reset()
     }
 
     /** Persist score without ever overwriting externally spent Garden seeds. */
