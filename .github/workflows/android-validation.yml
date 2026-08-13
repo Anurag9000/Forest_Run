@@ -158,6 +158,8 @@ jobs:
           test -f scripts/test_build_declared_dependency_inventory.py
           test -f scripts/build_resolved_dependency_sbom.py
           test -f scripts/test_build_resolved_dependency_sbom.py
+          test -f scripts/validate_supply_chain_evidence.py
+          test -f scripts/test_validate_supply_chain_evidence.py
           grep -q 'declared-direct-dependencies-only' scripts/build_declared_dependency_inventory.py
           grep -q '"bomFormat": "CycloneDX"' scripts/build_resolved_dependency_sbom.py
 
@@ -215,11 +217,27 @@ jobs:
           evidence_dir='build/supply-chain'
           rm -rf "$evidence_dir"
           mkdir -p "$evidence_dir"
-          ./gradlew --no-daemon \
-            --console=plain \
-            -PcandidateCommitSha="${GITHUB_SHA}" \
-            generateSbom \
-            buildResolvedDependencySbom
+
+          ./gradlew app:dependencies \
+            --configuration releaseRuntimeClasspath \
+            --no-daemon --console=plain \
+            > "${evidence_dir}/releaseRuntimeClasspath.txt"
+
+          ./gradlew app:dependencies \
+            --configuration debugAndroidTestRuntimeClasspath \
+            --no-daemon --console=plain \
+            > "${evidence_dir}/debugAndroidTestRuntimeClasspath.txt"
+
+          python3 scripts/build_declared_dependency_inventory.py \
+            --root . \
+            --candidate-sha "${GITHUB_SHA}" \
+            --output "${evidence_dir}/declared-dependencies.json"
+
+          python3 scripts/build_resolved_dependency_sbom.py \
+            --candidate-sha "${GITHUB_SHA}" \
+            --report "releaseRuntimeClasspath=${evidence_dir}/releaseRuntimeClasspath.txt" \
+            --report "debugAndroidTestRuntimeClasspath=${evidence_dir}/debugAndroidTestRuntimeClasspath.txt" \
+            --output "${evidence_dir}/resolved-sbom.cdx.json"
 
           python3 scripts/validate_supply_chain_evidence.py \
             --declared "${evidence_dir}/declared-dependencies.json" \
