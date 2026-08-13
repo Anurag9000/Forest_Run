@@ -1,8 +1,9 @@
 package com.anurag9000.forestrun.engine
 
-import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class InputLatencyReportTest {
@@ -38,11 +39,14 @@ class InputLatencyReportTest {
 
         val first = report.toJson()
         assertEquals(first, report.toJson())
-        val json = JSONObject(first)
-        assertEquals(1, json.getInt("schemaVersion"))
-        assertEquals("app_touch_to_posted_frame", json.getString("measurementKind"))
-        assertEquals(40, json.getInt("sampledActions"))
-        assertEquals(86_000_000L, json.getLong("p95TouchToRenderNs"))
+        assertTrue(first.startsWith("{\n"))
+        assertTrue(first.endsWith("}\n"))
+        assertTrue(first.contains("\"schemaVersion\": 1"))
+        assertTrue(first.contains("\"measurementKind\": \"app_touch_to_posted_frame\""))
+        assertTrue(first.contains("\"sampledActions\": 40"))
+        assertTrue(first.contains("\"p95TouchToRenderNs\": 86000000"))
+        assertFalse(first.contains("touch_to_photon", ignoreCase = true))
+        assertFalse(first.contains("touchToPhoton", ignoreCase = true))
     }
 
     @Test
