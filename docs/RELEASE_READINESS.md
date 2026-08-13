@@ -2,7 +2,7 @@
 
 Forest Run's final source-side release command is `scripts/validate_release_readiness.py`.
 
-It does **not** create physical, human, signing, store, legal, policy, security, licence, or presentation evidence. Those facts must already exist and must already pass their owning validators. Readiness is the final orchestration layer that independently revalidates those accepted inputs and proves that the same candidate and files are represented in the final release-evidence index.
+It does **not** create physical, installed-package, Play-delivery, human, signing, store, legal, policy, security, licence, or presentation evidence. Those facts must already exist and must already pass their owning validators. Readiness is the final orchestration layer that independently revalidates those accepted inputs and proves that the same candidate and files are represented in the final release-evidence index.
 
 ## Required inputs
 
@@ -20,7 +20,7 @@ The command also requires the exact expected lowercase 40-character candidate SH
 
 ## What readiness revalidates
 
-The orchestrator delegates rather than reimplementing the four owning formats:
+The orchestrator delegates rather than reimplementing the six owning formats:
 
 1. `validate_device_acceptance.load_and_validate(...)` revalidates physical acceptance.
 2. `validate_installed_identity_matrix.load_and_validate(...)` revalidates one measured Play-delivered package identity per physical session.
@@ -35,14 +35,20 @@ It then applies cross-layer invariants that no one individual format can prove a
 
 A ready result requires:
 
-- expected SHA = physical candidate SHA = human candidate SHA = governance candidate SHA = evidence-index candidate SHA;
-- physical artifact SHA-256 = human artifact SHA-256 = governance artifact SHA-256;
-- physical upload-certificate SHA-256 = human upload-certificate SHA-256 = governance upload-certificate SHA-256;
-- physical app-signing-certificate SHA-256 = human app-signing-certificate SHA-256 = governance app-signing-certificate SHA-256;
+- expected SHA = physical candidate SHA = installed-identity candidate SHA = Play-delivery candidate SHA = human candidate SHA = governance candidate SHA = evidence-index candidate SHA;
+- physical artifact SHA-256 = installed-identity artifact SHA-256 = Play-delivery artifact SHA-256 = human artifact SHA-256 = governance artifact SHA-256;
+- physical upload-certificate SHA-256 = installed-identity upload-certificate SHA-256 = Play-delivery upload-certificate SHA-256 = human upload-certificate SHA-256 = governance upload-certificate SHA-256;
+- physical app-signing-certificate SHA-256 = installed-identity app-signing-certificate SHA-256 = Play-delivery app-signing-certificate SHA-256 = human app-signing-certificate SHA-256 = governance app-signing-certificate SHA-256;
 - the human manifest's recorded physical-manifest digest equals the exact revalidated physical manifest;
+- the installed-identity matrix's recorded physical-manifest digest equals that same physical manifest;
+- the Play-delivery manifest's recorded installed-identity-matrix digest equals the exact revalidated installed-identity matrix;
 - the governance manifest's physical-manifest digest equals that same physical manifest;
 - the governance manifest's human-manifest digest equals the exact revalidated human manifest;
+- the governance manifest's installed-identity-matrix digest equals the exact revalidated installed-identity matrix;
+- the governance manifest's Play-delivery digest equals the exact revalidated Play-delivery manifest;
 - the exact revalidated physical manifest is the file indexed as `device_acceptance`;
+- the exact revalidated installed-identity matrix is the file indexed as `installed_identity_matrix`;
+- the exact revalidated Play-delivery manifest is the file indexed as `play_delivery`;
 - the exact revalidated human manifest is the file indexed as `human_acceptance`;
 - the exact revalidated governance manifest is the file indexed as `release_governance`;
 - the indexed `signed_bundle` SHA-256 equals the accepted candidate artifact SHA-256;
@@ -94,13 +100,15 @@ The evidence index proves set integrity: file identity, bytes, hashes, candidate
 
 Readiness adds semantic orchestration without replacing the index:
 
-- it actually reruns the physical validator;
-- it actually reruns the human validator;
+- it actually reruns the physical-device acceptance validator;
+- it actually reruns the installed-package identity-matrix validator;
+- it actually reruns the Play-delivery validator;
+- it actually reruns the human-acceptance validator;
 - it actually reruns the governance validator;
-- it independently reruns the index verifier;
+- it independently reruns the evidence-index verifier;
 - it then proves the exact revalidated manifests are the exact files named by the index and that the indexed signed bundle is the artifact all acceptance layers approved.
 
-This prevents a superficially valid final folder from mixing a valid governance file with a different valid device manifest, indexing a copied manifest while the operator validated another path, or including a different signed bundle than the accepted artifact.
+This prevents a superficially valid final folder from mixing a valid governance file with a different valid device manifest, installed identity matrix, Play-delivery record, or human acceptance manifest; indexing a copied manifest while the operator validated another path; or including a different signed bundle than the accepted artifact.
 
 ## Correct final order
 
