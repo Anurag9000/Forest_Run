@@ -2,9 +2,10 @@
 """Revalidate every final Forest Run release-evidence layer as one candidate.
 
 This is an orchestration gate, not a new source of truth. It delegates physical,
-human, governance, and release-index validation to their independent validators,
-then checks that the same files, digests, signed artifact, and candidate identity
-are actually represented in the final evidence index.
+installed-identity, Play-delivery, human, governance, and release-index validation
+to their independent validators, then checks that the same files, digests, signed
+artifact, and candidate identity are actually represented in the final evidence
+index.
 """
 
 from __future__ import annotations
@@ -246,7 +247,7 @@ def validate_readiness(
     }
     if candidate_values != {expected}:
         raise ReleaseReadinessError(
-            "device, human, governance, and expected candidate SHA must all match"
+            "device, installed identity, Play delivery, human, governance, and expected candidate SHA must all match"
         )
     artifact_values = {
         device_summary.artifact_sha256,
@@ -257,7 +258,7 @@ def validate_readiness(
     }
     if len(artifact_values) != 1:
         raise ReleaseReadinessError(
-            "device, human, and governance artifact SHA-256 values do not match"
+            "device, installed identity, Play delivery, human, and governance artifact SHA-256 values do not match"
         )
     upload_certificates = {
         device_summary.upload_certificate_sha256,
@@ -268,7 +269,7 @@ def validate_readiness(
     }
     if len(upload_certificates) != 1:
         raise ReleaseReadinessError(
-            "device, human, and governance upload-certificate SHA-256 values do not match"
+            "device, installed identity, Play delivery, human, and governance upload-certificate SHA-256 values do not match"
         )
     app_signing_certificates = {
         device_summary.app_signing_certificate_sha256,
@@ -279,7 +280,7 @@ def validate_readiness(
     }
     if len(app_signing_certificates) != 1:
         raise ReleaseReadinessError(
-            "device, human, and governance app-signing-certificate SHA-256 values do not match"
+            "device, installed identity, Play delivery, human, and governance app-signing-certificate SHA-256 values do not match"
         )
 
     device_digest = _sha256_file(device_path)
