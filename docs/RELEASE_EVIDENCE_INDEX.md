@@ -168,7 +168,7 @@ That final cross-check is intentionally separate from the index format. The inde
 2. Build, sign, deliver, capture, and test that candidate only.
 3. Validate every evidence format with its owning verifier.
 4. Build the declared inventory, resolved SBOM, licence review, and vulnerability report for the same candidate.
-5. Compile/validate physical acceptance, then human acceptance, then release governance for the same artifact.
+5. Compile and validate physical acceptance, the installed-identity matrix, Play-delivery evidence, human acceptance, and release governance—in that dependency order—for the same artifact.
 6. Run `build_stable_release_evidence_index.py` with every selected file.
 7. Have an independent reviewer run `verify_release_evidence_index.py` separately.
 8. Run `validate_release_readiness.py` against the same evidence root and exact candidate SHA.
