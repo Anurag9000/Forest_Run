@@ -47,7 +47,7 @@ class InputLatencyTelemetry(private val capacity: Int = DEFAULT_CAPACITY) {
     private var size = 0
     private var pendingTouchNs = UNSET
     private var pendingDecisionNs = UNSET
-    private var pendingResponseNs = UNSET
+    @Volatile private var pendingResponseNs = UNSET
     private var pendingGesture = NO_GESTURE
     private var dropped = 0L
 
@@ -91,23 +91,27 @@ class InputLatencyTelemetry(private val capacity: Int = DEFAULT_CAPACITY) {
         pendingResponseNs = nowNs
     }
 
-    @Synchronized
     fun recordFrameRendered(nowNs: Long) {
-        if (pendingTouchNs == UNSET || pendingResponseNs == UNSET) return
-        if (nowNs < pendingResponseNs) {
-            dropped++
+        // Almost every rendered frame has no pending input response. Avoid
+        // contending with the UI thread in that overwhelmingly common case.
+        if (pendingResponseNs == UNSET) return
+        synchronized(this) {
+            if (pendingTouchNs == UNSET || pendingResponseNs == UNSET) return
+            if (nowNs < pendingResponseNs) {
+                dropped++
+                clearPending()
+                return
+            }
+            val index = writeIndex
+            touchToDecisionNs[index] = pendingDecisionNs - pendingTouchNs
+            decisionToResponseNs[index] = pendingResponseNs - pendingDecisionNs
+            responseToRenderNs[index] = nowNs - pendingResponseNs
+            touchToRenderNs[index] = nowNs - pendingTouchNs
+            gestureKinds[index] = pendingGesture
+            writeIndex = (writeIndex + 1) % capacity
+            if (size < capacity) size++
             clearPending()
-            return
         }
-        val index = writeIndex
-        touchToDecisionNs[index] = pendingDecisionNs - pendingTouchNs
-        decisionToResponseNs[index] = pendingResponseNs - pendingDecisionNs
-        responseToRenderNs[index] = nowNs - pendingResponseNs
-        touchToRenderNs[index] = nowNs - pendingTouchNs
-        gestureKinds[index] = pendingGesture
-        writeIndex = (writeIndex + 1) % capacity
-        if (size < capacity) size++
-        clearPending()
     }
 
     @Synchronized
@@ -170,4 +174,18 @@ class InputLatencyTelemetry(private val capacity: Int = DEFAULT_CAPACITY) {
         private const val UNSET = -1L
         private const val NO_GESTURE: Byte = -1
     }
+}
+
+/** Process-local owner shared by the UI input path, render thread, and profiler. */
+object InputLatencyTelemetryRegistry {
+    private val telemetry = InputLatencyTelemetry()
+
+    fun recordTouchReceived(nowNs: Long) = telemetry.recordTouchReceived(nowNs)
+    fun recordGestureDecision(kind: InputGestureKind, nowNs: Long) =
+        telemetry.recordGestureDecision(kind, nowNs)
+    fun recordGameplayResponse(nowNs: Long) = telemetry.recordGameplayResponse(nowNs)
+    fun recordFrameRendered(nowNs: Long) = telemetry.recordFrameRendered(nowNs)
+    fun cancelPending() = telemetry.cancelPending()
+    fun reset() = telemetry.reset()
+    fun snapshot(): InputLatencySnapshot = telemetry.snapshot()
 }
