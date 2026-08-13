@@ -1,5 +1,6 @@
 package com.anurag9000.forestrun.engine
 
+import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
 
@@ -86,10 +87,14 @@ class InputHandler : View.OnTouchListener {
      * stale press into a delayed jump or duck release on the next frame.
      */
     fun cancelActiveGesture(notifyDuckRelease: Boolean = false) {
-        if (primaryPointerId == INVALID_POINTER) return
+        if (primaryPointerId == INVALID_POINTER) {
+            InputLatencyTelemetryRegistry.cancelPending()
+            return
+        }
 
         val wasDucking = isDucking
         clearGestureState()
+        InputLatencyTelemetryRegistry.cancelPending()
         lastGestureLabel = "RESET"
 
         if (notifyDuckRelease && wasDucking) {
@@ -106,6 +111,7 @@ class InputHandler : View.OnTouchListener {
         val startX = event.getX(index)
         val startY = event.getY(index)
         if (pointerId == INVALID_POINTER || !startX.isFinite() || !startY.isFinite()) {
+            InputLatencyTelemetryRegistry.cancelPending()
             lastGestureLabel = "INVALID"
             return false
         }
@@ -117,6 +123,7 @@ class InputHandler : View.OnTouchListener {
         isDucking = false
         isChargingJump = true
         jumpStarted = false
+        InputLatencyTelemetryRegistry.recordTouchReceived(SystemClock.elapsedRealtimeNanos())
         lastGestureLabel = "PRESS"
         return true
     }
@@ -133,8 +140,8 @@ class InputHandler : View.OnTouchListener {
             isChargingJump = false
             holdDuration = 0f
             lastGestureLabel = "DUCK"
-            onGestureClassified?.invoke(InputGestureKind.DUCK)
-            onDuckPressed?.invoke()
+            classify(InputGestureKind.DUCK)
+            dispatchDuckPressed()
         }
         return true
     }
@@ -164,8 +171,34 @@ class InputHandler : View.OnTouchListener {
     private fun startJump() {
         if (jumpStarted || isDucking || !isChargingJump) return
         jumpStarted = true
-        onGestureClassified?.invoke(InputGestureKind.JUMP)
-        onJumpPressed?.invoke()
+        classify(InputGestureKind.JUMP)
+        dispatchJumpPressed()
+    }
+
+    private fun classify(kind: InputGestureKind) {
+        val nowNs = SystemClock.elapsedRealtimeNanos()
+        InputLatencyTelemetryRegistry.recordGestureDecision(kind, nowNs)
+        onGestureClassified?.invoke(kind)
+    }
+
+    private fun dispatchJumpPressed() {
+        val callback = onJumpPressed
+        if (callback == null) {
+            InputLatencyTelemetryRegistry.cancelPending()
+            return
+        }
+        callback.invoke()
+        InputLatencyTelemetryRegistry.recordGameplayResponse(SystemClock.elapsedRealtimeNanos())
+    }
+
+    private fun dispatchDuckPressed() {
+        val callback = onDuckPressed
+        if (callback == null) {
+            InputLatencyTelemetryRegistry.cancelPending()
+            return
+        }
+        callback.invoke()
+        InputLatencyTelemetryRegistry.recordGameplayResponse(SystemClock.elapsedRealtimeNanos())
     }
 
     private fun commitRelease(cancelled: Boolean) {
@@ -190,13 +223,17 @@ class InputHandler : View.OnTouchListener {
                 lastGestureLabel = "CANCEL"
                 // Release only a jump that actually began. Never turn an
                 // Android cancellation into a surprise tap jump.
-                if (hadStartedJump) onJumpReleased?.invoke(finalHold)
+                if (hadStartedJump) {
+                    onJumpReleased?.invoke(finalHold)
+                } else {
+                    InputLatencyTelemetryRegistry.cancelPending()
+                }
             }
 
             wasCharging -> {
                 if (!hadStartedJump) {
-                    onGestureClassified?.invoke(InputGestureKind.JUMP)
-                    onJumpPressed?.invoke()
+                    classify(InputGestureKind.JUMP)
+                    dispatchJumpPressed()
                 }
                 lastGestureLabel = if (finalHold < 0.12f) {
                     "JUMP:TAP"
