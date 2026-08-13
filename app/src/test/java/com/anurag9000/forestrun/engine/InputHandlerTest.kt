@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.MotionEvent
 import android.view.View
 import androidx.test.core.app.ApplicationProvider
+import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -181,6 +182,112 @@ class InputHandlerTest {
         assertEquals(1, duckReleases)
         assertFalse(handler.isDucking)
         assertEquals("RESET", handler.lastGestureLabel)
+    }
+
+    @Test
+    fun `swipe threshold is strict and stable across the arbitration boundary`() {
+        val offsets = listOf(79.999f, 80f, 80.001f, 120f)
+        for (offset in offsets) {
+            handler = InputHandler()
+            var jumpPresses = 0
+            var jumpReleases = 0
+            var duckPresses = 0
+            var duckReleases = 0
+            handler.onJumpPressed = { jumpPresses++ }
+            handler.onJumpReleased = { jumpReleases++ }
+            handler.onDuckPressed = { duckPresses++ }
+            handler.onDuckReleased = { duckReleases++ }
+
+            dispatch(MotionEvent.ACTION_DOWN, 100f, 100f)
+            handler.tick(0.074f)
+            dispatch(MotionEvent.ACTION_MOVE, 100f, 100f + offset)
+            dispatch(MotionEvent.ACTION_UP, 100f, 100f + offset)
+
+            if (offset > 80f) {
+                assertEquals("offset=$offset jump presses", 0, jumpPresses)
+                assertEquals("offset=$offset jump releases", 0, jumpReleases)
+                assertEquals("offset=$offset duck presses", 1, duckPresses)
+                assertEquals("offset=$offset duck releases", 1, duckReleases)
+            } else {
+                assertEquals("offset=$offset jump presses", 1, jumpPresses)
+                assertEquals("offset=$offset jump releases", 1, jumpReleases)
+                assertEquals("offset=$offset duck presses", 0, duckPresses)
+                assertEquals("offset=$offset duck releases", 0, duckReleases)
+            }
+            assertFalse(handler.isChargingJump)
+            assertFalse(handler.isDucking)
+        }
+    }
+
+    @Test
+    fun `seeded predecision gesture traces always resolve to exactly one action family`() {
+        val random = Random(0xF0E57)
+        repeat(1_024) { trace ->
+            handler = InputHandler()
+            var jumpPresses = 0
+            var jumpReleases = 0
+            var duckPresses = 0
+            var duckReleases = 0
+            handler.onJumpPressed = { jumpPresses++ }
+            handler.onJumpReleased = { jumpReleases++ }
+            handler.onDuckPressed = { duckPresses++ }
+            handler.onDuckReleased = { duckReleases++ }
+
+            val startX = random.nextInt(0, 1_920).toFloat()
+            val startY = random.nextInt(0, 1_080).toFloat()
+            val tick = random.nextInt(0, 75).toFloat() / 1_000f
+            val dy = random.nextInt(-240, 241).toFloat()
+            val expectedDuck = dy > 80f
+
+            assertTrue("trace=$trace down", dispatch(MotionEvent.ACTION_DOWN, startX, startY))
+            handler.tick(tick)
+            assertTrue(
+                "trace=$trace move",
+                dispatch(MotionEvent.ACTION_MOVE, startX + random.nextInt(-80, 81), startY + dy)
+            )
+            assertTrue("trace=$trace up", dispatch(MotionEvent.ACTION_UP, startX, startY + dy))
+
+            if (expectedDuck) {
+                assertEquals("trace=$trace jump presses", 0, jumpPresses)
+                assertEquals("trace=$trace jump releases", 0, jumpReleases)
+                assertEquals("trace=$trace duck presses", 1, duckPresses)
+                assertEquals("trace=$trace duck releases", 1, duckReleases)
+            } else {
+                assertEquals("trace=$trace jump presses", 1, jumpPresses)
+                assertEquals("trace=$trace jump releases", 1, jumpReleases)
+                assertEquals("trace=$trace duck presses", 0, duckPresses)
+                assertEquals("trace=$trace duck releases", 0, duckReleases)
+            }
+            assertFalse("trace=$trace charging", handler.isChargingJump)
+            assertFalse("trace=$trace ducking", handler.isDucking)
+            assertEquals("trace=$trace reset hold", 0f, handler.holdDuration, 0f)
+        }
+    }
+
+    @Test
+    fun `once hold decision starts later downward motion cannot double classify`() {
+        val downwardOffsets = listOf(81f, 120f, 500f, 10_000f)
+        for (offset in downwardOffsets) {
+            handler = InputHandler()
+            var jumpPresses = 0
+            var jumpReleases = 0
+            var duckPresses = 0
+            var duckReleases = 0
+            handler.onJumpPressed = { jumpPresses++ }
+            handler.onJumpReleased = { jumpReleases++ }
+            handler.onDuckPressed = { duckPresses++ }
+            handler.onDuckReleased = { duckReleases++ }
+
+            dispatch(MotionEvent.ACTION_DOWN, 100f, 100f)
+            handler.tick(0.075f)
+            dispatch(MotionEvent.ACTION_MOVE, 100f, 100f + offset)
+            dispatch(MotionEvent.ACTION_UP, 100f, 100f + offset)
+
+            assertEquals("offset=$offset jump presses", 1, jumpPresses)
+            assertEquals("offset=$offset jump releases", 1, jumpReleases)
+            assertEquals("offset=$offset duck presses", 0, duckPresses)
+            assertEquals("offset=$offset duck releases", 0, duckReleases)
+        }
     }
 
     private fun dispatch(action: Int, x: Float, y: Float): Boolean {
