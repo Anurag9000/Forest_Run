@@ -79,16 +79,18 @@ internal object EncounterActionFeasibility {
             gravityPxPerSecSquared = gravity,
             maximumRisePx = maxRise
         )
+        val actionWindowAvailable = decision.toDouble() + safety.toDouble() <=
+            contactTime.toDouble() + 0.0001
         val availableAfterDecision =
             (contactTime.toDouble() - decision.toDouble() - safety.toDouble())
                 .coerceAtLeast(0.0)
                 .coerceAtMost(Float.MAX_VALUE.toDouble())
                 .toFloat()
-        val jumpFeasible = clearance <= maxRise + 0.0001f &&
+        val jumpFeasible = actionWindowAvailable &&
+            clearance <= maxRise + 0.0001f &&
             riseTime.isFinite() &&
             riseTime <= availableAfterDecision + 0.0001f
-        val duckFeasible = decision.toDouble() + safety.toDouble() <=
-            contactTime.toDouble() + 0.0001
+        val duckFeasible = actionWindowAvailable
 
         return EncounterActionFeasibilityObservation(
             leadDistancePx = lead,
