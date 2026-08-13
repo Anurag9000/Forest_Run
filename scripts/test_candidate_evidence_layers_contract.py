@@ -12,6 +12,15 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
     def test_permanent_source_surface_exists(self) -> None:
         for relative in (
             "scripts/collect_performance_profiles.sh",
+            "scripts/collect_installed_candidate_identity.py",
+            "scripts/validate_installed_candidate_identity.py",
+            "scripts/test_installed_candidate_identity.py",
+            "scripts/compile_installed_identity_matrix.py",
+            "scripts/validate_installed_identity_matrix.py",
+            "scripts/test_installed_identity_matrix.py",
+            "scripts/compile_play_delivery_evidence.py",
+            "scripts/validate_play_delivery_evidence.py",
+            "scripts/test_play_delivery_evidence.py",
             "scripts/compile_human_acceptance.py",
             "scripts/validate_human_acceptance.py",
             "scripts/test_validate_human_acceptance.py",
@@ -20,6 +29,7 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
             "scripts/test_validate_release_governance.py",
             "scripts/validate_release_readiness.py",
             "scripts/test_validate_release_readiness.py",
+            "docs/INSTALLED_CANDIDATE_IDENTITY.md",
             "docs/HUMAN_ACCEPTANCE.md",
             "docs/RELEASE_GOVERNANCE_EVIDENCE.md",
             "docs/RELEASE_READINESS.md",
@@ -31,11 +41,15 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
             "scripts/migrate_candidate_evidence_layers.py",
             "scripts/finalize_candidate_evidence_reconciliation.py",
             "scripts/migrate_device_acceptance_path_integrity.py",
+            "scripts/migrate_play_delivery_release_integration.py",
+            "scripts/migrate_final_release_evidence_docs.py",
             ".github/workflows/candidate-evidence-reconciliation.yml",
             ".github/workflows/candidate-evidence-reconciliation-v2.yml",
             ".github/workflows/candidate-evidence-reconciliation-v3.yml",
             ".github/workflows/candidate-evidence-reconciliation-v4.yml",
             ".github/workflows/device-acceptance-path-integrity.yml",
+            ".github/workflows/play-delivery-release-integration.yml",
+            ".github/workflows/final-release-evidence-docs.yml",
         ):
             self.assertFalse((ROOT / relative).exists(), relative)
 
@@ -75,6 +89,29 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         ):
             self.assertIn(token, source)
 
+    def test_installed_identity_and_play_delivery_are_candidate_bound(self) -> None:
+        installed = (SCRIPTS / "validate_installed_identity_matrix.py").read_text(
+            encoding="utf-8"
+        )
+        play = (SCRIPTS / "validate_play_delivery_evidence.py").read_text(encoding="utf-8")
+        for token in (
+            "device_acceptance_sha256",
+            "artifact_sha256",
+            "upload_certificate_sha256",
+            "app_signing_certificate_sha256",
+            "candidate_sha",
+        ):
+            self.assertIn(token, installed)
+        for token in (
+            "installed_identity_matrix_sha256",
+            "artifact_sha256",
+            "upload_certificate_sha256",
+            "app_signing_certificate_sha256",
+            "candidate_sha",
+            '"internal"',
+        ):
+            self.assertIn(token, play)
+
     def test_human_contract_is_device_bound_and_detailed(self) -> None:
         source = (SCRIPTS / "validate_human_acceptance.py").read_text(encoding="utf-8")
         for token in (
@@ -93,6 +130,10 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
     def test_governance_contract_covers_all_external_decision_families(self) -> None:
         source = (SCRIPTS / "validate_release_governance.py").read_text(encoding="utf-8")
         for token in (
+            "installed_matrix.load_and_validate",
+            "play_delivery.load_and_validate",
+            "installed_identity_matrix",
+            "play_delivery_record",
             "private_vulnerability_reporting_enabled",
             "software_licensing",
             "creative_asset_licensing",
@@ -113,10 +154,14 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         source = (SCRIPTS / "validate_release_readiness.py").read_text(encoding="utf-8")
         for token in (
             "device_acceptance.load_and_validate",
+            "installed_matrix.load_and_validate",
+            "play_delivery.load_and_validate",
             "human_acceptance.load_and_validate",
             "governance.load_and_validate",
             "evidence_index.verify_index",
             'kind="device_acceptance"',
+            'kind="installed_identity_matrix"',
+            'kind="play_delivery"',
             'kind="human_acceptance"',
             'kind="release_governance"',
             'entries["signed_bundle"]',
@@ -124,25 +169,33 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         ):
             self.assertIn(token, source)
 
-    def test_canonical_docs_describe_new_layers_and_index_requires_them(self) -> None:
+    def test_canonical_docs_describe_all_layers_and_index_requires_them(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         performance = (DOCS / "PERFORMANCE.md").read_text(encoding="utf-8")
         device = (DOCS / "DEVICE_ACCEPTANCE.md").read_text(encoding="utf-8")
         index = (DOCS / "RELEASE_EVIDENCE_INDEX.md").read_text(encoding="utf-8")
+        governance = (DOCS / "RELEASE_GOVERNANCE_EVIDENCE.md").read_text(encoding="utf-8")
         security = (DOCS / "SECURITY_AND_LICENSING_GOVERNANCE.md").read_text(encoding="utf-8")
         readiness_doc = (DOCS / "RELEASE_READINESS.md").read_text(encoding="utf-8")
 
+        self.assertIn("docs/INSTALLED_CANDIDATE_IDENTITY.md", readme)
         self.assertIn("docs/HUMAN_ACCEPTANCE.md", readme)
         self.assertIn("docs/RELEASE_GOVERNANCE_EVIDENCE.md", readme)
         self.assertIn("FOREST_RUN_CAPTURE_PERFETTO", performance)
         self.assertIn("HUMAN_ACCEPTANCE.md", device)
+        self.assertEqual(2, index.count("--require-bound-kind installed_identity_matrix"))
+        self.assertEqual(2, index.count("--require-bound-kind play_delivery"))
         self.assertEqual(2, index.count("--require-bound-kind human_acceptance"))
         self.assertEqual(2, index.count("--require-bound-kind release_governance"))
         self.assertNotIn("--require-bound-kind policy_approval", index)
         self.assertNotIn("--entry policy_approval=", index)
+        self.assertIn("installed-identity-matrix", governance)
+        self.assertIn("play-delivery", governance)
         self.assertIn("validate_release_readiness.py", index)
         self.assertIn("compile_release_governance.py", security)
         self.assertIn("validate_release_governance.py", security)
+        self.assertIn("--installed-identity-matrix", readiness_doc)
+        self.assertIn("--play-delivery", readiness_doc)
         self.assertIn("validate_release_readiness.py", readiness_doc)
 
 
