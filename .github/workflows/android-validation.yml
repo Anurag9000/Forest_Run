@@ -106,6 +106,10 @@ jobs:
 
           test -f scripts/compare_visual_regression.py
           test -f scripts/test_compare_visual_regression.py
+          test -f scripts/test_visual_regression_trusted_root.py
+          test -f scripts/test_visual_regression_symlink_root.py
+          test -f scripts/visual_baseline_provenance.py
+          test -f scripts/test_visual_baseline_provenance.py
           test -f docs/VISUAL_REGRESSION.md
 
           test -f scripts/run_connected_validation.sh
@@ -160,6 +164,7 @@ jobs:
           test -f scripts/test_build_resolved_dependency_sbom.py
           test -f scripts/validate_supply_chain_evidence.py
           test -f scripts/test_validate_supply_chain_evidence.py
+          test -f scripts/test_supply_chain_purl_binding.py
           grep -q 'declared-direct-dependencies-only' scripts/build_declared_dependency_inventory.py
           grep -q '"bomFormat": "CycloneDX"' scripts/build_resolved_dependency_sbom.py
 
