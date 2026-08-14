@@ -52,6 +52,13 @@ class AndroidValidationWorkflowContractTest(unittest.TestCase):
             "capture_store_screenshots.sh",
             "screenshot_capture_evidence.py",
             "verify_curated_screenshot_set.py",
+            "compare_visual_regression.py",
+            "test_compare_visual_regression.py",
+            "test_visual_regression_trusted_root.py",
+            "test_visual_regression_symlink_root.py",
+            "visual_baseline_provenance.py",
+            "test_visual_baseline_provenance.py",
+            "test_supply_chain_purl_binding.py",
         ):
             self.assertIn(f"test -f scripts/{required_script}", self.source)
 
