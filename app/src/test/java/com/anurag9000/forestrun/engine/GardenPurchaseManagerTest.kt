@@ -44,6 +44,55 @@ class GardenPurchaseManagerTest {
     }
 
     @Test
+    fun `exact cumulative paid catalogue budget unlocks every remaining plant to zero`() {
+        val totalBudget = paidCatalogueBudget()
+        SaveManager.saveGardenProgress(context, 1)
+        SaveManager.saveLifetimeSeeds(context, totalBudget)
+
+        var expectedBalance = totalBudget
+        for (index in 1 until GardenEconomy.catalogueSize) {
+            val cost = requireNotNull(GardenEconomy.seedCostForIndex(index))
+            val result = GardenPurchaseManager.purchaseNext(context, index)
+            expectedBalance -= cost
+
+            assertEquals(GardenPurchaseStatus.PURCHASED, result.status)
+            assertEquals(index + 1, result.unlockedCount)
+            assertEquals(expectedBalance, result.remainingSeeds)
+            assertEquals(index + 1, SaveManager.loadGardenProgress(context))
+            assertEquals(expectedBalance, SaveManager.loadLifetimeSeeds(context))
+        }
+
+        assertEquals(GardenEconomy.catalogueSize, SaveManager.loadGardenProgress(context))
+        assertEquals(0, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
+    fun `one seed below cumulative paid catalogue budget stops only at final boundary`() {
+        val oneSeedShort = paidCatalogueBudget() - 1
+        SaveManager.saveGardenProgress(context, 1)
+        SaveManager.saveLifetimeSeeds(context, oneSeedShort)
+
+        for (index in 1 until GardenEconomy.catalogueSize - 1) {
+            val result = GardenPurchaseManager.purchaseNext(context, index)
+            assertEquals(GardenPurchaseStatus.PURCHASED, result.status)
+        }
+
+        val finalIndex = GardenEconomy.catalogueSize - 1
+        val progressBefore = SaveManager.loadGardenProgress(context)
+        val seedsBefore = SaveManager.loadLifetimeSeeds(context)
+        val finalCost = requireNotNull(GardenEconomy.seedCostForIndex(finalIndex))
+        assertEquals(finalCost - 1, seedsBefore)
+
+        val rejected = GardenPurchaseManager.purchaseNext(context, finalIndex)
+
+        assertEquals(GardenPurchaseStatus.INSUFFICIENT_SEEDS, rejected.status)
+        assertEquals(progressBefore, rejected.unlockedCount)
+        assertEquals(seedsBefore, rejected.remainingSeeds)
+        assertEquals(progressBefore, SaveManager.loadGardenProgress(context))
+        assertEquals(seedsBefore, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
     fun `stale repeated tap cannot purchase the same index twice`() {
         SaveManager.saveGardenProgress(context, 1)
         SaveManager.saveLifetimeSeeds(context, 50)
@@ -135,6 +184,11 @@ class GardenPurchaseManagerTest {
             GardenPurchaseManager.purchaseNext(context, 0).status
         )
     }
+
+    private fun paidCatalogueBudget(): Int =
+        (1 until GardenEconomy.catalogueSize).sumOf { index ->
+            requireNotNull(GardenEconomy.seedCostForIndex(index))
+        }
 
     private fun clearActivePreferences() {
         context.getSharedPreferences(
