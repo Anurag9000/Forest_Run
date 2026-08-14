@@ -1,5 +1,6 @@
 package com.anurag9000.forestrun.engine
 
+import android.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -49,6 +50,35 @@ class BiomeManagerTest {
     }
 
     @Test
+    fun `palette and ambient handoff are continuous across every cyclic boundary`() {
+        val manager = BiomeManager()
+
+        for (segment in 1..Biome.entries.size) {
+            val boundary = GameConstants.BIOME_LENGTH_METRES * segment
+            val justBefore = Math.nextDown(boundary)
+            val expectedNext = Biome.at(boundary)
+
+            manager.update(justBefore)
+            assertTrue("crossfade must be almost complete before boundary $segment", manager.crossfadeAlpha > 0.999f)
+            assertColourNear(expectedNext.skyTopColour, manager.currentSkyTop)
+            assertColourNear(expectedNext.skyBottomColour, manager.currentSkyBottom)
+            assertColourNear(expectedNext.groundColour, manager.currentGround)
+            assertColourNear(expectedNext.midFoliageColour, manager.currentFoliage)
+            val expectedAmbient = ((1f - expectedNext.ambientLightFactor) * 200f).toInt()
+            assertTrue(kotlin.math.abs(manager.ambientAlpha - expectedAmbient) <= 1)
+
+            manager.update(boundary)
+            assertEquals(expectedNext, manager.currentBiome)
+            assertEquals(0f, manager.crossfadeAlpha, 0f)
+            assertEquals(expectedNext.skyTopColour, manager.currentSkyTop)
+            assertEquals(expectedNext.skyBottomColour, manager.currentSkyBottom)
+            assertEquals(expectedNext.groundColour, manager.currentGround)
+            assertEquals(expectedNext.midFoliageColour, manager.currentFoliage)
+            assertEquals(expectedAmbient, manager.ambientAlpha)
+        }
+    }
+
+    @Test
     fun `invalid update restores finite opening palette and no crossfade`() {
         val manager = BiomeManager()
         manager.update(GameConstants.BIOME_LENGTH_METRES * 3.9f)
@@ -76,5 +106,12 @@ class BiomeManagerTest {
         manager.forceDebugBiome(null)
         manager.update(0f)
         assertEquals(Biome.MEADOW, manager.currentBiome)
+    }
+
+    private fun assertColourNear(expected: Int, actual: Int) {
+        assertTrue(kotlin.math.abs(Color.alpha(expected) - Color.alpha(actual)) <= 1)
+        assertTrue(kotlin.math.abs(Color.red(expected) - Color.red(actual)) <= 1)
+        assertTrue(kotlin.math.abs(Color.green(expected) - Color.green(actual)) <= 1)
+        assertTrue(kotlin.math.abs(Color.blue(expected) - Color.blue(actual)) <= 1)
     }
 }
