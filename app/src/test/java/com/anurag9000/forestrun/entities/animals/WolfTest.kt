@@ -77,6 +77,6 @@ class WolfTest {
     private fun enumFieldName(wolf: Wolf, name: String): String {
         val field = Wolf::class.java.getDeclaredField(name)
         field.isAccessible = true
-        return field.get(wolf).toString()
+        return requireNotNull(field.get(wolf)).toString()
     }
 }
