@@ -49,6 +49,33 @@ Exit status is:
 
 The JSON result records per-scenario image digests and metrics, aggregate maxima, and the exact list of scenarios exceeding tolerance.
 
+## Baseline identity provenance
+
+`scripts/visual_baseline_provenance.py` gives a reviewed baseline an immutable identity descriptor. The descriptor binds the baseline candidate SHA, curation-manifest SHA-256, ordered scenario/file list, every PNG SHA-256 and dimension, and an aggregate screenshot-set SHA-256. It intentionally says nothing about whether the visuals are aesthetically acceptable.
+
+Build a descriptor only after the candidate screenshots and curation manifest have been selected for review:
+
+```bash
+python3 scripts/visual_baseline_provenance.py build \
+  --manifest release/google-play/screenshots/curation_manifest.json \
+  --baseline-dir release/visual-baselines/approved \
+  --filename-field final_file \
+  --baseline-candidate-sha <40-character-candidate-sha> \
+  --output release/visual-baselines/approved/provenance.json
+```
+
+After a human reviewer has approved that exact screenshot set, retain the descriptor with the baseline evidence. Before every later comparison, verify that the retained descriptor still matches the same manifest and raster files:
+
+```bash
+python3 scripts/visual_baseline_provenance.py verify \
+  --provenance release/visual-baselines/approved/provenance.json \
+  --manifest release/google-play/screenshots/curation_manifest.json \
+  --baseline-dir release/visual-baselines/approved \
+  --filename-field final_file
+```
+
+A successful provenance verification proves **identity**, not approval. The human approval record must still identify the reviewed baseline candidate and screenshot-set digest. If any baseline PNG, manifest entry, filename ordering, dimensions, or candidate binding changes, rebuild the descriptor and require a fresh human review rather than silently carrying the old approval forward.
+
 ## Baseline discipline
 
 A visual baseline should be treated as reviewed evidence, not as a file that silently updates whenever CI changes.
@@ -57,13 +84,15 @@ Recommended flow:
 
 1. capture deterministic scenarios from one known candidate;
 2. verify the capture session with the existing raw/curated screenshot validators;
-3. have a human reviewer approve the intended appearance;
-4. retain that approved set as the comparison baseline with candidate provenance;
-5. compare later deterministic captures against it;
-6. inspect every reported regression;
-7. replace the approved baseline only when the visual change is intentional and separately reviewed.
+3. build the visual-baseline identity descriptor;
+4. have a human reviewer approve that exact candidate and screenshot-set digest;
+5. retain the approved set and provenance descriptor together;
+6. verify the descriptor before every later comparison;
+7. compare later deterministic captures against it;
+8. inspect every reported regression;
+9. replace the approved baseline only when the visual change is intentional and separately reviewed.
 
-Do not make CI automatically overwrite baselines after a mismatch. That would convert the regression detector into a self-approving mechanism.
+Do not make CI automatically overwrite baselines, rebuild provenance as an approval substitute, or accept a mismatch merely because the descriptor can be regenerated. Any of those would convert the regression detector into a self-approving mechanism.
 
 ## Choosing tolerances
 
