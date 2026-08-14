@@ -195,18 +195,45 @@ def publish(output: Path, payload: dict[str, Any]) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _resolve_cli_inputs(arguments: argparse.Namespace) -> tuple[Path, str, bool]:
+    positional_artifact: Path | None = arguments.artifact
+    legacy_artifact: Path | None = arguments.legacy_artifact
+    if positional_artifact is not None and legacy_artifact is not None:
+        raise PageSizeInspectionError(
+            "artifact must be supplied exactly once, either positionally or with --artifact"
+        )
+    artifact = positional_artifact or legacy_artifact
+    if artifact is None:
+        raise PageSizeInspectionError("artifact path is required")
+
+    candidate_sha = arguments.candidate_sha or os.environ.get("GITHUB_SHA", "")
+    if not SHA_RE.fullmatch(candidate_sha):
+        raise PageSizeInspectionError(
+            "candidate SHA must be provided explicitly or by GITHUB_SHA as 40 lowercase hexadecimal characters"
+        )
+
+    legacy_mode = legacy_artifact is not None or arguments.legacy_build_tools_dir is not None
+    require_no_native_code = arguments.require_no_native_code or legacy_mode
+    return artifact, candidate_sha, require_no_native_code
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("artifact", type=Path)
-    parser.add_argument("--candidate-sha", required=True)
+    parser.add_argument("artifact", nargs="?", type=Path)
+    parser.add_argument("--candidate-sha")
     parser.add_argument("--require-no-native-code", action="store_true")
     parser.add_argument("--output", type=Path)
+    # Compatibility with the historical CI invocation. Legacy mode is intentionally
+    # stricter than the general inspector: it always requires a native-free package.
+    parser.add_argument("--artifact", dest="legacy_artifact", type=Path)
+    parser.add_argument("--build-tools-dir", dest="legacy_build_tools_dir", type=Path)
     arguments = parser.parse_args()
     try:
+        artifact, candidate_sha, require_no_native_code = _resolve_cli_inputs(arguments)
         payload = inspect_artifact(
-            arguments.artifact,
-            arguments.candidate_sha,
-            require_no_native_code=arguments.require_no_native_code,
+            artifact,
+            candidate_sha,
+            require_no_native_code=require_no_native_code,
         )
         if arguments.output is not None:
             publish(arguments.output, payload)
