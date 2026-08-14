@@ -95,7 +95,7 @@ class DeterministicScenarioTraceEvidenceVerifierTest {
                 )
             )
 
-            val renamed = file.parentFile.resolve("renamed-trace.json")
+            val renamed = requireNotNull(file.parentFile).resolve("renamed-trace.json")
             assertTrue(file.renameTo(renamed))
             assertNull(
                 DeterministicScenarioTraceEvidenceVerifier.verify(
