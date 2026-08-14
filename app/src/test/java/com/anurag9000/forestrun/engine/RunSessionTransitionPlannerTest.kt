@@ -163,8 +163,8 @@ class RunSessionTransitionPlannerTest {
         snapshots.forEach { snapshot ->
             RunSessionEvent.entries
                 .filterNot { it == RunSessionEvent.DEBUG_PLAYING_STATE_REQUESTED }
-                .forEach { event ->
-                    if ((snapshot to event) in validPairs) return@forEach
+                .forEach eventLoop@ { event ->
+                    if ((snapshot to event) in validPairs) return@eventLoop
                     val transition = RunSessionTransitionPlanner.plan(snapshot, event)
                     assertEquals(snapshot, transition.after)
                     assertTrue(transition.effects.isEmpty())
