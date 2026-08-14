@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import urllib.parse
 from pathlib import Path
 from typing import Sequence
 
@@ -79,6 +80,14 @@ def _properties(value: object, label: str) -> dict[str, str]:
             raise SupplyChainEvidenceError(f"duplicate property name in {label}: {name}")
         result[name] = property_value
     return result
+
+
+def _canonical_maven_purl(group: str, name: str, version: str) -> str:
+    """Match build_resolved_dependency_sbom.purl without trusting SBOM identity text."""
+    namespace = urllib.parse.quote(group, safe=".")
+    encoded_name = urllib.parse.quote(name, safe="._-")
+    encoded_version = urllib.parse.quote(version, safe="._-")
+    return f"pkg:maven/{namespace}/{encoded_name}@{encoded_version}"
 
 
 def validate_declared(payload: dict[str, object], expected_sha: str) -> set[tuple[str, str]]:
@@ -190,8 +199,12 @@ def validate_resolved(
         purl = _string(item.get("purl"), f"resolved.components[{index}].purl")
         if item.get("bom-ref") != purl:
             raise SupplyChainEvidenceError("resolved bom-ref must equal purl")
-        if not purl.startswith("pkg:maven/") or f"@{version}" not in purl:
-            raise SupplyChainEvidenceError(f"invalid Maven purl: {purl}")
+        expected_purl = _canonical_maven_purl(group, name, version)
+        if purl != expected_purl:
+            raise SupplyChainEvidenceError(
+                "resolved Maven purl is not the canonical encoding of its "
+                f"group/name/version fields: {purl} != {expected_purl}"
+            )
         if purl in seen_purls:
             raise SupplyChainEvidenceError(f"duplicate resolved purl: {purl}")
         seen_purls.add(purl)
