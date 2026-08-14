@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -18,6 +20,20 @@ class AndroidPageSizePackageTest(unittest.TestCase):
         with zipfile.ZipFile(path, "w") as archive:
             for name, content in entries.items():
                 archive.writestr(name, content)
+
+    def _run_cli(self, *arguments: str, candidate: str | None = CANDIDATE):
+        environment = os.environ.copy()
+        if candidate is None:
+            environment.pop("GITHUB_SHA", None)
+        else:
+            environment["GITHUB_SHA"] = candidate
+        return subprocess.run(
+            [sys.executable, str(Path(verifier.__file__).resolve()), *arguments],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
 
     def test_kotlin_only_package_is_candidate_bound_and_compatible_by_inspection(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -70,6 +86,67 @@ class AndroidPageSizePackageTest(unittest.TestCase):
                     CANDIDATE,
                     require_no_native_code=True,
                 )
+
+    def test_legacy_ci_cli_is_candidate_bound_and_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = root / "app.apk"
+            self._write_zip(artifact, {"classes.dex": b"dex"})
+
+            result = self._run_cli(
+                "--artifact",
+                str(artifact),
+                "--build-tools-dir",
+                str(root / "unused-build-tools"),
+            )
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual("valid", payload["status"])
+            self.assertEqual(CANDIDATE, payload["candidateSha"])
+            self.assertEqual("no-native-code", payload["assessment"])
+
+            native_artifact = root / "native.apk"
+            self._write_zip(
+                native_artifact,
+                {"lib/arm64-v8a/libexample.so": b"not-an-elf"},
+            )
+            native_result = self._run_cli(
+                "--artifact",
+                str(native_artifact),
+                "--build-tools-dir",
+                str(root / "unused-build-tools"),
+            )
+            self.assertEqual(1, native_result.returncode)
+            self.assertIn("native libraries require ELF", native_result.stdout)
+
+    def test_legacy_ci_cli_rejects_missing_candidate_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / "app.apk"
+            self._write_zip(artifact, {"classes.dex": b"dex"})
+            result = self._run_cli(
+                "--artifact",
+                str(artifact),
+                "--build-tools-dir",
+                str(Path(directory) / "unused-build-tools"),
+                candidate=None,
+            )
+            self.assertEqual(1, result.returncode)
+            self.assertIn("candidate SHA must be provided", result.stdout)
+
+    def test_rejects_ambiguous_artifact_arguments(self) -> None:
+        namespace = type(
+            "Arguments",
+            (),
+            {
+                "artifact": Path("positional.apk"),
+                "legacy_artifact": Path("legacy.apk"),
+                "candidate_sha": CANDIDATE,
+                "legacy_build_tools_dir": None,
+                "require_no_native_code": False,
+            },
+        )()
+        with self.assertRaisesRegex(verifier.PageSizeInspectionError, "exactly once"):
+            verifier._resolve_cli_inputs(namespace)
 
     def test_rejects_duplicate_and_unsafe_archive_paths(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
