@@ -321,13 +321,13 @@ object DialogueBubbleManager {
             }
 
             val part = StringBuilder()
-            for (character in word) {
-                val candidate = "$part$character"
+            for (cluster in GraphemeClusters.split(word)) {
+                val candidate = "$part$cluster"
                 if (part.isNotEmpty() && paint.measureText(candidate) > maxWidth) {
                     result.add(part.toString())
                     part.clear()
                 }
-                part.append(character)
+                part.append(cluster)
             }
             if (part.isNotEmpty()) result.add(part.toString())
         }
@@ -336,10 +336,11 @@ object DialogueBubbleManager {
 
     private fun appendEllipsis(text: String, maxWidth: Float, paint: Paint): String {
         val ellipsis = "…"
-        val result = StringBuilder(text.removeSuffix(ellipsis))
-        while (result.isNotEmpty() && paint.measureText("$result$ellipsis") > maxWidth) {
-            result.deleteCharAt(result.lastIndex)
+        val clusters = GraphemeClusters.split(text.removeSuffix(ellipsis)).toMutableList()
+        while (clusters.isNotEmpty() && paint.measureText(clusters.joinToString("") + ellipsis) > maxWidth) {
+            clusters.removeAt(clusters.lastIndex)
         }
-        return if (result.isEmpty()) ellipsis else "$result$ellipsis"
+        val prefix = clusters.joinToString("")
+        return if (prefix.isEmpty()) ellipsis else "$prefix$ellipsis"
     }
 }
