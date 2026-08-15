@@ -6,7 +6,13 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 
-/** Central, preference-aware haptic feedback owner. */
+/**
+ * Central, preference-aware haptic feedback owner.
+ *
+ * New call sites should use the semantic cue methods instead of choosing raw
+ * durations. Compatibility wrappers remain for older gameplay owners while
+ * preserving their existing physical feedback.
+ */
 object HapticManager {
     private var vibrator: Vibrator? = null
 
@@ -25,44 +31,48 @@ object HapticManager {
         }.getOrNull()
     }
 
-    fun shortPulse() = pulse(40L)
-    fun longPulse() = pulse(200L)
-    fun mediumPulse() = pulse(100L)
+    /** Light confirmation for Seeds, small UI actions, and similarly quiet events. */
+    fun lightTick() = pulse(40L)
 
+    /** Medium physical interruption used by stumble-like nonterminal impacts. */
+    fun stumbleImpact() = pulse(100L)
+
+    /** Weighted terminal feedback; intentionally distinct from ordinary stumble. */
+    fun terminalImpact() = pulse(200L)
+
+    /** Soft paired acknowledgement for mercy and relationship-positive moments. */
+    fun mercyAcknowledgement() {
+        waveform(
+            timings = longArrayOf(0, 30, 50, 30),
+            amplitudes = intArrayOf(0, 180, 0, 220),
+            legacyDurationMs = 110L
+        )
+    }
+
+    /** Deliberate home/growth cadence for meaningful Garden progression. */
+    fun gardenGrowth() {
+        waveform(
+            timings = longArrayOf(0, 35, 45, 55),
+            amplitudes = intArrayOf(0, 140, 0, 205),
+            legacyDurationMs = 135L
+        )
+    }
+
+    /** Bloom uses a rising multi-step signature rather than an ordinary impact. */
     fun bloomSurge() {
-        withAvailableVibrator { vib ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vib.vibrate(
-                    VibrationEffect.createWaveform(
-                        longArrayOf(0, 40, 25, 70, 35, 140),
-                        intArrayOf(0, 140, 0, 200, 0, 255),
-                        -1
-                    )
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                vib.vibrate(240L)
-            }
-        }
+        waveform(
+            timings = longArrayOf(0, 40, 25, 70, 35, 140),
+            amplitudes = intArrayOf(0, 140, 0, 200, 0, 255),
+            legacyDurationMs = 240L
+        )
     }
 
-    fun doubleTap() {
-        withAvailableVibrator { vib ->
-            val timings = longArrayOf(0, 30, 50, 30)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vib.vibrate(
-                    VibrationEffect.createWaveform(
-                        timings,
-                        intArrayOf(0, 180, 0, 220),
-                        -1
-                    )
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                vib.vibrate(timings, -1)
-            }
-        }
-    }
+    // Compatibility vocabulary used by existing owners. These wrappers keep
+    // old behavior stable while giving new code a semantic API to target.
+    fun shortPulse() = lightTick()
+    fun mediumPulse() = stumbleImpact()
+    fun longPulse() = terminalImpact()
+    fun doubleTap() = mercyAcknowledgement()
 
     private fun pulse(durationMs: Long) {
         if (durationMs <= 0L) return
@@ -77,6 +87,22 @@ object HapticManager {
             } else {
                 @Suppress("DEPRECATION")
                 vib.vibrate(durationMs)
+            }
+        }
+    }
+
+    private fun waveform(
+        timings: LongArray,
+        amplitudes: IntArray,
+        legacyDurationMs: Long
+    ) {
+        if (timings.isEmpty() || timings.size != amplitudes.size || legacyDurationMs <= 0L) return
+        withAvailableVibrator { vib ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vib.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+            } else {
+                @Suppress("DEPRECATION")
+                vib.vibrate(timings, -1)
             }
         }
     }
