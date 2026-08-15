@@ -16,6 +16,10 @@ import com.anurag9000.forestrun.engine.EncounterFamilyGroup
 import com.anurag9000.forestrun.engine.ForestCollectionProgressComposer
 import com.anurag9000.forestrun.engine.ForestCollectionSnapshot
 import com.anurag9000.forestrun.engine.ForestCollectionTrack
+import com.anurag9000.forestrun.engine.ForestGardenHistoryComposer
+import com.anurag9000.forestrun.engine.ForestGardenHistorySnapshot
+import com.anurag9000.forestrun.engine.ForestGardenPlantMemory
+import com.anurag9000.forestrun.engine.ForestGardenPlantState
 import com.anurag9000.forestrun.engine.ForestJournalComposer
 import com.anurag9000.forestrun.engine.ForestJournalEntry
 import com.anurag9000.forestrun.engine.ForestJournalSnapshot
@@ -61,6 +65,7 @@ class ForestJournalActivity : Activity() {
         val snapshot = ForestJournalComposer.snapshot(this)
         val collection = ForestCollectionProgressComposer.snapshot(this, snapshot)
         val pathHistory = ForestPathHistoryComposer.snapshot(this)
+        val gardenHistory = ForestGardenHistoryComposer.snapshot(this)
         val scroll = ScrollView(this).apply {
             isFillViewport = true
             setBackgroundColor(Color.rgb(24, 39, 31))
@@ -86,7 +91,7 @@ class ForestJournalActivity : Activity() {
         content.addView(summaryView(snapshot, collection))
 
         if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.PROGRESS) {
-            addProgressSections(content, collection, pathHistory)
+            addProgressSections(content, collection, pathHistory, gardenHistory)
         }
         if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.BONDS) {
             addRelationshipSection(content, collection)
@@ -119,11 +124,31 @@ class ForestJournalActivity : Activity() {
     private fun addProgressSections(
         content: LinearLayout,
         collection: ForestCollectionSnapshot,
-        pathHistory: ForestPathHistorySnapshot
+        pathHistory: ForestPathHistorySnapshot,
+        gardenHistory: ForestGardenHistorySnapshot
     ) {
         content.addView(sectionTitle("COLLECTION PATH"))
         collection.tracks.forEach { track ->
             content.addView(collectionTrackCard(track))
+        }
+
+        content.addView(sectionTitle("GARDEN SANCTUARY"))
+        content.addView(
+            card(
+                title = if (gardenHistory.complete) "The Garden is full" else "The Garden is still growing",
+                subtitle = "${gardenHistory.unlockedCount}/${gardenHistory.plants.size} plants • ${gardenHistory.availableSeeds} Seeds available",
+                detail = gardenHistory.nextPlant?.let { next ->
+                    if (next.affordableNow) {
+                        "${next.displayName} is the next canonical growth and can be afforded now for ${next.seedCost} Seeds. Purchasing still happens only inside the Garden."
+                    } else {
+                        "${next.displayName} is next at ${next.seedCost} Seeds. The Journal never spends Seeds or advances Garden progress."
+                    }
+                } ?: "Every current sanctuary plant has been grown.",
+                emphasized = gardenHistory.complete
+            )
+        )
+        gardenHistory.plants.forEach { plant ->
+            content.addView(gardenPlantCard(plant))
         }
 
         content.addView(sectionTitle("PATH HISTORY"))
@@ -300,6 +325,29 @@ class ForestJournalActivity : Activity() {
         },
         detail = track.detail,
         emphasized = track.isComplete
+    )
+
+    private fun gardenPlantCard(plant: ForestGardenPlantMemory): View = card(
+        title = when (plant.state) {
+            ForestGardenPlantState.GROWN -> plant.displayName
+            ForestGardenPlantState.NEXT -> "→ ${plant.displayName}"
+            ForestGardenPlantState.LOCKED -> "○ ${plant.displayName}"
+        },
+        subtitle = when (plant.state) {
+            ForestGardenPlantState.GROWN -> "Growing at home"
+            ForestGardenPlantState.NEXT -> if (plant.affordableNow) {
+                "Next • ${plant.seedCost} Seeds • affordable now"
+            } else {
+                "Next • ${plant.seedCost} Seeds"
+            }
+            ForestGardenPlantState.LOCKED -> "Later • ${plant.seedCost} Seeds"
+        },
+        detail = when (plant.state) {
+            ForestGardenPlantState.GROWN -> "This plant is already part of the persistent sanctuary."
+            ForestGardenPlantState.NEXT -> "Only this next catalogue entry can be purchased; later plants remain locked in order."
+            ForestGardenPlantState.LOCKED -> "The Garden reaches this plant only after the earlier sanctuary entries have grown."
+        },
+        emphasized = plant.state == ForestGardenPlantState.GROWN
     )
 
     private fun pathHistoryCard(path: ForestPathMemory): View = card(
