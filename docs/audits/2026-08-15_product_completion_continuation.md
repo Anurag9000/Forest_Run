@@ -76,23 +76,33 @@ A future coordinated large-owner edit should:
 
 Until then, `gardenGrowth()` is vocabulary plus tested policy, not a claim that the live Garden already emits the cue.
 
-## 5. Garden catalogue presentation duplication remains contract-bound
+## 5. Garden catalogue presentation duplication is closed
 
-`GardenEconomy` remains the sole progression/name/cost catalogue authority. `GardenScreen` still repeats compact display names and costs beside its local colour/emoji/sprite ordering.
+`GardenEconomy` is now the sole source of Garden progression order, full names, compact card names, and Seed costs.
 
-This is maintainability debt only because `scripts/test_garden_catalogue_contract.py` fails if the Canvas list diverges from `GardenEconomy`, README, or Game Design.
+`GardenScreen` keeps only local visual metadata that genuinely belongs to the Canvas presentation: card colour, fallback emoji, and sprite ordering. It no longer stores a second copy of compact names or costs.
 
-The preferred future large-owner edit is to keep only visual metadata plus canonical index in `GardenScreen` and derive compact name/cost from `GardenEconomy.plantForIndex(index)`.
+The live card loop resolves the canonical entry with `GardenEconomy.plantForIndex(i)` and renders `economy.compactName` and `economy.seedCost`. The screen also fails fast if either its visual catalogue size or sprite catalogue size diverges from `GardenEconomy.catalogueSize`.
 
-No economy or purchase correctness depends on completing that refactor today.
+`scripts/test_garden_catalogue_contract.py` now protects the completed ownership model by requiring:
+
+- exactly nine contiguous canonical economy entries with unique names;
+- canonical README and Game Design tables;
+- `GardenScreen` import/use of `GardenEconomy`;
+- visual/sprite catalogue-size alignment with the canonical catalogue;
+- card resolution through `GardenEconomy.plantForIndex(i)`;
+- rendering through `economy.compactName` and `economy.seedCost`;
+- absence of local `GardenPlant.name` / `GardenPlant.seedCost` fields;
+- continued purchase routing through the application persistence facade rather than direct Garden/Seed writes.
+
+This closes the previous presentation-maintainability debt without changing purchase indices, visual order, animation, touch geometry, sprites, colours, emoji, wardrobe behavior, or persistence semantics.
 
 ## 6. Current source-addressable remainder
 
 After this continuation, the known source-only remainder is deliberately small:
 
 1. live-wire `GardenPurchaseInteractionCoordinator` through both touch and virtual-accessibility Garden purchase paths;
-2. remove the contract-bound compact-name/cost duplication from the large Canvas Garden renderer;
-3. opportunistically retire duration-shaped haptic compatibility adapter names when the corresponding large live adapter is next edited.
+2. opportunistically retire duration-shaped haptic compatibility adapter names when the corresponding large live adapter is next edited.
 
 No missing gameplay state machine, Bloom system, collision arbiter, persistence layer, relationship engine, Garden economy, visitor system, Journal persistence store, accessibility semantic architecture, ghost system, runtime ML model, cloud/account system, advertising system, or multiplayer layer is justified by the current product goals.
 
