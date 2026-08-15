@@ -36,7 +36,7 @@ internal class PortBackedTerminalHitImpactEffects(
     override fun shakeHit() = runtime.shakeHit()
     override fun playHit() = runtime.playHit()
     override fun playRest() = runtime.playRest()
-    override fun longPulse() = runtime.longPulse()
+    override fun terminalImpactHaptic() = runtime.longPulse()
 }
 
 /** Nonterminal effect adapter backed only by [CollisionRuntimePort]. */
@@ -51,10 +51,10 @@ internal class PortBackedNonTerminalCollisionEffects(
 
     override fun playNonLethalHit() = runtime.playHit()
     override fun shakeHit() = runtime.shakeHit()
-    override fun mediumPulse() = runtime.mediumPulse()
+    override fun stumbleImpactHaptic() = runtime.mediumPulse()
     override fun showMercyFlash() = runtime.showMercyFlash()
     override fun playMercyMiss() = runtime.playMercyMiss()
-    override fun doubleTap() = runtime.doubleTap()
+    override fun mercyAcknowledgementHaptic() = runtime.doubleTap()
     override fun emitMercyStars(centerX: Float, centerY: Float) =
         runtime.emitMercyStars(centerX, centerY)
 
