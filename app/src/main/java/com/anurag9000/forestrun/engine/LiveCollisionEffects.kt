@@ -44,15 +44,15 @@ internal class LiveCollisionEffects(
 
     override fun playRest() = playRestAction()
 
-    override fun longPulse() = longPulseAction()
+    override fun terminalImpactHaptic() = longPulseAction()
 
-    override fun mediumPulse() = mediumPulseAction()
+    override fun stumbleImpactHaptic() = mediumPulseAction()
 
     override fun showMercyFlash() = showMercyFlashAction()
 
     override fun playMercyMiss() = playMercyMissAction()
 
-    override fun doubleTap() = doubleTapAction()
+    override fun mercyAcknowledgementHaptic() = doubleTapAction()
 
     override fun emitMercyStars(centerX: Float, centerY: Float) =
         emitMercyStarsAction(centerX, centerY)

@@ -43,13 +43,9 @@ internal interface NonTerminalCollisionEffectSink {
     fun playNonLethalHit()
     fun shakeHit()
 
-    /** Compatibility primitives retained for existing live/test adapters. */
-    fun mediumPulse()
-    fun doubleTap()
-
     /** Domain-level semantic haptic cues used by collision orchestration. */
-    fun stumbleImpactHaptic() = mediumPulse()
-    fun mercyAcknowledgementHaptic() = doubleTap()
+    fun stumbleImpactHaptic()
+    fun mercyAcknowledgementHaptic()
 
     fun showMercyFlash()
     fun playMercyMiss()

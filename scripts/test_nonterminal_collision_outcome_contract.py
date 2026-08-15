@@ -221,7 +221,8 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
         )
         positions = [self.stumble_complete.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
-        self.assertIn("fun stumbleImpactHaptic() = mediumPulse()", self.coordinator)
+        self.assertIn("fun stumbleImpactHaptic()", self.coordinator)
+        self.assertNotIn("fun mediumPulse()", self.coordinator)
 
     def test_stumble_relationship_is_gated_by_persistent_known_killer(self) -> None:
         gate = "if (input.persistEncounter && input.killerType != null)"
@@ -242,10 +243,8 @@ class NonTerminalCollisionOutcomeContractTest(unittest.TestCase):
         )
         positions = [self.mercy_complete.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
-        self.assertIn(
-            "fun mercyAcknowledgementHaptic() = doubleTap()",
-            self.coordinator,
-        )
+        self.assertIn("fun mercyAcknowledgementHaptic()", self.coordinator)
+        self.assertNotIn("fun doubleTap()", self.coordinator)
 
     def test_presenter_owns_authored_copy_and_geometry(self) -> None:
         expected_once = (

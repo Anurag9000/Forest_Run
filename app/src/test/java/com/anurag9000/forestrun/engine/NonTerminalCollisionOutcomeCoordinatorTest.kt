@@ -32,7 +32,7 @@ class NonTerminalCollisionOutcomeCoordinatorTest {
                 "stumble-flash:287454020",
                 "play-hit",
                 "shake-hit",
-                "medium-pulse",
+                "stumble-impact-haptic",
                 "present-stumble:WOLF",
                 "deactivate"
             ),
@@ -64,7 +64,7 @@ class NonTerminalCollisionOutcomeCoordinatorTest {
                 "stumble-flash:287454020",
                 "play-hit",
                 "shake-hit",
-                "medium-pulse",
+                "stumble-impact-haptic",
                 "present-stumble:CAT",
                 "deactivate"
             ),
@@ -113,7 +113,7 @@ class NonTerminalCollisionOutcomeCoordinatorTest {
             listOf(
                 "mercy-flash",
                 "play-mercy-miss",
-                "double-tap",
+                "mercy-acknowledgement-haptic",
                 "present-mercy:EAGLE:6:8",
                 "mercy-stars:${300f + Player.BASE_WIDTH * 0.5f}:${700f + Player.BASE_HEIGHT * 0.5f}",
                 "shake-mercy-miss"
@@ -224,8 +224,8 @@ class NonTerminalCollisionOutcomeCoordinatorTest {
             calls += "shake-hit"
         }
 
-        override fun mediumPulse() {
-            calls += "medium-pulse"
+        override fun stumbleImpactHaptic() {
+            calls += "stumble-impact-haptic"
         }
 
         override fun showMercyFlash() {
@@ -236,8 +236,8 @@ class NonTerminalCollisionOutcomeCoordinatorTest {
             calls += "play-mercy-miss"
         }
 
-        override fun doubleTap() {
-            calls += "double-tap"
+        override fun mercyAcknowledgementHaptic() {
+            calls += "mercy-acknowledgement-haptic"
         }
 
         override fun emitMercyStars(centerX: Float, centerY: Float) {

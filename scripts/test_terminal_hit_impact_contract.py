@@ -131,7 +131,8 @@ class TerminalHitImpactContractTest(unittest.TestCase):
             "const val GHOST_SUPPRESSION_SECONDS = 1.35f",
             self.impact,
         )
-        self.assertIn("fun terminalImpactHaptic() = longPulse()", self.impact)
+        self.assertIn("fun terminalImpactHaptic()", self.impact)
+        self.assertNotIn("fun longPulse()", self.impact)
 
     def test_dispatcher_delegates_impact_once_without_direct_effect_calls(self) -> None:
         self.assertEqual(

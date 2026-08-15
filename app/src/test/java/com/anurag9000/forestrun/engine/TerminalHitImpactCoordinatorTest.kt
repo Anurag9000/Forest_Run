@@ -30,7 +30,7 @@ class TerminalHitImpactCoordinatorTest {
                 "shake_hit",
                 "play_hit",
                 "play_rest",
-                "long_pulse",
+                "terminal_impact_haptic",
                 "capture"
             ),
             events
@@ -115,7 +115,7 @@ class TerminalHitImpactCoordinatorTest {
 
         override fun playRest() = record("play_rest")
 
-        override fun longPulse() = record("long_pulse")
+        override fun terminalImpactHaptic() = record("terminal_impact_haptic")
 
         private fun record(event: String) {
             events += event
