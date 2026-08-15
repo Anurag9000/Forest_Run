@@ -28,7 +28,12 @@ internal interface TerminalHitImpactEffectSink {
     fun shakeHit()
     fun playHit()
     fun playRest()
+
+    /** Compatibility primitive retained for existing live/test adapters. */
     fun longPulse()
+
+    /** Domain-level terminal-impact cue used by collision orchestration. */
+    fun terminalImpactHaptic() = longPulse()
 }
 
 /**
@@ -50,7 +55,7 @@ internal class TerminalHitImpactCoordinator(
         effects.shakeHit()
         effects.playHit()
         effects.playRest()
-        effects.longPulse()
+        effects.terminalImpactHaptic()
         return captureAfterImpact()
     }
 
