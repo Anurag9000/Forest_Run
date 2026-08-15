@@ -73,7 +73,12 @@ internal object ForestJournalComposer {
                 sparedCount = spared,
                 hitCount = hits,
                 relationshipStage = if (profile.relationshipTracked) {
-                    PersistentMemoryManager.getRelationshipStage(appContext, type)
+                    // The Journal is observational. Normal gameplay materializes
+                    // relationship stages after encounter outcomes; a missing
+                    // stage in an old/repaired save is displayed conservatively
+                    // rather than calling stageFor()/refreshStage(), which writes.
+                    SaveManager.loadRelationshipStage(appContext, type)
+                        ?: RelationshipStage.FIRST_IMPRESSION
                 } else {
                     null
                 },
@@ -96,9 +101,24 @@ internal object ForestJournalComposer {
             totalHits = entries.sumOf { it.hitCount.toLong() },
             memoryPageCount = SaveManager.loadUnlockedMemoryPages(appContext).size,
             historyMarks = PersistentMemoryManager.historyUnlocks(appContext),
-            strongestRelationship = RelationshipArcSystem.strongestRelationshipLabel(appContext),
+            strongestRelationship = strongestRelationshipLabel(entries),
             peacefulBiomes = PersistentMemoryManager.peacefulBiomes(appContext)
         )
+    }
+
+    private fun strongestRelationshipLabel(entries: List<ForestJournalEntry>): String? {
+        val strongest = entries
+            .asSequence()
+            .filter { it.discovered && it.relationshipStage != null }
+            .maxWithOrNull(
+                compareBy<ForestJournalEntry> { requireNotNull(it.relationshipStage).ordinal }
+                    .thenBy { it.sparedCount - it.hitCount }
+                    .thenBy { it.cleanPassCount }
+                    .thenBy { it.encounterCount }
+                    .thenBy { it.type.ordinal }
+            )
+            ?: return null
+        return "${strongest.displayName} ${requireNotNull(strongest.relationshipStage).displayName}"
     }
 
     private fun displayName(type: EntityType): String =
