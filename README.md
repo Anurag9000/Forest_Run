@@ -1,182 +1,324 @@
 # Forest Run
 
-Native Android endless runner in Kotlin using a custom `SurfaceView` game loop. Forest Run is designed as a handcrafted cottagecore journey rather than a minimal score chaser: the player begins beneath a willow, crosses five changing biomes, collects Seeds, enters Bloom, practices mercy toward forest creatures, rests after failure, and returns to a persistent Garden whose state remembers earlier runs.
+Forest Run is a native Kotlin Android endless runner built around a custom `SurfaceView` loop and a persistent emotional world. The player begins beneath a willow, crosses five changing biomes, meets nineteen forest families, gathers Seeds, enters Bloom, practices mercy or causes harm, rests when a run ends, and returns to a Garden that remembers what happened.
 
-**Core loop:** willow ritual → five-biome run → soft failure/Rest → changed Garden → remembered next run
+**Core loop:** willow → five-biome run → Seeds/Bloom/encounters → Rest → changed Garden → remembered next run
 
-## Current status
+## Current source status
 
-**Source-ready feature-rich alpha.** The previously identified source-architecture remediation queue is implemented on `main`: collision-result dispatch, shared live collision effects, typed run-session transitions, application persistence facade adoption, a real virtual-node accessibility provider with coalesced announcements, canonical encounter-family catalogue coverage, and an ordinary-player fail-closed recovery UI are all live rather than merely test seams or future plans.
+The major source-architecture remediation queue is closed on `main`. Core input, Bloom, encounter arbitration, terminal/nonterminal outcomes, persistence/recovery, relationships, Garden progression, wardrobe, ghosts, accessibility, deterministic scenario evidence, release provenance, dependency/SBOM tooling, store evidence, and candidate-readiness orchestration all have explicit runtime owners.
 
-The exact source-bearing checkpoint `414bf30b36ce051f0d5ef75f6143ed6bf8fa5884` passed Android validation run `31297723150`: the full host/release/lint/package/R8/source-immutability job and API-35 connected-behavior/source-immutability job both succeeded. The current exhaustive closure and remaining-gates record is [`docs/audits/2026-08-09_source_completion_and_remaining_gates.md`](docs/audits/2026-08-09_source_completion_and_remaining_gates.md).
+The current product surface also includes a player-facing **Forest Journal** that exposes the history the game was already persisting: encounter discovery, clean passes, mercy/harm, relationship stages, Garden growth, wardrobe state, route history, peaceful-biome traces, best-run legacy, forest mood, last Rest, durable story pages, and derived long-horizon milestones. The Journal is a read-only projection; it does not create a parallel achievement or progression database.
 
-That does **not** make Forest Run a physically accepted release candidate or a store-ready production release. Source tooling now also captures extended physical diagnostics and compiles fail-closed human-acceptance plus release-governance evidence, but representative-device performance/fairness/accessibility runs, real signing and signed-install verification, internal-store delivery, final asset/audio/haptic review, privacy/store-policy decisions, dependency/licence/security review, and accountable final approvals remain external gates.
+Source completeness is **not** the same as production acceptance. Final creative approval, rights/licensing decisions, real production signing, privacy-policy hosting, private vulnerability-reporting configuration, Play Console declarations/delivery, and accountable release approval remain external release work.
 
-## Implemented product surface
+## Player experience
 
-- responsive tap/hold jumping and swipe-down duck arbitration with cancellation-safe input ownership;
-- player run, jump, apex/fall, duck, stumble, Rest, restart, and Bloom presentation;
-- five runtime biomes: Meadow, Orchard, Ancient Grove, Dusk Canyon, and Night Forest;
-- exactly 19 encounter types across flora, trees, birds, and animals;
-- deterministic collision severity/order independence and exactly one selected outcome per collision query;
-- Seeds, Seed Orbs, Bloom, score, distance, mercy hearts, kindness chains, pacifist tiers, authored run summaries, and Rest quotes;
-- outcome-earned relationship progression, persistent encounter/pass/hit/spare memory, forest mood, return moments, and story fragments;
-- nine-plant persistent Garden with canonical economy and atomic purchases;
-- persistent wardrobe/costume unlock and equip state;
-- deterministic debug/fairness/readability scenarios for the full encounter roster;
-- ghost capture/replay with recoverable best-run promotion, receipts/manifests, namespace isolation, monotonic distance, and strong content identity;
-- particles, camera feedback, authored dialogue/flavour text, leitmotif/audio, haptics, reduced-motion/audio/haptic settings, and safe-content transforms;
-- privacy-safe user recovery prompts plus separate debuggable maintenance tooling;
-- performance telemetry, physical evidence collection, release/source integrity tooling, screenshot/metadata/graphics verification, SBOM/dependency evidence, and candidate-bound acceptance aggregation.
+### Movement
 
-## Runtime ownership now implemented
+- quick tap → short jump;
+- hold → higher/full jump;
+- early release trims upward motion;
+- downward swipe → duck;
+- gameplay input is state-owned and cancellation-safe rather than leaking through menus/Garden/Rest.
 
-### Collision outcomes
+### Five biomes
 
-`EntityManager` performs pure collision arbitration. `CollisionOutcomeDispatcher` is the single result dispatcher for `HIT`, `STUMBLE`, `MERCY_MISS`, and `NONE` and delegates to:
+1. Meadow
+2. Orchard
+3. Ancient Grove
+4. Dusk Canyon
+5. Night Forest
 
-- `TerminalHitImpactCoordinator` for immediate terminal impact ordering;
-- `TerminalHitOutcomeCoordinator` for relationship feedback, summary/quote resolution, and terminal persistence completion;
-- `NonTerminalCollisionOutcomeCoordinator` for STUMBLE and MERCY_MISS;
-- one shared `LiveCollisionEffects` adapter for Player, ghost, flash, camera, audio, haptic, and particle effects.
+The run remains one continuous world; biome presentation, spawn pools, scenery, atmosphere, and music change over distance.
 
-`GameView` supplies live inputs once, receives the typed dispatch result, and does not own a private collision-result `when` or private terminal/nonterminal effect adapters.
+### Nineteen encounter families
 
-### Run-session transitions
+**Flora:** Cactus, Lily of the Valley, Hyacinth, Eucalyptus, Vanilla Orchid  
+**Trees:** Weeping Willow, Jacaranda, Bamboo, Cherry Blossom  
+**Birds:** Duck, Tit, Chickadee, Owl, Eagle  
+**Animals:** Cat, Fox, Wolf, Hedgehog, Dog
 
-`RunSessionTransitionPlanner` is the pure transition table for Menu, Garden, Playing, DYING, GAME_OVER, and RESTARTING boundaries. `RunSessionTransitionCoordinator` executes ordered effects through `LiveRunSessionEffects`. `GameView` adopts the after-state only when the transition is valid and all required effects complete successfully.
+`EncounterFamilyCatalogue` is the structural authority for the complete roster and derives biome/scenario/variant/relationship capability from existing runtime owners.
 
-Terminal collision completion therefore hands off through `RunSessionEvent.TERMINAL_COLLISION_COMPLETED`; the session layer owns death triggering and the transition to `DYING`. Debug scenario/autostart publication also routes through the same owner via `DEBUG_PLAYING_STATE_REQUESTED`, which is explicitly accepted when idempotent without turning invalid ordinary events into successful no-ops.
+### Seeds and Bloom
 
-### Persistence boundary
+- Bloom threshold: **8 Seeds**;
+- Bloom active window: **6 seconds**;
+- Bloom does not freeze ordinary player physics;
+- active Bloom has one authoritative duration;
+- incoming Seeds do not restart/extend the active timer;
+- Bloom presentation spans aura, particles, music, haptic identity, HUD feedback, and encounter conversion behavior.
 
-`ApplicationPersistenceFacade` is the shared live application mutation boundary for:
+### Encounter outcomes
 
-- exactly-once terminal run-outcome persistence;
-- resolved encounter/pass/hit memory and collision relationship writes;
-- Garden purchases;
-- wardrobe/costume writes;
-- feedback settings;
-- recovery inspection/retry/discard operations.
+Collision arbitration selects exactly one result for an encounter interaction. Runtime dispatch separates terminal impact, nonterminal stumble/mercy consequences, relationship writes, summary persistence, visual/audio/haptic feedback, and state transitions instead of letting multiple ad-hoc branches reward/punish the same encounter.
 
-Low-level durability remains intentionally separated among SharedPreferences, run-outcome recovery state, and AtomicFile ghost protocols. The facade does **not** claim a fake global ACID transaction across those independent recovery domains.
+### Persistent relationships
 
-### Accessibility
+Cat, Fox, Wolf, Dog, Owl, and Eagle have persistent relationship arcs. The game remembers how the player repeatedly meets, passes, spares, or harms them. Relationship stages, warm/strained tone, Bond rewards, home presence, return moments, rituals, and some wardrobe unlocks persist across runs.
 
-The custom Canvas UI exposes a real Android virtual-node hierarchy:
+## Forest Journal
 
-- `GameAccessibilitySemantics` builds stable-ID semantic trees for Menu, accessibility Settings, Playing, Garden, and Rest;
-- `GameAccessibilityActionRouter` rejects stale, disabled, unsupported, or malformed actions;
-- `LiveGameAccessibilityActions` routes virtual actions to real session/input/persistence owners;
-- `GameAccessibilityGeometry` binds settings/Garden nodes to the same layout planners used by touch UI and supplies bounded semantic regions for run/Rest controls;
-- `GameAccessibilityNodeProvider` exposes virtual descendants, focus, state, bounds, clicks, and checkable settings without synthesizing fixed-coordinate touch events;
-- framework accessibility events are emitted only while Android accessibility is enabled, while semantic queries/actions remain safe if it is off;
-- all nine Garden plants and all wardrobe styles have truthful virtual state;
-- Rest continuation is disabled until `GAME_OVER`;
-- `AccessibilityAnnouncementPolicy` is live, sampled only under accessibility + touch exploration, and coalesces routine Playing distance to 100 m buckets with a 10 s minimum interval while prioritizing important surface/Bloom/Garden/settings changes.
+The willow menu exposes **MEMORY → FOREST JOURNAL** as a real touch and accessibility action.
 
-Source integration is complete; representative physical TalkBack acceptance is still release-blocking.
+The Journal uses native Android scrolling/text controls for long-form accessibility and has ephemeral filters for:
 
-### Encounter catalogue
+- All
+- Progress
+- Bonds
+- Memories
+- Families
 
-`EncounterFamilyCatalogue` is the single canonical structural/derived inventory for all 19 encounter types. It owns only structural implementation identity and derives ordinary biome reachability, deterministic scenario/fairness coverage, authored variants, and relationship capability from their existing authorities. Tests require every type to remain biome-reachable, factory/asset-wired, deterministically covered, and backed by at least one focused single-type fairness/readability scenario.
+It derives its state from gameplay owners and does not mutate progression.
 
-### Recovery experience
+### Journal progression views
 
-`RecoveryEvidencePresentation`, `RecoveryEvidenceUserController`, and `RecoveryEvidenceDialogCoordinator` provide the ordinary-player recovery path. It exposes privacy-safe domain/status copy, performs safe retry without deletion, revalidates every action, and requires a second explicit confirmation before destructive discard. Raw recovery payloads, file paths, hashes, ghost frames, and exception details are not surfaced.
+**Run Legacy**
+- high score;
+- best distance;
+- total remembered runs;
+- current/dominant forest mood and mood streak;
+- Gentle/Steady/Fearful/Reckless run history;
+- most recent Rest summary.
 
-Debug/ADB recovery maintenance remains a separate acceptance/support surface using the same fail-closed domain rules.
+**Collection Path**
+- Forest Families discovered;
+- Living Bonds completed;
+- Garden completion;
+- Wardrobe completion;
+- Peace in Every Biome.
+
+**Garden Sanctuary**
+- exact canonical nine-plant order;
+- grown/next/locked state;
+- current Seed balance;
+- affordability of the one legal next purchase;
+- no purchasing from the Journal.
+
+**Path History**
+- Kind Path count;
+- Merciful Path count;
+- Peaceful Path count;
+- derived `Every Gentle Shape` recognition when all three have returned home.
+
+**Living Bonds**
+- current relationship stage;
+- warm/strained/learning tone;
+- Bond milestone title/summary;
+- Bond ritual;
+- wearable memory when applicable.
+
+**Memory Pages**
+- creature thoughts;
+- Rest memories;
+- Garden memories;
+- route/biome/mood/weather memories;
+- repeated-encounter memories;
+- Bloom memories;
+- relationship/return histories.
+
+Internal persistent page IDs are converted into player-facing titles/categories and pattern-specific authored prose.
+
+See [`docs/FOREST_JOURNAL.md`](docs/FOREST_JOURNAL.md).
+
+## Garden
+
+The Garden is a persistent sanctuary rather than a post-run score screen. It already reflects relationship visitors, home characters, route/mood history, return moments, wardrobe state, story fragments, memory traces, weather/lighting, particles, and other long-horizon presentation.
+
+`GardenEconomy` owns stable progression order, player-facing plant names, and Seed costs:
+
+| Order | Plant | Seed cost |
+|---:|---|---:|
+| 1 | Lily | 15 |
+| 2 | Cactus | 20 |
+| 3 | Hyacinth | 25 |
+| 4 | Eucalyptus | 30 |
+| 5 | Vanilla Orchid | 40 |
+| 6 | Weeping Willow | 50 |
+| 7 | Jacaranda | 60 |
+| 8 | Bamboo | 75 |
+| 9 | Cherry Blossom | 100 |
+
+The first catalogue entry is the initial Garden state; subsequent purchases are sequential and atomic through `GardenPurchaseManager`.
+
+## Wardrobe
+
+Current styles:
+
+1. Classic
+2. Flower Crown
+3. Vine Scarf
+4. Moon Cape
+5. Bell Charm
+6. Lantern Pin
+7. Sky Sash
+8. Bloom Ribbon
+
+Unlocks are derived from actual run/relationship history and equipped state persists across sessions.
+
+## Feedback and presentation
+
+### Audio
+
+Forest Run already has distinct state-aware music/SFX ownership rather than one generic loop:
+
+- willow/menu/Garden identity;
+- running music states and biome progression;
+- Bloom transition/signature;
+- Rest cadence;
+- jump/land/Seed cues;
+- species/encounter cues;
+- mercy/hit/Bloom-conversion feedback;
+- fail-safe fallback behavior for optional audio assets.
+
+### Haptics
+
+`HapticManager` exposes a semantic vocabulary for new call sites:
+
+- `lightTick()`;
+- `stumbleImpact()`;
+- `terminalImpact()`;
+- `mercyAcknowledgement()`;
+- `gardenGrowth()`;
+- `bloomSurge()`.
+
+Compatibility wrappers preserve existing feedback behavior while future tuning can target meaning instead of raw durations.
+
+### Visual identity
+
+The Android-template launcher identity has been removed. Launcher resources now use an original Forest Run willow-leaf / Seed / Bloom vector mark, with adaptive, monochrome, round, and pre-adaptive vector coverage. Stock density-specific Android launcher WebPs were removed.
+
+The app resource palette and cold-launch/system-bar background now use Forest Run forest/willow/Seed colors rather than stock Material purple/teal or template black.
+
+Final creative production direction is defined in [`docs/CREATIVE_DIRECTION.md`](docs/CREATIVE_DIRECTION.md). Final human artistic approval and rights clearance are still external gates.
+
+## Accessibility
+
+The custom Canvas game exposes a real Android virtual-node hierarchy rather than pretending Canvas labels are accessible automatically.
+
+Implemented source architecture includes:
+
+- stable semantic node IDs;
+- Menu, Settings, Playing, Garden, and Rest semantic surfaces;
+- typed action validation/routing;
+- touch-aligned semantic geometry;
+- truthful Garden/wardrobe state;
+- live-region/coalesced announcements;
+- reduced-motion/audio/haptic controls;
+- the Forest Journal as a stable Menu accessibility action;
+- native semantic controls inside the Journal itself.
+
+See [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md).
+
+## Persistence and recovery
+
+Persistent state spans:
+
+- high score / best distance;
+- lifetime Seeds;
+- Garden progress;
+- wardrobe unlock/equip state;
+- encounter/pass/spare/hit history;
+- relationship stages and milestones;
+- biome friendship;
+- forest mood/run history;
+- route-tier counts;
+- Rest/last-run summary;
+- memory pages/history marks;
+- return-moment state;
+- ghost run data and recovery metadata.
+
+`ApplicationPersistenceFacade` is the shared live mutation boundary for high-level application writes. Low-level durability remains intentionally separated by storage domain; the project does not claim a fake global transaction across unrelated files/preferences.
+
+## Ghosts
+
+Ghost capture/replay includes bounded recording, stable state coding, recovery-aware persistence, namespace isolation, candidate/source identity tooling, and monotonic/distance validity checks. Ghost recovery remains intentionally separate from ordinary run-outcome persistence.
+
+## Release/evidence engineering
+
+The repository contains source tooling for:
+
+- Android debug/release compilation and packaging;
+- lint/R8/source-immutability checks;
+- deterministic scenario evidence;
+- physical-device acceptance manifests/aggregation;
+- input-latency/performance evidence;
+- accessibility/human acceptance manifests;
+- candidate-bound screenshots;
+- store graphics and metadata verification;
+- dependency/SBOM evidence;
+- native/page-size inspection;
+- installed candidate identity;
+- Play-delivery evidence;
+- security/licensing/privacy/store governance evidence;
+- final release-evidence indexing and readiness cross-binding.
+
+These systems can validate evidence supplied to them; they cannot manufacture external facts such as a real Play upload, physical human approval, legal rights, or production signing identity.
+
+## Release-facing product copy
+
+Canonical human-authored store positioning, description, screenshot story, icon/wordmark direction, and feature-graphic brief live in [`docs/STORE_LISTING.md`](docs/STORE_LISTING.md).
+
+Candidate-specific `title.txt`, `short-description.txt`, `full-description.txt`, screenshots, graphics manifests, and release summaries are intentionally generated/finalized for one frozen candidate rather than committed as misleading timeless evidence.
+
+## Privacy
+
+The checked-in application behavior is designed around an offline local game with no account, ads, analytics SDK, or cloud gameplay dependency. The source-backed policy is [`PRIVACY.md`](PRIVACY.md).
+
+A public release still requires the accepted privacy policy to be hosted at a stable HTTPS URL and the Play declarations to match the exact shipping candidate.
+
+## Security and licensing
+
+Security/licensing governance is intentionally fail-closed:
+
+- the repository must not claim private vulnerability reporting is enabled until the repository setting is actually enabled and verified;
+- source-code licensing is **not** silently selected by the codebase;
+- creative assets, audio, fonts, promotional media, trademarks, and third-party dependencies require their own owner-approved rights/notice decisions;
+- hashes/inventories prove byte identity, not legal permission.
+
+See [`SECURITY.md`](SECURITY.md), [`docs/SECURITY_AND_LICENSING_GOVERNANCE.md`](docs/SECURITY_AND_LICENSING_GOVERNANCE.md), and [`docs/CREATIVE_ASSET_PROVENANCE.md`](docs/CREATIVE_ASSET_PROVENANCE.md).
+
+## What remains outside source implementation
+
+The major remaining blockers are not another collision/persistence/relationship architecture. They are principally:
+
+- final production art/animation selection and approval;
+- final music/SFX/haptic mastering and human acceptance;
+- creator/source/licence/attribution review for every shipping creative asset;
+- owner decision on source/asset/audio/font/trademark/contribution licensing;
+- required third-party notices after the resolved dependency review;
+- enabling and verifying the chosen private vulnerability-reporting mechanism;
+- publishing the accepted privacy policy at a stable HTTPS URL;
+- real production upload key / Play App Signing configuration;
+- Play Console application ownership, Data Safety, target audience, content rating, category, regions, support/privacy metadata, and release tracks;
+- candidate-specific signed artifacts, store metadata, screenshots, release notes, and final production tag once the exact accepted candidate exists.
+
+These should not be marked complete merely because source validators exist.
 
 ## Development workflow
 
-`main` is the only active development branch and the sole source of repository truth.
+`main` is the only active development branch and the source of repository truth for this project workflow.
 
-- Routine implementation is committed directly to `main`; do not create development PRs/branches for this project workflow.
-- Preserve published history; do not force-push or rewrite it.
-- Keep code, tests, configuration, specifications, and documentation coherent in the same implementation sequence.
-- Read the exact current blob and use optimistic-lock SHAs for writes.
-- Add focused regression/source contracts for corrected invariants.
-- Permanent validation workflows are read-only and must never mutate or push repository source.
-- Temporary exact migrations, when needed for a large file, must be narrow, self-verifying, and delete their own migration script/workflow in the descendant commit.
+- implementation is committed directly to `main`;
+- do not create routine development PRs/branches;
+- preserve published history; do not force-push/rewrite it;
+- read current blobs and use optimistic-lock SHAs for direct writes;
+- keep runtime owners and canonical docs coherent as the product evolves;
+- dated audit documents remain provenance records even when later source supersedes old “remaining” statements.
 
-## Automated evidence
+## Build environment
 
-Permanent Android validation checks out the exact event SHA and runs:
+- package/application ID: `com.anurag9000.forestrun`
+- minimum Android API: 24
+- compile/target API: 36
+- Android source target: Java/Kotlin 17 bytecode
+- CI runtime: Java 21
+- canonical orientation: **landscape**
+- current product version: `1.0.0` / version code `1`
+- release credentials: external Gradle properties/environment variables only; never commit real signing secrets
 
-- immutable-source/governance contracts;
-- all Python release, provenance, screenshot, metadata, graphics, privacy, dependency, performance, connected-runner, accessibility, persistence, recovery, catalogue, and physical-acceptance tests under `scripts/test_*.py`;
-- debug/release/unit/instrumentation Kotlin compilation;
-- the complete JVM/Robolectric suite;
-- debug and release lint;
-- debug application + instrumentation APK packaging;
-- minified/resource-shrunk release AAB construction;
-- resolved dependency/SBOM evidence construction;
-- 16 KB page-size/native-code package inspection;
-- effective R8 application-class renaming verification;
-- post-build source immutability;
-- API 35 connected behavior and connected source immutability.
-
-These automated checks prove source/build/emulator properties for their exact SHA. They do not substitute for physical-device, human accessibility/fairness, signing, or store-delivery acceptance.
-
-## Remaining release blockers
-
-The remaining work is now predominantly **candidate-bound and external**, not the old architecture queue:
-
-- freeze an exact candidate and run deterministic scenarios plus ordinary play across a representative physical matrix: older phone, midrange phone, high-refresh phone, cutout/unusual-aspect phone, and tablet;
-- capture and review p95/p99 frame time, slow frames, allocation/GC, PSS, I/O, audio-thread behavior, crashes/ANRs, thermal behavior, battery impact, long-session behavior, dense Bloom, and all-entity stress evidence;
-- conduct human gameplay acceptance for touch latency, jump/hold/swipe feel, encounter fairness/telegraphs, safe areas, text/contrast, reduced motion, audio, haptics, lifecycle/process-death recovery, Garden/wardrobe continuity, and ghost readability;
-- conduct current TalkBack testing on the exact signed candidate for focus order, labels/state, action reliability, announcement cadence, Garden/wardrobe/recovery flows, large font/display scale, lifecycle, cutout/aspect variants, and audio coexistence;
-- provide real signing credentials, produce a signed minified build, verify certificate identity, install/update it, and smoke-test it on hardware;
-- deliver through an internal Play track and verify receipt/update/store path on the exact candidate;
-- visually approve final artwork/animation—including Wolf—plus screenshots, store graphics, procedural scenic layers, and the fixed-landscape product decision;
-- approve final audio, haptic, reduced-motion, and accessibility presentation on hardware;
-- publish the privacy policy at a stable HTTPS URL and complete final Data Safety, content rating, target audience, and current Play-policy review;
-- finalize resolved dependency vulnerability review, dependency verification, licence attribution, source-code licence, asset licences/provenance, and signed-artifact provenance;
-- enable/verify the intended private vulnerability-reporting path before describing it as available;
-- freeze candidate-specific release notes/changelog only after the accepted candidate exists;
-- compile and independently review the final physical/device/store acceptance manifest, aggregate, release-evidence index, evidence hashes, reviewer approvals, and release decision.
-
-## Intentional limitations that remain
-
-These are not hidden source TODOs and should not be misreported as solved:
-
-- ghost/distance mismatches from before persistent manifests cannot be reconstructed retroactively;
-- healthy legacy sidecars may remain legacy until strong validation/upgrade is needed;
-- SHA-256 binds content/distance identity but is not authentication of a trusted writer;
-- ghost recovery and non-ghost outcome recovery remain independent durability domains;
-- automated emulator tests do not prove real-device timing, thermal, battery, screen-reader usability, or subjective fairness;
-- further `GameView` decomposition should be driven by measured maintainability/device findings rather than broad behavior-risking rewrites.
-
-## Documentation
-
-| File | Purpose |
-|---|---|
-| [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) | Product vision, entity mechanics, session lifecycle, and design rules |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Current runtime ownership, persistence, recovery, CI, and remaining evidence debt |
-| [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) | Live virtual-node/announcement architecture and physical TalkBack acceptance |
-| [`docs/ENCOUNTER_CATALOGUE.md`](docs/ENCOUNTER_CATALOGUE.md) | Canonical 19-type structural and derived content catalogue |
-| [`docs/RECOVERY_USER_EXPERIENCE.md`](docs/RECOVERY_USER_EXPERIENCE.md) | Ordinary-player recovery state/action/confirmation model |
-| [`docs/RECOVERY_EVIDENCE_MAINTENANCE.md`](docs/RECOVERY_EVIDENCE_MAINTENANCE.md) | Low-level fail-closed recovery evidence and debug/support maintenance |
-| [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Physical profiling protocol and threshold/evidence procedure |
-| [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) | Candidate identity, device/scenario evidence, thresholds, approvals, and release decision |
-| [`docs/HUMAN_ACCEPTANCE.md`](docs/HUMAN_ACCEPTANCE.md) | Candidate-bound gameplay, TalkBack/accessibility, and presentation review matrix |
-| [`docs/INSTALLED_CANDIDATE_IDENTITY.md`](docs/INSTALLED_CANDIDATE_IDENTITY.md) | Measured Play-delivered package/split/signing identity and five-device installed matrix |
-| [`docs/RELEASE_GOVERNANCE_EVIDENCE.md`](docs/RELEASE_GOVERNANCE_EVIDENCE.md) | Security, licensing, privacy, store, provenance, release-note, and final decision evidence |
-| [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) | Final cross-layer physical/install/Play/human/governance/index readiness gate |
-| [`docs/RELEASE.md`](docs/RELEASE.md) | Correctness, validation, packaging, hardware, signing, and store checklist |
-| [`docs/RELEASE_EVIDENCE_INDEX.md`](docs/RELEASE_EVIDENCE_INDEX.md) | Final evidence-set construction and independent verification |
-| [`docs/SUPPLY_CHAIN_AND_SBOM.md`](docs/SUPPLY_CHAIN_AND_SBOM.md) | Dependency/SBOM/provenance boundaries |
-| [`docs/SECURITY_AND_LICENSING_GOVERNANCE.md`](docs/SECURITY_AND_LICENSING_GOVERNANCE.md) | Security reporting and licensing release gates |
-| [`PRIVACY.md`](PRIVACY.md) | Source-backed offline privacy/data behavior |
-| [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) | Chronological remediation history with a current reconciliation preface |
-| [`docs/audits/2026-08-09_source_completion_and_remaining_gates.md`](docs/audits/2026-08-09_source_completion_and_remaining_gates.md) | Current exhaustive source-closure checkpoint and remaining candidate/external gates |
-| [`docs/audits/2026-08-06_documentation_reconciliation_audit.md`](docs/audits/2026-08-06_documentation_reconciliation_audit.md) | Prior full documentation reconciliation and reconstructed mission |
-
-Dated audit documents are provenance records. Later source/tests/current canonical docs supersede historical “remaining” statements without rewriting history.
-
-## Build and test
-
-CI uses Java 21 while Android source targets Java 17 bytecode. Android API 36 must be installed for host compilation; connected validation currently exercises API 35.
+Typical host commands:
 
 ```bash
 python3 -m unittest discover -s scripts -p 'test_*.py'
@@ -184,47 +326,47 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 ./gradlew testDebugUnitTest
 ./gradlew lintDebug lintRelease
 ./gradlew assembleDebug assembleDebugAndroidTest bundleRelease
-./gradlew connectedDebugAndroidTest   # requires an emulator/device
 ```
 
-Physical performance evidence on an authorized device:
-
-```bash
-bash scripts/collect_performance_profiles.sh
-```
-
-Validate a completed candidate-bound physical/store evidence bundle:
-
-```bash
-python3 scripts/validate_device_acceptance.py \
-  release-evidence/device-acceptance.json \
-  --summary-output release-evidence/device-acceptance-summary.json
-```
-
-Canonical release preparation from the exact clean `origin/main` tip:
+Canonical release preparation from an exact clean `origin/main` candidate:
 
 ```bash
 bash scripts/prepare_main_release.sh
 ```
 
-The release wrapper rejects dirty, detached, non-`main`, stale, and unpushed worktrees, freezes the matching candidate SHA, runs the release preparer, and verifies local `main`/`origin/main` identity afterward.
+Expected Android outputs include the debug APK, instrumentation APK, release AAB, and R8 mapping under the standard `app/build/outputs/` paths.
 
-Expected outputs:
+## Documentation map
 
-- Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
-- Instrumentation APK: `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
-- Release bundle: `app/build/outputs/bundle/release/app-release.aab`
-- R8 mapping: `app/build/outputs/mapping/release/mapping.txt`
+| Document | Purpose |
+|---|---|
+| [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) | Product mechanics and design rules |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Runtime ownership and architectural boundaries |
+| [`docs/FOREST_JOURNAL.md`](docs/FOREST_JOURNAL.md) | Persistent memory/collection projection contract |
+| [`docs/CREATIVE_DIRECTION.md`](docs/CREATIVE_DIRECTION.md) | Final art/animation/audio/haptic direction |
+| [`docs/STORE_LISTING.md`](docs/STORE_LISTING.md) | Canonical store copy and public brand brief |
+| [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) | Accessibility semantics and acceptance boundary |
+| [`docs/ENCOUNTER_CATALOGUE.md`](docs/ENCOUNTER_CATALOGUE.md) | Complete nineteen-family encounter contract |
+| [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Performance evidence protocol |
+| [`docs/DEVICE_ACCEPTANCE.md`](docs/DEVICE_ACCEPTANCE.md) | Physical candidate evidence contract |
+| [`docs/HUMAN_ACCEPTANCE.md`](docs/HUMAN_ACCEPTANCE.md) | Gameplay/accessibility/presentation human review |
+| [`docs/RELEASE.md`](docs/RELEASE.md) | Release procedure/checklist |
+| [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) | Final evidence cross-binding/readiness gate |
+| [`docs/STORE_EVIDENCE.md`](docs/STORE_EVIDENCE.md) | Candidate-bound graphics/metadata/screenshots |
+| [`docs/SUPPLY_CHAIN_AND_SBOM.md`](docs/SUPPLY_CHAIN_AND_SBOM.md) | Dependency/SBOM boundaries |
+| [`docs/SECURITY_AND_LICENSING_GOVERNANCE.md`](docs/SECURITY_AND_LICENSING_GOVERNANCE.md) | Security/licensing decision gates |
+| [`PRIVACY.md`](PRIVACY.md) | Source-backed privacy behavior |
+| [`docs/AUDIT_LEDGER.md`](docs/AUDIT_LEDGER.md) | Historical remediation ledger |
 
 ## Canonical runtime direction
 
-- **Application ID:** `com.anurag9000.forestrun`
-- **Canonical branch:** `main`
-- **Biomes:** five runtime biomes
-- **Bloom target:** eight Seeds; six-second active window
-- **Input intent:** tap short jump, hold higher jump, swipe down duck
-- **Encounter invariant:** exactly one selected collision outcome per query/entity interaction
-- **Failure flow:** run → Rest summary → Garden → next run
-- **Ghost format:** v2 stable state codes with legacy read compatibility
-- **Display orientation:** fixed landscape pending final product/device acceptance
-- **Release signing:** external Gradle properties/environment variables only; credentials are never committed
+- **Branch:** `main`
+- **Orientation:** fixed landscape by product/source design
+- **Biomes:** 5
+- **Encounter families:** 19
+- **Tracked relationship families:** 6
+- **Garden catalogue:** 9
+- **Wardrobe styles:** 8
+- **Bloom:** 8 Seeds → 6-second active window
+- **Failure flow:** run → Rest → Garden → remembered next run
+- **Release model:** exact candidate, external signing, candidate-bound evidence; no committed secrets
