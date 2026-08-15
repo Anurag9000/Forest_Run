@@ -47,16 +47,20 @@ class GardenScreenBoundaryTest {
 
     @Test
     fun `display catalogue stays synchronized with canonical economy`() {
-        val catalogue = getPrivateField<List<GardenScreen.GardenPlant>>(screen, "catalogue")
+        val visualCatalogue = getPrivateField<List<GardenScreen.GardenPlant>>(screen, "catalogue")
+        val economyCatalogue = GardenEconomy.entries
 
-        assertEquals(GardenEconomy.catalogueSize, catalogue.size)
-        assertEquals(
-            (0 until GardenEconomy.catalogueSize).map { index ->
-                requireNotNull(GardenEconomy.seedCostForIndex(index))
-            },
-            catalogue.map { plant -> plant.seedCost }
+        assertEquals(GardenEconomy.catalogueSize, visualCatalogue.size)
+        assertEquals(visualCatalogue.indices.toList(), economyCatalogue.map { entry -> entry.index })
+        assertTrue(
+            economyCatalogue.all { entry ->
+                entry.displayName.isNotBlank() &&
+                    entry.compactName.isNotBlank() &&
+                    entry.seedCost > 0
+            }
         )
-        assertTrue(catalogue.all { plant -> plant.name.isNotBlank() && plant.seedCost > 0 })
+        assertEquals(economyCatalogue.size, economyCatalogue.map { entry -> entry.displayName }.distinct().size)
+        assertEquals(economyCatalogue.size, economyCatalogue.map { entry -> entry.compactName }.distinct().size)
     }
 
     @Test
