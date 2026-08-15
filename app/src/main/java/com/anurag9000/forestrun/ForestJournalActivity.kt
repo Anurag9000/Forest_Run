@@ -16,6 +16,7 @@ import com.anurag9000.forestrun.engine.EncounterFamilyGroup
 import com.anurag9000.forestrun.engine.ForestCollectionProgressComposer
 import com.anurag9000.forestrun.engine.ForestCollectionSnapshot
 import com.anurag9000.forestrun.engine.ForestCollectionTrack
+import com.anurag9000.forestrun.engine.ForestCompletionCapstoneComposer
 import com.anurag9000.forestrun.engine.ForestGardenHistoryComposer
 import com.anurag9000.forestrun.engine.ForestGardenHistorySnapshot
 import com.anurag9000.forestrun.engine.ForestGardenPlantMemory
@@ -152,6 +153,15 @@ class ForestJournalActivity : Activity() {
         collection.tracks.forEach { track ->
             content.addView(collectionTrackCard(track))
         }
+        val capstone = ForestCompletionCapstoneComposer.compose(collection, pathHistory)
+        content.addView(
+            card(
+                title = capstone.title,
+                subtitle = "${capstone.completedPillars}/${capstone.totalPillars} long-horizon pillars complete",
+                detail = capstone.line,
+                emphasized = capstone.complete
+            )
+        )
 
         content.addView(sectionTitle("GARDEN SANCTUARY"))
         content.addView(
