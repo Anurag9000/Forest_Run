@@ -23,6 +23,7 @@ import com.anurag9000.forestrun.engine.ForestLegacyMilestone
 import com.anurag9000.forestrun.engine.ForestMemoryPagePresentation
 import com.anurag9000.forestrun.engine.ForestRelationshipMemory
 import com.anurag9000.forestrun.engine.ForestWardrobeMemory
+import com.anurag9000.forestrun.engine.RelationshipStage
 
 /**
  * Native Android presentation of the persistent Forest Journal.
@@ -32,6 +33,16 @@ import com.anurag9000.forestrun.engine.ForestWardrobeMemory
  * accessibility services, and independent from gameplay frame timing.
  */
 class ForestJournalActivity : Activity() {
+    private enum class JournalSection(val label: String) {
+        ALL("All"),
+        PROGRESS("Progress"),
+        BONDS("Bonds"),
+        MEMORIES("Memories"),
+        FAMILIES("Families")
+    }
+
+    private var selectedSection = JournalSection.ALL
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = Color.rgb(28, 45, 35)
@@ -66,8 +77,45 @@ class ForestJournalActivity : Activity() {
         content.addView(text("FOREST JOURNAL", 30f, Color.rgb(246, 231, 151), true))
         content.addView(text("What the forest remembers between runs", 16f, Color.rgb(206, 225, 198)))
         content.addView(spacer(12))
+        content.addView(sectionFilterRow())
+        content.addView(spacer(12))
         content.addView(summaryView(snapshot, collection))
 
+        if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.PROGRESS) {
+            addProgressSections(content, collection)
+        }
+        if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.BONDS) {
+            addRelationshipSection(content, collection)
+        }
+        if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.MEMORIES) {
+            addMemorySections(content, snapshot, collection)
+        }
+        if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.FAMILIES) {
+            addFamilySections(content, snapshot)
+        }
+
+        val close = Button(this).apply {
+            text = "Return to Forest"
+            isAllCaps = false
+            textSize = 16f
+            setOnClickListener { finish() }
+            contentDescription = "Return to Forest Run"
+        }
+        content.addView(spacer(18))
+        content.addView(
+            close,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(54)
+            )
+        )
+        setContentView(scroll)
+    }
+
+    private fun addProgressSections(
+        content: LinearLayout,
+        collection: ForestCollectionSnapshot
+    ) {
         content.addView(sectionTitle("COLLECTION PATH"))
         collection.tracks.forEach { track ->
             content.addView(collectionTrackCard(track))
@@ -80,6 +128,16 @@ class ForestJournalActivity : Activity() {
                 content.addView(milestoneCard(milestone))
             }
 
+        content.addView(sectionTitle("WARDROBE MEMORIES"))
+        collection.wardrobe.forEach { style ->
+            content.addView(wardrobeCard(style))
+        }
+    }
+
+    private fun addRelationshipSection(
+        content: LinearLayout,
+        collection: ForestCollectionSnapshot
+    ) {
         content.addView(sectionTitle("LIVING BONDS"))
         if (collection.relationships.isEmpty()) {
             content.addView(
@@ -94,12 +152,13 @@ class ForestJournalActivity : Activity() {
                 content.addView(relationshipCard(relationship))
             }
         }
+    }
 
-        content.addView(sectionTitle("WARDROBE MEMORIES"))
-        collection.wardrobe.forEach { style ->
-            content.addView(wardrobeCard(style))
-        }
-
+    private fun addMemorySections(
+        content: LinearLayout,
+        snapshot: ForestJournalSnapshot,
+        collection: ForestCollectionSnapshot
+    ) {
         if (snapshot.historyMarks.isNotEmpty()) {
             content.addView(sectionTitle("MEMORY MARKS"))
             snapshot.historyMarks.forEach { mark ->
@@ -128,29 +187,48 @@ class ForestJournalActivity : Activity() {
                 content.addView(memoryPageCard(page))
             }
         }
+    }
 
+    private fun addFamilySections(
+        content: LinearLayout,
+        snapshot: ForestJournalSnapshot
+    ) {
         EncounterFamilyGroup.entries.forEach { group ->
             val entries = snapshot.entries.filter { it.group == group }
             content.addView(sectionTitle(groupLabel(group)))
             entries.forEach { entry -> content.addView(entryCard(entry)) }
         }
+    }
 
-        val close = Button(this).apply {
-            text = "Return to Forest"
-            isAllCaps = false
-            textSize = 16f
-            setOnClickListener { finish() }
-            contentDescription = "Return to Forest Run"
-        }
-        content.addView(spacer(18))
-        content.addView(
-            close,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(54)
+    private fun sectionFilterRow(): View = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER
+        JournalSection.entries.forEach { section ->
+            addView(
+                Button(this@ForestJournalActivity).apply {
+                    text = section.label
+                    isAllCaps = false
+                    textSize = 12f
+                    isSelected = section == selectedSection
+                    alpha = if (isSelected) 1f else 0.78f
+                    contentDescription = if (isSelected) {
+                        "${section.label} Journal section, selected"
+                    } else {
+                        "Show ${section.label} Journal section"
+                    }
+                    setOnClickListener {
+                        if (selectedSection != section) {
+                            selectedSection = section
+                            renderJournal()
+                        }
+                    }
+                },
+                LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                    marginStart = dp(2)
+                    marginEnd = dp(2)
+                }
             )
-        )
-        setContentView(scroll)
+        }
     }
 
     private fun summaryView(
@@ -226,7 +304,7 @@ class ForestJournalActivity : Activity() {
             title = relationship.displayName,
             subtitle = "${relationship.stage.displayName} • ${relationship.toneLabel}",
             detail = detail,
-            emphasized = relationship.stage.name == "MILESTONE"
+            emphasized = relationship.stage == RelationshipStage.MILESTONE
         )
     }
 
