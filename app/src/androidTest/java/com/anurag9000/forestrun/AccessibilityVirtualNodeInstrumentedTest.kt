@@ -51,7 +51,7 @@ class AccessibilityVirtualNodeInstrumentedTest {
                     AccessibilityNodeProvider.HOST_VIEW_ID
                 )
                 assertNotNull(menuRoot)
-                assertEquals(3, menuRoot!!.childCount)
+                assertEquals(4, menuRoot!!.childCount)
 
                 val continueNode = provider.createAccessibilityNodeInfo(
                     AccessibilityNodeIds.MENU_CONTINUE
@@ -59,6 +59,16 @@ class AccessibilityVirtualNodeInstrumentedTest {
                 assertNotNull(continueNode)
                 assertEquals("Begin forest run", continueNode!!.contentDescription.toString())
                 assertTrue(continueNode.isClickable)
+
+                val journalNode = provider.createAccessibilityNodeInfo(
+                    AccessibilityNodeIds.MENU_JOURNAL
+                )
+                assertNotNull(journalNode)
+                assertEquals(
+                    "Open Forest Journal",
+                    journalNode!!.contentDescription.toString()
+                )
+                assertTrue(journalNode.isClickable)
 
                 assertNull(
                     provider.createAccessibilityNodeInfo(
@@ -82,6 +92,11 @@ class AccessibilityVirtualNodeInstrumentedTest {
                 assertNull(
                     provider.createAccessibilityNodeInfo(
                         AccessibilityNodeIds.MENU_CONTINUE
+                    )
+                )
+                assertNull(
+                    provider.createAccessibilityNodeInfo(
+                        AccessibilityNodeIds.MENU_JOURNAL
                     )
                 )
 
@@ -118,6 +133,11 @@ class AccessibilityVirtualNodeInstrumentedTest {
                 assertNotNull(
                     provider.createAccessibilityNodeInfo(
                         AccessibilityNodeIds.MENU_CONTINUE
+                    )
+                )
+                assertNotNull(
+                    provider.createAccessibilityNodeInfo(
+                        AccessibilityNodeIds.MENU_JOURNAL
                     )
                 )
                 assertNull(
