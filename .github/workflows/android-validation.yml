@@ -55,7 +55,8 @@ jobs:
           grep -q 'InputLatencyTelemetryRegistry.recordFrameRendered' app/src/main/java/com/anurag9000/forestrun/engine/GameThread.kt
           grep -q 'InputLatencyTelemetryRegistry.recordTouchReceived' app/src/main/java/com/anurag9000/forestrun/engine/InputHandler.kt
 
-          grep -q 'persistenceFacade.purchaseNextGardenPlant' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
+          grep -q 'persistenceFacade::purchaseNextGardenPlant' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
+          grep -q 'purchaseInteraction.purchase(i)' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt
           grep -q 'GardenPurchaseManager.purchaseNext' app/src/main/java/com/anurag9000/forestrun/engine/ApplicationPersistenceFacade.kt
           if grep -q 'SaveManager.saveGardenProgress\|SaveManager.saveLifetimeSeeds\|GardenPurchaseManager.purchaseNext' app/src/main/java/com/anurag9000/forestrun/ui/GardenScreen.kt; then
             echo "GardenScreen must use the application facade and its single atomic purchase boundary." >&2
