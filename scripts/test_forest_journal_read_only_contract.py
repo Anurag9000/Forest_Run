@@ -53,11 +53,12 @@ class ForestJournalReadOnlyContractTest(unittest.TestCase):
 
     def test_contract_document_states_the_observational_rule(self) -> None:
         text = DOC.read_text(encoding="utf-8")
-        self.assertIn("read-only projection", text)
+        self.assertIn("observational projection", text)
         self.assertIn("award or spend Seeds", text)
-        self.assertIn("mutate relationship affinity or tone", text)
+        self.assertIn("mutate or materialize relationship stage", text)
         self.assertIn("create story pages", text)
         self.assertIn("refresh or fabricate costume unlocks", text)
+        self.assertIn("must never call that path directly or indirectly", text)
 
 
 if __name__ == "__main__":
