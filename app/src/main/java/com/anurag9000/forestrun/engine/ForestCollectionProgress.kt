@@ -20,8 +20,8 @@ internal data class ForestCollectionTrack(
     init {
         require(id.isNotBlank()) { "Collection track id must not be blank" }
         require(label.isNotBlank()) { "Collection track label must not be blank" }
-        require(completed in 0..total) { "Collection progress must stay within its total" }
         require(total > 0) { "Collection track total must be positive" }
+        require(completed in 0..total) { "Collection progress must stay within its total" }
         require(detail.isNotBlank()) { "Collection track detail must not be blank" }
     }
 
@@ -47,6 +47,43 @@ internal data class ForestLegacyMilestone(
     }
 }
 
+internal data class ForestRelationshipMemory(
+    val displayName: String,
+    val stage: RelationshipStage,
+    val toneLabel: String,
+    val toneLine: String,
+    val milestoneTitle: String?,
+    val milestoneLine: String?,
+    val ritualTitle: String?,
+    val ritualLine: String?,
+    val costumeMemory: String?
+) {
+    init {
+        require(displayName.isNotBlank()) { "Relationship memory must name its family" }
+        require(toneLabel.isNotBlank()) { "Relationship memory must describe its tone" }
+        require(toneLine.isNotBlank()) { "Relationship memory must describe its current history" }
+        require((milestoneTitle == null) == (milestoneLine == null)) {
+            "Relationship milestone title and line must appear together"
+        }
+        require((ritualTitle == null) == (ritualLine == null)) {
+            "Relationship ritual title and line must appear together"
+        }
+    }
+}
+
+internal data class ForestWardrobeMemory(
+    val displayName: String,
+    val unlockHint: String,
+    val available: Boolean,
+    val active: Boolean
+) {
+    init {
+        require(displayName.isNotBlank()) { "Wardrobe memory must name its style" }
+        require(unlockHint.isNotBlank()) { "Wardrobe memory must retain its unlock story" }
+        require(!active || available) { "Active wardrobe style must be available" }
+    }
+}
+
 internal data class ForestMemoryPagePresentation(
     val id: String,
     val title: String,
@@ -64,6 +101,8 @@ internal data class ForestMemoryPagePresentation(
 internal data class ForestCollectionSnapshot(
     val tracks: List<ForestCollectionTrack>,
     val milestones: List<ForestLegacyMilestone>,
+    val relationships: List<ForestRelationshipMemory>,
+    val wardrobe: List<ForestWardrobeMemory>,
     val memoryPages: List<ForestMemoryPagePresentation>,
     val kindRuns: Int,
     val mercifulRuns: Int,
@@ -75,6 +114,15 @@ internal data class ForestCollectionSnapshot(
         }
         require(milestones.map(ForestLegacyMilestone::id).distinct().size == milestones.size) {
             "Milestone ids must be unique"
+        }
+        require(relationships.map(ForestRelationshipMemory::displayName).distinct().size == relationships.size) {
+            "Relationship memories must be unique per family"
+        }
+        require(wardrobe.map(ForestWardrobeMemory::displayName).distinct().size == wardrobe.size) {
+            "Wardrobe memories must be unique per style"
+        }
+        require(wardrobe.count(ForestWardrobeMemory::active) <= 1) {
+            "Only one wardrobe style can be active"
         }
         require(memoryPages.map(ForestMemoryPagePresentation::id).distinct().size == memoryPages.size) {
             "Memory page ids must be unique"
@@ -98,16 +146,19 @@ internal object ForestCollectionProgressComposer {
     ): ForestCollectionSnapshot {
         val appContext = context.applicationContext
         val trackedRelationships = journal.entries.count { it.relationshipStage != null }
+        require(trackedRelationships > 0) {
+            "Forest Journal must retain at least one persistent relationship family"
+        }
         val bondedRelationships = RelationshipArcSystem.relationshipsAtOrAbove(
             appContext,
             RelationshipStage.MILESTONE
         ).size.coerceIn(0, trackedRelationships)
         val gardenPlants = SaveManager.loadGardenProgress(appContext)
             .coerceIn(1, GardenEconomy.catalogueSize)
-        val wardrobeStyles = CostumeManager.availableCostumes(appContext)
+        val availableCostumes = CostumeManager.availableCostumes(appContext)
             .distinct()
-            .size
-            .coerceIn(1, CostumeStyle.entries.size)
+        val activeCostume = CostumeManager.activeCostume(appContext)
+        val wardrobeStyles = availableCostumes.size.coerceIn(1, CostumeStyle.entries.size)
         val peacefulBiomeCount = journal.peacefulBiomes
             .map { it.biome }
             .distinct()
@@ -217,6 +268,58 @@ internal object ForestCollectionProgressComposer {
             )
         )
 
+        val relationships = journal.entries
+            .asSequence()
+            .filter { it.discovered && it.relationshipStage != null }
+            .map { entry ->
+                val type = entry.type
+                val stage = requireNotNull(entry.relationshipStage)
+                val warm = RelationshipArcSystem.isWarmBond(appContext, type)
+                val strained = RelationshipArcSystem.isStrainedBond(appContext, type)
+                val reward = RelationshipArcSystem.milestoneRewardFor(appContext, type)
+                ForestRelationshipMemory(
+                    displayName = entry.displayName,
+                    stage = stage,
+                    toneLabel = when {
+                        strained -> "Strained"
+                        warm -> "Warm"
+                        stage == RelationshipStage.MILESTONE -> "Bonded"
+                        stage == RelationshipStage.TRUST -> "Trusting"
+                        stage == RelationshipStage.RECOGNITION -> "Recognizing"
+                        else -> "First impression"
+                    },
+                    toneLine = when {
+                        strained -> "Familiarity remains, but repeated harm has made this bond hold itself more carefully."
+                        warm && stage == RelationshipStage.MILESTONE ->
+                            "Repeated gentle outcomes have turned recognition into a warm relationship that now changes home and return moments."
+                        warm -> "Gentle outcomes are becoming a recognizable pattern instead of isolated good luck."
+                        stage == RelationshipStage.MILESTONE ->
+                            "This relationship reached its Bond, though its current tone still reflects the history that followed."
+                        stage == RelationshipStage.TRUST ->
+                            "The forest now treats this creature as someone who knows your habits, not merely someone you have met."
+                        stage == RelationshipStage.RECOGNITION ->
+                            "This creature has begun to recognize the pattern of your crossings."
+                        else -> "The relationship is still learning what your choices usually mean."
+                    },
+                    milestoneTitle = reward?.label,
+                    milestoneLine = reward?.summary,
+                    ritualTitle = reward?.bondRitualLabel,
+                    ritualLine = reward?.bondRitualLine,
+                    costumeMemory = reward?.costumeReward?.displayName
+                )
+            }
+            .toList()
+
+        val wardrobe = CostumeStyle.entries.map { style ->
+            val available = style == CostumeStyle.NONE || style in availableCostumes
+            ForestWardrobeMemory(
+                displayName = style.displayName,
+                unlockHint = style.unlockLabel,
+                available = available,
+                active = style == activeCostume
+            )
+        }
+
         val memoryPages = StoryFragmentSystem.unlockedMemoryPages(appContext)
             .asSequence()
             .filter(String::isNotBlank)
@@ -228,6 +331,8 @@ internal object ForestCollectionProgressComposer {
         return ForestCollectionSnapshot(
             tracks = tracks,
             milestones = milestones,
+            relationships = relationships,
+            wardrobe = wardrobe,
             memoryPages = memoryPages,
             kindRuns = kindRuns,
             mercifulRuns = mercifulRuns,
