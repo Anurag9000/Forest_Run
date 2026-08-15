@@ -21,7 +21,8 @@ internal class LiveGameAccessibilityActions(
     private val longJumpAction: () -> Boolean,
     private val duckAction: () -> Boolean,
     private val purchasePlantAction: (Int) -> Boolean,
-    private val equipCostumeAction: (CostumeStyle) -> Boolean
+    private val equipCostumeAction: (CostumeStyle) -> Boolean,
+    private val gardenGrowthFeedbackAction: () -> Unit = HapticManager::gardenGrowth
 ) : AccessibilitySemanticActionHandler {
     override fun perform(nodeId: Int, action: AccessibilitySemanticAction): Boolean = when {
         nodeId == AccessibilityNodeIds.MENU_CONTINUE &&
@@ -69,8 +70,16 @@ internal class LiveGameAccessibilityActions(
 
         nodeId in AccessibilityNodeIds.GARDEN_FIRST_PLANT until
             AccessibilityNodeIds.GARDEN_FIRST_PLANT + GardenEconomy.catalogueSize &&
-            action == AccessibilitySemanticAction.ACTIVATE ->
-            purchasePlantAction(nodeId - AccessibilityNodeIds.GARDEN_FIRST_PLANT)
+            action == AccessibilitySemanticAction.ACTIVATE -> {
+            val purchased = purchasePlantAction(
+                nodeId - AccessibilityNodeIds.GARDEN_FIRST_PLANT
+            )
+            GardenPurchaseFeedbackPolicy.emitIfPurchased(
+                purchased = purchased,
+                gardenGrowthFeedbackAction = gardenGrowthFeedbackAction
+            )
+            purchased
+        }
 
         nodeId in AccessibilityNodeIds.GARDEN_FIRST_COSTUME until
             AccessibilityNodeIds.GARDEN_FIRST_COSTUME + CostumeStyle.entries.size &&
