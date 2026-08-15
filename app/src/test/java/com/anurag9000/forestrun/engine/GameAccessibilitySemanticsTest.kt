@@ -23,6 +23,28 @@ class GameAccessibilitySemanticsTest {
     }
 
     @Test
+    fun menuPublishesJournalAfterPrimaryNavigationWithoutReplacingExistingActions() {
+        val nodes = GameAccessibilitySemantics.build(
+            AccessibilitySemanticSnapshot(surface = AccessibilitySurface.MENU)
+        )
+
+        assertEquals(
+            listOf(
+                AccessibilityNodeIds.MENU_CONTINUE,
+                AccessibilityNodeIds.MENU_GARDEN,
+                AccessibilityNodeIds.MENU_SETTINGS,
+                AccessibilityNodeIds.MENU_JOURNAL
+            ),
+            nodes.map { it.id }
+        )
+        assertEquals("Open Forest Journal", nodes.last().label)
+        assertEquals(
+            setOf(AccessibilitySemanticAction.ACTIVATE),
+            nodes.last().actions
+        )
+    }
+
+    @Test
     fun playingStatusIsLiveAndExposesOnlyBoundedGameActions() {
         val nodes = GameAccessibilitySemantics.build(
             AccessibilitySemanticSnapshot(
