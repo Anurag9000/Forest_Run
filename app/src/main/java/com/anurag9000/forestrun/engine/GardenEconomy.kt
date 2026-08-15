@@ -4,11 +4,13 @@ package com.anurag9000.forestrun.engine
 data class GardenPlantEconomy(
     val index: Int,
     val displayName: String,
+    val compactName: String,
     val seedCost: Int
 ) {
     init {
         require(index >= 0) { "Garden plant index must be non-negative" }
         require(displayName.isNotBlank()) { "Garden plant name must not be blank" }
+        require(compactName.isNotBlank()) { "Garden compact plant name must not be blank" }
         require(seedCost > 0) { "Garden plant Seed cost must be positive" }
     }
 }
@@ -18,25 +20,28 @@ data class GardenPlantEconomy(
  * collection surfaces.
  *
  * Visual sprite/color ownership remains with GardenScreen/SpriteManager; this
- * object owns the stable progression order, names, and Seed costs.
+ * object owns stable progression order, full/compact names, and Seed costs.
  */
 object GardenEconomy {
     private val catalogue = listOf(
-        GardenPlantEconomy(0, "Lily", 15),
-        GardenPlantEconomy(1, "Cactus", 20),
-        GardenPlantEconomy(2, "Hyacinth", 25),
-        GardenPlantEconomy(3, "Eucalyptus", 30),
-        GardenPlantEconomy(4, "Vanilla Orchid", 40),
-        GardenPlantEconomy(5, "Weeping Willow", 50),
-        GardenPlantEconomy(6, "Jacaranda", 60),
-        GardenPlantEconomy(7, "Bamboo", 75),
-        GardenPlantEconomy(8, "Cherry Blossom", 100)
+        GardenPlantEconomy(0, "Lily", "Lily", 15),
+        GardenPlantEconomy(1, "Cactus", "Cactus", 20),
+        GardenPlantEconomy(2, "Hyacinth", "Hyacinth", 25),
+        GardenPlantEconomy(3, "Eucalyptus", "Eucalyptus", 30),
+        GardenPlantEconomy(4, "Vanilla Orchid", "Orchid", 40),
+        GardenPlantEconomy(5, "Weeping Willow", "Willow", 50),
+        GardenPlantEconomy(6, "Jacaranda", "Jacaranda", 60),
+        GardenPlantEconomy(7, "Bamboo", "Bamboo", 75),
+        GardenPlantEconomy(8, "Cherry Blossom", "Cherry", 100)
     ).also { entries ->
         require(entries.map(GardenPlantEconomy::index) == entries.indices.toList()) {
             "Garden catalogue indices must remain contiguous and ordered"
         }
         require(entries.map(GardenPlantEconomy::displayName).distinct().size == entries.size) {
-            "Garden catalogue names must remain unique"
+            "Garden catalogue full names must remain unique"
+        }
+        require(entries.map(GardenPlantEconomy::compactName).distinct().size == entries.size) {
+            "Garden catalogue compact names must remain unique"
         }
     }
 
