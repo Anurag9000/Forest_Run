@@ -21,6 +21,9 @@ import com.anurag9000.forestrun.engine.ForestJournalEntry
 import com.anurag9000.forestrun.engine.ForestJournalSnapshot
 import com.anurag9000.forestrun.engine.ForestLegacyMilestone
 import com.anurag9000.forestrun.engine.ForestMemoryPagePresentation
+import com.anurag9000.forestrun.engine.ForestPathHistoryComposer
+import com.anurag9000.forestrun.engine.ForestPathHistorySnapshot
+import com.anurag9000.forestrun.engine.ForestPathMemory
 import com.anurag9000.forestrun.engine.ForestRelationshipMemory
 import com.anurag9000.forestrun.engine.ForestWardrobeMemory
 import com.anurag9000.forestrun.engine.RelationshipStage
@@ -57,6 +60,7 @@ class ForestJournalActivity : Activity() {
     private fun renderJournal() {
         val snapshot = ForestJournalComposer.snapshot(this)
         val collection = ForestCollectionProgressComposer.snapshot(this, snapshot)
+        val pathHistory = ForestPathHistoryComposer.snapshot(this)
         val scroll = ScrollView(this).apply {
             isFillViewport = true
             setBackgroundColor(Color.rgb(24, 39, 31))
@@ -82,7 +86,7 @@ class ForestJournalActivity : Activity() {
         content.addView(summaryView(snapshot, collection))
 
         if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.PROGRESS) {
-            addProgressSections(content, collection)
+            addProgressSections(content, collection, pathHistory)
         }
         if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.BONDS) {
             addRelationshipSection(content, collection)
@@ -114,12 +118,34 @@ class ForestJournalActivity : Activity() {
 
     private fun addProgressSections(
         content: LinearLayout,
-        collection: ForestCollectionSnapshot
+        collection: ForestCollectionSnapshot,
+        pathHistory: ForestPathHistorySnapshot
     ) {
         content.addView(sectionTitle("COLLECTION PATH"))
         collection.tracks.forEach { track ->
             content.addView(collectionTrackCard(track))
         }
+
+        content.addView(sectionTitle("PATH HISTORY"))
+        pathHistory.paths.forEach { path ->
+            content.addView(pathHistoryCard(path))
+        }
+        content.addView(
+            card(
+                title = if (pathHistory.allGentleShapesSeen) {
+                    "Every Gentle Shape"
+                } else {
+                    "○ Every Gentle Shape"
+                },
+                subtitle = "${pathHistory.discoveredTiers}/${pathHistory.totalTiers} route tiers remembered",
+                detail = if (pathHistory.allGentleShapesSeen) {
+                    "Kind, Merciful, and Peaceful routes have each returned to the willow at least once."
+                } else {
+                    "The forest has not yet seen every gentle route tier come home."
+                },
+                emphasized = pathHistory.allGentleShapesSeen
+            )
+        )
 
         content.addView(sectionTitle("LEGACY MILESTONES"))
         collection.milestones
@@ -274,6 +300,17 @@ class ForestJournalActivity : Activity() {
         },
         detail = track.detail,
         emphasized = track.isComplete
+    )
+
+    private fun pathHistoryCard(path: ForestPathMemory): View = card(
+        title = if (path.discovered) path.label else "○ ${path.label}",
+        subtitle = if (path.discovered) {
+            "${path.runCount} remembered run${if (path.runCount == 1) "" else "s"}"
+        } else {
+            "Not yet carried home"
+        },
+        detail = path.line,
+        emphasized = path.discovered
     )
 
     private fun milestoneCard(milestone: ForestLegacyMilestone): View = card(
