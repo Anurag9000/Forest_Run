@@ -36,6 +36,8 @@ import com.anurag9000.forestrun.engine.ForestRunLegacySnapshot
 import com.anurag9000.forestrun.engine.ForestWardrobeMemory
 import com.anurag9000.forestrun.engine.RelationshipStage
 
+private const val STATE_JOURNAL_SECTION = "forest_journal_selected_section"
+
 /**
  * Native Android presentation of the persistent Forest Journal.
  *
@@ -56,8 +58,17 @@ class ForestJournalActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        selectedSection = savedInstanceState
+            ?.getString(STATE_JOURNAL_SECTION)
+            ?.let { savedName -> JournalSection.entries.firstOrNull { it.name == savedName } }
+            ?: JournalSection.ALL
         window.statusBarColor = Color.rgb(28, 45, 35)
         window.navigationBarColor = Color.rgb(20, 34, 27)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(STATE_JOURNAL_SECTION, selectedSection.name)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
