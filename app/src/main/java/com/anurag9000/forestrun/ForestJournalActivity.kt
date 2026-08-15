@@ -24,11 +24,14 @@ import com.anurag9000.forestrun.engine.ForestJournalComposer
 import com.anurag9000.forestrun.engine.ForestJournalEntry
 import com.anurag9000.forestrun.engine.ForestJournalSnapshot
 import com.anurag9000.forestrun.engine.ForestLegacyMilestone
+import com.anurag9000.forestrun.engine.ForestMemoryPageNarrative
 import com.anurag9000.forestrun.engine.ForestMemoryPagePresentation
 import com.anurag9000.forestrun.engine.ForestPathHistoryComposer
 import com.anurag9000.forestrun.engine.ForestPathHistorySnapshot
 import com.anurag9000.forestrun.engine.ForestPathMemory
 import com.anurag9000.forestrun.engine.ForestRelationshipMemory
+import com.anurag9000.forestrun.engine.ForestRunLegacyComposer
+import com.anurag9000.forestrun.engine.ForestRunLegacySnapshot
 import com.anurag9000.forestrun.engine.ForestWardrobeMemory
 import com.anurag9000.forestrun.engine.RelationshipStage
 
@@ -66,6 +69,7 @@ class ForestJournalActivity : Activity() {
         val collection = ForestCollectionProgressComposer.snapshot(this, snapshot)
         val pathHistory = ForestPathHistoryComposer.snapshot(this)
         val gardenHistory = ForestGardenHistoryComposer.snapshot(this)
+        val runLegacy = ForestRunLegacyComposer.snapshot(this)
         val scroll = ScrollView(this).apply {
             isFillViewport = true
             setBackgroundColor(Color.rgb(24, 39, 31))
@@ -91,7 +95,7 @@ class ForestJournalActivity : Activity() {
         content.addView(summaryView(snapshot, collection))
 
         if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.PROGRESS) {
-            addProgressSections(content, collection, pathHistory, gardenHistory)
+            addProgressSections(content, collection, pathHistory, gardenHistory, runLegacy)
         }
         if (selectedSection == JournalSection.ALL || selectedSection == JournalSection.BONDS) {
             addRelationshipSection(content, collection)
@@ -125,8 +129,25 @@ class ForestJournalActivity : Activity() {
         content: LinearLayout,
         collection: ForestCollectionSnapshot,
         pathHistory: ForestPathHistorySnapshot,
-        gardenHistory: ForestGardenHistorySnapshot
+        gardenHistory: ForestGardenHistorySnapshot,
+        runLegacy: ForestRunLegacySnapshot
     ) {
+        content.addView(sectionTitle("RUN LEGACY"))
+        content.addView(runLegacyCard(runLegacy))
+        runLegacy.lastRun?.let { last ->
+            content.addView(
+                card(
+                    title = "Most Recent Rest",
+                    subtitle = "Score ${last.score} • ${last.distanceM} m • ${last.routeLabel} • ${last.moodLabel}",
+                    detail = buildString {
+                        append("Clean passes ${last.cleanPasses} • Spared ${last.spared} • Hits ${last.hits}")
+                        append("\nSeeds ${last.seeds} • Bloom conversions ${last.bloomConversions}")
+                        if (last.restQuote.isNotBlank()) append("\n“${last.restQuote}”")
+                    }
+                )
+            )
+        }
+
         content.addView(sectionTitle("COLLECTION PATH"))
         collection.tracks.forEach { track ->
             content.addView(collectionTrackCard(track))
@@ -157,11 +178,7 @@ class ForestJournalActivity : Activity() {
         }
         content.addView(
             card(
-                title = if (pathHistory.allGentleShapesSeen) {
-                    "Every Gentle Shape"
-                } else {
-                    "○ Every Gentle Shape"
-                },
+                title = if (pathHistory.allGentleShapesSeen) "Every Gentle Shape" else "○ Every Gentle Shape",
                 subtitle = "${pathHistory.discoveredTiers}/${pathHistory.totalTiers} route tiers remembered",
                 detail = if (pathHistory.allGentleShapesSeen) {
                     "Kind, Merciful, and Peaceful routes have each returned to the willow at least once."
@@ -175,20 +192,13 @@ class ForestJournalActivity : Activity() {
         content.addView(sectionTitle("LEGACY MILESTONES"))
         collection.milestones
             .sortedByDescending(ForestLegacyMilestone::achieved)
-            .forEach { milestone ->
-                content.addView(milestoneCard(milestone))
-            }
+            .forEach { milestone -> content.addView(milestoneCard(milestone)) }
 
         content.addView(sectionTitle("WARDROBE MEMORIES"))
-        collection.wardrobe.forEach { style ->
-            content.addView(wardrobeCard(style))
-        }
+        collection.wardrobe.forEach { style -> content.addView(wardrobeCard(style)) }
     }
 
-    private fun addRelationshipSection(
-        content: LinearLayout,
-        collection: ForestCollectionSnapshot
-    ) {
+    private fun addRelationshipSection(content: LinearLayout, collection: ForestCollectionSnapshot) {
         content.addView(sectionTitle("LIVING BONDS"))
         if (collection.relationships.isEmpty()) {
             content.addView(
@@ -199,9 +209,7 @@ class ForestJournalActivity : Activity() {
                 )
             )
         } else {
-            collection.relationships.forEach { relationship ->
-                content.addView(relationshipCard(relationship))
-            }
+            collection.relationships.forEach { relationship -> content.addView(relationshipCard(relationship)) }
         }
     }
 
@@ -213,14 +221,7 @@ class ForestJournalActivity : Activity() {
         if (snapshot.historyMarks.isNotEmpty()) {
             content.addView(sectionTitle("MEMORY MARKS"))
             snapshot.historyMarks.forEach { mark ->
-                content.addView(
-                    card(
-                        title = mark.label,
-                        subtitle = mark.line,
-                        detail = null,
-                        emphasized = true
-                    )
-                )
+                content.addView(card(mark.label, mark.line, null, emphasized = true))
             }
         }
 
@@ -234,16 +235,11 @@ class ForestJournalActivity : Activity() {
                 )
             )
         } else {
-            collection.memoryPages.forEach { page ->
-                content.addView(memoryPageCard(page))
-            }
+            collection.memoryPages.forEach { page -> content.addView(memoryPageCard(page)) }
         }
     }
 
-    private fun addFamilySections(
-        content: LinearLayout,
-        snapshot: ForestJournalSnapshot
-    ) {
+    private fun addFamilySections(content: LinearLayout, snapshot: ForestJournalSnapshot) {
         EncounterFamilyGroup.entries.forEach { group ->
             val entries = snapshot.entries.filter { it.group == group }
             content.addView(sectionTitle(groupLabel(group)))
@@ -282,10 +278,7 @@ class ForestJournalActivity : Activity() {
         }
     }
 
-    private fun summaryView(
-        snapshot: ForestJournalSnapshot,
-        collection: ForestCollectionSnapshot
-    ): View {
+    private fun summaryView(snapshot: ForestJournalSnapshot, collection: ForestCollectionSnapshot): View {
         val peaceful = snapshot.peacefulBiomes
             .take(3)
             .joinToString { "${it.biome.displayName} ${it.friendshipCount}" }
@@ -299,13 +292,10 @@ class ForestJournalActivity : Activity() {
             append("  •  ${snapshot.totalCleanPasses} clean passes")
             append("  •  ${snapshot.totalSpares} mercies")
             append("  •  ${snapshot.totalHits} hits")
-            append("\nMemory pages: ${snapshot.memoryPageCount}")
-            append("  •  Strongest bond: $strongest")
+            append("\nMemory pages: ${snapshot.memoryPageCount}  •  Strongest bond: $strongest")
             append("\nCollection paths complete: $completedTracks/${collection.tracks.size}")
             append("  •  Legacy milestones: $achievedMilestones/${collection.milestones.size}")
-            append("\nGentle routes: ${collection.kindRuns} kind")
-            append("  •  ${collection.mercifulRuns} merciful")
-            append("  •  ${collection.peacefulRuns} peaceful")
+            append("\nGentle routes: ${collection.kindRuns} kind • ${collection.mercifulRuns} merciful • ${collection.peacefulRuns} peaceful")
             append("\nPeace carried home: $peaceful")
         }
         return card(
@@ -316,13 +306,21 @@ class ForestJournalActivity : Activity() {
         )
     }
 
+    private fun runLegacyCard(legacy: ForestRunLegacySnapshot): View = card(
+        title = "Long Road",
+        subtitle = "High score ${legacy.highScore} • Best ${legacy.bestDistanceM} m • ${legacy.totalRuns} remembered runs",
+        detail = buildString {
+            append("Current forest mood: ${legacy.currentMood.displayName}")
+            if (legacy.moodStreak > 0) append(" (${legacy.moodStreak} in a row)")
+            append("\nMost common remembered mood: ${legacy.dominantMood.displayName}")
+            append("\nGentle ${legacy.gentleRuns} • Steady ${legacy.steadyRuns} • Fearful ${legacy.fearfulRuns} • Reckless ${legacy.recklessRuns}")
+        },
+        emphasized = legacy.totalRuns > 0
+    )
+
     private fun collectionTrackCard(track: ForestCollectionTrack): View = card(
         title = track.label,
-        subtitle = if (track.isComplete) {
-            "${track.progressLabel} — Complete"
-        } else {
-            "${track.progressLabel} remembered"
-        },
+        subtitle = if (track.isComplete) "${track.progressLabel} — Complete" else "${track.progressLabel} remembered",
         detail = track.detail,
         emphasized = track.isComplete
     )
@@ -364,26 +362,16 @@ class ForestJournalActivity : Activity() {
     private fun milestoneCard(milestone: ForestLegacyMilestone): View = card(
         title = if (milestone.achieved) milestone.title else "○ ${milestone.title}",
         subtitle = if (milestone.achieved) "Remembered • ${milestone.progress}" else milestone.progress,
-        detail = if (milestone.achieved) {
-            milestone.line
-        } else {
-            "Not yet remembered. ${milestone.line}"
-        },
+        detail = if (milestone.achieved) milestone.line else "Not yet remembered. ${milestone.line}",
         emphasized = milestone.achieved
     )
 
     private fun relationshipCard(relationship: ForestRelationshipMemory): View {
         val detail = buildString {
             append(relationship.toneLine)
-            relationship.milestoneTitle?.let { title ->
-                append("\n$title — ${relationship.milestoneLine}")
-            }
-            relationship.ritualTitle?.let { title ->
-                append("\n$title — ${relationship.ritualLine}")
-            }
-            relationship.costumeMemory?.let { costume ->
-                append("\nWearable memory: $costume")
-            }
+            relationship.milestoneTitle?.let { title -> append("\n$title — ${relationship.milestoneLine}") }
+            relationship.ritualTitle?.let { title -> append("\n$title — ${relationship.ritualLine}") }
+            relationship.costumeMemory?.let { costume -> append("\nWearable memory: $costume") }
         }
         return card(
             title = relationship.displayName,
@@ -411,16 +399,12 @@ class ForestJournalActivity : Activity() {
     private fun memoryPageCard(page: ForestMemoryPagePresentation): View = card(
         title = page.title,
         subtitle = page.category,
-        detail = page.line
+        detail = ForestMemoryPageNarrative.lineFor(page)
     )
 
     private fun entryCard(entry: ForestJournalEntry): View {
         val relationship = entry.relationshipStage?.let { "  •  Bond: ${it.displayName}" }.orEmpty()
-        val variants = if (entry.authoredVariantCount > 1) {
-            "  •  ${entry.authoredVariantCount} known forms"
-        } else {
-            ""
-        }
+        val variants = if (entry.authoredVariantCount > 1) "  •  ${entry.authoredVariantCount} known forms" else ""
         val biomes = entry.preferredBiomes.joinToString()
         return if (entry.discovered) {
             card(
@@ -459,15 +443,11 @@ class ForestJournalActivity : Activity() {
         }
         addView(text(title, 19f, Color.rgb(247, 235, 174), true))
         addView(text(subtitle, 14f, Color.rgb(193, 219, 183)))
-        if (!detail.isNullOrBlank()) {
-            addView(text(detail, 13f, Color.rgb(224, 233, 214)))
-        }
+        if (!detail.isNullOrBlank()) addView(text(detail, 13f, Color.rgb(224, 233, 214)))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply {
-            bottomMargin = dp(10)
-        }
+        ).apply { bottomMargin = dp(10) }
     }
 
     private fun sectionTitle(label: String): TextView = text(
@@ -480,23 +460,19 @@ class ForestJournalActivity : Activity() {
         gravity = Gravity.START
     }
 
-    private fun text(
-        value: String,
-        sizeSp: Float,
-        color: Int,
-        bold: Boolean = false
-    ): TextView = TextView(this).apply {
-        text = value
-        textSize = sizeSp
-        setTextColor(color)
-        typeface = if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setLineSpacing(0f, 1.12f)
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-    }
+    private fun text(value: String, sizeSp: Float, color: Int, bold: Boolean = false): TextView =
+        TextView(this).apply {
+            text = value
+            textSize = sizeSp
+            setTextColor(color)
+            typeface = if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            setLineSpacing(0f, 1.12f)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
 
     private fun spacer(heightDp: Int): View = View(this).apply {
         layoutParams = LinearLayout.LayoutParams(1, dp(heightDp))
