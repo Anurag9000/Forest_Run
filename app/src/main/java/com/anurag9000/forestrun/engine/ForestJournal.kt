@@ -28,10 +28,10 @@ internal data class ForestJournalSnapshot(
     val entries: List<ForestJournalEntry>,
     val discoveredFamilies: Int,
     val totalFamilies: Int,
-    val totalEncounters: Int,
-    val totalCleanPasses: Int,
-    val totalSpares: Int,
-    val totalHits: Int,
+    val totalEncounters: Long,
+    val totalCleanPasses: Long,
+    val totalSpares: Long,
+    val totalHits: Long,
     val memoryPageCount: Int,
     val historyMarks: List<PersistentMemoryManager.HistoryUnlockMark>,
     val strongestRelationship: String?,
@@ -40,7 +40,7 @@ internal data class ForestJournalSnapshot(
     init {
         require(totalFamilies == entries.size) { "Journal family count must match entries" }
         require(discoveredFamilies in 0..totalFamilies) { "Journal discovery count is invalid" }
-        require(totalEncounters >= 0 && totalCleanPasses >= 0 && totalSpares >= 0 && totalHits >= 0) {
+        require(totalEncounters >= 0L && totalCleanPasses >= 0L && totalSpares >= 0L && totalHits >= 0L) {
             "Journal aggregate counters must be non-negative"
         }
         require(memoryPageCount >= 0) { "Journal memory-page count must be non-negative" }
@@ -90,10 +90,10 @@ internal object ForestJournalComposer {
             entries = entries,
             discoveredFamilies = entries.count(ForestJournalEntry::discovered),
             totalFamilies = entries.size,
-            totalEncounters = entries.sumOf(ForestJournalEntry::encounterCount),
-            totalCleanPasses = entries.sumOf(ForestJournalEntry::cleanPassCount),
-            totalSpares = entries.sumOf(ForestJournalEntry::sparedCount),
-            totalHits = entries.sumOf(ForestJournalEntry::hitCount),
+            totalEncounters = entries.sumOf { it.encounterCount.toLong() },
+            totalCleanPasses = entries.sumOf { it.cleanPassCount.toLong() },
+            totalSpares = entries.sumOf { it.sparedCount.toLong() },
+            totalHits = entries.sumOf { it.hitCount.toLong() },
             memoryPageCount = SaveManager.loadUnlockedMemoryPages(appContext).size,
             historyMarks = PersistentMemoryManager.historyUnlocks(appContext),
             strongestRelationship = RelationshipArcSystem.strongestRelationshipLabel(appContext),
