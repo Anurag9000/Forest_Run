@@ -21,6 +21,8 @@ import com.anurag9000.forestrun.engine.ForestJournalEntry
 import com.anurag9000.forestrun.engine.ForestJournalSnapshot
 import com.anurag9000.forestrun.engine.ForestLegacyMilestone
 import com.anurag9000.forestrun.engine.ForestMemoryPagePresentation
+import com.anurag9000.forestrun.engine.ForestRelationshipMemory
+import com.anurag9000.forestrun.engine.ForestWardrobeMemory
 
 /**
  * Native Android presentation of the persistent Forest Journal.
@@ -77,6 +79,26 @@ class ForestJournalActivity : Activity() {
             .forEach { milestone ->
                 content.addView(milestoneCard(milestone))
             }
+
+        content.addView(sectionTitle("LIVING BONDS"))
+        if (collection.relationships.isEmpty()) {
+            content.addView(
+                card(
+                    title = "No familiar creature yet",
+                    subtitle = "Persistent bonds begin with repeated meetings.",
+                    detail = "Cat, Fox, Wolf, Dog, Owl, and Eagle can learn the pattern of how you treat them over many runs."
+                )
+            )
+        } else {
+            collection.relationships.forEach { relationship ->
+                content.addView(relationshipCard(relationship))
+            }
+        }
+
+        content.addView(sectionTitle("WARDROBE MEMORIES"))
+        collection.wardrobe.forEach { style ->
+            content.addView(wardrobeCard(style))
+        }
 
         if (snapshot.historyMarks.isNotEmpty()) {
             content.addView(sectionTitle("MEMORY MARKS"))
@@ -185,6 +207,42 @@ class ForestJournalActivity : Activity() {
             "Not yet remembered. ${milestone.line}"
         },
         emphasized = milestone.achieved
+    )
+
+    private fun relationshipCard(relationship: ForestRelationshipMemory): View {
+        val detail = buildString {
+            append(relationship.toneLine)
+            relationship.milestoneTitle?.let { title ->
+                append("\n$title — ${relationship.milestoneLine}")
+            }
+            relationship.ritualTitle?.let { title ->
+                append("\n$title — ${relationship.ritualLine}")
+            }
+            relationship.costumeMemory?.let { costume ->
+                append("\nWearable memory: $costume")
+            }
+        }
+        return card(
+            title = relationship.displayName,
+            subtitle = "${relationship.stage.displayName} • ${relationship.toneLabel}",
+            detail = detail,
+            emphasized = relationship.stage.name == "MILESTONE"
+        )
+    }
+
+    private fun wardrobeCard(style: ForestWardrobeMemory): View = card(
+        title = when {
+            style.active -> "${style.displayName} — Equipped"
+            style.available -> style.displayName
+            else -> "○ ${style.displayName}"
+        },
+        subtitle = when {
+            style.active -> "Carried into the next run"
+            style.available -> "Available"
+            else -> "Still locked"
+        },
+        detail = style.unlockHint,
+        emphasized = style.active
     )
 
     private fun memoryPageCard(page: ForestMemoryPagePresentation): View = card(
