@@ -42,10 +42,17 @@ internal interface NonTerminalCollisionEffectSink {
     fun showStumbleFlash(dominantColor: Int)
     fun playNonLethalHit()
     fun shakeHit()
+
+    /** Compatibility primitives retained for existing live/test adapters. */
     fun mediumPulse()
+    fun doubleTap()
+
+    /** Domain-level semantic haptic cues used by collision orchestration. */
+    fun stumbleImpactHaptic() = mediumPulse()
+    fun mercyAcknowledgementHaptic() = doubleTap()
+
     fun showMercyFlash()
     fun playMercyMiss()
-    fun doubleTap()
     fun emitMercyStars(centerX: Float, centerY: Float)
     fun shakeMercyMiss()
 }
@@ -135,7 +142,7 @@ internal class NonTerminalCollisionOutcomeCoordinator(
         effects.showStumbleFlash(input.dominantColor)
         effects.playNonLethalHit()
         effects.shakeHit()
-        effects.mediumPulse()
+        effects.stumbleImpactHaptic()
         feedbackPresenter.presentStumble(input)
         deactivateEntity()
     }
@@ -143,7 +150,7 @@ internal class NonTerminalCollisionOutcomeCoordinator(
     fun completeMercyMiss(input: MercyMissCollisionOutcome) {
         effects.showMercyFlash()
         effects.playMercyMiss()
-        effects.doubleTap()
+        effects.mercyAcknowledgementHaptic()
         feedbackPresenter.presentMercyMiss(input)
         effects.emitMercyStars(
             centerX = input.playerX + Player.BASE_WIDTH * 0.5f,
