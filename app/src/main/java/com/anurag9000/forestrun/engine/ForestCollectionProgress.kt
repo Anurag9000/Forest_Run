@@ -157,7 +157,7 @@ internal object ForestCollectionProgressComposer {
             "Forest Journal must retain at least one persistent relationship family"
         }
         val bondedRelationships = journal.entries
-            .count { it.relationshipStage == RelationshipStage.MILESTONE }
+            .count { it.discovered && it.relationshipStage == RelationshipStage.MILESTONE }
             .coerceIn(0, trackedRelationships)
         val gardenPlants = SaveManager.loadGardenProgress(appContext)
             .coerceIn(1, GardenEconomy.catalogueSize)
@@ -240,7 +240,7 @@ internal object ForestCollectionProgressComposer {
             ForestLegacyMilestone(
                 id = "all_bonds",
                 title = "Every Quiet Promise",
-                line = "Every persistent creature relationship has reached its lasting Bond.",
+                line = "Every persistent relationship has reached its lasting Bond.",
                 achieved = bondedRelationships == trackedRelationships,
                 progress = "$bondedRelationships/$trackedRelationships Bonds"
             ),
