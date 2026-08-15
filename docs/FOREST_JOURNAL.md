@@ -17,7 +17,7 @@ Opening or reading the Journal must not:
 - refresh or fabricate costume unlocks;
 - increase encounter/pass/spare/hit counters;
 - mutate relationship affinity or tone;
-- mark a milestone as completed in a new achievement store;
+- mark a milestone or capstone as completed in a new achievement store;
 - create story pages;
 - change route counters or forest mood;
 - alter the active costume;
@@ -37,6 +37,7 @@ Every displayed value is derived from an existing runtime owner.
 | high score, distance, last Rest, world mood/run history | `SaveManager` + `ForestMoodSystem` |
 | memory pages | `StoryFragmentSystem` + `SaveManager` |
 | history marks | `PersistentMemoryManager` |
+| whole-forest completion capstone | derived from collection tracks + path history |
 
 ## Journal sections
 
@@ -74,11 +75,25 @@ The current Journal derives five bounded completion tracks:
 4. **Wardrobe** — available styles out of `CostumeStyle.entries`, including Classic.
 5. **Peace in Every Biome** — biomes whose friendship history is surfaced by persistent memory out of all ordinary `Biome` entries.
 
-Totals are derived at runtime rather than duplicated as Journal constants. If the authoritative catalogue grows, the Journal total grows with it.
+Totals are derived at runtime rather than duplicated as Journal constants. If an authoritative catalogue grows, the corresponding Journal total grows with it.
+
+### Whole-forest capstone
+
+`ForestCompletionCapstoneComposer` combines those five collection tracks with one sixth pillar: whether **Kind**, **Merciful**, and **Peaceful** paths have each returned home at least once.
+
+Before all six pillars are complete, the Journal presents:
+
+**A Forest Still Becoming**
+
+Once every pillar is complete, it presents:
+
+**The Forest Knows Your Name**
+
+The capstone is recomputed from existing authorities every time the Journal is rendered. There is no `capstoneUnlocked` preference or Journal-owned achievement flag, so catalogue expansion or save recovery cannot leave a stale completion bit behind.
 
 ## Garden sanctuary history
 
-`GardenEconomy` now exposes the stable progression order, player-facing plant names, and Seed costs while Garden rendering still owns sprites/layout. `ForestGardenHistoryComposer` combines that catalogue with persisted Garden progress and lifetime Seed balance.
+`GardenEconomy` exposes the stable progression order, full and compact player-facing plant names, and Seed costs while Garden rendering still owns sprites/layout. `ForestGardenHistoryComposer` combines that catalogue with persisted Garden progress and lifetime Seed balance.
 
 Each Journal entry is derived as one of:
 
