@@ -99,7 +99,8 @@ internal object ForestJournalComposer {
             totalCleanPasses = entries.sumOf { it.cleanPassCount.toLong() },
             totalSpares = entries.sumOf { it.sparedCount.toLong() },
             totalHits = entries.sumOf { it.hitCount.toLong() },
-            memoryPageCount = SaveManager.loadUnlockedMemoryPages(appContext).size,
+            memoryPageCount = SaveManager.loadUnlockedMemoryPages(appContext)
+                .count(String::isNotBlank),
             historyMarks = PersistentMemoryManager.historyUnlocks(appContext),
             strongestRelationship = strongestRelationshipLabel(entries),
             peacefulBiomes = PersistentMemoryManager.peacefulBiomes(appContext)
