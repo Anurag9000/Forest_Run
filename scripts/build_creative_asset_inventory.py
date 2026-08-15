@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, NoReturn
+from typing import NoReturn
 
 from audit_runtime_asset_references import verify_repository as verify_asset_ownership
 from verify_release_source_assets import (
@@ -124,7 +124,7 @@ def build_inventory(
 ) -> dict[str, object]:
     normalized_sha = candidate_sha.strip().lower()
     if not SHA_PATTERN.fullmatch(normalized_sha):
-        _fail("candidate SHA must be exactly 40 lowercase hexadecimal characters")
+        _fail("candidate SHA must be exactly 40 hexadecimal characters")
 
     resolved = root.expanduser().resolve()
     if validate_runtime_inputs:
@@ -144,6 +144,10 @@ def build_inventory(
     inventory_sha256 = hashlib.sha256(_canonical_bytes(identity_payload)).hexdigest()
     return {
         **identity_payload,
+        # build_release_evidence_index.py recognizes candidateSha as the canonical
+        # top-level binding. candidateCommit remains in the inventory identity
+        # payload so existing inventory digests keep their explicit commit binding.
+        "candidateSha": normalized_sha,
         "assetCount": len(serialized_entries),
         "inventorySha256": inventory_sha256,
         "reviewSummary": {
