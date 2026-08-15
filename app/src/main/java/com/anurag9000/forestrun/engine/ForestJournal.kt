@@ -8,7 +8,7 @@ import com.anurag9000.forestrun.entities.EntityType
  * biome, and history persistence. The journal deliberately derives from the
  * canonical runtime authorities instead of adding a second progression store.
  */
-data class ForestJournalEntry(
+internal data class ForestJournalEntry(
     val type: EntityType,
     val displayName: String,
     val group: EncounterFamilyGroup,
@@ -24,7 +24,7 @@ data class ForestJournalEntry(
     val fieldNote: String
 )
 
-data class ForestJournalSnapshot(
+internal data class ForestJournalSnapshot(
     val entries: List<ForestJournalEntry>,
     val discoveredFamilies: Int,
     val totalFamilies: Int,
@@ -53,7 +53,7 @@ internal data class ForestJournalLore(
     val fieldNote: String
 )
 
-object ForestJournalComposer {
+internal object ForestJournalComposer {
     fun snapshot(context: Context): ForestJournalSnapshot {
         val appContext = context.applicationContext
         val entries = EncounterFamilyCatalogue.profiles.map { profile ->
