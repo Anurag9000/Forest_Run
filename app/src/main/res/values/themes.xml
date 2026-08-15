@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-        Full-screen immersive game theme for the API 36 application target.
-        Status and navigation bars are hidden in code; essential UI is mapped
-        into system-bar and display-cutout safe content bounds.
+        Full-screen immersive game theme. The forest-deep window color keeps
+        cold launch, task switching, and system-bar transitions inside the same
+        visual identity as the willow/menu rather than exposing template black.
+        Status/navigation bars are hidden during gameplay; safe content bounds
+        still account for system bars and display cutouts.
     -->
     <style name="Theme.ForestRun" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowBackground">@color/forest_deep</item>
+        <item name="android:statusBarColor">@color/forest_deep</item>
+        <item name="android:navigationBarColor">@color/forest_deep</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 </resources>
