@@ -1,5 +1,7 @@
 package com.anurag9000.forestrun.engine
 
+import android.app.Activity
+import android.content.Intent
 import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
@@ -8,6 +10,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityNodeProvider
+import com.anurag9000.forestrun.ForestJournalActivity
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -19,8 +22,12 @@ internal fun interface AccessibilityNodeBoundsResolver {
  * Android accessibility bridge for the custom Canvas UI.
  *
  * The provider never invents actions: it rebuilds the current semantic tree for
- * every query and delegates activation through [GameAccessibilityActionRouter].
- * This makes stale virtual IDs fail closed after screen/state transitions.
+ * every query and delegates gameplay/state mutations through
+ * [GameAccessibilityActionRouter]. The Forest Journal is the one navigation-only
+ * platform surface; its semantic node is still validated against the current
+ * tree before the provider opens the standard Android activity. This makes stale
+ * virtual IDs fail closed after screen/state transitions.
+ *
  * Mutation owners are responsible for publishing semantic-tree changes after a
  * successful write or transition; the provider emits only interaction/focus
  * events itself. Framework accessibility events are emitted only while Android's
@@ -152,11 +159,27 @@ internal class GameAccessibilityNodeProvider(
         val node = currentNodesOrEmpty().firstOrNull { it.id == nodeId } ?: return false
         if (!node.enabled) return false
         val semanticAction = node.actions.singleOrNull() ?: return false
-        val result = router.perform(nodeId, semanticAction)
-        if (!result.performed) return false
+
+        val performed = if (
+            nodeId == AccessibilityNodeIds.MENU_JOURNAL &&
+            semanticAction == AccessibilitySemanticAction.ACTIVATE
+        ) {
+            openForestJournal()
+        } else {
+            router.perform(nodeId, semanticAction).performed
+        }
+        if (!performed) return false
         sendEvent(nodeId, AccessibilityEvent.TYPE_VIEW_CLICKED)
         return true
     }
+
+    private fun openForestJournal(): Boolean = runCatching {
+        val context = hostView.context
+        val intent = Intent(context, ForestJournalActivity::class.java)
+        if (context !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        true
+    }.getOrDefault(false)
 
     private fun requestAccessibilityFocus(nodeId: Int): Boolean {
         if (createVirtualNode(nodeId) == null) return false
