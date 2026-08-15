@@ -57,7 +57,7 @@ internal object ForestRunLegacyComposer {
             ForestLastRunMemory(
                 score = summary.score.coerceAtLeast(0),
                 distanceM = summary.distanceM
-                    .takeIf(Float::isFinite)
+                    .takeIf { it.isFinite() }
                     ?.coerceAtLeast(0f)
                     ?.toInt()
                     ?: 0,
@@ -74,7 +74,7 @@ internal object ForestRunLegacyComposer {
         return ForestRunLegacySnapshot(
             highScore = SaveManager.loadHighScore(appContext).coerceAtLeast(0),
             bestDistanceM = SaveManager.loadBestDistance(appContext)
-                .takeIf(Float::isFinite)
+                .takeIf { it.isFinite() }
                 ?.coerceAtLeast(0f)
                 ?.toInt()
                 ?: 0,
