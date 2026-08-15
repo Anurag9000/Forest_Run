@@ -109,6 +109,38 @@ class ForestJournalProjectionTest {
     }
 
     @Test
+    fun `legacy mood sanitization happens before dominant mood selection`() {
+        val corrupt = ForestMoodState(
+            currentMood = ForestMood.FEARFUL,
+            moodStreak = -8,
+            totalRuns = -20,
+            gentleRuns = -4,
+            recklessRuns = -3,
+            fearfulRuns = 2,
+            steadyRuns = -1
+        )
+
+        val sanitized = ForestRunLegacyComposer.sanitizedMoodState(corrupt)
+
+        assertEquals(0, sanitized.moodStreak)
+        assertEquals(0, sanitized.totalRuns)
+        assertEquals(0, sanitized.gentleRuns)
+        assertEquals(0, sanitized.recklessRuns)
+        assertEquals(2, sanitized.fearfulRuns)
+        assertEquals(0, sanitized.steadyRuns)
+        assertEquals(ForestMood.FEARFUL, sanitized.dominantMood)
+    }
+
+    @Test
+    fun `legacy distance projection rejects nonfinite and negative values`() {
+        assertEquals(0, ForestRunLegacyComposer.safeDistanceMetres(Float.NaN))
+        assertEquals(0, ForestRunLegacyComposer.safeDistanceMetres(Float.POSITIVE_INFINITY))
+        assertEquals(0, ForestRunLegacyComposer.safeDistanceMetres(-10f))
+        assertEquals(0, ForestRunLegacyComposer.safeDistanceMetres(0f))
+        assertEquals(1_234, ForestRunLegacyComposer.safeDistanceMetres(1_234.9f))
+    }
+
+    @Test
     fun `memory page narrative specializes known persistent history families`() {
         val learned = presentation(
             id = "page_thought_learned_fox",
