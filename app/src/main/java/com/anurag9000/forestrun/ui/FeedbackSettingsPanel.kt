@@ -1,11 +1,14 @@
 package com.anurag9000.forestrun.ui
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import com.anurag9000.forestrun.ForestJournalActivity
 import com.anurag9000.forestrun.engine.ApplicationPersistenceFacade
 import com.anurag9000.forestrun.engine.AssetPaths
 import com.anurag9000.forestrun.engine.FeedbackSettings
@@ -46,6 +49,22 @@ internal object FeedbackSettingsPanelLayout {
         return layout
     }
 
+    /**
+     * A separate home-memory chip above the existing comfort stack. Keeping it
+     * outside [FeedbackSettingsLayout.all] preserves the three-toggle contract.
+     */
+    fun journalBounds(width: Float, height: Float): RectF {
+        val layout = build(width, height)
+        val gap = (height * 0.012f).coerceIn(7f, 13f)
+        val bottom = layout.reducedMotion.top - gap
+        val top = bottom - layout.reducedMotion.height()
+        return RectF(layout.reducedMotion.left, top, layout.reducedMotion.right, bottom).also { rect ->
+            require(isValidContainedRect(rect, width, height)) {
+                "Feedback settings surface is too small for the Forest Journal chip."
+            }
+        }
+    }
+
     fun hitTest(layout: FeedbackSettingsLayout, x: Float, y: Float): FeedbackToggle? {
         if (!FiniteCoordinateAdmission.accepts(x, y)) return null
         return when {
@@ -54,6 +73,11 @@ internal object FeedbackSettingsPanelLayout {
             contains(layout.haptics, x, y) -> FeedbackToggle.HAPTICS
             else -> null
         }
+    }
+
+    fun journalHitTest(width: Float, height: Float, x: Float, y: Float): Boolean {
+        if (!FiniteCoordinateAdmission.accepts(x, y)) return false
+        return contains(journalBounds(width, height), x, y)
     }
 
     private fun contains(rect: RectF, x: Float, y: Float): Boolean =
@@ -83,7 +107,10 @@ internal class FeedbackSettingsPanel(
     private val persistenceFacade: ApplicationPersistenceFacade =
         ApplicationPersistenceFacade.android(context)
 ) {
-    private val layout = FeedbackSettingsPanelLayout.build(screenWidth.toFloat(), screenHeight.toFloat())
+    private val screenWidthF = screenWidth.toFloat()
+    private val screenHeightF = screenHeight.toFloat()
+    private val layout = FeedbackSettingsPanelLayout.build(screenWidthF, screenHeightF)
+    private val journalRect = FeedbackSettingsPanelLayout.journalBounds(screenWidthF, screenHeightF)
     private val pixelFont: Typeface = runCatching {
         Typeface.createFromAsset(context.assets, AssetPaths.PIXEL_FONT)
     }.getOrDefault(Typeface.MONOSPACE)
@@ -94,6 +121,15 @@ internal class FeedbackSettingsPanel(
     }
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(210, 214, 232, 198)
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+    }
+    private val memoryFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(218, 48, 62, 38)
+        style = Paint.Style.FILL
+    }
+    private val memoryBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(226, 236, 218, 140)
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
     }
@@ -111,6 +147,10 @@ internal class FeedbackSettingsPanel(
     }
 
     fun onTap(x: Float, y: Float): Boolean {
+        if (FeedbackSettingsPanelLayout.journalHitTest(screenWidthF, screenHeightF, x, y)) {
+            openForestJournal()
+            return true
+        }
         when (FeedbackSettingsPanelLayout.hitTest(layout, x, y)) {
             FeedbackToggle.REDUCED_MOTION -> persistenceFacade.saveFeedbackPreferences(
                 FeedbackSettings.snapshot().copy(
@@ -133,10 +173,25 @@ internal class FeedbackSettingsPanel(
     }
 
     fun draw(canvas: Canvas) {
+        canvas.drawText("MEMORY", journalRect.right, journalRect.top - 9f, titlePaint)
+        drawMemoryChip(canvas, journalRect, "FOREST JOURNAL")
         canvas.drawText("COMFORT", layout.audio.right, layout.reducedMotion.top - 9f, titlePaint)
         drawChip(canvas, layout.reducedMotion, if (FeedbackSettings.reducedMotion) "MOTION: LOW" else "MOTION: FULL")
         drawChip(canvas, layout.audio, if (FeedbackSettings.audioEnabled) "AUDIO: ON" else "AUDIO: OFF")
         drawChip(canvas, layout.haptics, if (FeedbackSettings.hapticsEnabled) "HAPTICS: ON" else "HAPTICS: OFF")
+    }
+
+    private fun openForestJournal() {
+        val intent = Intent(context, ForestJournalActivity::class.java)
+        if (context !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    }
+
+    private fun drawMemoryChip(canvas: Canvas, rect: RectF, label: String) {
+        canvas.drawRoundRect(rect, 12f, 12f, memoryFillPaint)
+        canvas.drawRoundRect(rect, 12f, 12f, memoryBorderPaint)
+        val baseline = rect.centerY() - (textPaint.ascent() + textPaint.descent()) / 2f
+        canvas.drawText(label, rect.centerX(), baseline, textPaint)
     }
 
     private fun drawChip(canvas: Canvas, rect: RectF, label: String) {
