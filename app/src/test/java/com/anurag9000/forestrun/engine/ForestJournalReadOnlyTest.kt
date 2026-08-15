@@ -83,6 +83,46 @@ class ForestJournalReadOnlyTest {
         assertEquals(before, after)
     }
 
+    @Test
+    fun `orphan persisted Bond does not advance completion without discovery`() {
+        SaveManager.saveRelationshipStage(context, EntityType.EAGLE, RelationshipStage.MILESTONE)
+        SaveManager.saveUnlockedRelationshipMilestones(context, setOf(EntityType.EAGLE))
+
+        val before = immutablePreferenceSnapshot(prefs)
+        val journal = ForestJournalComposer.snapshot(context)
+        val collection = ForestCollectionProgressComposer.snapshot(context, journal)
+        val after = immutablePreferenceSnapshot(prefs)
+
+        val eagle = journal.entries.single { it.type == EntityType.EAGLE }
+        assertFalse(eagle.discovered)
+        assertEquals(RelationshipStage.MILESTONE, eagle.relationshipStage)
+        assertEquals(0, collection.tracks.single { it.id == "bonds" }.completed)
+        assertTrue(collection.relationships.none { it.displayName == eagle.displayName })
+        assertEquals(before, after)
+    }
+
+    @Test
+    fun `blank persisted memory page key is ignored consistently without repair write`() {
+        SaveManager.saveUnlockedMemoryPages(
+            context,
+            setOf("", "page_weather_bloom")
+        )
+
+        val before = immutablePreferenceSnapshot(prefs)
+        val journal = ForestJournalComposer.snapshot(context)
+        val collection = ForestCollectionProgressComposer.snapshot(context, journal)
+        val after = immutablePreferenceSnapshot(prefs)
+
+        assertEquals(1, journal.memoryPageCount)
+        assertEquals(1, collection.memoryPages.size)
+        assertEquals("page_weather_bloom", collection.memoryPages.single().id)
+        assertEquals(before, after)
+        assertEquals(
+            setOf("", "page_weather_bloom"),
+            SaveManager.loadUnlockedMemoryPages(context)
+        )
+    }
+
     private fun immutablePreferenceSnapshot(
         preferences: android.content.SharedPreferences
     ): Map<String, Any?> = preferences.all.mapValues { (_, value) ->
