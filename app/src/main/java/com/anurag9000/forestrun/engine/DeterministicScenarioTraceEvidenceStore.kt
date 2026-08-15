@@ -3,7 +3,6 @@ package com.anurag9000.forestrun.engine
 import android.util.AtomicFile
 import java.io.BufferedOutputStream
 import java.io.File
-import java.io.FileOutputStream
 
 /** Atomic persistence boundary for already validated deterministic trace evidence. */
 internal object DeterministicScenarioTraceEvidenceStore {
@@ -20,18 +19,19 @@ internal object DeterministicScenarioTraceEvidenceStore {
 
         val destination = File(directory, fileNameFor(evidence))
         val atomicFile = AtomicFile(destination)
-        var pendingStream: FileOutputStream? = null
+        val activeStream = try {
+            atomicFile.startWrite()
+        } catch (_: Exception) {
+            return null
+        }
         return try {
-            val activeStream = atomicFile.startWrite()
-            pendingStream = activeStream
             val output = BufferedOutputStream(activeStream)
             output.write(payload)
             output.flush()
             atomicFile.finishWrite(activeStream)
-            pendingStream = null
             destination
         } catch (_: Exception) {
-            pendingStream?.let(atomicFile::failWrite)
+            runCatching { atomicFile.failWrite(activeStream) }
             null
         }
     }
