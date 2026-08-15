@@ -15,7 +15,7 @@ class CollisionRuntimeEffectAdaptersTest {
         adapter.shakeHit()
         adapter.playHit()
         adapter.playRest()
-        adapter.longPulse()
+        adapter.terminalImpactHaptic()
 
         assertEquals(
             listOf(
@@ -42,10 +42,10 @@ class CollisionRuntimeEffectAdaptersTest {
         adapter.showStumbleFlash(0x123456)
         adapter.playNonLethalHit()
         adapter.shakeHit()
-        adapter.mediumPulse()
+        adapter.stumbleImpactHaptic()
         adapter.showMercyFlash()
         adapter.playMercyMiss()
-        adapter.doubleTap()
+        adapter.mercyAcknowledgementHaptic()
         adapter.emitMercyStars(356f, 770f)
         adapter.shakeMercyMiss()
 
