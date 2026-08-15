@@ -13,7 +13,7 @@ import com.anurag9000.forestrun.engine.AssetPaths
 import com.anurag9000.forestrun.engine.CostumeManager
 import com.anurag9000.forestrun.engine.CinematicOverlayRenderer
 import com.anurag9000.forestrun.engine.CinematicScene
-import com.anurag9000.forestrun.engine.GardenPurchaseManager
+import com.anurag9000.forestrun.engine.GardenEconomy
 import com.anurag9000.forestrun.engine.GardenSanctuaryPlanner
 import com.anurag9000.forestrun.engine.GardenSanctuaryState
 import com.anurag9000.forestrun.engine.GameConstants
@@ -59,7 +59,7 @@ import kotlin.math.sin
  *   - Bottom: "back" hint
  *
  * After unlock: bloom burst particle effect fires at the card centre.
- * GardenPurchaseManager atomically persists progress and remaining Seeds.
+ * Garden purchase persistence atomically commits progress and remaining Seeds.
  */
 class GardenScreen internal constructor(
     private val context: Context,
@@ -72,22 +72,20 @@ class GardenScreen internal constructor(
     // ── Plant catalogue ───────────────────────────────────────────────────
 
     data class GardenPlant(
-        val name: String,
-        val seedCost: Int,
         val colour: Int,
         val emoji: String
     )
 
     private val catalogue = listOf(
-        GardenPlant("Lily",       15, Color.rgb(220, 240, 180), "🌸"),
-        GardenPlant("Cactus",     20, Color.rgb(100, 200,  80), "🌵"),
-        GardenPlant("Hyacinth",   25, Color.rgb(180, 100, 220), "💜"),
-        GardenPlant("Eucalyptus", 30, Color.rgb( 80, 180, 120), "🍃"),
-        GardenPlant("Orchid",     40, Color.rgb(255, 200, 220), "🌺"),
-        GardenPlant("Willow",     50, Color.rgb( 60, 160,  60), "🌿"),
-        GardenPlant("Jacaranda",  60, Color.rgb(160, 100, 240), "🌲"),
-        GardenPlant("Bamboo",     75, Color.rgb(120, 200,  80), "🎋"),
-        GardenPlant("Cherry",    100, Color.rgb(255, 150, 180), "🌸")
+        GardenPlant(Color.rgb(220, 240, 180), "🌸"),
+        GardenPlant(Color.rgb(100, 200,  80), "🌵"),
+        GardenPlant(Color.rgb(180, 100, 220), "💜"),
+        GardenPlant(Color.rgb( 80, 180, 120), "🍃"),
+        GardenPlant(Color.rgb(255, 200, 220), "🌺"),
+        GardenPlant(Color.rgb( 60, 160,  60), "🌿"),
+        GardenPlant(Color.rgb(160, 100, 240), "🌲"),
+        GardenPlant(Color.rgb(120, 200,  80), "🎋"),
+        GardenPlant(Color.rgb(255, 150, 180), "🌸")
     )
     private val catalogueSprites: List<SpriteSheet> = listOf(
         spriteManager.lilySprite.copy(),
@@ -100,6 +98,15 @@ class GardenScreen internal constructor(
         spriteManager.bambooSprite.copy(),
         spriteManager.cherryBlossomSprite.copy()
     )
+
+    init {
+        require(catalogue.size == GardenEconomy.catalogueSize) {
+            "Garden visual catalogue must match canonical GardenEconomy size"
+        }
+        require(catalogueSprites.size == GardenEconomy.catalogueSize) {
+            "Garden sprite catalogue must match canonical GardenEconomy size"
+        }
+    }
 
     // ── State ─────────────────────────────────────────────────────────────
 
@@ -503,6 +510,9 @@ class GardenScreen internal constructor(
             val top = ROW_Y
             cardRect.set(left, top, left + CARD_W, top + CARD_H)
 
+            val economy = checkNotNull(GardenEconomy.plantForIndex(i)) {
+                "Missing GardenEconomy entry for visual card $i"
+            }
             val isUnlocked = i < unlockedCount
             val isNext = i == unlockedCount
             val isAnimatingThis = unlockIdx == i && unlockAnim in 0f..1f
@@ -547,14 +557,14 @@ class GardenScreen internal constructor(
             when {
                 isUnlocked -> {
                     namePaint.alpha = 220
-                    canvas.drawText(catalogue[i].name, cardRect.centerX(), cardRect.bottom - 22f, namePaint)
+                    canvas.drawText(economy.compactName, cardRect.centerX(), cardRect.bottom - 22f, namePaint)
                 }
                 isNext -> {
                     val pulse = (0.6f + 0.4f * sin(elapsed * 2.5f)) * 255
                     costPaint.alpha = pulse.toInt().coerceIn(0, 255)
-                    canvas.drawText("🌱${catalogue[i].seedCost}", cardRect.centerX(), cardRect.bottom - 36f, costPaint)
+                    canvas.drawText("🌱${economy.seedCost}", cardRect.centerX(), cardRect.bottom - 36f, costPaint)
                     namePaint.alpha = 180
-                    canvas.drawText(catalogue[i].name, cardRect.centerX(), cardRect.bottom - 18f, namePaint)
+                    canvas.drawText(economy.compactName, cardRect.centerX(), cardRect.bottom - 18f, namePaint)
                 }
                 else -> {
                     namePaint.alpha = 60
