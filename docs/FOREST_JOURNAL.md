@@ -6,7 +6,7 @@ The Forest Journal is the player-facing view of Forest Run's existing long-horiz
 
 Forest Run already remembers encounters, clean passes, mercy, harm, relationship stages, route history, Garden growth, wardrobe unlocks, biome friendship, run legacy, forest mood, return moments, and story pages. The Journal makes that persistence legible to the player so the forest's memory is visible rather than only influencing hidden presentation.
 
-The Journal is reachable from the willow menu through the **MEMORY → FOREST JOURNAL** action and is rendered with native Android views so long-form history remains scrollable and accessible independently from gameplay frame timing.
+The Journal is reachable from the willow menu through the **MEMORY → FOREST JOURNAL** action and is rendered with native Android views so long-form content remains scrollable and accessible independently from gameplay frame timing.
 
 ## Source-of-truth rule
 
@@ -16,28 +16,44 @@ Opening or reading the Journal must not:
 - purchase Garden plants;
 - refresh or fabricate costume unlocks;
 - increase encounter/pass/spare/hit counters;
-- mutate relationship affinity or tone;
+- mutate or materialize relationship stage, affinity, tone, or milestones;
 - mark a milestone or capstone as completed in a new achievement store;
 - create story pages;
 - change route counters or forest mood;
 - alter the active costume;
 - overwrite high score, distance, or last-run history.
 
-Every displayed value is derived from an existing runtime owner.
+Every displayed value is derived from an existing runtime owner or an observational projection over existing stored facts.
 
 | Journal surface | Runtime authority |
 | --- | --- |
 | 19-family discovery and encounter history | `EncounterFamilyCatalogue` + `PersistentMemoryManager` |
-| relationship stage/tone/Bond reward | `RelationshipArcSystem` |
+| persisted relationship stage/Bond reward | `SaveManager` + `RelationshipArcSystem` reward metadata |
+| relationship tone shown in the Journal | read-only spare/hit/kindness/tender counters using the same tone semantics as the relationship system |
 | Garden order/names/costs | `GardenEconomy` |
 | Garden progress and Seed balance | `SaveManager` |
-| wardrobe completion/equipped style | `SaveManager` + `CostumeManager` + `CostumeStyle` |
+| wardrobe completion/equipped style | `SaveManager` + read-only `CostumeManager` accessors + `CostumeStyle` |
 | peaceful-biome history | `PersistentMemoryManager` + `Biome` |
 | Kind/Merciful/Peaceful route history | `SaveManager` + `PacifistRouteTier` |
-| high score, distance, last Rest, world mood/run history | `SaveManager` + `ForestMoodSystem` |
-| memory pages | `StoryFragmentSystem` + `SaveManager` |
+| high score, distance, last Rest, world mood/run history | `SaveManager` + sanitized `ForestMoodState` projection |
+| memory pages | read-only `StoryFragmentSystem.unlockedMemoryPages` + `SaveManager` |
 | history marks | `PersistentMemoryManager` |
 | whole-forest completion capstone | derived from collection tracks + path history |
+
+## Strictly observational relationship reads
+
+Normal gameplay owns relationship-stage materialization. `RelationshipArcSystem.refreshStage()` can write a new stage and can persist a newly reached Bond milestone; therefore the Journal must never call that path directly or indirectly.
+
+`ForestJournalComposer` reads the already-persisted stage with `SaveManager.loadRelationshipStage`. For a relationship-capable family whose old/repaired save contains encounter history but no saved stage, the Journal deliberately presents **First Impression** rather than repairing the save while it is being read. A later normal gameplay outcome remains responsible for refreshing/materializing the stage.
+
+Likewise:
+
+- Bond completion counts come from the stages already present in the Journal snapshot, not `relationshipsAtOrAbove()`;
+- strongest-relationship display is derived from the same read-only snapshot;
+- warm/strained Journal tone is computed from read-only counters and mirrors the relationship tone rules without calling a stage-refreshing API;
+- Bond reward/ritual metadata may be read only when the corresponding persisted milestone is already unlocked.
+
+`ForestJournalReadOnlyTest` seeds enough relationship history to qualify for a Bond while leaving the saved stage absent, opens/composes the Journal, and requires the complete preference map to remain unchanged. `scripts/test_forest_journal_read_only_contract.py` also prevents the projection layer from regressing to relationship-refresh, costume-refresh, or story-unlock APIs.
 
 ## Journal sections
 
@@ -63,14 +79,14 @@ The selected filter is intentionally not a progression fact and is not written t
 - Gentle/Steady/Fearful/Reckless run counts;
 - the most recent persisted Rest summary, including score, distance, route tier, mood, clean passes, mercy, hits, Seeds, Bloom conversions, and Rest quote.
 
-The Journal never records these values itself.
+The projection sanitizes invalid negative mood counters before dominant-mood selection and rejects nonfinite/negative distance values before presentation. It does not repair the underlying save while being read.
 
 ## Collection paths
 
 The current Journal derives five bounded completion tracks:
 
 1. **Forest Families** — discovered encounter families out of the complete 19-family catalogue.
-2. **Living Bonds** — persistent creature relationships that have reached `RelationshipStage.MILESTONE` out of the relationship-tracked family set.
+2. **Living Bonds** — persisted relationship stages at `RelationshipStage.MILESTONE` out of the six relationship-capable families.
 3. **Garden** — currently grown Garden catalogue entries out of `GardenEconomy.catalogueSize`.
 4. **Wardrobe** — available styles out of `CostumeStyle.entries`, including Classic.
 5. **Peace in Every Biome** — biomes whose friendship history is surfaced by persistent memory out of all ordinary `Biome` entries.
@@ -121,8 +137,8 @@ Current recognitions include:
 
 - **First Footprint** — at least one family discovered;
 - **Every Path Has a Name** — every encounter family discovered;
-- **Known by the Wild** — at least one persistent relationship reaches Bond;
-- **Every Quiet Promise** — every persistent relationship reaches Bond;
+- **Known by the Wild** — at least one persisted relationship stage has reached Bond;
+- **Every Quiet Promise** — every persistent relationship has reached Bond;
 - **Garden in Full** — the entire current Garden catalogue is grown;
 - **Dressed by Memory** — every current wardrobe style is available;
 - **Peace in Every Biome** — every biome carries persistent friendship history;
@@ -134,14 +150,14 @@ Because there is no Journal-specific completion store, save recovery and migrati
 
 For every discovered relationship-tracked creature, the Journal can show:
 
-- current relationship stage;
-- current warm/strained/learning tone;
+- already-persisted relationship stage;
+- current observational warm/strained/learning tone;
 - a plain-language interpretation of that tone;
-- Bond milestone title and summary when unlocked;
-- the Bond ritual when unlocked;
+- Bond milestone title and summary when already unlocked;
+- the Bond ritual when already unlocked;
 - the wearable memory associated with that Bond when one exists.
 
-The Journal does not duplicate relationship thresholds. It asks `RelationshipArcSystem` for the live stage, tone, and milestone reward.
+The Journal does not refresh relationship thresholds or milestone persistence. Missing historical stage materialization remains a gameplay/save-repair concern, not a side effect of opening the book.
 
 ## Wardrobe memories
 
@@ -151,13 +167,15 @@ The Journal lists the complete current `CostumeStyle` catalogue and distinguishe
 - available;
 - currently equipped.
 
-The unlock hint comes from the costume's authored `unlockLabel`. Reading the Journal does not call `CostumeManager.refreshUnlocks`; unlock decisions remain with the normal progression flow.
+The unlock hint comes from the costume's authored `unlockLabel`. Reading the Journal calls `availableCostumes`/`activeCostume`, not `CostumeManager.refreshUnlocks`; unlock decisions remain with normal progression flow.
 
 ## Memory pages
 
 `StoryFragmentSystem` persists memory-page IDs when Rest, Garden, creature, weather, route, biome, Bloom, relationship, or return contexts become durable story memories.
 
-`ForestMemoryPagePresenter` converts those internal keys into player-facing titles and categories without exposing raw persistence identifiers. `ForestMemoryPageNarrative` then supplies pattern-specific prose for the actual durable history represented by known page families—for example clean Rest patterns, strained/warm relationships, biome or mood returns, Garden peace, repeated encounters, route memories, and Bloom traces. Future or unknown page IDs retain a deterministic safe fallback.
+The Journal calls only the read-side `unlockedMemoryPages` accessor. It does not call `restQuote`, `gardenReflection`, `creatureThought`, or `weatherThought`, because those gameplay/presentation paths can unlock additional pages.
+
+`ForestMemoryPagePresenter` converts unlocked internal keys into player-facing titles and categories without exposing raw persistence identifiers. `ForestMemoryPageNarrative` then supplies pattern-specific prose for the actual durable history represented by known page families—for example clean Rest patterns, strained/warm relationships, biome or mood returns, Garden peace, repeated encounters, route memories, and Bloom traces. Future or unknown page IDs retain a deterministic safe fallback.
 
 Current categories include:
 
@@ -184,11 +202,11 @@ All nineteen encounter families retain their own Journal identity:
 - clean passes;
 - mercy/spare count;
 - hit count;
-- relationship stage where applicable;
+- persisted relationship stage where applicable;
 - preferred biomes;
 - known authored variant count.
 
-Undiscovered families remain named but do not reveal their authored lore/history until the persistent encounter history says they have been met.
+Undiscovered families remain named but do not reveal their authored lore/history until persistent encounter history says they have been met.
 
 ## Accessibility and layout
 
