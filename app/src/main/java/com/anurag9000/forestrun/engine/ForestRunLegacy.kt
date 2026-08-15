@@ -52,15 +52,11 @@ internal data class ForestRunLegacySnapshot(
 internal object ForestRunLegacyComposer {
     fun snapshot(context: Context): ForestRunLegacySnapshot {
         val appContext = context.applicationContext
-        val mood = SaveManager.loadForestMoodState(appContext)
+        val mood = sanitizedMoodState(SaveManager.loadForestMoodState(appContext))
         val last = SaveManager.loadLastRunSummary(appContext)?.let { summary ->
             ForestLastRunMemory(
                 score = summary.score.coerceAtLeast(0),
-                distanceM = summary.distanceM
-                    .takeIf { it.isFinite() }
-                    ?.coerceAtLeast(0f)
-                    ?.toInt()
-                    ?: 0,
+                distanceM = safeDistanceMetres(summary.distanceM),
                 routeLabel = routeLabel(summary.pacifistRouteTier),
                 moodLabel = summary.forestMood.displayName,
                 cleanPasses = summary.cleanPasses.coerceAtLeast(0),
@@ -73,22 +69,33 @@ internal object ForestRunLegacyComposer {
         }
         return ForestRunLegacySnapshot(
             highScore = SaveManager.loadHighScore(appContext).coerceAtLeast(0),
-            bestDistanceM = SaveManager.loadBestDistance(appContext)
-                .takeIf { it.isFinite() }
-                ?.coerceAtLeast(0f)
-                ?.toInt()
-                ?: 0,
-            totalRuns = mood.totalRuns.coerceAtLeast(0),
+            bestDistanceM = safeDistanceMetres(SaveManager.loadBestDistance(appContext)),
+            totalRuns = mood.totalRuns,
             currentMood = mood.currentMood,
-            moodStreak = mood.moodStreak.coerceAtLeast(0),
+            moodStreak = mood.moodStreak,
             dominantMood = mood.dominantMood,
-            gentleRuns = mood.gentleRuns.coerceAtLeast(0),
-            steadyRuns = mood.steadyRuns.coerceAtLeast(0),
-            fearfulRuns = mood.fearfulRuns.coerceAtLeast(0),
-            recklessRuns = mood.recklessRuns.coerceAtLeast(0),
+            gentleRuns = mood.gentleRuns,
+            steadyRuns = mood.steadyRuns,
+            fearfulRuns = mood.fearfulRuns,
+            recklessRuns = mood.recklessRuns,
             lastRun = last
         )
     }
+
+    internal fun sanitizedMoodState(state: ForestMoodState): ForestMoodState = state.copy(
+        moodStreak = state.moodStreak.coerceAtLeast(0),
+        totalRuns = state.totalRuns.coerceAtLeast(0),
+        gentleRuns = state.gentleRuns.coerceAtLeast(0),
+        recklessRuns = state.recklessRuns.coerceAtLeast(0),
+        fearfulRuns = state.fearfulRuns.coerceAtLeast(0),
+        steadyRuns = state.steadyRuns.coerceAtLeast(0)
+    )
+
+    internal fun safeDistanceMetres(distanceM: Float): Int =
+        distanceM.takeIf { it.isFinite() && it > 0f }
+            ?.coerceAtMost(Int.MAX_VALUE.toFloat())
+            ?.toInt()
+            ?: 0
 
     private fun routeLabel(tier: PacifistRouteTier): String = when (tier) {
         PacifistRouteTier.NONE -> "Unmarked path"
