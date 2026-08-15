@@ -4,23 +4,24 @@ The Forest Journal is the player-facing view of Forest Run's existing long-horiz
 
 ## Purpose
 
-Forest Run already remembers encounters, clean passes, mercy, harm, relationship stages, route history, Garden growth, wardrobe unlocks, biome friendship, return moments, and story pages. The Journal makes that persistence legible to the player so the forest's memory is visible rather than only influencing hidden presentation.
+Forest Run already remembers encounters, clean passes, mercy, harm, relationship stages, route history, Garden growth, wardrobe unlocks, biome friendship, run legacy, forest mood, return moments, and story pages. The Journal makes that persistence legible to the player so the forest's memory is visible rather than only influencing hidden presentation.
 
-The Journal is reachable from the willow menu through the **MEMORY → FOREST JOURNAL** action and is rendered with native Android views so long-form content remains scrollable and accessible independently from gameplay frame timing.
+The Journal is reachable from the willow menu through the **MEMORY → FOREST JOURNAL** action and is rendered with native Android views so long-form history remains scrollable and accessible independently from gameplay frame timing.
 
 ## Source-of-truth rule
 
 Opening or reading the Journal must not:
 
-- award Seeds;
+- award or spend Seeds;
 - purchase Garden plants;
 - refresh or fabricate costume unlocks;
 - increase encounter/pass/spare/hit counters;
 - mutate relationship affinity or tone;
 - mark a milestone as completed in a new achievement store;
 - create story pages;
-- change route counters;
-- alter the active costume.
+- change route counters or forest mood;
+- alter the active costume;
+- overwrite high score, distance, or last-run history.
 
 Every displayed value is derived from an existing runtime owner.
 
@@ -28,12 +29,40 @@ Every displayed value is derived from an existing runtime owner.
 | --- | --- |
 | 19-family discovery and encounter history | `EncounterFamilyCatalogue` + `PersistentMemoryManager` |
 | relationship stage/tone/Bond reward | `RelationshipArcSystem` |
-| Garden completion | `SaveManager` + `GardenEconomy` |
+| Garden order/names/costs | `GardenEconomy` |
+| Garden progress and Seed balance | `SaveManager` |
 | wardrobe completion/equipped style | `SaveManager` + `CostumeManager` + `CostumeStyle` |
 | peaceful-biome history | `PersistentMemoryManager` + `Biome` |
 | Kind/Merciful/Peaceful route history | `SaveManager` + `PacifistRouteTier` |
+| high score, distance, last Rest, world mood/run history | `SaveManager` + `ForestMoodSystem` |
 | memory pages | `StoryFragmentSystem` + `SaveManager` |
 | history marks | `PersistentMemoryManager` |
+
+## Journal sections
+
+The long-form Journal has ephemeral native-view filters:
+
+- **All**;
+- **Progress**;
+- **Bonds**;
+- **Memories**;
+- **Families**.
+
+The selected filter is intentionally not a progression fact and is not written to game persistence.
+
+## Run Legacy
+
+`ForestRunLegacyComposer` exposes durable run history that was already saved before the Journal existed:
+
+- high score;
+- best distance;
+- total remembered runs;
+- current forest mood and its streak;
+- dominant remembered mood;
+- Gentle/Steady/Fearful/Reckless run counts;
+- the most recent persisted Rest summary, including score, distance, route tier, mood, clean passes, mercy, hits, Seeds, Bloom conversions, and Rest quote.
+
+The Journal never records these values itself.
 
 ## Collection paths
 
@@ -46,6 +75,28 @@ The current Journal derives five bounded completion tracks:
 5. **Peace in Every Biome** — biomes whose friendship history is surfaced by persistent memory out of all ordinary `Biome` entries.
 
 Totals are derived at runtime rather than duplicated as Journal constants. If the authoritative catalogue grows, the Journal total grows with it.
+
+## Garden sanctuary history
+
+`GardenEconomy` now exposes the stable progression order, player-facing plant names, and Seed costs while Garden rendering still owns sprites/layout. `ForestGardenHistoryComposer` combines that catalogue with persisted Garden progress and lifetime Seed balance.
+
+Each Journal entry is derived as one of:
+
+- **Grown** — already part of the persistent sanctuary;
+- **Next** — the only catalogue entry currently eligible for purchase;
+- **Locked** — later in the ordered sanctuary path.
+
+The Journal can truthfully show whether the one legal next plant is affordable, but it cannot purchase it. `GardenPurchaseManager` remains the only purchase owner.
+
+## Path History
+
+`ForestPathHistoryComposer` turns the already-persisted route-tier counters into three authored path memories:
+
+- **Kind Path**;
+- **Merciful Path**;
+- **Peaceful Path**.
+
+Each shows how many completed runs of that tier have returned home. **Every Gentle Shape** is a derived recognition when all three route tiers have occurred at least once; it is not another saved achievement flag.
 
 ## Legacy milestones
 
@@ -91,7 +142,7 @@ The unlock hint comes from the costume's authored `unlockLabel`. Reading the Jou
 
 `StoryFragmentSystem` persists memory-page IDs when Rest, Garden, creature, weather, route, biome, Bloom, relationship, or return contexts become durable story memories.
 
-`ForestMemoryPagePresenter` converts those internal keys into player-facing titles and categories without exposing raw persistence identifiers. Known families receive specific presentation rules, while future/unknown IDs have a deterministic human-readable fallback.
+`ForestMemoryPagePresenter` converts those internal keys into player-facing titles and categories without exposing raw persistence identifiers. `ForestMemoryPageNarrative` then supplies pattern-specific prose for the actual durable history represented by known page families—for example clean Rest patterns, strained/warm relationships, biome or mood returns, Garden peace, repeated encounters, route memories, and Bloom traces. Future or unknown page IDs retain a deterministic safe fallback.
 
 Current categories include:
 
@@ -104,7 +155,7 @@ Current categories include:
 - Bloom Memory;
 - general Forest Memory.
 
-The presenter is intentionally a view projection. It does not decide whether a page is unlocked.
+Neither presenter decides whether a page is unlocked.
 
 ## Encounter entries
 
@@ -128,7 +179,7 @@ Undiscovered families remain named but do not reveal their authored lore/history
 
 The willow menu Journal entry is a stable virtual accessibility node and shares the exact same geometry as the visible/touch Journal chip.
 
-Inside `ForestJournalActivity`, content uses standard Android `ScrollView`, `LinearLayout`, `TextView`, and `Button` controls. Future portrait art, stamps, portraits, or notebook decoration must not replace readable semantic text with bitmap-only information.
+Inside `ForestJournalActivity`, content uses standard Android `ScrollView`, `LinearLayout`, `TextView`, and `Button` controls. Section filters have explicit selected/action descriptions. Future portrait art, stamps, portraits, or notebook decoration must not replace readable semantic text with bitmap-only information.
 
 ## Expansion rule
 
