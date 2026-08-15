@@ -83,15 +83,31 @@ The live card loop resolves the canonical entry with `GardenEconomy.plantForInde
 
 This closes the previous presentation-maintainability debt without changing purchase indices, visual order, animation, touch geometry, sprites, colours, emoji, wardrobe behavior, or persistence semantics.
 
-## 5. Current source-addressable remainder
+The corresponding Robolectric boundary test was also reconciled after this deduplication. `GardenScreenBoundaryTest` no longer tries to read removed presentation-owned `GardenPlant.name` / `seedCost` fields; instead it verifies visual-catalogue cardinality against `GardenEconomy`, contiguous canonical indices, nonblank/unique canonical names, and positive canonical prices while retaining the existing frame/tap/purchase boundary coverage.
 
-No known correctness or missing-player-feature item remains from the product-completion queue covered by this continuation.
+## 5. Collision haptic ports are semantic at the domain boundary
 
-One low-value compatibility cleanup remains intentionally nonblocking: duration-shaped haptic primitive names (`longPulse`, `mediumPulse`, `doubleTap`) still exist at old adapter/test boundaries beneath semantic collision methods. Domain orchestration already uses `terminalImpactHaptic`, `stumbleImpactHaptic`, and `mercyAcknowledgementHaptic`; removing the compatibility names now would require a large `GameView` rename-only rewrite with no player-visible behavior change. That should be done only when the live adapter is next edited for substantive behavior.
+The final source-maintainability debt from the earlier sweep is now closed.
+
+`TerminalHitImpactEffectSink` no longer exposes `longPulse`; its haptic port is only `terminalImpactHaptic`. `NonTerminalCollisionEffectSink` no longer exposes `mediumPulse` or `doubleTap`; its haptic ports are only `stumbleImpactHaptic` and `mercyAcknowledgementHaptic`.
+
+`TerminalHitImpactCoordinator` and `NonTerminalCollisionOutcomeCoordinator` therefore describe collision intent rather than device-duration primitives. `LiveCollisionEffects` maps those semantic ports to the same pre-existing runtime callbacks, so effect ordering, suppression durations, physical haptic waveform selection, game state, and persistence are unchanged.
+
+The large `GameView` owner was deliberately not rewritten for naming alone. Its narrow adapter-construction callback labels (`longPulseAction`, `mediumPulseAction`, `doubleTapAction`) still describe the physical callbacks supplied to `LiveCollisionEffects`; those names are now confined below the domain interface rather than leaking into collision orchestration.
+
+Focused Kotlin tests now assert semantic haptic events, while `scripts/test_terminal_hit_impact_contract.py` and `scripts/test_nonterminal_collision_outcome_contract.py` require the semantic ports and reject reintroduction of the old physical methods into the coordinator interfaces.
+
+The Git-object update that made this atomic temporarily changed those two Python contract file modes; a follow-up metadata-only fast-forward restored their historical `100644` modes. No source content was reverted.
+
+## 6. Current source-addressable remainder
+
+No known correctness, missing-player-feature, or justified source-architecture item remains from the product-completion queue covered by this continuation.
 
 No missing gameplay state machine, Bloom system, collision arbiter, persistence layer, relationship engine, Garden economy, visitor system, Journal persistence store, accessibility semantic architecture, ghost system, runtime ML model, cloud/account system, advertising system, or multiplayer layer is justified by the current product goals.
 
-## 6. Still external / candidate-bound
+Compiler warnings that remain are not being promoted into invented product debt. In particular, ghost-ordinal `PlayerState.BLOOM` compatibility and platform-compatibility accessibility APIs must not be rewritten merely to silence deprecation warnings. Small unused-parameter or redundant-initializer warnings are nonblocking maintainability observations unless a future substantive edit naturally removes them.
+
+## 7. Still external / candidate-bound
 
 The following remain intentionally unresolved by source work:
 
@@ -110,6 +126,8 @@ The following remain intentionally unresolved by source work:
 
 These must remain open until real external evidence or owner decisions exist.
 
-## 7. Validation rule
+## 8. Validation rule and current status
 
 Because each direct-to-`main` commit starts a new candidate SHA, only the final exact-head workflow may be used as completion evidence. Superseded or cancelled runs are useful diagnostics but are not a substitute for a green host/release job and green API-35 connected job on the same final SHA.
+
+At the time this record is committed, the source-completion implementation is closed but final exact-head validation is still pending. This document must not be interpreted as claiming a green candidate until both workflow jobs complete successfully on this document-inclusive `main` SHA.
