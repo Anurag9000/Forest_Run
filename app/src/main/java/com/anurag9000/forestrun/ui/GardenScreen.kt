@@ -14,9 +14,11 @@ import com.anurag9000.forestrun.engine.CostumeManager
 import com.anurag9000.forestrun.engine.CinematicOverlayRenderer
 import com.anurag9000.forestrun.engine.CinematicScene
 import com.anurag9000.forestrun.engine.GardenEconomy
+import com.anurag9000.forestrun.engine.GardenPurchaseInteractionCoordinator
 import com.anurag9000.forestrun.engine.GardenSanctuaryPlanner
 import com.anurag9000.forestrun.engine.GardenSanctuaryState
 import com.anurag9000.forestrun.engine.GameConstants
+import com.anurag9000.forestrun.engine.HapticManager
 import com.anurag9000.forestrun.engine.PacifistPresentation
 import com.anurag9000.forestrun.engine.PersistentMemoryManager
 import com.anurag9000.forestrun.engine.PostRunReflectionEntry
@@ -69,6 +71,11 @@ class GardenScreen internal constructor(
     private val persistenceFacade: ApplicationPersistenceFacade =
         ApplicationPersistenceFacade.android(context)
 ) {
+    private val purchaseInteraction = GardenPurchaseInteractionCoordinator(
+        purchaseAction = persistenceFacade::purchaseNextGardenPlant,
+        gardenGrowthFeedbackAction = HapticManager::gardenGrowth
+    )
+
     // ── Plant catalogue ───────────────────────────────────────────────────
 
     data class GardenPlant(
@@ -428,7 +435,7 @@ class GardenScreen internal constructor(
             if (tapX in cx - CARD_W / 2f..cx + CARD_W / 2f &&
                 tapY in cy - CARD_H / 2f..cy + CARD_H / 2f) {
                 if (i == unlockedCount) {
-                    val result = persistenceFacade.purchaseNextGardenPlant(i)
+                    val result = purchaseInteraction.purchase(i)
                     unlockedCount = result.unlockedCount.coerceIn(1, catalogue.size)
                     lifeSeeds = result.remainingSeeds.coerceAtLeast(0)
                     if (result.purchased) {
