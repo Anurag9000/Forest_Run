@@ -2,7 +2,7 @@
 
 **Platform:** native Android/Kotlin with a custom `SurfaceView` engine  
 **Package:** `com.anurag9000.forestrun`  
-**Current orientation:** fixed landscape, pending final product/device acceptance  
+**Current orientation:** fixed landscape by product/source design; representative-device acceptance remains required  
 **Nominal frame target:** 60 Hz  
 **Tone:** cottagecore, intimate, expressive, and restorative
 
@@ -18,8 +18,8 @@ Forest Run is an endless runner built around a living forest, creature personali
 | Alive | Wind, particles, animation, dialogue, music, and persistent reactions give the forest presence |
 | Readable | Hazards advertise their true collision geometry and required response before contact |
 | Forgiving | Mercy windows, nonlethal stumbles, and soft failure reward learning rather than surprise |
-| Persistent | Seeds, relationships, Garden state, route history, and return moments give later sessions meaning |
-| Honest | Documentation, telegraphs, hitboxes, and rewards must agree with runtime behavior |
+| Persistent | Seeds, relationships, Garden state, route history, return moments, and the Journal give later sessions meaning |
+| Honest | Documentation, telegraphs, hitboxes, rewards, collection totals, and release claims must agree with runtime behavior |
 
 Every creature should have a recognizable voice and memory, but uniqueness may come from motion, timing, geometry, reward, relationship, or presentation. It does not need invented physics merely to sound distinct.
 
@@ -88,7 +88,7 @@ A lethal outcome advances through the explicit death/game-over/restart flow. The
 
 ### Garden return
 
-Seeds are persistent Garden currency. The Garden reflects unlocked plants, relationships, route history, recent run tone, and return context. Spending must remain authoritative across run resets.
+Seeds are persistent Garden currency. The Garden reflects unlocked plants, relationships, route history, recent run tone, return context, wardrobe state, and remembered story fragments. Spending must remain authoritative across run resets.
 
 ## 4. Input and locomotion
 
@@ -150,13 +150,13 @@ Route tiers are derived from actual run outcomes:
 
 The exact thresholds live in `PacifistTracker` and its tests; this document intentionally does not duplicate constants that can drift.
 
-Route signals influence Rest, Garden, return moments, world opinion, sanctuary presentation, and persistent history.
+Route signals influence Rest, Garden, return moments, world opinion, sanctuary presentation, persistent history, and the Journal’s Path History.
 
 ## 8. Forest memory
 
 ### Forest mood
 
-Recent conduct is summarized into a mood such as gentle, reckless, fearful, or steady. It affects sanctuary and post-run presentation.
+Recent conduct is summarized into a mood such as gentle, reckless, fearful, or steady. It affects sanctuary and post-run presentation and contributes to the persistent Run Legacy view.
 
 ### Relationships
 
@@ -170,29 +170,56 @@ Return writing considers local day, absence, rough-run streak, route, Bloom use,
 
 Story fragments, Rest quotes, menu atmosphere, Garden arrival, and carry-home wording are composed from shared state so the macro loop remains coherent rather than presenting independent random text.
 
+### Forest Journal
+
+The Forest Journal is the player-facing memory book for the long-horizon state that gameplay already owns. It must remain a **read-only projection** rather than becoming a second progression database.
+
+Its current completion/memory surfaces derive:
+
+- discovery across all 19 encounter families;
+- six persistent relationship Bonds;
+- nine Garden catalogue entries;
+- eight wardrobe styles;
+- peaceful history across all five biomes;
+- Kind, Merciful, and Peaceful route history;
+- high-score, best-distance, run-count, mood, and last-Rest legacy;
+- history marks and durable story pages.
+
+`Every Gentle Shape` is derived when all three positive route tiers have returned home. The whole-forest capstone is derived from the five collection tracks plus that route-history pillar. Neither recognition creates a new persistent achievement flag.
+
+Opening, filtering, or reading the Journal must never award/spend Seeds, purchase Garden plants, refresh unlocks, mutate relationships, create story pages, or increment progression counters.
+
+See `docs/FOREST_JOURNAL.md` for the ownership contract.
+
 ## 9. Garden progression
 
-Current plant unlock order and costs:
+`GardenEconomy` is the canonical owner of progression order, full/compact player-facing names, and Seed costs. The Garden screen owns visual presentation such as sprites, colours, and card layout; `GardenPurchaseManager` owns the atomic purchase boundary.
 
-| Plant | Seed cost |
-|---|---:|
-| Cactus | 5 |
-| Lily of the Valley | 10 |
-| Hyacinth | 15 |
-| Eucalyptus | 20 |
-| Vanilla Orchid | 25 |
-| Bamboo | 30 |
-| Cherry Blossom | 40 |
-| Weeping Willow | 50 |
-| Jacaranda | 60 |
+Current unlock order and costs:
 
-Catalogue, statistics, last-run, wardrobe, and run controls share one tested layout plan. Hardware acceptance is still required for density, cutouts, unusual aspect ratios, text size, and touch comfort.
+| Order | Plant | Seed cost |
+|---:|---|---:|
+| 1 | Lily | 15 |
+| 2 | Cactus | 20 |
+| 3 | Hyacinth | 25 |
+| 4 | Eucalyptus | 30 |
+| 5 | Vanilla Orchid | 40 |
+| 6 | Weeping Willow | 50 |
+| 7 | Jacaranda | 60 |
+| 8 | Bamboo | 75 |
+| 9 | Cherry Blossom | 100 |
+
+The first entry is the initial Garden state. Later plants unlock sequentially; only the single next catalogue entry may be purchased. Journal presentation may show affordability but may not perform the purchase.
+
+Catalogue, statistics, last-run, wardrobe, and run controls share one tested layout plan. Hardware acceptance remains required for density, cutouts, unusual aspect ratios, text size, and touch comfort.
 
 ## 10. Audio, haptics, and accessibility
 
 Music transitions through menu/Garden, early/mid/late run, Bloom, and Rest identities. Crossfade ownership is deterministic and frequent parameter writes are throttled.
 
 SFX loading is explicit. Mandatory missing assets fail non-debug validation; optional Bloom sounds have defined fallbacks.
+
+Haptic orchestration should use semantic event names rather than duration-shaped language. Current semantic cues include light confirmation, stumble impact, terminal impact, mercy acknowledgement, Garden growth, and Bloom surge. Compatibility wrappers may exist at old adapter boundaries without changing physical timing.
 
 Persistent controls independently manage:
 
@@ -270,7 +297,7 @@ The following statements remain prohibited until measured:
 - “all art final”;
 - “all entities physically validated.”
 
-Release acceptance still requires profiling, representative devices, signed installation, store-path testing, final artwork/screenshots/metadata, and current policy review.
+Release acceptance still requires profiling, representative devices, signed installation, store-path testing, final artwork/screenshots/metadata, current policy review, and accountable approval for the exact candidate.
 
 ## 14. Design mantras
 
@@ -281,4 +308,5 @@ Every implementation decision should answer:
 3. Is failure readable and recoverable?
 4. Does presentation agree with collision and reward semantics?
 5. Does it remain charming without sacrificing clarity?
-6. Is audio identity present where it adds information or emotion?
+6. Is audio/haptic identity present where it adds information or emotion?
+7. Is long-horizon progress visible without duplicating persistence ownership?
