@@ -13,9 +13,14 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.anurag9000.forestrun.engine.EncounterFamilyGroup
+import com.anurag9000.forestrun.engine.ForestCollectionProgressComposer
+import com.anurag9000.forestrun.engine.ForestCollectionSnapshot
+import com.anurag9000.forestrun.engine.ForestCollectionTrack
 import com.anurag9000.forestrun.engine.ForestJournalComposer
 import com.anurag9000.forestrun.engine.ForestJournalEntry
 import com.anurag9000.forestrun.engine.ForestJournalSnapshot
+import com.anurag9000.forestrun.engine.ForestLegacyMilestone
+import com.anurag9000.forestrun.engine.ForestMemoryPagePresentation
 
 /**
  * Native Android presentation of the persistent Forest Journal.
@@ -38,6 +43,7 @@ class ForestJournalActivity : Activity() {
 
     private fun renderJournal() {
         val snapshot = ForestJournalComposer.snapshot(this)
+        val collection = ForestCollectionProgressComposer.snapshot(this, snapshot)
         val scroll = ScrollView(this).apply {
             isFillViewport = true
             setBackgroundColor(Color.rgb(24, 39, 31))
@@ -58,7 +64,19 @@ class ForestJournalActivity : Activity() {
         content.addView(text("FOREST JOURNAL", 30f, Color.rgb(246, 231, 151), true))
         content.addView(text("What the forest remembers between runs", 16f, Color.rgb(206, 225, 198)))
         content.addView(spacer(12))
-        content.addView(summaryView(snapshot))
+        content.addView(summaryView(snapshot, collection))
+
+        content.addView(sectionTitle("COLLECTION PATH"))
+        collection.tracks.forEach { track ->
+            content.addView(collectionTrackCard(track))
+        }
+
+        content.addView(sectionTitle("LEGACY MILESTONES"))
+        collection.milestones
+            .sortedByDescending(ForestLegacyMilestone::achieved)
+            .forEach { milestone ->
+                content.addView(milestoneCard(milestone))
+            }
 
         if (snapshot.historyMarks.isNotEmpty()) {
             content.addView(sectionTitle("MEMORY MARKS"))
@@ -71,6 +89,21 @@ class ForestJournalActivity : Activity() {
                         emphasized = true
                     )
                 )
+            }
+        }
+
+        content.addView(sectionTitle("MEMORY PAGES"))
+        if (collection.memoryPages.isEmpty()) {
+            content.addView(
+                card(
+                    title = "The pages are still quiet",
+                    subtitle = "Rest, relationships, routes, Bloom, weather, and Garden reflections can leave pages behind.",
+                    detail = "Nothing must be collected from a checklist; pages appear when the forest has something persistent to remember."
+                )
+            )
+        } else {
+            collection.memoryPages.forEach { page ->
+                content.addView(memoryPageCard(page))
             }
         }
 
@@ -98,12 +131,17 @@ class ForestJournalActivity : Activity() {
         setContentView(scroll)
     }
 
-    private fun summaryView(snapshot: ForestJournalSnapshot): View {
+    private fun summaryView(
+        snapshot: ForestJournalSnapshot,
+        collection: ForestCollectionSnapshot
+    ): View {
         val peaceful = snapshot.peacefulBiomes
             .take(3)
             .joinToString { "${it.biome.displayName} ${it.friendshipCount}" }
             .ifBlank { "None yet" }
         val strongest = snapshot.strongestRelationship ?: "Still unfolding"
+        val completedTracks = collection.tracks.count(ForestCollectionTrack::isComplete)
+        val achievedMilestones = collection.milestones.count(ForestLegacyMilestone::achieved)
         val detail = buildString {
             append("${snapshot.discoveredFamilies}/${snapshot.totalFamilies} families discovered")
             append("  •  ${snapshot.totalEncounters} meetings")
@@ -112,6 +150,11 @@ class ForestJournalActivity : Activity() {
             append("  •  ${snapshot.totalHits} hits")
             append("\nMemory pages: ${snapshot.memoryPageCount}")
             append("  •  Strongest bond: $strongest")
+            append("\nCollection paths complete: $completedTracks/${collection.tracks.size}")
+            append("  •  Legacy milestones: $achievedMilestones/${collection.milestones.size}")
+            append("\nGentle routes: ${collection.kindRuns} kind")
+            append("  •  ${collection.mercifulRuns} merciful")
+            append("  •  ${collection.peacefulRuns} peaceful")
             append("\nPeace carried home: $peaceful")
         }
         return card(
@@ -121,6 +164,34 @@ class ForestJournalActivity : Activity() {
             emphasized = true
         )
     }
+
+    private fun collectionTrackCard(track: ForestCollectionTrack): View = card(
+        title = track.label,
+        subtitle = if (track.isComplete) {
+            "${track.progressLabel} — Complete"
+        } else {
+            "${track.progressLabel} remembered"
+        },
+        detail = track.detail,
+        emphasized = track.isComplete
+    )
+
+    private fun milestoneCard(milestone: ForestLegacyMilestone): View = card(
+        title = if (milestone.achieved) milestone.title else "○ ${milestone.title}",
+        subtitle = if (milestone.achieved) "Remembered • ${milestone.progress}" else milestone.progress,
+        detail = if (milestone.achieved) {
+            milestone.line
+        } else {
+            "Not yet remembered. ${milestone.line}"
+        },
+        emphasized = milestone.achieved
+    )
+
+    private fun memoryPageCard(page: ForestMemoryPagePresentation): View = card(
+        title = page.title,
+        subtitle = page.category,
+        detail = page.line
+    )
 
     private fun entryCard(entry: ForestJournalEntry): View {
         val relationship = entry.relationshipStage?.let { "  •  Bond: ${it.displayName}" }.orEmpty()
