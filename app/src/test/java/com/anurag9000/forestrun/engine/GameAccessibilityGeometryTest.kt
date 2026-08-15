@@ -1,5 +1,6 @@
 package com.anurag9000.forestrun.engine
 
+import com.anurag9000.forestrun.ui.FeedbackSettingsPanelLayout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,6 +31,23 @@ class GameAccessibilityGeometryTest {
                 assertTrue(bounds.top < bounds.bottom)
             }
         }
+    }
+
+    @Test
+    fun journalAccessibilityBoundsMatchVisibleTouchChipExactly() {
+        val width = 1920f
+        val height = 1080f
+        val visible = FeedbackSettingsPanelLayout.journalBounds(width, height)
+        val semantic = GameAccessibilityGeometry.boundsFor(
+            AccessibilityNodeIds.MENU_JOURNAL,
+            width,
+            height
+        )
+
+        assertEquals(visible.left, semantic.left, 0.001f)
+        assertEquals(visible.top, semantic.top, 0.001f)
+        assertEquals(visible.right, semantic.right, 0.001f)
+        assertEquals(visible.bottom, semantic.bottom, 0.001f)
     }
 
     @Test
