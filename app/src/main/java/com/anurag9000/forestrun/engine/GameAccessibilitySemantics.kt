@@ -27,6 +27,7 @@ internal object AccessibilityNodeIds {
     const val MENU_CONTINUE = 100
     const val MENU_GARDEN = 110
     const val MENU_SETTINGS = 120
+    const val MENU_JOURNAL = 130
     const val SETTINGS_REDUCED_MOTION = 200
     const val SETTINGS_AUDIO = 210
     const val SETTINGS_HAPTICS = 220
@@ -140,6 +141,12 @@ internal object GameAccessibilitySemantics {
             id = AccessibilityNodeIds.MENU_SETTINGS,
             order = 30,
             label = "Open feedback settings",
+            action = AccessibilitySemanticAction.ACTIVATE
+        ),
+        node(
+            id = AccessibilityNodeIds.MENU_JOURNAL,
+            order = 40,
+            label = "Open Forest Journal",
             action = AccessibilitySemanticAction.ACTIVATE
         )
     )
