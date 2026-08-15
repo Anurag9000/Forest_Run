@@ -62,7 +62,8 @@ class ApplicationPersistenceFacadeAdoptionContractTest(unittest.TestCase):
         self.assertNotIn("PersistentMemoryManager.recordEncounter(context, type)", self.entity_manager)
 
     def test_touch_ui_writes_use_facade(self) -> None:
-        self.assertIn("persistenceFacade.purchaseNextGardenPlant(i)", self.garden)
+        self.assertIn("persistenceFacade::purchaseNextGardenPlant", self.garden)
+        self.assertIn("purchaseInteraction.purchase(i)", self.garden)
         self.assertIn("persistenceFacade.equipCostume(style)", self.garden)
         self.assertNotIn("GardenPurchaseManager.purchaseNext(", self.garden)
         self.assertNotIn("CostumeManager.equip(context, style)", self.garden)
