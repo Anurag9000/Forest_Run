@@ -32,6 +32,7 @@ internal object GameAccessibilityGeometry {
             AccessibilityNodeIds.MENU_CONTINUE -> box(width, height, 0.28f, 0.79f, 0.72f, 0.98f)
             AccessibilityNodeIds.MENU_GARDEN -> box(width, height, 0f, 0.80f, 0.35f, 1f)
             AccessibilityNodeIds.MENU_SETTINGS -> box(width, height, 0.72f, 0.55f, 1f, 0.82f)
+            AccessibilityNodeIds.MENU_JOURNAL -> journalBounds(width, height)
 
             AccessibilityNodeIds.SETTINGS_REDUCED_MOTION -> settingsBounds(width, height, 0)
             AccessibilityNodeIds.SETTINGS_AUDIO -> settingsBounds(width, height, 1)
@@ -65,6 +66,11 @@ internal object GameAccessibilityGeometry {
 
             else -> box(width, height, 0.05f, 0.05f, 0.95f, 0.95f)
         }
+    }
+
+    private fun journalBounds(width: Float, height: Float): AccessibilityNodeBounds {
+        val rect = FeedbackSettingsPanelLayout.journalBounds(width, height)
+        return AccessibilityNodeBounds(rect.left, rect.top, rect.right, rect.bottom)
     }
 
     private fun settingsBounds(width: Float, height: Float, index: Int): AccessibilityNodeBounds {
