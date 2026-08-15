@@ -13,9 +13,6 @@ GAME_DESIGN = ROOT / "docs/GAME_DESIGN.md"
 ENTRY_PATTERN = re.compile(
     r'GardenPlantEconomy\(\s*(\d+)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(\d+)\s*\)'
 )
-CARD_PATTERN = re.compile(
-    r'GardenPlant\(\s*"([^"]+)"\s*,\s*(\d+)\s*,'
-)
 
 
 def canonical_entries() -> list[tuple[int, str, str, int]]:
@@ -52,13 +49,19 @@ class GardenCatalogueContractTest(unittest.TestCase):
         self.assertIn("GardenEconomy", design)
         self.assertIn("Forest Journal", design)
 
-    def test_canvas_card_metadata_matches_canonical_economy_until_deduplicated(self) -> None:
-        entries = canonical_entries()
+    def test_canvas_cards_derive_names_and_costs_from_canonical_economy(self) -> None:
         source = GARDEN.read_text(encoding="utf-8")
-        cards = [(name, int(cost)) for name, cost in CARD_PATTERN.findall(source)]
-        expected = [(entry[2], entry[3]) for entry in entries]
 
-        self.assertEqual(expected, cards)
+        self.assertIn("import com.anurag9000.forestrun.engine.GardenEconomy", source)
+        self.assertIn("catalogue.size == GardenEconomy.catalogueSize", source)
+        self.assertIn("catalogueSprites.size == GardenEconomy.catalogueSize", source)
+        self.assertIn("GardenEconomy.plantForIndex(i)", source)
+        self.assertIn("economy.compactName", source)
+        self.assertIn("economy.seedCost", source)
+        self.assertNotIn("val name: String", source)
+        self.assertNotIn("val seedCost: Int", source)
+        self.assertNotRegex(source, r'GardenPlant\(\s*"')
+
         self.assertIn("persistenceFacade.purchaseNextGardenPlant(i)", source)
         self.assertNotIn("SaveManager.saveGardenProgress", source)
         self.assertNotIn("SaveManager.saveLifetimeSeeds", source)
