@@ -29,7 +29,6 @@ class ForestJournalActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = Color.rgb(28, 45, 35)
         window.navigationBarColor = Color.rgb(20, 34, 27)
-        renderJournal()
     }
 
     override fun onResume() {
