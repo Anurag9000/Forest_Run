@@ -2,6 +2,7 @@ package com.anurag9000.forestrun.engine
 
 import android.content.Context
 import com.anurag9000.forestrun.entities.CostumeStyle
+import com.anurag9000.forestrun.entities.EntityType
 
 /**
  * Read-only projection of long-horizon progression already owned by gameplay,
@@ -133,6 +134,12 @@ internal data class ForestCollectionSnapshot(
     }
 }
 
+private enum class JournalRelationshipTone {
+    WARM,
+    STRAINED,
+    NEUTRAL
+}
+
 /**
  * Canonical collection view used by the Forest Journal.
  *
@@ -149,10 +156,9 @@ internal object ForestCollectionProgressComposer {
         require(trackedRelationships > 0) {
             "Forest Journal must retain at least one persistent relationship family"
         }
-        val bondedRelationships = RelationshipArcSystem.relationshipsAtOrAbove(
-            appContext,
-            RelationshipStage.MILESTONE
-        ).size.coerceIn(0, trackedRelationships)
+        val bondedRelationships = journal.entries
+            .count { it.relationshipStage == RelationshipStage.MILESTONE }
+            .coerceIn(0, trackedRelationships)
         val gardenPlants = SaveManager.loadGardenProgress(appContext)
             .coerceIn(1, GardenEconomy.catalogueSize)
         val availableCostumes = CostumeManager.availableCostumes(appContext)
@@ -271,43 +277,7 @@ internal object ForestCollectionProgressComposer {
         val relationships = journal.entries
             .asSequence()
             .filter { it.discovered && it.relationshipStage != null }
-            .map { entry ->
-                val type = entry.type
-                val stage = requireNotNull(entry.relationshipStage)
-                val warm = RelationshipArcSystem.isWarmBond(appContext, type)
-                val strained = RelationshipArcSystem.isStrainedBond(appContext, type)
-                val reward = RelationshipArcSystem.milestoneRewardFor(appContext, type)
-                ForestRelationshipMemory(
-                    displayName = entry.displayName,
-                    stage = stage,
-                    toneLabel = when {
-                        strained -> "Strained"
-                        warm -> "Warm"
-                        stage == RelationshipStage.MILESTONE -> "Bonded"
-                        stage == RelationshipStage.TRUST -> "Trusting"
-                        stage == RelationshipStage.RECOGNITION -> "Recognizing"
-                        else -> "First impression"
-                    },
-                    toneLine = when {
-                        strained -> "Familiarity remains, but repeated harm has made this bond hold itself more carefully."
-                        warm && stage == RelationshipStage.MILESTONE ->
-                            "Repeated gentle outcomes have turned recognition into a warm relationship that now changes home and return moments."
-                        warm -> "Gentle outcomes are becoming a recognizable pattern instead of isolated good luck."
-                        stage == RelationshipStage.MILESTONE ->
-                            "This relationship reached its Bond, though its current tone still reflects the history that followed."
-                        stage == RelationshipStage.TRUST ->
-                            "The forest now treats this creature as someone who knows your habits, not merely someone you have met."
-                        stage == RelationshipStage.RECOGNITION ->
-                            "This creature has begun to recognize the pattern of your crossings."
-                        else -> "The relationship is still learning what your choices usually mean."
-                    },
-                    milestoneTitle = reward?.label,
-                    milestoneLine = reward?.summary,
-                    ritualTitle = reward?.bondRitualLabel,
-                    ritualLine = reward?.bondRitualLine,
-                    costumeMemory = reward?.costumeReward?.displayName
-                )
-            }
+            .map { entry -> relationshipMemory(appContext, entry) }
             .toList()
 
         val wardrobe = CostumeStyle.entries.map { style ->
@@ -338,6 +308,66 @@ internal object ForestCollectionProgressComposer {
             mercifulRuns = mercifulRuns,
             peacefulRuns = peacefulRuns
         )
+    }
+
+    private fun relationshipMemory(
+        context: Context,
+        entry: ForestJournalEntry
+    ): ForestRelationshipMemory {
+        val type = entry.type
+        val stage = requireNotNull(entry.relationshipStage)
+        val tone = relationshipTone(context, type, stage)
+        val reward = RelationshipArcSystem.milestoneRewardFor(context, type)
+        val warm = tone == JournalRelationshipTone.WARM
+        val strained = tone == JournalRelationshipTone.STRAINED
+        return ForestRelationshipMemory(
+            displayName = entry.displayName,
+            stage = stage,
+            toneLabel = when {
+                strained -> "Strained"
+                warm -> "Warm"
+                stage == RelationshipStage.MILESTONE -> "Bonded"
+                stage == RelationshipStage.TRUST -> "Trusting"
+                stage == RelationshipStage.RECOGNITION -> "Recognizing"
+                else -> "First impression"
+            },
+            toneLine = when {
+                strained -> "Familiarity remains, but repeated harm has made this bond hold itself more carefully."
+                warm && stage == RelationshipStage.MILESTONE ->
+                    "Repeated gentle outcomes have turned recognition into a warm relationship that now changes home and return moments."
+                warm -> "Gentle outcomes are becoming a recognizable pattern instead of isolated good luck."
+                stage == RelationshipStage.MILESTONE ->
+                    "This relationship reached its Bond, though its current tone still reflects the history that followed."
+                stage == RelationshipStage.TRUST ->
+                    "The forest now treats this creature as someone who knows your habits, not merely someone you have met."
+                stage == RelationshipStage.RECOGNITION ->
+                    "This creature has begun to recognize the pattern of your crossings."
+                else -> "The relationship is still learning what your choices usually mean."
+            },
+            milestoneTitle = reward?.label,
+            milestoneLine = reward?.summary,
+            ritualTitle = reward?.bondRitualLabel,
+            ritualLine = reward?.bondRitualLine,
+            costumeMemory = reward?.costumeReward?.displayName
+        )
+    }
+
+    /** Mirrors RelationshipArcSystem tone semantics using read-only counters only. */
+    private fun relationshipTone(
+        context: Context,
+        type: EntityType,
+        stage: RelationshipStage
+    ): JournalRelationshipTone {
+        val spared = SaveManager.loadSparedCount(context, type)
+        val hits = SaveManager.loadHitCount(context, type)
+        val kindnessStreak = SaveManager.loadKindnessStreak(context, type)
+        val tenderStreak = SaveManager.loadTenderStreak(context, type)
+        return when {
+            kindnessStreak >= 2 || (spared > hits && spared >= 1) -> JournalRelationshipTone.WARM
+            stage.ordinal >= RelationshipStage.RECOGNITION.ordinal &&
+                (tenderStreak >= 2 || (hits > spared && hits >= 2)) -> JournalRelationshipTone.STRAINED
+            else -> JournalRelationshipTone.NEUTRAL
+        }
     }
 }
 
