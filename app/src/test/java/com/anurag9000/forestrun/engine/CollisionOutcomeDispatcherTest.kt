@@ -163,7 +163,7 @@ class CollisionOutcomeDispatcherTest {
                     override fun shakeHit() { calls += "impact:shake" }
                     override fun playHit() { calls += "impact:hit" }
                     override fun playRest() { calls += "impact:music" }
-                    override fun longPulse() { calls += "impact:haptic" }
+                    override fun terminalImpactHaptic() { calls += "impact:haptic" }
                 }
             ),
             terminalHitOutcome = TerminalHitOutcomeCoordinator(
@@ -207,10 +207,10 @@ class CollisionOutcomeDispatcherTest {
                     override fun showStumbleFlash(dominantColor: Int) { calls += "nonterminal:flash:$dominantColor" }
                     override fun playNonLethalHit() { calls += "nonterminal:hit" }
                     override fun shakeHit() { calls += "nonterminal:shake" }
-                    override fun mediumPulse() { calls += "nonterminal:haptic" }
+                    override fun stumbleImpactHaptic() { calls += "nonterminal:haptic" }
                     override fun showMercyFlash() { calls += "nonterminal:mercyFlash" }
                     override fun playMercyMiss() { calls += "nonterminal:mercySound" }
-                    override fun doubleTap() { calls += "nonterminal:doubleTap" }
+                    override fun mercyAcknowledgementHaptic() { calls += "nonterminal:doubleTap" }
                     override fun emitMercyStars(centerX: Float, centerY: Float) {
                         calls += "nonterminal:stars:$centerX:$centerY"
                     }
