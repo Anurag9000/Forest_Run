@@ -62,7 +62,8 @@ class GardenCatalogueContractTest(unittest.TestCase):
         self.assertNotIn("val seedCost: Int", source)
         self.assertNotRegex(source, r'GardenPlant\(\s*"')
 
-        self.assertIn("persistenceFacade.purchaseNextGardenPlant(i)", source)
+        self.assertIn("persistenceFacade::purchaseNextGardenPlant", source)
+        self.assertIn("purchaseInteraction.purchase(i)", source)
         self.assertNotIn("SaveManager.saveGardenProgress", source)
         self.assertNotIn("SaveManager.saveLifetimeSeeds", source)
 
