@@ -35,6 +35,7 @@ It now surfaces:
 - Bond rewards, rituals, and wearable memories;
 - five collection tracks;
 - derived long-horizon milestones;
+- the six-pillar whole-forest completion capstone;
 - full eight-style wardrobe lock/available/equipped state;
 - exact nine-plant Garden sanctuary progression;
 - Seed balance and next-plant affordability without allowing purchases;
@@ -65,9 +66,12 @@ New read-only projections separate player-facing interpretation from persistence
 - `ForestGardenHistoryComposer`;
 - `ForestPathHistoryComposer`;
 - `ForestRunLegacyComposer`;
+- `ForestCompletionCapstoneComposer`;
 - `ForestMemoryPagePresenter` / `ForestMemoryPageNarrative`.
 
-No new currency, achievement flag, or save namespace was introduced.
+No new currency, achievement flag, capstone flag, or save namespace was introduced.
+
+The whole-forest capstone combines the five bounded collection tracks with one sixth route-history pillar. Until all six are complete it presents **A Forest Still Becoming**; once all are complete it presents **The Forest Knows Your Name**. Completion is recalculated from authoritative histories rather than stored separately.
 
 ### Garden catalogue ownership
 
