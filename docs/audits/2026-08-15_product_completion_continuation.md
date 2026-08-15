@@ -35,9 +35,9 @@ No SharedPreferences/save-game key was added.
 
 `scripts/test_forest_journal_lifecycle_contract.py` additionally rejects persistence APIs from the Activity and locks the Bundle-only ownership rule.
 
-## 3. Garden purchase feedback policy is implemented above persistence
+## 3. Garden purchase feedback parity is live and remains above persistence
 
-`GardenPurchaseInteractionCoordinator` now defines the presentation policy for Garden growth feedback:
+`GardenPurchaseFeedbackPolicy` is now the single success-to-feedback rule used by both Garden input modalities. `GardenPurchaseInteractionCoordinator` applies it for result-bearing callers:
 
 - invoke the authoritative purchase action exactly once;
 - return its exact `GardenPurchaseResult` unchanged;
@@ -48,35 +48,21 @@ No SharedPreferences/save-game key was added.
 - emit no growth cue for `INSUFFICIENT_SEEDS`;
 - emit no growth cue for `WRITE_FAILED`.
 
-`GardenPurchaseInteractionCoordinatorTest` covers every status.
+Touch purchases in `GardenScreen` now go through a `GardenPurchaseInteractionCoordinator` built from `persistenceFacade::purchaseNextGardenPlant` and `HapticManager::gardenGrowth`. The existing authoritative result still drives local Seed/unlock state, card animation, and particle feedback exactly as before.
 
-`scripts/test_garden_purchase_feedback_contract.py` protects the architectural boundary: neither `GardenPurchaseManager` nor `ApplicationPersistenceFacade` may import `HapticManager`, call `gardenGrowth()`, or absorb the presentation coordinator merely to avoid proper UI integration.
+Virtual-accessibility purchases continue to use the existing validated `GameView` Boolean purchase callback, but `LiveGameAccessibilityActions` now applies the same `GardenPurchaseFeedbackPolicy` to that callback's success result and defaults its semantic feedback action to `HapticManager::gardenGrowth`. Wrong semantic actions and rejected purchases emit no cue.
 
-This means persistence remains truthful: a committed purchase determines success, while presentation decides how success feels.
+This closes modality parity without moving haptics into persistence, without a global event bus, and without making `GardenPurchaseResult.purchased` perform hidden side effects.
 
-## 4. Deliberately not shortcut: live Garden wiring
+Regression coverage includes:
 
-The remaining Garden feedback integration is narrow but spans two unusually large live owners:
+- `GardenPurchaseInteractionCoordinatorTest` across every `GardenPurchaseStatus`;
+- `LiveGameAccessibilityGardenFeedbackTest` for accessibility success, rejection, and wrong-action suppression;
+- `scripts/test_garden_purchase_feedback_contract.py`, which requires both live presentation paths and forbids Garden haptic/coordinator ownership inside `GardenPurchaseManager` or `ApplicationPersistenceFacade`.
 
-- `GardenScreen.kt` owns touch purchase, Garden animation/particles, local presentation metadata, and wardrobe interaction;
-- `GameView.kt` owns the virtual-accessibility purchase action and semantic-tree invalidation.
+Persistence therefore remains truthful: a committed purchase determines success, while presentation decides how that success feels.
 
-There is no smaller existing callback seam that can give touch and accessibility one shared interaction owner without editing both files.
-
-The continuation therefore did **not** move haptic behavior into persistence, did **not** create a global event bus, and did **not** make `GardenPurchaseResult.purchased` perform hidden side effects. Those approaches would reduce diff size at the cost of architecture and testability.
-
-A future coordinated large-owner edit should:
-
-1. inject/use one `GardenPurchaseInteractionCoordinator` for both purchase paths;
-2. let successful touch purchase retain its existing animation/particle behavior;
-3. let successful accessibility purchase refresh the same Garden state and semantic tree;
-4. ensure `HapticManager.gardenGrowth()` is emitted once per committed purchase regardless of input modality;
-5. ensure every rejected/failed result emits no growth cue;
-6. add an installed connected test for that parity.
-
-Until then, `gardenGrowth()` is vocabulary plus tested policy, not a claim that the live Garden already emits the cue.
-
-## 5. Garden catalogue presentation duplication is closed
+## 4. Garden catalogue presentation duplication is closed
 
 `GardenEconomy` is now the sole source of Garden progression order, full names, compact card names, and Seed costs.
 
@@ -93,20 +79,19 @@ The live card loop resolves the canonical entry with `GardenEconomy.plantForInde
 - card resolution through `GardenEconomy.plantForIndex(i)`;
 - rendering through `economy.compactName` and `economy.seedCost`;
 - absence of local `GardenPlant.name` / `GardenPlant.seedCost` fields;
-- continued purchase routing through the application persistence facade rather than direct Garden/Seed writes.
+- purchase routing through the Garden interaction coordinator and application persistence facade rather than direct Garden/Seed writes.
 
 This closes the previous presentation-maintainability debt without changing purchase indices, visual order, animation, touch geometry, sprites, colours, emoji, wardrobe behavior, or persistence semantics.
 
-## 6. Current source-addressable remainder
+## 5. Current source-addressable remainder
 
-After this continuation, the known source-only remainder is deliberately small:
+No known correctness or missing-player-feature item remains from the product-completion queue covered by this continuation.
 
-1. live-wire `GardenPurchaseInteractionCoordinator` through both touch and virtual-accessibility Garden purchase paths;
-2. opportunistically retire duration-shaped haptic compatibility adapter names when the corresponding large live adapter is next edited.
+One low-value compatibility cleanup remains intentionally nonblocking: duration-shaped haptic primitive names (`longPulse`, `mediumPulse`, `doubleTap`) still exist at old adapter/test boundaries beneath semantic collision methods. Domain orchestration already uses `terminalImpactHaptic`, `stumbleImpactHaptic`, and `mercyAcknowledgementHaptic`; removing the compatibility names now would require a large `GameView` rename-only rewrite with no player-visible behavior change. That should be done only when the live adapter is next edited for substantive behavior.
 
 No missing gameplay state machine, Bloom system, collision arbiter, persistence layer, relationship engine, Garden economy, visitor system, Journal persistence store, accessibility semantic architecture, ghost system, runtime ML model, cloud/account system, advertising system, or multiplayer layer is justified by the current product goals.
 
-## 7. Still external / candidate-bound
+## 6. Still external / candidate-bound
 
 The following remain intentionally unresolved by source work:
 
@@ -125,6 +110,6 @@ The following remain intentionally unresolved by source work:
 
 These must remain open until real external evidence or owner decisions exist.
 
-## 8. Validation rule
+## 7. Validation rule
 
 Because each direct-to-`main` commit starts a new candidate SHA, only the final exact-head workflow may be used as completion evidence. Superseded or cancelled runs are useful diagnostics but are not a substitute for a green host/release job and green API-35 connected job on the same final SHA.
