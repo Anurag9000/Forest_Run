@@ -1,15 +1,33 @@
-Run through a living forest that remembers how you move through it.
+Begin beneath the willow and follow a changing path through meadow, orchard,
+ancient grove, dusk canyon, and night forest.
 
-Forest Run is a pixel-art endless runner built around rhythm, mercy, and return. Every run moves through five shifting biomes, and every rest carries something back to the Garden: mood, kindness, caution, Bloom afterglow, milestone bonds, and the world's changing opinion of you.
+Forest Run is a handcrafted landscape endless runner built around responsive
+movement and a softer kind of progression. Tap for a short jump, hold for more
+height, release early to trim the arc, and swipe down to duck beneath danger.
+Collect Seeds as you travel. Gather enough and Bloom briefly transforms the
+run without taking control away from you.
 
-What is in the current build:
+The forest is more than an obstacle course. Nineteen families of plants,
+trees, birds, and animals can become familiar across repeated journeys. Clean
+passes and merciful choices shape relationships, remembered encounters,
+return moments, story fragments, and the mood that follows you home.
 
-- Gesture-anywhere controls for jump, hold, and duck.
-- Five runtime biomes with distinct hazards, atmosphere, and scenic composition.
-- Mercy, kindness, and clean-play payoff across animals, birds, flora, and trees.
-- Bloom power that activates at 8 seeds and transforms the run.
-- A full loop of run, restorative rest, Garden return, and another run.
-- Quiet return writing, creature thoughts, relationship traces, and sanctuary carry-home state.
-- Wardrobe, milestone keepsakes, bond rituals, peaceful-biome world signs, and ghost playback.
+After a difficult run you Rest rather than meet a harsh game-over. Your Seeds,
+memories, relationships, unlocked styles, and earlier choices continue into a
+persistent Garden. Grow its nine plants, revisit the creatures and traces that
+have become part of your story, and open the Forest Journal to see what the
+world remembers about your path.
 
-Forest Run is not about outrunning a forest that hates you. It is about learning what kind of rhythm you leave behind, and whether the world answers that rhythm with fear, warmth, or something gentler than either.
+Forest Run includes:
+
+• responsive tap, hold, release, and swipe-down controls
+• five authored forest biomes with changing atmosphere
+• nineteen encounter families with distinct behaviors and variants
+• Seeds, Seed Orbs, Bloom, mercy, kindness, and pacifist progression
+• persistent relationships, memories, return moments, and story fragments
+• a nine-plant Garden and unlockable wardrobe
+• a Forest Journal that reflects your remembered encounters and bonds
+• optional audio and haptics plus a reduced-motion setting
+• an offline-first experience with no account, ads, or analytics in the current build
+
+Every run is temporary. What the forest remembers is not.

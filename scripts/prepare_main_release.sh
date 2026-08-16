@@ -37,6 +37,9 @@ python3 "${ROOT}/scripts/verify_store_graphics.py" \
   --root "${ROOT}" \
   --graphics-dir "${ROOT}/release/google-play/graphics" \
   --candidate-sha "${candidate_sha}"
+python3 "${ROOT}/scripts/verify_store_listing_parity.py" \
+  --listing-source "${ROOT}/docs/STORE_LISTING.md" \
+  --metadata-dir "${ROOT}/release/google-play/metadata/en-US"
 python3 "${ROOT}/scripts/verify_store_metadata.py" \
   --metadata-dir "${ROOT}/release/google-play/metadata/en-US" \
   --candidate-sha "${candidate_sha}"
