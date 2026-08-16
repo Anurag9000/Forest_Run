@@ -88,6 +88,67 @@ class StoreMetadataVerifierTest(unittest.TestCase):
         with self.assertRaisesRegex(StoreMetadataError, "Duplicate"):
             verify_metadata(self.metadata, self.candidate)
 
+    def test_manifest_rejects_duplicate_keys_and_extra_schema_fields(self) -> None:
+        manifest = finalize_metadata(self.metadata, self.candidate)
+        original = json.loads(manifest.read_text(encoding="utf-8"))
+        files_json = json.dumps(original["files"], separators=(",", ":"))
+        manifest.write_text(
+            "{"
+            '"schemaVersion":1,'
+            '"schemaVersion":1,'
+            '"locale":"en-US",'
+            f'"candidateSha":"{self.candidate}",'
+            f'"files":{files_json}'
+            "}",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(StoreMetadataError, "duplicate JSON object key"):
+            verify_metadata(self.metadata, self.candidate)
+
+        manifest = finalize_metadata(self.metadata, self.candidate)
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        payload["unexpected"] = True
+        manifest.write_text(json.dumps(payload), encoding="utf-8")
+        with self.assertRaisesRegex(StoreMetadataError, "fields are incomplete or contain extras"):
+            verify_metadata(self.metadata, self.candidate)
+
+    def test_symlinked_metadata_and_manifest_are_rejected(self) -> None:
+        manifest = finalize_metadata(self.metadata, self.candidate)
+        title = self.metadata / "title.txt"
+        title_target = Path(self.temp.name, "title-target.txt")
+        title_target.write_bytes(title.read_bytes())
+        title.unlink()
+        try:
+            title.symlink_to(title_target)
+        except OSError as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+        with self.assertRaisesRegex(StoreMetadataError, "symbolic link"):
+            verify_metadata(self.metadata, self.candidate)
+
+        title.unlink()
+        title.write_text("Forest Run", encoding="utf-8")
+        manifest_target = Path(self.temp.name, "manifest-target.json")
+        manifest_target.write_bytes(manifest.read_bytes())
+        manifest.unlink()
+        manifest.symlink_to(manifest_target)
+        with self.assertRaisesRegex(StoreMetadataError, "symbolic link"):
+            verify_metadata(self.metadata, self.candidate)
+        with self.assertRaisesRegex(StoreMetadataError, "symbolic link"):
+            finalize_metadata(self.metadata, self.candidate)
+
+    def test_symlinked_metadata_directory_is_rejected(self) -> None:
+        real = Path(self.temp.name, "real-metadata")
+        real.mkdir()
+        self.write_valid_metadata(real)
+        finalize_metadata(real, self.candidate)
+        alias = Path(self.temp.name, "metadata-alias")
+        try:
+            alias.symlink_to(real, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+        with self.assertRaisesRegex(StoreMetadataError, "directory must not be a symbolic link"):
+            verify_metadata(alias, self.candidate)
+
     def test_finalize_replaces_stale_manifest_atomically(self) -> None:
         manifest = self.metadata / "metadata_manifest.json"
         manifest.write_text("stale", encoding="utf-8")
