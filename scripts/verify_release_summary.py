@@ -4,7 +4,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
+import stat
 import sys
 from pathlib import Path, PurePosixPath
 from typing import Any, Sequence
@@ -14,6 +16,16 @@ HEX_40 = re.compile(r"[0-9a-f]{40}")
 HEX_64 = re.compile(r"[0-9a-f]{64}")
 MAX_SUMMARY_BYTES = 2 * 1024 * 1024
 EXPECTED_APPLICATION_ID = "com.anurag9000.forestrun"
+EXPECTED_GRAPHICS_PATHS = {
+    "release/google-play/graphics/feature-graphic.png",
+    "release/google-play/graphics/promo-square.png",
+}
+EXPECTED_METADATA_PATHS = {
+    "release/google-play/metadata/en-US/title.txt",
+    "release/google-play/metadata/en-US/short-description.txt",
+    "release/google-play/metadata/en-US/full-description.txt",
+}
+SCREENSHOT_PREFIX = PurePosixPath("release/google-play/screenshots/final")
 
 
 class ReleaseSummaryError(ValueError):
@@ -21,7 +33,11 @@ class ReleaseSummaryError(ValueError):
 
 
 def digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    hasher = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 def required_dict(source: dict[str, Any], key: str) -> dict[str, Any]:
@@ -38,7 +54,7 @@ def required_text(source: dict[str, Any], key: str, label: str) -> str:
     return value.strip()
 
 
-def verify_file_fact(root: Path, facts: dict[str, Any], label: str) -> Path:
+def _safe_fact_path(root: Path, facts: dict[str, Any], label: str) -> tuple[str, Path]:
     relative = required_text(facts, "path", label)
     if any(ord(character) < 32 or ord(character) == 127 for character in relative):
         raise ReleaseSummaryError(f"{label}.path is unsafe")
@@ -48,18 +64,120 @@ def verify_file_fact(root: Path, facts: dict[str, Any], label: str) -> Path:
     pure = PurePosixPath(normalized)
     if not pure.parts or any(part in {"", ".", ".."} for part in pure.parts):
         raise ReleaseSummaryError(f"{label}.path is unsafe")
-    absolute = root.joinpath(*pure.parts)
-    if not absolute.is_file():
-        raise ReleaseSummaryError(f"{label} file is missing: {relative}")
-    size = absolute.stat().st_size
-    if facts.get("bytes") != size:
-        raise ReleaseSummaryError(f"{label} byte count is stale")
+
+    root = root.expanduser().resolve()
+    lexical = root.joinpath(*pure.parts)
+    current = root
+    for part in pure.parts:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError as exc:
+            raise ReleaseSummaryError(f"{label} file is missing: {relative}") from exc
+        except OSError as exc:
+            raise ReleaseSummaryError(f"could not inspect {label}: {current}: {exc}") from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise ReleaseSummaryError(f"{label} must not traverse a symbolic link: {relative}")
+
+    resolved = lexical.resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ReleaseSummaryError(f"{label}.path escapes the release root") from exc
+    try:
+        metadata = resolved.stat()
+    except OSError as exc:
+        raise ReleaseSummaryError(f"could not stat {label}: {relative}: {exc}") from exc
+    if not stat.S_ISREG(metadata.st_mode):
+        raise ReleaseSummaryError(f"{label} must be a regular file: {relative}")
+    return pure.as_posix(), resolved
+
+
+def _recorded_sha256(facts: dict[str, Any], label: str) -> str:
     recorded_hash = facts.get("sha256")
     if not isinstance(recorded_hash, str) or HEX_64.fullmatch(recorded_hash) is None:
         raise ReleaseSummaryError(f"{label} SHA-256 is malformed")
-    if digest(absolute) != recorded_hash:
+    return recorded_hash
+
+
+def verify_file_fact(root: Path, facts: dict[str, Any], label: str) -> Path:
+    _, absolute = _safe_fact_path(root, facts, label)
+    size = absolute.stat().st_size
+    if facts.get("bytes") != size:
+        raise ReleaseSummaryError(f"{label} byte count is stale")
+    if digest(absolute) != _recorded_sha256(facts, label):
         raise ReleaseSummaryError(f"{label} SHA-256 is stale")
     return absolute
+
+
+def verify_metadata_fact(root: Path, facts: dict[str, Any], label: str) -> Path:
+    _, absolute = _safe_fact_path(root, facts, label)
+    if digest(absolute) != _recorded_sha256(facts, label):
+        raise ReleaseSummaryError(f"{label} SHA-256 is stale")
+    try:
+        text = absolute.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ReleaseSummaryError(f"{label} is not readable UTF-8: {exc}") from exc
+    if facts.get("characters") != len(text):
+        raise ReleaseSummaryError(f"{label} character count is stale")
+    return absolute
+
+
+def _fact_dicts(value: object, *, label: str, exact_count: int | None = None) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        raise ReleaseSummaryError(f"Release summary {label} must be a list")
+    if exact_count is not None and len(value) != exact_count:
+        raise ReleaseSummaryError(
+            f"Release summary must contain exactly {exact_count} {label}"
+        )
+    if any(not isinstance(item, dict) for item in value):
+        raise ReleaseSummaryError(f"Release summary {label} entries must be objects")
+    return value
+
+
+def _require_exact_paths(
+    root: Path,
+    facts_list: list[dict[str, Any]],
+    expected: set[str],
+    *,
+    label: str,
+    metadata: bool = False,
+) -> None:
+    observed: set[str] = set()
+    for index, facts in enumerate(facts_list):
+        path, _ = _safe_fact_path(root, facts, f"{label}[{index}]")
+        if path in observed:
+            raise ReleaseSummaryError(f"Release summary duplicates {label} path: {path}")
+        observed.add(path)
+        if metadata:
+            verify_metadata_fact(root, facts, f"{label}[{index}]")
+        else:
+            verify_file_fact(root, facts, f"{label}[{index}]")
+    if observed != expected:
+        raise ReleaseSummaryError(
+            f"Release summary {label} paths differ from the canonical set"
+        )
+
+
+def _verify_screenshot_facts(root: Path, facts_list: list[dict[str, Any]]) -> None:
+    observed_paths: set[str] = set()
+    observed_hashes: set[str] = set()
+    for index, facts in enumerate(facts_list):
+        label = f"screenshots.images[{index}]"
+        path, _ = _safe_fact_path(root, facts, label)
+        pure = PurePosixPath(path)
+        if pure.parent != SCREENSHOT_PREFIX or pure.suffix.lower() != ".png":
+            raise ReleaseSummaryError(
+                f"{label}.path must be a curated final screenshot PNG"
+            )
+        if path in observed_paths:
+            raise ReleaseSummaryError(f"Release summary duplicates screenshot path: {path}")
+        observed_paths.add(path)
+        verify_file_fact(root, facts, label)
+        recorded_hash = _recorded_sha256(facts, label)
+        if recorded_hash in observed_hashes:
+            raise ReleaseSummaryError("Release summary contains duplicate screenshot image hashes")
+        observed_hashes.add(recorded_hash)
 
 
 def verify_release_summary(
@@ -105,24 +223,34 @@ def verify_release_summary(
     ):
         raise ReleaseSummaryError("Release summary dry-run overrides are malformed")
 
-    graphics = payload.get("graphics")
-    metadata = payload.get("metadata")
+    graphics = _fact_dicts(payload.get("graphics"), label="graphics", exact_count=2)
+    metadata = _fact_dicts(payload.get("metadata"), label="metadata files", exact_count=3)
     audio = payload.get("audio")
-    if not isinstance(graphics, list) or len(graphics) != 2:
-        raise ReleaseSummaryError("Release summary must contain exactly two graphics")
-    if not isinstance(metadata, list) or len(metadata) != 3:
-        raise ReleaseSummaryError("Release summary must contain exactly three metadata files")
     if not isinstance(audio, list) or len(audio) != 15 or len(audio) != len(set(audio)):
         raise ReleaseSummaryError("Release summary required-audio evidence is incomplete")
+    _require_exact_paths(
+        root,
+        graphics,
+        EXPECTED_GRAPHICS_PATHS,
+        label="graphics",
+    )
+    _require_exact_paths(
+        root,
+        metadata,
+        EXPECTED_METADATA_PATHS,
+        label="metadata",
+        metadata=True,
+    )
 
     screenshots = required_dict(payload, "screenshots")
     if screenshots.get("candidate_sha") != expected_candidate_sha:
         raise ReleaseSummaryError("Screenshot evidence candidate differs from release candidate")
     if screenshots.get("package_name") != "com.anurag9000.forestrun.debug":
         raise ReleaseSummaryError("Screenshot evidence package is invalid")
-    images = screenshots.get("images")
-    if not isinstance(images, list) or len(images) < 4:
+    images = _fact_dicts(screenshots.get("images"), label="screenshot images")
+    if len(images) < 4:
         raise ReleaseSummaryError("Release summary contains too few screenshots")
+    _verify_screenshot_facts(root, images)
 
     bundle = payload.get("bundle")
     mapping = payload.get("r8_mapping")

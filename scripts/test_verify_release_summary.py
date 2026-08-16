@@ -22,6 +22,39 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
         self.bundle.write_bytes(b"bundle")
         self.mapping.write_text("mapping", encoding="utf-8")
 
+        self.graphics = [
+            self.root / "release/google-play/graphics/feature-graphic.png",
+            self.root / "release/google-play/graphics/promo-square.png",
+        ]
+        for index, path in enumerate(self.graphics):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(f"graphic-{index}".encode("utf-8"))
+
+        self.metadata = [
+            self.root / "release/google-play/metadata/en-US/title.txt",
+            self.root / "release/google-play/metadata/en-US/short-description.txt",
+            self.root / "release/google-play/metadata/en-US/full-description.txt",
+        ]
+        self.metadata_text = [
+            "Forest Run",
+            "Run gently through a living forest that remembers your choices.",
+            (
+                "Forest Run is a handcrafted endless runner where mercy changes the path. "
+                "Collect Seeds, meet the forest, and return to a persistent Garden that "
+                "remembers your choices across journeys."
+            ),
+        ]
+        for path, text in zip(self.metadata, self.metadata_text, strict=True):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+        self.screenshots = []
+        for index in range(4):
+            path = self.root / f"release/google-play/screenshots/final/shot-{index}.png"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(f"screenshot-{index}".encode("utf-8"))
+            self.screenshots.append(path)
+
     def tearDown(self) -> None:
         self.temp.cleanup()
 
@@ -29,14 +62,27 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
     def digest(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
+    def file_fact(self, path: Path) -> dict:
+        return {
+            "path": str(path.relative_to(self.root)).replace("\\", "/"),
+            "bytes": path.stat().st_size,
+            "sha256": self.digest(path),
+        }
+
+    def metadata_fact(self, path: Path) -> dict:
+        text = path.read_text(encoding="utf-8")
+        return {
+            "path": str(path.relative_to(self.root)).replace("\\", "/"),
+            "characters": len(text),
+            "sha256": self.digest(path),
+        }
+
     def payload(self, *, skip_build=False, allow_unsigned=False, signature=True):
         bundle = None
         mapping = None
         if not skip_build:
             bundle = {
-                "path": str(self.bundle.relative_to(self.root)),
-                "bytes": self.bundle.stat().st_size,
-                "sha256": self.digest(self.bundle),
+                **self.file_fact(self.bundle),
                 "application_id": "com.anurag9000.forestrun",
                 "version_code": 7,
                 "version_name": "1.2.3",
@@ -46,9 +92,7 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
                 "dex_files": ["base/dex/classes.dex"],
             }
             mapping = {
-                "path": str(self.mapping.relative_to(self.root)),
-                "bytes": self.mapping.stat().st_size,
-                "sha256": self.digest(self.mapping),
+                **self.file_fact(self.mapping),
                 "application_classes": 100,
                 "renamed_classes": 90,
             }
@@ -59,10 +103,10 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
                 "version_name": "1.2.3",
                 "version_code": 7,
             },
-            "graphics": [{}, {}],
-            "metadata": [{}, {}, {}],
+            "graphics": [self.file_fact(path) for path in self.graphics],
+            "metadata": [self.metadata_fact(path) for path in self.metadata],
             "screenshots": {
-                "images": [{}, {}, {}, {}],
+                "images": [self.file_fact(path) for path in self.screenshots],
                 "candidate_sha": self.candidate,
                 "package_name": "com.anurag9000.forestrun.debug",
             },
@@ -134,6 +178,65 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
         self.write(payload)
         self.bundle.write_bytes(b"changed")
         with self.assertRaisesRegex(ReleaseSummaryError, "byte count|SHA-256"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+    def test_graphics_metadata_and_screenshot_bytes_are_rehashed(self) -> None:
+        for path, expected in (
+            (self.graphics[0], "graphics.*byte count|graphics.*SHA-256"),
+            (self.metadata[1], "metadata.*SHA-256|metadata.*character count"),
+            (self.screenshots[2], "screenshots.*byte count|screenshots.*SHA-256"),
+        ):
+            payload = self.payload()
+            self.write(payload)
+            path.write_bytes(path.read_bytes() + b"-changed")
+            with self.assertRaisesRegex(ReleaseSummaryError, expected):
+                verify_release_summary(self.root, self.release, self.candidate)
+            if path in self.graphics:
+                index = self.graphics.index(path)
+                path.write_bytes(f"graphic-{index}".encode("utf-8"))
+            elif path in self.metadata:
+                index = self.metadata.index(path)
+                path.write_text(self.metadata_text[index], encoding="utf-8")
+            else:
+                index = self.screenshots.index(path)
+                path.write_bytes(f"screenshot-{index}".encode("utf-8"))
+
+    def test_summary_file_facts_reject_symbolic_links(self) -> None:
+        payload = self.payload()
+        self.write(payload)
+        original = self.graphics[0]
+        target = self.root / "safe-graphic.png"
+        target.write_bytes(original.read_bytes())
+        original.unlink()
+        try:
+            original.symlink_to(target)
+        except OSError as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+        with self.assertRaisesRegex(ReleaseSummaryError, "symbolic link"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+    def test_canonical_graphics_metadata_and_screenshot_paths_are_required(self) -> None:
+        payload = self.payload()
+        payload["graphics"][0] = dict(payload["graphics"][1])
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "duplicates graphics path|canonical set"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+        other_metadata = self.root / "release/google-play/metadata/en-US/other.txt"
+        other_metadata.write_text("Other metadata", encoding="utf-8")
+        payload = self.payload()
+        payload["metadata"][0] = self.metadata_fact(other_metadata)
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "canonical set"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+        raw = self.root / "release/google-play/screenshots/raw/shot.png"
+        raw.parent.mkdir(parents=True, exist_ok=True)
+        raw.write_bytes(b"raw-shot")
+        payload = self.payload()
+        payload["screenshots"]["images"][0] = self.file_fact(raw)
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "curated final screenshot"):
             verify_release_summary(self.root, self.release, self.candidate)
 
     def test_human_summary_must_disclose_exact_bundle_and_status(self) -> None:
