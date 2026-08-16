@@ -126,6 +126,62 @@ class StoreGraphicsVerifierTest(unittest.TestCase):
         with self.assertRaisesRegex(StoreGraphicsError, "mode"):
             verify_store_graphics(self.root, self.graphics, self.candidate)
 
+    def test_manifest_rejects_duplicate_keys_and_extra_schema_fields(self) -> None:
+        manifest = self.graphics / "graphics_manifest.json"
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        duplicate = '{"schemaVersion":1,' + json.dumps(
+            payload, separators=(",", ":")
+        )[1:]
+        manifest.write_text(duplicate, encoding="utf-8")
+        with self.assertRaisesRegex(StoreGraphicsError, "duplicate JSON object key"):
+            verify_store_graphics(self.root, self.graphics, self.candidate)
+
+        self.write_manifest(unexpected=True)
+        with self.assertRaisesRegex(StoreGraphicsError, "fields are incomplete or contain extras"):
+            verify_store_graphics(self.root, self.graphics, self.candidate)
+
+        payload = json.loads((self.graphics / "graphics_manifest.json").read_text())
+        payload.pop("unexpected")
+        payload["outputs"][0]["unexpected"] = True
+        self.write_manifest(outputs=payload["outputs"])
+        with self.assertRaisesRegex(StoreGraphicsError, "outputs contains an invalid entry"):
+            verify_store_graphics(self.root, self.graphics, self.candidate)
+
+    def test_missing_and_symlinked_source_assets_are_rejected_cleanly(self) -> None:
+        source = self.root / self.source_paths[-1]
+        original = source.read_bytes()
+        source.unlink()
+        with self.assertRaisesRegex(StoreGraphicsError, "Missing graphics source asset"):
+            verify_store_graphics(self.root, self.graphics, self.candidate)
+
+        target = Path(self.temp.name) / "source-target.bin"
+        target.write_bytes(original)
+        try:
+            source.symlink_to(target)
+        except OSError as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+        with self.assertRaisesRegex(StoreGraphicsError, "must not be a symbolic link"):
+            verify_store_graphics(self.root, self.graphics, self.candidate)
+
+    def test_symlinked_graphic_and_graphics_directory_are_rejected(self) -> None:
+        promo = self.graphics / "promo-square.png"
+        target = Path(self.temp.name) / "promo-target.png"
+        target.write_bytes(promo.read_bytes())
+        promo.unlink()
+        try:
+            promo.symlink_to(target)
+        except OSError as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+        with self.assertRaisesRegex(StoreGraphicsError, "symbolic link"):
+            verify_store_graphics(self.root, self.graphics, self.candidate)
+
+        promo.unlink()
+        promo.write_bytes(target.read_bytes())
+        alias = Path(self.temp.name) / "graphics-alias"
+        alias.symlink_to(self.graphics, target_is_directory=True)
+        with self.assertRaisesRegex(StoreGraphicsError, "directory must not be a symbolic link"):
+            verify_store_graphics(self.root, alias, self.candidate)
+
 
 class StoreGraphicsReleaseContractTest(unittest.TestCase):
     def test_canonical_wrapper_verifies_graphics_before_play_preparer(self) -> None:
