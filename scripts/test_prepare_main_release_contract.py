@@ -67,6 +67,14 @@ class MainReleaseWrapperContractTest(unittest.TestCase):
         self.assertIn("only supported release-preparation entry point", guide)
         self.assertIn("Do not invoke `scripts/prepare_play_release.py` directly", guide)
 
+    def test_release_guide_does_not_hard_code_connected_test_cardinality(self) -> None:
+        guide = RELEASE_DOC.read_text(encoding="utf-8")
+        self.assertNotIn("fourteen", guide.lower())
+        self.assertIn("complete ordinary connected suite", guide)
+        self.assertIn("zero failures", guide)
+        self.assertIn("zero errors", guide)
+        self.assertIn("zero skips", guide)
+
 
 if __name__ == "__main__":
     unittest.main()
