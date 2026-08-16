@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import json
 import tempfile
 import unittest
@@ -11,6 +10,7 @@ import compile_release_governance
 import test_validate_device_acceptance as device_fixture
 import test_validate_release_governance as governance_fixture
 import validate_release_readiness as readiness
+import verify_store_metadata as store_metadata
 
 
 GENERIC_BOUND_KINDS = (
@@ -23,6 +23,36 @@ GENERIC_BOUND_KINDS = (
 )
 
 
+def _prepare_store_metadata(root: Path) -> Path:
+    metadata = root / "store-metadata"
+    metadata.mkdir(parents=True, exist_ok=True)
+    (metadata / "title.txt").write_text("Forest Run", encoding="utf-8")
+    (metadata / "short-description.txt").write_text(
+        "Run gently through a living forest that remembers your choices.",
+        encoding="utf-8",
+    )
+    (metadata / "full-description.txt").write_text(
+        "Forest Run is a handcrafted endless runner where mercy changes the path.\n\n"
+        "Collect Seeds, enter Bloom, meet memorable creatures, and return to a "
+        "persistent Garden that remembers how you played. Open the Forest Journal "
+        "to revisit discoveries and bonds from earlier journeys.",
+        encoding="utf-8",
+    )
+    return store_metadata.finalize_metadata(metadata, device_fixture.SHA)
+
+
+def _base_specs(generic_paths: dict[str, str], *, signed_bundle_path: str) -> list[str]:
+    return [
+        f"signed_bundle={signed_bundle_path}",
+        "device_acceptance=device-acceptance.json",
+        "human_acceptance=human-acceptance.json",
+        "installed_identity_matrix=installed-identity-matrix.json",
+        "play_delivery=play-delivery.json",
+        "release_governance=release-governance.json",
+        "store_metadata=store-metadata/metadata_manifest.json",
+    ] + [f"{kind}={generic_paths[kind]}" for kind in GENERIC_BOUND_KINDS]
+
+
 def prepare_complete_evidence(root: Path, *, signed_bundle_path: str = "artifact/app-release.aab") -> dict[str, Path]:
     governance_draft = governance_fixture._governance_draft(root)
     governance_draft_path = root / "release-governance-draft.json"
@@ -32,6 +62,7 @@ def prepare_complete_evidence(root: Path, *, signed_bundle_path: str = "artifact
         encoding="utf-8",
     )
     compile_release_governance.compile_file(governance_draft_path, governance_path)
+    metadata_manifest = _prepare_store_metadata(root)
 
     generic_paths: dict[str, str] = {}
     for kind in GENERIC_BOUND_KINDS:
@@ -51,14 +82,7 @@ def prepare_complete_evidence(root: Path, *, signed_bundle_path: str = "artifact
         )
         generic_paths[kind] = relative
 
-    specs = [
-        f"signed_bundle={signed_bundle_path}",
-        "device_acceptance=device-acceptance.json",
-        "human_acceptance=human-acceptance.json",
-        "installed_identity_matrix=installed-identity-matrix.json",
-        "play_delivery=play-delivery.json",
-        "release_governance=release-governance.json",
-    ] + [f"{kind}={generic_paths[kind]}" for kind in GENERIC_BOUND_KINDS]
+    specs = _base_specs(generic_paths, signed_bundle_path=signed_bundle_path)
     index_path = root / "release-evidence-index.json"
     payload = index_builder.build_index(
         root,
@@ -75,6 +99,7 @@ def prepare_complete_evidence(root: Path, *, signed_bundle_path: str = "artifact
         "matrix": root / "installed-identity-matrix.json",
         "play": root / "play-delivery.json",
         "governance": governance_path,
+        "metadata": metadata_manifest,
         "index": index_path,
     }
 
@@ -89,6 +114,7 @@ class ReleaseReadinessTest(unittest.TestCase):
             installed_identity_matrix=paths["matrix"],
             play_delivery_manifest=paths["play"],
             governance_manifest=paths["governance"],
+            store_metadata_manifest=paths["metadata"],
             release_index=paths["index"],
         )
 
@@ -103,7 +129,8 @@ class ReleaseReadinessTest(unittest.TestCase):
             self.assertEqual(device_fixture.APP_SIGNING_CERT_SHA, summary.app_signing_certificate_sha256)
             self.assertRegex(summary.installed_identity_matrix_sha256, r"^[0-9a-f]{64}$")
             self.assertRegex(summary.play_delivery_sha256, r"^[0-9a-f]{64}$")
-            self.assertGreaterEqual(summary.evidence_entry_count, 12)
+            self.assertRegex(summary.store_metadata_sha256, r"^[0-9a-f]{64}$")
+            self.assertGreaterEqual(summary.evidence_entry_count, 13)
             self.assertRegex(summary.evidence_index_sha256, r"^[0-9a-f]{64}$")
             self.assertRegex(summary.evidence_set_sha256, r"^[0-9a-f]{64}$")
 
@@ -120,6 +147,7 @@ class ReleaseReadinessTest(unittest.TestCase):
                     installed_identity_matrix=paths["matrix"],
                     play_delivery_manifest=paths["play"],
                     governance_manifest=paths["governance"],
+                    store_metadata_manifest=paths["metadata"],
                     release_index=paths["index"],
                 )
             self.assertIn("must all match", str(raised.exception))
@@ -139,6 +167,46 @@ class ReleaseReadinessTest(unittest.TestCase):
             with self.assertRaises(readiness.ReleaseReadinessError) as raised:
                 self.validate(root, paths)
             self.assertIn("release evidence index failed", str(raised.exception))
+
+    def test_store_metadata_manifest_is_a_required_candidate_bound_kind(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = prepare_complete_evidence(root)
+            payload = json.loads(paths["index"].read_text(encoding="utf-8"))
+            payload["entries"] = [
+                entry for entry in payload["entries"] if entry["kind"] != "store_metadata"
+            ]
+            payload["entryCount"] = len(payload["entries"])
+            paths["index"].write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+            with self.assertRaises(readiness.ReleaseReadinessError) as raised:
+                self.validate(root, paths)
+            self.assertIn("release evidence index failed", str(raised.exception))
+
+    def test_tampered_store_copy_is_rejected_even_when_manifest_was_indexed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = prepare_complete_evidence(root)
+            title = paths["metadata"].parent / "title.txt"
+            title.write_text("Forest Run Changed", encoding="utf-8")
+            with self.assertRaises(readiness.ReleaseReadinessError) as raised:
+                self.validate(root, paths)
+            self.assertIn("store metadata failed", str(raised.exception))
+
+    def test_store_metadata_text_symlink_is_rejected_before_delegation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = prepare_complete_evidence(root)
+            title = paths["metadata"].parent / "title.txt"
+            replacement = root / "safe-title.txt"
+            replacement.write_text("Forest Run", encoding="utf-8")
+            title.unlink()
+            try:
+                title.symlink_to(replacement)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            with self.assertRaises(readiness.ReleaseReadinessError) as raised:
+                self.validate(root, paths)
+            self.assertIn("store metadata title.txt must not traverse a symbolic link", str(raised.exception))
 
     def test_indexed_signed_bundle_must_be_the_accepted_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -171,6 +239,7 @@ class ReleaseReadinessTest(unittest.TestCase):
                 "installed_identity_matrix=installed-identity-matrix.json",
                 "play_delivery=play-delivery.json",
                 "release_governance=release-governance.json",
+                "store_metadata=store-metadata/metadata_manifest.json",
             ] + [f"{kind}={generic[kind]}" for kind in GENERIC_BOUND_KINDS]
             payload = index_builder.build_index(
                 root,
@@ -221,6 +290,7 @@ class ReleaseReadinessTest(unittest.TestCase):
                     installed_identity_matrix=paths["matrix"],
                     play_delivery_manifest=paths["play"],
                     governance_manifest=paths["governance"],
+                    store_metadata_manifest=paths["metadata"],
                     release_index=paths["index"],
                 )
             self.assertIn("must not traverse a symbolic link", str(raised.exception))

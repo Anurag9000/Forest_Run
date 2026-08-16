@@ -25,12 +25,14 @@ The release process produces evidence through independent pipelines:
 - detailed human gameplay/accessibility/presentation acceptance;
 - performance profiles and physical diagnostics;
 - screenshot capture and curation;
-- graphics and metadata generation;
+- graphics and candidate-bound public metadata generation;
 - candidate-bound security/licensing/privacy/store/presentation governance and final approvals.
 
 Without a final index, each file can be internally valid while the folder remains vulnerable to omission, candidate mixing, path aliasing, hard-link reuse, replacement during review, or inconsistent reads while a file changes. The index records the exact path, byte count, SHA-256 digest, candidate-binding status, and discovered candidate identities for every selected file. It hashes the canonical entry list into `evidenceSetSha256`.
 
 ## Canonical stable build and verification
+
+Before building the index, copy the finalized store metadata manifest **and the exact three text files it records** into `release/evidence/store-metadata/` (or another path inside the chosen evidence root) without changing bytes. Final readiness revalidates those sibling files; indexing only a detached manifest is not enough.
 
 ```bash
 python3 scripts/build_stable_release_evidence_index.py \
@@ -49,6 +51,7 @@ python3 scripts/build_stable_release_evidence_index.py \
   --entry release_governance=release/evidence/release-governance.json \
   --entry screenshot_manifest=release/google-play/screenshots/screenshot_manifest.json \
   --entry graphics_manifest=release/google-play/graphics/graphics_manifest.json \
+  --entry store_metadata=release/evidence/store-metadata/metadata_manifest.json \
   --require-bound-kind artifact_verification \
   --require-bound-kind declared_dependencies \
   --require-bound-kind sbom \
@@ -60,10 +63,13 @@ python3 scripts/build_stable_release_evidence_index.py \
   --require-bound-kind release_governance \
   --require-bound-kind screenshot_manifest \
   --require-bound-kind graphics_manifest \
+  --require-bound-kind store_metadata \
   --output release/evidence/release-evidence-index.json
 ```
 
 Use the exact lowercase 40-character candidate SHA and an actual canonical UTC timestamp with second precision. Add one unique `kind=relative/path` entry for every file used in the release decision. In particular, index the individual governance evidence files, performance diagnostics/traces, store-delivery records, and reviewer records whenever they materially participate in the go/no-go decision; the command above shows the minimum principal manifests rather than the maximum evidence set.
+
+`store_metadata` is the candidate-bound metadata manifest produced by `verify_store_metadata.py`; its sibling `title.txt`, `short-description.txt`, and `full-description.txt` remain semantically protected by that manifest and are revalidated by final readiness. The exact public copy must first pass `verify_store_listing_parity.py` against `docs/STORE_LISTING.md` before metadata finalization.
 
 The prior generic `policy_approval` example is intentionally removed. There is no separate `policy_approval` source format in the repository: policy/privacy/security/licensing/presentation decisions now belong to the strict candidate-bound `release_governance` manifest defined in [`RELEASE_GOVERNANCE_EVIDENCE.md`](RELEASE_GOVERNANCE_EVIDENCE.md). Keeping both as mandatory kinds would create an unsupported duplicate authority.
 
@@ -88,7 +94,8 @@ python3 scripts/verify_release_evidence_index.py \
   --require-bound-kind human_acceptance \
   --require-bound-kind release_governance \
   --require-bound-kind screenshot_manifest \
-  --require-bound-kind graphics_manifest
+  --require-bound-kind graphics_manifest \
+  --require-bound-kind store_metadata
 ```
 
 A valid result includes:
@@ -158,7 +165,9 @@ The verifier rejects:
 
 ## Final readiness orchestration
 
-After the index independently verifies, run [`validate_release_readiness.py`](../scripts/validate_release_readiness.py) as described in [`RELEASE_READINESS.md`](RELEASE_READINESS.md). The readiness gate re-runs the device, installed-identity-matrix, Play-delivery, human, governance, and index validators and then proves that the exact revalidated manifest paths/digests are the exact indexed files and that the indexed `signed_bundle` digest equals the artifact approved by all acceptance layers.
+After the index independently verifies, run [`validate_release_readiness.py`](../scripts/validate_release_readiness.py) as described in [`RELEASE_READINESS.md`](RELEASE_READINESS.md). The readiness gate re-runs the device, installed-identity-matrix, Play-delivery, human, governance, store-metadata, and index validators and then proves that the exact revalidated manifest paths/digests are the exact indexed files and that the indexed `signed_bundle` digest equals the artifact approved by all acceptance layers.
+
+For store metadata specifically, readiness also path-admits and revalidates the three sibling text files recorded by `metadata_manifest.json`. This closes the gap where a candidate-bound manifest could be indexed while the public listing bytes beside it were missing, replaced, stale, or reached through a symbolic link.
 
 That final cross-check is intentionally separate from the index format. The index owns evidence-set integrity; readiness owns semantic cross-layer consistency.
 
@@ -169,11 +178,12 @@ That final cross-check is intentionally separate from the index format. The inde
 3. Validate every evidence format with its owning verifier.
 4. Build the declared inventory, resolved SBOM, licence review, and vulnerability report for the same candidate.
 5. Compile and validate physical acceptance, the installed-identity matrix, Play-delivery evidence, human acceptance, and release governance—in that dependency order—for the same artifact.
-6. Run `build_stable_release_evidence_index.py` with every selected file.
-7. Have an independent reviewer run `verify_release_evidence_index.py` separately.
-8. Run `validate_release_readiness.py` against the same evidence root and exact candidate SHA.
-9. Record `indexSha256`, `evidenceSetSha256`, and the readiness summary in the final approval record.
-10. Review entry count, kinds, paths, candidate-bound count, reviewer coverage, underlying evidence, and external console state.
-11. Do not modify an indexed file after approval. Any required change creates a new candidate and evidence set.
+6. Verify public copy against `docs/STORE_LISTING.md`, finalize store metadata for the candidate, and preserve the manifest with its exact three sibling text files.
+7. Run `build_stable_release_evidence_index.py` with every selected file, including `store_metadata`.
+8. Have an independent reviewer run `verify_release_evidence_index.py` separately.
+9. Run `validate_release_readiness.py` against the same evidence root and exact candidate SHA.
+10. Record `indexSha256`, `evidenceSetSha256`, `store_metadata_sha256`, and the readiness summary in the final approval record.
+11. Review entry count, kinds, paths, candidate-bound count, reviewer coverage, underlying evidence, public listing bytes, and external console state.
+12. Do not modify an indexed file or its metadata siblings after approval. Any required change creates a new candidate and evidence set.
 
 The index and readiness gate are integrity/orchestration boundaries, not approval substitutes. Physical-device sessions, subjective presentation review, signing custody, legal decisions, and store-console checks still require real people and real systems.

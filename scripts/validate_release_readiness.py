@@ -2,10 +2,10 @@
 """Revalidate every final Forest Run release-evidence layer as one candidate.
 
 This is an orchestration gate, not a new source of truth. It delegates physical,
-installed-identity, Play-delivery, human, governance, and release-index validation
-to their independent validators, then checks that the same files, digests, signed
-artifact, and candidate identity are actually represented in the final evidence
-index.
+installed-identity, Play-delivery, human, governance, store-metadata, and
+release-index validation to their independent validators, then checks that the
+same files, digests, signed artifact, public store copy, and candidate identity
+are actually represented in the final evidence index.
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ import validate_installed_identity_matrix as installed_matrix
 import validate_play_delivery_evidence as play_delivery
 import validate_release_governance as governance
 import verify_release_evidence_index as evidence_index
+import verify_store_metadata as store_metadata
 
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 MAX_INDEX_BYTES = evidence_index.MAX_INDEX_BYTES
@@ -46,6 +47,7 @@ REQUIRED_BOUND_KINDS = frozenset(
         "release_governance",
         "screenshot_manifest",
         "graphics_manifest",
+        "store_metadata",
     }
 )
 REQUIRED_UNBOUND_KINDS = frozenset({"signed_bundle"})
@@ -66,6 +68,7 @@ class ReleaseReadinessSummary:
     installed_identity_matrix_sha256: str
     play_delivery_sha256: str
     governance_sha256: str
+    store_metadata_sha256: str
     evidence_index_sha256: str
     evidence_set_sha256: str
     evidence_entry_count: int
@@ -82,6 +85,7 @@ class ReleaseReadinessSummary:
             "installed_identity_matrix_sha256": self.installed_identity_matrix_sha256,
             "play_delivery_sha256": self.play_delivery_sha256,
             "governance_sha256": self.governance_sha256,
+            "store_metadata_sha256": self.store_metadata_sha256,
             "evidence_index_sha256": self.evidence_index_sha256,
             "evidence_set_sha256": self.evidence_set_sha256,
             "evidence_entry_count": self.evidence_entry_count,
@@ -196,6 +200,7 @@ def validate_readiness(
     installed_identity_matrix: Path,
     play_delivery_manifest: Path,
     governance_manifest: Path,
+    store_metadata_manifest: Path,
     release_index: Path,
 ) -> ReleaseReadinessSummary:
     root = root.expanduser().resolve()
@@ -215,6 +220,20 @@ def validate_readiness(
     governance_relative, governance_path = _safe_relative_path(
         governance_manifest, root, "release governance manifest"
     )
+    store_metadata_relative, store_metadata_path = _safe_relative_path(
+        store_metadata_manifest, root, "store metadata manifest"
+    )
+    if store_metadata_path.name != "metadata_manifest.json":
+        raise ReleaseReadinessError(
+            "store metadata manifest must be named metadata_manifest.json"
+        )
+    store_metadata_dir = store_metadata_path.parent
+    for filename in store_metadata.FILES:
+        _safe_relative_path(
+            store_metadata_dir / filename,
+            root,
+            f"store metadata {filename}",
+        )
     _, index_path = _safe_relative_path(release_index, root, "release evidence index")
 
     try:
@@ -249,6 +268,11 @@ def validate_readiness(
         raise ReleaseReadinessError(
             "device, installed identity, Play delivery, human, governance, and expected candidate SHA must all match"
         )
+    try:
+        store_metadata.verify_metadata(store_metadata_dir, expected)
+    except (OSError, store_metadata.StoreMetadataError) as exc:
+        raise ReleaseReadinessError(f"store metadata failed: {exc}") from exc
+
     artifact_values = {
         device_summary.artifact_sha256,
         human_summary.artifact_sha256,
@@ -288,6 +312,7 @@ def validate_readiness(
     installed_matrix_digest = _sha256_file(installed_matrix_path)
     play_delivery_digest = _sha256_file(play_delivery_path)
     governance_digest = _sha256_file(governance_path)
+    store_metadata_digest = _sha256_file(store_metadata_path)
     if device_digest != device_summary.bundle_sha256:
         raise ReleaseReadinessError("device acceptance digest changed after validation")
     if device_digest != human_summary.device_acceptance_sha256:
@@ -362,6 +387,12 @@ def validate_readiness(
         expected_path=governance_relative,
         expected_sha256=governance_digest,
     )
+    _require_index_reference(
+        entries,
+        kind="store_metadata",
+        expected_path=store_metadata_relative,
+        expected_sha256=store_metadata_digest,
+    )
 
     signed_bundle = entries["signed_bundle"]
     if signed_bundle.get("sha256") != governance_summary.artifact_sha256:
@@ -383,6 +414,7 @@ def validate_readiness(
         installed_identity_matrix_sha256=installed_matrix_digest,
         play_delivery_sha256=play_delivery_digest,
         governance_sha256=governance_digest,
+        store_metadata_sha256=store_metadata_digest,
         evidence_index_sha256=str(index_summary["indexSha256"]),
         evidence_set_sha256=str(index_summary["evidenceSetSha256"]),
         evidence_entry_count=int(index_summary["entryCount"]),
@@ -422,6 +454,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--installed-identity-matrix", type=Path, required=True)
     parser.add_argument("--play-delivery", type=Path, required=True)
     parser.add_argument("--release-governance", type=Path, required=True)
+    parser.add_argument("--store-metadata-manifest", type=Path, required=True)
     parser.add_argument("--release-evidence-index", type=Path, required=True)
     parser.add_argument("--summary-output", type=Path)
     args = parser.parse_args(argv)
@@ -434,6 +467,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             installed_identity_matrix=args.installed_identity_matrix,
             play_delivery_manifest=args.play_delivery,
             governance_manifest=args.release_governance,
+            store_metadata_manifest=args.store_metadata_manifest,
             release_index=args.release_evidence_index,
         )
     except ReleaseReadinessError as exc:

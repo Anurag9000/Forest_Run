@@ -29,6 +29,8 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
             "scripts/test_validate_release_governance.py",
             "scripts/validate_release_readiness.py",
             "scripts/test_validate_release_readiness.py",
+            "scripts/verify_store_listing_parity.py",
+            "scripts/test_verify_store_listing_parity.py",
             "docs/INSTALLED_CANDIDATE_IDENTITY.md",
             "docs/HUMAN_ACCEPTANCE.md",
             "docs/RELEASE_GOVERNANCE_EVIDENCE.md",
@@ -158,12 +160,14 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
             "play_delivery.load_and_validate",
             "human_acceptance.load_and_validate",
             "governance.load_and_validate",
+            "store_metadata.verify_metadata",
             "evidence_index.verify_index",
             'kind="device_acceptance"',
             'kind="installed_identity_matrix"',
             'kind="play_delivery"',
             'kind="human_acceptance"',
             'kind="release_governance"',
+            'kind="store_metadata"',
             'entries["signed_bundle"]',
             "indexed signed_bundle digest does not match the accepted signed artifact",
         ):
@@ -177,6 +181,7 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         governance = (DOCS / "RELEASE_GOVERNANCE_EVIDENCE.md").read_text(encoding="utf-8")
         security = (DOCS / "SECURITY_AND_LICENSING_GOVERNANCE.md").read_text(encoding="utf-8")
         readiness_doc = (DOCS / "RELEASE_READINESS.md").read_text(encoding="utf-8")
+        store_doc = (DOCS / "STORE_EVIDENCE.md").read_text(encoding="utf-8")
 
         self.assertIn("docs/INSTALLED_CANDIDATE_IDENTITY.md", readme)
         self.assertIn("docs/HUMAN_ACCEPTANCE.md", readme)
@@ -187,6 +192,8 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         self.assertEqual(2, index.count("--require-bound-kind play_delivery"))
         self.assertEqual(2, index.count("--require-bound-kind human_acceptance"))
         self.assertEqual(2, index.count("--require-bound-kind release_governance"))
+        self.assertEqual(2, index.count("--require-bound-kind store_metadata"))
+        self.assertEqual(1, index.count("--entry store_metadata="))
         self.assertNotIn("--require-bound-kind policy_approval", index)
         self.assertNotIn("--entry policy_approval=", index)
         self.assertIn("installed-identity-matrix", governance)
@@ -196,7 +203,11 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         self.assertIn("validate_release_governance.py", security)
         self.assertIn("--installed-identity-matrix", readiness_doc)
         self.assertIn("--play-delivery", readiness_doc)
+        self.assertIn("--store-metadata-manifest", readiness_doc)
+        self.assertIn("store_metadata", readiness_doc)
         self.assertIn("validate_release_readiness.py", readiness_doc)
+        self.assertIn("verify_store_listing_parity.py", store_doc)
+        self.assertIn("docs/STORE_LISTING.md", store_doc)
 
 
 if __name__ == "__main__":
