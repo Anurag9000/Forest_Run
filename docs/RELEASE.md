@@ -378,13 +378,17 @@ Still required:
 
 ## 13. Store asset pipeline
 
+Asset generation and screenshot capture/curation are preparatory steps. When a candidate is ready, the **only supported release-preparation entry point** is `scripts/prepare_main_release.sh`:
+
 ```bash
 python3 -m pip install -r scripts/requirements.txt
 python3 scripts/generate_store_assets.py
 bash scripts/capture_store_screenshots.sh
 python3 scripts/curate_store_screenshots.py
-python3 scripts/prepare_play_release.py
+bash scripts/prepare_main_release.sh
 ```
+
+Do not invoke `scripts/prepare_play_release.py` directly for a release candidate. It is a lower-level helper called by the canonical wrapper and, by itself, does not establish the full `origin/main`, provenance, source-asset, candidate-bound graphics/metadata, and final-summary verification boundary.
 
 Automated safeguards implemented:
 
@@ -395,11 +399,14 @@ Automated safeguards implemented:
 - [x] rejection of empty/invalid/portrait/stale screenshots;
 - [x] rejection of exact and near duplicates;
 - [x] rejection of low-variance/suspicious edge-band captures;
-- [x] generated graphic dimensions and hashes verified;
-- [x] metadata non-empty and placeholder-screened;
+- [x] exact candidate and `origin/main` are verified before preparation;
+- [x] release source assets and approved provenance are verified before preparation;
+- [x] generated graphics use strict candidate-bound manifests, exact schemas, hashes, dimensions, and source evidence;
+- [x] store metadata uses strict candidate-bound manifests, exact schemas, hashes, content normalization, and placeholder screening;
 - [x] final application ID accepted and known placeholders rejected;
 - [x] signing inputs required by default for upload preparation;
-- [x] Java/toolchain and Gradle release gates invoked by preparation.
+- [x] Java/toolchain and Gradle release gates invoked by preparation;
+- [x] newly produced release summaries are verified before the candidate is rechecked against local and remote `main`.
 
 Manual/store work still required:
 
