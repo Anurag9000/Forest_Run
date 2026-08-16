@@ -123,6 +123,8 @@ The supported release-preparation boundary is also explicit and mechanically gua
 
 `docs/RELEASE.md` no longer advertises direct invocation of `scripts/prepare_play_release.py`; it labels that file as the lower-level helper it is and names `bash scripts/prepare_main_release.sh` as the only supported candidate-preparation entrypoint. `test_prepare_main_release_contract.py` locks this documentation rule so the old bypass-prone command cannot silently return.
 
+A final documentation-to-suite reconciliation also removed the stale hard-coded statement that the ordinary connected gate contained exactly fourteen tests. The current non-`@LargeTest` suite contains sixteen tests, including the later accessibility and Journal lifecycle coverage. The release contract now states the durable invariant instead: execute the complete ordinary connected suite and require zero failures, zero errors, and zero skips. `test_prepare_main_release_contract.py` rejects reintroduction of the stale `fourteen` cardinality while requiring those semantic gate statements.
+
 This hardening does not manufacture store approval, signing credentials, final creative acceptance, or provenance approval. It only ensures that repository-generated release evidence fails closed and that operators are directed through the strongest source-controlled boundary.
 
 ## 7. Current source-addressable remainder
