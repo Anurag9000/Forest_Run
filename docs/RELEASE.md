@@ -119,7 +119,7 @@ The exact candidate must pass:
 The exact candidate must execute—not merely assemble—the connected suite:
 
 - [x] API 35 emulator boot and installation;
-- [x] exactly fourteen ordinary connected tests;
+- [x] complete ordinary connected suite excluding `@LargeTest` physical-evidence harnesses;
 - [x] zero failures;
 - [x] zero errors;
 - [x] zero skips;
@@ -450,7 +450,7 @@ These debts must be documented and bounded; they must not be falsely called reso
 Forest Run may be called a release candidate only when all are true:
 
 1. The exact frozen SHA passes host/release CI.
-2. The exact frozen SHA passes the fourteen-test emulator gate with zero skips.
+2. The exact frozen SHA passes the complete ordinary connected emulator gate with zero failures, errors, or skips.
 3. No known P0/P1 gameplay, persistence, lifecycle, packaging, or data-loss defect remains.
 4. Representative physical-device deterministic and ordinary-play scenarios pass.
 5. Written performance thresholds are met with archived evidence.
