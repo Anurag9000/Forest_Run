@@ -99,7 +99,33 @@ Focused Kotlin tests now assert semantic haptic events, while `scripts/test_term
 
 The Git-object update that made this atomic temporarily changed those two Python contract file modes; a follow-up metadata-only fast-forward restored their historical `100644` modes. No source content was reverted.
 
-## 6. Current source-addressable remainder
+## 6. Candidate-bound store graphics and release entrypoint are fail-closed
+
+The store-metadata evidence path already used the repository's strict JSON admission policy, but the graphics manifest verifier still had a materially weaker parser/admission boundary. That asymmetry is now closed.
+
+`scripts/verify_store_graphics.py` now:
+
+- parses the manifest through `strict_json` with duplicate-key, UTF-8/BOM, depth, non-finite-number, and byte-size protections;
+- requires the exact top-level schema and exact source/output entry schemas;
+- requires the exact 40-hex release-candidate SHA and generator identity;
+- admits the graphics directory and every evidence file with `lstat`, rejecting symbolic links and non-regular substitutions;
+- bounds manifest, source-asset, and generated-graphic byte sizes;
+- reads each evidence file once and rejects size/mtime/inode changes observed across the read;
+- hashes the same admitted bytes used for evidence checks;
+- verifies the exact source-asset set, source byte counts, SHA-256 values, and duplicate absence;
+- verifies the exact generated-output set, dimensions, image mode, byte counts, SHA-256 values, and duplicate/basename safety;
+- rejects unmanifested, missing, symbolic-link, and non-file entries in the graphics directory;
+- decodes and verifies PNGs from the already-admitted byte stream rather than reopening a different path instance.
+
+`scripts/test_verify_store_graphics.py` now covers the normal candidate plus adversarial duplicate JSON keys, schema smuggling, missing required source assets, source symlinks, generated-output symlinks, a symlinked graphics directory, stale source evidence, output tampering, duplicate/incomplete manifest entries, wrong dimensions, and wrong mode evidence.
+
+The supported release-preparation boundary is also explicit and mechanically guarded. `scripts/prepare_main_release.sh` remains the canonical candidate entrypoint: it verifies the exact local/remote `main` candidate, source assets/provenance, candidate-bound graphics, listing parity, candidate-bound metadata, invokes the lower-level Play preparer, verifies the newly produced summary, and finally rechecks the candidate against local and remote `main`.
+
+`docs/RELEASE.md` no longer advertises direct invocation of `scripts/prepare_play_release.py`; it labels that file as the lower-level helper it is and names `bash scripts/prepare_main_release.sh` as the only supported candidate-preparation entrypoint. `test_prepare_main_release_contract.py` locks this documentation rule so the old bypass-prone command cannot silently return.
+
+This hardening does not manufacture store approval, signing credentials, final creative acceptance, or provenance approval. It only ensures that repository-generated release evidence fails closed and that operators are directed through the strongest source-controlled boundary.
+
+## 7. Current source-addressable remainder
 
 No known correctness, missing-player-feature, or justified source-architecture item remains from the product-completion queue covered by this continuation.
 
@@ -107,7 +133,7 @@ No missing gameplay state machine, Bloom system, collision arbiter, persistence 
 
 Compiler warnings that remain are not being promoted into invented product debt. In particular, ghost-ordinal `PlayerState.BLOOM` compatibility and platform-compatibility accessibility APIs must not be rewritten merely to silence deprecation warnings. Small unused-parameter or redundant-initializer warnings are nonblocking maintainability observations unless a future substantive edit naturally removes them.
 
-## 7. Still external / candidate-bound
+## 8. Still external / candidate-bound
 
 The following remain intentionally unresolved by source work:
 
@@ -126,7 +152,7 @@ The following remain intentionally unresolved by source work:
 
 These must remain open until real external evidence or owner decisions exist.
 
-## 8. Validation rule and current status
+## 9. Validation rule and current status
 
 Because each direct-to-`main` commit starts a new candidate SHA, only the final exact-head workflow may be used as completion evidence. Superseded or cancelled runs are useful diagnostics but are not a substitute for a green host/release job and green API-35 connected job on the same final SHA.
 
