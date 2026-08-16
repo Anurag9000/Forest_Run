@@ -4,7 +4,9 @@ import subprocess
 import unittest
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = Path(__file__).with_name("prepare_main_release.sh")
+RELEASE_DOC = ROOT / "docs/RELEASE.md"
 
 
 class MainReleaseWrapperContractTest(unittest.TestCase):
@@ -57,6 +59,13 @@ class MainReleaseWrapperContractTest(unittest.TestCase):
         self.assertLess(summary_index, final_local_index)
         self.assertLess(summary_index, final_origin_index)
         self.assertIn('--candidate-sha "${candidate_sha}"', self.source[summary_index:final_local_index])
+
+    def test_release_guide_uses_only_canonical_candidate_entrypoint(self) -> None:
+        guide = RELEASE_DOC.read_text(encoding="utf-8")
+        self.assertIn("bash scripts/prepare_main_release.sh", guide)
+        self.assertNotIn("python3 scripts/prepare_play_release.py", guide)
+        self.assertIn("only supported release-preparation entry point", guide)
+        self.assertIn("Do not invoke `scripts/prepare_play_release.py` directly", guide)
 
 
 if __name__ == "__main__":
