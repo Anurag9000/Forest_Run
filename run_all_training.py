@@ -2,7 +2,7 @@
 from __future__ import annotations
 import hashlib,os,subprocess,sys,urllib.request
 from pathlib import Path
-R="Anurag9000/Forest_Run";B="d173db2e03984e0a6814cb348262b41078969a7c";S="f990134b14c9fc514a0592f595deafc323000f5c";AC="89a10cf30b4171aec27e67284df6900a6b1c68ca";AS="b34b4deca809f63a8f8db5d3189ea734f2c8c228";D=Path(__file__).resolve().parent;U=f"https://raw.githubusercontent.com/Anurag9000/RigorousRAG/{AC}/tools/repo_training_launcher_adapter.py"
+R="Anurag9000/Forest_Run";B="d173db2e03984e0a6814cb348262b41078969a7c";S="f990134b14c9fc514a0592f595deafc323000f5c";AC="e0d9a757bebcd342f1f93dda8f53c6d1b5d41e7b";AS="a850289c88841cb7e1f8e9d68b81b2dec5168335";D=Path(__file__).resolve().parent;U=f"https://raw.githubusercontent.com/Anurag9000/RigorousRAG/{AC}/tools/repo_training_launcher_adapter.py"
 def h(x):return hashlib.sha1(f"blob {len(x)}\0".encode()+x).hexdigest()
 def main():
  p=D/".training_control"/"repo_training_launcher_adapter.py"
