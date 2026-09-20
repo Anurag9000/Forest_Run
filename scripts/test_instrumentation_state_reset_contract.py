@@ -31,6 +31,9 @@ class InstrumentationStateResetContractTest(unittest.TestCase):
         start = self.ghost_persistence.index("    internal fun clearMemoryForTests()")
         end = self.ghost_persistence.index("    private fun artifactStore(", start)
         region = self.ghost_persistence[start:end]
+        annotation = self.ghost_persistence.rfind("@Synchronized", 0, start)
+        self.assertGreaterEqual(annotation, 0)
+        self.assertLess(start - annotation, 64)
         wait = region.index("check(awaitPendingWrites(TEST_RESET_QUIESCENCE_TIMEOUT_MS))")
         clear = region.index("pendingWrites.clear()", wait)
         self.assertLess(wait, clear)

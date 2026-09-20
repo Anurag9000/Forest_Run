@@ -222,14 +222,13 @@ object GhostPersistenceManager {
         return receiptCleared && manifestCleared
     }
 
+    @Synchronized
     internal fun clearMemoryForTests() {
         check(awaitPendingWrites(TEST_RESET_QUIESCENCE_TIMEOUT_MS)) {
             "Ghost test reset could not quiesce pending persistence work"
         }
-        synchronized(this) {
-            latestPublications.clear()
-            pendingWrites.clear()
-        }
+        latestPublications.clear()
+        pendingWrites.clear()
         GhostIoTelemetry.reset()
     }
 
