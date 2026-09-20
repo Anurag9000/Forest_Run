@@ -41,6 +41,28 @@ class DebugLaunchReleaseGuardContractTest(unittest.TestCase):
         self.assertIn("return", guard)
         self.assertNotIn("DEBUG_SCENARIO_READY_PREFIX", guard)
 
+    def test_ready_marker_requires_exact_applied_state_match(self) -> None:
+        dispatch = self.launch.index("gameView.applyDebugLaunchIntent(launchIntent)")
+        post_dispatch_match = self.launch.index(
+            "if (!gameView.matchesDebugLaunch(scenario, effectiveMode))",
+            dispatch + 1,
+        )
+        apply_timeout = self.launch.index("reason=apply_timeout", post_dispatch_match)
+        ready_marker = self.launch.index("$DEBUG_SCENARIO_READY_PREFIX", apply_timeout)
+        self.assertLess(dispatch, post_dispatch_match)
+        self.assertLess(post_dispatch_match, apply_timeout)
+        self.assertLess(apply_timeout, ready_marker)
+
+    def test_game_view_match_is_locked_and_exact(self) -> None:
+        start = self.game_view.index("    internal fun matchesDebugLaunch(")
+        end = self.game_view.index("    private fun stopThread()", start)
+        match = self.game_view[start:end]
+        self.assertIn("synchronized(runtimeStateLock)", match)
+        self.assertIn("appState != AppGameState.PLAYING", match)
+        self.assertIn("runState != RunState.PLAYING", match)
+        self.assertIn("runMode != mode", match)
+        self.assertIn("encounterDirector?.activeScenario == scenario", match)
+
     def test_game_view_keeps_second_defense_at_dispatch_boundary(self) -> None:
         start = self.game_view.index("    fun applyDebugLaunchIntent(intent: Intent?)")
         end = self.game_view.index("    private fun prepareEncounterScenario()", start)
