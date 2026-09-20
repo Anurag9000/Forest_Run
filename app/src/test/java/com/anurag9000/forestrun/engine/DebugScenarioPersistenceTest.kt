@@ -70,6 +70,32 @@ class DebugScenarioPersistenceTest {
     }
 
     @Test
+    fun `persistent high score survives debug contamination without promoting debug score`() {
+        var persistProgress = true
+        val gameState = GameStateManager(context) { persistProgress }
+
+        gameState.addBonus(points = 120)
+        assertEquals(120, gameState.highScore)
+        assertEquals(0, SaveManager.loadHighScore(context))
+
+        persistProgress = false
+        gameState.resetRun()
+        assertEquals(120, gameState.highScore)
+
+        gameState.addBonus(points = 5_000)
+        assertEquals(5_000, gameState.highScore)
+        assertEquals(0, SaveManager.loadHighScore(context))
+
+        persistProgress = true
+        gameState.resetRun()
+        assertEquals(120, gameState.highScore)
+        assertEquals(0, SaveManager.loadHighScore(context))
+
+        gameState.save()
+        assertEquals(120, SaveManager.loadHighScore(context))
+    }
+
+    @Test
     fun `debug Cat spare leaves permanent history untouched`() {
         val player = Player(1_920, 1_080, spriteManager)
         val gameState = GameStateManager(context)
