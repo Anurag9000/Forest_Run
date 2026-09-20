@@ -42,6 +42,34 @@ class DebugScenarioPersistenceTest {
     }
 
     @Test
+    fun `non persistent run rewards never leak into durable seeds or later high score`() {
+        var persistProgress = false
+        val gameState = GameStateManager(context) { persistProgress }
+
+        gameState.recordBloomConversion()
+        gameState.addBonus(points = 5_000, seeds = 3)
+        gameState.save()
+
+        assertEquals(4, gameState.seedsThisRun)
+        assertEquals(0, gameState.lifetimeSeeds)
+        assertEquals(0, SaveManager.loadLifetimeSeeds(context))
+        assertEquals(0, SaveManager.loadHighScore(context))
+
+        // Returning to an ordinary run must discard the debug-only high-score
+        // cache before any later save can make it durable.
+        persistProgress = true
+        gameState.resetRun()
+        assertEquals(0, gameState.highScore)
+        assertEquals(0, gameState.lifetimeSeeds)
+
+        gameState.addBonus(points = 25, seeds = 1)
+        gameState.save()
+
+        assertEquals(25, SaveManager.loadHighScore(context))
+        assertEquals(1, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
     fun `debug Cat spare leaves permanent history untouched`() {
         val player = Player(1_920, 1_080, spriteManager)
         val gameState = GameStateManager(context)
