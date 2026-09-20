@@ -1,15 +1,24 @@
 package com.anurag9000.forestrun
 
 import android.content.Context
+import com.anurag9000.forestrun.engine.FeedbackSettings
+import com.anurag9000.forestrun.engine.SaveIntegrityManager
+import com.anurag9000.forestrun.engine.SaveManager
 import com.anurag9000.forestrun.systems.GhostPersistenceManager
 
 /** Clears every persistent namespace that can influence connected-test ordering. */
 object InstrumentationStateReset {
-    private val preferenceFiles = listOf(
-        "forest_run_prefs",
-        "forest_run_prefs_compat_v1",
-        "forest_run_feedback_settings"
+    private val saveNamespaces = listOf(
+        SaveManager.PREFS_NAME,
+        "${SaveManager.PREFS_NAME}_compat_v${SaveIntegrityManager.CURRENT_SCHEMA_VERSION}"
     )
+    private val preferenceFiles = buildList {
+        addAll(saveNamespaces)
+        add(FeedbackSettings.PREFS_NAME)
+        saveNamespaces.forEach { namespace ->
+            add("forest_run_outcome_recovery_${namespace}")
+        }
+    }
 
     fun clear(context: Context) {
         val appContext = context.applicationContext
