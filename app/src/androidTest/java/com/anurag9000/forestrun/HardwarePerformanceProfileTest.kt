@@ -123,7 +123,10 @@ class HardwarePerformanceProfileTest {
             // Stop its producer, clear startup/cache samples in place, restart the
             // requested scenario, and resume with the same monitor reference.
             activityScenario.onActivity {
-                gameView.pause()
+                assertTrue(
+                    "warmup render producer must stop before telemetry reset",
+                    gameView.pause()
+                )
                 FramePerformanceTelemetry.resetStoppedSession()
                 gameView.applyDebugLaunchIntent(launchIntent)
                 gameView.resume()

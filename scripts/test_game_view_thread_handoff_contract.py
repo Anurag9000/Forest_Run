@@ -53,6 +53,21 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         self.assertLess(branch_return, replacement)
         self.assertLess(replacement, start_thread)
 
+    def test_pause_reports_quiescence_for_fail_closed_profile_reset(self) -> None:
+        start = self.source.index("    fun pause(): Boolean {")
+        end = self.source.index("    fun resume() {", start)
+        pause = self.source[start:end]
+        self.assertIn("val threadStopped = stopThread()", pause)
+        self.assertIn("return threadStopped", pause)
+
+        profile = (ROOT / "app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt").read_text(encoding="utf-8")
+        pause_index = profile.index("gameView.pause()")
+        reset_index = profile.index("FramePerformanceTelemetry.resetStoppedSession()")
+        self.assertLess(pause_index, reset_index)
+        surrounding = profile[max(0, pause_index - 160):reset_index]
+        self.assertIn("assertTrue(", surrounding)
+        self.assertIn("warmup render producer must stop before telemetry reset", surrounding)
+
     def test_surface_recreation_never_reenables_a_stopping_live_thread(self) -> None:
         start = self.source.index("    override fun surfaceCreated(")
         end = self.source.index("    override fun surfaceChanged(", start)

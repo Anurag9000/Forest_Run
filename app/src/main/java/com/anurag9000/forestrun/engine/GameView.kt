@@ -540,17 +540,18 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         stopThread()
     }
 
-    fun pause() {
+    fun pause(): Boolean {
         lifecyclePaused = true
         // Invalidate any deferred resume before asking the current owner to stop.
         // A frame callback may be temporarily uncooperative, so pause must also
         // prevent a queued handoff from creating a replacement behind it.
         gameThreadRestartGate.cancel()
-        stopThread()
+        val threadStopped = stopThread()
         LeitmotifManager.pause()   // Phase 20
         if (::gameState.isInitialized && runMode.persistsProgress) {
             gameState.save()   // persist ordinary-play high score only
         }
+        return threadStopped
     }
 
     fun resume() {
@@ -652,10 +653,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 
-    private fun stopThread() {
-        if (!gameThread.requestStopAndAwait()) {
+    private fun stopThread(): Boolean {
+        val stopped = gameThread.requestStopAndAwait()
+        if (!stopped) {
             Log.w(TAG, "GameThread did not terminate within the 1 second shutdown bound")
         }
+        return stopped
     }
 
     // -----------------------------------------------------------------------
