@@ -649,10 +649,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             !::gameState.isInitialized ||
             holder.surface?.isValid != true
         ) {
+            // Keep exactly one latest pending request. MainActivity owns the
+            // tokenized retry loop; surface/resume initialization drains this
+            // field. Do not enqueue an unowned closure capturing an older intent.
             pendingDebugLaunchIntent = Intent(intent)
-            postDelayed({ applyDebugLaunchIntent(intent) }, 100L)
             return
         }
+
+        // A newer ready request supersedes anything that was deferred earlier.
+        pendingDebugLaunchIntent = null
 
         if (!scenarioName.isNullOrBlank()) {
             val director = encounterDirector ?: return
