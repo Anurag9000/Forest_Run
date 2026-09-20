@@ -66,6 +66,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
     private var gameThread: GameThread = GameThread(holder, this)
     private val gameThreadRestartGate = LatestRequestGate()
+    @Volatile
+    private var lifecyclePaused = false
 
     // -----------------------------------------------------------------------
     // Input
@@ -486,8 +488,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             wirePlayerToInput()
         }
 
-        gameThread.isRunning = true
-        if (gameThread.state == Thread.State.NEW) gameThread.start()
+        if (!lifecyclePaused) {
+            val restartToken = gameThreadRestartGate.begin()
+            resumeGameThreadWhenStopped(restartToken)
+        }
         pendingDebugLaunchIntent?.let {
             pendingDebugLaunchIntent = null
             post { applyDebugLaunchIntent(it) }
@@ -532,10 +536,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
+        gameThreadRestartGate.cancel()
         stopThread()
     }
 
     fun pause() {
+        lifecyclePaused = true
         // Invalidate any deferred resume before asking the current owner to stop.
         // A frame callback may be temporarily uncooperative, so pause must also
         // prevent a queued handoff from creating a replacement behind it.
@@ -548,6 +554,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     fun resume() {
+        lifecyclePaused = false
         LeitmotifManager.resume()  // Phase 20
         val restartToken = gameThreadRestartGate.begin()
         resumeGameThreadWhenStopped(restartToken)
@@ -567,7 +574,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      * render the same GameView concurrently.
      */
     private fun resumeGameThreadWhenStopped(restartToken: LatestRequestGate.Token) {
-        if (!gameThreadRestartGate.isCurrent(restartToken)) return
+        if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return
 
         if (gameThread.isAlive) {
             gameThread.requestStop()

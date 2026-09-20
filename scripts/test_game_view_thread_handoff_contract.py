@@ -22,6 +22,7 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         start = self.source.index("    fun pause() {")
         end = self.source.index("    fun resume() {", start)
         pause = self.source[start:end]
+        self.assertLess(pause.index("lifecyclePaused = true"), pause.index("gameThreadRestartGate.cancel()"))
         self.assertLess(pause.index("gameThreadRestartGate.cancel()"), pause.index("stopThread()"))
 
     def test_resume_uses_owned_deferred_handoff_instead_of_immediate_replacement(self) -> None:
@@ -29,6 +30,7 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         end = self.source.index("    fun applyDebugLaunchIntent", start)
         resume_region = self.source[start:end]
         resume_only = resume_region[:resume_region.index("    private fun resumeGameThreadWhenStopped")]
+        self.assertIn("lifecyclePaused = false", resume_only)
         self.assertIn("val restartToken = gameThreadRestartGate.begin()", resume_only)
         self.assertIn("resumeGameThreadWhenStopped(restartToken)", resume_only)
         self.assertNotIn("gameThread = GameThread(holder, this)", resume_only)
@@ -37,7 +39,7 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         start = self.source.index("    private fun resumeGameThreadWhenStopped")
         end = self.source.index("    fun applyDebugLaunchIntent", start)
         handoff = self.source[start:end]
-        ownership = handoff.index("if (!gameThreadRestartGate.isCurrent(restartToken)) return")
+        ownership = handoff.index("if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return")
         alive = handoff.index("if (gameThread.isAlive)")
         stop = handoff.index("gameThread.requestStop()", alive)
         retry = handoff.index("postDelayed(", stop)
@@ -50,6 +52,20 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         self.assertLess(retry, branch_return)
         self.assertLess(branch_return, replacement)
         self.assertLess(replacement, start_thread)
+
+    def test_surface_recreation_never_reenables_a_stopping_live_thread(self) -> None:
+        start = self.source.index("    override fun surfaceCreated(")
+        end = self.source.index("    override fun surfaceChanged(", start)
+        created = self.source[start:end]
+        self.assertIn("if (!lifecyclePaused)", created)
+        self.assertIn("gameThreadRestartGate.begin()", created)
+        self.assertIn("resumeGameThreadWhenStopped(restartToken)", created)
+        self.assertNotIn("gameThread.isRunning = true", created)
+
+        destroyed_start = self.source.index("    override fun surfaceDestroyed(")
+        pause_start = self.source.index("    fun pause() {", destroyed_start)
+        destroyed = self.source[destroyed_start:pause_start]
+        self.assertLess(destroyed.index("gameThreadRestartGate.cancel()"), destroyed.index("stopThread()"))
 
     def test_retry_is_bounded_by_latest_resume_ownership(self) -> None:
         self.assertIn("private val gameThreadRestartGate = LatestRequestGate()", self.source)
