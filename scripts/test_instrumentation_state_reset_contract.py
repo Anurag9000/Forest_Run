@@ -18,6 +18,13 @@ class InstrumentationStateResetContractTest(unittest.TestCase):
         self.assertIn('saveNamespaces.forEach { namespace ->', self.source)
         self.assertIn('add("forest_run_outcome_recovery_${namespace}")', self.source)
 
+    def test_process_save_namespace_returns_to_primary_before_preloads(self) -> None:
+        clear_start = self.source.index("    fun clear(context: Context) {")
+        clear_region = self.source[clear_start:]
+        primary = clear_region.index("SaveManager.usePrimaryPreferences()")
+        ghost = clear_region.index("GhostPersistenceManager.clearMemoryForTests()")
+        self.assertLess(primary, ghost)
+
     def test_feedback_and_ghost_state_are_also_cleared(self) -> None:
         self.assertIn("FeedbackSettings.PREFS_NAME", self.source)
         self.assertIn("GhostPersistenceManager.clearMemoryForTests()", self.source)
