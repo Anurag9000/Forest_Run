@@ -22,6 +22,7 @@ object InstrumentationStateReset {
 
     fun clear(context: Context) {
         val appContext = context.applicationContext
+        SaveManager.usePrimaryPreferences()
         GhostPersistenceManager.clearMemoryForTests()
         preferenceFiles.forEach { name ->
             check(
