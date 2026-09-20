@@ -694,6 +694,24 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 
+    internal fun matchesDebugLaunch(
+        scenario: EncounterScenario?,
+        mode: RunMode
+    ): Boolean = synchronized(runtimeStateLock) {
+        if (!debugToolsEnabled ||
+            appState != AppGameState.PLAYING ||
+            runState != RunState.PLAYING ||
+            runMode != mode
+        ) {
+            return@synchronized false
+        }
+        if (scenario == null) {
+            encounterDirector?.isScenarioActive != true
+        } else {
+            encounterDirector?.activeScenario == scenario
+        }
+    }
+
     private fun stopThread(): Boolean {
         val stopped = gameThread.requestStopAndAwait()
         if (!stopped) {
