@@ -4,23 +4,69 @@ This file is the chronological remediation ledger. It preserves tranche-local fi
 
 The ledger remains intentionally conservative: a source change is not called validated merely because it was committed, and automated validation is not treated as physical-device or store acceptance.
 
-## Current reconciliation — 2026-08-09
+## Current reconciliation — 2026-09-20
 
-The source-architecture queue reconstructed in the 2026-08-06 documentation audit is now closed on canonical `main` at source-bearing checkpoint `414bf30b36ce051f0d5ef75f6143ed6bf8fa5884`. Android validation run `31297723150` completed successfully for both the full host/release/lint/package/R8 job and API-35 connected behavior.
+The repository-specific whole-software re-audit was repeated from the live `main`
+tree after the September continuation commands. The final source-bearing checkpoint
+before this reconciliation record is `2e79500c577fb3fa86f6e99cad5a872a69dcbff2`.
+GitHub Actions run `35494183684` completed successfully on that exact SHA for
+both the host/release/lint/package/R8 job and the API-35 connected validation job.
+The repository-specific and estate-local training-control certificates also passed
+on the same SHA in runs `35494183607` and `35494183606`.
 
-Closed after the historical tranches below:
+This continuation closed the concrete regressions and contradictions found by the
+fresh audit:
 
-- `CollisionOutcomeDispatcher` is the sole collision-result dispatcher; terminal/nonterminal sequencing is coordinator-owned and one shared `LiveCollisionEffects` adapter replaced the former private `GameView` effect adapters.
-- `RunSessionTransitionPlanner` and `RunSessionTransitionCoordinator` own ordinary top-level transitions. Debug scenario/autostart publication also routes through the explicit `DEBUG_PLAYING_STATE_REQUESTED` event, which distinguishes an accepted idempotent request from an invalid stale no-op.
-- `ApplicationPersistenceFacade` is adopted by the live gameplay/UI mutation paths for terminal outcomes, encounter/pass/hit/relationship memory, Garden purchases, wardrobe writes, feedback settings, and recovery operations while preserving independent durability domains.
-- The custom Canvas UI has a real `AccessibilityNodeProvider` virtual hierarchy with stable semantic nodes/actions, truthful Garden/wardrobe state, stale-ID rejection, accessibility focus/content change behavior, and throttled TalkBack announcements. Framework events are suppressed safely while Android accessibility is disabled.
-- `EncounterFamilyCatalogue` is the single canonical 19-family structural/derived catalogue with biome reachability, deterministic/focused scenario coverage, relationship capability, authored variants, factory wiring, and asset drift contracts.
-- Ordinary players have privacy-safe recovery inspection/retry/discard UI with revalidation and two-step destructive confirmation; debug/ADB maintenance remains separate.
-- The exact API-35 failures discovered while adopting the final accessibility/session coverage were fixed at their owners: accessibility-off event emission and repeated idempotent debug state publication.
+- Forest Run's root training-control command is now repository-specific and
+  fail-closed. It certifies the absence of a retained ML/training surface instead
+  of treating ordinary Android release/test dictionaries as model registries or
+  downloading a generic scientific controller. Dataset cohorts, GPU training,
+  optimizers, losses, checkpoints, training DAGs, and model-family matrices are
+  explicitly not applicable unless a real trainable surface is later introduced.
+- Both training-control workflows execute only the checked-in local authority and
+  upload candidate-bound certificates. The former externally pinned estate
+  validator dependency is no longer required for this repository.
+- Android validation no longer depends on the failing `setup-android` package
+  installation path that requested obsolete SDK package `tools`. It validates
+  the hosted SDK and installs only the explicit platform/build-tools/emulator
+  packages the build actually needs.
+- `GameThread` no longer records a frame as posted after swallowing
+  `unlockCanvasAndPost` failures. A failed lock/post remains a render failure, so
+  app-touch-to-posted-frame telemetry cannot manufacture successful frame evidence.
+- The Wolf runtime loader now matches the authored `wolf_4frames.png` contract
+  instead of slicing the same bytes as eight frames.
+- The release-facing Google Play README now directs operators only through
+  `scripts/prepare_main_release.sh`, removes the workstation-specific absolute
+  link, and no longer keeps a stale checked-in `BUILD_SUMMARY.md` as if it were
+  candidate evidence. Regression tests guard the supported boundary.
+- Player animation ownership was re-audited across callers rather than by local
+  declaration alone. `playerStandUp` is a live Menu/willow-home presentation
+  owner, not an orphan; it is restored with an explicit cross-layer contract.
+  Gameplay jump partitions, hit/stumble, and death/Rest ownership remain separate.
+- The runtime-asset audit confirmed the five bird base/flying byte-identical pairs
+  are existing explicit alias groups. They remain creative-review/provenance items,
+  not hidden missing-file defects.
 
-No source-addressable item from the prior collision/session/persistence/catalogue/accessibility/recovery architecture queue remains open after this checkpoint. Remaining blockers are candidate-bound or decision-bound: representative physical hardware, human fairness/accessibility review, performance/thermal/battery evidence, real signing and signed-install/store delivery, final art/audio/haptic approval, privacy/store policy, licensing/security/provenance decisions, and independent final evidence review.
+The final tree inventory used for this closure contained 806 tracked files,
+including 187 production Kotlin files, 226 JVM/Robolectric Kotlin test files,
+8 Android instrumentation Kotlin files, 167 Python files below `scripts/`,
+8 shell scripts, 3 GitHub workflows, 29 runtime PNG sprites, 15 raw audio files,
+and 1 runtime font. Only `main` exists and there are no open pull requests.
 
-Intentional compatibility limitations remain documented separately: pre-manifest ghost mismatches are not reconstructable, healthy legacy sidecars may stay legacy until validation is needed, SHA-256 identity is not trusted-writer authentication, and ghost/non-ghost recovery remain independent durability domains.
+No additional source-addressable correctness defect, missing player feature, or
+justified architecture item was substantiated by the final re-audit after the
+above fixes. In particular, the audit does not manufacture ML infrastructure,
+cloud/account systems, advertising, multiplayer, new encounter families, new
+biomes, or speculative frame mappings merely to create work.
+
+Remaining blockers are intentionally external or candidate-bound: representative
+physical hardware and human fairness/accessibility review; performance, thermal,
+battery, audio, haptic, and long-session evidence; production signing and signed
+install/store-delivery evidence; final creative/art/audio approval; rights,
+licensing, attribution, privacy, data-safety, content-rating, target-audience and
+current Play-policy decisions; private vulnerability-reporting configuration; and
+accountable final release approval.
+
 
 ## Historical tranche ledger
 
