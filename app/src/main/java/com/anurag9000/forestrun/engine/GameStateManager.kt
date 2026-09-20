@@ -7,11 +7,19 @@ import com.anurag9000.forestrun.utils.MathUtils
 /**
  * Single source of truth for mutable per-run state.
  *
- * Lifetime seed currency is persisted transactionally through SaveManager. The
- * in-memory value is only a cache and is refreshed before every mutation so a
- * Garden purchase can never be overwritten by a stale GameStateManager.
+ * Lifetime seed currency is persisted transactionally through SaveManager only
+ * while [persistProgress] authorizes the active run. Debug/capture/performance
+ * runs still exercise local score, Seed, and Bloom behavior without mutating the
+ * player's durable Garden currency or high score.
+ *
+ * The in-memory lifetime value is only a cache and is refreshed before every
+ * persistent mutation so a Garden purchase can never be overwritten by a stale
+ * GameStateManager.
  */
-class GameStateManager(context: Context) {
+class GameStateManager(
+    context: Context,
+    private val persistProgress: () -> Boolean = { true }
+) {
     private val appContext = context.applicationContext
     private val pacifistTracker = PacifistTracker()
     private val mercySystem = MercySystem()
@@ -324,6 +332,7 @@ class GameStateManager(context: Context) {
         exactScore = 0f
         scoreMultiplier = 1f
         seedsThisRun = 0
+        highScore = SaveManager.loadHighScore(appContext)
         lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext)
         bloomMeter = 0
         isBloomActive = false
@@ -342,6 +351,7 @@ class GameStateManager(context: Context) {
 
     /** Persist score without ever overwriting externally spent Garden seeds. */
     fun save() {
+        if (!persistProgress()) return
         SaveManager.saveHighScore(appContext, highScore)
         lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext)
     }
@@ -352,14 +362,16 @@ class GameStateManager(context: Context) {
 
         seedsThisRun = saturatingAdd(seedsThisRun, safeSeedCount)
 
-        // Reload once before the atomic-sized award: Garden may have spent
-        // seeds while this long-lived manager was inactive. Persisting once
-        // avoids O(n) disk writes for large bonuses.
-        lifetimeSeeds = saturatingAdd(
-            SaveManager.loadLifetimeSeeds(appContext),
-            safeSeedCount
-        )
-        SaveManager.saveLifetimeSeeds(appContext, lifetimeSeeds)
+        if (persistProgress()) {
+            // Reload once before the atomic-sized award: Garden may have spent
+            // seeds while this long-lived manager was inactive. Persisting once
+            // avoids O(n) disk writes for large bonuses.
+            lifetimeSeeds = saturatingAdd(
+                SaveManager.loadLifetimeSeeds(appContext),
+                safeSeedCount
+            )
+            SaveManager.saveLifetimeSeeds(appContext, lifetimeSeeds)
+        }
 
         if (isBloomActive) return
 
