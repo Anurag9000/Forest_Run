@@ -556,8 +556,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         gameThreadRestartGate.cancel()
         val threadStopped = stopThread()
         LeitmotifManager.pause()   // Phase 20
-        if (::gameState.isInitialized && runMode.persistsProgress) {
+        if (threadStopped && ::gameState.isInitialized && runMode.persistsProgress) {
             gameState.save()   // persist ordinary-play high score only
+        } else if (!threadStopped && ::gameState.isInitialized && runMode.persistsProgress) {
+            // Do not read mutable GameState concurrently with an uncooperative
+            // frame callback. The shutdown result is exposed to callers so
+            // evidence/profile paths can fail closed instead of fabricating a
+            // quiescent snapshot.
+            Log.w(TAG, "Skipping pause persistence while GameThread is still active")
         }
         return threadStopped
     }
