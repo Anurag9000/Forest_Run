@@ -409,7 +409,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         holder: SurfaceHolder,
         restartToken: LatestRequestGate.Token
     ) {
-        if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return
+        if (!gameThreadRestartGate.isCurrent(restartToken)) return
 
         if (gameThread.isAlive && !gameThread.isRunning) {
             postDelayed(
@@ -420,7 +420,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
 
         synchronized(runtimeStateLock) {
-            if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return
+            if (!gameThreadRestartGate.isCurrent(restartToken)) return
 
         screenWidth  = width
         screenHeight = height
@@ -519,10 +519,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             wirePlayerToInput()
         }
 
-        resumeGameThreadWhenStopped(restartToken)
-        pendingDebugLaunchIntent?.let {
-            pendingDebugLaunchIntent = null
-            post { applyDebugLaunchIntent(it) }
+        if (!lifecyclePaused) {
+            resumeGameThreadWhenStopped(restartToken)
+            pendingDebugLaunchIntent?.let {
+                pendingDebugLaunchIntent = null
+                post { applyDebugLaunchIntent(it) }
+            }
         }
         }
     }
@@ -593,10 +595,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         lifecyclePaused = false
         LeitmotifManager.resume()  // Phase 20
         val restartToken = gameThreadRestartGate.begin()
-        resumeGameThreadWhenStopped(restartToken)
-        pendingDebugLaunchIntent?.let {
-            pendingDebugLaunchIntent = null
-            post { applyDebugLaunchIntent(it) }
+        if (holder.surface?.isValid == true) {
+            initializeSurfaceWhenThreadStopped(holder, restartToken)
         }
     }
 
