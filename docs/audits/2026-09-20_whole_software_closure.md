@@ -2,191 +2,252 @@
 
 ## Scope and method
 
-This audit is the September continuation of the repository-specific completion
-work. It treats Forest Run as an Android game and release system, not as a generic
-ML repository. The live `main` tree was re-inventoried across production code,
-tests, assets, workflows, release tooling, persistence/evidence systems, and
-canonical documentation before any new work was classified as necessary.
+This is the canonical September whole-software closure audit for Forest Run. The
+repository is evaluated as a native Android game plus its persistence, evidence,
+build, release, and store-delivery system—not as a generic ML repository. The
+audit re-inventoried first-party source, tests, assets, workflows, release tools,
+runtime owners, persistence/recovery boundaries, instrumentation evidence, and
+canonical documentation, and traced changed cross-layer contracts before
+classifying work as closed.
 
-The source-bearing checkpoint validated by GitHub Actions is
-`2e79500c577fb3fa86f6e99cad5a872a69dcbff2`.
+The final source-bearing checkpoint validated by GitHub Actions is
+`7757b40b7e87b3d33412f9a070c068e92f62ccf2`.
 
 ## Repository inventory
 
-The audited tree contains 806 tracked files:
+The audited source-bearing tree contains 813 tracked files:
 
 | Surface | Count |
 | --- | ---: |
 | Production Kotlin (`app/src/main/java`) | 187 |
 | JVM/Robolectric Kotlin tests (`app/src/test`) | 226 |
 | Android instrumentation Kotlin tests (`app/src/androidTest`) | 8 |
-| Python files below `scripts/` | 167 |
+| Python files below `scripts/` | 173 |
 | Shell scripts below `scripts/` | 8 |
 | GitHub workflows | 3 |
 | Runtime PNG sprites | 29 |
 | Runtime raw audio files | 15 |
 | Runtime fonts | 1 |
 
-Repository organization is also closed: `main` is the only branch and there
-are no open pull requests.
+Only `main` exists and there are no open pull requests. The continuation from
+the prior documented checkpoint
+`e1de33bb90a41ffd9df6fdf1e8d52d234c77726e` to the final source-bearing
+checkpoint contains 45 commits touching 24 files. Those changes are concentrated
+in runtime lifecycle/debug ownership, deterministic-persistence isolation,
+connected evidence, and their regression contracts rather than unrelated product
+expansion.
 
-## Defects found and closed in this continuation
+## Defects and contradictions closed
 
-### 1. Training-control applicability was conceptually wrong
+### 1. Training-control applicability
 
-The prior generic controller scanned normal application vocabulary such as
-registries, metrics, tasks, stages, and strategies as if it proved trainable ML
-surfaces. That is invalid for this repository.
+Forest Run has no retained model-training surface. The root training-control path
+therefore uses the checked-in repository-specific fail-closed authority rather
+than interpreting ordinary application vocabulary as ML registries or downloading
+a generic scientific controller. Dataset cohorts, GPU-first training, CPU/GPU
+training parity, optimizer/loss/checkpoint surfaces, distillation, QAT/PTQ
+training stages, pruning fine-tuning, model registries, training DAGs,
+architecture search, and model-family matrices are explicitly N/A until a real
+trainable surface exists.
 
-The root command now delegates to the checked-in
-`training_control/forest_no_trainable_authority.py` fail-closed audit. It emits
-a local certificate stating that training is not applicable only while the
-repository remains free of retained ML/training framework and training-entrypoint
-markers. A future real ML surface therefore turns the certificate red instead of
-being silently ignored.
+Both local training-control workflows execute that authority and produce
+candidate-bound certificates.
 
-The local dataset-cohort certificate derives from the same authority. GPU-first
-training, CPU/GPU parity, optimizers, losses, checkpoints/resume, distillation,
-QAT/PTQ training stages, pruning fine-tuning, model registries, experiment
-matrices, training DAGs, architecture search, and model-family coverage are
-explicitly N/A rather than synthetic PASS claims.
+### 2. Android CI bootstrap
 
-Both training workflows now execute this repository-local authority. Exact-SHA
-runs `35494183607` and `35494183606` passed.
+Android validation validates the hosted SDK and installs only the explicit API
+36/build-tools and API-35 emulator packages required by the repository. It no
+longer relies on the failing SDK action path that requested obsolete package
+`tools`.
 
-### 2. Android CI SDK bootstrap was broken
+### 3. Posted-frame evidence
 
-The previous SDK action path attempted to install obsolete package `tools` and
-failed before the real build. The workflow now validates the Android SDK already
-provided by the hosted runner and explicitly installs the platform/build-tools
-and emulator packages needed by the repository.
+`GameThread.renderSurfaceFrame` fails if no Canvas is obtained and does not
+swallow `unlockCanvasAndPost` failures. App input latency records a completed
+posted frame only after the render function returns successfully.
 
-This was validated on the exact source checkpoint by the successful Java 21,
-hosted-SDK validation, API 36 toolchain installation, Gradle setup, wrapper
-validation, host build and API-35 connected execution in run `35494183684`.
+### 4. Asset/runtime agreement
 
-### 3. Render latency evidence could be false-positive
+The runtime Wolf loader uses four frames, matching
+`sprites/animals/wolf_4frames.png` and the authored source-asset contract. Five
+bird base/flying byte-identical pairs remain explicit known alias groups; that
+allowlist is provenance/creative-review metadata, not artistic or licensing
+approval.
 
-`GameThread.renderSurfaceFrame` previously swallowed exceptions from
-`unlockCanvasAndPost`, after which the outer loop recorded
-`InputLatencyTelemetryRegistry.recordFrameRendered(...)`. That allowed a failed
-surface post to be represented as a completed posted frame.
+### 5. Release operator boundary
 
-The render helper now fails when no Canvas is obtained and lets post failures
-propagate through the existing render-failure boundary. The latency completion
-call therefore occurs only after a successful render function return.
+The Google Play operator documentation exposes
+`scripts/prepare_main_release.sh` as the supported release-preparation boundary,
+uses repository-relative documentation paths, and does not retain generated
+`BUILD_SUMMARY.md` output as checked-in candidate evidence.
 
-### 4. Wolf sprite frame contract disagreed with the authored asset
-
-The repository ships `sprites/animals/wolf_4frames.png`, documentation describes
-the Wolf sheet as four-frame, and source-asset validation treats the filename as
-a four-frame authored contract. `SpriteManager` alone was loading it as eight
-frames. The runtime loader now uses four frames and a regression test prevents
-the mismatch from returning.
-
-### 5. Release documentation exposed a bypass and stale evidence
-
-The Google Play README previously told operators to call the lower-level
-`scripts/prepare_play_release.py` helper directly and linked the publishing
-checklist through a workstation-specific absolute path. It also coexisted with a
-checked-in generated build summary.
-
-The README now exposes only `bash scripts/prepare_main_release.sh` as the
-candidate release boundary, uses a repository-relative checklist link, and states
-that summaries are generated candidate evidence. The stale tracked
-`release/google-play/BUILD_SUMMARY.md` was removed. Contract tests now scan the
-operator-facing release documents for direct helper command lines and workstation
-absolute paths.
-
-### 6. Player animation ownership required cross-layer reconciliation
+### 6. Animation ownership
 
 A declaration-only orphan pass initially misclassified `playerStandUp`. The
-compile gate exposed the real caller: `MainMenuScreen` consumes it during the
-willow-home `STANDING_UP` ritual.
+compile gate exposed its real caller in `MainMenuScreen`; it is retained as the
+willow-home `STANDING_UP` presentation. Gameplay jump partitions, hit/stumble,
+and death/Rest mappings remain separate. The audit does not invent frame mappings
+from unused ranges merely to consume every authored frame.
 
-The owner was restored and explicitly documented as Menu presentation rather than
-a gameplay locomotion state. The source contract now verifies both sides of the
-ownership edge. This is an example of why the closure audit evaluates actual
-callers and workflows rather than deleting apparently unused declarations in
-isolation.
+### 7. Runtime thread handoff and state ownership
 
-The audit deliberately does not remap unseen jump-strip frames based on filename
-or unused ranges. Final visual suitability of the derived Menu rise is a creative
-acceptance question.
+`GameView` serializes update, draw, touch, accessibility, debug launch, and
+runtime state transitions through its runtime monitor. Lifecycle pause requests a
+bounded render-thread stop and exposes failure rather than pretending quiescence.
+Resume/surface recreation uses a latest-request token and never intentionally
+starts a replacement while a previous producer still owns the runtime. Surface
+initialization is idempotent, so thread replacement does not reconstruct live
+gameplay owners.
 
-### 7. Bird source aliases were investigated rather than rewritten
+### 8. Latest-request debug launch
 
-Five bird base/flying pairs are byte-identical. The existing runtime asset audit
-already declares those exact pairs as known alias groups and rejects any newly
-introduced unexpected duplicate group. Creative provenance documentation also
-states that the allowlist is not artistic or licensing approval.
+Debug launch remains disabled in non-debuggable runtimes. `MainActivity` owns a
+latest-request token for retry/readiness, while `GameView` keeps at most one
+latest deferred intent. A newer singleTask intent cancels any older deferred
+scenario before validation. READY evidence requires exact applied
+scenario/run-mode/game-state agreement; it is not emitted merely because a
+dispatch was attempted.
 
-Accordingly, no speculative replacement art was synthesized. Distinct final
-flight art, if desired, remains a human creative decision with provenance and
-rights evidence.
+### 9. Deterministic-run persistence isolation
+
+Debug, screenshot-capture, and performance-profile runs exercise score, Seed,
+Bloom, encounters, and presentation locally without making their progression
+durable. `GameStateManager` retains a persistent high-score floor earned only
+while persistence is authorized, so a later ordinary reset discards debug-only
+score while preserving legitimate ordinary progress. Terminal outcome
+persistence is exactly-once and recovery-journaled; non-persistent terminal
+outcomes consume their token without later retroactive writes.
+
+### 10. Cross-thread instrumentation evidence
+
+Connected tests no longer rely on incidental JVM cache visibility for facts
+produced by the runtime thread. Instrumentation-facing state now has explicit
+publication where needed, including Bloom invincibility, current biome, Menu
+phase, ghost readiness, render-thread identity, active encounter scenario,
+active-entity count, frame counter, and a dedicated GhostRecorder frame count.
+The test no longer polls the live mutable ghost-frame list while the producer is
+appending.
+
+High-risk direct mutations of live `GameStateManager`/`EntityManager` owners
+use one stop–mutate–resume helper that requires a successful producer stop and
+always resumes through `finally`.
+
+### 11. Connected candidate binding
+
+`scripts/run_connected_validation.sh` now requires the requested full candidate
+SHA and a clean worktree before execution, then rechecks HEAD and source
+cleanliness afterward. Ordinary local invocations also verify canonical
+`origin/main` before and after the connected run. GitHub Actions checks out
+`${{ github.sha }}` with credentials disabled and skips only the remote-main
+check appropriate to detached CI; exact local SHA and clean-tree requirements
+remain active.
+
+Expected Gradle/Android outputs are ignored by repository policy, so the final
+clean-tree check detects source/evidence drift rather than ordinary build
+artifacts.
+
+### 12. Ghost test reset quiescence
+
+`GhostPersistenceManager.clearMemoryForTests()` is synchronized, blocks new
+promotion admission, and requires all namespace-scoped pending writes to quiesce
+within a bounded 30-second reset window. It fails closed if they do not. Only
+after successful quiescence does it clear in-memory publications, pending-write
+ownership, and telemetry. `InstrumentationStateReset` then clears primary and
+current compatibility preferences, recovery journals, feedback preferences, and
+all `ghost_run*` artifacts.
+
+Worker completion does not require the manager monitor, so the synchronized wait
+does not deadlock the writer it is draining.
+
+### 13. All-entity connected proof geometry
+
+A strengthened API-35 proof first exposed a deterministic 18/19 roster. The
+missing type was `Eagle`, not because production spawn/update was broken, but
+because the test used an index-growing X coordinate. Eagle intentionally
+deactivates when `x > screenWidth + 150`, and index 13 had been staged roughly
+three thousand pixels beyond that boundary.
+
+The final proof stages every `EntityType` at the shared valid pre-entry position
+`screenWidth + 100`, performs one `EntityManager.update` while the runtime
+producer is stopped, asserts the exact nineteen-type set and count, then resumes
+and independently verifies live frame progression. Direct inspection of all
+nineteen concrete entity update implementations confirms this common staging
+position is valid for the one-update proof.
 
 ## Exact-head automated evidence
 
-GitHub Actions run `35494183684` passed both jobs on
-`2e79500c577fb3fa86f6e99cad5a872a69dcbff2`.
+All automated claims below are tied to source-bearing checkpoint
+`7757b40b7e87b3d33412f9a070c068e92f62ccf2`.
 
-The host job passed:
+GitHub Actions Android validation run `35510934262` completed successfully.
 
-- immutable source contracts;
-- the complete Python `scripts/test_*.py` suite;
+The host/release/lint/package job passed:
+
+- immutable source contracts and the complete Python `scripts/test_*.py` suite;
 - source immutability checks;
-- Java 21 setup;
-- hosted Android SDK validation;
+- Java 21 and hosted Android SDK validation;
 - API 36/build-tools installation;
 - Gradle setup and wrapper validation;
-- candidate-bound dependency/SBOM evidence;
-- debug/release/unit/instrumentation compilation;
+- candidate-bound declared dependency and resolved SBOM evidence;
+- debug, release, unit-test, and instrumentation compilation;
 - JVM/Robolectric tests;
-- debug and release lint;
+- debug/release lint;
 - debug app and instrumentation APK assembly;
 - release AAB build;
-- package page-size inspection;
+- packaged native page-size inspection;
 - R8/source immutability verification;
-- artifact publication.
+- validation artifact publication.
 
-The connected job passed:
+The API-35 connected job passed:
 
-- Java 21 and hosted Android SDK setup;
-- API 35 platform/system-image/emulator installation;
+- exact candidate checkout with credentials disabled;
+- Java 21 and hosted SDK validation;
+- API-35 platform/system-image/emulator installation;
 - KVM permission setup;
-- the repository's connected validation runner;
-- deterministic connected evidence collection and artifact publication.
+- the repository's clean-tree/exact-SHA connected-validation runner;
+- connected smoke and deterministic evidence tests, including the corrected
+  nineteen-entity one-update proof;
+- connected artifact publication.
 
-The two training-control certificate workflows also passed on the same SHA.
+The training-control applicability audit `35510934112` and estate-local
+training-control certificate `35510934149` also passed on the same SHA.
 
-## Capability closure result
+## Re-audit closure result
 
-The current implemented product still includes the previously closed runtime
-surfaces: gesture-anywhere run input, finite player physics, five biomes,
-nineteen encounter families, Bloom, one-shot collision outcomes, Seed/Seed-Orb
-economy, Garden progression, wardrobe, relationship memory, return/session
-memory, Forest Journal projection, ghosts, persistence/recovery, accessibility,
-audio/haptics, deterministic debug/capture scenarios, performance/input-latency
-telemetry, screenshot/visual evidence, supply-chain evidence, and release/store
+The implemented product retains the previously audited runtime surfaces:
+gesture-anywhere run input, finite player physics, five biomes, nineteen encounter
+families, Bloom, one-shot collision outcomes, Seed/Seed-Orb economy, Garden
+progression, wardrobe, relationship memory, return/session memory, Forest Journal
+projection, ghosts, persistence/recovery, accessibility, audio/haptics,
+deterministic debug/capture scenarios, performance/input-latency telemetry,
+screenshot/visual evidence, supply-chain evidence, and release/store
 orchestration.
 
-The final re-audit did not substantiate another source-only correctness defect,
-missing promised player feature, broken owner contract, or justified architecture
-addition after the continuation fixes above.
+The final tree search returned no live TODO/FIXME markers, workstation `/home/`
+or `/Users/` paths, direct `prepare_play_release.py` operator reference, or
+the explicit credential-marker strings used by the closure scan. GitHub code
+search was not used to prove positive orphanhood because its index returned zero
+for some identifiers known to exist; cross-layer owner traversal remained the
+required basis for deletion decisions.
+
+After the final source-bearing re-audit and exact-head execution, no additional
+source-addressable correctness defect, missing promised player feature, broken
+owner contract, or justified architecture addition was substantiated. This does
+not authorize speculative feature growth or declaration-only orphan deletion.
 
 ## Intentionally unresolved external gates
 
-Source closure must not be relabeled production release acceptance. The following
-still require real external evidence or accountable decisions:
+Source/repository closure is not production acceptance. These still require real
+candidate-bound evidence or accountable human decisions:
 
-- representative physical-device acceptance, including constrained, current
+- representative physical-device coverage, including constrained, current
   mid-range, high-refresh, cutout/unusual-aspect and tablet coverage where
   supported;
 - human fairness/readability and TalkBack/accessibility acceptance;
-- p95/p99 frame performance, memory, GC, audio-thread, ghost-I/O, thermal,
-  battery and long-session evidence on representative hardware;
-- production upload/signing credentials, signed artifact construction,
-  certificate verification, direct install, Play internal-track delivery and
+- p95/p99 frame performance, memory/GC/audio-thread/ghost-I/O, thermal, battery
+  and long-session evidence on representative hardware;
+- production upload/signing credentials, a signed artifact, certificate
+  verification, direct installation, Play internal-track delivery and
   store-delivered update verification;
 - final sprite/animation/background/UI/icon/wordmark/screenshot/music/SFX/haptic
   creative approval;
@@ -195,17 +256,18 @@ still require real external evidence or accountable decisions:
 - privacy-policy hosting, Play data-safety/content-rating/target-audience and
   current policy declarations;
 - private vulnerability-reporting repository configuration;
-- final independent evidence review, release-owner approval and production tag.
+- final independent evidence review, accountable release-owner approval and a
+  production tag.
 
-These items stay open precisely because source code cannot truthfully manufacture
+These remain open because source code and emulator CI cannot truthfully manufacture
 their evidence.
 
 ## Closure classification
 
 **Source implementation / repository engineering:** closed for the audited goals.
 
-**Automated host + API-35 connected validation:** passed on the exact
-source-bearing checkpoint identified above.
+**Automated host + API-35 connected validation:** passed on exact source-bearing
+checkpoint `7757b40b7e87b3d33412f9a070c068e92f62ccf2`.
 
-**Physical/human/legal/store/production acceptance:** open by design until real
-candidate-bound evidence exists.
+**Physical/human/legal/store/production acceptance:** open by design until the
+required real candidate-bound evidence exists.
