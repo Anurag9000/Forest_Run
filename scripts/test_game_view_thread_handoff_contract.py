@@ -80,6 +80,19 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         self.assertIn("assertTrue(", surrounding)
         self.assertIn("warmup render producer must stop before telemetry reset", surrounding)
 
+    def test_pause_never_snapshots_mutable_game_state_after_shutdown_timeout(self) -> None:
+        start = self.source.index("    fun pause(): Boolean {")
+        end = self.source.index("    fun resume() {", start)
+        pause = self.source[start:end]
+        stop = pause.index("val threadStopped = stopThread()")
+        guarded_save = pause.index("if (threadStopped && ::gameState.isInitialized && runMode.persistsProgress)", stop)
+        save = pause.index("gameState.save()", guarded_save)
+        timeout_branch = pause.index("else if (!threadStopped", save)
+        self.assertLess(stop, guarded_save)
+        self.assertLess(guarded_save, save)
+        self.assertLess(save, timeout_branch)
+        self.assertIn("Skipping pause persistence while GameThread is still active", pause)
+
     def test_surface_recreation_never_reenables_a_stopping_live_thread(self) -> None:
         start = self.source.index("    override fun surfaceCreated(")
         end = self.source.index("    override fun surfaceChanged(", start)
