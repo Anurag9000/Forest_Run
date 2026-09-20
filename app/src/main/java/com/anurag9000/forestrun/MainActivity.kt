@@ -257,6 +257,18 @@ class MainActivity : AppCompatActivity() {
         val autoStart = launchIntent.getBooleanExtra(EXTRA_DEBUG_AUTOSTART, false)
         if (scenarioName.isNullOrBlank() && !autoStart) return
 
+        // Debug/capture launch evidence must fail closed in production builds.
+        // GameView independently rejects these intents too, but without this
+        // Activity-level guard we could still publish a false READY marker.
+        if (!isDebuggableRuntime()) {
+            Log.e(
+                TAG,
+                "FOREST_RUN_SCENARIO_REJECTED scenario=${scenarioName ?: "NORMAL"} " +
+                    "reason=not_debuggable"
+            )
+            return
+        }
+
         val scenario = scenarioName?.let { raw ->
             EncounterScenario.entries.firstOrNull { it.name == raw }
         }
