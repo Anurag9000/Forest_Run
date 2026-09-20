@@ -63,6 +63,19 @@ class DebugLaunchReleaseGuardContractTest(unittest.TestCase):
         self.assertIn("runMode != mode", match)
         self.assertIn("encounterDirector?.activeScenario == scenario", match)
 
+    def test_game_view_has_one_latest_pending_launch_owner(self) -> None:
+        start = self.game_view.index("    fun applyDebugLaunchIntent(intent: Intent?)")
+        end = self.game_view.index("    internal fun matchesDebugLaunch(", start)
+        dispatch = self.game_view[start:end]
+        deferred = dispatch.index("pendingDebugLaunchIntent = Intent(intent)")
+        deferred_return = dispatch.index("return", deferred)
+        clear = dispatch.index("pendingDebugLaunchIntent = null", deferred_return)
+        scenario = dispatch.index("if (!scenarioName.isNullOrBlank())", clear)
+        self.assertLess(deferred, deferred_return)
+        self.assertLess(deferred_return, clear)
+        self.assertLess(clear, scenario)
+        self.assertNotIn("postDelayed({ applyDebugLaunchIntent(intent)", dispatch)
+
     def test_game_view_keeps_second_defense_at_dispatch_boundary(self) -> None:
         start = self.game_view.index("    fun applyDebugLaunchIntent(intent: Intent?)")
         end = self.game_view.index("    private fun prepareEncounterScenario()", start)
