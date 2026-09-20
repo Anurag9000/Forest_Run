@@ -94,13 +94,30 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         self.assertIn("Skipping pause persistence while GameThread is still active", pause)
 
     def test_surface_recreation_never_reenables_a_stopping_live_thread(self) -> None:
-        start = self.source.index("    override fun surfaceCreated(")
-        end = self.source.index("    override fun surfaceChanged(", start)
-        created = self.source[start:end]
-        self.assertIn("if (!lifecyclePaused)", created)
+        created_start = self.source.index("    override fun surfaceCreated(")
+        init_start = self.source.index("    private fun initializeSurfaceWhenThreadStopped(", created_start)
+        changed_start = self.source.index("    override fun surfaceChanged(", init_start)
+        created = self.source[created_start:init_start]
+        initializer = self.source[init_start:changed_start]
+
         self.assertIn("gameThreadRestartGate.begin()", created)
-        self.assertIn("resumeGameThreadWhenStopped(restartToken)", created)
-        self.assertNotIn("gameThread.isRunning = true", created)
+        self.assertIn("initializeSurfaceWhenThreadStopped(holder, restartToken)", created)
+
+        ownership = initializer.index("if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return")
+        old_owner = initializer.index("if (gameThread.isAlive && !gameThread.isRunning)")
+        retry = initializer.index("postDelayed(", old_owner)
+        old_owner_return = initializer.index("return", retry)
+        runtime_lock = initializer.index("synchronized(runtimeStateLock)", old_owner_return)
+        initialize_dimensions = initializer.index("screenWidth  = width", runtime_lock)
+        resume = initializer.index("resumeGameThreadWhenStopped(restartToken)", initialize_dimensions)
+
+        self.assertLess(ownership, old_owner)
+        self.assertLess(old_owner, retry)
+        self.assertLess(retry, old_owner_return)
+        self.assertLess(old_owner_return, runtime_lock)
+        self.assertLess(runtime_lock, initialize_dimensions)
+        self.assertLess(initialize_dimensions, resume)
+        self.assertNotIn("gameThread.isRunning = true", initializer)
 
         destroyed_start = self.source.index("    override fun surfaceDestroyed(")
         pause_start = self.source.index("    fun pause(): Boolean {", destroyed_start)
