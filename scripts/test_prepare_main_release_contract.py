@@ -99,7 +99,7 @@ class MainReleaseWrapperContractTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("bash scripts/prepare_main_release.sh", play_readme)
-        self.assertIn("must not be invoked directly", play_readme)
+        self.assertRegex(play_readme, r"must not be invoked\\s+directly")
 
 
 if __name__ == "__main__":
