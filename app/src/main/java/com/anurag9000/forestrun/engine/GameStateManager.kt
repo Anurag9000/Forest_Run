@@ -45,6 +45,12 @@ class GameStateManager(
     var highScore: Int = SaveManager.loadHighScore(appContext)
         private set
 
+    // Tracks legitimate best-score progress earned while persistence is
+    // authorized. Non-persistent debug/capture/performance runs may raise the
+    // display highScore for local scenario behavior, but must never raise this
+    // floor or make that score survive the next reset.
+    private var persistentHighScoreFloor: Int = highScore
+
     var isNewHighScore: Boolean = false
         private set
 
@@ -332,7 +338,11 @@ class GameStateManager(
         exactScore = 0f
         scoreMultiplier = 1f
         seedsThisRun = 0
-        highScore = SaveManager.loadHighScore(appContext)
+        highScore = maxOf(
+            SaveManager.loadHighScore(appContext),
+            persistentHighScoreFloor
+        )
+        persistentHighScoreFloor = highScore
         lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext)
         bloomMeter = 0
         isBloomActive = false
@@ -353,6 +363,7 @@ class GameStateManager(
     fun save() {
         if (!persistProgress()) return
         SaveManager.saveHighScore(appContext, highScore)
+        persistentHighScoreFloor = maxOf(persistentHighScoreFloor, highScore)
         lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext)
     }
 
@@ -389,6 +400,9 @@ class GameStateManager(
     private fun updateHighScore() {
         if (score > highScore) {
             highScore = score
+            if (persistProgress()) {
+                persistentHighScoreFloor = maxOf(persistentHighScoreFloor, highScore)
+            }
             isNewHighScore = true
         }
     }
