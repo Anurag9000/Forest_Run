@@ -19,7 +19,7 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         self.assertIn("assertTrue(thread.isAlive)", self.shutdown_test)
 
     def test_pause_cancels_deferred_restart_before_stopping_owner(self) -> None:
-        start = self.source.index("    fun pause() {")
+        start = self.source.index("    fun pause(): Boolean {")
         end = self.source.index("    fun resume() {", start)
         pause = self.source[start:end]
         self.assertLess(pause.index("lifecyclePaused = true"), pause.index("gameThreadRestartGate.cancel()"))
@@ -78,7 +78,7 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         self.assertNotIn("gameThread.isRunning = true", created)
 
         destroyed_start = self.source.index("    override fun surfaceDestroyed(")
-        pause_start = self.source.index("    fun pause() {", destroyed_start)
+        pause_start = self.source.index("    fun pause(): Boolean {", destroyed_start)
         destroyed = self.source[destroyed_start:pause_start]
         self.assertLess(destroyed.index("gameThreadRestartGate.cancel()"), destroyed.index("stopThread()"))
 
