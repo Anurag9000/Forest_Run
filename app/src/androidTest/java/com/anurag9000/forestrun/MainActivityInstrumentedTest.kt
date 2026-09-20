@@ -298,7 +298,7 @@ class MainActivityInstrumentedTest {
 
             waitForCondition("ghost recorder captures live frames", timeoutMs = 8_000L) {
                 val recorder = getPrivateField(gameView, "ghostRecorder") as GhostRecorder
-                recorder.frames.size >= 5
+                recorder.recordedFrameCount >= 5
             }
 
             mutateStopped(gameView) {

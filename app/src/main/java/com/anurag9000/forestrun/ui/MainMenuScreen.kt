@@ -47,6 +47,7 @@ class MainMenuScreen internal constructor(
 ) {
     enum class Phase { IDLE, STANDING_UP, READY }
 
+    @Volatile
     var phase: Phase = Phase.IDLE
         private set
 

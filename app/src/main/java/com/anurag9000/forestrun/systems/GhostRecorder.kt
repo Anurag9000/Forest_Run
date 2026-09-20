@@ -24,6 +24,14 @@ class GhostRecorder {
     private var lastSampleTime = Float.NEGATIVE_INFINITY
     private var activeFrames = ArrayList<GhostFrame>(INITIAL_CAPACITY)
 
+    /**
+     * Cross-thread diagnostic count for instrumentation/profiling. The frame
+     * list itself remains render-owner state and must not be polled concurrently.
+     */
+    @Volatile
+    internal var recordedFrameCount: Int = 0
+        private set
+
     /** Read-only view of the currently recording run. */
     val frames: List<GhostFrame>
         get() = activeFrames
@@ -47,6 +55,7 @@ class GhostRecorder {
         if (!GhostRunValidator.isValidFrame(frame, lastSampleTime)) return
 
         activeFrames.add(frame)
+        recordedFrameCount = activeFrames.size
         lastSampleTime = elapsed
     }
 
@@ -82,6 +91,7 @@ class GhostRecorder {
     }
 
     private fun resetClock() {
+        recordedFrameCount = 0
         elapsed = 0f
         lastSampleTime = Float.NEGATIVE_INFINITY
     }

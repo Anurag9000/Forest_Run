@@ -94,6 +94,7 @@ class GhostPlayer {
     private var frameIdx: Int = 0
     private var isWaving: Boolean = false
     private var waveTimer: Float = 0f
+    @Volatile
     private var isActive: Boolean = false
     private var suppressedFor: Float = 0f
     private var denseSuppressedFor: Float = 0f

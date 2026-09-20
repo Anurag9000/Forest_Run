@@ -13,6 +13,7 @@ class BiomeManager {
 
     private val biomeLength = GameConstants.BIOME_LENGTH_METRES
 
+    @Volatile
     var currentBiome: Biome = Biome.MEADOW
         private set
 

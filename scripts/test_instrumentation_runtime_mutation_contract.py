@@ -3,6 +3,11 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 TEST = ROOT / "app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt"
+PLAYER = ROOT / "app/src/main/java/com/anurag9000/forestrun/entities/Player.kt"
+BIOME_MANAGER = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/BiomeManager.kt"
+MAIN_MENU = ROOT / "app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt"
+GHOST_PLAYER = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPlayer.kt"
+GHOST_RECORDER = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostRecorder.kt"
 
 class InstrumentationRuntimeMutationContractTest(unittest.TestCase):
     @classmethod
@@ -11,6 +16,28 @@ class InstrumentationRuntimeMutationContractTest(unittest.TestCase):
         helper_start = cls.source.index("    private fun mutateStopped(")
         helper_end = cls.source.index("    private fun tapLogical(", helper_start)
         cls.helper = cls.source[helper_start:helper_end]
+        cls.player = PLAYER.read_text(encoding="utf-8")
+        cls.biome_manager = BIOME_MANAGER.read_text(encoding="utf-8")
+        cls.main_menu = MAIN_MENU.read_text(encoding="utf-8")
+        cls.ghost_player = GHOST_PLAYER.read_text(encoding="utf-8")
+        cls.ghost_recorder = GHOST_RECORDER.read_text(encoding="utf-8")
+
+    def test_cross_thread_instrumentation_observations_are_safely_published(self) -> None:
+        for source, declaration in (
+            (self.player, "var isInvincible: Boolean = false"),
+            (self.biome_manager, "var currentBiome: Biome = Biome.MEADOW"),
+            (self.main_menu, "var phase: Phase = Phase.IDLE"),
+            (self.ghost_player, "private var isActive: Boolean = false"),
+            (self.ghost_recorder, "internal var recordedFrameCount: Int = 0"),
+        ):
+            index = source.index(declaration)
+            prefix = source[max(0, index - 64):index]
+            self.assertIn("@Volatile", prefix, declaration)
+
+        self.assertIn("recorder.recordedFrameCount >= 5", self.source)
+        self.assertNotIn("recorder.frames.size >= 5", self.source)
+        self.assertIn("recordedFrameCount = activeFrames.size", self.ghost_recorder)
+        self.assertIn("recordedFrameCount = 0", self.ghost_recorder)
 
     def test_quiescence_helper_requires_successful_stop_and_always_resumes(self) -> None:
         self.assertIn("gameView.pause()", self.helper)

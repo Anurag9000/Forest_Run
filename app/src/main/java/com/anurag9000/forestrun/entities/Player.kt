@@ -79,6 +79,7 @@ class Player(
     private var presentationElapsed = 0f
 
     /** Authoritative Bloom timing lives in GameStateManager. */
+    @Volatile
     var isInvincible: Boolean = false
         private set
 
