@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 object GhostPersistenceManager {
     private const val MAX_CONCURRENT_NAMESPACE_WRITES = 2
+    private const val TEST_RESET_QUIESCENCE_TIMEOUT_MS = 30_000L
 
     private data class PublishedGhost(
         val namespace: GhostPersistenceNamespace,
@@ -222,7 +223,9 @@ object GhostPersistenceManager {
     }
 
     internal fun clearMemoryForTests() {
-        awaitPendingWrites()
+        check(awaitPendingWrites(TEST_RESET_QUIESCENCE_TIMEOUT_MS)) {
+            "Ghost test reset could not quiesce pending persistence work"
+        }
         synchronized(this) {
             latestPublications.clear()
             pendingWrites.clear()

@@ -3,11 +3,13 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 RESET = ROOT / "app/src/androidTest/java/com/anurag9000/forestrun/InstrumentationStateReset.kt"
+GHOST_PERSISTENCE = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPersistenceManager.kt"
 
 class InstrumentationStateResetContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.source = RESET.read_text(encoding="utf-8")
+        cls.ghost_persistence = GHOST_PERSISTENCE.read_text(encoding="utf-8")
 
     def test_save_namespaces_follow_canonical_schema_constants(self) -> None:
         self.assertIn("SaveManager.PREFS_NAME", self.source)
@@ -24,6 +26,16 @@ class InstrumentationStateResetContractTest(unittest.TestCase):
         primary = clear_region.index("SaveManager.usePrimaryPreferences()")
         ghost = clear_region.index("GhostPersistenceManager.clearMemoryForTests()")
         self.assertLess(primary, ghost)
+
+    def test_ghost_reset_fails_closed_if_async_writes_do_not_quiesce(self) -> None:
+        start = self.ghost_persistence.index("    internal fun clearMemoryForTests()")
+        end = self.ghost_persistence.index("    private fun artifactStore(", start)
+        region = self.ghost_persistence[start:end]
+        wait = region.index("check(awaitPendingWrites(TEST_RESET_QUIESCENCE_TIMEOUT_MS))")
+        clear = region.index("pendingWrites.clear()", wait)
+        self.assertLess(wait, clear)
+        self.assertIn("TEST_RESET_QUIESCENCE_TIMEOUT_MS = 30_000L", self.ghost_persistence)
+        self.assertIn("could not quiesce pending persistence work", region)
 
     def test_feedback_and_ghost_state_are_also_cleared(self) -> None:
         self.assertIn("FeedbackSettings.PREFS_NAME", self.source)
