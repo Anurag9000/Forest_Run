@@ -634,6 +634,12 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
     }
 
+    internal fun cancelPendingDebugLaunchIntent() {
+        synchronized(runtimeStateLock) {
+            pendingDebugLaunchIntent = null
+        }
+    }
+
     fun applyDebugLaunchIntent(intent: Intent?) {
         synchronized(runtimeStateLock) {
         if (!debugToolsEnabled || intent == null) return

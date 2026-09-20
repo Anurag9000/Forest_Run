@@ -109,8 +109,13 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleRecoveryMaintenanceIntent(intent, allowMutation = false)
         val launchToken = debugLaunchGate.begin()
+        if (::gameView.isInitialized) {
+            // A newly delivered singleTask intent supersedes any scenario that
+            // GameView deferred while a previous surface/request was unavailable.
+            gameView.cancelPendingDebugLaunchIntent()
+        }
+        handleRecoveryMaintenanceIntent(intent, allowMutation = false)
         if (::gameView.isInitialized) {
             gameView.post { applyDebugLaunchWhenReady(Intent(intent), launchToken) }
         }

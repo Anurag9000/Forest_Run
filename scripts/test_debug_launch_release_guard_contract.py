@@ -63,6 +63,22 @@ class DebugLaunchReleaseGuardContractTest(unittest.TestCase):
         self.assertIn("runMode != mode", match)
         self.assertIn("encounterDirector?.activeScenario == scenario", match)
 
+    def test_new_single_task_intent_cancels_any_older_deferred_scenario(self) -> None:
+        start = self.main.index("    override fun onNewIntent(intent: Intent)")
+        end = self.main.index("    override fun onWindowFocusChanged", start)
+        region = self.main[start:end]
+        token = region.index("debugLaunchGate.begin()")
+        cancel = region.index("gameView.cancelPendingDebugLaunchIntent()", token)
+        post = region.index("gameView.post { applyDebugLaunchWhenReady", cancel)
+        self.assertLess(token, cancel)
+        self.assertLess(cancel, post)
+
+        view_start = self.game_view.index("    internal fun cancelPendingDebugLaunchIntent()")
+        view_end = self.game_view.index("    fun applyDebugLaunchIntent", view_start)
+        clear = self.game_view[view_start:view_end]
+        self.assertIn("synchronized(runtimeStateLock)", clear)
+        self.assertIn("pendingDebugLaunchIntent = null", clear)
+
     def test_game_view_has_one_latest_pending_launch_owner(self) -> None:
         start = self.game_view.index("    fun applyDebugLaunchIntent(intent: Intent?)")
         end = self.game_view.index("    internal fun matchesDebugLaunch(", start)
