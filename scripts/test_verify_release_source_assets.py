@@ -263,6 +263,20 @@ class ReleaseSourceAssetVerifierTest(unittest.TestCase):
         self.assertLess(verifier_index, preparer_index)
         self.assertIn('--root "${ROOT}"', wrapper[verifier_index:preparer_index])
 
+    def test_wolf_runtime_frame_count_matches_authored_four_frame_contract(self) -> None:
+        source = (
+            ROOT
+            / "app/src/main/java/com/anurag9000/forestrun/engine/SpriteManager.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "wolfSprite = loadEntity(AssetPaths.Animals.WOLF, Color.rgb(100, 100, 120), 4)",
+            source,
+        )
+        self.assertNotIn(
+            "wolfSprite = loadEntity(AssetPaths.Animals.WOLF, Color.rgb(100, 100, 120), 8)",
+            source,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

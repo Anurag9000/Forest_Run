@@ -187,22 +187,18 @@ class GameThread internal constructor(
         private const val MAX_DELTA_SECONDS = 0.05f
 
         private fun renderSurfaceFrame(surfaceHolder: SurfaceHolder, gameView: GameView) {
-            var canvas: Canvas? = null
+            val canvas: Canvas = surfaceHolder.lockCanvas()
+                ?: throw IllegalStateException("SurfaceHolder.lockCanvas returned no Canvas")
             try {
-                canvas = surfaceHolder.lockCanvas()
-                if (canvas != null) {
-                    synchronized(surfaceHolder) {
-                        gameView.draw(canvas)
-                    }
+                synchronized(surfaceHolder) {
+                    gameView.draw(canvas)
                 }
             } finally {
-                if (canvas != null) {
-                    try {
-                        surfaceHolder.unlockCanvasAndPost(canvas)
-                    } catch (_: Exception) {
-                        // The Surface may disappear while the frame is held.
-                    }
-                }
+                // Do not swallow post failures. GameThread records
+                // InputLatencyTelemetry only after this call returns, so a
+                // failed unlock/post must remain a failed render rather than
+                // fabricated "frame posted" evidence.
+                surfaceHolder.unlockCanvasAndPost(canvas)
             }
         }
     }

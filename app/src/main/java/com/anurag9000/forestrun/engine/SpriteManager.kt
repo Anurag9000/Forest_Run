@@ -218,7 +218,7 @@ class SpriteManager(private val context: Context) {
         eagleFlying = loadEntity(AssetPaths.Birds.EAGLE_FLYING, Color.rgb(160, 120, 60), 4)
 
         catSprite = loadEntity(AssetPaths.Animals.CAT, Color.rgb(220, 190, 160), 4)
-        wolfSprite = loadEntity(AssetPaths.Animals.WOLF, Color.rgb(100, 100, 120), 8)
+        wolfSprite = loadEntity(AssetPaths.Animals.WOLF, Color.rgb(100, 100, 120), 4)
         foxSprite = loadEntity(AssetPaths.Animals.FOX, Color.rgb(220, 120, 60), 4)
         hedgehogSprite = loadEntity(AssetPaths.Animals.HEDGEHOG, Color.rgb(120, 100, 80), 4)
         dogSprite = loadEntity(AssetPaths.Animals.DOG, Color.rgb(200, 170, 130), 4)
