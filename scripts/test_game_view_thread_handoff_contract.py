@@ -32,7 +32,9 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         resume_only = resume_region[:resume_region.index("    private fun resumeGameThreadWhenStopped")]
         self.assertIn("lifecyclePaused = false", resume_only)
         self.assertIn("val restartToken = gameThreadRestartGate.begin()", resume_only)
-        self.assertIn("resumeGameThreadWhenStopped(restartToken)", resume_only)
+        self.assertIn("if (holder.surface?.isValid == true)", resume_only)
+        self.assertIn("initializeSurfaceWhenThreadStopped(holder, restartToken)", resume_only)
+        self.assertNotIn("resumeGameThreadWhenStopped(restartToken)", resume_only)
         self.assertNotIn("gameThread = GameThread(holder, this)", resume_only)
 
     def test_replacement_occurs_only_after_live_owner_branch_returns(self) -> None:
@@ -103,7 +105,7 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         self.assertIn("gameThreadRestartGate.begin()", created)
         self.assertIn("initializeSurfaceWhenThreadStopped(holder, restartToken)", created)
 
-        ownership = initializer.index("if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return")
+        ownership = initializer.index("if (!gameThreadRestartGate.isCurrent(restartToken)) return")
         old_owner = initializer.index("if (gameThread.isAlive && !gameThread.isRunning)")
         retry = initializer.index("postDelayed(", old_owner)
         old_owner_return = initializer.index("return", retry)
@@ -123,6 +125,24 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         pause_start = self.source.index("    fun pause(): Boolean {", destroyed_start)
         destroyed = self.source[destroyed_start:pause_start]
         self.assertLess(destroyed.index("gameThreadRestartGate.cancel()"), destroyed.index("stopThread()"))
+
+    def test_paused_surface_may_initialize_but_cannot_activate_thread_or_debug_launch(self) -> None:
+        init_start = self.source.index("    private fun initializeSurfaceWhenThreadStopped(")
+        changed_start = self.source.index("    override fun surfaceChanged(", init_start)
+        initializer = self.source[init_start:changed_start]
+
+        first_gate = initializer.index("if (!gameThreadRestartGate.isCurrent(restartToken)) return")
+        runtime_lock = initializer.index("synchronized(runtimeStateLock)", first_gate)
+        initialize_dimensions = initializer.index("screenWidth  = width", runtime_lock)
+        activation_gate = initializer.index("if (!lifecyclePaused)", initialize_dimensions)
+        resume = initializer.index("resumeGameThreadWhenStopped(restartToken)", activation_gate)
+        pending = initializer.index("pendingDebugLaunchIntent?.let", resume)
+
+        self.assertLess(first_gate, runtime_lock)
+        self.assertLess(runtime_lock, initialize_dimensions)
+        self.assertLess(initialize_dimensions, activation_gate)
+        self.assertLess(activation_gate, resume)
+        self.assertLess(resume, pending)
 
     def test_retry_is_bounded_by_latest_resume_ownership(self) -> None:
         self.assertIn("private val gameThreadRestartGate = LatestRequestGate()", self.source)
