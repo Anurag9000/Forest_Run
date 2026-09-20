@@ -259,8 +259,13 @@ class MainActivityInstrumentedTest {
                 val expectedTypes = EntityType.values().toSet()
 
                 entityManager.reset()
-                EntityType.values().forEachIndexed { index, type ->
-                    entityManager.debugSpawnAt(type, gameView.width + 300f + index * 220f)
+                // Keep every type in a valid common pre-entry lane. In
+                // particular, Eagle intentionally despawns beyond
+                // screenWidth + 150f, so an index-growing X offset would test
+                // out-of-contract geometry rather than spawn/update viability.
+                val stagingX = gameView.width + 100f
+                EntityType.values().forEach { type ->
+                    entityManager.debugSpawnAt(type, stagingX)
                 }
                 entityManager.update(
                     deltaTime = 1f / 60f,
@@ -269,11 +274,10 @@ class MainActivityInstrumentedTest {
                     runMode = RunMode.DEBUG_SCENARIO
                 )
 
-                assertEquals(expectedTypes.size, entityManager.debugActiveEntityCount)
-                assertEquals(
-                    expectedTypes,
+                val actualTypes =
                     entityManager.activeEntities.mapNotNull(entityManager::entityTypeOf).toSet()
-                )
+                assertEquals(expectedTypes, actualTypes)
+                assertEquals(expectedTypes.size, entityManager.debugActiveEntityCount)
             }
 
             val startFrameCount = gameView.debugFrameCounter
