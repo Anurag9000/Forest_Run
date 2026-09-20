@@ -276,6 +276,11 @@ class MainActivity : AppCompatActivity() {
             Log.e(TAG, "FOREST_RUN_SCENARIO_REJECTED scenario=$scenarioName reason=unknown")
             return
         }
+        val effectiveMode = if (scenario != null) {
+            RunMode.forScenario(launchIntent.getStringExtra(EXTRA_RUN_MODE))
+        } else {
+            RunMode.NORMAL
+        }
 
         val surfaceReady = gameView.width > 0 &&
             gameView.height > 0 &&
@@ -303,11 +308,29 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (!debugLaunchGate.isCurrent(launchToken)) return
-        gameView.applyDebugLaunchIntent(launchIntent)
-        val effectiveMode = if (scenario != null) {
-            RunMode.forScenario(launchIntent.getStringExtra(EXTRA_RUN_MODE))
-        } else {
-            RunMode.NORMAL
+        if (!gameView.matchesDebugLaunch(scenario, effectiveMode)) {
+            gameView.applyDebugLaunchIntent(launchIntent)
+        }
+        if (!gameView.matchesDebugLaunch(scenario, effectiveMode)) {
+            if (attemptsRemaining <= 0) {
+                Log.e(
+                    TAG,
+                    "FOREST_RUN_SCENARIO_REJECTED scenario=${scenarioName ?: "NORMAL"} " +
+                        "reason=apply_timeout"
+                )
+                return
+            }
+            gameView.postDelayed(
+                {
+                    applyDebugLaunchWhenReady(
+                        launchIntent = launchIntent,
+                        launchToken = launchToken,
+                        attemptsRemaining = attemptsRemaining - 1
+                    )
+                },
+                DEBUG_LAUNCH_RETRY_MS
+            )
+            return
         }
         Log.i(
             TAG,
