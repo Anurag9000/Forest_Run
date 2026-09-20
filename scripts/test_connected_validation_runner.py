@@ -70,6 +70,33 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
         self.assertIn('bash scripts/verify_origin_main.sh "${ROOT_DIR}"', self.script)
         self.assertIn("Unknown connected-validation argument", self.script)
 
+    def test_runner_rejects_dirty_source_before_and_after_connected_execution(self) -> None:
+        initial_status = self.script.index(
+            'git status --porcelain=v1 --untracked-files=all'
+        )
+        gradle = self.script.index("./gradlew connectedDebugAndroidTest")
+        final_status = self.script.index(
+            'git status --porcelain=v1 --untracked-files=all',
+            initial_status + 1,
+        )
+        final_head = self.script.index(
+            'FINAL_LOCAL_CANDIDATE_SHA="$(git rev-parse --verify HEAD)"'
+        )
+        self.assertLess(initial_status, gradle)
+        self.assertLess(gradle, final_head)
+        self.assertLess(final_head, final_status)
+        self.assertIn("Connected validation requires a clean candidate worktree.", self.script)
+        self.assertIn(
+            "Connected validation changed or introduced non-ignored candidate files.",
+            self.script,
+        )
+
+    def test_local_origin_identity_is_rechecked_after_connected_execution(self) -> None:
+        gradle = self.script.index("./gradlew connectedDebugAndroidTest")
+        final_origin = self.script.index("FINAL_ORIGIN_MAIN_SHA", gradle)
+        self.assertLess(gradle, final_origin)
+        self.assertIn("Canonical origin/main changed during connected validation.", self.script)
+
     def test_ci_skip_does_not_skip_local_candidate_identity(self) -> None:
         local_check = self.script.index(
             'if [[ "${LOCAL_CANDIDATE_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]'

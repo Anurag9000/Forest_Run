@@ -58,6 +58,12 @@ if [[ "${LOCAL_CANDIDATE_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]; then
   echo "local=${LOCAL_CANDIDATE_SHA}" >&2
   exit 1
 fi
+readonly INITIAL_WORKTREE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
+if [[ -n "${INITIAL_WORKTREE_STATUS}" ]]; then
+  echo "Connected validation requires a clean candidate worktree." >&2
+  printf '%s\n' "${INITIAL_WORKTREE_STATUS}" >&2
+  exit 1
+fi
 if [[ "${SKIP_ORIGIN_MAIN_CHECK}" -eq 0 ]]; then
   readonly ORIGIN_MAIN_SHA="$(bash scripts/verify_origin_main.sh "${ROOT_DIR}")"
   if [[ "${ORIGIN_MAIN_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]; then
@@ -120,3 +126,26 @@ wait_for_android_services
   --no-daemon \
   --stacktrace \
   --console=plain
+
+readonly FINAL_LOCAL_CANDIDATE_SHA="$(git rev-parse --verify HEAD)"
+if [[ "${FINAL_LOCAL_CANDIDATE_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]; then
+  echo "Connected-validation HEAD changed during execution." >&2
+  echo "expected=${EXPECTED_CANDIDATE_SHA}" >&2
+  echo "local=${FINAL_LOCAL_CANDIDATE_SHA}" >&2
+  exit 1
+fi
+readonly FINAL_WORKTREE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
+if [[ -n "${FINAL_WORKTREE_STATUS}" ]]; then
+  echo "Connected validation changed or introduced non-ignored candidate files." >&2
+  printf '%s\n' "${FINAL_WORKTREE_STATUS}" >&2
+  exit 1
+fi
+if [[ "${SKIP_ORIGIN_MAIN_CHECK}" -eq 0 ]]; then
+  readonly FINAL_ORIGIN_MAIN_SHA="$(bash scripts/verify_origin_main.sh "${ROOT_DIR}")"
+  if [[ "${FINAL_ORIGIN_MAIN_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]; then
+    echo "Canonical origin/main changed during connected validation." >&2
+    echo "expected=${EXPECTED_CANDIDATE_SHA}" >&2
+    echo "origin/main=${FINAL_ORIGIN_MAIN_SHA}" >&2
+    exit 1
+  fi
+fi
