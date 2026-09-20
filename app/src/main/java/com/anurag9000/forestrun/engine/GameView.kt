@@ -578,6 +578,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return
 
         if (gameThread.isAlive) {
+            // surfaceCreated/resume may be delivered redundantly while the
+            // current owner is already healthy. Only a live owner whose stop
+            // flag is cleared belongs to the deferred handoff path.
+            if (gameThread.isRunning) return
             gameThread.requestStop()
             postDelayed(
                 { resumeGameThreadWhenStopped(restartToken) },

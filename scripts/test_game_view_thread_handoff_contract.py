@@ -41,17 +41,29 @@ class GameViewThreadHandoffContractTest(unittest.TestCase):
         handoff = self.source[start:end]
         ownership = handoff.index("if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return")
         alive = handoff.index("if (gameThread.isAlive)")
-        stop = handoff.index("gameThread.requestStop()", alive)
+        healthy_return = handoff.index("if (gameThread.isRunning) return", alive)
+        stop = handoff.index("gameThread.requestStop()", healthy_return)
         retry = handoff.index("postDelayed(", stop)
         branch_return = handoff.index("return", retry)
         replacement = handoff.index("gameThread = GameThread(holder, this)")
         start_thread = handoff.index("gameThread.start()", replacement)
         self.assertLess(ownership, alive)
-        self.assertLess(alive, stop)
+        self.assertLess(alive, healthy_return)
+        self.assertLess(healthy_return, stop)
         self.assertLess(stop, retry)
         self.assertLess(retry, branch_return)
         self.assertLess(branch_return, replacement)
         self.assertLess(replacement, start_thread)
+
+    def test_live_healthy_owner_is_idempotent_under_duplicate_resume_or_surface_callback(self) -> None:
+        start = self.source.index("    private fun resumeGameThreadWhenStopped")
+        end = self.source.index("    fun applyDebugLaunchIntent", start)
+        handoff = self.source[start:end]
+        alive = handoff.index("if (gameThread.isAlive)")
+        healthy = handoff.index("if (gameThread.isRunning) return", alive)
+        stop = handoff.index("gameThread.requestStop()", healthy)
+        self.assertLess(alive, healthy)
+        self.assertLess(healthy, stop)
 
     def test_pause_reports_quiescence_for_fail_closed_profile_reset(self) -> None:
         start = self.source.index("    fun pause(): Boolean {")
