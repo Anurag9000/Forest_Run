@@ -316,6 +316,7 @@ class EncounterDirector {
     private var elapsedSeconds = 0f
     private var nextStepIndex = 0
 
+    @Volatile
     var activeScenario: EncounterScenario? = null
         private set
 

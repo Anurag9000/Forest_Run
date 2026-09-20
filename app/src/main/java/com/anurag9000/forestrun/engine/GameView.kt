@@ -64,6 +64,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
     // Engine
     // -----------------------------------------------------------------------
+    @Volatile
     private var gameThread: GameThread = GameThread(holder, this)
     private val gameThreadRestartGate = LatestRequestGate()
     // Serialize live runtime state shared by GameThread and Android callbacks.

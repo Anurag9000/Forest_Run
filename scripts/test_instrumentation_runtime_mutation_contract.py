@@ -8,6 +8,8 @@ BIOME_MANAGER = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/BiomeM
 MAIN_MENU = ROOT / "app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt"
 GHOST_PLAYER = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostPlayer.kt"
 GHOST_RECORDER = ROOT / "app/src/main/java/com/anurag9000/forestrun/systems/GhostRecorder.kt"
+GAME_VIEW = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
+ENCOUNTER_DIRECTOR = ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt"
 
 class InstrumentationRuntimeMutationContractTest(unittest.TestCase):
     @classmethod
@@ -21,6 +23,8 @@ class InstrumentationRuntimeMutationContractTest(unittest.TestCase):
         cls.main_menu = MAIN_MENU.read_text(encoding="utf-8")
         cls.ghost_player = GHOST_PLAYER.read_text(encoding="utf-8")
         cls.ghost_recorder = GHOST_RECORDER.read_text(encoding="utf-8")
+        cls.game_view = GAME_VIEW.read_text(encoding="utf-8")
+        cls.encounter_director = ENCOUNTER_DIRECTOR.read_text(encoding="utf-8")
 
     def test_cross_thread_instrumentation_observations_are_safely_published(self) -> None:
         for source, declaration in (
@@ -29,6 +33,8 @@ class InstrumentationRuntimeMutationContractTest(unittest.TestCase):
             (self.main_menu, "var phase: Phase = Phase.IDLE"),
             (self.ghost_player, "private var isActive: Boolean = false"),
             (self.ghost_recorder, "internal var recordedFrameCount: Int = 0"),
+            (self.game_view, "private var gameThread: GameThread = GameThread(holder, this)"),
+            (self.encounter_director, "var activeScenario: EncounterScenario? = null"),
         ):
             index = source.index(declaration)
             prefix = source[max(0, index - 64):index]
