@@ -18,6 +18,7 @@ import com.anurag9000.forestrun.engine.SafeContentTransform
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.PlayerState
 import com.anurag9000.forestrun.entities.EntityType
+import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.RunState
 import com.anurag9000.forestrun.engine.SaveManager
 import com.anurag9000.forestrun.ui.GardenLayoutPlan
@@ -253,16 +254,26 @@ class MainActivityInstrumentedTest {
 
             mutateStopped(gameView) {
                 val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
+                val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
+                val player = getPrivateField(gameView, "player") as Player
+                val expectedTypes = EntityType.values().toSet()
+
                 entityManager.reset()
                 EntityType.values().forEachIndexed { index, type ->
                     entityManager.debugSpawnAt(type, gameView.width + 300f + index * 220f)
                 }
-            }
+                entityManager.update(
+                    deltaTime = 1f / 60f,
+                    gameState = gameState,
+                    player = player,
+                    runMode = RunMode.DEBUG_SCENARIO
+                )
 
-            val expectedCount = EntityType.values().size
-            waitForCondition("all entity types remain active for at least one live update") {
-                val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
-                entityManager.debugActiveEntityCount >= expectedCount
+                assertEquals(expectedTypes.size, entityManager.debugActiveEntityCount)
+                assertEquals(
+                    expectedTypes,
+                    entityManager.activeEntities.mapNotNull(entityManager::entityTypeOf).toSet()
+                )
             }
 
             val startFrameCount = gameView.debugFrameCounter
