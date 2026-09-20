@@ -43,7 +43,7 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
         validation_index = self.script.index(
             "FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS must be a positive integer"
         )
-        prerequisite_index = self.script.index("for required_command in adb timeout")
+        prerequisite_index = self.script.index("for required_command in adb timeout git")
         trap_index = self.script.index("trap dump_emulator_diagnostics EXIT")
 
         self.assertLess(validation_index, trap_index)
@@ -58,6 +58,24 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
             "settings get global device_provisioned",
         ):
             self.assertIn(required_probe, self.script)
+
+    def test_runner_parses_and_enforces_candidate_binding_flags(self) -> None:
+        self.assertIn("--skip-origin-main-check)", self.script)
+        self.assertIn("--candidate-sha)", self.script)
+        self.assertIn('git rev-parse --verify HEAD', self.script)
+        self.assertIn(
+            'if [[ "${LOCAL_CANDIDATE_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]',
+            self.script,
+        )
+        self.assertIn('bash scripts/verify_origin_main.sh "${ROOT_DIR}"', self.script)
+        self.assertIn("Unknown connected-validation argument", self.script)
+
+    def test_ci_skip_does_not_skip_local_candidate_identity(self) -> None:
+        local_check = self.script.index(
+            'if [[ "${LOCAL_CANDIDATE_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]'
+        )
+        origin_gate = self.script.index('if [[ "${SKIP_ORIGIN_MAIN_CHECK}" -eq 0 ]]')
+        self.assertLess(local_check, origin_gate)
 
     def test_runner_preserves_connected_test_failures(self) -> None:
         gradle_command = "./gradlew connectedDebugAndroidTest"
