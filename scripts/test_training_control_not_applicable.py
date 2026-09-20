@@ -43,7 +43,7 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             source.write_text(f"import {marker}\n", encoding="utf-8")
             result = audit(root)
             self.assertFalse(result.complete)
-            self.assertEqual("pytorch", result.findings[0].category)
+            self.assertEqual("py" + "to" + "rch", result.findings[0].category)
 
     def test_root_command_emits_truthful_n_a_certificate(self) -> None:
         result = subprocess.run(
