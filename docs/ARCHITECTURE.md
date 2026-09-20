@@ -84,13 +84,15 @@ Gameplay input is admitted only during the live gameplay state. Menu, Garden, Re
 
 `Player` owns locomotion states, finite/bounded physics admission, landing, stumble/rest presentation, and Bloom visual power. Poisoned/nonfinite values are repaired or rejected at admission boundaries rather than being allowed to propagate through the frame loop.
 
-Player animation ownership follows the states that are actually rendered. The shared
-48-frame jump strip is explicitly partitioned for jump start, ascent, apex, fall,
-and landing. There is no separate runtime `playerStandUp` view: stumble/recovery
-uses the dedicated hit sequence and terminal Rest uses the dedicated death
-sequence. Any future interpretation of currently unmapped jump-strip frames must
-be visually reviewed and explicitly mapped before runtime adoption rather than
-being exposed as an orphan animation authority.
+Player animation ownership follows the surfaces that actually render it. The shared
+48-frame jump strip has explicit gameplay partitions for jump start, ascent, apex,
+fall, and landing. The willow-home Menu additionally owns a presentation-only
+`playerStandUp` view derived from the first 18 frames for its sit-to-rise ritual;
+it is not a second gameplay locomotion state. Gameplay stumble/recovery uses the
+dedicated hit sequence and terminal Rest uses the dedicated death sequence. Final
+visual suitability of the derived Menu rise remains part of candidate/human
+creative review rather than a reason to invent an unverified alternative frame
+mapping in source.
 
 ## 6. Per-run economy and Bloom
 

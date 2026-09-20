@@ -34,6 +34,8 @@ class SpriteManager(private val context: Context) {
     val playerApex: SpriteSheet
     val playerFalling: SpriteSheet
     val playerLanding: SpriteSheet
+    /** Presentation-only willow/home rise sequence derived from the shared jump strip. */
+    val playerStandUp: SpriteSheet
     val playerDuck: SpriteSheet
     val playerHit: SpriteSheet
     val playerDeath: SpriteSheet
@@ -99,6 +101,7 @@ class SpriteManager(private val context: Context) {
             frameCount = 2,
             framesPerSec = 20f,
             isLooping = false,
+            startFrame = 0,
             totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES
         )
         playerJumping = SpriteSheet(
@@ -131,6 +134,17 @@ class SpriteManager(private val context: Context) {
             framesPerSec = 25f,
             isLooping = false,
             startFrame = 24,
+            totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES
+        )
+        // MainMenuScreen's sit-to-rise ritual intentionally derives a
+        // presentation sequence from the first 18 authored frames. This does
+        // not create a second gameplay locomotion state.
+        playerStandUp = SpriteSheet(
+            jumpBitmap,
+            frameCount = 18,
+            framesPerSec = 12f,
+            isLooping = false,
+            startFrame = 0,
             totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES
         )
         val duckBitmap = loadValidated(
