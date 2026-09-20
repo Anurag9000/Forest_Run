@@ -405,7 +405,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 5: GameStateManager first (owns scroll speed)
         if (!::gameState.isInitialized) {
-            gameState = GameStateManager(context)
+            gameState = GameStateManager(context) { runMode.persistsProgress }
         }
 
         // Phase 4: background (groundY used by Player)
