@@ -23,6 +23,21 @@ class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
         self.assertIn("synchronized(runtimeStateLock)", update)
         self.assertIn("synchronized(runtimeStateLock)", draw)
 
+    def test_surface_initialization_joins_runtime_owner_after_quiescence(self) -> None:
+        surface = self.region(
+            "    private fun initializeSurfaceWhenThreadStopped(",
+            "    override fun surfaceChanged("
+        )
+        old_owner = surface.index("if (gameThread.isAlive && !gameThread.isRunning)")
+        retry = surface.index("postDelayed(", old_owner)
+        branch_return = surface.index("return", retry)
+        lock = surface.index("synchronized(runtimeStateLock)", branch_return)
+        self.assertLess(old_owner, retry)
+        self.assertLess(retry, branch_return)
+        self.assertLess(branch_return, lock)
+        self.assertIn("screenWidth  = width", surface[lock:])
+        self.assertIn("resumeGameThreadWhenStopped(restartToken)", surface[lock:])
+
     def test_touch_and_debug_reset_share_the_same_owner(self) -> None:
         init = self.region("    init {", "    override fun surfaceCreated")
         debug = self.region("    fun applyDebugLaunchIntent", "    private fun stopThread")
