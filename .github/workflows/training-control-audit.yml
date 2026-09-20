@@ -1,4 +1,4 @@
-name: OPF v20 training-control audit
+name: Training-control applicability audit
 
 on:
   push:
@@ -13,21 +13,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  strict-training-control-audit:
+  no-trainable-surface:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Check out exact candidate
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Compile central launcher
-        run: python -m py_compile run_all_training.py
-      - name: Audit exhaustive training closure and recovery contracts
+      - name: Compile local applicability authority
+        run: >-
+          python -m py_compile
+          run_all_training.py
+          training_control/forest_no_trainable_authority.py
+          training_control/dataset_cohort_not_applicable_v1.py
+      - name: Certify no retained trainable surface
         run: python run_all_training.py --training-control-audit
-      - name: Upload training-control certificate
+      - name: Upload applicability certificate
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: training-control-certificate-${{ github.sha }}
           path: .training_control/coverage_report.json
