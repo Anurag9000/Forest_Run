@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import subprocess
 import unittest
 from pathlib import Path
@@ -85,21 +84,25 @@ class MainReleaseWrapperContractTest(unittest.TestCase):
             ROOT / "release/google-play/PUBLISHING_CHECKLIST.md",
             ROOT / "release/google-play/screenshots/CAPTURE_PLAN.md",
         )
-        direct_helper = re.compile(
-            r"(?m)^\\s*(?:python3\\s+)?scripts/prepare_play_release\\.py(?:\\s|$)"
-        )
-        workstation_path = re.compile(r"(?:^|[\\s(])/(?:home|Users)/[^\\s)]+")
+        forbidden_commands = {
+            "scripts/prepare_play_release.py",
+            "python3 scripts/prepare_play_release.py",
+            "python scripts/prepare_play_release.py",
+        }
         for path in operator_docs:
             with self.subTest(path=path):
                 text = path.read_text(encoding="utf-8")
-                self.assertIsNone(direct_helper.search(text))
-                self.assertIsNone(workstation_path.search(text))
+                stripped_lines = {line.strip() for line in text.splitlines()}
+                self.assertTrue(forbidden_commands.isdisjoint(stripped_lines))
+                self.assertNotIn("/home/", text)
+                self.assertNotIn("/Users/", text)
 
         play_readme = (ROOT / "release/google-play/README.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("bash scripts/prepare_main_release.sh", play_readme)
-        self.assertRegex(play_readme, r"must not be invoked\\s+directly")
+        normalized = " ".join(play_readme.split())
+        self.assertIn("bash scripts/prepare_main_release.sh", normalized)
+        self.assertIn("must not be invoked directly", normalized)
 
 
 if __name__ == "__main__":

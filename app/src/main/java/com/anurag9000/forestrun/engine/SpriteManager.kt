@@ -34,7 +34,6 @@ class SpriteManager(private val context: Context) {
     val playerApex: SpriteSheet
     val playerFalling: SpriteSheet
     val playerLanding: SpriteSheet
-    val playerStandUp: SpriteSheet
     val playerDuck: SpriteSheet
     val playerHit: SpriteSheet
     val playerDeath: SpriteSheet
@@ -134,14 +133,6 @@ class SpriteManager(private val context: Context) {
             startFrame = 24,
             totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES
         )
-        playerStandUp = SpriteSheet(
-            jumpBitmap,
-            frameCount = 18,
-            framesPerSec = 12f,
-            isLooping = false,
-            totalFramesInBitmap = PLAYER_JUMP_STRIP_FRAMES
-        )
-
         val duckBitmap = loadValidated(
             AssetPaths.Char.DUCK,
             Color.rgb(80, 220, 180),
