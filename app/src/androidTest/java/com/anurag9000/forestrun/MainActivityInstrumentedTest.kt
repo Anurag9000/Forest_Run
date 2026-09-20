@@ -148,7 +148,7 @@ class MainActivityInstrumentedTest {
             val gameView = requireGameView(scenario)
             enterPlayingState(gameView)
 
-            scenario.onActivity {
+            mutateStopped(gameView) {
                 val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
                 repeat(GameConstants.BLOOM_SEED_COUNT) {
                     gameState.collectSeed()
@@ -168,7 +168,7 @@ class MainActivityInstrumentedTest {
             val gameView = requireGameView(scenario)
             enterPlayingState(gameView)
 
-            scenario.onActivity {
+            mutateStopped(gameView) {
                 val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
                 val player = getPrivateField(gameView, "player") as Player
                 entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 10f)
@@ -194,7 +194,7 @@ class MainActivityInstrumentedTest {
             val gameView = requireGameView(scenario)
             enterPlayingState(gameView)
 
-            scenario.onActivity {
+            mutateStopped(gameView) {
                 val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
                 repeat(GameConstants.BLOOM_SEED_COUNT) {
                     gameState.collectSeed()
@@ -206,7 +206,7 @@ class MainActivityInstrumentedTest {
                 player.isInvincible
             }
 
-            scenario.onActivity {
+            mutateStopped(gameView) {
                 val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
                 val player = getPrivateField(gameView, "player") as Player
                 entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 10f)
@@ -232,7 +232,7 @@ class MainActivityInstrumentedTest {
             )
 
             checkpoints.forEach { (distance, biome) ->
-                scenario.onActivity {
+                mutateStopped(gameView) {
                     val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
                     setPrivateField(gameState, "distanceMetres", distance)
                 }
@@ -251,7 +251,7 @@ class MainActivityInstrumentedTest {
             val gameView = requireGameView(scenario)
             enterPlayingState(gameView)
 
-            scenario.onActivity {
+            mutateStopped(gameView) {
                 val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
                 entityManager.reset()
                 EntityType.values().forEachIndexed { index, type ->
@@ -290,7 +290,7 @@ class MainActivityInstrumentedTest {
                 recorder.frames.size >= 5
             }
 
-            scenario.onActivity {
+            mutateStopped(gameView) {
                 val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
                 setPrivateField(gameState, "distanceMetres", 25f)
                 val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
@@ -355,6 +355,21 @@ class MainActivityInstrumentedTest {
         waitForCondition("game enters playing state", timeoutMs = 8_000L) {
             getPrivateField(gameView, "appState") == AppGameState.PLAYING
         }
+    }
+
+    private fun mutateStopped(gameView: GameView, mutation: () -> Unit) {
+        instrumentation.runOnMainSync {
+            assertTrue(
+                "runtime producer must stop before instrumentation mutates live owners",
+                gameView.pause()
+            )
+            try {
+                mutation()
+            } finally {
+                gameView.resume()
+            }
+        }
+        instrumentation.waitForIdleSync()
     }
 
     private fun tapLogical(gameView: GameView, logicalX: Float, logicalY: Float) {
