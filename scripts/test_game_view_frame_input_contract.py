@@ -48,8 +48,10 @@ class GameViewFrameInputContractTest(unittest.TestCase):
         ]
         self.assertEqual(
             [
+                "synchronized(runtimeStateLock) {",
                 "if (!FrameInputAdmission.acceptsDelta(deltaTime)) return",
                 "updateBounded(FrameInputAdmission.boundedDeltaSeconds(deltaTime))",
+                "}",
             ],
             statements,
         )
