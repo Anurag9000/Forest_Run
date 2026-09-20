@@ -71,14 +71,20 @@ The remaining work for final store readiness is:
 
 ## Packaging Readiness
 
-Prepare and verify the release bundle with:
+Prepare and verify a release candidate only through the canonical wrapper:
 
 ```bash
-scripts/prepare_play_release.py
+bash scripts/prepare_main_release.sh
 ```
 
-This verifies the generated art, metadata files, builds `bundleRelease`, and writes:
+That wrapper binds the operation to a clean canonical `main` candidate, runs the
+source/provenance/store preflights, invokes the lower-level
+`scripts/prepare_play_release.py` helper internally, verifies the newly generated
+candidate-bound summaries, and revalidates the candidate afterward. The helper is
+not an equivalent operator-facing release boundary and must not be invoked
+directly for a candidate.
 
-- `BUILD_SUMMARY.md`
+`BUILD_SUMMARY.md` and `build_summary.json` are generated candidate evidence,
+not checked-in approval artifacts.
 
-Use [PUBLISHING_CHECKLIST.md](/home/anurag-basistha/Projects/TODO/Forest_Run/release/google-play/PUBLISHING_CHECKLIST.md) for the final console upload pass.
+Use [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md) for the final console upload pass.
