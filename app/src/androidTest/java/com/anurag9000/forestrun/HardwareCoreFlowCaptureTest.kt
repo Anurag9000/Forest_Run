@@ -1,5 +1,6 @@
 package com.anurag9000.forestrun
 
+import android.content.Intent
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.graphics.Bitmap
@@ -23,7 +24,6 @@ import com.anurag9000.forestrun.engine.RunState
 import com.anurag9000.forestrun.engine.SaveManager
 import com.anurag9000.forestrun.entities.PlayerState
 import com.anurag9000.forestrun.systems.GhostFrame
-import com.anurag9000.forestrun.ui.MainMenuScreen
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -117,46 +117,30 @@ class HardwareCoreFlowCaptureTest {
     }
 
     private fun prepareScenario(gameView: GameView, scenario: EncounterScenario) {
-        enterPlayingState(gameView)
+        waitForCondition("game view laid out and rendering", timeoutMs = 8_000L) {
+            gameView.width > 0 &&
+                gameView.height > 0 &&
+                gameView.holder.surface?.isValid == true &&
+                gameView.debugFrameCounter > 10
+        }
+
+        val launchIntent = Intent(targetContext, MainActivity::class.java).apply {
+            putExtra(MainActivity.EXTRA_DEBUG_SCENARIO, scenario.name)
+            putExtra(MainActivity.EXTRA_RUN_MODE, RunMode.SCREENSHOT_CAPTURE.name)
+            putExtra(MainActivity.EXTRA_DEBUG_AUTOSTART, true)
+        }
         instrumentation.runOnMainSync {
-            setPrivateField(gameView, "runMode", RunMode.SCREENSHOT_CAPTURE)
-            val director = getPrivateField(gameView, "encounterDirector") as EncounterDirector
-            setPrivateField(director, "selectedIndex", EncounterScenario.entries.indexOf(scenario))
-            invokePrivate(gameView, "prepareEncounterScenario")
+            // Use the production deterministic-launch boundary so scenario
+            // selection/reset is serialized with the live GameThread and the
+            // capture can never spend even a transient frame in NORMAL mode.
+            gameView.applyDebugLaunchIntent(launchIntent)
         }
         instrumentation.waitForIdleSync()
         waitForCondition("scenario becomes active", timeoutMs = 8_000L) {
             val director = getPrivateField(gameView, "encounterDirector") as EncounterDirector
             director.activeScenario == scenario &&
+                getPrivateField(gameView, "runMode") == RunMode.SCREENSHOT_CAPTURE &&
                 getPrivateField(gameView, "runState") == RunState.PLAYING
-        }
-    }
-
-    private fun enterPlayingState(gameView: GameView) {
-        waitForCondition("menu initialized") {
-            getPrivateField(gameView, "mainMenuScreen") != null
-        }
-        waitForCondition("game view laid out and rendering", timeoutMs = 8_000L) {
-            gameView.width > 0 &&
-                gameView.height > 0 &&
-                gameView.debugFrameCounter > 10
-        }
-
-        val menu = getPrivateField(gameView, "mainMenuScreen") as MainMenuScreen
-        val centerX = gameView.width / 2f
-        val centerY = gameView.height / 2f
-
-        tapGameView(gameView, centerX, centerY)
-        waitForCondition("menu leaves idle phase") {
-            menu.phase != MainMenuScreen.Phase.IDLE
-        }
-        waitForCondition("menu ready phase", timeoutMs = 8_000L) {
-            menu.phase == MainMenuScreen.Phase.READY && gameView.debugFrameCounter > 20
-        }
-
-        tapGameView(gameView, centerX, centerY)
-        waitForCondition("game enters playing state", timeoutMs = 8_000L) {
-            getPrivateField(gameView, "appState") == AppGameState.PLAYING
         }
     }
 
@@ -252,18 +236,6 @@ class HardwareCoreFlowCaptureTest {
         val field = target.javaClass.getDeclaredField(fieldName)
         field.isAccessible = true
         return field.get(target)
-    }
-
-    private fun setPrivateField(target: Any, fieldName: String, value: Any) {
-        val field = target.javaClass.getDeclaredField(fieldName)
-        field.isAccessible = true
-        field.set(target, value)
-    }
-
-    private fun invokePrivate(target: Any, methodName: String) {
-        val method = target.javaClass.getDeclaredMethod(methodName)
-        method.isAccessible = true
-        method.invoke(target)
     }
 
     private fun runShell(command: String) {
