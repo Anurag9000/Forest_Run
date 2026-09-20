@@ -66,6 +66,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
     private var gameThread: GameThread = GameThread(holder, this)
     private val gameThreadRestartGate = LatestRequestGate()
+    // Serialize live runtime state shared by GameThread and Android callbacks.
+    private val runtimeStateLock = Any()
     @Volatile
     private var lifecyclePaused = false
 
@@ -332,7 +334,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val accessibilityActionRouter by lazy {
         GameAccessibilityActionRouter(
             snapshotProvider = ::buildAccessibilitySnapshot,
-            handler = liveAccessibilityActions
+            handler = AccessibilitySemanticActionHandler { nodeId, action ->
+                synchronized(runtimeStateLock) {
+                    liveAccessibilityActions.perform(nodeId, action)
+                }
+            }
         )
     }
     private val gameAccessibilityNodeProvider by lazy {
@@ -354,6 +360,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
         isFocusable = true
         setOnTouchListener { view, event ->
+            synchronized(runtimeStateLock) {
             val idx = event.actionIndex.coerceAtLeast(0)
             lastTouchX = event.getX(idx)
             lastTouchY = event.getY(idx)
@@ -386,6 +393,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     }
                 }
                 true
+            }
             }
         }
     }
@@ -600,6 +608,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     fun applyDebugLaunchIntent(intent: Intent?) {
+        synchronized(runtimeStateLock) {
         if (!debugToolsEnabled || intent == null) return
 
         val scenarioName = intent.getStringExtra(com.anurag9000.forestrun.MainActivity.EXTRA_DEBUG_SCENARIO)
@@ -655,6 +664,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 "Debug auto-start state publication was rejected"
             }
         }
+        }
     }
 
     private fun stopThread(): Boolean {
@@ -688,6 +698,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun buildAccessibilitySnapshot(): AccessibilitySemanticSnapshot {
+        synchronized(runtimeStateLock) {
         val surface = when {
             appState == AppGameState.MENU && accessibilitySettingsOpen ->
                 AccessibilitySurface.SETTINGS
@@ -764,6 +775,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             restSummary = restSummary,
             restContinueEnabled = runState == RunState.GAME_OVER
         )
+        }
     }
 
     private fun accessibilityBoundsFor(nodeId: Int): Rect {
@@ -884,7 +896,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         pressed.invoke()
         postDelayed(
             {
-                if (acceptsGameplayInput()) released.invoke()
+                synchronized(runtimeStateLock) {
+                    if (acceptsGameplayInput()) released.invoke()
+                }
             },
             280L
         )
@@ -945,8 +959,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
 
     fun update(deltaTime: Float) {
-        if (!FrameInputAdmission.acceptsDelta(deltaTime)) return
-        updateBounded(FrameInputAdmission.boundedDeltaSeconds(deltaTime))
+        synchronized(runtimeStateLock) {
+            if (!FrameInputAdmission.acceptsDelta(deltaTime)) return
+            updateBounded(FrameInputAdmission.boundedDeltaSeconds(deltaTime))
+        }
     }
 
     private fun updateBounded(deltaTime: Float) {
@@ -1317,6 +1333,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     override fun draw(canvas: Canvas) {
+        synchronized(runtimeStateLock) {
         super.draw(canvas)
 
         // 1. Black fill (never shakes — clean border always visible)
@@ -1522,6 +1539,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         // 10. RESTARTING — fade to black
         if (runState == RunState.RESTARTING) {
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), restartFadePaint)
+        }
         }
     }
 
