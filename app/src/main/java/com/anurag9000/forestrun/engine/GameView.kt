@@ -40,6 +40,7 @@ import kotlin.math.hypot
 
 private const val TAG = "ForestRun"
 private const val ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES = 30L
+private const val GAME_THREAD_RESTART_RETRY_MS = 16L
 
 /**
  * The top-level game view.
@@ -64,6 +65,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // Engine
     // -----------------------------------------------------------------------
     private var gameThread: GameThread = GameThread(holder, this)
+    private val gameThreadRestartGate = LatestRequestGate()
 
     // -----------------------------------------------------------------------
     // Input
@@ -534,6 +536,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     fun pause() {
+        // Invalidate any deferred resume before asking the current owner to stop.
+        // A frame callback may be temporarily uncooperative, so pause must also
+        // prevent a queued handoff from creating a replacement behind it.
+        gameThreadRestartGate.cancel()
         stopThread()
         LeitmotifManager.pause()   // Phase 20
         if (::gameState.isInitialized && runMode.persistsProgress) {
@@ -543,16 +549,41 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     fun resume() {
         LeitmotifManager.resume()  // Phase 20
-        // Re-create thread (Java threads can't be restarted after stop)
-        gameThread = GameThread(holder, this)
-        // Thread starts when surfaceCreated fires again (or immediately if surface exists)
-        if (holder.surface?.isValid == true) {
-            gameThread.isRunning = true
-            gameThread.start()
-        }
+        val restartToken = gameThreadRestartGate.begin()
+        resumeGameThreadWhenStopped(restartToken)
         pendingDebugLaunchIntent?.let {
             pendingDebugLaunchIntent = null
             post { applyDebugLaunchIntent(it) }
+        }
+    }
+
+    /**
+     * Transfers render/update ownership without ever overlapping GameThread instances.
+     *
+     * requestStopAndAwait() is intentionally bounded because lifecycle callbacks run
+     * on the UI thread. A frame callback that ignores interruption can therefore still
+     * be alive when pause() returns. Resume must wait asynchronously for that exact
+     * owner to terminate before replacing it; otherwise two threads could mutate and
+     * render the same GameView concurrently.
+     */
+    private fun resumeGameThreadWhenStopped(restartToken: LatestRequestGate.Token) {
+        if (!gameThreadRestartGate.isCurrent(restartToken)) return
+
+        if (gameThread.isAlive) {
+            gameThread.requestStop()
+            postDelayed(
+                { resumeGameThreadWhenStopped(restartToken) },
+                GAME_THREAD_RESTART_RETRY_MS
+            )
+            return
+        }
+
+        if (gameThread.state != Thread.State.NEW) {
+            gameThread = GameThread(holder, this)
+        }
+        if (holder.surface?.isValid == true && gameThread.state == Thread.State.NEW) {
+            gameThread.isRunning = true
+            gameThread.start()
         }
     }
 
