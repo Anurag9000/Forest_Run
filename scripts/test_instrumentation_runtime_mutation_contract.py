@@ -29,6 +29,22 @@ class InstrumentationRuntimeMutationContractTest(unittest.TestCase):
             self.source,
         )
 
+    def test_entity_roster_proof_updates_once_while_quiesced_before_live_resume(self) -> None:
+        start = self.source.index("    fun allEntityTypesSpawnAndUpdateOnDevice()")
+        end = self.source.index("    @Test\n    fun bestRunPersistsGhostAndReloadsOnNextLaunch()", start)
+        region = self.source[start:end]
+        block = region.index("mutateStopped(gameView) {")
+        update = region.index("entityManager.update(", block)
+        exact_count = region.index("assertEquals(expectedTypes.size, entityManager.debugActiveEntityCount)", update)
+        exact_types = region.index("entityManager.activeEntities.mapNotNull(entityManager::entityTypeOf).toSet()", exact_count)
+        live_loop = region.index('waitForCondition("live loop continues with full entity roster"', exact_types)
+        self.assertLess(block, update)
+        self.assertLess(update, exact_count)
+        self.assertLess(exact_count, exact_types)
+        self.assertLess(exact_types, live_loop)
+        self.assertIn("runMode = RunMode.DEBUG_SCENARIO", region)
+        self.assertNotIn("all entity types remain active for at least one live update", region)
+
     def test_each_high_risk_mutation_is_inside_a_quiesced_block(self) -> None:
         markers = (
             "gameState.collectSeed()",
