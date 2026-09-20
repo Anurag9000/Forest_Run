@@ -1,6 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SKIP_ORIGIN_MAIN_CHECK=0
+EXPECTED_CANDIDATE_SHA=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skip-origin-main-check)
+      SKIP_ORIGIN_MAIN_CHECK=1
+      shift
+      ;;
+    --candidate-sha)
+      if [[ $# -lt 2 ]]; then
+        echo "--candidate-sha requires a 40-character Git commit SHA." >&2
+        exit 2
+      fi
+      EXPECTED_CANDIDATE_SHA="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown connected-validation argument: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+cd "${ROOT_DIR}"
+
 readonly SERIAL="${ANDROID_SERIAL:-emulator-${EMULATOR_PORT:-5554}}"
 readonly READINESS_TIMEOUT_SECONDS="${FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS:-240}"
 readonly POLL_SECONDS=5
@@ -10,12 +37,36 @@ if [[ ! "${READINESS_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
   echo "FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS must be a positive integer." >&2
   exit 2
 fi
-for required_command in adb timeout; do
+for required_command in adb timeout git; do
   if ! command -v "${required_command}" >/dev/null 2>&1; then
     echo "Connected validation requires '${required_command}' on PATH." >&2
     exit 2
   fi
 done
+
+readonly LOCAL_CANDIDATE_SHA="$(git rev-parse --verify HEAD)"
+if [[ -z "${EXPECTED_CANDIDATE_SHA}" ]]; then
+  EXPECTED_CANDIDATE_SHA="${LOCAL_CANDIDATE_SHA}"
+fi
+if [[ ! "${EXPECTED_CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  echo "Connected-validation candidate SHA must be exactly 40 hexadecimal characters." >&2
+  exit 2
+fi
+if [[ "${LOCAL_CANDIDATE_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]; then
+  echo "Connected-validation checkout does not match the requested candidate." >&2
+  echo "expected=${EXPECTED_CANDIDATE_SHA}" >&2
+  echo "local=${LOCAL_CANDIDATE_SHA}" >&2
+  exit 1
+fi
+if [[ "${SKIP_ORIGIN_MAIN_CHECK}" -eq 0 ]]; then
+  readonly ORIGIN_MAIN_SHA="$(bash scripts/verify_origin_main.sh "${ROOT_DIR}")"
+  if [[ "${ORIGIN_MAIN_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]; then
+    echo "Connected-validation candidate is not canonical origin/main." >&2
+    echo "expected=${EXPECTED_CANDIDATE_SHA}" >&2
+    echo "origin/main=${ORIGIN_MAIN_SHA}" >&2
+    exit 1
+  fi
+fi
 
 export ANDROID_SERIAL="${SERIAL}"
 
