@@ -305,8 +305,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     // -----------------------------------------------------------------------
     // Screen dimensions
     // -----------------------------------------------------------------------
+    @Volatile
     var screenWidth:  Int = 0
         private set
+    @Volatile
     var screenHeight: Int = 0
         private set
     private var safeAreaInsets = SafeAreaInsets()
@@ -399,6 +401,27 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
+        val restartToken = gameThreadRestartGate.begin()
+        initializeSurfaceWhenThreadStopped(holder, restartToken)
+    }
+
+    private fun initializeSurfaceWhenThreadStopped(
+        holder: SurfaceHolder,
+        restartToken: LatestRequestGate.Token
+    ) {
+        if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return
+
+        if (gameThread.isAlive && !gameThread.isRunning) {
+            postDelayed(
+                { initializeSurfaceWhenThreadStopped(holder, restartToken) },
+                GAME_THREAD_RESTART_RETRY_MS
+            )
+            return
+        }
+
+        synchronized(runtimeStateLock) {
+            if (!gameThreadRestartGate.isCurrent(restartToken) || lifecyclePaused) return
+
         screenWidth  = width
         screenHeight = height
         rebuildSafeContentTransform()
@@ -496,13 +519,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             wirePlayerToInput()
         }
 
-        if (!lifecyclePaused) {
-            val restartToken = gameThreadRestartGate.begin()
-            resumeGameThreadWhenStopped(restartToken)
-        }
+        resumeGameThreadWhenStopped(restartToken)
         pendingDebugLaunchIntent?.let {
             pendingDebugLaunchIntent = null
             post { applyDebugLaunchIntent(it) }
+        }
         }
     }
 
