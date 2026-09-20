@@ -15,8 +15,10 @@ class AndroidValidationActionVersionsTest(unittest.TestCase):
     def test_maintained_node_runtime_actions_are_used(self) -> None:
         self.assertEqual(2, WORKFLOW.count("uses: actions/checkout@v6"))
         self.assertEqual(2, WORKFLOW.count("uses: actions/setup-java@v5"))
-        self.assertEqual(2, WORKFLOW.count("uses: android-actions/setup-android@v4"))
-        self.assertEqual(2, WORKFLOW.count("cmdline-tools-version: '12266719'"))
+        self.assertNotIn("android-actions/setup-android@", WORKFLOW)
+        self.assertEqual(2, WORKFLOW.count("name: Validate hosted Android SDK"))
+        self.assertEqual(2, WORKFLOW.count("command -v sdkmanager"))
+        self.assertIn("'build-tools;36.0.0'", WORKFLOW)
         self.assertEqual(2, WORKFLOW.count("uses: gradle/actions/setup-gradle@v6"))
         self.assertEqual(1, WORKFLOW.count("uses: gradle/actions/wrapper-validation@v6"))
         for obsolete in (
@@ -24,6 +26,7 @@ class AndroidValidationActionVersionsTest(unittest.TestCase):
             "actions/checkout@v5",
             "actions/setup-java@v4",
             "android-actions/setup-android@v3",
+            "android-actions/setup-android@v4",
             "gradle/actions/setup-gradle@v4",
             "gradle/actions/setup-gradle@v5",
             "gradle/actions/wrapper-validation@v4",

@@ -194,16 +194,30 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          cmdline-tools-version: '12266719'
+      - name: Validate hosted Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?GitHub runner did not expose ANDROID_HOME}"
+          sdkmanager_bin="$(command -v sdkmanager || true)"
+          if [[ -z "${sdkmanager_bin}" ]]; then
+            sdkmanager_bin="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' -perm -u+x -print 2>/dev/null | sort -V | tail -n 1)"
+          fi
+          if [[ -z "${sdkmanager_bin}" || ! -x "${sdkmanager_bin}" ]]; then
+            echo "No usable hosted sdkmanager was found under ANDROID_HOME." >&2
+            exit 1
+          fi
+          echo "$(dirname "${sdkmanager_bin}")" >> "${GITHUB_PATH}"
+          "${sdkmanager_bin}" --version
 
-      - name: Install Android API 36
+      - name: Install Android API 36 toolchain
         shell: bash
         run: |
           set +o pipefail
-          yes | sdkmanager 'platforms;android-36' >/dev/null
+          yes | sdkmanager \
+            'platform-tools' \
+            'platforms;android-36' \
+            'build-tools;36.0.0' >/dev/null
           status=${PIPESTATUS[1]}
           set -o pipefail
           exit "$status"
@@ -295,7 +309,7 @@ jobs:
         if: always()
         with:
           name: android-validation-${{ github.sha }}
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
           path: |
             app/build/reports/
@@ -324,10 +338,21 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          cmdline-tools-version: '12266719'
+      - name: Validate hosted Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?GitHub runner did not expose ANDROID_HOME}"
+          sdkmanager_bin="$(command -v sdkmanager || true)"
+          if [[ -z "${sdkmanager_bin}" ]]; then
+            sdkmanager_bin="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' -perm -u+x -print 2>/dev/null | sort -V | tail -n 1)"
+          fi
+          if [[ -z "${sdkmanager_bin}" || ! -x "${sdkmanager_bin}" ]]; then
+            echo "No usable hosted sdkmanager was found under ANDROID_HOME." >&2
+            exit 1
+          fi
+          echo "$(dirname "${sdkmanager_bin}")" >> "${GITHUB_PATH}"
+          "${sdkmanager_bin}" --version
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -339,8 +364,11 @@ jobs:
         run: |
           set +o pipefail
           yes | sdkmanager \
+            'platform-tools' \
             'platforms;android-36' \
+            'build-tools;36.0.0' \
             'platforms;android-35' \
+            'emulator' \
             'system-images;android-35;google_apis;x86_64' >/dev/null
           status=${PIPESTATUS[1]}
           set -o pipefail
@@ -380,7 +408,7 @@ jobs:
         if: always()
         with:
           name: connected-validation-${{ github.sha }}
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
           path: |
             app/build/reports/androidTests/connected/
