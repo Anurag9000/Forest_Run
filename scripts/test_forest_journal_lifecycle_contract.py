@@ -33,7 +33,11 @@ class ForestJournalLifecycleContractTest(unittest.TestCase):
         self.assertIn("scenario.recreate()", test)
         self.assertIn('"Memories Journal section, selected"', test)
         self.assertIn("val before = gamePrefs.all.toMap()", test)
-        self.assertIn("assertEquals(before, gamePrefs.all.toMap())", test)
+        self.assertIn("val after = gamePrefs.all.toMap()", test)
+        self.assertIn("before - SaveIntegrityManager.KEY_SCHEMA_VERSION", test)
+        self.assertIn("after - SaveIntegrityManager.KEY_SCHEMA_VERSION", test)
+        self.assertIn("SaveIntegrityManager.CURRENT_SCHEMA_VERSION", test)
+        self.assertNotIn("assertEquals(before, gamePrefs.all.toMap())", test)
 
 
 if __name__ == "__main__":
