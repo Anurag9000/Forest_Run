@@ -35,6 +35,7 @@ import com.anurag9000.forestrun.engine.ForestRunLegacyComposer
 import com.anurag9000.forestrun.engine.ForestRunLegacySnapshot
 import com.anurag9000.forestrun.engine.ForestWardrobeMemory
 import com.anurag9000.forestrun.engine.RelationshipStage
+import com.anurag9000.forestrun.engine.SaveIntegrityManager
 
 private const val STATE_JOURNAL_SECTION = "forest_journal_selected_section"
 
@@ -58,6 +59,10 @@ class ForestJournalActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Android may restore the Journal as the top Activity without first
+        // recreating MainActivity. Repair typed persistence before any Journal
+        // projection reads SharedPreferences.
+        SaveIntegrityManager.repair(this)
         selectedSection = savedInstanceState
             ?.getString(STATE_JOURNAL_SECTION)
             ?.let { savedName -> JournalSection.entries.firstOrNull { it.name == savedName } }

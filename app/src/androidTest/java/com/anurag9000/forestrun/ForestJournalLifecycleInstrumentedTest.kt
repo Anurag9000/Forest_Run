@@ -25,6 +25,27 @@ class ForestJournalLifecycleInstrumentedTest {
     }
 
     @Test
+    fun directJournalLaunchRepairsMalformedTypedPersistenceBeforeProjection() {
+        val gamePrefs = targetContext.getSharedPreferences(
+            "forest_run_prefs",
+            Context.MODE_PRIVATE
+        )
+        gamePrefs.edit()
+            .putString("encounter_cat", "not-an-int")
+            .putString("garden_unlocked", "not-an-int")
+            .commit()
+
+        ActivityScenario.launch(ForestJournalActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                assertNotNull(findButton(activity.window.decorView, "All"))
+            }
+        }
+
+        assertEquals(0, gamePrefs.getInt("encounter_cat", -1))
+        assertEquals(1, gamePrefs.getInt("garden_unlocked", -1))
+    }
+
+    @Test
     fun selectedSectionSurvivesActivityRecreationWithoutWritingGameProgress() {
         val gamePrefs = targetContext.getSharedPreferences(
             "forest_run_prefs",
