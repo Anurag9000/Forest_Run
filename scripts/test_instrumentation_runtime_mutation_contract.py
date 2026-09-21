@@ -62,6 +62,17 @@ class InstrumentationRuntimeMutationContractTest(unittest.TestCase):
             self.source,
         )
 
+    def test_bloom_collision_proof_waits_for_real_conversion_not_fixed_sleep(self) -> None:
+        start = self.source.index("    fun bloomPreventsImmediateCollisionDeath()")
+        end = self.source.index("    @Test\n    fun biomeCycleTransitionsAcrossLongRunOnDevice()", start)
+        region = self.source[start:end]
+        self.assertIn('entityManager.reset()', region)
+        self.assertIn('conversionsBefore = gameState.bloomConversionsThisRun', region)
+        self.assertIn('waitForCondition("Bloom converts isolated Cactus while run stays live"', region)
+        self.assertIn('entityManager.debugActiveEntityCount == 0', region)
+        self.assertIn('assertEquals(conversionsBefore + 1, gameState.bloomConversionsThisRun)', region)
+        self.assertNotIn('SystemClock.sleep(800)', region)
+
     def test_entity_roster_proof_updates_once_while_quiesced_before_live_resume(self) -> None:
         start = self.source.index("    fun allEntityTypesSpawnAndUpdateOnDevice()")
         end = self.source.index("    @Test\n    fun bestRunPersistsGhostAndReloadsOnNextLaunch()", start)

@@ -207,14 +207,29 @@ class MainActivityInstrumentedTest {
                 player.isInvincible
             }
 
+            var conversionsBefore = -1
             mutateStopped(gameView) {
+                val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
                 val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
                 val player = getPrivateField(gameView, "player") as Player
+                entityManager.reset()
+                conversionsBefore = gameState.bloomConversionsThisRun
                 entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 10f)
             }
 
-            SystemClock.sleep(800)
-            org.junit.Assert.assertEquals(RunState.PLAYING, getPrivateField(gameView, "runState"))
+            val startFrame = gameView.debugFrameCounter
+            waitForCondition("Bloom converts isolated Cactus while run stays live", timeoutMs = 4_000L) {
+                val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
+                gameView.debugFrameCounter > startFrame &&
+                    entityManager.debugActiveEntityCount == 0 &&
+                    getPrivateField(gameView, "runState") == RunState.PLAYING
+            }
+
+            mutateStopped(gameView) {
+                val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
+                org.junit.Assert.assertEquals(conversionsBefore + 1, gameState.bloomConversionsThisRun)
+                org.junit.Assert.assertEquals(RunState.PLAYING, getPrivateField(gameView, "runState"))
+            }
         }
     }
 
