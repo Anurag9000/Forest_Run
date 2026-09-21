@@ -7,6 +7,7 @@ import android.widget.Button
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.anurag9000.forestrun.engine.SaveIntegrityManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -81,7 +82,15 @@ class ForestJournalLifecycleInstrumentedTest {
             }
         }
 
-        assertEquals(before, gamePrefs.all.toMap())
+        val after = gamePrefs.all.toMap()
+        assertEquals(
+            before - SaveIntegrityManager.KEY_SCHEMA_VERSION,
+            after - SaveIntegrityManager.KEY_SCHEMA_VERSION
+        )
+        assertEquals(
+            SaveIntegrityManager.CURRENT_SCHEMA_VERSION,
+            gamePrefs.getInt(SaveIntegrityManager.KEY_SCHEMA_VERSION, -1)
+        )
     }
 
     private fun findButton(root: View, label: String): Button? {
