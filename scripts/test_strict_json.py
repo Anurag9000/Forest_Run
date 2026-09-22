@@ -1,6 +1,10 @@
 import json
+import os
 import tempfile
 import unittest
+from unittest import mock
+
+import strict_json
 from pathlib import Path
 
 from strict_json import StrictJsonError, load_file, loads
@@ -55,6 +59,33 @@ class StrictJsonTest(unittest.TestCase):
             path.write_text("[]", encoding="utf-8")
             with self.assertRaisesRegex(StrictJsonError, "JSON object"):
                 load_file(path, require_object=True)
+
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO support required")
+    def test_file_reader_rejects_fifo_without_opening(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory, "fifo.json")
+            os.mkfifo(path)
+            with mock.patch.object(strict_json.os, "open", wraps=strict_json.os.open) as opened:
+                with self.assertRaisesRegex(StrictJsonError, "not a regular file"):
+                    load_file(path)
+                opened.assert_not_called()
+
+    @unittest.skipUnless(hasattr(os, "O_NONBLOCK"), "nonblocking open required")
+    def test_file_reader_uses_checked_nonblocking_descriptor(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory, "evidence.json")
+            path.write_text('{"candidateSha":"ok"}', encoding="utf-8")
+            with mock.patch.object(strict_json.os, "open", wraps=strict_json.os.open) as opened:
+                self.assertEqual({"candidateSha": "ok"}, load_file(path))
+            calls = [
+                call for call in opened.call_args_list
+                if Path(call.args[0]) == path
+            ]
+            self.assertEqual(1, len(calls))
+            self.assertTrue(calls[0].args[1] & os.O_NONBLOCK)
+            if hasattr(os, "O_NOFOLLOW"):
+                self.assertTrue(calls[0].args[1] & os.O_NOFOLLOW)
 
 
 class StrictJsonEvidencePreflightTest(unittest.TestCase):

@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -155,6 +157,8 @@ def load_file(
     maximum_integer_digits: int = DEFAULT_MAX_INTEGER_DIGITS,
     require_object: bool = False,
 ) -> Any:
+    # Preserve the public explicit-path behavior while keeping the subsequent
+    # read on the exact checked inode, rather than reopening through read_bytes().
     path = path.expanduser().resolve()
     try:
         before = path.stat()
@@ -162,26 +166,65 @@ def load_file(
         raise StrictJsonError(f"JSON file is missing: {path}") from exc
     except OSError as exc:
         raise StrictJsonError(f"could not inspect JSON file {path}: {exc}") from exc
-    if not path.is_file():
+    if not stat.S_ISREG(before.st_mode):
         raise StrictJsonError(f"JSON path is not a regular file: {path}")
     if before.st_size <= 0 or before.st_size > maximum_bytes:
         raise StrictJsonError(
             f"{path} must be between 1 and {maximum_bytes} bytes"
         )
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
     try:
-        raw = path.read_bytes()
-        after = path.stat()
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise StrictJsonError(f"could not safely open JSON file {path}: {exc}") from exc
+
+    identity_fields = (
+        "st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns"
+    )
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode):
+            raise StrictJsonError(f"JSON path is not a regular file: {path}")
+        if any(
+            getattr(before, field) != getattr(opened, field)
+            for field in identity_fields
+        ):
+            raise StrictJsonError(f"JSON file changed while being read: {path}")
+        remaining = before.st_size
+        chunks: list[bytes] = []
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise StrictJsonError(f"JSON file changed while being read: {path}")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise StrictJsonError(f"JSON file changed while being read: {path}")
+        after = os.fstat(descriptor)
     except OSError as exc:
         raise StrictJsonError(f"could not read JSON file {path}: {exc}") from exc
-    if (
-        len(raw) != before.st_size
-        or after.st_size != before.st_size
-        or after.st_mtime_ns != before.st_mtime_ns
-        or (before.st_ino and after.st_ino != before.st_ino)
+    finally:
+        os.close(descriptor)
+
+    try:
+        after_path = path.stat()
+    except OSError as exc:
+        raise StrictJsonError(f"JSON file changed while being read: {path}: {exc}") from exc
+    if any(
+        getattr(before, field) != getattr(after, field)
+        or getattr(before, field) != getattr(after_path, field)
+        for field in identity_fields
     ):
         raise StrictJsonError(f"JSON file changed while being read: {path}")
     return loads(
-        raw,
+        b"".join(chunks),
         label=str(path),
         maximum_bytes=maximum_bytes,
         maximum_depth=maximum_depth,
