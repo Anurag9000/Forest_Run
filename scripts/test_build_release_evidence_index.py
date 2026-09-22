@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import build_release_evidence_index as indexer
 
@@ -180,8 +181,28 @@ class ReleaseEvidenceIndexTest(unittest.TestCase):
                 require_bound_kinds=["screenshot_manifest"],
             )
         self.manifest.write_bytes(b"{not json}")
-        with self.assertRaisesRegex(indexer.EvidenceIndexError, "invalid UTF-8 JSON"):
+        with self.assertRaisesRegex(indexer.EvidenceIndexError, "invalid JSON evidence"):
             self.build(["device=evidence/device.json"])
+
+    def test_builder_rejects_ambiguous_and_nonstandard_json_before_publication(self) -> None:
+        for payload in (
+            '{"candidateSha":"' + ("b" * 40) + '","candidateSha":"' + self.candidate + '"}',
+            '{"candidateSha":"' + self.candidate + '","measurement":NaN}',
+            '{"candidateSha":"' + self.candidate + '","measurement":1e9999}',
+        ):
+            with self.subTest(payload=payload):
+                self.manifest.write_text(payload, encoding="utf-8")
+                with self.assertRaisesRegex(indexer.EvidenceIndexError, "invalid JSON evidence"):
+                    self.build(["device=evidence/device.json"])
+
+    def test_builder_bounds_json_read_to_the_verifier_limit(self) -> None:
+        self.manifest.write_text(
+            '{"candidateSha":"' + self.candidate + '"}' + " " * 200,
+            encoding="utf-8",
+        )
+        with patch.object(indexer, "MAX_JSON_EVIDENCE_BYTES", 128):
+            with self.assertRaisesRegex(indexer.EvidenceIndexError, "between 1 and 128 bytes"):
+                self.build(["device=evidence/device.json"])
 
     def test_publish_is_canonical_atomic_and_refuses_symlink_output(self) -> None:
         payload = self.build()
