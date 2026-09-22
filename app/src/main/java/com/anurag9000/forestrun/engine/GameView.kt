@@ -69,6 +69,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val gameThreadRestartGate = LatestRequestGate()
     // Serialize live runtime state shared by GameThread and Android callbacks.
     private val runtimeStateLock = Any()
+    // Initial audio selection belongs to this GameView instance, not to every
+    // Surface/Thread handoff. Resume must preserve REST/BLOOM/late-run music.
+    private var audioBootstrapCompleted = false
     @Volatile
     private var lifecyclePaused = false
 
@@ -468,14 +471,23 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             if (frames.isNotEmpty()) ghostPlayer.load(frames)
         }
 
-        // Phase 20: Init audio managers
-        LeitmotifManager.init(context)
-        SfxManager.init(context)
-        // Phase 22: Start with garden music in MENU, run music when PLAYING
-        if (appState == AppGameState.MENU) {
-            LeitmotifManager.transitionTo(LeitmotifManager.MusicState.MENU)
-        } else {
-            LeitmotifManager.playRunStart()
+        // Phase 20: Select initial music only once per GameView. This method
+        // also runs after pause/resume and surface recreation; reinitializing
+        // LeitmotifManager here would force MENU then PLAYING_1, overriding the
+        // live REST, BLOOM, or distance-dependent music phase.
+        if (!audioBootstrapCompleted) {
+            LeitmotifManager.init(context)
+            SfxManager.init(context)
+            if (appState == AppGameState.MENU) {
+                LeitmotifManager.transitionTo(LeitmotifManager.MusicState.MENU)
+            } else if (runState == RunState.GAME_OVER) {
+                LeitmotifManager.playRest()
+            } else if (gameState.isBloomActive) {
+                LeitmotifManager.playBloom()
+            } else {
+                LeitmotifManager.playRunStart()
+            }
+            audioBootstrapCompleted = true
         }
 
         // Phase 21: Init haptics
