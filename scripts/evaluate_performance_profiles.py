@@ -4,14 +4,16 @@
 from __future__ import annotations
 
 import argparse
-import json
 import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
+import strict_json
+
 SCHEMA_VERSION = 1
+MAX_PROFILE_JSON_BYTES = 2 * 1024 * 1024
 REQUIRED_LIMITS = (
     "minSampledFrames",
     "maxP95ProcessingNs",
@@ -86,13 +88,14 @@ class ReportEvidence:
 
 def _read_json(path: Path) -> dict[str, Any]:
     try:
-        parsed = json.loads(path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise ConfigurationError(f"could not read {path}: {exc}") from exc
-    except json.JSONDecodeError as exc:
+        parsed = strict_json.load_file(
+            path,
+            maximum_bytes=MAX_PROFILE_JSON_BYTES,
+            require_object=True,
+        )
+    except (OSError, strict_json.StrictJsonError) as exc:
         raise ConfigurationError(f"invalid JSON in {path}: {exc}") from exc
-    if not isinstance(parsed, dict):
-        raise ConfigurationError(f"{path} must contain a JSON object")
+    assert isinstance(parsed, dict)
     return parsed
 
 
