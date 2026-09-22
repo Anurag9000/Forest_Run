@@ -1,11 +1,13 @@
 import json
 import tempfile
+from unittest.mock import patch
 import unittest
 from pathlib import Path
 
 from evaluate_performance_profiles import (
     ConfigurationError,
     ThresholdProfile,
+    _read_json,
     evaluate_report,
     load_thresholds,
     select_profile,
@@ -215,6 +217,28 @@ class PerformanceProfileEvaluatorTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ConfigurationError, "ambiguous"):
             select_profile(self.report, (first, second))
+
+    def test_performance_json_rejects_duplicate_metrics_and_nonstandard_numbers(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory, "profile.json")
+            cases = (
+                '{"sampledFrames":0,"sampledFrames":600}',
+                '{"p95ProcessingNs":NaN}',
+                '{"p95ProcessingNs":1e9999}',
+            )
+            for payload in cases:
+                with self.subTest(payload=payload):
+                    path.write_text(payload, encoding="utf-8")
+                    with self.assertRaisesRegex(ConfigurationError, "invalid JSON"):
+                        _read_json(path)
+
+    def test_performance_json_is_bounded_before_loading(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory, "thresholds.json")
+            path.write_text('{"schemaVersion":1}' + " " * 200, encoding="utf-8")
+            with patch("evaluate_performance_profiles.MAX_PROFILE_JSON_BYTES", 64):
+                with self.assertRaisesRegex(ConfigurationError, "between 1 and 64 bytes"):
+                    load_thresholds(path)
 
     def test_threshold_manifest_requires_measured_core_limits(self):
         manifest = {
