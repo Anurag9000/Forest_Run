@@ -119,7 +119,7 @@ class StableReleaseEvidenceIndexTest(unittest.TestCase):
                     output=root / "release-evidence-index.json",
                 )
 
-    def test_strict_verifier_rejects_duplicate_json_keys_and_removes_output(self) -> None:
+    def test_strict_snapshot_builder_rejects_duplicate_json_keys_before_publication(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             evidence = root / "acceptance.json"
@@ -130,9 +130,11 @@ class StableReleaseEvidenceIndexTest(unittest.TestCase):
             )
             output = root / "release-evidence-index.json"
 
+            # Strict JSON validation now runs in the snapshot builder, before
+            # publication. This is stronger than waiting for the verifier.
             with self.assertRaisesRegex(
-                stable.StableEvidenceIndexError,
-                "independent verification failed",
+                stable.builder.EvidenceIndexError,
+                "duplicate JSON object key",
             ):
                 stable.build_stable_index(
                     root=root,
@@ -141,6 +143,36 @@ class StableReleaseEvidenceIndexTest(unittest.TestCase):
                     generated_at_utc=GENERATED_AT,
                     output=output,
                 )
+            self.assertFalse(output.exists())
+
+    def test_independent_verification_failure_removes_published_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            evidence = root / "acceptance.json"
+            evidence.write_text(
+                json.dumps({"candidateSha": CANDIDATE}),
+                encoding="utf-8",
+            )
+            output = root / "release-evidence-index.json"
+
+            with mock.patch.object(
+                stable.verifier,
+                "verify_index",
+                side_effect=stable.verifier.EvidenceIndexVerificationError(
+                    "independent mismatch"
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    stable.StableEvidenceIndexError,
+                    "independent verification failed",
+                ):
+                    stable.build_stable_index(
+                        root=root,
+                        candidate_sha=CANDIDATE,
+                        specs=["acceptance=acceptance.json"],
+                        generated_at_utc=GENERATED_AT,
+                        output=output,
+                    )
             self.assertFalse(output.exists())
 
 
