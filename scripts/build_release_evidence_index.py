@@ -15,9 +15,12 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Iterable, Mapping, Sequence
 
+import strict_json
+
 SCHEMA_VERSION = 1
 MAX_ENTRIES = 128
 MAX_FILE_BYTES = 512 * 1024 * 1024
+MAX_JSON_EVIDENCE_BYTES = strict_json.DEFAULT_MAX_BYTES
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 KIND = re.compile(r"^[a-z][a-z0-9_]{0,47}$")
 SUPPORTED_SUFFIXES = {
@@ -140,12 +143,18 @@ def _load_json_bindings(path: Path) -> tuple[str, ...]:
     if path.suffix.lower() != ".json":
         return ()
     try:
-        raw = path.read_bytes()
-        if raw.startswith(b"\xef\xbb\xbf"):
-            raise EvidenceIndexError(f"JSON evidence must not contain a UTF-8 BOM: {path}")
-        value = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise EvidenceIndexError(f"invalid UTF-8 JSON evidence: {path}") from exc
+        # Match the independent verifier: bound reads before parsing and reject
+        # ambiguous keys, non-standard numbers, and excess structural nesting.
+        with path.open("rb") as handle:
+            raw = handle.read(MAX_JSON_EVIDENCE_BYTES + 1)
+        value = strict_json.loads(
+            raw,
+            label=str(path),
+            maximum_bytes=MAX_JSON_EVIDENCE_BYTES,
+            maximum_depth=64,
+        )
+    except (OSError, strict_json.StrictJsonError) as exc:
+        raise EvidenceIndexError(f"invalid JSON evidence: {path}: {exc}") from exc
     bindings = tuple(sorted(_candidate_bindings(value)))
     if any(not SHA40.fullmatch(binding) for binding in bindings):
         raise EvidenceIndexError(f"JSON evidence contains a malformed candidate SHA: {path}")
