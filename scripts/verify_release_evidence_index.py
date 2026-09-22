@@ -209,28 +209,72 @@ def _read_stable_file(
         raise EvidenceIndexVerificationError(
             f"{label} must be between 1 and {maximum_bytes} bytes"
         )
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        # If the path is swapped to a FIFO after lstat(), opening it must not
+        # hang before fstat() can reject the non-regular descriptor.
+        flags |= os.O_NONBLOCK
+
     try:
-        raw = path.read_bytes()
-        after = path.lstat()
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise EvidenceIndexVerificationError(
+            f"could not open {label} {path} safely: {exc}"
+        ) from exc
+
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode):
+            raise EvidenceIndexVerificationError(f"{label} must be a regular file")
+        identity_fields = (
+            "st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns"
+        )
+        if any(
+            getattr(before, field) != getattr(opened, field)
+            for field in identity_fields
+        ):
+            raise EvidenceIndexVerificationError(f"{label} changed while being read")
+        remaining = before.st_size
+        chunks: list[bytes] = []
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise EvidenceIndexVerificationError(
+                    f"{label} ended while being read"
+                )
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise EvidenceIndexVerificationError(f"{label} changed while being read")
+        after = os.fstat(descriptor)
     except OSError as exc:
         raise EvidenceIndexVerificationError(
             f"could not read {label} {path}: {exc}"
         ) from exc
-    before_identity = (
-        before.st_dev,
-        before.st_ino,
-        before.st_size,
-        before.st_mtime_ns,
-    )
-    after_identity = (
-        after.st_dev,
-        after.st_ino,
-        after.st_size,
-        after.st_mtime_ns,
-    )
-    if len(raw) != before.st_size or after_identity != before_identity:
+    finally:
+        os.close(descriptor)
+
+    try:
+        after_path = path.lstat()
+    except OSError as exc:
+        raise EvidenceIndexVerificationError(
+            f"{label} changed while being read: {path}: {exc}"
+        ) from exc
+    if any(
+        getattr(before, field) != getattr(after, field)
+        or getattr(before, field) != getattr(after_path, field)
+        for field in identity_fields
+    ):
         raise EvidenceIndexVerificationError(f"{label} changed while being read")
-    return raw, (before.st_dev, before.st_ino)
+    raw = b"".join(chunks)
+    if len(raw) != before.st_size:
+        raise EvidenceIndexVerificationError(f"{label} changed while being read")
+    return raw, (opened.st_dev, opened.st_ino)
 
 
 def _load_evidence_bindings(path: Path, raw: bytes) -> tuple[str, ...]:

@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import build_release_evidence_index as builder
@@ -184,6 +185,36 @@ class ReleaseEvidenceIndexVerifierTest(unittest.TestCase):
             "symbolic link",
         ):
             self.verify()
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO support required")
+    def test_fifo_evidence_is_rejected_before_open(self) -> None:
+        self.note.unlink()
+        os.mkfifo(self.note)
+        with mock.patch.object(verifier.os, "open", wraps=verifier.os.open) as opened:
+            with self.assertRaisesRegex(
+                verifier.EvidenceIndexVerificationError,
+                "regular file",
+            ):
+                self.verify()
+            # The index is opened normally; the FIFO evidence is never opened.
+            self.assertFalse(
+                any(Path(call.args[0]) == self.note for call in opened.call_args_list)
+            )
+
+    @unittest.skipUnless(hasattr(os, "O_NONBLOCK"), "nonblocking open required")
+    def test_verifier_opens_index_and_evidence_nonblocking_and_nofollow(self) -> None:
+        with mock.patch.object(verifier.os, "open", wraps=verifier.os.open) as opened:
+            self.verify()
+        protected = {self.index, self.note, self.bound}
+        opened_evidence = [
+            call for call in opened.call_args_list
+            if Path(call.args[0]) in protected
+        ]
+        self.assertEqual(protected, {Path(call.args[0]) for call in opened_evidence})
+        for call in opened_evidence:
+            self.assertTrue(call.args[1] & os.O_NONBLOCK)
+            if hasattr(os, "O_NOFOLLOW"):
+                self.assertTrue(call.args[1] & os.O_NOFOLLOW)
 
     def test_required_kind_must_be_candidate_bound(self) -> None:
         with self.assertRaisesRegex(
