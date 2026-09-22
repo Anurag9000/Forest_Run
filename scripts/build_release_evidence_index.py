@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -139,13 +140,51 @@ def _candidate_bindings(
     return bindings
 
 
-def _load_json_bindings(path: Path) -> tuple[str, ...]:
+@contextmanager
+def _checked_evidence_open(path: Path, expected: os.stat_result):
+    """Open the exact checked inode without following a swapped link or FIFO."""
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise EvidenceIndexError(f"could not safely open evidence file: {path}: {exc}") from exc
+    identity = ("st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns")
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode):
+            raise EvidenceIndexError(f"evidence must be a regular file: {path}")
+        if any(getattr(expected, field) != getattr(opened, field) for field in identity):
+            raise EvidenceIndexError(f"evidence changed before read: {path}")
+        with os.fdopen(descriptor, "rb") as handle:
+            descriptor = -1
+            yield handle
+            after = os.fstat(handle.fileno())
+        try:
+            after_path = path.lstat()
+        except OSError as exc:
+            raise EvidenceIndexError(f"evidence changed during read: {path}: {exc}") from exc
+        if any(
+            getattr(expected, field) != getattr(after, field)
+            or getattr(expected, field) != getattr(after_path, field)
+            for field in identity
+        ):
+            raise EvidenceIndexError(f"evidence changed during read: {path}")
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
+def _load_json_bindings(path: Path, expected: os.stat_result) -> tuple[str, ...]:
     if path.suffix.lower() != ".json":
         return ()
     try:
-        # Match the independent verifier: bound reads before parsing and reject
-        # ambiguous keys, non-standard numbers, and excess structural nesting.
-        with path.open("rb") as handle:
+        with _checked_evidence_open(path, expected) as handle:
             raw = handle.read(MAX_JSON_EVIDENCE_BYTES + 1)
         value = strict_json.loads(
             raw,
@@ -153,7 +192,7 @@ def _load_json_bindings(path: Path) -> tuple[str, ...]:
             maximum_bytes=MAX_JSON_EVIDENCE_BYTES,
             maximum_depth=64,
         )
-    except (OSError, strict_json.StrictJsonError) as exc:
+    except (OSError, strict_json.StrictJsonError, EvidenceIndexError) as exc:
         raise EvidenceIndexError(f"invalid JSON evidence: {path}: {exc}") from exc
     bindings = tuple(sorted(_candidate_bindings(value)))
     if any(not SHA40.fullmatch(binding) for binding in bindings):
@@ -161,9 +200,9 @@ def _load_json_bindings(path: Path) -> tuple[str, ...]:
     return bindings
 
 
-def _digest(path: Path) -> str:
+def _digest(path: Path, expected: os.stat_result) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
+    with _checked_evidence_open(path, expected) as handle:
         while chunk := handle.read(1024 * 1024):
             digest.update(chunk)
     return digest.hexdigest()
@@ -345,7 +384,7 @@ def collect_entries(
             )
         seen_files.add(identity)
 
-        bindings = _load_json_bindings(path)
+        bindings = _load_json_bindings(path, metadata)
         mismatches = [binding for binding in bindings if binding != candidate_sha]
         if mismatches:
             raise EvidenceIndexError(
@@ -361,7 +400,7 @@ def collect_entries(
                 kind=kind,
                 path=relative,
                 bytes=metadata.st_size,
-                sha256=_digest(path),
+                sha256=_digest(path, metadata),
                 candidate_bound=candidate_bound,
                 candidate_bindings=bindings,
             )

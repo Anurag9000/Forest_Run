@@ -204,6 +204,37 @@ class ReleaseEvidenceIndexTest(unittest.TestCase):
             with self.assertRaisesRegex(indexer.EvidenceIndexError, "between 1 and 128 bytes"):
                 self.build(["device=evidence/device.json"])
 
+    @unittest.skipUnless(hasattr(os, "O_NONBLOCK"), "nonblocking open required")
+    def test_index_builder_opens_evidence_nonblocking_and_nofollow(self) -> None:
+        with patch.object(indexer.os, "open", wraps=indexer.os.open) as opened:
+            self.build()
+        evidence_paths = {self.manifest, self.screenshot}
+        calls = [
+            call for call in opened.call_args_list
+            if Path(call.args[0]) in evidence_paths
+        ]
+        self.assertEqual(evidence_paths, {Path(call.args[0]) for call in calls})
+        for call in calls:
+            self.assertTrue(call.args[1] & os.O_NONBLOCK)
+            if hasattr(os, "O_NOFOLLOW"):
+                self.assertTrue(call.args[1] & os.O_NOFOLLOW)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO support required")
+    def test_rejects_evidence_swapped_to_fifo_before_checked_open(self) -> None:
+        original = indexer._load_json_bindings
+
+        def replace_before_read(path, expected):
+            path.unlink()
+            os.mkfifo(path)
+            return original(path, expected)
+
+        with patch.object(indexer, "_load_json_bindings", side_effect=replace_before_read):
+            with self.assertRaisesRegex(
+                indexer.EvidenceIndexError,
+                "regular file",
+            ):
+                self.build(["device=evidence/device.json"])
+
     def test_publish_is_canonical_atomic_and_refuses_symlink_output(self) -> None:
         payload = self.build()
         output = self.root / "published/index.json"
