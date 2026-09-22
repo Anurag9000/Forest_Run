@@ -72,11 +72,25 @@ def _assert_no_symlink_components(root: Path, relative: str) -> Path:
 
 def _read_snapshot(root: Path, relative: str) -> StableSnapshot:
     path = _assert_no_symlink_components(root, relative)
+    try:
+        preopen = path.lstat()
+    except OSError as exc:
+        raise StableEvidenceIndexError(
+            f"could not inspect evidence file before open: {relative}: {exc}"
+        ) from exc
+    if not stat.S_ISREG(preopen.st_mode):
+        raise StableEvidenceIndexError(
+            f"evidence path is not a regular file: {relative}"
+        )
     flags = os.O_RDONLY
     if hasattr(os, "O_CLOEXEC"):
         flags |= os.O_CLOEXEC
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
+    # A malicious/racing replacement with a FIFO must never block in open()
+    # before the post-open fstat() can reject the non-regular descriptor.
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
     try:
         descriptor = os.open(path, flags)
     except OSError as exc:

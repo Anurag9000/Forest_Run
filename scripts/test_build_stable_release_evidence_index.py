@@ -62,6 +62,55 @@ class StableReleaseEvidenceIndexTest(unittest.TestCase):
                     output=root / "release-evidence-index.json",
                 )
 
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO support required")
+    def test_rejects_fifo_evidence_without_opening_it(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fifo = root / "acceptance.json"
+            os.mkfifo(fifo)
+            output = root / "release-evidence-index.json"
+
+            with mock.patch.object(stable.os, "open", wraps=stable.os.open) as opened:
+                with self.assertRaisesRegex(
+                    stable.StableEvidenceIndexError,
+                    "not a regular file",
+                ):
+                    stable.build_stable_index(
+                        root=root,
+                        candidate_sha=CANDIDATE,
+                        specs=["acceptance=acceptance.json"],
+                        generated_at_utc=GENERATED_AT,
+                        output=output,
+                    )
+                opened.assert_not_called()
+            self.assertFalse(output.exists())
+
+    @unittest.skipUnless(hasattr(os, "O_NONBLOCK"), "nonblocking open required")
+    def test_regular_evidence_open_is_nonblocking_against_fifo_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            evidence = root / "acceptance.json"
+            evidence.write_text(
+                json.dumps({"candidateSha": CANDIDATE}),
+                encoding="utf-8",
+            )
+            original_open = stable.os.open
+            with mock.patch.object(stable.os, "open", wraps=original_open) as opened:
+                stable.build_stable_index(
+                    root=root,
+                    candidate_sha=CANDIDATE,
+                    specs=["acceptance=acceptance.json"],
+                    generated_at_utc=GENERATED_AT,
+                    output=root / "release-evidence-index.json",
+                )
+            evidence_opens = [
+                call for call in opened.call_args_list
+                if Path(call.args[0]) == evidence
+            ]
+            self.assertGreaterEqual(len(evidence_opens), 1)
+            for call in evidence_opens:
+                self.assertTrue(call.args[1] & os.O_NONBLOCK)
+
     def test_rejects_source_mutation_after_snapshot_before_publication(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
