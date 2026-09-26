@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from strict_json import StrictJsonError, load_file
+
 from screenshot_capture_evidence import (
     CaptureEvidence,
     CaptureEvidenceError,
@@ -31,6 +33,7 @@ MIN_HEIGHT = 480
 MAX_WIDTH = 7_680
 MAX_HEIGHT = 4_320
 MAX_FILE_BYTES = 50 * 1024 * 1024
+MAX_MANIFEST_BYTES = 256 * 1024
 MIN_LUMA_STDDEV = 6.0
 NEAR_DUPLICATE_HAMMING_DISTANCE = 3
 SYSTEM_BAR_BAND_PX = 18
@@ -70,17 +73,13 @@ def _load_pillow():
 
 def load_manifest() -> dict[str, Any]:
     try:
-        value = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise SystemExit(f"Missing manifest: {MANIFEST_PATH}") from exc
-    except OSError as exc:
-        raise SystemExit(f"Could not read manifest {MANIFEST_PATH}: {exc}") from exc
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Invalid JSON in {MANIFEST_PATH}: {exc}") from exc
-    if not isinstance(value, dict):
-        raise SystemExit("Curation manifest must be a JSON object")
-    return value
-
+        return load_file(
+            MANIFEST_PATH,
+            maximum_bytes=MAX_MANIFEST_BYTES,
+            require_object=True,
+        )
+    except StrictJsonError as exc:
+        raise SystemExit(f"Invalid curation manifest {MANIFEST_PATH}: {exc}") from exc
 
 def validate_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     items = manifest.get("screenshots")

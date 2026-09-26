@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn
 
+from strict_json import StrictJsonError, load_file
+
 from release_artifact_verifier import (
     ArtifactVerificationError,
     inspect_bundle_identity,
@@ -49,6 +51,8 @@ PLACEHOLDER_APPLICATION_IDS = {
     "com.example.forest_run",
     "com.example.forestrun",
 }
+
+MAX_GRAPHICS_MANIFEST_BYTES = 64 * 1024
 
 REQUIRED_AUDIO = (
     "sfx_jump",
@@ -304,15 +308,31 @@ def verify_graphics() -> list[dict]:
         "generated graphics manifest",
     )
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
+        manifest = load_file(
+            manifest_path,
+            maximum_bytes=MAX_GRAPHICS_MANIFEST_BYTES,
+            require_object=True,
+        )
+    except StrictJsonError as exc:
         fail(f"Invalid graphics manifest: {exc}")
 
-    expected_hashes = {
-        item.get("file"): item.get("sha256")
-        for item in manifest.get("outputs", [])
-        if isinstance(item, dict)
-    }
+    outputs = manifest.get("outputs")
+    if not isinstance(outputs, list) or len(outputs) != 2:
+        fail("Graphics manifest must name exactly two outputs")
+    expected_hashes: dict[str, str] = {}
+    for item in outputs:
+        if (
+            not isinstance(item, dict)
+            or not isinstance(item.get("file"), str)
+            or not isinstance(item.get("sha256"), str)
+        ):
+            fail("Graphics manifest output evidence is malformed")
+        filename = item["file"]
+        if filename in expected_hashes:
+            fail(f"Graphics manifest has duplicate output: {filename}")
+        expected_hashes[filename] = item["sha256"]
+    if set(expected_hashes) != {"feature-graphic.png", "promo-square.png"}:
+        fail("Graphics manifest output names differ from the required pair")
     for facts in (feature, promo):
         filename = Path(facts["path"]).name
         expected = expected_hashes.get(filename)

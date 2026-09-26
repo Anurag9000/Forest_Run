@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from unittest.mock import patch
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -195,6 +198,32 @@ class ScreenshotCurationTest(unittest.TestCase):
             )
         self.assertFalse(curator.STAGING_DIR.exists())
         self.assertFalse(curator.BACKUP_DIR.exists())
+
+
+    def test_manifest_reader_admits_valid_and_rejects_ambiguous_evidence(self) -> None:
+        with patch.object(curator, "MANIFEST_PATH", self.root / "curation_manifest.json"):
+            original = json.dumps(self.manifest())
+            curator.MANIFEST_PATH.write_text(original, encoding="utf-8")
+            self.assertEqual(self.manifest(), curator.load_manifest())
+
+            variants = (
+                (
+                    original.replace(
+                        '"screenshots":', '"extra": 1, "extra": 2, "screenshots":', 1
+                    ),
+                    "duplicate JSON object key",
+                ),
+                (
+                    original.replace('"screenshots":', '"probe": NaN, "screenshots":', 1),
+                    "non-finite",
+                ),
+                (" " * (curator.MAX_MANIFEST_BYTES + 1), "between"),
+            )
+            for text, error in variants:
+                with self.subTest(error=error):
+                    curator.MANIFEST_PATH.write_text(text, encoding="utf-8")
+                    with self.assertRaisesRegex(SystemExit, error):
+                        curator.load_manifest()
 
 
 if __name__ == "__main__":
