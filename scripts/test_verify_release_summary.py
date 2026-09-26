@@ -263,5 +263,88 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
             verify_release_summary(self.root, self.release, self.candidate)
 
 
+    def test_ambiguous_or_non_finite_machine_summary_is_rejected(self) -> None:
+        payload = self.payload()
+        self.write(payload)
+        machine = self.release / "build_summary.json"
+        original = machine.read_text(encoding="utf-8")
+        for poisoned, error in (
+            (
+                original.replace(
+                    '"branch": "main"',
+                    '"branch": "other", "branch": "main"',
+                    1,
+                ),
+                "duplicate JSON object key",
+            ),
+            (
+                original.replace('"candidate": {', '"probe": NaN, "candidate": {', 1),
+                "non-finite",
+            ),
+            (
+                original.replace('"candidate": {', '"probe": Infinity, "candidate": {', 1),
+                "non-finite",
+            ),
+        ):
+            with self.subTest(error=error, poisoned=poisoned[:100]):
+                machine.write_text(poisoned, encoding="utf-8")
+                with self.assertRaisesRegex(ReleaseSummaryError, error):
+                    verify_release_summary(self.root, self.release, self.candidate)
+
+    def test_release_evidence_rejects_boolean_numeric_fields(self) -> None:
+        payload = self.payload()
+        payload["identity"]["version_code"] = True
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "version code"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+        payload = self.payload()
+        payload["identity"]["version_code"] = 1
+        payload["bundle"]["version_code"] = True
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "Bundle version"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+        payload = self.payload()
+        payload["r8_mapping"]["application_classes"] = True
+        payload["r8_mapping"]["renamed_classes"] = True
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "R8 class counts"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+    def test_release_evidence_rejects_non_string_audio_entries(self) -> None:
+        for invalid in ({"unhashable": "object"}, True, "", "  "):
+            with self.subTest(invalid=invalid):
+                payload = self.payload()
+                payload["audio"][0] = invalid
+                self.write(payload)
+                with self.assertRaisesRegex(ReleaseSummaryError, "audio"):
+                    verify_release_summary(self.root, self.release, self.candidate)
+
+    def test_release_evidence_rejects_blank_version_name(self) -> None:
+        payload = self.payload()
+        payload["identity"]["version_name"] = ""
+        payload["bundle"]["version_name"] = ""
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "version_name"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+    def test_release_evidence_rejects_boolean_file_sizes_and_character_counts(self) -> None:
+        self.graphics[0].write_bytes(b"x")
+        payload = self.payload()
+        payload["graphics"][0]["bytes"] = True
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "byte count"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+        self.graphics[0].write_bytes(b"graphic-0")
+        self.metadata[0].write_text("X", encoding="utf-8")
+        payload = self.payload()
+        payload["metadata"][0]["characters"] = True
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "character count"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+
 if __name__ == "__main__":
     unittest.main()

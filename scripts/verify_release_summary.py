@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import os
 import re
 import stat
 import sys
 from pathlib import Path, PurePosixPath
 from typing import Any, Sequence
+
+from strict_json import StrictJsonError, load_file
 
 ROOT = Path(__file__).resolve().parent.parent
 HEX_40 = re.compile(r"[0-9a-f]{40}")
@@ -103,7 +104,7 @@ def _recorded_sha256(facts: dict[str, Any], label: str) -> str:
 def verify_file_fact(root: Path, facts: dict[str, Any], label: str) -> Path:
     _, absolute = _safe_fact_path(root, facts, label)
     size = absolute.stat().st_size
-    if facts.get("bytes") != size:
+    if type(facts.get("bytes")) is not int or facts["bytes"] != size:
         raise ReleaseSummaryError(f"{label} byte count is stale")
     if digest(absolute) != _recorded_sha256(facts, label):
         raise ReleaseSummaryError(f"{label} SHA-256 is stale")
@@ -118,7 +119,7 @@ def verify_metadata_fact(root: Path, facts: dict[str, Any], label: str) -> Path:
         text = absolute.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as exc:
         raise ReleaseSummaryError(f"{label} is not readable UTF-8: {exc}") from exc
-    if facts.get("characters") != len(text):
+    if type(facts.get("characters")) is not int or facts["characters"] != len(text):
         raise ReleaseSummaryError(f"{label} character count is stale")
     return absolute
 
@@ -200,8 +201,12 @@ def verify_release_summary(
         if size <= 0 or size > MAX_SUMMARY_BYTES:
             raise ReleaseSummaryError(f"Release summary has invalid size: {path}")
     try:
-        payload = json.loads(machine_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        payload = load_file(
+            machine_path,
+            maximum_bytes=MAX_SUMMARY_BYTES,
+            require_object=True,
+        )
+    except StrictJsonError as exc:
         raise ReleaseSummaryError(f"Invalid machine release summary: {exc}") from exc
     if not isinstance(payload, dict):
         raise ReleaseSummaryError("Machine release summary must be a JSON object")
@@ -213,7 +218,8 @@ def verify_release_summary(
     identity = required_dict(payload, "identity")
     if identity.get("application_id") != EXPECTED_APPLICATION_ID:
         raise ReleaseSummaryError("Release summary application ID is not final")
-    if not isinstance(identity.get("version_code"), int) or identity["version_code"] <= 0:
+    required_text(identity, "version_name", "identity")
+    if type(identity.get("version_code")) is not int or identity["version_code"] <= 0:
         raise ReleaseSummaryError("Release summary version code is invalid")
 
     overrides = required_dict(payload, "dry_run_overrides")
@@ -226,7 +232,12 @@ def verify_release_summary(
     graphics = _fact_dicts(payload.get("graphics"), label="graphics", exact_count=2)
     metadata = _fact_dicts(payload.get("metadata"), label="metadata files", exact_count=3)
     audio = payload.get("audio")
-    if not isinstance(audio, list) or len(audio) != 15 or len(audio) != len(set(audio)):
+    if (
+        not isinstance(audio, list)
+        or len(audio) != 15
+        or any(not isinstance(item, str) or not item.strip() for item in audio)
+        or len(audio) != len(set(audio))
+    ):
         raise ReleaseSummaryError("Release summary required-audio evidence is incomplete")
     _require_exact_paths(
         root,
@@ -264,7 +275,11 @@ def verify_release_summary(
         verify_file_fact(root, mapping, "r8_mapping")
         if bundle.get("application_id") != EXPECTED_APPLICATION_ID:
             raise ReleaseSummaryError("Bundle application ID differs from release identity")
-        if bundle.get("version_code") != identity.get("version_code") or bundle.get("version_name") != identity.get("version_name"):
+        if (
+            type(bundle.get("version_code")) is not int
+            or bundle["version_code"] != identity["version_code"]
+            or bundle.get("version_name") != identity["version_name"]
+        ):
             raise ReleaseSummaryError("Bundle version differs from release identity")
         signature_verified = bundle.get("signature_verified")
         if not isinstance(signature_verified, bool):
@@ -275,7 +290,7 @@ def verify_release_summary(
                 raise ReleaseSummaryError("Verified bundle signer fingerprint is malformed")
         elif not overrides["allow_unsigned"] or signer is not None:
             raise ReleaseSummaryError("Unsigned bundle is not explicitly identified as a dry run")
-        if not isinstance(mapping.get("application_classes"), int) or not isinstance(mapping.get("renamed_classes"), int):
+        if type(mapping.get("application_classes")) is not int or type(mapping.get("renamed_classes")) is not int:
             raise ReleaseSummaryError("R8 class counts are malformed")
         if mapping["application_classes"] <= 0 or not 0 < mapping["renamed_classes"] <= mapping["application_classes"]:
             raise ReleaseSummaryError("R8 class counts are inconsistent")
