@@ -4,6 +4,32 @@ This file is the chronological remediation ledger. It preserves tranche-local fi
 
 The ledger remains intentionally conservative: a source change is not called validated merely because it was committed, and automated validation is not treated as physical-device or store acceptance.
 
+## Current reconciliation — 2026-09-26
+
+This is the current source-addressable continuation; the 2026-09-20 reconciliation and all lower tranches are retained as historical checkpoints. It supersedes that checkpoint's claim that no further source defect could be substantiated: the subsequent fresh inspection found real cross-layer and evidence-validation defects. Do not reclassify those defects as imaginary merely because the older source checkpoint had a passing workflow.
+
+**Actual authored product and coverage boundary.** Forest Run remains a hand-authored native Kotlin Android/Canvas game: Willow/Home -> guided opening -> five ordinary biomes -> the nineteen distinct encounter families (five flora, four trees, five birds, five animals) -> Seeds/eight-Seed Bloom -> Rest -> persistent Garden (nine plant unlocks), wardrobe (eight styles), relationships, ghosts and read-only Forest Journal. The current deterministic catalogue contains 28 scenarios. Four focused scenarios intentionally have explicit authored player-action scripts; other scenarios have encounter schedules but do not falsely claim an automatic action trace. The encounter catalogue derives biome reachability and scenario/fairness coverage from actual source owners. No trainable model/dataset/training runner is applicable.
+
+**Complete tracked-tree inventory at source-bearing checkpoint `8516880d371345b8de187e8652578e861592f012`:** 833 tracked files, 187 production Kotlin files, 227 JVM/Robolectric Kotlin test files, eight instrumented Kotlin test files, 123 Python test files, 53 non-test Python scripts, 29 runtime sprite PNGs, 15 runtime OGGs, one runtime font and three GitHub workflows. These are source inventory counts, not proof of artistic or functional acceptance.
+
+**Substantiated and fixed defects since the 2026-09-20 historical audit, each with a dated focused audit and regression evidence:**
+
+- Candidate release summaries now reject duplicate JSON keys, non-finite JSON values, invalid numeric/audio types, alternate bundle/R8 paths, incorrect audio names and symlinked summaries.
+- Raw capture, curated capture, screenshot sidecar/session, curation and Play graphics manifest entry points now use strict, bounded evidence admission. The raw screenshot gate shares the full PNG chunk/CRC/zlib/geometry verifier instead of accepting a matching digest over a fabricated header. The remaining permissive JSON call in the scenario source parser decodes a Kotlin string literal, not a release-evidence file.
+- Bloom nearby-world reactions use actual entity reference identity rather than colliding identity-hash integers.
+- Authored scenario steps seed stochastic entity details independently; Eagle staged offscreen encounters survive until viewport entry; Owl alert/screech is visibility gated; compound Dog/Tit/Chickadee collisions prioritize direct HIT over a different subcomponent's near-miss; Chickadee's advertised gap excludes every live bird hitbox; species-specific warning/companion sound/persistence paths were repaired.
+- Deterministic jump release now uses each authored hold interval rather than the hard-coded 0.35 s release. Wolf/Eagle scenarios no longer inject unauthored extra entities. Scripted actions now enter before same-tick player physics/collision rather than one tick late.
+- Render/post input latency only closes after an actual successful SurfaceHolder post; synthetic injected render callbacks no longer fabricate posted-frame evidence.
+- CI surfaced a two-case test-only error from using `EncounterStepDefinition.type` instead of its real `entity_type`; that source-contract regression was corrected. Its failed prior workflow must not be represented as a product failure or a passing run.
+
+**Verification authority:** a green run on an *earlier SHA* is historical, not automatic proof for the current head. The last fully observed Android host + API-35 validation before this continuation was run `36238682407` at `09e3a7b8`. The Python suite and source-immutability step were observed successful on `8516880d`, along with both repository-local N/A-training workflows. Consult the exact latest source/documentation HEAD's Android workflow for its host, lint, package, R8, and connected results; do not fill an in-progress or canceled result with a historical PASS.
+
+**Outstanding acceptance boundary:** source-level integrity and regression tests do not supply the actual five-class physical-device evidence, thermal/battery/frame/input-latency measurements, human gameplay/fairness/TalkBack/Switch Access, final sprite/biome/audio/haptic creative review, binary art frame-by-frame inspection, rights/licence approvals, signed-and-installed artifact identity, Play internal-track delivery, public privacy-policy URL, security reporting configuration, release governance or accountable final go/no-go. The five known bird base/flying byte-identical alias pairs remain a creative/provenance review item, not automatically accepted distinct flying art. No such external evidence is fabricated or inherited across new candidate SHAs.
+
+**Closure interpretation:** A (game/source) has extensive implemented owners and additional verified fixes, but no honest assertion of exhaustive visual/hardware polish or absence of all future undiscovered bugs. B (automated source/host/connected) is conditional on exact-head workflow success. C (physical/human/signed candidate acceptance) OPEN. D (governance/Play/final release) OPEN. Evidence validators and their test fixtures are not real external acceptance measurements.
+
+---
+
 ## Current reconciliation — 2026-09-20
 
 The repository-specific whole-software re-audit was continued from the live `main`
