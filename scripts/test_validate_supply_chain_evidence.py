@@ -135,6 +135,16 @@ class SupplyChainEvidenceValidatorTest(unittest.TestCase):
         resolved_path.write_text(json.dumps(resolved or resolved_payload()), encoding="utf-8")
         return declared_path, resolved_path
 
+    def test_declared_schema_version_must_be_integer(self) -> None:
+        for invalid in (True, False, 1.0, "1", None):
+            with self.subTest(value=invalid):
+                payload = declared_payload()
+                payload["schemaVersion"] = invalid
+                with self.assertRaisesRegex(
+                    validator.SupplyChainEvidenceError, "schemaVersion"
+                ):
+                    validator.validate_declared(payload, CANDIDATE)
+
     def test_valid_pair_is_accepted(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             declared_path, resolved_path = self.write_pair(Path(temporary))

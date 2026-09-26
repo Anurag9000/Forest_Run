@@ -21,6 +21,14 @@ FIELDS = {
 
 
 class AssetProvenanceValidationTest(unittest.TestCase):
+    def test_provenance_schema_version_must_be_integer(self) -> None:
+        from validate_asset_provenance import validated_rules
+
+        for invalid in (True, False, 1.0, "1", None):
+            with self.subTest(value=invalid):
+                with self.assertRaisesRegex(AssetProvenanceError, "schemaVersion"):
+                    validated_rules({"schemaVersion": invalid, "rules": []})
+
     def test_complete_review_required_coverage_passes_but_strict_release_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

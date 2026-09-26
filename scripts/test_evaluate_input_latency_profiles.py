@@ -49,6 +49,24 @@ class InputLatencyProfileEvaluatorTest(unittest.TestCase):
             max_p95_touch_to_render_ns=90000000,
         )
 
+    def test_version_requires_integer_for_thresholds_and_measured_report(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "thresholds.json"
+            for invalid in (True, False, 1.0, "1", None):
+                with self.subTest(value=invalid):
+                    path.write_text(
+                        json.dumps({"schemaVersion": invalid, "profiles": []}),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaisesRegex(
+                        latency.InputLatencyConfigurationError, "schemaVersion"
+                    ):
+                        latency.load_thresholds(path)
+                    with self.assertRaisesRegex(
+                        latency.InputLatencyConfigurationError, "schemaVersion"
+                    ):
+                        latency.validate_report(dict(self.report, schemaVersion=invalid))
+
     def test_passing_report_has_no_violations(self) -> None:
         result = latency.evaluate_report(Path("latency.json"), self.report, (self.profile,))
         self.assertTrue(result.passed)

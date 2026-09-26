@@ -91,7 +91,7 @@ def _canonical_maven_purl(group: str, name: str, version: str) -> str:
 
 
 def validate_declared(payload: dict[str, object], expected_sha: str) -> set[tuple[str, str]]:
-    if payload.get("schemaVersion") != 1:
+    if type(payload.get("schemaVersion")) is not int or payload["schemaVersion"] != 1:
         raise SupplyChainEvidenceError("declared schemaVersion must equal 1")
     if payload.get("candidateSha") != expected_sha:
         raise SupplyChainEvidenceError("declared candidateSha does not match expected commit")

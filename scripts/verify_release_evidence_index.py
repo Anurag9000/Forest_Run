@@ -414,7 +414,7 @@ def verify_index(
         ) from exc
     assert isinstance(payload, dict)
     _exact_keys(payload, ROOT_KEYS, label="release evidence index")
-    if payload["schemaVersion"] != SCHEMA_VERSION:
+    if type(payload["schemaVersion"]) is not int or payload["schemaVersion"] != SCHEMA_VERSION:
         raise EvidenceIndexVerificationError(
             f"schemaVersion must equal {SCHEMA_VERSION}"
         )

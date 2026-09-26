@@ -74,6 +74,18 @@ class PerformanceProfileEvaluatorTest(unittest.TestCase):
         values.update(overrides)
         return ThresholdProfile(**values)
 
+    def test_threshold_schema_revision_must_be_integer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "thresholds.json"
+            for invalid in (True, False, 1.0, "1", None):
+                with self.subTest(value=invalid):
+                    path.write_text(
+                        json.dumps({"schemaVersion": invalid, "profiles": []}),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaisesRegex(ConfigurationError, "schemaVersion"):
+                        load_thresholds(path)
+
     def test_passing_report_has_no_violations(self):
         result = evaluate_report(
             Path("opening.json"),

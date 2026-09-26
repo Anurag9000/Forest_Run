@@ -269,7 +269,7 @@ def verify_metadata(metadata_dir: Path, candidate_sha: str) -> list[MetadataFact
     assert isinstance(raw, dict)
     if set(raw) != MANIFEST_KEYS:
         raise StoreMetadataError("Metadata manifest fields are incomplete or contain extras")
-    if raw.get("schemaVersion") != SCHEMA_VERSION:
+    if type(raw.get("schemaVersion")) is not int or raw["schemaVersion"] != SCHEMA_VERSION:
         raise StoreMetadataError("Metadata manifest schemaVersion must equal 1")
     if raw.get("locale") != LOCALE:
         raise StoreMetadataError(f"Metadata manifest locale must equal {LOCALE}")

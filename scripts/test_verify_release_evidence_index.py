@@ -53,6 +53,17 @@ class ReleaseEvidenceIndexVerifierTest(unittest.TestCase):
             require_bound_kinds=["device_acceptance"],
         )
 
+    def test_schema_version_must_be_integer(self) -> None:
+        for invalid in (True, False, 1.0, "1", None):
+            with self.subTest(value=invalid):
+                payload = json.loads(self.index.read_text(encoding="utf-8"))
+                payload["schemaVersion"] = invalid
+                self.index.write_text(json.dumps(payload), encoding="utf-8")
+                with self.assertRaisesRegex(
+                    verifier.EvidenceIndexVerificationError, "schemaVersion"
+                ):
+                    self.verify()
+
     def test_valid_builder_output_is_independently_reconstructed(self) -> None:
         summary = self.verify()
         self.assertEqual("valid", summary["status"])

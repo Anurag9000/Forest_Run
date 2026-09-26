@@ -234,7 +234,11 @@ def verify_provenance(
         raise VisualBaselineProvenanceError(
             f"visual baseline provenance keys mismatch; missing={missing}, extra={extra}"
         )
-    if payload.get("schemaVersion") != SCHEMA_VERSION or payload.get("kind") != KIND:
+    if (
+        type(payload.get("schemaVersion")) is not int
+        or payload["schemaVersion"] != SCHEMA_VERSION
+        or payload.get("kind") != KIND
+    ):
         raise VisualBaselineProvenanceError("visual baseline provenance schema/kind is invalid")
     candidate_sha = payload.get("baselineCandidateSha")
     if not isinstance(candidate_sha, str) or SHA40.fullmatch(candidate_sha) is None:

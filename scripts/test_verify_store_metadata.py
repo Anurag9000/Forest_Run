@@ -37,6 +37,16 @@ class StoreMetadataVerifierTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
+    def test_metadata_schema_version_must_be_integer(self) -> None:
+        for invalid in (True, False, 1.0, "1", None):
+            with self.subTest(value=invalid):
+                manifest = finalize_metadata(self.metadata, self.candidate)
+                payload = json.loads(manifest.read_text(encoding="utf-8"))
+                payload["schemaVersion"] = invalid
+                manifest.write_text(json.dumps(payload), encoding="utf-8")
+                with self.assertRaisesRegex(StoreMetadataError, "schemaVersion"):
+                    verify_metadata(self.metadata, self.candidate)
+
     def test_finalize_then_verify_binds_exact_text_to_candidate(self) -> None:
         manifest = finalize_metadata(self.metadata, self.candidate)
         facts = verify_metadata(self.metadata, self.candidate)

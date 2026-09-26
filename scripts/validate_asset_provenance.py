@@ -114,7 +114,7 @@ def validated_rules(payload: dict[str, object]) -> list[dict[str, str]]:
         raise AssetProvenanceError(
             "registry must contain only schemaVersion and rules"
         )
-    if payload["schemaVersion"] != 1:
+    if type(payload["schemaVersion"]) is not int or payload["schemaVersion"] != 1:
         raise AssetProvenanceError("unsupported provenance schemaVersion")
     raw_rules = payload["rules"]
     if not isinstance(raw_rules, list) or not raw_rules:

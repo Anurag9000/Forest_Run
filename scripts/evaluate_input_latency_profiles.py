@@ -110,7 +110,7 @@ def _matches(pattern: str, actual: str) -> bool:
 
 def load_thresholds(path: Path) -> tuple[ThresholdProfile, ...]:
     root = _read(path, MAX_THRESHOLDS_BYTES)
-    if root.get("schemaVersion") != SCHEMA_VERSION:
+    if type(root.get("schemaVersion")) is not int or root["schemaVersion"] != SCHEMA_VERSION:
         raise InputLatencyConfigurationError(
             f"{path}.schemaVersion must equal {SCHEMA_VERSION}"
         )
@@ -165,7 +165,7 @@ def load_thresholds(path: Path) -> tuple[ThresholdProfile, ...]:
 
 
 def validate_report(report: Mapping[str, Any]) -> None:
-    if report.get("schemaVersion") != SCHEMA_VERSION:
+    if type(report.get("schemaVersion")) is not int or report["schemaVersion"] != SCHEMA_VERSION:
         raise InputLatencyConfigurationError(
             f"report.schemaVersion must equal {SCHEMA_VERSION}"
         )

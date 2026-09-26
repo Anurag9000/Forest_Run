@@ -52,6 +52,28 @@ class VisualBaselineProvenanceTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    def test_visual_baseline_schema_version_must_be_integer(self) -> None:
+        for invalid in (True, False, 1.0, "1", None):
+            with self.subTest(value=invalid):
+                payload = provenance.build_provenance(
+                    manifest_path=self.manifest,
+                    baseline_dir=self.baseline,
+                    filename_field="final_file",
+                    baseline_candidate_sha=self.candidate_sha,
+                )
+                payload["schemaVersion"] = invalid
+                output = self.root / "baseline-provenance.json"
+                provenance.publish(output, payload)
+                with self.assertRaisesRegex(
+                    provenance.VisualBaselineProvenanceError, "schema/kind"
+                ):
+                    provenance.verify_provenance(
+                        output,
+                        manifest_path=self.manifest,
+                        baseline_dir=self.baseline,
+                        filename_field="final_file",
+                    )
+
     def test_build_and_verify_round_trip(self) -> None:
         payload = provenance.build_provenance(
             manifest_path=self.manifest,

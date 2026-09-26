@@ -205,7 +205,7 @@ def _parse_profile(raw: Any, index: int) -> ThresholdProfile:
 
 def load_thresholds(path: Path) -> tuple[ThresholdProfile, ...]:
     raw = _read_json(path)
-    if raw.get("schemaVersion") != SCHEMA_VERSION:
+    if type(raw.get("schemaVersion")) is not int or raw["schemaVersion"] != SCHEMA_VERSION:
         raise ConfigurationError(
             f"{path}.schemaVersion must equal {SCHEMA_VERSION}"
         )
