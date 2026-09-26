@@ -166,5 +166,30 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
                 require_same_capture_identity(first, second, second_path)
 
 
+    def test_ambiguous_nonfinite_and_oversized_capture_sidecars_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = self.write(Path(temporary_directory), self.evidence())
+            original = path.read_text(encoding="utf-8")
+            poisoned_variants = (
+                (
+                    original.replace(
+                        '"scenario": "OPENING_READABILITY"',
+                        '"scenario": "OTHER", "scenario": "OPENING_READABILITY"',
+                        1,
+                    ),
+                    "duplicate JSON object key",
+                ),
+                (
+                    original.replace('"schemaVersion": 1', '"extra": NaN, "schemaVersion": 1', 1),
+                    "non-finite",
+                ),
+                (" " * (64 * 1024 + 1), "between"),
+            )
+            for poisoned, error in poisoned_variants:
+                with self.subTest(error=error):
+                    path.write_text(poisoned, encoding="utf-8")
+                    with self.assertRaisesRegex(CaptureEvidenceError, error):
+                        self.load(path)
+
 if __name__ == "__main__":
     unittest.main()

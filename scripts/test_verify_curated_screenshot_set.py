@@ -321,5 +321,36 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
                 verify_curated_set(root, self.candidate_sha)
 
 
+    def test_ambiguous_curation_manifest_and_capture_session_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            manifest = root / "curation_manifest.json"
+            original_manifest = manifest.read_text(encoding="utf-8")
+            manifest.write_text(
+                original_manifest.replace(
+                    '"screenshots":',
+                    '"extra": 1, "extra": 2, "screenshots":',
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(CuratedScreenshotError, "duplicate JSON object key"):
+                verify_curated_set(root, self.candidate_sha)
+
+            manifest.write_text(original_manifest, encoding="utf-8")
+            session = root / "raw" / "capture-session.json"
+            original_session = session.read_text(encoding="utf-8")
+            session.write_text(
+                original_session.replace(
+                    '"candidateSha":',
+                    '"candidateSha": "' + "c" * 40 + '", "candidateSha":',
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(CuratedScreenshotError, "duplicate JSON object key"):
+                verify_curated_set(root, self.candidate_sha)
+
 if __name__ == "__main__":
     unittest.main()

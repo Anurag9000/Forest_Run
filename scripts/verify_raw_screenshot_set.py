@@ -4,13 +4,14 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
-import json
 import re
 import struct
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NoReturn, Sequence
+
+from strict_json import StrictJsonError, load_file
 
 from screenshot_capture_evidence import (
     CaptureEvidence,
@@ -24,6 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SCREENSHOT_ROOT = ROOT / "release/google-play/screenshots"
 HEX_40 = re.compile(r"[0-9a-f]{40}")
 HEX_64 = re.compile(r"[0-9a-f]{64}")
+MAX_SESSION_BYTES = 64 * 1024
 
 
 class RawScreenshotSetError(ValueError):
@@ -48,13 +50,13 @@ def _fail(message: str) -> NoReturn:
 
 def _read_object(path: Path) -> dict[str, Any]:
     try:
-        parsed = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as error:
-        _fail(f"Missing raw screenshot session evidence: {path}")
-    except OSError as error:
-        _fail(f"Could not read raw screenshot session evidence {path}: {error}")
-    except json.JSONDecodeError as error:
-        _fail(f"Invalid JSON in raw screenshot session evidence {path}: {error}")
+        parsed = load_file(
+            path,
+            maximum_bytes=MAX_SESSION_BYTES,
+            require_object=True,
+        )
+    except StrictJsonError as error:
+        _fail(f"Invalid raw screenshot session evidence {path}: {error}")
     if not isinstance(parsed, dict):
         _fail(f"Raw screenshot session evidence must be a JSON object: {path}")
     return parsed

@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
-import json
 import math
 import re
 import struct
@@ -16,6 +15,8 @@ import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
+
+from strict_json import StrictJsonError, load_file
 
 from screenshot_capture_evidence import (
     EXPECTED_ACTIVITY_NAME,
@@ -36,6 +37,7 @@ MAX_SCREENSHOT_BYTES = 64 * 1024 * 1024
 MAX_SCREENSHOT_PIXELS = 12_000_000
 MAX_DECODED_SCREENSHOT_BYTES = 128 * 1024 * 1024
 MAX_SESSION_BYTES = 64 * 1024
+MAX_MANIFEST_BYTES = 256 * 1024
 VALID_BIT_DEPTHS = {
     0: {1, 2, 4, 8, 16},
     2: {8, 16},
@@ -101,10 +103,12 @@ def _load_capture_session(
             f"Capture session has invalid file size: {path} is {size} bytes"
         )
     try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise CuratedScreenshotError(f"Could not read capture session {path}: {exc}") from exc
-    except json.JSONDecodeError as exc:
+        raw = load_file(
+            path,
+            maximum_bytes=MAX_SESSION_BYTES,
+            require_object=True,
+        )
+    except StrictJsonError as exc:
         raise CuratedScreenshotError(f"Invalid capture session JSON {path}: {exc}") from exc
     if not isinstance(raw, dict):
         raise CuratedScreenshotError(f"Capture session must be a JSON object: {path}")
@@ -161,14 +165,12 @@ def _load_capture_session(
 
 def _load_manifest(path: Path) -> list[dict[str, Any]]:
     try:
-        parsed = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise CuratedScreenshotError(f"Missing curation manifest: {path}") from exc
-    except OSError as exc:
-        raise CuratedScreenshotError(
-            f"Could not read curation manifest {path}: {exc}"
-        ) from exc
-    except json.JSONDecodeError as exc:
+        parsed = load_file(
+            path,
+            maximum_bytes=MAX_MANIFEST_BYTES,
+            require_object=True,
+        )
+    except StrictJsonError as exc:
         raise CuratedScreenshotError(
             f"Invalid curation manifest JSON {path}: {exc}"
         ) from exc

@@ -12,6 +12,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Sequence
 
+from strict_json import StrictJsonError, load_file
+
 from screenshot_capture_evidence import (
     EXPECTED_ACTIVITY_NAME,
     EXPECTED_PACKAGE_NAME,
@@ -44,10 +46,12 @@ def _read_sidecar_identity(path: Path) -> tuple[str, str]:
             f"Capture sidecar has invalid size: {path} is {size} bytes"
         )
     try:
-        raw: Any = json.loads(path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise CaptureSessionFinalizeError(f"Could not read capture sidecar {path}: {exc}") from exc
-    except json.JSONDecodeError as exc:
+        raw: Any = load_file(
+            path,
+            maximum_bytes=MAX_SIDECAR_BYTES,
+            require_object=True,
+        )
+    except StrictJsonError as exc:
         raise CaptureSessionFinalizeError(f"Invalid capture sidecar JSON {path}: {exc}") from exc
     if not isinstance(raw, dict):
         raise CaptureSessionFinalizeError(f"Capture sidecar must be an object: {path}")

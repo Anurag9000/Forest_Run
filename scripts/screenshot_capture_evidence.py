@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import datetime as dt
-import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from strict_json import StrictJsonError, load_file
 
 SCHEMA_VERSION = 1
 EXPECTED_RUN_MODE = "SCREENSHOT_CAPTURE"
@@ -17,6 +18,7 @@ EXPECTED_ACTIVITY_NAME = "com.anurag9000.forestrun.MainActivity"
 READY_PREFIX = "FOREST_RUN_SCENARIO_READY"
 HEX_40 = re.compile(r"[0-9a-f]{40}")
 HEX_64 = re.compile(r"[0-9a-f]{64}")
+MAX_CAPTURE_EVIDENCE_BYTES = 64 * 1024
 
 
 class CaptureEvidenceError(ValueError):
@@ -53,16 +55,14 @@ class CaptureEvidence:
 
 def _load_object(path: Path) -> dict[str, Any]:
     try:
-        parsed = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise CaptureEvidenceError(f"Missing capture evidence: {path}") from exc
-    except OSError as exc:
+        parsed = load_file(
+            path,
+            maximum_bytes=MAX_CAPTURE_EVIDENCE_BYTES,
+            require_object=True,
+        )
+    except StrictJsonError as exc:
         raise CaptureEvidenceError(
-            f"Could not read capture evidence {path}: {exc}"
-        ) from exc
-    except json.JSONDecodeError as exc:
-        raise CaptureEvidenceError(
-            f"Invalid JSON in capture evidence {path}: {exc}"
+            f"Invalid capture evidence JSON {path}: {exc}"
         ) from exc
     if not isinstance(parsed, dict):
         raise CaptureEvidenceError(

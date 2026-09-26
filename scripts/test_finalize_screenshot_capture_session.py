@@ -187,5 +187,25 @@ class ScreenshotCaptureSessionFinalizerTest(unittest.TestCase):
                 )
 
 
+    def test_ambiguous_sidecar_cannot_publish_capture_session(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            sidecar = root / "01-opening.capture.json"
+            original = sidecar.read_text(encoding="utf-8")
+            sidecar.write_text(
+                original.replace(
+                    '"scenario": "OPENING_READABILITY"',
+                    '"scenario": "WRONG", "scenario": "OPENING_READABILITY"',
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                CaptureSessionFinalizeError, "duplicate JSON object key"
+            ):
+                self.finalize(root)
+            self.assertFalse((root / "capture-session.json").exists())
+
 if __name__ == "__main__":
     unittest.main()

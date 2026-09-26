@@ -201,5 +201,30 @@ class RawScreenshotSetVerifierTest(unittest.TestCase):
             )
 
 
+    def test_ambiguous_or_nonfinite_capture_session_is_rejected(self) -> None:
+        self.create_valid_set()
+        session = self.raw_dir / "capture-session.json"
+        original = session.read_text(encoding="utf-8")
+        for poisoned, error in (
+            (
+                original.replace(
+                    '"candidateSha":',
+                    '"candidateSha": "' + "c" * 40 + '", "candidateSha":',
+                    1,
+                ),
+                "duplicate JSON object key",
+            ),
+            (
+                original.replace('"schemaVersion": 1', '"extra": Infinity, "schemaVersion": 1', 1),
+                "non-finite",
+            ),
+        ):
+            with self.subTest(error=error):
+                session.write_text(poisoned, encoding="utf-8")
+                with self.assertRaisesRegex(RawScreenshotSetError, error):
+                    verify_raw_screenshot_set(
+                        self.raw_dir, self.manifest_path, self.candidate_sha
+                    )
+
 if __name__ == "__main__":
     unittest.main()
