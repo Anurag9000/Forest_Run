@@ -179,18 +179,50 @@ class ChickadeeGroup(
 
     private fun updateFlutterPocket() {
         val leadRect = birdRects[leadBirdIndex]
-        val upperBound = birdRects.minOf { it.bottom } + 4f
-        val lowerBound = birdRects.maxOf { it.top } - 4f
-        val fallbackCenter = leadRect.centerY() + birdH * 0.72f
-        val pocketTop = if (lowerBound > upperBound + birdH * 0.18f) {
-            upperBound
-        } else {
-            fallbackCenter - birdH * 0.20f
+        val padding = 4f
+        val minimumHeight = birdH * 0.18f
+        val desiredHalfHeight = birdH * 0.21f
+        var pocketTop = Float.NaN
+        var pocketBottom = Float.NaN
+        var closestGap = Float.POSITIVE_INFINITY
+
+        // Find a genuinely unoccupied vertical gap between whole bird
+        // hitboxes. Min(bottom)..max(top) can span an intervening bird and
+        // falsely advertise its occupied lane as a safe flutter pocket.
+        // A flock has at most four birds, so this bounded scan allocates none.
+        for (upper in birdRects) {
+            val candidateTop = upper.bottom + padding
+            var nextBirdTop = Float.POSITIVE_INFINITY
+            var blocked = false
+            for (other in birdRects) {
+                if (other.top <= candidateTop && other.bottom > candidateTop) {
+                    blocked = true
+                    break
+                }
+                if (other.top > candidateTop && other.top < nextBirdTop) {
+                    nextBirdTop = other.top
+                }
+            }
+            val candidateBottom = nextBirdTop - padding
+            if (blocked || !candidateBottom.isFinite() ||
+                candidateBottom - candidateTop < minimumHeight
+            ) continue
+
+            val center = (candidateTop + candidateBottom) * 0.5f
+            val distance = kotlin.math.abs(center - leadRect.centerY())
+            if (distance < closestGap) {
+                closestGap = distance
+                val halfHeight = minOf(desiredHalfHeight, (candidateBottom - candidateTop) * 0.5f)
+                pocketTop = center - halfHeight
+                pocketBottom = center + halfHeight
+            }
         }
-        val pocketBottom = if (lowerBound > upperBound + birdH * 0.18f) {
-            lowerBound
-        } else {
-            fallbackCenter + birdH * 0.20f
+
+        if (!pocketTop.isFinite()) {
+            // When the flock is too crowded to contain a real internal gap,
+            // draw the cue below every bird, not across the lead bird.
+            pocketTop = birdRects.maxOf { it.bottom } + padding
+            pocketBottom = pocketTop + birdH * 0.42f
         }
         flutterPocketRect.set(
             leadRect.centerX() - birdW * 0.95f,

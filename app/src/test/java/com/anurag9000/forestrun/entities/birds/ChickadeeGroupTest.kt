@@ -8,6 +8,7 @@ import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Player
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -86,6 +87,33 @@ class ChickadeeGroupTest {
         assertEquals(CollisionResult.HIT, group.onCollision(player, state))
         birds[1].set(250f, 100f, 290f, 140f)
         assertEquals(CollisionResult.MERCY_MISS, group.onCollision(player, state))
+    }
+
+
+    @Test
+    fun `flutter pocket excludes every live bird during spread and crowding`() {
+        val chickadees = chickadees()
+        val arrangements = listOf(
+            floatArrayOf(240f, 310f, 380f),
+            floatArrayOf(200f, 360f, 510f),
+            floatArrayOf(350f, 352f, 354f)
+        )
+        for (altitudes in arrangements) {
+            with(chickadees) {
+                setFloatArray(this, "altitudes", altitudes)
+                setFloatArray(this, "targetAltitudes", altitudes)
+                update(0f, 0f)
+            }
+            repeat(20) {
+                val pocket = rectField(chickadees, "flutterPocketRect")
+                val birds = rectArrayField(chickadees, "birdRects")
+                assertTrue(pocket.height() > 0f)
+                for (bird in birds) {
+                    assertFalse("Pocket intersects a live bird: $altitudes", RectF.intersects(pocket, bird))
+                }
+                chickadees.update(0.05f, 0f)
+            }
+        }
     }
 
     private fun chickadees() = ChickadeeGroup(
