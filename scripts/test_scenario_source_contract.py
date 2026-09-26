@@ -165,7 +165,7 @@ class ScenarioSourceContractTest(unittest.TestCase):
             with self.subTest(scenario=name):
                 definition = contract.load_trace_contract(ROOT, name).scenario
                 self.assertEqual(2, len(definition.steps))
-                self.assertEqual([entity, entity], [step.type for step in definition.steps])
+                self.assertEqual([entity, entity], [step.entity_type for step in definition.steps])
 
     @staticmethod
     def replace_cactus_step(source: str, replacement: str) -> str:
