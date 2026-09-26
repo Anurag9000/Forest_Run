@@ -1729,12 +1729,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         resetBloomPresentationState()
         resetOrdinaryProgressCueState()
         director.startSelectedScenario()
+        // REST_LOOP intentionally forces an immediate terminal hit to exercise
+        // the recovery transition. All other scenarios spawn exclusively from
+        // their authored EncounterScenario.steps through EncounterDirector.
         if (scenario == EncounterScenario.REST_LOOP) {
             entityManager.debugSpawnAt(EntityType.CACTUS, player.x + 14f)
-        } else if (scenario == EncounterScenario.WOLF_CHARGE) {
-            entityManager.debugSpawnAt(EntityType.WOLF, player.x + 520f)
-        } else if (scenario == EncounterScenario.EAGLE_MARK) {
-            entityManager.debugSpawnAt(EntityType.EAGLE, player.x + 420f)
         }
         LeitmotifManager.playRunStart()
     }

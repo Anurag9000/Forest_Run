@@ -144,6 +144,29 @@ class ScenarioSourceContractTest(unittest.TestCase):
         ):
             contract.parse_scenario_definition(broken, "OPENING_READABILITY")
 
+
+    def test_authored_wolf_and_eagle_scenarios_have_no_extra_game_view_spawns(self) -> None:
+        game_view = (
+            ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
+        ).read_text(encoding="utf-8")
+        method = game_view.split("private fun prepareEncounterScenario() {", 1)[1].split(
+            "private fun handleDebugOverlayAction(", 1
+        )[0]
+        self.assertEqual(
+            1, method.count("entityManager.debugSpawnAt("),
+            "Only REST_LOOP's explicit immediate-hit fixture may bypass authored steps",
+        )
+        self.assertIn("scenario == EncounterScenario.REST_LOOP", method)
+        self.assertIn("entityManager.debugSpawnAt(EntityType.CACTUS", method)
+        self.assertNotIn("entityManager.debugSpawnAt(EntityType.WOLF", method)
+        self.assertNotIn("entityManager.debugSpawnAt(EntityType.EAGLE", method)
+
+        for name, entity in (("WOLF_CHARGE", "WOLF"), ("EAGLE_MARK", "EAGLE")):
+            with self.subTest(scenario=name):
+                definition = contract.load_trace_contract(ROOT, name).scenario
+                self.assertEqual(2, len(definition.steps))
+                self.assertEqual([entity, entity], [step.type for step in definition.steps])
+
     @staticmethod
     def replace_cactus_step(source: str, replacement: str) -> str:
         block = contract._extract_scenario_block(source, "CACTUS_READ")
