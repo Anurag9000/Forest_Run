@@ -41,6 +41,7 @@ class OwlTest {
             context = context,
             startX = 560f,
             groundY = 885.6f,
+            screenWidth = 1920f,
             idleSprite = spriteManager.owlSprite.copy(),
             actionSprite = spriteManager.owlFlying.copy()
         )
@@ -57,6 +58,7 @@ class OwlTest {
             context = context,
             startX = 560f,
             groundY = 885.6f,
+            screenWidth = 1920f,
             idleSprite = spriteManager.owlSprite.copy(),
             actionSprite = spriteManager.owlFlying.copy()
         )
@@ -68,6 +70,32 @@ class OwlTest {
 
         assertEquals("ALERT", enumFieldName(owl, "owlState"))
         assertTrue(booleanField(owl, "hasWarned"))
+    }
+
+    @Test
+    fun `offscreen owl ignores premature jump but alerts once it enters the viewport`() {
+        val owl = Owl(
+            context = context,
+            startX = 2020f,
+            groundY = 885.6f,
+            screenWidth = 1920f,
+            idleSprite = spriteManager.owlSprite.copy(),
+            actionSprite = spriteManager.owlFlying.copy()
+        )
+        val player = Player(1920, 1080, spriteManager)
+        val state = GameStateManager(context)
+        player.onJumpPressed()
+
+        owl.updatePlayerInteraction(player, state)
+        assertEquals("SLEEPING", enumFieldName(owl, "owlState"))
+        assertTrue(!booleanField(owl, "hasWarned"))
+
+        owl.update(deltaTime = 0.5f, scrollSpeed = 300f)
+        owl.updatePlayerInteraction(player, state)
+        assertEquals("ALERT", enumFieldName(owl, "owlState"))
+        assertTrue(booleanField(owl, "hasWarned"))
+        owl.updatePlayerInteraction(player, state)
+        assertEquals("ALERT", enumFieldName(owl, "owlState"))
     }
 
     private fun booleanField(owl: Owl, name: String): Boolean {

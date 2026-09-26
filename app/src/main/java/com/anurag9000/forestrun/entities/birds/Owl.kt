@@ -29,6 +29,7 @@ class Owl(
     context: Context,
     startX: Float,
     private val groundY: Float,
+    private val screenWidth: Float,
     private val idleSprite: SpriteSheet,
     private val actionSprite: SpriteSheet
 ) : Entity(context) {
@@ -166,6 +167,9 @@ class Owl(
     }
 
     override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {
+        // The authored cue says "jump while the owl is visible". Pre-entry
+        // jumps must not silently start the alert/dive offscreen.
+        if (!isActive || x >= screenWidth || x + birdW <= 0f) return
         if (player.state in listOf(
                 com.anurag9000.forestrun.entities.PlayerState.JUMPING,
                 com.anurag9000.forestrun.entities.PlayerState.APEX,

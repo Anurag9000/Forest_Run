@@ -91,6 +91,7 @@ object EntityFactory {
                 context,
                 safeStartX,
                 groundY,
+                safeScreenWidth,
                 spriteManager.owlSprite.copy(),
                 spriteManager.owlFlying.copy()
             )
