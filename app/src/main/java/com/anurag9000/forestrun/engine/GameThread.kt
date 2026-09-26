@@ -12,7 +12,10 @@ class GameThread internal constructor(
     private val renderFrame: () -> Unit = {},
     targetFrameTimeNs: Long = DEFAULT_TARGET_FRAME_TIME_NS,
     private val performanceMonitor: FramePerformanceMonitor? = null,
-    private val failureHandler: (FrameFailure) -> Unit = {}
+    private val failureHandler: (FrameFailure) -> Unit = {},
+    // Internal injected callbacks may render to nothing; only the production
+    // SurfaceHolder constructor is evidence of a posted frame.
+    private val postsToSurface: Boolean = false
 ) : Thread("GameThread") {
     enum class FrameStage {
         UPDATE,
@@ -31,6 +34,7 @@ class GameThread internal constructor(
         renderFrame = { renderSurfaceFrame(surfaceHolder, gameView) },
         targetFrameTimeNs = DEFAULT_TARGET_FRAME_TIME_NS,
         performanceMonitor = FramePerformanceTelemetry.monitor,
+        postsToSurface = true,
         failureHandler = { failure ->
             Log.e(
                 TAG,
@@ -130,9 +134,11 @@ class GameThread internal constructor(
                     // renderSurfaceFrame returns only after unlockCanvasAndPost,
                     // so this closes an app/render latency sample at the first
                     // posted frame following the gameplay response.
-                    InputLatencyTelemetryRegistry.recordFrameRendered(
-                        SystemClock.elapsedRealtimeNanos()
-                    )
+                    if (postsToSurface) {
+                        InputLatencyTelemetryRegistry.recordFrameRendered(
+                            SystemClock.elapsedRealtimeNanos()
+                        )
+                    }
                 } catch (failure: Exception) {
                     val renderFailedAtNs = System.nanoTime()
                     performanceMonitor?.record(
