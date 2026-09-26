@@ -1800,14 +1800,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             runState != RunState.PLAYING
         ) return
 
-        debugScenarioScript.advance(gameState.runTimeSeconds) { action ->
-            when (action) {
+        debugScenarioScript.advanceTimed(gameState.runTimeSeconds) { timed ->
+            when (timed.action) {
                 DebugScenarioAction.TAP_JUMP -> {
                     player.onJumpPressed()
                     player.onJumpReleased(0f)
                 }
                 DebugScenarioAction.HOLD_JUMP_START -> player.onJumpPressed()
-                DebugScenarioAction.HOLD_JUMP_END -> player.onJumpReleased(0.35f)
+                DebugScenarioAction.HOLD_JUMP_END -> player.onJumpReleased(timed.holdDurationSeconds)
                 DebugScenarioAction.DUCK_START -> player.onDuckPressed()
                 DebugScenarioAction.DUCK_END -> player.onDuckReleased()
             }

@@ -14,6 +14,13 @@ internal data class DebugScenarioStep(
     val action: DebugScenarioAction
 )
 
+/** Runtime interpretation of one authored action at its actual scheduled hold duration. */
+internal data class DebugScenarioTimedAction(
+    val action: DebugScenarioAction,
+    val scheduledAtSeconds: Float,
+    val holdDurationSeconds: Float
+)
+
 /**
  * Owns deterministic input sequencing independently from [GameView].
  *
@@ -71,7 +78,16 @@ internal class DebugScenarioScript {
         }
     }
 
+    /** Keep the action-only API without duplicating dispatch/trace semantics. */
     fun advance(elapsedSeconds: Float, dispatch: (DebugScenarioAction) -> Unit) {
+        advanceTimed(elapsedSeconds) { timed -> dispatch(timed.action) }
+    }
+
+    /**
+     * Use the authored press/end timestamps for release height. Frame batching
+     * must not turn a scheduled hold into a zero-duration tap.
+     */
+    fun advanceTimed(elapsedSeconds: Float, dispatch: (DebugScenarioTimedAction) -> Unit) {
         val observedSteps = steps
         if (!elapsedSeconds.isFinite() || nextIndex >= observedSteps.size) return
 
@@ -83,7 +99,22 @@ internal class DebugScenarioScript {
             ) {
                 val sequence = nextIndex
                 val step = activeSteps[sequence]
-                dispatch(step.action)
+                val heldSeconds = if (step.action == DebugScenarioAction.HOLD_JUMP_END) {
+                    // prepare() requires balanced, nonoverlapping authored hold pairs.
+                    val start = activeSteps.subList(0, sequence).lastOrNull {
+                        it.action == DebugScenarioAction.HOLD_JUMP_START
+                    } ?: error("Validated deterministic jump end has no start")
+                    (step.atSeconds - start.atSeconds).coerceAtLeast(0f)
+                } else {
+                    0f
+                }
+                dispatch(
+                    DebugScenarioTimedAction(
+                        action = step.action,
+                        scheduledAtSeconds = step.atSeconds,
+                        holdDurationSeconds = heldSeconds
+                    )
+                )
                 if (scenario != null) {
                     traceRecorder.record(
                         scenario = scenario,

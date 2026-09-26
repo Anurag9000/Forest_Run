@@ -97,4 +97,61 @@ class DebugScenarioScriptTest {
             assertTrue("$scenario should be manual", DebugScenarioScript.stepsFor(scenario).isEmpty())
         }
     }
+
+    @Test
+    fun `timed actions reproduce authored holds under different frame partitions`() {
+        for (scenario in listOf(
+            EncounterScenario.CACTUS_READ,
+            EncounterScenario.CAT_KINDNESS,
+            EncounterScenario.FOX_MIRROR,
+            EncounterScenario.EAGLE_MARK
+        )) {
+            val authored = DebugScenarioScript.stepsFor(scenario)
+            val expected = authored.chunked(2).map { pair ->
+                pair[1].atSeconds - pair[0].atSeconds
+            }
+            val batched = DebugScenarioScript()
+            val batchedActions = mutableListOf<DebugScenarioTimedAction>()
+            batched.prepare(scenario)
+            batched.advanceTimed(10f, batchedActions::add)
+
+            val partitioned = DebugScenarioScript()
+            val partitionedActions = mutableListOf<DebugScenarioTimedAction>()
+            partitioned.prepare(scenario)
+            authored.forEach { step ->
+                partitioned.advanceTimed(step.atSeconds, partitionedActions::add)
+            }
+
+            assertEquals(batchedActions, partitionedActions)
+            assertEquals(
+                expected,
+                batchedActions.filter { it.action == DebugScenarioAction.HOLD_JUMP_END }
+                    .map { it.holdDurationSeconds }
+            )
+            assertTrue(batchedActions.filter {
+                it.action == DebugScenarioAction.HOLD_JUMP_START
+            }.all { it.holdDurationSeconds == 0f })
+            assertEquals(4, batched.traceSnapshot().events.size)
+        }
+    }
+
+    @Test
+    fun `timed callback failure retains pending action without false trace`() {
+        val script = DebugScenarioScript()
+        script.prepare(EncounterScenario.CACTUS_READ)
+        try {
+            script.advanceTimed(10f) { throw IllegalStateException("dispatch failed") }
+            throw AssertionError("dispatch must propagate failure")
+        } catch (expected: IllegalStateException) {
+            assertEquals("dispatch failed", expected.message)
+        }
+        assertEquals(4, script.pendingCountForTest())
+        assertTrue(script.traceSnapshot().events.isEmpty())
+
+        val delivered = mutableListOf<DebugScenarioTimedAction>()
+        script.advanceTimed(10f, delivered::add)
+        assertEquals(4, delivered.size)
+        assertEquals(4, script.traceSnapshot().events.size)
+    }
+
 }
