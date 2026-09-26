@@ -10,6 +10,7 @@ import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.ReadabilityProfile
 import com.anurag9000.forestrun.engine.RelationshipEncounterTuning
 import com.anurag9000.forestrun.engine.RelationshipArcSystem
+import com.anurag9000.forestrun.engine.SfxManager
 import com.anurag9000.forestrun.engine.SpriteSizing
 import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.entities.CollisionResult
@@ -114,6 +115,7 @@ class Eagle(
     private fun announceTarget() {
         if (targetAnnounced) return
         targetAnnounced = true
+        SfxManager.playScreech()
         CameraSystem.shakeEagle()
         DialogueBubbleManager.spawn(
             RelationshipArcSystem.encounterCueLine(

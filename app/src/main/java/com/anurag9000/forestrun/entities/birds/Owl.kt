@@ -11,6 +11,7 @@ import com.anurag9000.forestrun.engine.ReadabilityProfile
 import com.anurag9000.forestrun.engine.RelationshipEncounterTuning
 import com.anurag9000.forestrun.engine.RelationshipArcSystem
 import com.anurag9000.forestrun.engine.RelationshipStage
+import com.anurag9000.forestrun.engine.SfxManager
 import com.anurag9000.forestrun.engine.SpriteSizing
 import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.entities.EntityType
@@ -188,6 +189,9 @@ class Owl(
                     Color.rgb(170, 120, 60)
                 )
                 hasWarned = true
+                // The first alert is the actionable cue; do not sound again
+                // on every frame or after the dive has started.
+                SfxManager.playScreech()
             }
         }
     }
