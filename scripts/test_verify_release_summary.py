@@ -4,7 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from verify_release_summary import ReleaseSummaryError, verify_release_summary
+from verify_release_summary import (
+    EXPECTED_AUDIO_NAMES,
+    ReleaseSummaryError,
+    verify_release_summary,
+)
+from verify_release_source_assets import parse_required_audio
 
 
 class ReleaseSummaryVerifierTest(unittest.TestCase):
@@ -110,7 +115,7 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
                 "candidate_sha": self.candidate,
                 "package_name": "com.anurag9000.forestrun.debug",
             },
-            "audio": [f"audio_{index}" for index in range(15)],
+            "audio": sorted(EXPECTED_AUDIO_NAMES),
             "bundle": bundle,
             "r8_mapping": mapping,
             "dry_run_overrides": {
@@ -345,6 +350,48 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
         with self.assertRaisesRegex(ReleaseSummaryError, "character count"):
             verify_release_summary(self.root, self.release, self.candidate)
 
+
+    def test_bundle_and_mapping_must_use_canonical_build_output_paths(self) -> None:
+        for field, original in (("bundle", self.bundle), ("r8_mapping", self.mapping)):
+            with self.subTest(field=field):
+                payload = self.payload()
+                alternative = original.with_name("alternate-" + original.name)
+                alternative.write_bytes(original.read_bytes())
+                payload[field].update(self.file_fact(alternative))
+                self.write(payload)
+                with self.assertRaisesRegex(ReleaseSummaryError, "canonical build outputs"):
+                    verify_release_summary(self.root, self.release, self.candidate)
+
+    def test_audio_evidence_must_name_exact_required_resources(self) -> None:
+        payload = self.payload()
+        payload["audio"][0] = "unrelated_sound"
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "audio"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+    def test_summary_files_must_not_be_symbolic_links(self) -> None:
+        payload = self.payload()
+        for filename in ("build_summary.json", "BUILD_SUMMARY.md"):
+            with self.subTest(filename=filename):
+                self.write(payload)
+                path = self.release / filename
+                target = self.root / ("external-" + filename)
+                target.write_bytes(path.read_bytes())
+                path.unlink()
+                try:
+                    path.symlink_to(target)
+                except OSError as exc:
+                    self.skipTest(f"symbolic links unavailable: {exc}")
+                with self.assertRaisesRegex(ReleaseSummaryError, "non-symlink"):
+                    verify_release_summary(self.root, self.release, self.candidate)
+                path.unlink()
+
+    def test_expected_audio_catalogue_matches_release_preparer(self) -> None:
+        preparer = Path(__file__).resolve().with_name("prepare_play_release.py")
+        self.assertEqual(
+            EXPECTED_AUDIO_NAMES,
+            frozenset(parse_required_audio(preparer.read_text(encoding="utf-8"))),
+        )
 
 if __name__ == "__main__":
     unittest.main()

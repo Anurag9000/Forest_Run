@@ -27,6 +27,14 @@ EXPECTED_METADATA_PATHS = {
     "release/google-play/metadata/en-US/full-description.txt",
 }
 SCREENSHOT_PREFIX = PurePosixPath("release/google-play/screenshots/final")
+EXPECTED_BUNDLE_PATH = "app/build/outputs/bundle/release/app-release.aab"
+EXPECTED_MAPPING_PATH = "app/build/outputs/mapping/release/mapping.txt"
+EXPECTED_AUDIO_NAMES = frozenset((
+    "sfx_jump", "sfx_land", "sfx_seed_ping", "sfx_bark",
+    "sfx_screech", "sfx_howl", "sfx_bloom", "sfx_mercy_miss",
+    "sfx_hit", "music_garden", "music_run_1", "music_run_2",
+    "music_run_3", "music_bloom", "music_rest",
+))
 
 
 class ReleaseSummaryError(ValueError):
@@ -195,10 +203,14 @@ def verify_release_summary(
     human_path = release_root / "BUILD_SUMMARY.md"
     for path in (machine_path, human_path):
         try:
-            size = path.stat().st_size
+            metadata = path.lstat()
         except FileNotFoundError as exc:
             raise ReleaseSummaryError(f"Missing release summary: {path}") from exc
-        if size <= 0 or size > MAX_SUMMARY_BYTES:
+        except OSError as exc:
+            raise ReleaseSummaryError(f"Could not inspect release summary {path}: {exc}") from exc
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+            raise ReleaseSummaryError(f"Release summary must be a regular non-symlink file: {path}")
+        if metadata.st_size <= 0 or metadata.st_size > MAX_SUMMARY_BYTES:
             raise ReleaseSummaryError(f"Release summary has invalid size: {path}")
     try:
         payload = load_file(
@@ -234,9 +246,9 @@ def verify_release_summary(
     audio = payload.get("audio")
     if (
         not isinstance(audio, list)
-        or len(audio) != 15
+        or len(audio) != len(EXPECTED_AUDIO_NAMES)
         or any(not isinstance(item, str) or not item.strip() for item in audio)
-        or len(audio) != len(set(audio))
+        or set(audio) != EXPECTED_AUDIO_NAMES
     ):
         raise ReleaseSummaryError("Release summary required-audio evidence is incomplete")
     _require_exact_paths(
@@ -271,6 +283,12 @@ def verify_release_summary(
     else:
         if not isinstance(bundle, dict) or not isinstance(mapping, dict):
             raise ReleaseSummaryError("Built release summary is missing bundle or R8 evidence")
+        bundle_path, _ = _safe_fact_path(root, bundle, "bundle")
+        mapping_path, _ = _safe_fact_path(root, mapping, "r8_mapping")
+        if bundle_path != EXPECTED_BUNDLE_PATH or mapping_path != EXPECTED_MAPPING_PATH:
+            raise ReleaseSummaryError(
+                "Release summary bundle/R8 paths differ from canonical build outputs"
+            )
         verify_file_fact(root, bundle, "bundle")
         verify_file_fact(root, mapping, "r8_mapping")
         if bundle.get("application_id") != EXPECTED_APPLICATION_ID:

@@ -4,7 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from verify_release_summary import ReleaseSummaryError, verify_release_summary
+from verify_release_summary import (
+    EXPECTED_AUDIO_NAMES,
+    ReleaseSummaryError,
+    verify_release_summary,
+)
 
 
 class ReleaseSummaryPathTest(unittest.TestCase):
@@ -98,7 +102,7 @@ class ReleaseSummaryPathTest(unittest.TestCase):
                     "candidate_sha": candidate,
                     "package_name": "com.anurag9000.forestrun.debug",
                 },
-                "audio": [f"audio_{index}" for index in range(15)],
+                "audio": sorted(EXPECTED_AUDIO_NAMES),
                 "bundle": {
                     "path": "app\\build\\outputs\\bundle\\release\\app-release.aab",
                     "bytes": bundle.stat().st_size,
@@ -153,7 +157,7 @@ class ReleaseSummaryPathTest(unittest.TestCase):
                             "candidate_sha": candidate,
                             "package_name": "com.anurag9000.forestrun.debug",
                         },
-                        "audio": [f"audio_{index}" for index in range(15)],
+                        "audio": sorted(EXPECTED_AUDIO_NAMES),
                         "bundle": {
                             "path": unsafe,
                             "bytes": 1,
