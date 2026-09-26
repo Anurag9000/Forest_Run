@@ -50,6 +50,9 @@ class Eagle(
     private var lockTimer = 0f
     private val lockDuration = (readability.telegraphDurationSec * relationshipTuning.telegraphMultiplier).coerceAtLeast(0.28f)
     private var isLocked = false
+    // Authored scenarios can stage the Eagle well beyond the right edge.
+    // Right-edge departure is only meaningful after the bird has entered.
+    private var hasEnteredHorizontalViewport = false
     private var markPrompted = false
     private var heldMark = true
     private var targetAnnounced = false
@@ -145,8 +148,15 @@ class Eagle(
         updateCueGeometry()
         hitbox.offsetTo(x + insetX, y + insetY)
         sprite.update(deltaTime)
-        // Despawn when completely off screen (using +150f to allow time for the diagonal dive)
-        if (y > groundY + birdH || x < -birdW - 50f || x > screenWidth + 150f) isActive = false
+        if (x <= screenWidth && x + birdW >= 0f) {
+            hasEnteredHorizontalViewport = true
+        }
+        // A staged Eagle is not a departing Eagle: EAGLE_MARK and
+        // BIRD_SHOWCASE intentionally start farther right than +150 px.
+        val departedRight = hasEnteredHorizontalViewport && x > screenWidth + 150f
+        if (y > groundY + birdH || x < -birdW - 50f || departedRight) {
+            isActive = false
+        }
     }
 
     override fun draw(canvas: Canvas) {

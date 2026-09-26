@@ -79,6 +79,37 @@ class EagleTest {
         assertTrue(heldState.score > markMissState.score)
     }
 
+
+    @Test
+    fun `all authored Eagle staging offsets survive pre entry and reach the viewport`() {
+        val player = Player(1920, 1080, spriteManager)
+        val state = GameStateManager(context)
+        player.hitbox.set(420f, 720f, 500f, 820f)
+
+        // EAGLE_MARK's two offsets and BIRD_SHOWCASE's later Eagle offset.
+        for (offset in listOf(520f, 1_060f, 1_280f)) {
+            val eagle = Eagle(
+                context = context,
+                startX = 1920f + offset,
+                screenWidth = 1920f,
+                groundY = 885.6f,
+                sprite = spriteManager.eagleSprite.copy()
+            )
+            eagle.update(deltaTime = 0.05f, scrollSpeed = 0f)
+            assertTrue("Eagle culled on the first staged frame: offset=$offset", eagle.isActive)
+
+            eagle.updatePlayerInteraction(player, state)
+            eagle.update(deltaTime = 1f, scrollSpeed = 0f)
+            assertTrue("Eagle culled during authored lock-on: offset=$offset", eagle.isActive)
+
+            repeat(55) {
+                eagle.update(deltaTime = 0.04f, scrollSpeed = 0f)
+                assertTrue("Eagle culled before entering: offset=$offset", eagle.isActive)
+            }
+            assertTrue("Eagle never reached the viewport: offset=$offset", eagle.x < 1920f)
+        }
+    }
+
     private fun rectField(eagle: Eagle, name: String): RectF {
         val field = Eagle::class.java.getDeclaredField(name)
         field.isAccessible = true
