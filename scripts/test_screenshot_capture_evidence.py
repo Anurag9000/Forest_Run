@@ -52,6 +52,15 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
         expected.update(overrides)
         return load_capture_evidence(path, **expected)
 
+    def test_capture_sidecar_schema_version_requires_integer(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "capture.json"
+            for invalid in (True, False, 1.0, "1", None):
+                with self.subTest(value=invalid):
+                    self.write(path.parent, self.evidence(schemaVersion=invalid), path.name)
+                    with self.assertRaisesRegex(CaptureEvidenceError, "schemaVersion"):
+                        self.load(path)
+
     def test_valid_evidence_is_loaded(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             path = self.write(Path(temporary_directory), self.evidence())

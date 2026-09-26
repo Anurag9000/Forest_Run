@@ -140,6 +140,16 @@ class RawScreenshotSetVerifierTest(unittest.TestCase):
         )
         self.write_session()
 
+    def test_raw_session_schema_version_rejects_json_boolean(self) -> None:
+        self.create_valid_set()
+        for invalid in (True, False, 1.0, "1", None):
+            with self.subTest(value=invalid):
+                self.write_session(schemaVersion=invalid)
+                with self.assertRaisesRegex(RawScreenshotSetError, "schemaVersion"):
+                    verify_raw_screenshot_set(
+                        self.raw_dir, self.manifest_path, self.candidate_sha
+                    )
+
     def test_valid_raw_capture_session_is_accepted(self) -> None:
         self.create_valid_set()
 

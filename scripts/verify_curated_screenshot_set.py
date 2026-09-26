@@ -112,7 +112,7 @@ def _load_capture_session(
         raise CuratedScreenshotError(f"Invalid capture session JSON {path}: {exc}") from exc
     if not isinstance(raw, dict):
         raise CuratedScreenshotError(f"Capture session must be a JSON object: {path}")
-    if raw.get("schemaVersion") != 1:
+    if type(raw.get("schemaVersion")) is not int or raw["schemaVersion"] != 1:
         raise CuratedScreenshotError(f"{path}: schemaVersion must equal 1")
 
     def required_string(key: str) -> str:

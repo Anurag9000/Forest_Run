@@ -154,7 +154,7 @@ def verify_raw_screenshot_set(
 
     session_path = raw_dir / "capture-session.json"
     session = _read_object(session_path)
-    if session.get("schemaVersion") != 1:
+    if type(session.get("schemaVersion")) is not int or session["schemaVersion"] != 1:
         _fail(f"{session_path}: schemaVersion must equal 1")
     session_candidate = _required_string(
         session, "candidateSha", session_path

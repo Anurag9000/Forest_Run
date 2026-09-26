@@ -142,7 +142,7 @@ def verify_store_graphics(root: Path, graphics_dir: Path, candidate_sha: str) ->
     assert isinstance(raw, dict)
     if set(raw) != MANIFEST_KEYS:
         raise StoreGraphicsError("graphics manifest fields are incomplete or contain extras")
-    if raw.get("schemaVersion") != 1:
+    if type(raw.get("schemaVersion")) is not int or raw["schemaVersion"] != 1:
         raise StoreGraphicsError("graphics manifest schemaVersion must equal 1")
     if raw.get("candidateSha") != candidate_sha:
         raise StoreGraphicsError("graphics manifest candidate does not match release candidate")

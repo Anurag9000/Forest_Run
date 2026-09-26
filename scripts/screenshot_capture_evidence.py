@@ -128,7 +128,7 @@ def load_capture_evidence(
     expected_height: int,
 ) -> CaptureEvidence:
     raw = _load_object(path)
-    if raw.get("schemaVersion") != SCHEMA_VERSION:
+    if type(raw.get("schemaVersion")) is not int or raw["schemaVersion"] != SCHEMA_VERSION:
         raise CaptureEvidenceError(
             f"{path}: schemaVersion must equal {SCHEMA_VERSION}"
         )

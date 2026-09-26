@@ -141,6 +141,16 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
             json.dumps({"screenshots": items}), encoding="utf-8"
         )
 
+    def test_capture_session_schema_version_rejects_json_boolean(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            for invalid in (True, False, 1.0, "1", None):
+                with self.subTest(value=invalid):
+                    self.write_session(root, schemaVersion=invalid)
+                    with self.assertRaisesRegex(CuratedScreenshotError, "schemaVersion"):
+                        verify_curated_set(root, self.candidate_sha)
+
     def test_valid_curated_set_is_bound_to_candidate(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

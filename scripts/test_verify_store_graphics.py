@@ -78,6 +78,13 @@ class StoreGraphicsVerifierTest(unittest.TestCase):
             json.dumps(payload), encoding="utf-8"
         )
 
+    def test_schema_version_requires_an_integer_not_json_boolean(self) -> None:
+        for invalid in (True, False, 1.0, "1", None):
+            with self.subTest(value=invalid):
+                self.write_manifest(schemaVersion=invalid)
+                with self.assertRaisesRegex(StoreGraphicsError, "schemaVersion"):
+                    verify_store_graphics(self.root, self.graphics, self.candidate)
+
     def test_valid_graphics_are_accepted(self) -> None:
         result = verify_store_graphics(self.root, self.graphics, self.candidate)
         self.assertEqual(2, len(result["outputs"]))
