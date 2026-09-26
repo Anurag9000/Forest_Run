@@ -157,6 +157,34 @@ class TerminalHitOutcomeContractTest(unittest.TestCase):
         )
         self.assertIn("runState = RunState.DYING", self.session_planner)
 
+    def test_terminal_dispatch_exits_frame_before_ghost_or_progress_mutation(self) -> None:
+        frame = extract_braced_block(
+            self.game_view, "private fun updateBounded(deltaTime: Float) {"
+        )
+        terminal = extract_braced_block(
+            frame, "if (dispatchResult is CollisionOutcomeDispatchResult.Terminal) {"
+        )
+        summary = terminal.index("currentRunSummary = completedHit.summary")
+        transition = terminal.index("RunSessionEvent.TERMINAL_COLLISION_COMPLETED")
+        exit_frame = terminal.rindex("return")
+        self.assertLess(summary, transition)
+        self.assertLess(transition, exit_frame)
+        self.assertEqual(1, terminal.count("return"))
+
+        # A return inside the named updateBounded function stops the same
+        # frame before these old fall-through mutations can run.
+        terminal_start = frame.index(
+            "if (dispatchResult is CollisionOutcomeDispatchResult.Terminal) {"
+        )
+        post_terminal = (
+            "ghostRecorder.record(deltaTime, player)",
+            "gameState.consumePacifistReward()",
+            "gameState.consumeMilestone()",
+        )
+        for mutation in post_terminal:
+            self.assertLess(terminal_start, frame.index(mutation))
+            self.assertNotIn(mutation, terminal)
+
     def test_game_view_passes_live_identity_and_accepts_completed_summary(self) -> None:
         required_once = (
             "persistEncounter = persistEncounter",

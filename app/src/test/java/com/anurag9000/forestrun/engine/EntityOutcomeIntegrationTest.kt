@@ -71,23 +71,31 @@ class EntityOutcomeIntegrationTest {
     }
 
     @Test
-    fun `mercy resolves once even when collision checks repeat`() {
+    fun `mercy resolves once only after the complete encounter passes safely`() {
         val manager = manager()
         val gameState = GameStateManager(context)
         val mercy = ProbeEntity(context, CollisionResult.MERCY_MISS)
         manager.activeEntities += mercy
 
-        val first = manager.checkCollisions(player, gameState)
-        val heartsAfterFirst = gameState.mercyHearts
-        val second = manager.checkCollisions(player, gameState)
+        // A padded encounter is still dangerous: no Heart, no terminal result.
+        assertNull(manager.checkCollisions(player, gameState))
+        assertNull(manager.checkCollisions(player, gameState))
+        assertEquals(EncounterOutcome.PENDING, mercy.encounterOutcome)
+        assertEquals(0, mercy.selectedCount)
+        assertEquals(0, gameState.mercyHearts)
 
-        requireNotNull(first)
+        val passedRight = player.hitbox.left - 20f
+        val passed = RectF(passedRight - 100f, 600f, passedRight, 700f)
+        mercy.setGeometry(passed, passed)
+        val first = requireNotNull(manager.checkCollisions(player, gameState))
         assertEquals(CollisionResult.MERCY_MISS, first.result)
-        assertNull(second)
-        assertEquals(1, mercy.selectedCount)
         assertEquals(EncounterOutcome.MERCY, mercy.encounterOutcome)
-        assertEquals(heartsAfterFirst, gameState.mercyHearts)
-        assertTrue(heartsAfterFirst > 0)
+        assertEquals(1, mercy.selectedCount)
+        assertEquals(1, gameState.mercyHearts)
+        assertNull(manager.checkCollisions(player, gameState))
+        assertEquals(1, mercy.selectedCount)
+        assertEquals(1, gameState.mercyHearts)
+        assertEquals(0, mercy.uniqueActionCount)
     }
 
     @Test

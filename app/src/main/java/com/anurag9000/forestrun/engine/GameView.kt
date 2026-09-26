@@ -1314,6 +1314,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     applyRunSessionEvent(
                         RunSessionEvent.TERMINAL_COLLISION_COMPLETED
                     )
+                    // The terminal coordinator already detached the ghost and
+                    // committed the Rest summary. Do not record a fresh ghost
+                    // frame or consume queued progress rewards after that
+                    // immutable end-of-run snapshot.
+                    return
                 }
             }
 
