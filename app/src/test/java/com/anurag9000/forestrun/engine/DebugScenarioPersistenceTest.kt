@@ -127,4 +127,55 @@ class DebugScenarioPersistenceTest {
         assertEquals(0, PersistentMemoryManager.getSparedCount(context, EntityType.CAT))
         assertEquals(0, PersistentMemoryManager.getKindnessStreak(context, EntityType.CAT))
     }
+    @Test
+    fun `debug Fox and Wolf spare events never persist while ordinary spares do`() {
+        val player = Player(1_920, 1_080, spriteManager)
+        val gameState = GameStateManager(context)
+        repeat(8) { gameState.addMercyHeart() }
+
+        for (type in listOf(EntityType.FOX, EntityType.WOLF)) {
+            for (recordPersistence in listOf(false, true)) {
+                val manager = EntityManager(context, 1_920f, 1_080f, spriteManager)
+                val entity = EntityFactory.create(
+                    context = context,
+                    type = type,
+                    startX = -1_000f,
+                    screenWidth = 1_920f,
+                    screenHeight = 1_080f,
+                    spriteManager = spriteManager
+                ).apply {
+                    shouldRecordPersistence = recordPersistence
+                    hitbox.set(
+                        player.hitbox.left - 220f,
+                        player.hitbox.top,
+                        player.hitbox.left - 120f,
+                        player.hitbox.bottom
+                    )
+                }
+                manager.activeEntities += entity
+
+                manager.checkCollisions(player, gameState)
+
+                assertEquals(EncounterOutcome.CLEAN_PASS, entity.encounterOutcome)
+                val expected = if (recordPersistence) 1 else 0
+                assertEquals(
+                    "$type spare history must respect run persistence",
+                    expected,
+                    PersistentMemoryManager.getSparedCount(context, type)
+                )
+                assertEquals(
+                    "$type encounter history must respect run persistence",
+                    expected,
+                    PersistentMemoryManager.getEncounterCount(context, type)
+                )
+                assertEquals(
+                    "$type clean-pass history must respect run persistence",
+                    expected,
+                    PersistentMemoryManager.getPassCount(context, type)
+                )
+            }
+        }
+    }
+
+
 }

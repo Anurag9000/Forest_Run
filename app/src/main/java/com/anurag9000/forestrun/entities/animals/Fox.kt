@@ -178,7 +178,9 @@ class Fox(
                 points = 120 + relationshipTuning.passBonusPoints,
                 seeds = 2 + relationshipTuning.passBonusSeeds
             )
-            PersistentMemoryManager.recordSpare(context, EntityType.FOX)
+            if (shouldRecordPersistence) {
+                PersistentMemoryManager.recordSpare(context, EntityType.FOX)
+            }
             gameState.recordSpare()
             DialogueBubbleManager.spawn(
                 RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.SPARE),

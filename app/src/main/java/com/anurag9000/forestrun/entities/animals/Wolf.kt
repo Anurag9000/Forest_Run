@@ -190,7 +190,9 @@ class Wolf(
                 points = 220 + relationshipTuning.passBonusPoints + if (respectStandDownHistory) 70 else 0,
                 seeds = 3 + relationshipTuning.passBonusSeeds + (if (warmBond) 1 else 0) + (if (respectStandDownHistory) 1 else 0)
             )
-            PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
+            if (shouldRecordPersistence) {
+                PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
+            }
             gameState.recordSpare()
             ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.5f, y + wolfH * 0.40f)
             ParticleManager.emit(FxPreset.SEED_COLLECT, x + wolfW * 0.5f, y + wolfH * 0.20f)

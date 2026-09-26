@@ -1,0 +1,7 @@
+# Forest Run — Fox/Wolf debug spare persistence isolation (2026-09-26)
+
+The deterministic run mode prohibits permanent relationship or progression writes. `EntityManager` stages script entities with `shouldRecordPersistence = false` and guards its own encounter and clean-pass history writes. `Cat.triggerSpare` also checks that flag, but `Fox.performUniqueAction` and `Wolf.performUniqueAction` each called `PersistentMemoryManager.recordSpare` unconditionally when the player's mercy threshold triggered their spare branch. A non-persistent scripted clean pass with sufficient mercy hearts therefore altered the next normal run's persistent memory despite the manager-level guards.
+
+Fox and Wolf now condition their direct spare-history writes on `shouldRecordPersistence`, following Cat's already-authored boundary. In-run spare counts, bonuses, animations, dialogue and unique outcomes remain intact in both modes. The Robolectric regression traverses `EntityFactory -> EntityManager.checkCollisions -> performUniqueAction` for both species, asserting zero permanent encounter/pass/spare history in non-persistent mode and one recorded outcome for an ordinary persistent pass.
+
+Read-only prior relationship state remains intentionally available to authored deterministic scenes; no debug-generated state is promoted. Exact-head host/emulator validation and full future-device acceptance remain separate.
