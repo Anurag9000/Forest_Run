@@ -5,6 +5,7 @@ import json
 import struct
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 from verify_raw_screenshot_set import (
@@ -49,12 +50,29 @@ class RawScreenshotSetVerifierTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
+    @staticmethod
+    def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
+        checksum = zlib.crc32(chunk_type)
+        checksum = zlib.crc32(data, checksum) & 0xFFFFFFFF
+        return (
+            struct.pack(">I", len(data))
+            + chunk_type
+            + data
+            + struct.pack(">I", checksum)
+        )
+
     def create_png(self, name: str, marker: bytes) -> str:
+        width, height = 1920, 1080
+        color = hashlib.sha256(marker).digest()[:3]
+        raw = (b"\x00" + color * width) * height
         content = (
             b"\x89PNG\r\n\x1a\n"
-            + b"\x00\x00\x00\rIHDR"
-            + struct.pack(">II", 1920, 1080)
-            + marker
+            + self._png_chunk(
+                b"IHDR",
+                struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0),
+            )
+            + self._png_chunk(b"IDAT", zlib.compress(raw, level=1))
+            + self._png_chunk(b"IEND", b"")
         )
         (self.raw_dir / name).write_bytes(content)
         return hashlib.sha256(content).hexdigest()
@@ -222,6 +240,43 @@ class RawScreenshotSetVerifierTest(unittest.TestCase):
             with self.subTest(error=error):
                 session.write_text(poisoned, encoding="utf-8")
                 with self.assertRaisesRegex(RawScreenshotSetError, error):
+                    verify_raw_screenshot_set(
+                        self.raw_dir, self.manifest_path, self.candidate_sha
+                    )
+
+    def test_matching_sidecar_hash_does_not_validate_fake_png_header(self) -> None:
+        self.create_valid_set()
+        screenshot = self.raw_dir / "01-opening.png"
+        fake_png = (
+            b"\x89PNG\r\n\x1a\n"
+            + b"\x00\x00\x00\rIHDR"
+            + struct.pack(">II", 1920, 1080)
+            + b"fake image data"
+        )
+        screenshot.write_bytes(fake_png)
+        sidecar = screenshot.with_suffix(".capture.json")
+        evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+        evidence["imageSha256"] = hashlib.sha256(fake_png).hexdigest()
+        sidecar.write_text(json.dumps(evidence), encoding="utf-8")
+        with self.assertRaisesRegex(RawScreenshotSetError, "Invalid raw screenshot"):
+            verify_raw_screenshot_set(
+                self.raw_dir, self.manifest_path, self.candidate_sha
+            )
+
+    def test_raw_png_crc_truncation_and_trailing_bytes_are_rejected(self) -> None:
+        self.create_valid_set()
+        screenshot = self.raw_dir / "01-opening.png"
+        original = screenshot.read_bytes()
+        corrupted_crc = bytearray(original)
+        corrupted_crc[corrupted_crc.index(b"IDAT") + 5] ^= 0x01
+        for poisoned, reason in (
+            (bytes(corrupted_crc), "CRC mismatch"),
+            (original[:-12], "missing required PNG chunks|truncated PNG"),
+            (original + b"unexpected", "trailing bytes"),
+        ):
+            with self.subTest(reason=reason):
+                screenshot.write_bytes(poisoned)
+                with self.assertRaisesRegex(RawScreenshotSetError, reason):
                     verify_raw_screenshot_set(
                         self.raw_dir, self.manifest_path, self.candidate_sha
                     )

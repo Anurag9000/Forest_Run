@@ -3,9 +3,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import hashlib
 import re
-import struct
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +17,7 @@ from screenshot_capture_evidence import (
     load_capture_evidence,
     require_same_capture_identity,
 )
-from verify_curated_screenshot_set import _load_manifest
+from verify_curated_screenshot_set import CuratedScreenshotError, _inspect_png, _load_manifest
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SCREENSHOT_ROOT = ROOT / "release/google-play/screenshots"
@@ -79,24 +77,6 @@ def _parse_utc(value: str, path: Path, field: str) -> dt.datetime:
     return parsed
 
 
-def _inspect_png(path: Path) -> tuple[int, int, str]:
-    try:
-        content = path.read_bytes()
-    except FileNotFoundError as error:
-        _fail(f"Missing raw screenshot: {path}")
-    except OSError as error:
-        _fail(f"Could not read raw screenshot {path}: {error}")
-    if len(content) < 24 or content[:8] != b"\x89PNG\r\n\x1a\n":
-        _fail(f"Raw screenshot is not a PNG: {path}")
-    width, height = struct.unpack(">II", content[16:24])
-    if width <= height or width < 800 or height < 480:
-        _fail(
-            f"Raw screenshot has invalid landscape dimensions: "
-            f"{path} is {width}x{height}"
-        )
-    return width, height, hashlib.sha256(content).hexdigest()
-
-
 def verify_raw_screenshot_set(
     raw_dir: Path,
     manifest_path: Path,
@@ -136,7 +116,10 @@ def verify_raw_screenshot_set(
     capture_times: list[dt.datetime] = []
     for item in items:
         png_path = raw_dir / item["raw_file"]
-        width, height, image_sha256 = _inspect_png(png_path)
+        try:
+            width, height, image_sha256 = _inspect_png(png_path)
+        except CuratedScreenshotError as error:
+            _fail(f"Invalid raw screenshot: {error}")
         sidecar = png_path.with_suffix(".capture.json")
         try:
             evidence = load_capture_evidence(
