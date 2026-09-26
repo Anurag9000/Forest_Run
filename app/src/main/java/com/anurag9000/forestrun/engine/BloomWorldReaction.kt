@@ -1,6 +1,25 @@
 package com.anurag9000.forestrun.engine
 
 import com.anurag9000.forestrun.entities.EntityType
+import java.util.IdentityHashMap
+
+/**
+ * One reaction per actual live entity during a Bloom activation.
+ *
+ * Hash codes (including System.identityHashCode) are not unique object IDs.
+ * IdentityHashMap uses reference equality even if two entities share a hash
+ * or override equals(), and retains identities until the Bloom boundary clears.
+ */
+internal class BloomReactionIdentityLedger<T : Any> {
+    private val reacted = IdentityHashMap<T, Boolean>()
+
+    fun contains(entity: T): Boolean = reacted.containsKey(entity)
+
+    /** True only on this exact object's first reaction in the active Bloom. */
+    fun mark(entity: T): Boolean = reacted.put(entity, true) == null
+
+    fun clear() = reacted.clear()
+}
 
 enum class BloomReactionFamily {
     FLORA,

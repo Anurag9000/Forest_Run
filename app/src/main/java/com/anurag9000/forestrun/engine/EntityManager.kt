@@ -52,7 +52,7 @@ class EntityManager internal constructor(
     private var distanceSinceRandomSpawnPx = 0f
     private var bloomReactionCooldown = 0f
     private var bloomWasActive = false
-    private val bloomReactedEntities: MutableSet<Int> = mutableSetOf()
+    private val bloomReactedEntities = BloomReactionIdentityLedger<Entity>()
 
     private val spawnX get() = screenWidth + 120f
 
@@ -359,16 +359,15 @@ class EntityManager internal constructor(
             ) {
                 val type = entityTypeOf(entity)
                 if (type != null) {
-                    val reactionKey = System.identityHashCode(entity)
                     if (BloomWorldReaction.shouldReact(
                             playerCenterX = playerCenterX,
                             playerCenterY = playerCenterY,
                             entityCenterX = bounds.centerX(),
                             entityCenterY = bounds.centerY(),
-                            alreadyReacted = reactionKey in bloomReactedEntities
+                            alreadyReacted = bloomReactedEntities.contains(entity)
                         )
                     ) {
-                        bloomReactedEntities.add(reactionKey)
+                        bloomReactedEntities.mark(entity)
                         emitBloomProximityReaction(type, bounds)
                         if (bloomReactionCooldown <= 0f) {
                             val cue = BloomWorldReaction.cueFor(type)
