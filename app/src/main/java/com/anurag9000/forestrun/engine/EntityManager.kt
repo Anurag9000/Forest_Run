@@ -146,9 +146,10 @@ class EntityManager internal constructor(
     }
 
     /**
-     * Resolve collision outcomes before any pass reward. HIT outranks STUMBLE,
-     * which outranks MERCY. If no collision wins, entities behind the player's
-     * real hitbox resolve as clean passes or Bloom conversions.
+     * A padded MERCY_MISS is provisional while the entity is still in front
+     * of the player. HIT outranks STUMBLE on this and every later frame; only
+     * when the encounter is wholly behind can provisional mercy resolve.
+     * Entity collision probes remain pure.
      */
     fun checkCollisions(player: Player, gameState: GameStateManager): CollisionFrame? {
         if (!gameState.isBloomActive) {
@@ -161,6 +162,13 @@ class EntityManager internal constructor(
                 val entity = activeEntities[collisionIndex]
                 if (entity.isActive && entity.encounterOutcome == EncounterOutcome.PENDING) {
                     val result = entity.onCollision(player, gameState)
+                    if (result == CollisionResult.MERCY_MISS) {
+                        // A close approach is not yet proof that the player
+                        // avoided this entity for its entire dangerous span.
+                        entity.observedMercyContact = true
+                        collisionIndex++
+                        continue
+                    }
                     val priority = collisionPriority(result)
                     if (priority > selectedPriority) {
                         selectedEntity = entity
@@ -177,20 +185,17 @@ class EntityManager internal constructor(
                 selectedEntity.encounterOutcome = when (selectedResult) {
                     CollisionResult.HIT -> EncounterOutcome.HIT
                     CollisionResult.STUMBLE -> EncounterOutcome.STUMBLE
-                    CollisionResult.MERCY_MISS -> EncounterOutcome.MERCY
-                    CollisionResult.NONE -> EncounterOutcome.PENDING
+                    CollisionResult.MERCY_MISS, CollisionResult.NONE ->
+                        error("Only direct HIT/STUMBLE may resolve before passage")
                 }
+                selectedEntity.observedMercyContact = false
                 selectedEntity.hasBeenPassed = true
                 recordResolvedEncounter(selectedEntity)
-                if (selectedResult == CollisionResult.MERCY_MISS) {
-                    gameState.addMercyHeart()
-                }
                 return CollisionFrame(selectedResult, selectedEntity)
             }
         }
 
-        resolvePassedEntities(player, gameState)
-        return null
+        return resolvePassedEntities(player, gameState)
     }
 
     private fun collisionPriority(result: CollisionResult): Int = when (result) {
@@ -200,7 +205,14 @@ class EntityManager internal constructor(
         CollisionResult.NONE -> 0
     }
 
-    private fun resolvePassedEntities(player: Player, gameState: GameStateManager) {
+    private fun resolvePassedEntities(
+        player: Player,
+        gameState: GameStateManager
+    ): CollisionFrame? {
+        // Multiple encounters can cross the player's plane in one frame.
+        // Each receives one correct reward; the existing single-frame UI
+        // contract presents the first completed mercy response.
+        var firstMercy: CollisionFrame? = null
         var entityIndex = 0
         while (entityIndex < activeEntities.size) {
             val entity = activeEntities[entityIndex]
@@ -214,12 +226,22 @@ class EntityManager internal constructor(
                 entity.hasBeenPassed = true
                 if (gameState.isBloomActive) {
                     resolveBloomConversion(entity, bounds, gameState)
+                } else if (entity.observedMercyContact) {
+                    entity.observedMercyContact = false
+                    entity.onOutcomeSelected(CollisionResult.MERCY_MISS, player, gameState)
+                    entity.encounterOutcome = EncounterOutcome.MERCY
+                    recordResolvedEncounter(entity)
+                    gameState.addMercyHeart()
+                    if (firstMercy == null) {
+                        firstMercy = CollisionFrame(CollisionResult.MERCY_MISS, entity)
+                    }
                 } else {
                     resolveCleanPass(entity, bounds, player, gameState)
                 }
             }
             entityIndex++
         }
+        return firstMercy
     }
 
     private fun resolveBloomConversion(
@@ -227,6 +249,7 @@ class EntityManager internal constructor(
         bounds: RectF,
         gameState: GameStateManager
     ) {
+        entity.observedMercyContact = false
         entity.encounterOutcome = EncounterOutcome.BLOOM_CONVERTED
         recordResolvedEncounter(entity)
         gameState.recordBloomConversion()
@@ -245,6 +268,7 @@ class EntityManager internal constructor(
         player: Player,
         gameState: GameStateManager
     ) {
+        entity.observedMercyContact = false
         entity.encounterOutcome = EncounterOutcome.CLEAN_PASS
         recordResolvedEncounter(entity)
         entity.performUniqueAction(player, gameState)

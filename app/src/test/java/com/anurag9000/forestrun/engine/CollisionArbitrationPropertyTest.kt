@@ -97,6 +97,105 @@ class CollisionArbitrationPropertyTest {
         }
     }
 
+
+    @Test
+    fun `early padded contact cannot immunize a later direct hit`() {
+        val manager = manager()
+        val state = GameStateManager(context)
+        val probe = ProbeEntity(context, CollisionResult.MERCY_MISS)
+        manager.activeEntities += probe
+
+        assertEquals(null, manager.checkCollisions(player, state))
+        assertEquals(EncounterOutcome.PENDING, probe.encounterOutcome)
+        assertTrue(probe.observedMercyContact)
+        assertEquals(0, state.mercyHearts)
+        assertEquals(0, probe.selectedCount)
+
+        probe.collisionResult = CollisionResult.HIT
+        val resolved = requireNotNull(manager.checkCollisions(player, state))
+        assertEquals(CollisionResult.HIT, resolved.result)
+        assertEquals(EncounterOutcome.HIT, probe.encounterOutcome)
+        assertEquals(1, probe.selectedCount)
+        assertEquals(0, state.mercyHearts)
+        probe.hitbox.set(0f, 600f, 20f, 700f)
+        assertEquals(null, manager.checkCollisions(player, state))
+        assertEquals(EncounterOutcome.HIT, probe.encounterOutcome)
+    }
+
+    @Test
+    fun `early padded contact cannot immunize a later stumble`() {
+        val manager = manager()
+        val state = GameStateManager(context)
+        val probe = ProbeEntity(context, CollisionResult.MERCY_MISS)
+        manager.activeEntities += probe
+        assertEquals(null, manager.checkCollisions(player, state))
+        probe.collisionResult = CollisionResult.STUMBLE
+        assertEquals(CollisionResult.STUMBLE, manager.checkCollisions(player, state)?.result)
+        assertEquals(EncounterOutcome.STUMBLE, probe.encounterOutcome)
+        assertEquals(0, state.mercyHearts)
+    }
+
+    @Test
+    fun `safe passage commits exactly one mercy without a subsequent clean pass`() {
+        val manager = manager()
+        val state = GameStateManager(context)
+        val probe = ProbeEntity(context, CollisionResult.MERCY_MISS)
+        manager.activeEntities += probe
+        repeat(3) {
+            assertEquals(null, manager.checkCollisions(player, state))
+        }
+        assertEquals(EncounterOutcome.PENDING, probe.encounterOutcome)
+        assertEquals(0, state.mercyHearts)
+
+        probe.collisionResult = CollisionResult.NONE
+        probe.hitbox.set(0f, 600f, 20f, 700f)
+        val frame = requireNotNull(manager.checkCollisions(player, state))
+        assertEquals(CollisionResult.MERCY_MISS, frame.result)
+        assertEquals(EncounterOutcome.MERCY, probe.encounterOutcome)
+        assertEquals(1, state.mercyHearts)
+        assertEquals(1, probe.selectedCount)
+        repeat(3) {
+            assertEquals(null, manager.checkCollisions(player, state))
+        }
+        assertEquals(1, state.mercyHearts)
+        assertEquals(1, probe.selectedCount)
+    }
+
+    @Test
+    fun `Bloom conversion excludes provisional ordinary mercy reward`() {
+        val manager = manager()
+        val state = GameStateManager(context)
+        val probe = ProbeEntity(context, CollisionResult.MERCY_MISS)
+        manager.activeEntities += probe
+        assertEquals(null, manager.checkCollisions(player, state))
+        state.debugActivateBloom()
+        probe.collisionResult = CollisionResult.NONE
+        probe.hitbox.set(0f, 600f, 20f, 700f)
+        assertEquals(null, manager.checkCollisions(player, state))
+        assertEquals(EncounterOutcome.BLOOM_CONVERTED, probe.encounterOutcome)
+        assertEquals(0, state.mercyHearts)
+        assertEquals(0, probe.selectedCount)
+    }
+
+    @Test
+    fun `simultaneous safe passages resolve each encounter exactly once`() {
+        val manager = manager()
+        val state = GameStateManager(context)
+        val probes = List(3) { ProbeEntity(context, CollisionResult.MERCY_MISS) }
+        manager.activeEntities += probes
+        assertEquals(null, manager.checkCollisions(player, state))
+        probes.forEach {
+            it.collisionResult = CollisionResult.NONE
+            it.hitbox.set(0f, 600f, 20f, 700f)
+        }
+        assertEquals(CollisionResult.MERCY_MISS, manager.checkCollisions(player, state)?.result)
+        assertEquals(3, state.mercyHearts)
+        assertTrue(probes.all { it.encounterOutcome == EncounterOutcome.MERCY })
+        assertTrue(probes.all { it.selectedCount == 1 })
+        assertEquals(null, manager.checkCollisions(player, state))
+        assertEquals(3, state.mercyHearts)
+    }
+
     @Test
     fun `none-only permutations never manufacture an encounter outcome`() {
         repeat(64) { caseIndex ->
@@ -122,6 +221,13 @@ class CollisionArbitrationPropertyTest {
             val probes = permutation.map { ProbeEntity(context, it) }
             manager.activeEntities += probes
 
+            if (expected == CollisionResult.MERCY_MISS) {
+                assertEquals("case=$caseIndex provisional contact", null, manager.checkCollisions(player, gameState))
+                assertTrue(probes.all { it.encounterOutcome == EncounterOutcome.PENDING })
+                assertEquals(0, gameState.mercyHearts)
+                // Complete a genuine safe passage, not an early padded overlap.
+                probes.forEach { it.hitbox.set(0f, 600f, 20f, 700f) }
+            }
             val frame = requireNotNull(manager.checkCollisions(player, gameState)) {
                 "case=$caseIndex permutation=$permutation should resolve a collision"
             }
@@ -153,7 +259,7 @@ class CollisionArbitrationPropertyTest {
 
     private class ProbeEntity(
         context: Context,
-        val collisionResult: CollisionResult
+        var collisionResult: CollisionResult
     ) : Entity(context) {
         var selectedCount = 0
 

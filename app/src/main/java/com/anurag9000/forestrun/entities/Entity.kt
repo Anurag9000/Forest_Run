@@ -41,6 +41,13 @@ abstract class Entity(val context: Context) {
     var hasBeenPassed: Boolean = false
     var encounterOutcome: EncounterOutcome = EncounterOutcome.PENDING
 
+    /**
+     * A pending mercy-band contact is not a completed MERCY outcome. A later
+     * real hit can still win until the entire encounter passes the player.
+     * Only EntityManager's arbitration/pass owner mutates this marker.
+     */
+    internal var observedMercyContact: Boolean = false
+
     /** Debug/showcase entities must never mutate real relationship history. */
     var shouldRecordPersistence: Boolean = true
 

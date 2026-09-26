@@ -10,7 +10,7 @@ enum class CollisionResult {
     /** Player made physical contact with a hazard hitbox. Results in REST/Game Over. */
     HIT,
 
-    /** Player passed extremely close (within 12px) of a hazard but did not hit it. */
+    /** Player currently occupies the padded mercy band; safe passage must still be proven. */
     MERCY_MISS,
 
     /** Player hit a non-lethal hazard (e.g., Fox/Wolf) and stumbles instead of dying. */
