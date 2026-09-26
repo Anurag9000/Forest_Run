@@ -45,7 +45,8 @@ class Dog(
     private val groundY: Float,
     private val screenWidth: Float,
     private val sprite: SpriteSheet,
-    isBuddy: Boolean = Random.nextFloat() < 0.20f  // 20% chance at spawn
+    private val random: Random = Random.Default,
+    isBuddy: Boolean = random.nextFloat() < 0.20f  // 20% chance at spawn
 ) : Entity(context) {
 
     private val readability = ReadabilityProfile.entityForGround(EntityType.DOG, groundY)
@@ -114,7 +115,7 @@ class Dog(
     private val projectiles  = mutableListOf<BarkProjectile>()
 
     // Buddy
-    private var buddyTimer   = 3f + Random.nextFloat() * 2f + buddyDurationBonusSec
+    private var buddyTimer   = 3f + random.nextFloat() * 2f + buddyDurationBonusSec
     private var buddyDialogueStep = 0
     private var buddyDialogueTimer = 0f
     private var buddyRewarded = false

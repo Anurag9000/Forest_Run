@@ -29,7 +29,8 @@ class Bamboo(
     startX: Float,
     private val screenHeight: Float,
     private val groundY: Float,
-    private val sprite: SpriteSheet
+    private val sprite: SpriteSheet,
+    private val random: Random = Random.Default
 ) : Entity(context) {
 
     private val readability = ReadabilityProfile.entity(EntityType.BAMBOO, screenHeight)
@@ -79,7 +80,7 @@ class Bamboo(
         }
         totalWidth = stalkCount * stalkWidth + gapSizes.sum()
         val gapHeight  = Player.BASE_HEIGHT * 1.5f
-        val gapYCenter = Random.nextFloat() * (groundY - gapHeight * 2f) + gapHeight
+        val gapYCenter = random.nextFloat() * (groundY - gapHeight * 2f) + gapHeight
 
         updateGeometry(x, gapYCenter, gapHeight)
         updateAggregateHitbox(x)

@@ -26,7 +26,8 @@ class ChickadeeGroup(
     startX: Float,
     private val groundY: Float,
     private val sprite: SpriteSheet,
-    count: Int = 3
+    count: Int = 3,
+    private val random: Random = Random.Default
 ) : Entity(context) {
 
     private val readability = ReadabilityProfile.entityForGround(EntityType.CHICKADEE, groundY)
@@ -59,10 +60,10 @@ class ChickadeeGroup(
     }
 
     // Each bird's individual altitude and timer
-    private val altitudes = FloatArray(birdCount) { groundY * (0.3f + Random.nextFloat() * 0.4f) }
-    private val targetAltitudes = FloatArray(birdCount) { groundY * (0.3f + Random.nextFloat() * 0.4f) }
-    private val altitudeTimers = FloatArray(birdCount) { Random.nextFloat() * 1.3f }
-    private val altitudeIntervals = FloatArray(birdCount) { 0.7f + Random.nextFloat() * 0.6f }
+    private val altitudes = FloatArray(birdCount) { groundY * (0.3f + random.nextFloat() * 0.4f) }
+    private val targetAltitudes = FloatArray(birdCount) { groundY * (0.3f + random.nextFloat() * 0.4f) }
+    private val altitudeTimers = FloatArray(birdCount) { random.nextFloat() * 1.3f }
+    private val altitudeIntervals = FloatArray(birdCount) { 0.7f + random.nextFloat() * 0.6f }
     private var warned = false
     private var pocketPrompted = false
     private var readPocket = false
@@ -88,7 +89,7 @@ class ChickadeeGroup(
         for (i in 0 until birdCount) {
             altitudeTimers[i] -= deltaTime
             if (altitudeTimers[i] <= 0f) {
-                targetAltitudes[i] = groundY * (0.2f + Random.nextFloat() * 0.5f)
+                targetAltitudes[i] = groundY * (0.2f + random.nextFloat() * 0.5f)
                 altitudeTimers[i] = altitudeIntervals[i]
             }
             // Smoothly lerp to target altitude

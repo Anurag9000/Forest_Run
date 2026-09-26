@@ -28,6 +28,37 @@ class EncounterDirectorTest {
         assertEquals(EntityType.CAT, thirdWave.first().type)
     }
 
+
+    @Test
+    fun `authored step seeds survive replay and frame partition changes`() {
+        val director = EncounterDirector()
+        director.selectScenario(EncounterScenario.BIRD_SHOWCASE)
+        director.startSelectedScenario()
+        val oneFrame = director.advance(10f)
+        assertEquals(EncounterScenario.BIRD_SHOWCASE.steps.indices.toList(), oneFrame.map { it.stepIndex })
+        assertEquals(oneFrame.size, oneFrame.map { it.deterministicSeed }.toSet().size)
+
+        director.startSelectedScenario()
+        val partitioned = director.advance(2f) + director.advance(2f) + director.advance(6f)
+        assertEquals(oneFrame, partitioned)
+        assertEquals(
+            EncounterStepRandomSeed.forStep(EncounterScenario.BIRD_SHOWCASE, 0),
+            oneFrame.first().deterministicSeed
+        )
+
+        director.selectScenario(EncounterScenario.BAMBOO_GAP)
+        director.startSelectedScenario()
+        val bamboo = director.advance(10f)
+        assertEquals(2, bamboo.size)
+        assertTrue(bamboo[0].deterministicSeed != bamboo[1].deterministicSeed)
+        assertTrue(bamboo[0].deterministicSeed != oneFrame.first().deterministicSeed)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `invalid authored step index cannot seed a fake encounter`() {
+        EncounterStepRandomSeed.forStep(EncounterScenario.BAMBOO_GAP, -1)
+    }
+
     @Test
     fun `invalid deltas cannot rewind or poison active scenario`() {
         val director = EncounterDirector()

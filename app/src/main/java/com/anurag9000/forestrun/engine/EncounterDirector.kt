@@ -307,8 +307,23 @@ enum class EncounterScenario(
 data class EncounterSpawnDirective(
     val type: EntityType,
     val xOffset: Float,
-    val variant: EncounterVariant
+    val variant: EncounterVariant,
+    val stepIndex: Int,
+    val deterministicSeed: Int
 )
+
+/**
+ * Versioned per-authored-step randomness. Independent of update partitioning,
+ * previous ordinary random draws and the scenario's position in the enum.
+ */
+internal object EncounterStepRandomSeed {
+    private const val VERSION_SALT = 0x46525331
+
+    fun forStep(scenario: EncounterScenario, stepIndex: Int): Int {
+        require(stepIndex in scenario.steps.indices) { "Invalid authored encounter step index" }
+        return VERSION_SALT xor (scenario.name.hashCode() * 31 + stepIndex)
+    }
+}
 
 class EncounterDirector {
 
@@ -372,8 +387,17 @@ class EncounterDirector {
         while (nextStepIndex < scenario.steps.size &&
             scenario.steps[nextStepIndex].atSeconds <= elapsedSeconds
         ) {
-            val step = scenario.steps[nextStepIndex++]
-            due.add(EncounterSpawnDirective(step.type, step.xOffset, step.variant))
+            val stepIndex = nextStepIndex++
+            val step = scenario.steps[stepIndex]
+            due.add(
+                EncounterSpawnDirective(
+                    type = step.type,
+                    xOffset = step.xOffset,
+                    variant = step.variant,
+                    stepIndex = stepIndex,
+                    deterministicSeed = EncounterStepRandomSeed.forStep(scenario, stepIndex)
+                )
+            )
         }
         return due
     }

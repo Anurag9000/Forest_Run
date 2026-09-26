@@ -38,7 +38,8 @@ object EntityFactory {
         screenWidth: Float,
         screenHeight: Float,
         spriteManager: SpriteManager,
-        variant: EncounterVariant = EncounterVariant.DEFAULT
+        variant: EncounterVariant = EncounterVariant.DEFAULT,
+        random: Random = Random.Default
     ): Entity {
         val safeScreenWidth = screenWidth.takeIf { it.isFinite() && it > 0f }
             ?: DEFAULT_SCREEN_WIDTH
@@ -74,7 +75,8 @@ object EntityFactory {
                 safeStartX,
                 safeScreenHeight,
                 groundY,
-                spriteManager.bambooSprite.copy()
+                spriteManager.bambooSprite.copy(),
+                random = random
             )
             EntityType.CHERRY_BLOSSOM -> CherryBlossom(
                 context,
@@ -86,7 +88,7 @@ object EntityFactory {
 
             EntityType.DUCK -> Duck(context, safeStartX, groundY, spriteManager.duckFlying.copy())
             EntityType.TIT -> TitGroup(context, safeStartX, groundY, spriteManager.titFlying.copy())
-            EntityType.CHICKADEE -> ChickadeeGroup(context, safeStartX, groundY, spriteManager.chickadeeFlying.copy())
+            EntityType.CHICKADEE -> ChickadeeGroup(context, safeStartX, groundY, spriteManager.chickadeeFlying.copy(), random = random)
             EntityType.OWL -> Owl(
                 context,
                 safeStartX,
@@ -119,10 +121,11 @@ object EntityFactory {
                 groundY = groundY,
                 screenWidth = safeScreenWidth,
                 sprite = spriteManager.dogSprite.copy(),
+                random = random,
                 isBuddy = when (variant) {
                     EncounterVariant.DOG_BUDDY -> true
                     EncounterVariant.DOG_HAZARD -> false
-                    else -> Random.nextFloat() < RelationshipArcSystem.dogBuddyChance(context)
+                    else -> random.nextFloat() < RelationshipArcSystem.dogBuddyChance(context)
                 }
             )
         }

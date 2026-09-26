@@ -94,7 +94,8 @@ class EntityManager internal constructor(
                     type = directive.type,
                     variant = directive.variant,
                     startX = screenWidth + directive.xOffset,
-                    recordPersistence = false
+                    recordPersistence = false,
+                    random = Random(directive.deterministicSeed)
                 )
                 directiveIndex++
             }
@@ -436,7 +437,8 @@ class EntityManager internal constructor(
         type: EntityType,
         variant: EncounterVariant = EncounterVariant.DEFAULT,
         startX: Float = spawnX,
-        recordPersistence: Boolean = true
+        recordPersistence: Boolean = true,
+        random: Random = Random.Default
     ) {
         val safeStartX = startX.takeIf { it.isFinite() } ?: spawnX
         val entity = EntityFactory.create(
@@ -446,7 +448,8 @@ class EntityManager internal constructor(
             screenWidth,
             screenHeight,
             spriteManager,
-            variant
+            variant,
+            random
         )
         entity.shouldRecordPersistence = recordPersistence
         activeEntities.add(entity)
