@@ -377,11 +377,9 @@ class GameStateManager(
             // Reload once before the atomic-sized award: Garden may have spent
             // seeds while this long-lived manager was inactive. Persisting once
             // avoids O(n) disk writes for large bonuses.
-            lifetimeSeeds = saturatingAdd(
-                SaveManager.loadLifetimeSeeds(appContext),
-                safeSeedCount
+            lifetimeSeeds = SaveManager.awardLifetimeSeeds(
+                appContext, safeSeedCount
             )
-            SaveManager.saveLifetimeSeeds(appContext, lifetimeSeeds)
         }
 
         if (isBloomActive) return

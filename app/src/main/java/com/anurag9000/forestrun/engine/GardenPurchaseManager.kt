@@ -30,8 +30,15 @@ object GardenPurchaseManager {
     private const val KEY_GARDEN_UNLOCKED = "garden_unlocked"
     private const val KEY_LIFETIME_SEEDS = "lifetime_seeds"
 
-    @Synchronized
     fun purchaseNext(
+        context: Context,
+        requestedIndex: Int
+    ): GardenPurchaseResult =
+        SaveManager.withGardenCurrencyLock {
+            purchaseNextLocked(context, requestedIndex)
+        }
+
+    private fun purchaseNextLocked(
         context: Context,
         requestedIndex: Int
     ): GardenPurchaseResult {
@@ -89,21 +96,22 @@ object GardenPurchaseManager {
      * Compatibility entrypoint for older call sites. Noncanonical values are
      * rejected rather than trusted, so this overload cannot undercharge.
      */
-    @Synchronized
     fun purchaseNext(
         context: Context,
         requestedIndex: Int,
         seedCost: Int,
         catalogueSize: Int
-    ): GardenPurchaseResult {
+    ): GardenPurchaseResult = SaveManager.withGardenCurrencyLock {
         val canonicalCost = GardenEconomy.seedCostForIndex(requestedIndex)
         if (canonicalCost == null ||
             seedCost != canonicalCost ||
             catalogueSize != GardenEconomy.catalogueSize
         ) {
-            return currentResult(context, GardenPurchaseStatus.INVALID_REQUEST)
+            return@withGardenCurrencyLock currentResult(
+                context, GardenPurchaseStatus.INVALID_REQUEST
+            )
         }
-        return purchaseNext(context, requestedIndex)
+        purchaseNextLocked(context, requestedIndex)
     }
 
     private fun currentResult(

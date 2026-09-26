@@ -38,6 +38,14 @@ object SaveManager {
 
     private val gardenWriteLock = Any()
 
+    /**
+     * The single currency/progression mutation lock. A run Seed award and
+     * Garden purchase must never read, compute and commit from stale balances.
+     * The legacy Garden progress writer already holds this reentrant monitor.
+     */
+    internal fun <T> withGardenCurrencyLock(operation: () -> T): T =
+        synchronized(gardenWriteLock) { operation() }
+
     private data class PendingGardenSeedFollowUp(
         val prefsName: String,
         val threadId: Long,
@@ -166,6 +174,29 @@ object SaveManager {
 
     fun loadLifetimeSeeds(context: Context): Int =
         prefs(context).getInt(KEY_LIFETIME_SEEDS, 0)
+
+    /**
+     * Adds a run-earned amount to the canonical persisted balance under the
+     * same lock used by Garden purchases. Never expose a read-then-write pair
+     * to callers: a concurrent purchase can otherwise be undone by a stale
+     * absolute Seed write.
+     */
+    fun awardLifetimeSeeds(context: Context, seedCount: Int): Int =
+        withGardenCurrencyLock {
+            val canonical = prefs(context)
+            val current = canonical.getInt(KEY_LIFETIME_SEEDS, 0).coerceAtLeast(0)
+            val increment = seedCount.coerceAtLeast(0)
+            if (increment == 0) return@withGardenCurrencyLock current
+            val next = (current.toLong() + increment.toLong())
+                .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            canonical.edit().putInt(KEY_LIFETIME_SEEDS, next).apply()
+            pendingGardenSeedFollowUp?.let { pending ->
+                if (pending.prefsName == activePrefsName) {
+                    pendingGardenSeedFollowUp = pending.copy(canonicalSeeds = next)
+                }
+            }
+            next
+        }
 
     // ── Ghost run ─────────────────────────────────────────────────────────
 
