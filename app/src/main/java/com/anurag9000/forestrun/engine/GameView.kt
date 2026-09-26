@@ -1239,6 +1239,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             player.setBloomPowerPresentation(scaleBoost = 0f, auraAlpha = 0)
         }
 
+        // Deterministic inputs must enter before this tick's physics and
+        // collision queries, just as ordinary InputHandler callbacks do.
+        // runTimeSeconds has already advanced for authored schedule admission.
+        runDebugScenarioScript()
         player.update(deltaTime, gameState.scrollSpeed)
 
         // Phase 12: EntityManager update (spawn, scroll, pass-detection)
@@ -1324,8 +1328,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (shouldDrawGhostPlayback()) {
             ghostPlayer.update(deltaTime, ghostVisibilityContext())
         }
-        runDebugScenarioScript()
-
         // Phase 20: Music layer transition + tempo scaling
         if (::gameState.isInitialized) {
             LeitmotifManager.updateDistance(gameState.distanceMetres)

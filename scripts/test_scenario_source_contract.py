@@ -167,6 +167,26 @@ class ScenarioSourceContractTest(unittest.TestCase):
                 self.assertEqual(2, len(definition.steps))
                 self.assertEqual([entity, entity], [step.entity_type for step in definition.steps])
 
+
+    def test_scripted_inputs_are_admitted_before_physics_and_collision(self) -> None:
+        source = (
+            ROOT / "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(1, source.count("        runDebugScenarioScript()"))
+        frame_start = source.index("private fun updateBounded(deltaTime: Float) {")
+        state_update = source.index("        gameState.update(deltaTime)", frame_start)
+        scripted_input = source.index("        runDebugScenarioScript()", frame_start)
+        player_update = source.index(
+            "        player.update(deltaTime, gameState.scrollSpeed)", frame_start
+        )
+        collision = source.index(
+            "        val collision = entityManager.checkCollisions(player, gameState)",
+            frame_start,
+        )
+        self.assertLess(state_update, scripted_input)
+        self.assertLess(scripted_input, player_update)
+        self.assertLess(player_update, collision)
+
     @staticmethod
     def replace_cactus_step(source: str, replacement: str) -> str:
         block = contract._extract_scenario_block(source, "CACTUS_READ")
