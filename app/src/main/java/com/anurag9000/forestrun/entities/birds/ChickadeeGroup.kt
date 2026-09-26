@@ -165,12 +165,13 @@ class ChickadeeGroup(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+        var nearMiss = false
+        val mercyPad = readability.mercyPaddingPx
         for (rect in birdRects) {
             if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT
-            val mercyPad = readability.mercyPaddingPx
-            if (intersectsExpanded(player.hitbox, rect, mercyPad)) return CollisionResult.MERCY_MISS
+            if (intersectsExpanded(player.hitbox, rect, mercyPad)) nearMiss = true
         }
-        return CollisionResult.NONE
+        return if (nearMiss) CollisionResult.MERCY_MISS else CollisionResult.NONE
     }
 
     private fun flutterSpread(): Float = altitudes.max() - altitudes.min()

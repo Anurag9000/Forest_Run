@@ -1,10 +1,12 @@
 package com.anurag9000.forestrun.entities.animals
 
 import android.content.Context
+import android.graphics.RectF
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.PersistentMemoryManager
 import com.anurag9000.forestrun.engine.SpriteManager
+import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
 import org.junit.Assert.assertEquals
@@ -63,6 +65,41 @@ class DogTest {
         assertEquals(4, listFieldSize(bondedDog, "buddyDialogue"))
         assertTrue(bondedState.seedsThisRun > baselineState.seedsThisRun)
         assertTrue(bondedState.score > baselineState.score)
+    }
+
+    @Test
+    fun `projectile mercy ring cannot hide direct dog body hit`() {
+        val dog = Dog(
+            context = context,
+            startX = 520f,
+            groundY = 885.6f,
+            screenWidth = 1920f,
+            sprite = spriteManager.dogSprite.copy(),
+            isBuddy = false
+        )
+        val player = Player(1920, 1080, spriteManager)
+        val gameState = GameStateManager(context)
+
+        // Trigger the first bark and move its projectile just beyond the
+        // player's right edge: inside mercy padding, outside direct overlap.
+        dog.update(deltaTime = 1f, scrollSpeed = 0f)
+        val field = Dog::class.java.getDeclaredField("projectiles")
+        field.isAccessible = true
+        val projectiles = field.get(dog) as List<*>
+        assertTrue(projectiles.isNotEmpty())
+        val projectile = projectiles.first()!!
+        val rectangleField = projectile.javaClass.getDeclaredField("rect")
+        rectangleField.isAccessible = true
+        val projectileRect = rectangleField.get(projectile) as RectF
+
+        player.hitbox.set(dog.hitbox)
+        projectileRect.set(
+            player.hitbox.right + 2f,
+            player.hitbox.top,
+            player.hitbox.right + 24f,
+            player.hitbox.bottom
+        )
+        assertEquals(CollisionResult.HIT, dog.onCollision(player, gameState))
     }
 
     private fun booleanField(dog: Dog, name: String): Boolean {

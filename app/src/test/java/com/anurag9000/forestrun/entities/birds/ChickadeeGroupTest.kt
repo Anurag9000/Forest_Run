@@ -68,6 +68,26 @@ class ChickadeeGroupTest {
         assertEquals(birds.maxOf { it.bottom }, chickadees.hitbox.bottom, 0.001f)
     }
 
+
+    @Test
+    fun `near miss of first chickadee does not mask direct hit on next bird`() {
+        val group = chickadees()
+        val player = Player(1920, 1080, spriteManager)
+        val state = GameStateManager(context)
+        val field = ChickadeeGroup::class.java.getDeclaredField("birdRects")
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val birds = field.get(group) as Array<RectF>
+        player.hitbox.set(110f, 110f, 130f, 130f)
+        birds[0].set(135f, 100f, 175f, 140f)
+        birds[1].set(100f, 100f, 140f, 140f)
+        birds[2].set(310f, 100f, 350f, 140f)
+
+        assertEquals(CollisionResult.HIT, group.onCollision(player, state))
+        birds[1].set(250f, 100f, 290f, 140f)
+        assertEquals(CollisionResult.MERCY_MISS, group.onCollision(player, state))
+    }
+
     private fun chickadees() = ChickadeeGroup(
         context = context,
         startX = 520f,

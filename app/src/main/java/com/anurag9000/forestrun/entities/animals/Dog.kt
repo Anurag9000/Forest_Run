@@ -279,21 +279,23 @@ class Dog(
         // Buddy mode: dog is harmless
         if (mode != DogMode.HAZARD) return CollisionResult.NONE
 
-        // Check bark projectiles first
+        // An earlier projectile's mercy ring must not mask a later direct
+        // projectile or body hit. Resolve every lethal overlap before mercy.
+        var projectileNearMiss = false
         for (proj in projectiles) {
             if (proj.collides(player)) return CollisionResult.HIT
-            if (proj.nearMiss(player)) return CollisionResult.MERCY_MISS
+            if (proj.nearMiss(player)) projectileNearMiss = true
         }
 
-        // Check dog body
         if (RectF.intersects(player.hitbox, hitbox)) {
             return CollisionResult.HIT
         }
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
-        if (intersectsExpanded(player.hitbox, hitbox, mercyPad)) {
-            return CollisionResult.MERCY_MISS
+        return if (projectileNearMiss || intersectsExpanded(player.hitbox, hitbox, mercyPad)) {
+            CollisionResult.MERCY_MISS
+        } else {
+            CollisionResult.NONE
         }
-        return CollisionResult.NONE
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
