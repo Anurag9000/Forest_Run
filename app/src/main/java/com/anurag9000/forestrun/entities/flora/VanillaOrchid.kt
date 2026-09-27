@@ -107,14 +107,14 @@ class VanillaOrchid(
         canvas.drawCircle(x + floraWidth * 0.74f, y + floraHeight * 0.16f, floraWidth * 0.09f, blossomPaint)
 
         // Bottom vine segment
-        bottomRect.set(x, groundY - floraHeight * 0.30f, x + floraWidth * 0.64f, groundY)
+        bottomRect.set(x, groundY - floraHeight * 0.18f, x + floraWidth * 0.98f, groundY)
         canvas.save()
         canvas.rotate(sway * 2f, x + floraWidth * 0.35f, groundY)
         sprite.draw(canvas, bottomRect)
         canvas.restore()
 
         // Top branch + flower
-        topRect.set(x + floraWidth * 0.22f, y, x + floraWidth, groundY - floraHeight * 0.56f)
+        topRect.set(x + floraWidth * 0.04f, y, x + floraWidth, groundY - floraHeight * 0.76f)
         canvas.save()
         canvas.rotate(sway * 0.8f, x + floraWidth * 0.62f, y)
         sprite.draw(canvas, topRect)
@@ -167,23 +167,27 @@ class VanillaOrchid(
 
     private fun updateCollisionGeometry() {
         hitbox.set(x, y, x + floraWidth, groundY)
+        // The whole visible thread must fit the live Player collision body.
+        // The old 20%-of-width overlap and 38%-of-height vertical gap could
+        // only fit an artificially shrunken test rectangle, not a real jump.
+        // Both hitboxes remain fully covered by their matching drawn segments.
         bottomHitbox.set(
             x + floraWidth * 0.14f,
-            groundY - floraHeight * 0.22f,
-            x + floraWidth * 0.58f,
+            groundY - floraHeight * 0.18f,
+            x + floraWidth * 0.92f,
             groundY
         )
         topHitbox.set(
-            x + floraWidth * 0.38f,
+            x + floraWidth * 0.12f,
             y,
-            x + floraWidth * 0.88f,
-            groundY - floraHeight * 0.60f
+            x + floraWidth * 0.96f,
+            groundY - floraHeight * 0.76f
         )
 
         val overlapLeft = maxOf(bottomHitbox.left, topHitbox.left)
         val overlapRight = minOf(bottomHitbox.right, topHitbox.right)
         val horizontalInset = readability.stagingPaddingPx * 0.22f
-        val verticalInset = readability.stagingPaddingPx * 0.45f
+        val verticalInset = readability.stagingPaddingPx * 0.20f
         val safeTop = topHitbox.bottom + verticalInset
         val safeBottom = bottomHitbox.top - verticalInset
         if (overlapRight - overlapLeft > horizontalInset * 2f && safeBottom > safeTop) {
