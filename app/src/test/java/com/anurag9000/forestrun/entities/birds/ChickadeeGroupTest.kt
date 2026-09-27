@@ -55,6 +55,75 @@ class ChickadeeGroupTest {
     }
 
     @Test
+    fun `real airborne Player must fit the entire highlighted pocket to earn credit`() {
+        val chickadees = chickadees()
+        val altitudes = floatArrayOf(240f, 310f, 380f)
+        setFloatArray(chickadees, "altitudes", altitudes)
+        setFloatArray(chickadees, "targetAltitudes", altitudes)
+        chickadees.update(0f, 0f)
+
+        val airborne = Player(1920, 1080, spriteManager)
+        airborne.onJumpPressed()
+        airborne.update(0.05f)
+        val pocket = rectField(chickadees, "flutterPocketRect")
+        assertTrue(
+            "cue must fit the full airborne collision height",
+            pocket.height() >= airborne.hitbox.height()
+        )
+        assertTrue(
+            "cue must fit the full airborne width",
+            pocket.width() >= airborne.hitbox.width()
+        )
+
+        // The fallback is also truly traversable by the unmodified grounded
+        // Player at its actual y; only horizontal scrolling aligns the lane.
+        val player = Player(1920, 1080, spriteManager)
+        val bodyWidth = player.hitbox.width()
+        val bodyHeight = player.hitbox.height()
+        assertTrue(pocket.contains(
+            pocket.centerX() - bodyWidth * 0.5f,
+            player.hitbox.top,
+            pocket.centerX() + bodyWidth * 0.5f,
+            player.hitbox.bottom
+        ))
+
+        val isolatedState = GameStateManager(context) { false }
+        // One pixel of overlap with the cue is not a completed pocket read.
+        player.hitbox.offsetTo(pocket.right - 1f, player.hitbox.top)
+        chickadees.updatePlayerInteraction(player, isolatedState)
+        assertFalse(booleanField(chickadees, "readPocket"))
+
+        player.hitbox.offsetTo(
+            pocket.centerX() - bodyWidth * 0.5f,
+            player.hitbox.top
+        )
+        assertTrue(pocket.contains(
+            player.hitbox.left, player.hitbox.top,
+            player.hitbox.right, player.hitbox.bottom
+        ))
+        chickadees.updatePlayerInteraction(player, isolatedState)
+        assertTrue(booleanField(chickadees, "readPocket"))
+        chickadees.performUniqueAction(player, isolatedState)
+        assertEquals(1, isolatedState.seedsThisRun)
+    }
+
+    @Test
+    fun `grounded fallback disappears rather than advertising an occupied lane`() {
+        val chickadees = chickadees()
+        val lowBirds = floatArrayOf(770f, 780f, 790f)
+        setFloatArray(chickadees, "altitudes", lowBirds)
+        setFloatArray(chickadees, "targetAltitudes", lowBirds)
+        chickadees.update(0f, 0f)
+
+        val pocket = rectField(chickadees, "flutterPocketRect")
+        assertTrue("no full-body gap must not display a fake safe cue", pocket.isEmpty)
+        val player = Player(1920, 1080, spriteManager)
+        val isolatedState = GameStateManager(context) { false }
+        chickadees.updatePlayerInteraction(player, isolatedState)
+        assertFalse(booleanField(chickadees, "readPocket"))
+    }
+
+    @Test
     fun `chickadee aggregate bounds equal independently moving flock`() {
         val chickadees = chickadees()
         setFloatArray(chickadees, "altitudes", floatArrayOf(210f, 410f, 285f))
@@ -107,7 +176,10 @@ class ChickadeeGroupTest {
             repeat(20) {
                 val pocket = rectField(chickadees, "flutterPocketRect")
                 val birds = rectArrayField(chickadees, "birdRects")
-                assertTrue(pocket.height() > 0f)
+                assertTrue(
+                    "Pocket must fit the full airborne Player, not just a point: $altitudes",
+                    pocket.height() >= Player.BASE_HEIGHT
+                )
                 for (bird in birds) {
                     assertFalse("Pocket intersects a live bird: $altitudes", RectF.intersects(pocket, bird))
                 }

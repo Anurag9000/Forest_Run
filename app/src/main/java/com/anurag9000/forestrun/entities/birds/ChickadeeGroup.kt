@@ -162,7 +162,14 @@ class ChickadeeGroup(
                 Color.rgb(170, 128, 84)
             )
         }
-        if (RectF.intersects(player.hitbox, flutterPocketRect)) readPocket = true
+        // Pocket-specific credit requires the whole current Player collision
+        // body inside the highlighted lane; touching the cue's fringe is not
+        // evidence that the Player actually threaded the safe opening.
+        if (flutterPocketRect.contains(
+                player.hitbox.left, player.hitbox.top,
+                player.hitbox.right, player.hitbox.bottom
+            )
+        ) readPocket = true
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
@@ -180,15 +187,19 @@ class ChickadeeGroup(
     private fun updateFlutterPocket() {
         val leadRect = birdRects[leadBirdIndex]
         val padding = 4f
-        val minimumHeight = birdH * 0.18f
-        val desiredHalfHeight = birdH * 0.21f
+        // The airborne Player's actual collision body reaches BASE_HEIGHT
+        // (JUMPING scales 1.20x then loses two 10px hitbox insets). A tiny
+        // between-bird slit must never be drawn as a traversable pocket.
+        val minimumHeight = Player.BASE_HEIGHT + padding * 2f
+        val desiredHalfHeight = minimumHeight * 0.5f
         var pocketTop = Float.NaN
         var pocketBottom = Float.NaN
         var closestGap = Float.POSITIVE_INFINITY
 
-        // Find a genuinely unoccupied vertical gap between whole bird
-        // hitboxes. Min(bottom)..max(top) can span an intervening bird and
-        // falsely advertise its occupied lane as a safe flutter pocket.
+        // Find a genuinely unoccupied, Player-sized vertical gap between
+        // whole bird hitboxes. A gap smaller than the full current airborne
+        // collision envelope is not a traversable lane. Min(bottom)..max(top)
+        // can span an intervening bird and falsely advertise occupied space.
         // A flock has at most four birds, so this bounded scan allocates none.
         for (upper in birdRects) {
             val candidateTop = upper.bottom + padding
@@ -219,10 +230,17 @@ class ChickadeeGroup(
         }
 
         if (!pocketTop.isFinite()) {
-            // When the flock is too crowded to contain a real internal gap,
-            // draw the cue below every bird, not across the lead bird.
-            pocketTop = birdRects.maxOf { it.bottom } + padding
-            pocketBottom = pocketTop + birdH * 0.42f
+            // When no full-body internal gap exists, show a grounded lane
+            // only if it really clears every bird. The whole standing Player
+            // collision body fits between this cue and the ground.
+            val standingCueBottom = groundY - Player.HITBOX_INSET + padding
+            val standingCueTop = standingCueBottom - minimumHeight
+            if (birdRects.maxOf { it.bottom } + padding > standingCueTop) {
+                flutterPocketRect.setEmpty()
+                return
+            }
+            pocketTop = standingCueTop
+            pocketBottom = standingCueBottom
         }
         flutterPocketRect.set(
             leadRect.centerX() - birdW * 0.95f,
