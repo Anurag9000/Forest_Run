@@ -543,14 +543,18 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        screenWidth  = width
-        screenHeight = height
-        rebuildSafeContentTransform()
+        synchronized(runtimeStateLock) {
+            screenWidth  = width
+            screenHeight = height
+            rebuildSafeContentTransform()
+        }
     }
 
     fun setSafeAreaInsets(left: Int, top: Int, right: Int, bottom: Int) {
-        safeAreaInsets = SafeAreaInsets(left, top, right, bottom)
-        rebuildSafeContentTransform()
+        synchronized(runtimeStateLock) {
+            safeAreaInsets = SafeAreaInsets(left, top, right, bottom)
+            rebuildSafeContentTransform()
+        }
     }
 
     private fun rebuildSafeContentTransform() {

@@ -38,6 +38,56 @@ class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
         self.assertIn("screenWidth  = width", surface[lock:])
         self.assertIn("resumeGameThreadWhenStopped(restartToken)", surface[lock:])
 
+    def test_surface_and_inset_writers_publish_one_coherent_transform(self) -> None:
+        surface = self.region(
+            "    override fun surfaceChanged(", "    fun setSafeAreaInsets("
+        )
+        insets = self.region(
+            "    fun setSafeAreaInsets(", "    private fun rebuildSafeContentTransform("
+        )
+        for name, body, mutations in (
+            (
+                "surface", surface,
+                ("screenWidth  = width", "screenHeight = height"),
+            ),
+            (
+                "insets", insets,
+                ("safeAreaInsets = SafeAreaInsets(",),
+            ),
+        ):
+            with self.subTest(writer=name):
+                monitor = body.index("synchronized(runtimeStateLock) {")
+                for mutation in mutations:
+                    self.assertLess(monitor, body.index(mutation))
+                self.assertLess(
+                    monitor, body.index("rebuildSafeContentTransform()")
+                )
+                self.assertLess(
+                    body.index("rebuildSafeContentTransform()"),
+                    body.rindex("}"),
+                )
+
+        # The initial inert default is a separate constructor expression;
+        # every subsequent transform replacement uses the shared helper.
+        initialization = self.region(
+            "    private fun initializeSurfaceWhenThreadStopped(",
+            "    override fun surfaceChanged(",
+        )
+        self.assertIn("synchronized(runtimeStateLock)", initialization)
+        self.assertEqual(
+            2, self.source.count("safeContentTransform = SafeContentTransform.create(")
+        )
+        helper = self.region(
+            "    private fun rebuildSafeContentTransform(",
+            "    private inline fun drawInSafeContent(",
+        )
+        self.assertIn("screenWidth.takeIf", helper)
+        self.assertIn("screenHeight.takeIf", helper)
+        self.assertIn("insets = safeAreaInsets", helper)
+        self.assertEqual(
+            1, helper.count("safeContentTransform = SafeContentTransform.create(")
+        )
+
     def test_touch_and_debug_reset_share_the_same_owner(self) -> None:
         init = self.region("    init {", "    override fun surfaceCreated")
         debug = self.region("    fun applyDebugLaunchIntent", "    private fun stopThread")
