@@ -2,6 +2,7 @@ package com.anurag9000.forestrun.ui
 
 import android.graphics.Color
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -10,6 +11,13 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class FlavorTextManagerTest {
+    // This Android-wide singleton may contain presentation from other tests.
+    // A teardown alone cannot isolate the first test executed in this class.
+    @Before
+    fun setUp() {
+        FlavorTextManager.clear()
+    }
+
     @After
     fun tearDown() {
         FlavorTextManager.clear()
