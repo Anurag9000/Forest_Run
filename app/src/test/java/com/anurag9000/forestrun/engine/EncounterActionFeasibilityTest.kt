@@ -27,7 +27,7 @@ class EncounterActionFeasibilityTest {
     }
 
     @Test
-    fun `production pacing sweep preserves baseline jump and duck reaction budget`() {
+    fun `production origin-gap sweep retains single-action jump and duck budget`() {
         val runTimes = floatArrayOf(0f, 6.75f, 10f, 15f, 20f, 27.99f, 28f, 60f, 600f)
         var caseIndex = 0
         var distance = 0f
@@ -40,7 +40,9 @@ class EncounterActionFeasibilityTest {
                     clearancePx = 220f
                 )
 
-                assertTrue("case=$caseIndex pacing", pacing.isFiniteAndFair)
+                // Numeric gap bounds plus a single isolated action do not prove
+                // safe transition between consecutive different encounters.
+                assertTrue("case=$caseIndex pacing", pacing.isFiniteAndWithinDeclaredBounds)
                 assertTrue("case=$caseIndex finite", observation.isFinite)
                 assertTrue(
                     "case=$caseIndex distance=$distance time=$runTime jump",
