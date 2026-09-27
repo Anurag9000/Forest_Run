@@ -102,6 +102,42 @@ class DogTest {
         assertEquals(CollisionResult.HIT, dog.onCollision(player, gameState))
     }
 
+    @Test
+    fun `projectile padded query remains stable and distinguishes untouched from direct contact`() {
+        val dog = Dog(
+            context = context,
+            startX = 520f,
+            groundY = 885.6f,
+            screenWidth = 1920f,
+            sprite = spriteManager.dogSprite.copy(),
+            isBuddy = false
+        )
+        val player = Player(1920, 1080, spriteManager)
+        val state = GameStateManager(context)
+        dog.update(deltaTime = 1f, scrollSpeed = 0f)
+        val field = Dog::class.java.getDeclaredField("projectiles")
+        field.isAccessible = true
+        val projectile = (field.get(dog) as List<*>).first()!!
+        val rectField = projectile.javaClass.getDeclaredField("rect")
+        rectField.isAccessible = true
+        val projectileRect = rectField.get(projectile) as RectF
+
+        // Isolate the bark from Dog's body so the result comes from the
+        // projectile alone, not an overlapping second encounter component.
+        player.hitbox.set(1_000f, 700f, 1_020f, 720f)
+        projectileRect.set(1_022f, 700f, 1_040f, 720f)
+        val unchanged = RectF(projectileRect)
+        repeat(4) {
+            assertEquals(CollisionResult.MERCY_MISS, dog.onCollision(player, state))
+            assertEquals(unchanged, projectileRect)
+        }
+
+        projectileRect.set(1_010f, 700f, 1_030f, 720f)
+        assertEquals(CollisionResult.HIT, dog.onCollision(player, state))
+        projectileRect.set(1_100f, 700f, 1_120f, 720f)
+        assertEquals(CollisionResult.NONE, dog.onCollision(player, state))
+    }
+
     private fun booleanField(dog: Dog, name: String): Boolean {
         val field = Dog::class.java.getDeclaredField(name)
         field.isAccessible = true

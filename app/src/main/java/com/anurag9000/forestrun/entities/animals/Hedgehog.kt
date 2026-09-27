@@ -69,7 +69,6 @@ class Hedgehog(
     private var warningLeadTimer = 0f
     private var pulse = 0f
     private val warningRect = RectF()
-    private val mercyRect = RectF()
 
     init {
         x = startX
@@ -215,13 +214,7 @@ class Hedgehog(
         }
 
         val mercyPad = readability.mercyPaddingPx
-        mercyRect.set(
-            hitbox.left - mercyPad,
-            hitbox.top - mercyPad,
-            hitbox.right + mercyPad,
-            hitbox.bottom + mercyPad
-        )
-        return if (RectF.intersects(player.hitbox, mercyRect)) {
+        return if (intersectsExpanded(player.hitbox, hitbox, mercyPad)) {
             CollisionResult.MERCY_MISS
         } else {
             CollisionResult.NONE

@@ -84,8 +84,9 @@ class Dog(
         fun collides(player: Player): Boolean = RectF.intersects(player.hitbox, rect)
         fun nearMiss(player: Player): Boolean {
             val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
-            val m = RectF(rect.left - mercyPad, rect.top - mercyPad, rect.right + mercyPad, rect.bottom + mercyPad)
-            return RectF.intersects(player.hitbox, m)
+            // Use the same pure allocation-free rectangle probe as every
+            // encounter: bark queries run once per active projectile/frame.
+            return this@Dog.intersectsExpanded(player.hitbox, rect, mercyPad)
         }
     }
 
