@@ -136,14 +136,11 @@ class GameStateManager(
 
         runTimeSeconds = finiteSaturatingAdd(runTimeSeconds, deltaTime)
 
-        // Capture one speed for both distance and score so acceleration cannot
-        // introduce a one-frame drift between the two quantities.
-        val speedThisFrame = scrollSpeed.takeIf { it.isFinite() && it >= 0f }
-            ?: GameConstants.BASE_SCROLL_SPEED
-        scrollSpeed = speedThisFrame
-        val distanceDelta = safeNonNegativeProduct(speedThisFrame / 1000f, deltaTime)
-        distanceMetres = finiteSaturatingAdd(distanceMetres, distanceDelta)
-
+        // Capture the effective movement speed *before* integrating the frame.
+        // The very same published scrollSpeed then drives parallax, entities,
+        // Orbs, distance and score. Computing a new speed after distance moved
+        // made the world scroll at a different speed from the recorded run.
+        // New distance affects acceleration on the next frame.
         val baseSpeed = MathUtils.clamp(
             GameConstants.BASE_SCROLL_SPEED + distanceMetres * GameConstants.SPEED_PER_METRE,
             GameConstants.BASE_SCROLL_SPEED,
@@ -153,8 +150,11 @@ class GameStateManager(
             ?.coerceAtMost(1f)
             ?: 1f
         speedDebuffMultiplier = safeDebuff
-        scrollSpeed = safeNonNegativeProduct(baseSpeed, safeDebuff)
+        val speedThisFrame = safeNonNegativeProduct(baseSpeed, safeDebuff)
             .coerceAtMost(GameConstants.MAX_SCROLL_SPEED)
+        scrollSpeed = speedThisFrame
+        val distanceDelta = safeNonNegativeProduct(speedThisFrame / 1000f, deltaTime)
+        distanceMetres = finiteSaturatingAdd(distanceMetres, distanceDelta)
 
         if (speedDebuffTimer > 0f) {
             speedDebuffTimer = (speedDebuffTimer - deltaTime).coerceAtLeast(0f)

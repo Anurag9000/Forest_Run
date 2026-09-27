@@ -89,6 +89,63 @@ class GameStateManagerTest {
         assertEquals(Int.MAX_VALUE, state.seedsThisRun)
     }
 
+
+    @Test
+    fun `world speed and recorded distance share one frame value through acceleration`() {
+        val state = GameStateManager(context)
+        val deltaTime = 0.05f
+
+        repeat(200) {
+            val beforeDistance = state.distanceMetres
+            state.update(deltaTime)
+            val recordedDistance = state.distanceMetres - beforeDistance
+            assertEquals(
+                "frame=$it: published world speed must match recorded movement",
+                state.scrollSpeed * deltaTime / 1000f,
+                recordedDistance,
+                0.0002f
+            )
+        }
+
+        assertTrue(state.scrollSpeed > GameConstants.BASE_SCROLL_SPEED)
+        assertTrue(state.score > 0)
+    }
+
+    @Test
+    fun `debuff begins and expires without a one frame world distance mismatch`() {
+        val state = GameStateManager(context)
+        val deltaTime = 0.05f
+        state.update(30f) // reach a distance with nonzero speed ramp
+        val fullSpeedBefore = GameConstants.BASE_SCROLL_SPEED +
+            state.distanceMetres * GameConstants.SPEED_PER_METRE
+
+        state.applySpeedDebuff(0.5f, 50)
+        val beforeDebuffed = state.distanceMetres
+        state.update(deltaTime)
+        assertEquals(
+            state.scrollSpeed * deltaTime / 1000f,
+            state.distanceMetres - beforeDebuffed,
+            0.0002f
+        )
+        assertEquals(fullSpeedBefore * 0.5f, state.scrollSpeed, 0.01f)
+        assertEquals(1f, state.speedDebuffMultiplier, 0f)
+
+        val beforeRecovered = state.distanceMetres
+        state.update(deltaTime)
+        assertEquals(
+            state.scrollSpeed * deltaTime / 1000f,
+            state.distanceMetres - beforeRecovered,
+            0.0002f
+        )
+        assertTrue(state.scrollSpeed > fullSpeedBefore * 0.5f)
+        assertEquals(
+            GameConstants.BASE_SCROLL_SPEED +
+                beforeRecovered * GameConstants.SPEED_PER_METRE,
+            state.scrollSpeed,
+            0.01f
+        )
+    }
+
     @Test
     fun `invalid frame deltas cannot corrupt or rewind run state`() {
         val state = GameStateManager(context)
