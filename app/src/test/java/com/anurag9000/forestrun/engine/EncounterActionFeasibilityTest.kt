@@ -142,6 +142,55 @@ class EncounterActionFeasibilityTest {
         }
     }
 
+    @Test
+    fun `every independent malformed field fails closed while report remains finite`() {
+        val malformed = floatArrayOf(
+            Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY,
+            -1f, -Float.MAX_VALUE
+        )
+        val valid = floatArrayOf(
+            2_000f, GameConstants.BASE_SCROLL_SPEED, 220f,
+            -Player.MAX_JUMP_FORCE, Player.GRAVITY,
+            gestureDecisionSeconds, safetyMarginSeconds
+        )
+
+        for (field in valid.indices) {
+            for (bad in malformed) {
+                val modified = valid.copyOf()
+                modified[field] = bad
+                val observation = EncounterActionFeasibility.observe(
+                    leadDistancePx = modified[0],
+                    approachSpeedPxPerSec = modified[1],
+                    requiredVerticalClearancePx = modified[2],
+                    jumpUpwardSpeedPxPerSec = modified[3],
+                    gravityPxPerSecSquared = modified[4],
+                    gestureDecisionSeconds = modified[5],
+                    safetyMarginSeconds = modified[6]
+                )
+                assertTrue("field=$field value=$bad finite", observation.isFinite)
+                assertFalse("field=$field value=$bad jump", observation.jumpFeasible)
+                assertFalse("field=$field value=$bad duck", observation.duckFeasible)
+            }
+        }
+
+        for (field in intArrayOf(1, 3, 4)) {
+            val modified = valid.copyOf()
+            modified[field] = 0f
+            val observation = EncounterActionFeasibility.observe(
+                leadDistancePx = modified[0],
+                approachSpeedPxPerSec = modified[1],
+                requiredVerticalClearancePx = modified[2],
+                jumpUpwardSpeedPxPerSec = modified[3],
+                gravityPxPerSecSquared = modified[4],
+                gestureDecisionSeconds = modified[5],
+                safetyMarginSeconds = modified[6]
+            )
+            assertTrue("zero field=$field finite", observation.isFinite)
+            assertFalse("zero field=$field jump", observation.jumpFeasible)
+            assertFalse("zero field=$field duck", observation.duckFeasible)
+        }
+    }
+
     private fun observe(
         leadDistancePx: Float,
         speedPxPerSec: Float,

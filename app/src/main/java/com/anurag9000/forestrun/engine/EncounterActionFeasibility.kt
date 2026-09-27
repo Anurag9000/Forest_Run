@@ -58,7 +58,20 @@ internal object EncounterActionFeasibility {
         val decision = finiteNonNegative(gestureDecisionSeconds)
         val safety = finiteNonNegative(safetyMarginSeconds)
 
-        if (speed == 0f || jumpSpeed == 0f || gravity == 0f) {
+        // The finite report fields are sanitized for diagnostics, but a
+        // malformed independent input must never turn into a zero-cost action.
+        // In particular NaN clearance/decision/safety previously became 0f
+        // and could produce a false jump/duck feasibility PASS.
+        val validInputs =
+            leadDistancePx.isFinite() && leadDistancePx >= 0f &&
+            approachSpeedPxPerSec.isFinite() && approachSpeedPxPerSec > 0f &&
+            requiredVerticalClearancePx.isFinite() && requiredVerticalClearancePx >= 0f &&
+            jumpUpwardSpeedPxPerSec.isFinite() && jumpUpwardSpeedPxPerSec > 0f &&
+            gravityPxPerSecSquared.isFinite() && gravityPxPerSecSquared > 0f &&
+            gestureDecisionSeconds.isFinite() && gestureDecisionSeconds >= 0f &&
+            safetyMarginSeconds.isFinite() && safetyMarginSeconds >= 0f
+
+        if (!validInputs) {
             return invalidObservation(
                 lead = lead,
                 speed = speed,
