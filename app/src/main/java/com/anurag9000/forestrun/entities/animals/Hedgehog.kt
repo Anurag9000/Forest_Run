@@ -27,7 +27,8 @@ import kotlin.math.sin
  * Collision → NOT game over. Instead:
  *   - Apply 50% speed debuff for 3 seconds.
  *   - Play curl animation (set sprite to last frame and hold).
- *   - Dialogue "Eep!" on near-miss.
+ *   - Dialogue "Eep!" on an actual safe near-miss.
+ * Body overlap during the warning lead remains a nonlethal STUMBLE.
  */
 class Hedgehog(
     context: Context,
@@ -190,13 +191,10 @@ class Hedgehog(
             }
 
             CollisionResult.MERCY_MISS -> {
-                val line = if (warned && !armed && RectF.intersects(player.hitbox, hitbox)) {
-                    "Hop now."
-                } else {
-                    "Eep!"
-                }
+                // Mercy is committed only after actual safe passage by the
+                // manager; a body-overlap branch here would be unreachable.
                 DialogueBubbleManager.spawn(
-                    line,
+                    "Eep!",
                     x + hogW * 0.5f,
                     y - 14f,
                     Color.rgb(255, 246, 220),
@@ -209,12 +207,11 @@ class Hedgehog(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
+        // The warning lead is a readable chance to react, not permission to
+        // touch the hedgehog and later claim an avoided-contact mercy reward.
+        // The physical body is always a nonlethal stumble.
         if (RectF.intersects(player.hitbox, hitbox)) {
-            return if (warned && !armed) {
-                CollisionResult.MERCY_MISS
-            } else {
-                CollisionResult.STUMBLE
-            }
+            return CollisionResult.STUMBLE
         }
 
         val mercyPad = readability.mercyPaddingPx
