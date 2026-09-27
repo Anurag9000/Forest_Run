@@ -22,7 +22,8 @@ import com.anurag9000.forestrun.ui.DialogueBubbleManager
 
 /**
  * Hyacinth — Phase 27: sprite rendered with sway rotation.
- * Brushing collision → MERCY_MISS. Full hit → HIT.
+ * Full core hit → HIT; visible soft brush contact → nonlethal STUMBLE;
+ * missing the brush narrowly → provisional MERCY_MISS until safe passage.
  */
 class Hyacinth(
     context: Context,
@@ -38,6 +39,11 @@ class Hyacinth(
     private val hitTopY     = floraHeight * readability.hitInsetYRatio
     private val drawRect    = RectF()
     private val brushBox    = RectF()
+
+    /** The complete collision-relevant brush span must clear before pass credit. */
+    override val encounterBounds: RectF
+        get() = brushBox
+
     private val brushPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(64, 188, 120, 228)
         style = Paint.Style.FILL
@@ -77,6 +83,7 @@ class Hyacinth(
         y = groundY - floraHeight
         swayComponent = SwayComponent(speed = 1.0f, intensity = 7f)
         hitbox.set(x + hitInsetX, y + hitTopY, x + floraWidth - hitInsetX, y + floraHeight)
+        updateBrushGeometry()
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
@@ -84,8 +91,7 @@ class Hyacinth(
         rhythmPulse += deltaTime * 3f
         currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
         hitbox.offsetTo(x + hitInsetX, y + hitTopY)
-        val pad = readability.stagingPaddingPx
-        brushBox.set(hitbox.left - pad, hitbox.top - pad * 2.2f, hitbox.right + pad, hitbox.bottom + pad * 0.35f)
+        updateBrushGeometry()
         sprite.update(deltaTime)
         if (x < -floraWidth - 20f) isActive = false
     }
@@ -145,9 +151,20 @@ class Hyacinth(
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
-        if (RectF.intersects(player.hitbox, brushBox)) return CollisionResult.MERCY_MISS
+        // The drawn soft fringe is actual contact, not an avoided near-miss.
+        if (RectF.intersects(player.hitbox, brushBox)) return CollisionResult.STUMBLE
         val mercyPad = readability.mercyPaddingPx
-        if (intersectsExpanded(player.hitbox, hitbox, mercyPad)) return CollisionResult.MERCY_MISS
+        if (intersectsExpanded(player.hitbox, brushBox, mercyPad)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE
+    }
+
+    private fun updateBrushGeometry() {
+        val pad = readability.stagingPaddingPx
+        brushBox.set(
+            hitbox.left - pad,
+            hitbox.top - pad * 2.2f,
+            hitbox.right + pad,
+            hitbox.bottom + pad * 0.35f
+        )
     }
 }
