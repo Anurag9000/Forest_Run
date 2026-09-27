@@ -513,9 +513,11 @@ class EntityManager internal constructor(
     }
 
     private fun spawnRandom(gameState: GameStateManager) {
-        val pool = gameState.openingSpawnPool(
-            DifficultyScaler.getSpawnPool(gameState.distanceMetres, biomeManager)
+        val surfaceEligible = EntityFactory.eligibleOrdinaryPool(
+            DifficultyScaler.getSpawnPool(gameState.distanceMetres, biomeManager),
+            screenHeight
         )
+        val pool = gameState.openingSpawnPool(surfaceEligible)
         if (pool.isNotEmpty()) {
             spawn(pool[Random.nextInt(pool.size)])
         }
@@ -528,6 +530,12 @@ class EntityManager internal constructor(
         recordPersistence: Boolean = true,
         random: Random = Random.Default
     ) {
+        // Preserve an honest full-traversal Bamboo instead of constructing
+        // impossible geometry (and throwing) on very short landscape devices.
+        // Do not silently replace the authored species with a different type.
+        if (type == EntityType.BAMBOO &&
+            !EntityFactory.canStageBamboo(screenHeight)
+        ) return
         val safeStartX = startX.takeIf { it.isFinite() } ?: spawnX
         val entity = EntityFactory.create(
             context,

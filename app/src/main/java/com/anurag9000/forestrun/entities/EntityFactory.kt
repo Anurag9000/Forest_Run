@@ -20,6 +20,7 @@ import com.anurag9000.forestrun.entities.flora.Hyacinth
 import com.anurag9000.forestrun.entities.flora.LilyOfValley
 import com.anurag9000.forestrun.entities.flora.VanillaOrchid
 import com.anurag9000.forestrun.entities.trees.Bamboo
+import com.anurag9000.forestrun.entities.trees.BambooGapPlacement
 import com.anurag9000.forestrun.entities.trees.CherryBlossom
 import com.anurag9000.forestrun.entities.trees.Jacaranda
 import com.anurag9000.forestrun.entities.trees.WeepingWillow
@@ -30,6 +31,27 @@ object EntityFactory {
     private const val DEFAULT_SCREEN_WIDTH = 1_280f
     private const val DEFAULT_SCREEN_HEIGHT = 720f
     private const val GROUND_RATIO = 0.82f
+
+    /**
+     * Production admission for a complete Bamboo encounter. A too-short
+     * physical surface cannot satisfy the full-width collision tunnel.
+     */
+    fun canStageBamboo(screenHeight: Float): Boolean {
+        val safeHeight = screenHeight.takeIf { it.isFinite() && it > 0f }
+            ?: DEFAULT_SCREEN_HEIGHT
+        return BambooGapPlacement.canStageAtGround(safeHeight * GROUND_RATIO)
+    }
+
+    /**
+     * Do not spend a random spawn opportunity on geometry this display
+     * cannot present. Preserve every other biome-authorized family and order.
+     * Explicit authored Bamboo attempts still fail closed at the spawn gate.
+     */
+    fun eligibleOrdinaryPool(
+        pool: List<EntityType>,
+        screenHeight: Float
+    ): List<EntityType> =
+        if (canStageBamboo(screenHeight)) pool else pool.filterNot { it == EntityType.BAMBOO }
 
     fun create(
         context: Context,

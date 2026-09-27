@@ -195,6 +195,62 @@ class BambooGapPlacementTest {
         return longestStart to longestLength
     }
 
+
+    @Test
+    fun `short landscape is rejected before construction while normal heights remain viable`() {
+        for (height in listOf(360f, 480f, 540f)) {
+            assertFalse(
+                "height=$height must not fabricate a complete Bamboo opening",
+                com.anurag9000.forestrun.entities.EntityFactory.canStageBamboo(height)
+            )
+        }
+        for (height in listOf(720f, 760f, 1_080f, 1_440f)) {
+            assertTrue(
+                "height=$height should retain the authored Bamboo encounter",
+                com.anurag9000.forestrun.entities.EntityFactory.canStageBamboo(height)
+            )
+        }
+    }
+
+    @Test
+    fun `ordinary selection omits only impossible Bamboo and retains every other species`() {
+        val pool = listOf(
+            com.anurag9000.forestrun.entities.EntityType.CAT,
+            com.anurag9000.forestrun.entities.EntityType.BAMBOO,
+            com.anurag9000.forestrun.entities.EntityType.DUCK
+        )
+        assertEquals(
+            listOf(
+                com.anurag9000.forestrun.entities.EntityType.CAT,
+                com.anurag9000.forestrun.entities.EntityType.DUCK
+            ),
+            com.anurag9000.forestrun.entities.EntityFactory.eligibleOrdinaryPool(pool, 360f)
+        )
+        assertEquals(
+            pool,
+            com.anurag9000.forestrun.entities.EntityFactory.eligibleOrdinaryPool(pool, 720f)
+        )
+    }
+
+    @Test
+    fun `short landscape manager skips impossible Bamboo without aborting another spawn`() {
+        val manager = com.anurag9000.forestrun.engine.EntityManager(
+            context = context,
+            screenWidth = 640f,
+            screenHeight = 360f,
+            spriteManager = sprites
+        )
+        manager.spawn(com.anurag9000.forestrun.entities.EntityType.BAMBOO)
+        assertTrue(manager.activeEntities.isEmpty())
+        manager.spawn(com.anurag9000.forestrun.entities.EntityType.CACTUS)
+        assertEquals(1, manager.activeEntities.size)
+        assertTrue(
+            manager.activeEntities.single() is
+                com.anurag9000.forestrun.entities.flora.Cactus
+        )
+        assertEquals(1, manager.debugActiveEntityCount)
+    }
+
     @Test
     fun `invalid or too short geometry fails instead of emitting an impossible gap`() {
         listOf(Float.NaN, Float.POSITIVE_INFINITY, -1f).forEach { ground ->

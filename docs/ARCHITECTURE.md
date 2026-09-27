@@ -211,7 +211,7 @@ Garden persistence has distinct responsibilities:
 
 Canonical Garden costs are 15, 20, 25, 30, 40, 50, 60, 75, and 100 Seeds in the live nine-entry order documented in `docs/GAME_DESIGN.md`.
 
-The Canvas presentation currently carries a matching local compact-name/cost list alongside its visual colour/emoji metadata. `scripts/test_garden_catalogue_contract.py` binds that presentation list and canonical docs to `GardenEconomy`, preventing silent drift until the large Canvas owner is next safely migrated to derive those fields directly.
+The Canvas presentation keeps only local visual colour/emoji and sprite metadata. Its compact plant names and Seed costs are read from `GardenEconomy.plantForIndex(i)` at the card display boundary; `scripts/test_garden_catalogue_contract.py` checks this direct runtime ownership and the canonical documentation against the same nine-entry economy. This removes the former duplicate Canvas name/cost list without changing the screen's visual-art responsibilities.
 
 ## 12. Persistent memory and Forest Journal
 

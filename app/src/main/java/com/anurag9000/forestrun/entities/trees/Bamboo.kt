@@ -221,17 +221,26 @@ internal object BambooGapPlacement {
     private const val LOWEST_FLIGHT_CENTRE_ABOVE_GROUND_PX = 355f
     private const val HIGHEST_FLIGHT_CENTRE_ABOVE_GROUND_PX = 335f
 
+    /** True only when this surface can host the full authored traversal. */
+    fun canStageAtGround(groundY: Float): Boolean =
+        viableCentreRangeOrNull(groundY, GAP_HEIGHT_PX) != null
+
     fun reachableCentreRange(
         groundY: Float,
         gapHeight: Float
-    ): ClosedFloatingPointRange<Float> {
-        require(groundY.isFinite() && gapHeight.isFinite() && gapHeight > 0f) {
-            "Bamboo gap geometry must be finite and positive"
-        }
+    ): ClosedFloatingPointRange<Float> =
+        viableCentreRangeOrNull(groundY, gapHeight)
+            ?: throw IllegalArgumentException(
+                "Bamboo requires sufficient usable height for a reachable opening"
+            )
+
+    private fun viableCentreRangeOrNull(
+        groundY: Float,
+        gapHeight: Float
+    ): ClosedFloatingPointRange<Float>? {
+        if (!groundY.isFinite() || !gapHeight.isFinite() || gapHeight <= 0f) return null
         val maximumAllowed = groundY - gapHeight
-        require(maximumAllowed > gapHeight * 0.5f + VERTICAL_MARGIN_PX) {
-            "Bamboo requires sufficient usable height for a reachable opening"
-        }
+        if (maximumAllowed <= gapHeight * 0.5f + VERTICAL_MARGIN_PX) return null
 
         val upwardSpeed = -Player.MAX_JUMP_FORCE
         val conservativeJumpRise = (
@@ -250,9 +259,7 @@ internal object BambooGapPlacement {
             maximumAllowed,
             groundY - HIGHEST_FLIGHT_CENTRE_ABOVE_GROUND_PX
         )
-        require(minimumCentre <= maximumCentre) {
-            "No complete-traversal Bamboo opening in available world height"
-        }
+        if (minimumCentre > maximumCentre) return null
         return minimumCentre..maximumCentre
     }
 }
