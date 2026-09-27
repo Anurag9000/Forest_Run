@@ -7,6 +7,7 @@ import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Player
+import com.anurag9000.forestrun.entities.PlayerState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -82,6 +83,43 @@ class WeepingWillowTest {
         )
         assertTrue(RectF.intersects(player.hitbox, willow.hitbox))
         assertEquals(CollisionResult.NONE, willow.onCollision(player, gameState))
+    }
+
+    @Test
+    fun `real standing Player meets curtain and real grounded duck fits lane`() {
+        for (screenHeight in intArrayOf(720, 1080, 1440)) {
+            val groundY = screenHeight * 0.82f
+            val willow = WeepingWillow(
+                context = context,
+                startX = 680f,
+                screenHeight = screenHeight.toFloat(),
+                groundY = groundY,
+                sprite = spriteManager.willowSprite.copy()
+            )
+            val player = Player(1920, screenHeight, spriteManager, groundYOverride = groundY)
+            val state = GameStateManager(context)
+            val lane = rectField(willow, "duckLaneRect")
+            player.x = lane.centerX() - Player.BASE_WIDTH * 0.5f
+            player.update(1f / 60f)
+            assertEquals(
+                "height=$screenHeight standing must meet the real curtain",
+                CollisionResult.HIT, willow.onCollision(player, state)
+            )
+            player.onDuckPressed()
+            player.update(1f / 60f)
+            assertEquals(PlayerState.DUCKING, player.state)
+            assertTrue(
+                "height=$screenHeight real duck does not fit displayed lane",
+                lane.contains(
+                    player.hitbox.left, player.hitbox.top,
+                    player.hitbox.right, player.hitbox.bottom
+                )
+            )
+            assertEquals(
+                "height=$screenHeight duck must avoid curtain and trunk",
+                CollisionResult.NONE, willow.onCollision(player, state)
+            )
+        }
     }
 
     private fun willow() = WeepingWillow(

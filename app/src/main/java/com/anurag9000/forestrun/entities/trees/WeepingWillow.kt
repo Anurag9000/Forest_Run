@@ -40,7 +40,8 @@ class WeepingWillow(
     private val trunkWidth    = treeWidth * 0.18f
     private val trunkTop      = groundY - treeHeight * 0.42f
     private val curtainTop    = groundY - treeHeight * 0.78f
-    private val curtainBottom = groundY - treeHeight * 0.16f
+    // Standing meets the curtain; the true grounded duck remains beneath it.
+    private val curtainBottom = groundY - treeHeight * 0.075f
 
     private val trunkHitbox   = RectF()
     private val curtainHitbox = RectF()

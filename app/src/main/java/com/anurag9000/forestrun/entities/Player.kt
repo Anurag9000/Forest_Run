@@ -358,7 +358,9 @@ class Player(
     }
 
     private fun updateDucking() {
-        y = groundY - currentHeight
+        // draw() scales about y + BASE_HEIGHT. Its ground anchor must not
+        // move by the reduction in visible height a second time.
+        y = groundY - BASE_HEIGHT
     }
 
     private fun checkLanding() {
@@ -430,9 +432,11 @@ class Player(
 
     private fun updateHitbox() {
         val left = x + (BASE_WIDTH - currentWidth) / 2f + HITBOX_INSET
-        val top = y + (BASE_HEIGHT - currentHeight) / 2f + HITBOX_INSET
+        // The visible sprite is scaled around its feet, not its centre.
+        // Match that transformed silhouette across all locomotion states.
+        val top = y + BASE_HEIGHT - currentHeight + HITBOX_INSET
         val right = left + currentWidth - HITBOX_INSET * 2f
-        val bottom = top + currentHeight - HITBOX_INSET * 2f
+        val bottom = y + BASE_HEIGHT - HITBOX_INSET
         hitbox.set(left, top, right, bottom)
     }
 

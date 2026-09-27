@@ -7,6 +7,7 @@ import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Player
+import com.anurag9000.forestrun.entities.PlayerState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -81,6 +82,43 @@ class JacarandaTest {
         )
         assertTrue(RectF.intersects(player.hitbox, jacaranda.hitbox))
         assertEquals(CollisionResult.NONE, jacaranda.onCollision(player, gameState))
+    }
+
+    @Test
+    fun `real standing Player meets branch and real grounded duck fits underside`() {
+        for (screenHeight in intArrayOf(720, 1080, 1440)) {
+            val groundY = screenHeight * 0.82f
+            val jacaranda = Jacaranda(
+                context = context,
+                startX = 660f,
+                screenHeight = screenHeight.toFloat(),
+                groundY = groundY,
+                sprite = spriteManager.jacarandaSprite.copy()
+            )
+            val player = Player(1920, screenHeight, spriteManager, groundYOverride = groundY)
+            val state = GameStateManager(context)
+            val lane = rectField(jacaranda, "undersideLaneRect")
+            player.x = lane.centerX() - Player.BASE_WIDTH * 0.5f
+            player.update(1f / 60f)
+            assertEquals(
+                "height=$screenHeight standing must meet the real branch",
+                CollisionResult.HIT, jacaranda.onCollision(player, state)
+            )
+            player.onDuckPressed()
+            player.update(1f / 60f)
+            assertEquals(PlayerState.DUCKING, player.state)
+            assertTrue(
+                "height=$screenHeight real duck does not fit displayed lane",
+                lane.contains(
+                    player.hitbox.left, player.hitbox.top,
+                    player.hitbox.right, player.hitbox.bottom
+                )
+            )
+            assertEquals(
+                "height=$screenHeight duck must avoid branch and trunk",
+                CollisionResult.NONE, jacaranda.onCollision(player, state)
+            )
+        }
     }
 
     private fun jacaranda() = Jacaranda(

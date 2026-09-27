@@ -111,6 +111,57 @@ class PlayerBoundaryTest {
         assertEquals(1080f * 0.82f, player.groundY, 0.001f)
     }
 
+    @Test
+    fun `locomotion hitboxes follow rendered feet and crouching stays on the ground`() {
+        val jumper = player()
+        assertFootAnchoredHitbox(jumper)
+        jumper.onJumpPressed()
+        jumper.update(1f / 60f)
+        assertFootAnchoredHitbox(jumper)
+        jumper.onJumpReleased(0.12f)
+        jumper.update(1f / 60f)
+        assertFootAnchoredHitbox(jumper)
+
+        val croucher = player()
+        croucher.onDuckPressed()
+        croucher.update(1f / 60f)
+        assertEquals(PlayerState.DUCKING, croucher.state)
+        assertEquals(croucher.groundY - Player.BASE_HEIGHT, croucher.y, 0.001f)
+        assertEquals(croucher.groundY, croucher.y + Player.BASE_HEIGHT, 0.001f)
+        assertFootAnchoredHitbox(croucher)
+        assertEquals(
+            croucher.groundY - Player.HITBOX_INSET,
+            croucher.hitbox.bottom,
+            0.001f
+        )
+        croucher.onDuckReleased()
+        croucher.update(1f / 60f)
+        assertEquals(PlayerState.RUNNING, croucher.state)
+        assertFootAnchoredHitbox(croucher)
+    }
+
+    private fun assertFootAnchoredHitbox(player: Player) {
+        assertEquals(
+            player.x + (Player.BASE_WIDTH - player.currentWidth) / 2f +
+                Player.HITBOX_INSET,
+            player.hitbox.left,
+            0.002f
+        )
+        assertEquals(
+            player.y + Player.BASE_HEIGHT - player.currentHeight +
+                Player.HITBOX_INSET,
+            player.hitbox.top,
+            0.002f
+        )
+        assertEquals(
+            player.y + Player.BASE_HEIGHT - Player.HITBOX_INSET,
+            player.hitbox.bottom,
+            0.002f
+        )
+        assertTrue(player.hitbox.width() > 0f)
+        assertTrue(player.hitbox.height() > 0f)
+    }
+
     private fun player(): Player = Player(1920, 1080, spriteManager)
 
     private fun float(player: Player, name: String): Float {

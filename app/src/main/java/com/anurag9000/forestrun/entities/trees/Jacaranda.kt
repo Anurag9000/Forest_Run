@@ -38,7 +38,8 @@ class Jacaranda(
     private val treeWidth    = SpriteSizing.widthForHeight(sprite, treeHeight, minWidth = readability.minWidthPx)
     private val trunkWidth   = treeWidth * 0.16f
     private val branchTop    = groundY - treeHeight * 0.72f
-    private val branchBottom = groundY - treeHeight * 0.34f
+    // Standing meets the branch; the true grounded duck has a real low lane.
+    private val branchBottom = groundY - treeHeight * 0.085f
     private val trunkTop     = groundY - treeHeight * 0.38f
     private val trunkHitbox = RectF()
     private val branchHitbox = RectF()
