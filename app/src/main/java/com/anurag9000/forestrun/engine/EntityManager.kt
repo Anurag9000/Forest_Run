@@ -11,6 +11,7 @@ import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.animals.Dog
 import com.anurag9000.forestrun.entities.animals.Wolf
 import com.anurag9000.forestrun.entities.birds.Eagle
+import com.anurag9000.forestrun.entities.birds.Owl
 import com.anurag9000.forestrun.entities.flora.Cactus
 import com.anurag9000.forestrun.entities.flora.Eucalyptus
 import com.anurag9000.forestrun.entities.flora.Hyacinth
@@ -51,11 +52,12 @@ class EntityManager internal constructor(
     val activeEntities: MutableList<Entity> = mutableListOf()
 
     /**
-     * Completed Eagle dives that exited the viewport before an x-plane pass.
-     * Their award is deferred until checkCollisions has given live HIT/STUMBLE
-     * arbitration priority; they are no longer rendered or collision-active.
+     * Completed, genuinely telegraphed diving-bird departures that could
+     * exit vertically before an x-plane pass. Never credit an offscreen staged
+     * Eagle or an unalerted sleeping Owl as a completed attack. Keep rewards
+     * behind live HIT/STUMBLE arbitration, not inside the update/removal loop.
      */
-    private val completedEagleEscapes = ArrayList<Eagle>()
+    private val completedBirdEscapes = ArrayList<Entity>()
 
     private var distanceSinceRandomSpawnPx = 0f
     private var bloomReactionCooldown = 0f
@@ -138,11 +140,11 @@ class EntityManager internal constructor(
                 entity.updatePlayerInteraction(player, gameState)
             }
             if (!entity.isActive) {
-                if (entity is Eagle &&
-                    entity.encounterOutcome == EncounterOutcome.PENDING &&
-                    entity.hasCompletedAttackEscape
+                if (entity.encounterOutcome == EncounterOutcome.PENDING &&
+                    ((entity is Eagle && entity.hasCompletedAttackEscape) ||
+                        (entity is Owl && entity.hasCompletedDiveEscape))
                 ) {
-                    completedEagleEscapes.add(entity)
+                    completedBirdEscapes.add(entity)
                 }
                 activeEntities.removeAt(entityIndex)
             } else {
@@ -242,20 +244,18 @@ class EntityManager internal constructor(
             entityIndex++
         }
 
-        // Eagle can escape *vertically* or depart the far edge after its
-        // telegraphed dive; x-plane passage is not a meaningful prerequisite
-        // for those trajectories. Process only after all live collisions.
-        var escapeIndex = 0
-        while (escapeIndex < completedEagleEscapes.size) {
-            val eagle = completedEagleEscapes[escapeIndex]
-            if (eagle.encounterOutcome == EncounterOutcome.PENDING) {
-                val bounds = liveBounds(eagle)
+        // Once a visible Owl/Eagle dive has exited, its vertical flight may
+        // never satisfy the ordinary horizontal pass plane. Both species now
+        // complete through this same outcome owner after live collision checks.
+        while (completedBirdEscapes.isNotEmpty()) {
+            val bird = completedBirdEscapes.removeAt(0)
+            if (bird.encounterOutcome == EncounterOutcome.PENDING) {
+                val bounds = liveBounds(bird)
                 if (bounds != null) {
-                    val mercy = resolveSafeDeparture(eagle, bounds, player, gameState)
+                    val mercy = resolveSafeDeparture(bird, bounds, player, gameState)
                     if (firstMercy == null) firstMercy = mercy
                 }
             }
-            completedEagleEscapes.removeAt(escapeIndex)
         }
         return firstMercy
     }
@@ -560,7 +560,7 @@ class EntityManager internal constructor(
 
     fun reset() {
         activeEntities.clear()
-        completedEagleEscapes.clear()
+        completedBirdEscapes.clear()
         seedOrbManager.reset()
         distanceSinceRandomSpawnPx = 0f
         bloomReactionCooldown = 0f

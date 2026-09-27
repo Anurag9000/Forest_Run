@@ -57,6 +57,15 @@ class Owl(
     private var pendingTargetX = 0f
     private var pendingTargetY = 0f
     private var hasWarned = false
+
+    /**
+     * A genuinely warned, diving Owl can finish below the visible ground
+     * before its body crosses the ordinary horizontal pass plane.
+     * Completion is read by the EntityManager's post-collision pass owner.
+     */
+    internal val hasCompletedDiveEscape: Boolean
+        get() = !isActive && hasWarned && owlState == OwlState.DIVING
+
     private val alertPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(180, 255, 205, 120)
         style = Paint.Style.STROKE
