@@ -138,6 +138,99 @@ class DogTest {
         assertEquals(CollisionResult.NONE, dog.onCollision(player, state))
     }
 
+
+    @Test
+    fun `bark shockwave detects same time contact with a falling Player`() {
+        val dog = Dog(
+            context = context,
+            startX = 1_400f,
+            groundY = 885.6f,
+            screenWidth = 1_920f,
+            sprite = spriteManager.dogSprite.copy(),
+            isBuddy = false
+        )
+        val player = Player(1_920, 1_080, spriteManager)
+        val state = GameStateManager(context)
+        // Create the projectile using the real hazard state machine.
+        dog.update(deltaTime = 1f, scrollSpeed = 0f)
+        val listField = Dog::class.java.getDeclaredField("projectiles")
+        listField.isAccessible = true
+        val projectile = (listField.get(dog) as List<*>).first()!!
+        val rectField = projectile.javaClass.getDeclaredField("rect")
+        rectField.isAccessible = true
+        val projectileRect = rectField.get(projectile) as RectF
+        projectileRect.set(500f, 200f, 584f, 236f)
+
+        player.previousHitbox.set(460f, 200f, 480f, 220f)
+        player.hitbox.set(460f, 300f, 480f, 320f)
+        player.hasMotionSample = true
+        dog.update(deltaTime = 0.05f, scrollSpeed = 1_480f)
+        // Both endpoint player/projectile pairs miss; the real falling
+        // player intersects the moving shockwave only between samples.
+        assertEquals(RectF(400f, 200f, 484f, 236f), projectileRect)
+        assertEquals(CollisionResult.HIT, dog.onCollision(player, state))
+    }
+
+    @Test
+    fun `bark shockwave does not use a stationary final player for an earlier crossing`() {
+        val dog = Dog(
+            context = context,
+            startX = 1_400f,
+            groundY = 885.6f,
+            screenWidth = 1_920f,
+            sprite = spriteManager.dogSprite.copy(),
+            isBuddy = false
+        )
+        val player = Player(1_920, 1_080, spriteManager)
+        val state = GameStateManager(context)
+        dog.update(deltaTime = 1f, scrollSpeed = 0f)
+        val listField = Dog::class.java.getDeclaredField("projectiles")
+        listField.isAccessible = true
+        val projectile = (listField.get(dog) as List<*>).first()!!
+        val rectField = projectile.javaClass.getDeclaredField("rect")
+        rectField.isAccessible = true
+        val projectileRect = rectField.get(projectile) as RectF
+        projectileRect.set(430f, 200f, 514f, 236f)
+
+        player.previousHitbox.set(460f, 300f, 480f, 320f)
+        player.hitbox.set(460f, 200f, 480f, 220f)
+        player.hasMotionSample = true
+        dog.update(deltaTime = 0.05f, scrollSpeed = 2_000f)
+        // The shockwave has cleared X before the Player reaches its Y lane.
+        assertEquals(CollisionResult.NONE, dog.onCollision(player, state))
+    }
+
+    @Test
+    fun `hazard Dog body also detects real simultaneous midframe contact`() {
+        val dog = Dog(
+            context = context,
+            startX = 520f,
+            groundY = 885.6f,
+            screenWidth = 1_920f,
+            sprite = spriteManager.dogSprite.copy(),
+            isBuddy = false
+        )
+        val player = Player(1_920, 1_080, spriteManager)
+        val state = GameStateManager(context)
+        val before = RectF(dog.hitbox)
+        dog.previousHitbox.set(before)
+        dog.hasMotionSample = true
+        val left = before.left - 44f
+        val right = before.left - 24f
+        player.previousHitbox.set(
+            left, before.top + 5f, right, before.top + 25f
+        )
+        player.hitbox.set(
+            left, before.bottom + 8f, right, before.bottom + 28f
+        )
+        player.hasMotionSample = true
+        dog.update(deltaTime = 0.05f, scrollSpeed = 2_000f)
+
+        // Before: horizontal miss. After: vertical miss. There is a genuine
+        // shared-time overlap as the body moves left and Player falls.
+        assertEquals(CollisionResult.HIT, dog.onCollision(player, state))
+    }
+
     private fun booleanField(dog: Dog, name: String): Boolean {
         val field = Dog::class.java.getDeclaredField(name)
         field.isAccessible = true

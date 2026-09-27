@@ -12,6 +12,7 @@ import com.anurag9000.forestrun.engine.RelationshipArcSystem
 import com.anurag9000.forestrun.engine.RelationshipStage
 import com.anurag9000.forestrun.engine.SfxManager
 import com.anurag9000.forestrun.engine.SpriteSizing
+import com.anurag9000.forestrun.engine.SweptCoreOverlap
 import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Entity
@@ -69,10 +70,12 @@ class Dog(
     private inner class BarkProjectile(spawnX: Float, spawnY: Float) {
         private val PROJECTILE_SPEED = 520f
         val rect = RectF(spawnX, spawnY - 28f, spawnX + 84f, spawnY + 8f)
+        private val previousRect = RectF(rect)
         var active = true
 
         fun update(deltaTime: Float, scrollSpeed: Float) {
-            // Travels in the same direction as the world scroll
+            // Capture the actual projectile core before this bounded step.
+            previousRect.set(rect)
             rect.offset(-(scrollSpeed + PROJECTILE_SPEED) * deltaTime, 0f)
             if (rect.right < -60f) active = false
         }
@@ -81,7 +84,11 @@ class Dog(
             canvas.drawOval(rect, barkPaint)
         }
 
-        fun collides(player: Player): Boolean = RectF.intersects(player.hitbox, rect)
+        fun collides(player: Player): Boolean =
+            RectF.intersects(player.hitbox, rect) ||
+                (player.hasMotionSample && SweptCoreOverlap.intersects(
+                    player.previousHitbox, player.hitbox, previousRect, rect
+                ))
         fun nearMiss(player: Player): Boolean {
             val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
             // Use the same pure allocation-free rectangle probe as every
@@ -289,7 +296,13 @@ class Dog(
             if (proj.nearMiss(player)) projectileNearMiss = true
         }
 
-        if (RectF.intersects(player.hitbox, hitbox)) {
+        if (RectF.intersects(player.hitbox, hitbox) ||
+            (hasMotionSample && player.hasMotionSample &&
+                SweptCoreOverlap.intersects(
+                    player.previousHitbox, player.hitbox,
+                    previousHitbox, hitbox
+                ))
+        ) {
             return CollisionResult.HIT
         }
         val mercyPad = readability.mercyPaddingPx + relationshipTuning.mercyPaddingBonusPx
