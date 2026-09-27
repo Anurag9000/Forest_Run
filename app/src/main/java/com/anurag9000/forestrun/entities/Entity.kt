@@ -26,6 +26,14 @@ abstract class Entity(val context: Context) {
     var hitbox = RectF()
 
     /**
+     * The preceding frame's actual primary physical core. Captured by the
+     * EntityManager before update; never inferred from an aggregate scene
+     * bound or a painted mercy/telegraph rectangle.
+     */
+    internal val previousHitbox = RectF()
+    internal var hasMotionSample = false
+
+    /**
      * Bounds of the complete live encounter used for terminal pass/conversion
      * decisions and presentation anchors.
      *

@@ -85,6 +85,11 @@ class Player(
 
     val hitbox = RectF()
 
+    /** Core at the start of the most recently admitted physics update. */
+    internal val previousHitbox = RectF()
+    internal var hasMotionSample = false
+        private set
+
     private val animRun = spriteManager.playerRun.copy()
     private val animJumpStart = spriteManager.playerJumpStart.copy()
     private val animJumping = spriteManager.playerJumping.copy()
@@ -243,12 +248,18 @@ class Player(
         bloomPowerScaleBoost = 0f
         bloomPowerAuraAlpha = 0
         stopBloomEmitters()
+        previousHitbox.setEmpty()
+        hasMotionSample = false
         transitionTo(PlayerState.RUNNING)
     }
 
     fun update(deltaTime: Float, scrollSpeed: Float = 400f) {
         if (!deltaTime.isFinite() || deltaTime <= 0f) return
         val dt = deltaTime.coerceAtMost(MAX_FRAME_DELTA_S)
+        previousHitbox.set(hitbox)
+        hasMotionSample = !previousHitbox.isEmpty &&
+            previousHitbox.left.isFinite() && previousHitbox.top.isFinite() &&
+            previousHitbox.right.isFinite() && previousHitbox.bottom.isFinite()
         normalizeKinematics()
 
         presentationElapsed = finiteTimerAdd(presentationElapsed, dt)

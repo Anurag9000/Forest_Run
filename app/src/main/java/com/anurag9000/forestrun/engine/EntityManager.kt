@@ -9,6 +9,7 @@ import com.anurag9000.forestrun.entities.EntityFactory
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.animals.Dog
+import com.anurag9000.forestrun.entities.animals.Hedgehog
 import com.anurag9000.forestrun.entities.animals.Wolf
 import com.anurag9000.forestrun.entities.birds.Eagle
 import com.anurag9000.forestrun.entities.birds.Owl
@@ -135,6 +136,8 @@ class EntityManager internal constructor(
         var entityIndex = 0
         while (entityIndex < activeEntities.size) {
             val entity = activeEntities[entityIndex]
+            entity.previousHitbox.set(entity.hitbox)
+            entity.hasMotionSample = isFiniteNonEmpty(entity.previousHitbox)
             entity.update(deltaTime, gameState.scrollSpeed)
             if (entity.isActive && entity.encounterOutcome == EncounterOutcome.PENDING) {
                 entity.updatePlayerInteraction(player, gameState)
@@ -177,7 +180,13 @@ class EntityManager internal constructor(
             while (collisionIndex < activeEntities.size) {
                 val entity = activeEntities[collisionIndex]
                 if (entity.isActive && entity.encounterOutcome == EncounterOutcome.PENDING) {
-                    val result = entity.onCollision(player, gameState)
+                    val sampled = entity.onCollision(player, gameState)
+                    val swept = sweptNarrowCoreResult(entity, player)
+                    val result = if (collisionPriority(swept) > collisionPriority(sampled)) {
+                        swept
+                    } else {
+                        sampled
+                    }
                     if (result == CollisionResult.MERCY_MISS) {
                         // A close approach is not yet proof that the player
                         // avoided this entity for its entire dangerous span.
@@ -212,6 +221,29 @@ class EntityManager internal constructor(
         }
 
         return resolvePassedEntities(player, gameState)
+    }
+
+    /**
+     * Recovery frames may move a narrow physical core completely through the
+     * Player between endpoint samples. Only species whose primary core has an
+     * unconditional, single-body consequence are eligible; do not sweep flock
+     * aggregate boxes, staged birds, Dog's harmless buddy mode, or tree/window
+     * aggregates that intentionally contain transparent safe lanes.
+     */
+    private fun sweptNarrowCoreResult(entity: Entity, player: Player): CollisionResult {
+        val contact = when (entity) {
+            is Cactus, is LilyOfValley -> CollisionResult.HIT
+            is Hedgehog -> CollisionResult.STUMBLE
+            else -> return CollisionResult.NONE
+        }
+        if (!entity.hasMotionSample || !player.hasMotionSample ||
+            !isFiniteNonEmpty(entity.hitbox) || !isFiniteNonEmpty(player.hitbox)
+        ) return CollisionResult.NONE
+        return if (SweptCoreOverlap.intersects(
+                player.previousHitbox, player.hitbox,
+                entity.previousHitbox, entity.hitbox
+            )
+        ) contact else CollisionResult.NONE
     }
 
     private fun collisionPriority(result: CollisionResult): Int = when (result) {
