@@ -349,7 +349,8 @@ class EntityManager internal constructor(
             playerBounds = player.hitbox,
             playerGroundY = player.groundY,
             screenWidth = screenWidth,
-            screenHeight = screenHeight
+            screenHeight = screenHeight,
+            scrollSpeedPxPerSec = gameState.scrollSpeed
         )
         seedOrbManager.trySpawn(
             centreX = stagingPoint.centreX,

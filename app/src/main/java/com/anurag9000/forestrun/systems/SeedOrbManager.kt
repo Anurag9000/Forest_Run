@@ -17,6 +17,9 @@ class SeedOrbManager(
         const val BASE_SPAWN_RATE = 0.95f
         const val SPAWN_HEIGHT_MIN = 55f
         const val SPAWN_HEIGHT_MAX = 115f
+
+        /** Half the random +/-30px horizontal spread, shared with staging. */
+        const val SPAWN_HORIZONTAL_JITTER_HALF_SPAN_PX = 30f
     }
 
     private val orbs = mutableListOf<SeedOrb>()
@@ -41,7 +44,8 @@ class SeedOrbManager(
         val offsetY = SPAWN_HEIGHT_MIN +
             nextUnitFloat() * (SPAWN_HEIGHT_MAX - SPAWN_HEIGHT_MIN)
         val spawnX = finiteCoordinate(
-            centreX.toDouble() + (nextUnitFloat() - 0.5f).toDouble() * 60.0
+            centreX.toDouble() + (nextUnitFloat() - 0.5f).toDouble() *
+                (2.0 * SPAWN_HORIZONTAL_JITTER_HALF_SPAN_PX.toDouble())
         )
         val spawnY = finiteCoordinate(topY.toDouble() - offsetY.toDouble())
         orbs.add(SeedOrb(x = spawnX, y = spawnY))

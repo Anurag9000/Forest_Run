@@ -1,8 +1,11 @@
 package com.anurag9000.forestrun.engine
 
+import android.content.Context
 import android.graphics.RectF
+import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.systems.SeedOrb
+import com.anurag9000.forestrun.systems.SeedOrbManager
 import kotlin.random.Random
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -141,6 +144,71 @@ class SeedOrbSpawnPolicyTest {
                 }
             }
         }
+    }
+
+
+    @Test
+    fun `maximum speed Orb has enough lead for a real high jump despite left jitter`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val sprites = SpriteManager(context)
+        val ground = 1_080f * 0.82f
+        val speed = GameConstants.MAX_SCROLL_SPEED
+        val player = Player(1_920, 1_080, sprites, groundYOverride = ground)
+        val point = SeedOrbSpawnPolicy.forCleanPass(
+            encounterBounds = RectF(100f, 0f, 230f, ground),
+            playerBounds = player.hitbox,
+            playerGroundY = ground,
+            screenWidth = 1_920f,
+            screenHeight = 1_080f,
+            scrollSpeedPxPerSec = speed
+        )
+
+        // The old flat 120px/8%-of-screen lead could cross the collection
+        // plane in about 0.05 seconds at 2,000px/s. The highest random Orb
+        // requires a real launch, so this is a temporal, not just Y, contract.
+        assertTrue(point.centreX - player.hitbox.right > 600f)
+
+        // Worst leftward X jitter and highest possible initial centre.
+        // Actual Orb bobbing and Player hitbox/physics, no synthetic body.
+        val orb = SeedOrb(
+            x = point.centreX -
+                SeedOrbManager.SPAWN_HORIZONTAL_JITTER_HALF_SPAN_PX,
+            y = point.minimumPossibleCentreY
+        )
+        val state = GameStateManager(context)
+        var collected = false
+        for (frame in 0 until 90) {
+            if (frame == 5) player.onJumpPressed() // 80ms reaction
+            player.update(0.016f, speed)
+            orb.update(0.016f, speed, state)
+            if (orb.checkCollection(player.hitbox)) {
+                collected = true
+                break
+            }
+        }
+        assertTrue("real full jump never reached the staged high Orb", collected)
+    }
+
+    @Test
+    fun `horizontal collection lead increases with scroll speed and remains finite`() {
+        val ground = 885.6f
+        val encounter = RectF(100f, 0f, 230f, ground)
+        val player = RectF(450f, ground - Player.BASE_HEIGHT, 502f, ground)
+        fun stage(speed: Float) = SeedOrbSpawnPolicy.forCleanPass(
+            encounterBounds = encounter,
+            playerBounds = player,
+            playerGroundY = ground,
+            screenWidth = 1_920f,
+            screenHeight = 1_080f,
+            scrollSpeedPxPerSec = speed
+        )
+        val slow = stage(GameConstants.BASE_SCROLL_SPEED)
+        val fast = stage(GameConstants.MAX_SCROLL_SPEED)
+        val invalid = stage(Float.NaN)
+        assertTrue(fast.centreX > slow.centreX)
+        assertTrue(invalid.centreX.isFinite())
+        assertTrue(invalid.centreX >= fast.centreX)
+        assertTrue(fast.minimumPossibleCentreY == slow.minimumPossibleCentreY)
     }
 
     @Test

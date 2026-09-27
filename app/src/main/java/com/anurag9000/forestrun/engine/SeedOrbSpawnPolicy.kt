@@ -18,19 +18,27 @@ data class SeedOrbStagingPoint(
  *
  * [SeedOrbManager] subtracts a random vertical offset from `topY`. The policy
  * therefore clamps `topY` so both offset extremes remain inside the player's
- * conservative full-jump envelope and the visible surface.
+ * conservative full-jump envelope and the visible surface. Its horizontal
+ * staging also gives the highest possible Orb enough time to meet a real jump,
+ * accounting for the full random X jitter, bob and pickup radius. Vertical
+ * possibility without approach time is not an attainable reward.
  */
 object SeedOrbSpawnPolicy {
     private const val PLAYER_CLEARANCE_PX = 24f
     private const val JUMP_SAFETY_FACTOR = 0.75f
     private const val VISIBLE_MARGIN_PX = 8f
+    // Source-side response assumptions, not measured physical-device latency.
+    // Human timing acceptance remains a separate requirement.
+    private const val GESTURE_DECISION_SECONDS = 0.075f
+    private const val JUMP_MARGIN_SECONDS = 0.08f
 
     fun forCleanPass(
         encounterBounds: RectF,
         playerBounds: RectF,
         playerGroundY: Float,
         screenWidth: Float,
-        screenHeight: Float
+        screenHeight: Float,
+        scrollSpeedPxPerSec: Float = GameConstants.BASE_SCROLL_SPEED
     ): SeedOrbStagingPoint {
         val safeScreenWidth = screenWidth.takeIf { it.isFinite() && it > 0f } ?: 1f
         val safeScreenHeight = screenHeight.takeIf { it.isFinite() && it > 0f } ?: 1f
@@ -66,8 +74,40 @@ object SeedOrbSpawnPolicy {
                 (SeedOrbManager.SPAWN_HEIGHT_MIN + SeedOrbManager.SPAWN_HEIGHT_MAX) / 2f
         }
 
+        // The highest random centre is also the earliest one a full jump
+        // must reach. Bobbing can lift it another BOB_AMP pixels, while the
+        // orb's actual core radius allows collection before centre alignment.
+        // Use the existing independent action model rather than an invented
+        // second gravity curve. A malformed speed takes the supported maximum.
+        val highestOrbCentreY = topAnchor - SeedOrbManager.SPAWN_HEIGHT_MAX
+        val standingPlayerTop = safeGroundY - Player.BASE_HEIGHT + Player.HITBOX_INSET
+        val requiredRise = (
+            standingPlayerTop -
+                (highestOrbCentreY - SeedOrb.BOB_AMP + SeedOrb.RADIUS)
+            ).coerceAtLeast(0f)
+        val riseObservation = EncounterActionFeasibility.observe(
+            leadDistancePx = 0f,
+            approachSpeedPxPerSec = GameConstants.BASE_SCROLL_SPEED,
+            requiredVerticalClearancePx = requiredRise,
+            jumpUpwardSpeedPxPerSec = -Player.MAX_JUMP_FORCE,
+            gravityPxPerSecSquared = Player.GRAVITY,
+            gestureDecisionSeconds = 0f
+        )
+        val riseSeconds = riseObservation.timeToRequiredRiseSeconds
+            .takeIf { it.isFinite() && it < Float.MAX_VALUE }
+            ?: Player.MAX_HOLD_DURATION_S
+        val approachSpeed = scrollSpeedPxPerSec
+            .takeIf { it.isFinite() && it > 0f }
+            ?.coerceAtMost(GameConstants.MAX_SCROLL_SPEED)
+            ?: GameConstants.MAX_SCROLL_SPEED
+        val minimumPickupLeadPx = (
+            (GESTURE_DECISION_SECONDS + JUMP_MARGIN_SECONDS + riseSeconds).toDouble() *
+                approachSpeed.toDouble() +
+                SeedOrb.RADIUS.toDouble() +
+                SeedOrbManager.SPAWN_HORIZONTAL_JITTER_HALF_SPAN_PX.toDouble()
+            ).coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
         val minimumAheadX = finiteOr(playerBounds.right, 0f) +
-            maxOf(120f, safeScreenWidth * 0.08f)
+            maxOf(120f, safeScreenWidth * 0.08f, minimumPickupLeadPx)
         val encounterCentreX = if (encounterBounds.left.isFinite() && encounterBounds.right.isFinite()) {
             (encounterBounds.left.toDouble() + encounterBounds.right.toDouble())
                 .div(2.0)
