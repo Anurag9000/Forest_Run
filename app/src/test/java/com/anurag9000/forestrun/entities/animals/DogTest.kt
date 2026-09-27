@@ -161,9 +161,11 @@ class DogTest {
         val projectileRect = rectField.get(projectile) as RectF
         projectileRect.set(500f, 200f, 584f, 236f)
 
-        player.previousHitbox.set(460f, 200f, 480f, 220f)
-        player.hitbox.set(460f, 300f, 480f, 320f)
-        player.hasMotionSample = true
+        capturePlayerMotion(
+            player = player,
+            before = RectF(460f, 200f, 480f, 220f),
+            after = RectF(460f, 300f, 480f, 320f)
+        )
         dog.update(deltaTime = 0.05f, scrollSpeed = 1_480f)
         // Both endpoint player/projectile pairs miss; the real falling
         // player intersects the moving shockwave only between samples.
@@ -192,9 +194,11 @@ class DogTest {
         val projectileRect = rectField.get(projectile) as RectF
         projectileRect.set(430f, 200f, 514f, 236f)
 
-        player.previousHitbox.set(460f, 300f, 480f, 320f)
-        player.hitbox.set(460f, 200f, 480f, 220f)
-        player.hasMotionSample = true
+        capturePlayerMotion(
+            player = player,
+            before = RectF(460f, 300f, 480f, 320f),
+            after = RectF(460f, 200f, 480f, 220f)
+        )
         dog.update(deltaTime = 0.05f, scrollSpeed = 2_000f)
         // The shockwave has cleared X before the Player reaches its Y lane.
         assertEquals(CollisionResult.NONE, dog.onCollision(player, state))
@@ -217,18 +221,26 @@ class DogTest {
         dog.hasMotionSample = true
         val left = before.left - 44f
         val right = before.left - 24f
-        player.previousHitbox.set(
-            left, before.top + 5f, right, before.top + 25f
+        capturePlayerMotion(
+            player = player,
+            before = RectF(left, before.top + 5f, right, before.top + 25f),
+            after = RectF(left, before.bottom + 8f, right, before.bottom + 28f)
         )
-        player.hitbox.set(
-            left, before.bottom + 8f, right, before.bottom + 28f
-        )
-        player.hasMotionSample = true
         dog.update(deltaTime = 0.05f, scrollSpeed = 2_000f)
 
         // Before: horizontal miss. After: vertical miss. There is a genuine
         // shared-time overlap as the body moves left and Player falls.
         assertEquals(CollisionResult.HIT, dog.onCollision(player, state))
+    }
+
+    private fun capturePlayerMotion(player: Player, before: RectF, after: RectF) {
+        player.hitbox.set(before)
+        // The motion-sample flag has a private setter by design. Let Player's
+        // real admitted physics update own it, then place the final geometry.
+        player.update(0.001f)
+        assertTrue(player.hasMotionSample)
+        assertEquals(before, player.previousHitbox)
+        player.hitbox.set(after)
     }
 
     private fun booleanField(dog: Dog, name: String): Boolean {
