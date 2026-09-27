@@ -122,22 +122,43 @@ object SaveManager {
 
     // ── High score ────────────────────────────────────────────────────────
 
+    /**
+     * Record writes are monotonic: an older run must never replace a better
+     * achievement. The same monitor as namespace selection makes the
+     * read/compare/write sequence belong to one preference namespace.
+     */
     fun saveHighScore(context: Context, score: Int) {
-        prefs(context).edit().putInt(KEY_HIGH_SCORE, score.coerceAtLeast(0)).apply()
+        val candidate = score.coerceAtLeast(0)
+        synchronized(gardenWriteLock) {
+            val selectedPrefs = prefs(context)
+            val previous = selectedPrefs.getInt(KEY_HIGH_SCORE, 0).coerceAtLeast(0)
+            if (candidate > previous) {
+                selectedPrefs.edit().putInt(KEY_HIGH_SCORE, candidate).apply()
+            }
+        }
     }
 
     fun loadHighScore(context: Context): Int =
-        prefs(context).getInt(KEY_HIGH_SCORE, 0)
+        prefs(context).getInt(KEY_HIGH_SCORE, 0).coerceAtLeast(0)
 
     // ── Best distance ─────────────────────────────────────────────────────
 
     fun saveBestDistance(context: Context, distanceM: Float) {
-        val safeDistance = distanceM.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
-        prefs(context).edit().putFloat(KEY_BEST_DIST, safeDistance).apply()
+        // Invalid geometry/measurement must not erase a real achievement.
+        if (!distanceM.isFinite() || distanceM <= 0f) return
+        synchronized(gardenWriteLock) {
+            val selectedPrefs = prefs(context)
+            val previous = selectedPrefs.getFloat(KEY_BEST_DIST, 0f)
+                .takeIf { it.isFinite() && it >= 0f } ?: 0f
+            if (distanceM > previous) {
+                selectedPrefs.edit().putFloat(KEY_BEST_DIST, distanceM).apply()
+            }
+        }
     }
 
     fun loadBestDistance(context: Context): Float =
         prefs(context).getFloat(KEY_BEST_DIST, 0f)
+            .takeIf { it.isFinite() && it >= 0f } ?: 0f
 
     // ── Lifetime seeds ────────────────────────────────────────────────────
 

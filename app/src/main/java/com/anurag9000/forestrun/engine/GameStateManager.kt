@@ -363,6 +363,8 @@ class GameStateManager(
     fun save() {
         if (!persistProgress()) return
         SaveManager.saveHighScore(appContext, highScore)
+        // Rejoin a better record saved by another run while this owner lived.
+        highScore = maxOf(highScore, SaveManager.loadHighScore(appContext))
         persistentHighScoreFloor = maxOf(persistentHighScoreFloor, highScore)
         lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext)
     }

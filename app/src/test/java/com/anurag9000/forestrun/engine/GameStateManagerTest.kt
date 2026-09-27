@@ -26,6 +26,24 @@ class GameStateManagerTest {
             .commit()
     }
 
+
+    @Test
+    fun `stale manager save cannot lower another run high score`() {
+        val stale = GameStateManager(context)
+        val recent = GameStateManager(context)
+        recent.addBonus(points = 900)
+        recent.save()
+
+        stale.addBonus(points = 200)
+        stale.save()
+
+        assertEquals(900, SaveManager.loadHighScore(context))
+        assertEquals(900, stale.highScore)
+        assertEquals(900, GameStateManager(context).highScore)
+        stale.resetRun()
+        assertEquals(900, stale.highScore)
+    }
+
     @Test
     fun `collecting seeds activates bloom and persists lifetime seeds`() {
         val state = GameStateManager(context)

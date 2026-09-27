@@ -81,6 +81,44 @@ class SaveManagerTest {
         assertEquals(12, SaveManager.loadLifetimeSeeds(context))
     }
 
+
+    @Test
+    fun `score and distance records never regress under stale writes`() {
+        SaveManager.saveHighScore(context, 900)
+        SaveManager.saveHighScore(context, 150)
+        SaveManager.saveHighScore(context, -100)
+        assertEquals(900, SaveManager.loadHighScore(context))
+        SaveManager.saveHighScore(context, 1_200)
+        SaveManager.saveHighScore(context, 900)
+        assertEquals(1_200, SaveManager.loadHighScore(context))
+
+        SaveManager.saveBestDistance(context, 1_234.5f)
+        for (stale in listOf(100f, -5f, 0f, Float.NaN, Float.POSITIVE_INFINITY,
+            Float.NEGATIVE_INFINITY
+        )) {
+            SaveManager.saveBestDistance(context, stale)
+            assertEquals(1_234.5f, SaveManager.loadBestDistance(context), 0f)
+        }
+        SaveManager.saveBestDistance(context, 2_345.75f)
+        SaveManager.saveBestDistance(context, 1_234.5f)
+        assertEquals(2_345.75f, SaveManager.loadBestDistance(context), 0f)
+    }
+
+    @Test
+    fun `malformed stored records normalize before the next valid achievement`() {
+        context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt("high_score", -50)
+            .putFloat("best_distance", Float.NaN)
+            .commit()
+        assertEquals(0, SaveManager.loadHighScore(context))
+        assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
+        SaveManager.saveHighScore(context, 42)
+        SaveManager.saveBestDistance(context, 12.5f)
+        assertEquals(42, SaveManager.loadHighScore(context))
+        assertEquals(12.5f, SaveManager.loadBestDistance(context), 0f)
+    }
+
     @Test
     fun `best distance persists across reloads`() {
         SaveManager.saveBestDistance(context, 123.5f)
