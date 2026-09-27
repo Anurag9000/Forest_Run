@@ -12,6 +12,7 @@ import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.PlayerState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -55,14 +56,26 @@ class WeepingWillowTest {
         )
         assertEquals(CollisionResult.HIT, willow.onCollision(player, gameState))
 
+        // The padded curtain edge is a near miss only outside the centre
+        // trunk; a wide rectangle crossing the trunk is a genuine HIT.
         player.hitbox.set(
-            duckLaneRect.left + 8f,
-            curtainHitbox.bottom + 0.5f,
-            duckLaneRect.right - 8f,
-            duckLaneRect.top - 0.5f
+            curtainHitbox.right - 4f,
+            curtainHitbox.bottom + 1f,
+            curtainHitbox.right + 4f,
+            curtainHitbox.bottom + 3f
         )
+        val trunk = rectField(willow, "trunkHitbox")
         assertTrue(player.hitbox.top < player.hitbox.bottom)
+        assertFalse(RectF.intersects(player.hitbox, curtainHitbox))
+        assertFalse(RectF.intersects(player.hitbox, trunk))
+        assertFalse(duckLaneRect.contains(player.hitbox))
         assertEquals(CollisionResult.MERCY_MISS, willow.onCollision(player, gameState))
+
+        player.hitbox.set(
+            trunk.centerX() - 4f, curtainHitbox.bottom + 1f,
+            trunk.centerX() + 4f, curtainHitbox.bottom + 3f
+        )
+        assertEquals(CollisionResult.HIT, willow.onCollision(player, gameState))
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.PlayerState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -55,13 +56,26 @@ class JacarandaTest {
         )
         assertEquals(CollisionResult.HIT, jacaranda.onCollision(player, gameState))
 
+        // A genuine near miss is just outside the branch at the far edge,
+        // not a wide strip across the still-solid centre trunk.
         player.hitbox.set(
-            undersideLaneRect.left + 8f,
-            branchHitbox.bottom + 2f,
-            undersideLaneRect.right - 8f,
-            undersideLaneRect.top - 2f
+            branchHitbox.right - 4f,
+            branchHitbox.bottom + 1f,
+            branchHitbox.right + 4f,
+            branchHitbox.bottom + 3f
         )
+        val trunk = rectField(jacaranda, "trunkHitbox")
+        assertFalse(RectF.intersects(player.hitbox, branchHitbox))
+        assertFalse(RectF.intersects(player.hitbox, trunk))
+        assertFalse(undersideLaneRect.contains(player.hitbox))
         assertEquals(CollisionResult.MERCY_MISS, jacaranda.onCollision(player, gameState))
+
+        // Being close vertically does not exempt the actual solid trunk.
+        player.hitbox.set(
+            trunk.centerX() - 4f, branchHitbox.bottom + 1f,
+            trunk.centerX() + 4f, branchHitbox.bottom + 3f
+        )
+        assertEquals(CollisionResult.HIT, jacaranda.onCollision(player, gameState))
     }
 
     @Test
