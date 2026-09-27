@@ -32,8 +32,12 @@ class Duck(
     private val readability = ReadabilityProfile.entityForGround(EntityType.DUCK, groundY)
     private val birdH = readability.heightPx
     private val birdW = SpriteSizing.widthForHeight(sprite, birdH, minWidth = readability.minWidthPx)
-    // Duck flies at ~60% screen height above ground — roughly head height
-    private val flyY = groundY - groundY * 0.30f
+    // Align flight to the actual Player foot anchor. A world-height
+    // percentage left the body entirely above a standing Player on 1080px
+    // and taller screens, silently defeating the taught duck response.
+    // The sprite's lower edge remains above the real crouched hitbox but
+    // overlaps the standing head/shoulder collision band at every density.
+    private val flyY = groundY - Player.BASE_HEIGHT * 0.60f
     private val insetX = birdW * readability.hitInsetXRatio
     private val insetY = birdH * readability.hitInsetYRatio
     private val quackCallRect = RectF()
