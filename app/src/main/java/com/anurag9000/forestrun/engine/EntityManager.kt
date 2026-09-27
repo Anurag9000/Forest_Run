@@ -43,12 +43,12 @@ class EntityManager internal constructor(
     private val spriteManager: SpriteManager,
     val biomeManager: BiomeManager = BiomeManager(),
     private val encounterPersistence: ApplicationEncounterPersistence =
-        AndroidApplicationEncounterPersistence(context)
+        AndroidApplicationEncounterPersistence(context),
+    val seedOrbManager: SeedOrbManager = SeedOrbManager()
 ) {
     @Volatile
     internal var debugActiveEntityCount: Int = 0
 
-    val seedOrbManager = SeedOrbManager()
     val activeEntities: MutableList<Entity> = mutableListOf()
 
     /**
@@ -352,11 +352,35 @@ class EntityManager internal constructor(
             screenHeight = screenHeight,
             scrollSpeedPxPerSec = gameState.scrollSpeed
         )
-        seedOrbManager.trySpawn(
-            centreX = stagingPoint.centreX,
-            topY = stagingPoint.topY,
-            spawnRate = orbSpawnRateFor(entity)
-        )
+        // The speed-aware pickup point may lie as far ahead as the next
+        // still-unresolved hazard. Do not spawn an enticing Orb through that
+        // encounter. Skip only the optional pickup, not clean-pass progress.
+        var clearApproach = true
+        var candidateIndex = 0
+        while (candidateIndex < activeEntities.size) {
+            val candidate = activeEntities[candidateIndex]
+            if (candidate !== entity && candidate.isActive &&
+                candidate.encounterOutcome == EncounterOutcome.PENDING
+            ) {
+                val candidateBounds = liveBounds(candidate)
+                if (candidateBounds == null ||
+                    !SeedOrbSpawnPolicy.isClearOfPendingEncounter(
+                        stagingPoint, player.hitbox, candidateBounds
+                    )
+                ) {
+                    clearApproach = false
+                    break
+                }
+            }
+            candidateIndex++
+        }
+        if (clearApproach) {
+            seedOrbManager.trySpawn(
+                centreX = stagingPoint.centreX,
+                topY = stagingPoint.topY,
+                spawnRate = orbSpawnRateFor(entity)
+            )
+        }
     }
 
     private fun recordResolvedEncounter(entity: Entity) {

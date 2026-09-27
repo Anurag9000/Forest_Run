@@ -211,6 +211,32 @@ class SeedOrbSpawnPolicyTest {
         assertTrue(fast.minimumPossibleCentreY == slow.minimumPossibleCentreY)
     }
 
+
+    @Test
+    fun `optional reward refuses an unresolved hazard anywhere along approach`() {
+        val player = RectF(454f, 785.6f, 506f, 875.6f)
+        val point = SeedOrbSpawnPolicy.forCleanPass(
+            encounterBounds = RectF(100f, 0f, 220f, 885.6f),
+            playerBounds = player,
+            playerGroundY = 885.6f,
+            screenWidth = 1_920f,
+            screenHeight = 1_080f,
+            scrollSpeedPxPerSec = GameConstants.MAX_SCROLL_SPEED
+        )
+        val inCorridor = RectF(
+            point.centreX - 30f, 0f, point.centreX + 30f, 885.6f
+        )
+        val behind = RectF(100f, 0f, player.left - 1f, 885.6f)
+        val beyond = RectF(point.centreX + 150f, 0f, point.centreX + 240f, 885.6f)
+        assertTrue(!SeedOrbSpawnPolicy.isClearOfPendingEncounter(point, player, inCorridor))
+        assertTrue(SeedOrbSpawnPolicy.isClearOfPendingEncounter(point, player, behind))
+        assertTrue(SeedOrbSpawnPolicy.isClearOfPendingEncounter(point, player, beyond))
+        assertTrue(!SeedOrbSpawnPolicy.isClearOfPendingEncounter(point, player, RectF()))
+        assertTrue(!SeedOrbSpawnPolicy.isClearOfPendingEncounter(
+            point, player, RectF(Float.NaN, 0f, 10f, 20f)
+        ))
+    }
+
     @Test
     fun `malformed geometry and dimensions always fail closed to finite ordered staging`() {
         val malformed = floatArrayOf(

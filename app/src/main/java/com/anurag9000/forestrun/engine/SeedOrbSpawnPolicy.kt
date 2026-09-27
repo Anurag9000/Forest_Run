@@ -31,6 +31,7 @@ object SeedOrbSpawnPolicy {
     // Human timing acceptance remains a separate requirement.
     private const val GESTURE_DECISION_SECONDS = 0.075f
     private const val JUMP_MARGIN_SECONDS = 0.08f
+    private const val APPROACH_CLEARANCE_PX = 8f
 
     fun forCleanPass(
         encounterBounds: RectF,
@@ -125,6 +126,35 @@ object SeedOrbSpawnPolicy {
             minimumPossibleCentreY = topAnchor - SeedOrbManager.SPAWN_HEIGHT_MAX,
             maximumPossibleCentreY = topAnchor - SeedOrbManager.SPAWN_HEIGHT_MIN
         )
+    }
+
+
+    /**
+     * No optional reward should lure the player through another *unresolved*
+     * encounter between the player and the farthest randomized Orb edge.
+     * This rejects the whole horizontal corridor conservatively; a disjoint
+     * vertical snapshot alone cannot certify a moving hazard's future lane.
+     */
+    fun isClearOfPendingEncounter(
+        staging: SeedOrbStagingPoint,
+        playerBounds: RectF,
+        pendingBounds: RectF
+    ): Boolean {
+        val left = playerBounds.left
+        val end = (
+            staging.centreX.toDouble() +
+                SeedOrbManager.SPAWN_HORIZONTAL_JITTER_HALF_SPAN_PX.toDouble() +
+                SeedOrb.RADIUS.toDouble() + SeedOrb.HALO_MARGIN.toDouble() +
+                APPROACH_CLEARANCE_PX.toDouble()
+            ).coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
+        if (!left.isFinite() || !end.isFinite() ||
+            !pendingBounds.left.isFinite() || !pendingBounds.right.isFinite() ||
+            !pendingBounds.top.isFinite() || !pendingBounds.bottom.isFinite() ||
+            pendingBounds.left >= pendingBounds.right ||
+            pendingBounds.top >= pendingBounds.bottom
+        ) return false
+
+        return pendingBounds.right <= left || pendingBounds.left >= end
     }
 
     private fun finiteOr(value: Float, fallback: Float): Float =

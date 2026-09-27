@@ -11,6 +11,7 @@ import com.anurag9000.forestrun.entities.EntityFactory
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.systems.ParticleManager
+import com.anurag9000.forestrun.systems.SeedOrbManager
 import com.anurag9000.forestrun.ui.DialogueBubbleManager
 import com.anurag9000.forestrun.ui.FlavorTextManager
 import org.junit.After
@@ -248,6 +249,46 @@ class EntityOutcomeIntegrationTest {
             DialogueBubbleManager.clear()
             FlavorTextManager.clear()
         }
+    }
+
+
+    @Test
+    fun `clean pass suppresses optional Orb behind the next pending hazard`() {
+        val guaranteedOrbs = SeedOrbManager { 0.5f }
+        val manager = EntityManager(
+            context = context,
+            screenWidth = 1_920f,
+            screenHeight = 1_080f,
+            spriteManager = spriteManager,
+            seedOrbManager = guaranteedOrbs
+        )
+        val state = GameStateManager(context)
+        val cleared = ProbeEntity(
+            context, CollisionResult.NONE, right = player.hitbox.left - 20f
+        )
+        val upcoming = ProbeEntity(
+            context, CollisionResult.NONE, right = player.hitbox.right + 300f
+        )
+        manager.activeEntities += listOf(cleared, upcoming)
+
+        assertNull(manager.checkCollisions(player, state))
+        assertEquals(EncounterOutcome.CLEAN_PASS, cleared.encounterOutcome)
+        assertEquals(EncounterOutcome.PENDING, upcoming.encounterOutcome)
+        assertEquals(1, cleared.uniqueActionCount)
+        assertEquals(1, state.cleanPassesThisRun)
+        assertEquals(0, guaranteedOrbs.activeOrbCount)
+
+        // Once the conflicting encounter departs, the same real owner and
+        // deterministic Orb manager can stage a subsequent clean-pass reward.
+        upcoming.isActive = false
+        val later = ProbeEntity(
+            context, CollisionResult.NONE, right = player.hitbox.left - 25f
+        )
+        manager.activeEntities += later
+        assertNull(manager.checkCollisions(player, state))
+        assertEquals(EncounterOutcome.CLEAN_PASS, later.encounterOutcome)
+        assertEquals(2, state.cleanPassesThisRun)
+        assertEquals(1, guaranteedOrbs.activeOrbCount)
     }
 
     @Test
