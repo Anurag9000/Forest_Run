@@ -27,6 +27,10 @@ class SeedOrb(
         private set
     private var elapsed = 0f
     private var bobTime = 0f
+    // The normal 50 ms recovery step can move a max-speed Orb 100 px.
+    // Store the preceding core centre so an in-between pickup is not missed.
+    private var previousCentreX = x
+    private var previousCentreY = y
 
     private val bobRect = RectF()
     private val checkRect = RectF()
@@ -56,6 +60,8 @@ class SeedOrb(
         if (!deltaTime.isFinite() || deltaTime < 0f) return true
         if (!scrollSpeed.isFinite() || scrollSpeed < 0f) return true
 
+        previousCentreX = centreX
+        previousCentreY = centreY
         elapsed = finiteSaturatingAdd(elapsed, deltaTime)
         bobTime = finiteSaturatingAdd(bobTime, deltaTime)
         x = finiteSaturatingSubtract(x, scrollSpeed * deltaTime)
@@ -103,21 +109,68 @@ class SeedOrb(
     }
 
     /**
-     * Atomically claims this Orb. A collected Orb becomes inactive immediately,
-     * so repeated collision checks can never grant duplicate Seeds.
+     * Atomically claims this Orb. Current-frame overlap remains authoritative,
+     * but a fast Orb can cross the narrower jumping Player entirely in one
+     * bounded update. Check the centre segment against the Player rectangle
+     * expanded by the existing square pickup core radius. This is a swept
+     * pickup (not a larger stationary pickup radius), with no allocation.
      */
     fun checkCollection(playerHitbox: RectF): Boolean {
-        if (!isActive || isCollected || playerHitbox.isEmpty) return false
+        if (!isActive || isCollected || playerHitbox.isEmpty ||
+            !playerHitbox.left.isFinite() || !playerHitbox.top.isFinite() ||
+            !playerHitbox.right.isFinite() || !playerHitbox.bottom.isFinite()
+        ) return false
         checkRect.set(
             bobRect.centerX() - RADIUS,
             bobRect.centerY() - RADIUS,
             bobRect.centerX() + RADIUS,
             bobRect.centerY() + RADIUS
         )
-        if (!RectF.intersects(playerHitbox, checkRect)) return false
+        if (!RectF.intersects(playerHitbox, checkRect) &&
+            !sweptCoreIntersects(playerHitbox)
+        ) return false
         isCollected = true
         isActive = false
         return true
+    }
+
+    /**
+     * Slab intersection of the two observed Orb centres with the stationary
+     * Player hitbox inflated by the square pickup core. Requiring overlapping
+     * time intervals on both axes avoids awarding a diagonal AABB-only miss.
+     * The short sinusoidal bob is approximated by its frame-end centre segment.
+     */
+    private fun sweptCoreIntersects(playerHitbox: RectF): Boolean {
+        val startX = previousCentreX.toDouble()
+        val startY = previousCentreY.toDouble()
+        val deltaX = centreX.toDouble() - startX
+        val deltaY = centreY.toDouble() - startY
+        var entry = 0.0
+        var exit = 1.0
+
+        val left = playerHitbox.left.toDouble() - RADIUS.toDouble()
+        val right = playerHitbox.right.toDouble() + RADIUS.toDouble()
+        if (deltaX == 0.0) {
+            if (startX <= left || startX >= right) return false
+        } else {
+            val first = (left - startX) / deltaX
+            val second = (right - startX) / deltaX
+            entry = maxOf(entry, minOf(first, second))
+            exit = minOf(exit, maxOf(first, second))
+            if (entry >= exit) return false
+        }
+
+        val top = playerHitbox.top.toDouble() - RADIUS.toDouble()
+        val bottom = playerHitbox.bottom.toDouble() + RADIUS.toDouble()
+        if (deltaY == 0.0) {
+            if (startY <= top || startY >= bottom) return false
+        } else {
+            val first = (top - startY) / deltaY
+            val second = (bottom - startY) / deltaY
+            entry = maxOf(entry, minOf(first, second))
+            exit = minOf(exit, maxOf(first, second))
+        }
+        return entry < exit && exit > 0.0 && entry < 1.0
     }
 
     private fun updateGeometry() {

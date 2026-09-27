@@ -28,6 +28,50 @@ class SeedOrbTest {
         gameState = GameStateManager(context)
     }
 
+
+    @Test
+    fun `max speed bounded frame cannot tunnel a narrow jumping player through an Orb`() {
+        val orb = SeedOrb(530f, 200f)
+        val narrowJumpHitbox = RectF(460f, 180f, 500f, 220f)
+        // Neither sampled endpoint overlaps the 52 px pickup core.
+        assertFalse(orb.checkCollection(narrowJumpHitbox))
+        assertTrue(orb.update(0.05f, 2_000f, gameState))
+        assertTrue(orb.centreX + SeedOrb.RADIUS < narrowJumpHitbox.left)
+        assertTrue(orb.checkCollection(narrowJumpHitbox))
+        assertTrue(orb.isCollected)
+        assertFalse(orb.isActive)
+        assertFalse(orb.checkCollection(narrowJumpHitbox))
+    }
+
+    @Test
+    fun `horizontal sweep never collects an Orb outside the vertical lane`() {
+        val orb = SeedOrb(530f, 200f)
+        val unrelatedVerticalLane = RectF(460f, 350f, 500f, 390f)
+        assertTrue(orb.update(0.05f, 2_000f, gameState))
+        assertFalse(orb.checkCollection(unrelatedVerticalLane))
+        assertTrue(orb.isActive)
+        assertFalse(orb.isCollected)
+    }
+
+    @Test
+    fun `swept collision does not use diagonal union rectangle as a pickup`() {
+        val orb = SeedOrb(530f, 220f)
+        val diagonalMiss = RectF(472f, 252f, 488f, 262f)
+        assertTrue(orb.update(0.05f, 2_000f, gameState))
+        // X and Y swept projections each overlap, but at different times.
+        assertFalse(orb.checkCollection(diagonalMiss))
+        assertTrue(orb.isActive)
+    }
+
+    @Test
+    fun `sweep does not resurrect a lifetime expired Orb`() {
+        val orb = SeedOrb(530f, 200f)
+        val narrowJumpHitbox = RectF(460f, 180f, 500f, 220f)
+        assertFalse(orb.update(SeedOrb.LIFETIME_S, 2_000f, gameState))
+        assertFalse(orb.checkCollection(narrowJumpHitbox))
+        assertFalse(orb.isCollected)
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun `orb rejects non finite spawn coordinates`() {
         SeedOrb(Float.NaN, 100f)
