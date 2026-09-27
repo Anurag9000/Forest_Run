@@ -1,5 +1,7 @@
 package com.anurag9000.forestrun.engine
 
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.sqrt
 
 /**
@@ -36,9 +38,11 @@ internal data class EncounterActionFeasibilityObservation(
 /**
  * Deterministic experiment boundary for reaction-window analysis.
  *
- * The jump equation uses a constant supplied gravity, which is conservative for
- * Forest Run's full jump because Player temporarily reduces gravity around the
- * apex. Therefore a passing result does not overstate the production jump.
+ * The maximum admitted 50ms semi-implicit Player step is the source of
+ * truth for the conservative vertical launch envelope. A continuous parabola
+ * overstates sampled height and reports an unrealistically early first rise.
+ * APEX gravity reduction starts only after upward velocity reaches zero and
+ * cannot restore height already lost before the apex.
  */
 internal object EncounterActionFeasibility {
     fun observe(
@@ -82,10 +86,7 @@ internal object EncounterActionFeasibility {
         }
 
         val contactTime = finiteFloatRatio(lead, speed)
-        val maxRise = finiteDoubleRatio(
-            jumpSpeed.toDouble() * jumpSpeed.toDouble(),
-            2.0 * gravity.toDouble()
-        )
+        val maxRise = sampledMaximumRise(jumpSpeed, gravity)
         val riseTime = earliestRiseTime(
             clearancePx = clearance,
             upwardSpeedPxPerSec = jumpSpeed,
@@ -120,6 +121,41 @@ internal object EncounterActionFeasibility {
         )
     }
 
+    /**
+     * Same semi-implicit update as Player:
+     *   v_n = -upwardSpeed + n * gravity * dt
+     *   rise_n = n * upwardSpeed * dt - gravity * dt² * n(n+1)/2
+     *
+     * Its peak is at one of the two integer steps surrounding the parabola's
+     * vertex. Compute those directly, without a loop that could grow without
+     * bound for malformed-but-finite extreme parameter combinations.
+     */
+    private fun sampledMaximumRise(upwardSpeed: Float, gravity: Float): Float {
+        val dt = FrameInputAdmission.MAX_DELTA_SECONDS.toDouble()
+        val speed = upwardSpeed.toDouble()
+        val g = gravity.toDouble()
+        val effectiveSpeed = speed - 0.5 * g * dt
+        if (effectiveSpeed <= 0.0) return 0f
+        val vertexStep = effectiveSpeed / (g * dt)
+        val earlier = floor(vertexStep).coerceAtLeast(0.0)
+        return maxOf(
+            riseAtStep(earlier, speed, g, dt),
+            riseAtStep(earlier + 1.0, speed, g, dt)
+        ).coerceIn(0.0, Float.MAX_VALUE.toDouble()).toFloat()
+    }
+
+    private fun riseAtStep(
+        steps: Double,
+        upwardSpeed: Double,
+        gravity: Double,
+        deltaTime: Double
+    ): Double {
+        val time = steps * deltaTime
+        return (upwardSpeed * time -
+            0.5 * gravity * deltaTime * deltaTime * steps * (steps + 1.0))
+            .coerceAtLeast(0.0)
+    }
+
     private fun earliestRiseTime(
         clearancePx: Float,
         upwardSpeedPxPerSec: Float,
@@ -127,21 +163,38 @@ internal object EncounterActionFeasibility {
         maximumRisePx: Float
     ): Float {
         if (clearancePx <= 0f) return 0f
-        if (clearancePx > maximumRisePx + 0.0001f) return Float.MAX_VALUE
+        if (clearancePx > maximumRisePx) return Float.MAX_VALUE
         val speed = upwardSpeedPxPerSec.toDouble()
         val gravity = gravityPxPerSecSquared.toDouble()
-        val discriminant = speed * speed - 2.0 * gravity * clearancePx.toDouble()
+        val dt = FrameInputAdmission.MAX_DELTA_SECONDS.toDouble()
+        val effectiveSpeed = speed - 0.5 * gravity * dt
+        if (effectiveSpeed <= 0.0) return Float.MAX_VALUE
+        val discriminant = effectiveSpeed * effectiveSpeed -
+            2.0 * gravity * clearancePx.toDouble()
         if (!discriminant.isFinite() || discriminant < 0.0) return Float.MAX_VALUE
-        // Stable smaller quadratic root: 2h / (v + sqrt(v² - 2gh)).
-        // Subtracting sqrt(discriminant) from v loses all significant bits
-        // for very small h relative to v²/g and can produce a false zero
-        // reaction time even though the true rise takes measurable time.
-        val denominator = speed + sqrt(discriminant)
+
+        // Stable smaller root of the sampled-height parabola. Round UP to a
+        // complete admitted simulation step; a continuous crossing between
+        // update calls is not yet an observable/reachable Player position.
+        val denominator = effectiveSpeed + sqrt(discriminant)
         if (!denominator.isFinite() || denominator <= 0.0) return Float.MAX_VALUE
-        val seconds = (2.0 * clearancePx.toDouble()) / denominator
-        return seconds
-            .coerceIn(0.0, Float.MAX_VALUE.toDouble())
-            .toFloat()
+        val continuousStepTime = 2.0 * clearancePx.toDouble() / denominator
+        // The exact 495px apex falls at a sampled step. Float 0.05f and
+        // a Double root can put that integer boundary a few ulps above 11.
+        // Snap near-integers down, then validate the actual sampled height.
+        val firstStep = ceil(continuousStepTime / dt - 1e-7).coerceAtLeast(1.0)
+        val firstRise = riseAtStep(firstStep, speed, gravity, dt)
+        val target = clearancePx.toDouble()
+        val roundingTolerance = 0.0001
+        val selectedStep = when {
+            firstRise + roundingTolerance >= target -> firstStep
+            riseAtStep(firstStep + 1.0, speed, gravity, dt) +
+                roundingTolerance >= target -> firstStep + 1.0
+            else -> return Float.MAX_VALUE
+        }
+        return (selectedStep * dt).coerceIn(
+            0.0, Float.MAX_VALUE.toDouble()
+        ).toFloat()
     }
 
     private fun finiteFloatRatio(numerator: Float, denominator: Float): Float {

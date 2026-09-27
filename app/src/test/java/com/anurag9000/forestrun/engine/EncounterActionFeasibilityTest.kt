@@ -18,10 +18,12 @@ class EncounterActionFeasibilityTest {
             clearancePx = 0f
         )
 
-        val expectedRise =
+        // With 50ms semi-implicit steps, the sampled apex is 495 px,
+        // not the continuous-parabola value of 540 px.
+        val continuousRise =
             Player.MAX_JUMP_FORCE * Player.MAX_JUMP_FORCE / (2f * Player.GRAVITY)
-        assertEquals(expectedRise, observation.maximumBallisticRisePx, 0.0001f)
-        assertEquals(540f, observation.maximumBallisticRisePx, 0.0001f)
+        assertEquals(540f, continuousRise, 0.0001f)
+        assertEquals(495f, observation.maximumBallisticRisePx, 0.0001f)
         assertTrue(observation.jumpFeasible)
         assertTrue(observation.duckFeasible)
     }
@@ -56,6 +58,40 @@ class EncounterActionFeasibilityTest {
             }
             distance += 5f
         }
+    }
+
+    @Test
+    fun `sampling rejects unreachable 500 pixel rise despite ideal 540 pixel apex`() {
+        val impossible = observe(
+            leadDistancePx = 10_000f,
+            speedPxPerSec = GameConstants.BASE_SCROLL_SPEED,
+            clearancePx = 500f
+        )
+        assertEquals(495f, impossible.maximumBallisticRisePx, 0.0001f)
+        assertFalse(impossible.jumpFeasible)
+        assertEquals(Float.MAX_VALUE, impossible.timeToRequiredRiseSeconds, 0f)
+
+        val reachable = observe(
+            leadDistancePx = 10_000f,
+            speedPxPerSec = GameConstants.BASE_SCROLL_SPEED,
+            clearancePx = 495f
+        )
+        assertTrue(reachable.jumpFeasible)
+        assertEquals(0.55f, reachable.timeToRequiredRiseSeconds, 0.0001f)
+    }
+
+    @Test
+    fun `tiny positive rise is not credited before the first physics step`() {
+        val observation = observe(
+            leadDistancePx = 10_000f,
+            speedPxPerSec = GameConstants.BASE_SCROLL_SPEED,
+            clearancePx = 0.0001f
+        )
+        assertEquals(
+            FrameInputAdmission.MAX_DELTA_SECONDS,
+            observation.timeToRequiredRiseSeconds,
+            0.0001f
+        )
     }
 
     @Test
