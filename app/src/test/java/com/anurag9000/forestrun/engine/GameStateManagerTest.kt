@@ -28,6 +28,53 @@ class GameStateManagerTest {
 
 
     @Test
+    fun `terminal Rest preview cannot mislabel stale lower run as new high`() {
+        val stale = GameStateManager(context)
+        val newer = GameStateManager(context)
+        stale.addBonus(points = 200)
+        assertTrue(stale.isNewHighScore)
+        newer.addBonus(points = 900)
+        newer.save()
+
+        // Preview is built before the death transition's save() call.
+        val preview = stale.buildRunSummary(lastKiller = null)
+        assertEquals(200, preview.score)
+        assertEquals(900, preview.highScore)
+        assertFalse(preview.isNewHighScore)
+        assertEquals(900, SaveManager.loadHighScore(context))
+
+        stale.save()
+        assertEquals(900, stale.highScore)
+        assertFalse(stale.isNewHighScore)
+    }
+
+    @Test
+    fun `nonpersistent debug summary keeps its own isolated local record`() {
+        SaveManager.saveHighScore(context, 900)
+        val debug = GameStateManager(context) { false }
+        debug.addBonus(points = 1_100)
+
+        val preview = debug.buildRunSummary(lastKiller = null)
+        assertEquals(1_100, preview.score)
+        assertEquals(1_100, preview.highScore)
+        assertTrue(preview.isNewHighScore)
+        debug.save()
+        assertEquals(900, SaveManager.loadHighScore(context))
+    }
+
+    @Test
+    fun `unsaved genuine new best remains labeled new in terminal preview`() {
+        SaveManager.saveHighScore(context, 100)
+        val active = GameStateManager(context)
+        active.addBonus(points = 250)
+        val preview = active.buildRunSummary(lastKiller = null)
+        assertEquals(250, preview.highScore)
+        assertTrue(preview.isNewHighScore)
+        active.save()
+        assertEquals(250, SaveManager.loadHighScore(context))
+    }
+
+    @Test
     fun `stale manager save cannot lower another run high score`() {
         val stale = GameStateManager(context)
         val recent = GameStateManager(context)

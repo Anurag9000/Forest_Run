@@ -237,12 +237,20 @@ class GameStateManager(
         bloomTimer = 0f
     }
 
-    fun buildRunSummary(lastKiller: EntityType?, restQuote: String = ""): RunSummary =
-        RunSummary(
+    fun buildRunSummary(lastKiller: EntityType?, restQuote: String = ""): RunSummary {
+        // Terminal summary creation precedes the death transition's save().
+        // A concurrent run may already have published a higher achievement.
+        // Debug and capture runs keep their intentionally isolated local view.
+        val bestForSummary = if (persistProgress()) {
+            maxOf(highScore, SaveManager.loadHighScore(appContext))
+        } else {
+            highScore
+        }
+        return RunSummary(
             score = score,
             distanceM = distanceMetres,
-            isNewHighScore = isNewHighScore,
-            highScore = highScore,
+            isNewHighScore = isNewHighScore && score >= bestForSummary,
+            highScore = bestForSummary,
             mercyHearts = mercyHearts,
             mercyMisses = mercyMissesThisRun,
             kindnessChain = kindnessChain,
@@ -266,6 +274,7 @@ class GameStateManager(
             ),
             pacifistRouteTier = pacifistRouteTier
         )
+    }
 
     fun applySpeedDebuff(multiplier: Float, durationMs: Int) {
         if (!multiplier.isFinite() || multiplier <= 0f || durationMs <= 0) return
@@ -365,6 +374,7 @@ class GameStateManager(
         SaveManager.saveHighScore(appContext, highScore)
         // Rejoin a better record saved by another run while this owner lived.
         highScore = maxOf(highScore, SaveManager.loadHighScore(appContext))
+        if (score < highScore) isNewHighScore = false
         persistentHighScoreFloor = maxOf(persistentHighScoreFloor, highScore)
         lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext)
     }
