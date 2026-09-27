@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.anurag9000.forestrun.engine.GameStateManager
+import com.anurag9000.forestrun.engine.SweptCoreOverlap
 import kotlin.math.sin
 
 /** Collectible seed reward staged ahead of the player after a clean pass. */
@@ -34,6 +35,7 @@ class SeedOrb(
 
     private val bobRect = RectF()
     private val checkRect = RectF()
+    private val previousCheckRect = RectF()
     private val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -109,13 +111,15 @@ class SeedOrb(
     }
 
     /**
-     * Atomically claims this Orb. Current-frame overlap remains authoritative,
-     * but a fast Orb can cross the narrower jumping Player entirely in one
-     * bounded update. Check the centre segment against the Player rectangle
-     * expanded by the existing square pickup core radius. This is a swept
-     * pickup (not a larger stationary pickup radius), with no allocation.
+     * Atomically claims a pickup. Live gameplay supplies both Player samples so
+     * an Orb and a jumping/falling Player must overlap at the SAME time, not
+     * merely somewhere within the union of their separate sweeps. The optional
+     * null history preserves stationary-hitbox callers and old tests.
      */
-    fun checkCollection(playerHitbox: RectF): Boolean {
+    fun checkCollection(
+        playerHitbox: RectF,
+        previousPlayerHitbox: RectF? = null
+    ): Boolean {
         if (!isActive || isCollected || playerHitbox.isEmpty ||
             !playerHitbox.left.isFinite() || !playerHitbox.top.isFinite() ||
             !playerHitbox.right.isFinite() || !playerHitbox.bottom.isFinite()
@@ -126,9 +130,21 @@ class SeedOrb(
             bobRect.centerX() + RADIUS,
             bobRect.centerY() + RADIUS
         )
-        if (!RectF.intersects(playerHitbox, checkRect) &&
-            !sweptCoreIntersects(playerHitbox)
-        ) return false
+        val intersects = if (previousPlayerHitbox != null) {
+            previousCheckRect.set(
+                previousCentreX - RADIUS,
+                previousCentreY - RADIUS,
+                previousCentreX + RADIUS,
+                previousCentreY + RADIUS
+            )
+            SweptCoreOverlap.intersects(
+                previousPlayerHitbox, playerHitbox, previousCheckRect, checkRect
+            )
+        } else {
+            RectF.intersects(playerHitbox, checkRect) ||
+                sweptCoreIntersects(playerHitbox)
+        }
+        if (!intersects) return false
         isCollected = true
         isActive = false
         return true

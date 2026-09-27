@@ -64,7 +64,11 @@ class SeedOrbManager(
             val orb = orbs[orbIndex]
             orb.update(deltaTime, gameState.scrollSpeed, gameState)
 
-            if (orb.checkCollection(player.hitbox)) {
+            if (orb.checkCollection(
+                    player.hitbox,
+                    player.previousHitbox.takeIf { player.hasMotionSample }
+                )
+            ) {
                 ParticleManager.emit(FxPreset.SEED_COLLECT, orb.centreX, orb.centreY)
                 gameState.collectSeed()
                 SfxManager.playSeedPing()

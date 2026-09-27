@@ -43,6 +43,46 @@ class SeedOrbTest {
         assertFalse(orb.checkCollection(narrowJumpHitbox))
     }
 
+
+    @Test
+    fun `moving player cannot collect an Orb when their time windows differ`() {
+        val orb = SeedOrb(520f, 200f)
+        val playerBefore = RectF(460f, 300f, 480f, 320f)
+        val playerAfter = RectF(460f, 224f, 480f, 244f)
+        assertTrue(orb.update(0.05f, 2_000f, gameState))
+        // An endpoint-only Player sweep sees the final 224px top and
+        // falsely intersects the Orb while it crosses X earlier.
+        assertFalse(orb.checkCollection(playerAfter, playerBefore))
+        assertFalse(orb.isCollected)
+        assertTrue(orb.isActive)
+    }
+
+    @Test
+    fun `moving player collects a real simultaneous midframe Orb overlap`() {
+        val orb = SeedOrb(520f, 200f)
+        val playerBefore = RectF(460f, 200f, 480f, 220f)
+        val playerAfter = RectF(460f, 300f, 480f, 320f)
+        assertTrue(orb.update(0.05f, 2_000f, gameState))
+        // End-frame rectangles miss, yet the falling Player and Orb share
+        // an actual collision interval shortly after Orb enters the X lane.
+        assertFalse(orb.checkCollection(playerAfter))
+        assertTrue(orb.checkCollection(playerAfter, playerBefore))
+        assertTrue(orb.isCollected)
+        assertFalse(orb.isActive)
+        assertFalse(orb.checkCollection(playerAfter, playerBefore))
+    }
+
+    @Test
+    fun `malformed historical player box fails closed without granting pickup`() {
+        val orb = SeedOrb(520f, 200f)
+        val current = RectF(460f, 190f, 480f, 220f)
+        assertTrue(orb.update(0.05f, 2_000f, gameState))
+        assertFalse(
+            orb.checkCollection(current, RectF(Float.NaN, 0f, 500f, 220f))
+        )
+        assertTrue(orb.isActive)
+    }
+
     @Test
     fun `horizontal sweep never collects an Orb outside the vertical lane`() {
         val orb = SeedOrb(530f, 200f)
