@@ -99,14 +99,14 @@ class Jacaranda(
         canopyBloomPaint.alpha = (20f + 20f * pulse).toInt().coerceIn(0, 255)
         petalCurtainPaint.alpha = (42f + 24f * pulse).toInt().coerceIn(0, 255)
         petalStrokePaint.alpha = (88f + 44f * pulse).toInt().coerceIn(0, 255)
-        undersideLanePaint.alpha = (44f + 24f * pulse).toInt().coerceIn(0, 255)
+        // Draw the passable low channel over the sprite so the trunk's
+        // decorative lower pixels cannot conceal the actual underpass.
+        undersideLanePaint.alpha = (214f + 18f * pulse).toInt().coerceIn(0, 255)
         undersideLaneBorderPaint.alpha = (150f + 36f * pulse).toInt().coerceIn(0, 255)
         canvas.drawOval(canopyBloomRect, canopyBloomPaint)
         canvas.drawOval(canopyCoreRect, canopyHaloPaint)
         canvas.drawRoundRect(branchHitbox, 28f, 28f, petalCurtainPaint)
         canvas.drawRoundRect(branchHitbox, 28f, 28f, petalStrokePaint)
-        canvas.drawRoundRect(undersideLaneRect, 22f, 22f, undersideLanePaint)
-        canvas.drawRoundRect(undersideLaneRect, 22f, 22f, undersideLaneBorderPaint)
         repeat(6) { index ->
             val driftX = branchHitbox.left + branchHitbox.width() * (0.10f + index * 0.14f)
             val startY = branchTop + branchHitbox.height() * (0.08f + (index % 3) * 0.14f)
@@ -125,15 +125,18 @@ class Jacaranda(
                 petalStrokePaint
             )
         }
-        repeat(3) { index ->
-            val laneMarkerX = undersideLaneRect.left + undersideLaneRect.width() * ((index + 1f) / 4f)
-            canvas.drawCircle(laneMarkerX, undersideLaneRect.centerY(), treeWidth * 0.015f, undersideLaneBorderPaint)
-        }
         drawRect.set(x, groundY - treeHeight, x + treeWidth, groundY)
         canvas.save()
         canvas.rotate(sway * 0.8f, x + treeWidth / 2f, groundY)
         sprite.draw(canvas, drawRect)
         canvas.restore()
+        // Keep the complete safe underpass visible over trunk sprite pixels.
+        canvas.drawRoundRect(undersideLaneRect, 22f, 22f, undersideLanePaint)
+        canvas.drawRoundRect(undersideLaneRect, 22f, 22f, undersideLaneBorderPaint)
+        repeat(3) { index ->
+            val laneMarkerX = undersideLaneRect.left + undersideLaneRect.width() * ((index + 1f) / 4f)
+            canvas.drawCircle(laneMarkerX, undersideLaneRect.centerY(), treeWidth * 0.015f, undersideLaneBorderPaint)
+        }
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
@@ -154,13 +157,17 @@ class Jacaranda(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        if (RectF.intersects(player.hitbox, trunkHitbox) ||
-            RectF.intersects(player.hitbox, branchHitbox)) return CollisionResult.HIT
+        // This highlighted underpass crosses the *entire* tree, including the
+        // trunk. Test its real full-body fit before the trunk's solid envelope:
+        // otherwise a duck works at one staged position but the trunk kills
+        // the player as the scrolling tree finishes crossing the fixed lane.
         if (!undersideLaneRect.isEmpty &&
             undersideLaneRect.contains(player.hitbox.left, player.hitbox.top, player.hitbox.right, player.hitbox.bottom)
         ) {
             return CollisionResult.NONE
         }
+        if (RectF.intersects(player.hitbox, trunkHitbox) ||
+            RectF.intersects(player.hitbox, branchHitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
         if (
             intersectsExpanded(
@@ -208,7 +215,7 @@ class Jacaranda(
         )
         val laneInset = readability.stagingPaddingPx * 0.55f
         undersideLaneRect.set(
-            maxOf(branchHitbox.left + laneInset, trunkHitbox.right + readability.stagingPaddingPx * 0.30f),
+            branchHitbox.left + laneInset,
             branchBottom + readability.stagingPaddingPx * 0.24f,
             branchHitbox.right - laneInset,
             groundY - readability.stagingPaddingPx * 0.24f

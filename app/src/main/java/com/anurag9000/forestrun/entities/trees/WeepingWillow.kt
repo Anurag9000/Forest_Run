@@ -106,7 +106,9 @@ class WeepingWillow(
         shadowZonePaint.alpha = (18f + 24f * pulse).toInt().coerceIn(0, 255)
         canopyPaint.alpha = (38f + 24f * pulse).toInt().coerceIn(0, 255)
         canopyBorderPaint.alpha = (74f + 34f * pulse).toInt().coerceIn(0, 255)
-        duckLanePaint.alpha = (48f + 28f * pulse).toInt().coerceIn(0, 255)
+        // The opaque overlay cuts a legible opening through the sprite's
+        // decorative trunk instead of promising a transparent-looking lane.
+        duckLanePaint.alpha = (214f + 18f * pulse).toInt().coerceIn(0, 255)
         duckLaneBorderPaint.alpha = (146f + 40f * pulse).toInt().coerceIn(0, 255)
         canvas.drawRoundRect(canopyRect, 44f, 44f, canopyPaint)
         canvas.drawRoundRect(canopyRect, 44f, 44f, canopyBorderPaint)
@@ -121,12 +123,6 @@ class WeepingWillow(
         )
         canvas.drawRoundRect(curtainHitbox, 24f, 24f, curtainPaint)
         canvas.drawRoundRect(curtainHitbox, 24f, 24f, curtainStrokePaint)
-        canvas.drawRoundRect(duckLaneRect, 22f, 22f, duckLanePaint)
-        canvas.drawRoundRect(duckLaneRect, 22f, 22f, duckLaneBorderPaint)
-        repeat(3) { index ->
-            val laneMarkerX = duckLaneRect.left + duckLaneRect.width() * ((index + 1f) / 4f)
-            canvas.drawCircle(laneMarkerX, duckLaneRect.centerY(), treeWidth * 0.018f, duckLaneBorderPaint)
-        }
         repeat(7) { index ->
             val strandX = curtainHitbox.left + curtainHitbox.width() * ((index + 1f) / 8f)
             val strandDrift = sway * (0.28f + index * 0.07f)
@@ -143,6 +139,14 @@ class WeepingWillow(
         canvas.rotate(sway * 0.5f, x + treeWidth / 2f, groundY)
         sprite.draw(canvas, drawRect)
         canvas.restore()
+        // Final foreground cutout is authoritative: it visibly crosses the
+        // trunk and corresponds to the exact rectangular safe collision lane.
+        canvas.drawRoundRect(duckLaneRect, 22f, 22f, duckLanePaint)
+        canvas.drawRoundRect(duckLaneRect, 22f, 22f, duckLaneBorderPaint)
+        repeat(3) { index ->
+            val laneMarkerX = duckLaneRect.left + duckLaneRect.width() * ((index + 1f) / 4f)
+            canvas.drawCircle(laneMarkerX, duckLaneRect.centerY(), treeWidth * 0.018f, duckLaneBorderPaint)
+        }
     }
 
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
@@ -161,13 +165,17 @@ class WeepingWillow(
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
-        if (RectF.intersects(player.hitbox, trunkHitbox) ||
-            RectF.intersects(player.hitbox, curtainHitbox)) return CollisionResult.HIT
+        // This highlighted underpass crosses the *entire* tree, including the
+        // trunk. Test its real full-body fit before the trunk's solid envelope:
+        // otherwise a duck works at one staged position but the trunk kills
+        // the player as the scrolling tree finishes crossing the fixed lane.
         if (!duckLaneRect.isEmpty &&
             duckLaneRect.contains(player.hitbox.left, player.hitbox.top, player.hitbox.right, player.hitbox.bottom)
         ) {
             return CollisionResult.NONE
         }
+        if (RectF.intersects(player.hitbox, trunkHitbox) ||
+            RectF.intersects(player.hitbox, curtainHitbox)) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
         if (
             intersectsExpanded(
@@ -209,7 +217,7 @@ class WeepingWillow(
         )
         val laneInset = readability.stagingPaddingPx * 0.55f
         duckLaneRect.set(
-            maxOf(curtainHitbox.left + laneInset, trunkHitbox.right + readability.stagingPaddingPx * 0.35f),
+            curtainHitbox.left + laneInset,
             curtainBottom + readability.stagingPaddingPx * 0.18f,
             curtainHitbox.right - laneInset,
             groundY - readability.stagingPaddingPx * 0.28f

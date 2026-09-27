@@ -3,9 +3,12 @@ package com.anurag9000.forestrun.entities.trees
 import android.content.Context
 import android.graphics.RectF
 import androidx.test.core.app.ApplicationProvider
+import com.anurag9000.forestrun.engine.EntityManager
+import com.anurag9000.forestrun.engine.GameConstants
 import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
+import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.PlayerState
 import org.junit.Assert.assertEquals
@@ -119,6 +122,71 @@ class WeepingWillowTest {
                 "height=$screenHeight duck must avoid curtain and trunk",
                 CollisionResult.NONE, willow.onCollision(player, state)
             )
+        }
+    }
+
+    @Test
+    fun `real grounded duck traverses the entire moving tree including its trunk`() {
+        val dt = 0.016f
+        for (screenHeight in intArrayOf(720, 1080, 1440)) {
+            val groundY = screenHeight * 0.82f
+            for (speed in floatArrayOf(
+                GameConstants.BASE_SCROLL_SPEED,
+                GameConstants.MAX_SCROLL_SPEED
+            )) {
+                val tree = WeepingWillow(
+                    context = context,
+                    startX = 680f,
+                    screenHeight = screenHeight.toFloat(),
+                    groundY = groundY,
+                    sprite = spriteManager.willowSprite.copy()
+                )
+                val player = Player(
+                    1920, screenHeight, spriteManager, groundYOverride = groundY
+                )
+                val state = GameStateManager(context)
+                val manager = EntityManager(
+                    context, 1_920f, screenHeight.toFloat(), spriteManager
+                )
+                manager.activeEntities += tree
+                player.onDuckPressed()
+                var enteredTrunk = false
+                var clearedTree = false
+                repeat(180) { frame ->
+                    player.update(dt, speed)
+                    tree.update(dt, speed)
+                    val trunk = rectField(tree, "trunkHitbox")
+                    if (RectF.intersects(player.hitbox, trunk)) {
+                        enteredTrunk = true
+                        assertTrue(
+                            "height=$screenHeight speed=$speed frame=$frame " +
+                                "the real crouch must fit the highlighted full-width underpass",
+                            rectField(tree, "duckLaneRect").contains(
+                                player.hitbox.left, player.hitbox.top,
+                                player.hitbox.right, player.hitbox.bottom
+                            )
+                        )
+                    }
+                    val resolved = manager.checkCollisions(player, state)
+                    assertTrue(
+                        "height=$screenHeight speed=$speed frame=$frame hit in a taught underpass",
+                        resolved?.result != CollisionResult.HIT
+                    )
+                    if (tree.encounterOutcome != EncounterOutcome.PENDING) {
+                        clearedTree = true
+                    }
+                }
+                assertTrue("height=$screenHeight speed=$speed never crossed trunk", enteredTrunk)
+                assertTrue("height=$screenHeight speed=$speed did not finish encounter", clearedTree)
+                assertTrue(
+                    tree.encounterOutcome == EncounterOutcome.CLEAN_PASS ||
+                        tree.encounterOutcome == EncounterOutcome.MERCY
+                )
+                assertEquals(
+                    "completion must be rewarded once",
+                    1, state.cleanPassesThisRun + state.mercyMissesThisRun
+                )
+            }
         }
     }
 
