@@ -102,6 +102,7 @@ internal object EncounterActionFeasibility {
         val jumpFeasible = actionWindowAvailable &&
             clearance <= maxRise + 0.0001f &&
             riseTime.isFinite() &&
+            riseTime < Float.MAX_VALUE &&
             riseTime <= availableAfterDecision + 0.0001f
         val duckFeasible = actionWindowAvailable
 
@@ -131,7 +132,13 @@ internal object EncounterActionFeasibility {
         val gravity = gravityPxPerSecSquared.toDouble()
         val discriminant = speed * speed - 2.0 * gravity * clearancePx.toDouble()
         if (!discriminant.isFinite() || discriminant < 0.0) return Float.MAX_VALUE
-        val seconds = (speed - sqrt(discriminant)) / gravity
+        // Stable smaller quadratic root: 2h / (v + sqrt(v² - 2gh)).
+        // Subtracting sqrt(discriminant) from v loses all significant bits
+        // for very small h relative to v²/g and can produce a false zero
+        // reaction time even though the true rise takes measurable time.
+        val denominator = speed + sqrt(discriminant)
+        if (!denominator.isFinite() || denominator <= 0.0) return Float.MAX_VALUE
+        val seconds = (2.0 * clearancePx.toDouble()) / denominator
         return seconds
             .coerceIn(0.0, Float.MAX_VALUE.toDouble())
             .toFloat()

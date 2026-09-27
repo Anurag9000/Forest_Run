@@ -72,6 +72,37 @@ class EncounterActionFeasibilityTest {
     }
 
     @Test
+    fun `large finite velocity does not cancel genuine rise time into zero`() {
+        val observation = EncounterActionFeasibility.observe(
+            leadDistancePx = 0.5f,
+            approachSpeedPxPerSec = 1f,
+            requiredVerticalClearancePx = Float.MAX_VALUE,
+            jumpUpwardSpeedPxPerSec = Float.MAX_VALUE,
+            gravityPxPerSecSquared = 1f,
+            gestureDecisionSeconds = 0f,
+            safetyMarginSeconds = 0f
+        )
+
+        // Naive (v - sqrt(v² - 2gh)) / g rounds to zero here, even though
+        // the exactly equivalent stable root is about one full second.
+        assertTrue(observation.isFinite)
+        assertEquals(1f, observation.timeToRequiredRiseSeconds, 0.0001f)
+        assertFalse(observation.jumpFeasible)
+    }
+
+    @Test
+    fun `tiny positive clearance retains a positive finite rise time`() {
+        val observation = observe(
+            leadDistancePx = 2_000f,
+            speedPxPerSec = GameConstants.BASE_SCROLL_SPEED,
+            clearancePx = 0.0001f
+        )
+        assertTrue(observation.timeToRequiredRiseSeconds > 0f)
+        assertTrue(observation.isFinite)
+        assertTrue(observation.jumpFeasible)
+    }
+
+    @Test
     fun `more lead cannot make a feasible action become infeasible`() {
         val clearances = floatArrayOf(0f, 40f, 120f, 220f, 360f, 500f)
         for (clearance in clearances) {
