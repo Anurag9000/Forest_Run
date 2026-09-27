@@ -4,6 +4,26 @@ This file is the chronological remediation ledger. It preserves tranche-local fi
 
 The ledger remains intentionally conservative: a source change is not called validated merely because it was committed, and automated validation is not treated as physical-device or store acceptance.
 
+## Current reconciliation — 2026-09-27
+
+This checkpoint supersedes the dated 2026-09-26 reconciliation for *current status* while preserving every earlier audit and its exact observed run as historical evidence. It is a repository-specific continuation from the previously inspected whole-software baseline, with fresh source tracing of run movement, SurfaceView geometry ownership and spawn-envelope semantics. It does not claim a new line-by-line read of every tracked binary or a physical acceptance run.
+
+**Source-bearing checkpoint:** `505d3679dc8d55b2ccb8413b6a8e3d1bde5886e1`, three fast-forward commits after the last fully observed exact-head green `a69945cb2b65502792326e23ede3a7936b500892`. The source-bearing tree has 841 tracked files: 187 production Kotlin, 227 JVM/Robolectric Kotlin tests, eight Android instrumented Kotlin tests, 123 Python tests, 53 non-test Python scripts, 29 runtime PNGs, 15 runtime OGGs, 61 dated audit documents and three GitHub workflows. Only `main` exists; no open PRs. Adding this reconciliation document increases the final documentation-only tree count by one without changing the source-bearing count.
+
+**Source-addressed corrections and evidence (2026-09-27):**
+- `GameStateManager` now captures the effective speed once, using pre-frame distance and the active debuff, and uses that same value for recorded distance/score and the speed consumed by world/entity/Orb movement. Tests cover 200 accelerating frames and the debuff expiry boundary (`2026-09-27_frame_movement_speed_consistency.md`).
+- `GameView.surfaceChanged` and `setSafeAreaInsets` now publish the complete geometry/transform under `runtimeStateLock`, as do update, render, touch and accessibility mutation. The source ownership test asserts both writer boundaries (`2026-09-27_surface_geometry_ownership.md`).
+- `SpawnFairnessEnvelope` now reports only finite, declared *origin-gap* bounds rather than incorrectly claiming overall gameplay fairness from the self-derived 780 px/2,000 px/s = 0.39 s lower bound. A regression test contrasts it with the idealized ~0.60 s minimum tap flight. The production spawn curve is unchanged; real action-specific pair/sequence feasibility remains OPEN (`2026-09-27_spawn_fairness_evidence_boundary.md`).
+- The preceding verified source-bearing `a69945cb` already included provisional-near-contact mercy with terminal safe-passage resolution, later HIT/STUMBLE authority, Bloom exclusivity, a terminal-frame early exit after Rest commit, and updated encounter/terminal contract tests. Its Android host and API-35 connected workflow `36252747722` succeeded.
+
+**Verification rule:** all source-bearing changes after `a69945cb` require their own exact-head JVM/host/lint/package/R8 and connected evidence. As of authoring, the Android workflow `36310526978` on `505d3679` was in progress (Python tooling and repository-specific N/A-training checks had passed); do not promote it to an overall PASS unless its final conclusion is success. The final docs-only commit also receives its own exact-head workflow. An earlier green or a superseded/cancelled run is not a substitute.
+
+**Closure matrix:** A — current native game owners, data/state, UI/API, authored encounter and meta systems are source-addressed and extensively tested, but a claim of perfect full-mechanic/creative closure remains unproven; pairwise encounter action feasibility is an explicit testing gap. B — repository engineering and automated validation conditional on the *final HEAD's* completed workflow; ML training runners remain NOT APPLICABLE. C — physical-device, human readability/fairness, TalkBack/Switch Access, production art/audio/haptic and rights/provenance, installed signed-candidate identity OPEN. D — Play internal delivery, policy/legal/security declarations, accountable go/no-go and public production release OPEN.
+
+**Do not manufacture evidence:** no simulated screenshot, CI fixture, origin-gap arithmetic, cached user preference or source asset can stand in for reviewed hardware/gameplay, final licence approval or store-delivered binary. The five known bird base/flying byte-identical sprite alias pairs remain a documented creative review issue rather than accepted distinct flight animation.
+
+---
+
 ## Current reconciliation — 2026-09-26
 
 This is the current source-addressable continuation; the 2026-09-20 reconciliation and all lower tranches are retained as historical checkpoints. It supersedes that checkpoint's claim that no further source defect could be substantiated: the subsequent fresh inspection found real cross-layer and evidence-validation defects. Do not reclassify those defects as imaginary merely because the older source checkpoint had a passing workflow.
