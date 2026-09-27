@@ -10,6 +10,7 @@ import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.animals.Dog
 import com.anurag9000.forestrun.entities.animals.Wolf
+import com.anurag9000.forestrun.entities.birds.Eagle
 import com.anurag9000.forestrun.entities.flora.Cactus
 import com.anurag9000.forestrun.entities.flora.Eucalyptus
 import com.anurag9000.forestrun.entities.flora.Hyacinth
@@ -48,6 +49,13 @@ class EntityManager internal constructor(
 
     val seedOrbManager = SeedOrbManager()
     val activeEntities: MutableList<Entity> = mutableListOf()
+
+    /**
+     * Completed Eagle dives that exited the viewport before an x-plane pass.
+     * Their award is deferred until checkCollisions has given live HIT/STUMBLE
+     * arbitration priority; they are no longer rendered or collision-active.
+     */
+    private val completedEagleEscapes = ArrayList<Eagle>()
 
     private var distanceSinceRandomSpawnPx = 0f
     private var bloomReactionCooldown = 0f
@@ -130,6 +138,12 @@ class EntityManager internal constructor(
                 entity.updatePlayerInteraction(player, gameState)
             }
             if (!entity.isActive) {
+                if (entity is Eagle &&
+                    entity.encounterOutcome == EncounterOutcome.PENDING &&
+                    entity.hasCompletedAttackEscape
+                ) {
+                    completedEagleEscapes.add(entity)
+                }
                 activeEntities.removeAt(entityIndex)
             } else {
                 entityIndex++
@@ -209,9 +223,8 @@ class EntityManager internal constructor(
         player: Player,
         gameState: GameStateManager
     ): CollisionFrame? {
-        // Multiple encounters can cross the player's plane in one frame.
-        // Each receives one correct reward; the existing single-frame UI
-        // contract presents the first completed mercy response.
+        // Each completed encounter receives one exclusive final outcome.
+        // Keep the existing single-frame UI contract: first mercy cue wins.
         var firstMercy: CollisionFrame? = null
         var entityIndex = 0
         while (entityIndex < activeEntities.size) {
@@ -223,25 +236,51 @@ class EntityManager internal constructor(
                 bounds != null &&
                 bounds.right < player.hitbox.left
             ) {
-                entity.hasBeenPassed = true
-                if (gameState.isBloomActive) {
-                    resolveBloomConversion(entity, bounds, gameState)
-                } else if (entity.observedMercyContact) {
-                    entity.observedMercyContact = false
-                    entity.onOutcomeSelected(CollisionResult.MERCY_MISS, player, gameState)
-                    entity.encounterOutcome = EncounterOutcome.MERCY
-                    recordResolvedEncounter(entity)
-                    gameState.addMercyHeart()
-                    if (firstMercy == null) {
-                        firstMercy = CollisionFrame(CollisionResult.MERCY_MISS, entity)
-                    }
-                } else {
-                    resolveCleanPass(entity, bounds, player, gameState)
-                }
+                val mercy = resolveSafeDeparture(entity, bounds, player, gameState)
+                if (firstMercy == null) firstMercy = mercy
             }
             entityIndex++
         }
+
+        // Eagle can escape *vertically* or depart the far edge after its
+        // telegraphed dive; x-plane passage is not a meaningful prerequisite
+        // for those trajectories. Process only after all live collisions.
+        var escapeIndex = 0
+        while (escapeIndex < completedEagleEscapes.size) {
+            val eagle = completedEagleEscapes[escapeIndex]
+            if (eagle.encounterOutcome == EncounterOutcome.PENDING) {
+                val bounds = liveBounds(eagle)
+                if (bounds != null) {
+                    val mercy = resolveSafeDeparture(eagle, bounds, player, gameState)
+                    if (firstMercy == null) firstMercy = mercy
+                }
+            }
+            completedEagleEscapes.removeAt(escapeIndex)
+        }
         return firstMercy
+    }
+
+    private fun resolveSafeDeparture(
+        entity: Entity,
+        bounds: RectF,
+        player: Player,
+        gameState: GameStateManager
+    ): CollisionFrame? {
+        entity.hasBeenPassed = true
+        if (gameState.isBloomActive) {
+            resolveBloomConversion(entity, bounds, gameState)
+            return null
+        }
+        if (entity.observedMercyContact) {
+            entity.observedMercyContact = false
+            entity.onOutcomeSelected(CollisionResult.MERCY_MISS, player, gameState)
+            entity.encounterOutcome = EncounterOutcome.MERCY
+            recordResolvedEncounter(entity)
+            gameState.addMercyHeart()
+            return CollisionFrame(CollisionResult.MERCY_MISS, entity)
+        }
+        resolveCleanPass(entity, bounds, player, gameState)
+        return null
     }
 
     private fun resolveBloomConversion(
@@ -521,6 +560,7 @@ class EntityManager internal constructor(
 
     fun reset() {
         activeEntities.clear()
+        completedEagleEscapes.clear()
         seedOrbManager.reset()
         distanceSinceRandomSpawnPx = 0f
         bloomReactionCooldown = 0f

@@ -53,6 +53,15 @@ class Eagle(
     // Authored scenarios can stage the Eagle well beyond the right edge.
     // Right-edge departure is only meaningful after the bird has entered.
     private var hasEnteredHorizontalViewport = false
+
+    /**
+     * The bird can complete its marked dive by exiting vertically or beyond
+     * the far edge before its bounds ever trail behind the player's x-plane.
+     * EntityManager defers reward arbitration until after all live HIT probes.
+     */
+    internal val hasCompletedAttackEscape: Boolean
+        get() = !isActive && isLocked && hasEnteredHorizontalViewport
+
     private var markPrompted = false
     private var heldMark = true
     private var targetAnnounced = false
