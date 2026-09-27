@@ -7,10 +7,10 @@ import org.junit.Test
 class SpawnFairnessEnvelopeTest {
 
     @Test
-    fun `worst supported pacing retains the authored reaction floor`() {
+    fun `declared origin gap retains its geometric time lower bound`() {
         assertEquals(
             0.39f,
-            SpawnFairnessEnvelope.minimumSupportedLeadTimeSeconds,
+            SpawnFairnessEnvelope.minimumDeclaredOriginLeadTimeSeconds,
             0.0001f
         )
 
@@ -22,11 +22,30 @@ class SpawnFairnessEnvelopeTest {
         assertEquals(GameConstants.SPAWN_GAP_MIN_PX, observation.readabilityGapPx, 0.0001f)
         assertEquals(GameConstants.SPAWN_GAP_MIN_PX, observation.requiredGapPx, 0.0001f)
         assertEquals(0.39f, observation.leadTimeSeconds, 0.0001f)
-        assertTrue(observation.isFiniteAndFair)
+        assertTrue(observation.isFiniteAndWithinDeclaredBounds)
+    }
+
+
+    @Test
+    fun `origin gap time alone does not certify a completed jump recovery`() {
+        val fastest = SpawnFairnessEnvelope.observe(
+            distanceMetres = 100_000f,
+            runTimeSeconds = 120f
+        )
+        val idealTapFlightSeconds =
+            (-2f * com.anurag9000.forestrun.entities.Player.MIN_JUMP_FORCE) /
+                com.anurag9000.forestrun.entities.Player.GRAVITY
+
+        // A simple no-apex-gravity ballistic tap already occupies ~0.60 s.
+        // The 0.39 s *origin spacing* alone cannot establish that the player
+        // can land and change action before a different subsequent hazard.
+        assertEquals(0.60f, idealTapFlightSeconds, 0.0001f)
+        assertTrue(fastest.leadTimeSeconds < idealTapFlightSeconds)
+        assertTrue(fastest.isFiniteAndWithinDeclaredBounds)
     }
 
     @Test
-    fun `production distance and opening-time grid remains finite and fair`() {
+    fun `production origin-gap grid remains finite and within declared bounds`() {
         val runTimes = floatArrayOf(0f, 6.75f, 7f, 12f, 19.9f, 20f, 27.9f, 28f, 120f)
         var distance = 0f
         while (distance <= 20_000f) {
@@ -34,7 +53,7 @@ class SpawnFairnessEnvelopeTest {
                 val observation = SpawnFairnessEnvelope.observe(distance, runTime)
                 assertTrue(
                     "distance=$distance time=$runTime observation=$observation",
-                    observation.isFiniteAndFair
+                    observation.isFiniteAndWithinDeclaredBounds
                 )
                 assertTrue(observation.requiredGapPx + 0.0001f >= observation.readabilityGapPx)
             }

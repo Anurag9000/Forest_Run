@@ -1,6 +1,12 @@
 package com.anurag9000.forestrun.engine
 
-/** One deterministic observation of the production random-spawn pacing chain. */
+/**
+ * One observation of the production random-spawn origin-gap curve.
+ *
+ * Validity of its numeric bounds does NOT prove pairwise encounter feasibility:
+ * jump/landing/duck recovery, entity width, trajectory, and telegraph vary by
+ * encounter and must be checked independently before creative fairness signoff.
+ */
 internal data class SpawnFairnessObservation(
     val distanceMetres: Float,
     val runTimeSeconds: Float,
@@ -8,9 +14,9 @@ internal data class SpawnFairnessObservation(
     val readabilityGapPx: Float,
     val requiredGapPx: Float,
     val leadTimeSeconds: Float,
-    val minimumSupportedLeadTimeSeconds: Float
+    val minimumDeclaredOriginLeadTimeSeconds: Float
 ) {
-    val isFiniteAndFair: Boolean
+    val isFiniteAndWithinDeclaredBounds: Boolean
         get() = distanceMetres.isFinite() &&
             distanceMetres >= 0f &&
             runTimeSeconds.isFinite() &&
@@ -22,15 +28,16 @@ internal data class SpawnFairnessObservation(
             requiredGapPx.isFinite() &&
             requiredGapPx >= readabilityGapPx &&
             leadTimeSeconds.isFinite() &&
-            leadTimeSeconds + 0.0001f >= minimumSupportedLeadTimeSeconds
+            leadTimeSeconds + 0.0001f >= minimumDeclaredOriginLeadTimeSeconds
 }
 
 /**
- * Pure inspection boundary for the exact production speed and spawn-gap rules.
- * It does not introduce a second pacing curve or mutate gameplay state.
+ * Pure inspection of the production speed and origin-gap arithmetic.
+ * The geometric lead-time lower bound is not an action recovery guarantee.
+ * No second pacing curve is introduced and gameplay state is not mutated.
  */
 internal object SpawnFairnessEnvelope {
-    val minimumSupportedLeadTimeSeconds: Float
+    val minimumDeclaredOriginLeadTimeSeconds: Float
         get() = GameConstants.SPAWN_GAP_MIN_PX / GameConstants.MAX_SCROLL_SPEED
 
     fun speedAtDistance(distanceMetres: Float): Float {
@@ -69,7 +76,7 @@ internal object SpawnFairnessEnvelope {
             readabilityGapPx = readabilityGap,
             requiredGapPx = requiredGap,
             leadTimeSeconds = leadTime,
-            minimumSupportedLeadTimeSeconds = minimumSupportedLeadTimeSeconds
+            minimumDeclaredOriginLeadTimeSeconds = minimumDeclaredOriginLeadTimeSeconds
         )
     }
 }
