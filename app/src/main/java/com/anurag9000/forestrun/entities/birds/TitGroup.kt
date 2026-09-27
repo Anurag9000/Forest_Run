@@ -95,7 +95,9 @@ class TitGroup(
         val guideWidth = birdCount * spacing + birdW * 0.4f
         val guideLeft = x - readability.stagingPaddingPx
         val guideTop = baseLine + waveY + birdH * 0.78f
-        val guideBottom = guideTop + birdH * 0.42f
+        // The airborne Player's real hitbox can be 100px tall. A short
+        // decorative strip cannot be advertised as a traversable trough.
+        val guideBottom = guideTop + Player.BASE_HEIGHT + readability.stagingPaddingPx
         troughGuideRect.set(guideLeft, guideTop, guideLeft + guideWidth, guideBottom)
 
         if (hitbox.right < -50f) isActive = false
@@ -165,7 +167,13 @@ class TitGroup(
                 Color.rgb(88, 138, 196)
             )
         }
-        if (RectF.intersects(player.hitbox, troughGuideRect)) keptBeat = true
+        // Rhythm credit requires the whole live collision body in the
+        // highlighted safe lane, not one pixel touching its fringe.
+        if (troughGuideRect.contains(
+                player.hitbox.left, player.hitbox.top,
+                player.hitbox.right, player.hitbox.bottom
+            )
+        ) keptBeat = true
     }
 
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {

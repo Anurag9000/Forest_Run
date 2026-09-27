@@ -8,6 +8,7 @@ import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Player
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -54,6 +55,58 @@ class TitGroupTest {
             birdRects[2].bottom - 4f
         )
         assertEquals(CollisionResult.HIT, titGroup.onCollision(player, gameState))
+    }
+
+    @Test
+    fun `full trough fits the real airborne Player and rewards only complete threading`() {
+        val titGroup = titGroup()
+        titGroup.update(0f, 0f)
+        val guide = rectField(titGroup, "troughGuideRect")
+        val player = Player(1920, 1080, spriteManager)
+        val isolatedState = GameStateManager(context) { false }
+        player.onJumpPressed()
+
+        var observedRealFlightFit = false
+        repeat(120) {
+            player.update(0.01f)
+            // Preserve the actual Player's vertical physics and hitbox size;
+            // horizontally align its stationary screen position with the wave.
+            player.hitbox.offsetTo(guide.left + 20f, player.hitbox.top)
+            if (guide.contains(
+                    player.hitbox.left, player.hitbox.top,
+                    player.hitbox.right, player.hitbox.bottom
+                )
+            ) {
+                observedRealFlightFit = true
+                assertFalse(titGroup.onCollision(player, isolatedState) == CollisionResult.HIT)
+            }
+        }
+        assertTrue("trough must admit at least one real jump-trajectory frame", observedRealFlightFit)
+
+        // A grazing hitbox used to count as a successful rhythm read.
+        player.hitbox.set(
+            guide.left + 20f,
+            guide.bottom - 1f,
+            guide.left + 20f + player.hitbox.width(),
+            guide.bottom - 1f + player.hitbox.height()
+        )
+        titGroup.updatePlayerInteraction(player, isolatedState)
+        assertFalse(booleanField(titGroup, "keptBeat"))
+
+        val bodyWidth = player.hitbox.width()
+        val bodyHeight = player.hitbox.height()
+        player.hitbox.offsetTo(
+            guide.left + 20f,
+            guide.centerY() - bodyHeight * 0.5f
+        )
+        assertTrue(guide.contains(
+            player.hitbox.left, player.hitbox.top,
+            player.hitbox.right, player.hitbox.bottom
+        ))
+        titGroup.updatePlayerInteraction(player, isolatedState)
+        assertTrue(booleanField(titGroup, "keptBeat"))
+        titGroup.performUniqueAction(player, isolatedState)
+        assertEquals(1, isolatedState.seedsThisRun)
     }
 
     @Test
