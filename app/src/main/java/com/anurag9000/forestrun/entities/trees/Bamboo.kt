@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import com.anurag9000.forestrun.engine.FrameInputAdmission
 import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.PersistentMemoryManager
 import com.anurag9000.forestrun.engine.ReadabilityProfile
@@ -79,8 +80,10 @@ class Bamboo(
             }
         }
         totalWidth = stalkCount * stalkWidth + gapSizes.sum()
-        val gapHeight  = Player.BASE_HEIGHT * 1.5f
-        val gapYCenter = random.nextFloat() * (groundY - gapHeight * 2f) + gapHeight
+        val gapHeight = Player.BASE_HEIGHT * 1.5f
+        val reachableCentres = BambooGapPlacement.reachableCentreRange(groundY, gapHeight)
+        val gapYCenter = reachableCentres.start +
+            random.nextFloat() * (reachableCentres.endInclusive - reachableCentres.start)
 
         updateGeometry(x, gapYCenter, gapHeight)
         updateAggregateHitbox(x)
@@ -199,5 +202,48 @@ class Bamboo(
      */
     private fun updateAggregateHitbox(geometryX: Float) {
         hitbox.set(geometryX, 0f, geometryX + totalWidth, groundY)
+    }
+}
+
+/**
+ * Vertical sampling range for the actual Player collision body, not merely
+ * for a decorative gap rectangle. The capped 50ms semi-implicit Euler jump
+ * loses half an integration step of ideal ballistic rise. Keep an additional
+ * safety margin so the lowest sampled opening has a real, reachable passage.
+ *
+ * This establishes single-encounter vertical reachability; horizontal approach
+ * timing and successive encounter recovery require their own validation.
+ */
+internal object BambooGapPlacement {
+    private const val VERTICAL_MARGIN_PX = 20f
+
+    fun reachableCentreRange(
+        groundY: Float,
+        gapHeight: Float
+    ): ClosedFloatingPointRange<Float> {
+        require(groundY.isFinite() && gapHeight.isFinite() && gapHeight > 0f) {
+            "Bamboo gap geometry must be finite and positive"
+        }
+        val maximumAllowed = groundY - gapHeight
+        require(maximumAllowed > gapHeight * 0.5f + VERTICAL_MARGIN_PX) {
+            "Bamboo requires sufficient usable height for a reachable opening"
+        }
+
+        val upwardSpeed = -Player.MAX_JUMP_FORCE
+        val conservativeJumpRise = (
+            upwardSpeed * upwardSpeed / (2f * Player.GRAVITY) -
+                upwardSpeed * FrameInputAdmission.MAX_DELTA_SECONDS * 0.5f
+        ).coerceAtLeast(0f)
+        val standingHitboxTop = groundY - Player.BASE_HEIGHT + Player.HITBOX_INSET
+        val hitboxHeight = Player.BASE_HEIGHT - Player.HITBOX_INSET * 2f
+        val minimumCentre = maxOf(
+            gapHeight * 0.5f + VERTICAL_MARGIN_PX,
+            standingHitboxTop - conservativeJumpRise +
+                hitboxHeight - gapHeight * 0.5f + VERTICAL_MARGIN_PX
+        )
+        require(minimumCentre <= maximumAllowed) {
+            "No vertically reachable Bamboo opening in available world height"
+        }
+        return minimumCentre..maximumAllowed
     }
 }
