@@ -117,8 +117,10 @@ class SweptCoreOverlapTest {
         displacementPx: Float
     ) {
         val state = GameStateManager(context) { false }
-        state.update(5_000f)
-        state.update(5_000f)
+        // The speed for a frame is sampled from its PRE-frame distance.
+        // First long update reaches 3,250m, second still uses 1,365px/s,
+        // and the third publishes the capped 2,000px/s speed.
+        repeat(3) { state.update(5_000f) }
         assertEquals(GameConstants.MAX_SCROLL_SPEED, state.scrollSpeed, 0f)
 
         // Stage a genuine entity with the specified minimum legal sprite width.
