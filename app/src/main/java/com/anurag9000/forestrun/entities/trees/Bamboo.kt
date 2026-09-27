@@ -80,7 +80,7 @@ class Bamboo(
             }
         }
         totalWidth = stalkCount * stalkWidth + gapSizes.sum()
-        val gapHeight = Player.BASE_HEIGHT * 1.5f
+        val gapHeight = BambooGapPlacement.GAP_HEIGHT_PX
         val reachableCentres = BambooGapPlacement.reachableCentreRange(groundY, gapHeight)
         val gapYCenter = reachableCentres.start +
             random.nextFloat() * (reachableCentres.endInclusive - reachableCentres.start)
@@ -211,11 +211,15 @@ class Bamboo(
  * loses half an integration step of ideal ballistic rise. Keep an additional
  * safety margin so the lowest sampled opening has a real, reachable passage.
  *
- * This establishes single-encounter vertical reachability; horizontal approach
- * timing and successive encounter recovery require their own validation.
+ * A momentary vertical fit is insufficient across all five stalks. Restrict
+ * the gap to a measured partial-jump flight band with a full-span regression.
+ * Mixed encounter recovery remains a distinct, unproven fairness requirement.
  */
 internal object BambooGapPlacement {
     private const val VERTICAL_MARGIN_PX = 20f
+    const val GAP_HEIGHT_PX = Player.BASE_HEIGHT * 3f
+    private const val LOWEST_FLIGHT_CENTRE_ABOVE_GROUND_PX = 355f
+    private const val HIGHEST_FLIGHT_CENTRE_ABOVE_GROUND_PX = 335f
 
     fun reachableCentreRange(
         groundY: Float,
@@ -239,11 +243,16 @@ internal object BambooGapPlacement {
         val minimumCentre = maxOf(
             gapHeight * 0.5f + VERTICAL_MARGIN_PX,
             standingHitboxTop - conservativeJumpRise +
-                hitboxHeight - gapHeight * 0.5f + VERTICAL_MARGIN_PX
+                hitboxHeight - gapHeight * 0.5f + VERTICAL_MARGIN_PX,
+            groundY - LOWEST_FLIGHT_CENTRE_ABOVE_GROUND_PX
         )
-        require(minimumCentre <= maximumAllowed) {
-            "No vertically reachable Bamboo opening in available world height"
+        val maximumCentre = minOf(
+            maximumAllowed,
+            groundY - HIGHEST_FLIGHT_CENTRE_ABOVE_GROUND_PX
+        )
+        require(minimumCentre <= maximumCentre) {
+            "No complete-traversal Bamboo opening in available world height"
         }
-        return minimumCentre..maximumAllowed
+        return minimumCentre..maximumCentre
     }
 }
