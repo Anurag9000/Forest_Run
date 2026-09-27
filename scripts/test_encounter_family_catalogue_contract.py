@@ -104,10 +104,19 @@ class EncounterFamilyCatalogueContractTest(unittest.TestCase):
             self.assertIn(token, CATALOGUE)
 
     def test_factory_contains_one_branch_for_every_catalogued_type(self) -> None:
-        for entity_type in MAPPINGS:
-            self.assertEqual(1, FACTORY.count(f"EntityType.{entity_type} ->"))
-        self.assertEqual(19, FACTORY.count("EntityType."))
+        # Count the exhaustive factory construction switch, not unrelated
+        # admission helpers that legitimately mention EntityType.BAMBOO.
         self.assertEqual(1, FACTORY.count("return when (type)"))
+        construction_branches = FACTORY.split("return when (type) {", 1)[1].split(
+            "\n        }\n    }", 1
+        )[0]
+        for entity_type in MAPPINGS:
+            self.assertEqual(
+                1, construction_branches.count(f"EntityType.{entity_type} ->")
+            )
+        self.assertEqual(19, construction_branches.count("EntityType."))
+        self.assertIn("eligibleOrdinaryPool(", FACTORY)
+        self.assertIn("canStageBamboo(", FACTORY)
 
 
 if __name__ == "__main__":
