@@ -28,6 +28,21 @@ class RuntimeCadenceClockTest {
     }
 
     @Test
+    fun `epsilon-admitted boundary cannot leave an almost-full interval remainder`() {
+        val clock = RuntimeCadenceClock()
+        clock.advance(0.5f - 0.0000005f)
+
+        assertTrue(clock.consumeAccessibilityPoll())
+        assertFalse(clock.consumeAccessibilityPoll())
+
+        // A tiny next frame must not immediately trigger a duplicate poll.
+        clock.advance(0.00001f)
+        assertFalse(clock.consumeAccessibilityPoll())
+        clock.advance(0.49999f)
+        assertTrue(clock.consumeAccessibilityPoll())
+    }
+
+    @Test
     fun `poll is unavailable before half a second and consumed exactly once`() {
         val clock = RuntimeCadenceClock()
         clock.advance(0.24f)

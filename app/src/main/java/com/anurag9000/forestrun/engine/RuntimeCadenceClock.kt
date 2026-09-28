@@ -41,10 +41,14 @@ internal class RuntimeCadenceClock(
         // slowly push the sampling phase later. Modulo also collapses a long
         // period with TalkBack disabled to one immediate poll rather than a
         // burst of backlogged announcements.
-        accessibilityPollElapsedSeconds = (
-            accessibilityPollElapsedSeconds.toDouble() %
-                accessibilityPollIntervalSeconds.toDouble()
-            ).toFloat()
+        val elapsed = accessibilityPollElapsedSeconds.toDouble()
+        val interval = accessibilityPollIntervalSeconds.toDouble()
+        // EPSILON admits ordinary floating-point accumulation just below the
+        // boundary. Normalize that tolerated near-boundary value *to* the
+        // boundary before modulo; otherwise e.g. 0.49999997 % 0.5 leaves
+        // almost 0.5 seconds behind and the next frame spuriously polls again.
+        val normalizedElapsed = if (elapsed < interval) interval else elapsed
+        accessibilityPollElapsedSeconds = (normalizedElapsed % interval).toFloat()
         return true
     }
 
