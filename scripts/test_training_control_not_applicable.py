@@ -52,6 +52,17 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             self.assertFalse(result.complete)
             self.assertEqual("py" + "to" + "rch", result.findings[0].category)
 
+    def test_only_root_launcher_is_exempt_not_new_nested_train_entrypoint(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            nested = root / "scripts" / "run_all_training.py"
+            nested.parent.mkdir(parents=True)
+            marker = "to" + "rch"
+            nested.write_text(f"import {marker}\\n", encoding="utf-8")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual("scripts/run_all_training.py", result.findings[0].path)
+
     def test_empty_repository_cannot_be_certified_as_non_trainable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
