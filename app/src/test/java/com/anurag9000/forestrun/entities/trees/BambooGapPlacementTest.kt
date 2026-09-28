@@ -4,8 +4,13 @@ import android.content.Context
 import android.graphics.RectF
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.engine.GameConstants
+import com.anurag9000.forestrun.engine.GameStateManager
+import com.anurag9000.forestrun.engine.EntityManager
+import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.Player
+import com.anurag9000.forestrun.entities.CollisionResult
+import com.anurag9000.forestrun.entities.EncounterOutcome
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -195,6 +200,80 @@ class BambooGapPlacementTest {
         return longestStart to longestLength
     }
 
+
+    @Test
+    fun `moving top stalk and falling Player register same time interframe collision`() {
+        val state = GameStateManager(context) { false }
+        state.update(10_000f)
+        state.update(0.05f)
+        assertEquals(GameConstants.MAX_SCROLL_SPEED, state.scrollSpeed, 0f)
+        val bamboo = Bamboo(
+            context, 650f, 1080f, 885.6f, sprites.bambooSprite.copy(), Random(7)
+        )
+        bamboo.shouldRecordPersistence = false
+        val oldTop = Array(5) { rectAt(bamboo, "topHitboxes", it) }
+        val oldBottom = Array(5) { rectAt(bamboo, "bottomHitboxes", it) }
+        val player = Player(1920, 1080, sprites)
+        player.update(0.05f, state.scrollSpeed)
+        val left = oldTop[0].left - 54f
+        val before = RectF(
+            left, oldTop[0].bottom - 40f,
+            oldTop[0].left - 4f, oldTop[0].bottom
+        )
+        val after = RectF(
+            left, oldTop[0].bottom + 15f,
+            oldTop[0].left - 4f, oldTop[0].bottom + 55f
+        )
+        player.previousHitbox.set(before)
+        player.hitbox.set(after)
+        val manager = EntityManager(context, 1920f, 1080f, sprites)
+        manager.activeEntities += bamboo
+        manager.update(0.05f, state, player, runMode = RunMode.DEBUG_SCENARIO)
+
+        for (i in 0 until 5) {
+            assertEquals(oldTop[i], rectAt(bamboo, "previousTopHitboxes", i))
+            assertEquals(oldBottom[i], rectAt(bamboo, "previousBottomHitboxes", i))
+            assertFalse(RectF.intersects(before, oldTop[i]))
+            assertFalse(RectF.intersects(before, oldBottom[i]))
+            assertFalse(RectF.intersects(after, rectAt(bamboo, "topHitboxes", i)))
+            assertFalse(RectF.intersects(after, rectAt(bamboo, "bottomHitboxes", i)))
+        }
+        val result = requireNotNull(manager.checkCollisions(player, state))
+        assertEquals(CollisionResult.HIT, result.result)
+        assertEquals(EncounterOutcome.HIT, bamboo.encounterOutcome)
+        assertEquals(0, state.mercyHearts)
+        assertEquals(0, state.cleanPassesThisRun)
+    }
+
+    @Test
+    fun `per stalk sweep preserves real unoccupied Bamboo tunnel`() {
+        val state = GameStateManager(context) { false }
+        state.update(10_000f)
+        state.update(0.05f)
+        val bamboo = Bamboo(
+            context, 650f, 1080f, 885.6f, sprites.bambooSprite.copy(), Random(7)
+        )
+        bamboo.shouldRecordPersistence = false
+        val top = rectAt(bamboo, "topHitboxes", 0)
+        val bottom = rectAt(bamboo, "bottomHitboxes", 0)
+        val player = Player(1920, 1080, sprites)
+        player.update(0.05f, state.scrollSpeed)
+        val centerY = (top.bottom + bottom.top) * 0.5f
+        val safeBody = RectF(
+            top.left - 54f, centerY - 20f,
+            top.left - 4f, centerY + 20f
+        )
+        player.previousHitbox.set(safeBody)
+        player.hitbox.set(safeBody)
+        val manager = EntityManager(context, 1920f, 1080f, sprites)
+        manager.activeEntities += bamboo
+        manager.update(0.05f, state, player, runMode = RunMode.DEBUG_SCENARIO)
+
+        assertEquals(null, manager.checkCollisions(player, state))
+        assertEquals(EncounterOutcome.PENDING, bamboo.encounterOutcome)
+        assertEquals(0, state.mercyHearts)
+        assertEquals(0, state.cleanPassesThisRun)
+    }
 
     @Test
     fun `short landscape is rejected before construction while normal heights remain viable`() {

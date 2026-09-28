@@ -10,6 +10,7 @@ import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.PersistentMemoryManager
 import com.anurag9000.forestrun.engine.ReadabilityProfile
 import com.anurag9000.forestrun.engine.SpriteSheet
+import com.anurag9000.forestrun.engine.SweptCoreOverlap
 import com.anurag9000.forestrun.engine.SwayComponent
 import com.anurag9000.forestrun.engine.TreeEncounterFlavor
 import com.anurag9000.forestrun.entities.CollisionResult
@@ -45,6 +46,8 @@ class Bamboo(
 
     private val topHitboxes       = Array(stalkCount) { RectF() }
     private val bottomHitboxes    = Array(stalkCount) { RectF() }
+    private val previousTopHitboxes = Array(stalkCount) { RectF() }
+    private val previousBottomHitboxes = Array(stalkCount) { RectF() }
     private val gapRects          = Array(gapCount) { RectF() }
     private val topDrawRects      = Array(stalkCount) { RectF() }
     private val bottomDrawRects   = Array(stalkCount) { RectF() }
@@ -90,6 +93,12 @@ class Bamboo(
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
+        // Sample the ten independent physical stalks before scroll/sway.
+        // Never sweep the enclosing rectangle through its genuine gap.
+        for (i in 0 until stalkCount) {
+            previousTopHitboxes[i].set(topHitboxes[i])
+            previousBottomHitboxes[i].set(bottomHitboxes[i])
+        }
         x -= scrollSpeed * deltaTime
         guidePulse += deltaTime * 3f
         val sway = swayComponent?.getOffset(deltaTime) ?: 0f
@@ -153,7 +162,17 @@ class Bamboo(
         var nearMiss = false
         for (i in 0 until stalkCount) {
             if (RectF.intersects(player.hitbox, topHitboxes[i]) ||
-                RectF.intersects(player.hitbox, bottomHitboxes[i])) return CollisionResult.HIT
+                RectF.intersects(player.hitbox, bottomHitboxes[i]) ||
+                (hasMotionSample && player.hasMotionSample &&
+                    (SweptCoreOverlap.intersects(
+                        player.previousHitbox, player.hitbox,
+                        previousTopHitboxes[i], topHitboxes[i]
+                    ) || SweptCoreOverlap.intersects(
+                        player.previousHitbox, player.hitbox,
+                        previousBottomHitboxes[i], bottomHitboxes[i]
+                    ))
+                )
+            ) return CollisionResult.HIT
             val mercyPad = readability.mercyPaddingPx * 0.5f
             if (
                 intersectsExpanded(
