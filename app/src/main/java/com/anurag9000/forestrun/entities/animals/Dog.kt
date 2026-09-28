@@ -155,7 +155,13 @@ class Dog(
         }
 
         hitbox.offsetTo(x + insetX, y + insetY)
-        if (x < -dogW - 50f) isActive = false
+        // A buddy dash can traverse the player and offscreen cull plane in one
+        // legal recovery frame on a compact landscape. Keep an unresolved
+        // buddy alive through EntityManager's same-frame pass arbitration so
+        // CLEAN_PASS can own its final reward before normal culling resumes.
+        val unresolvedBuddyDash =
+            mode == DogMode.BUDDY_DASH && encounterOutcome == EncounterOutcome.PENDING
+        if (!unresolvedBuddyDash && x < -dogW - 50f) isActive = false
     }
 
     private fun updateHazard(deltaTime: Float, scrollSpeed: Float) {
@@ -232,10 +238,11 @@ class Dog(
     }
 
     private fun updateBuddyDash(deltaTime: Float, scrollSpeed: Float) {
-        // Dog dashes forward (to the left) and quickly disappears
+        // Dog dashes forward (to the left). Deactivation is centralized after
+        // the hitbox update, and unresolved buddy dashes defer that cull until
+        // EntityManager has resolved the pass in this frame.
         buddyTrailPulse += deltaTime * 7f
         x -= (scrollSpeed * 5f) * deltaTime
-        if (x < -dogW - 100f) isActive = false
     }
 
     private fun bark() {
