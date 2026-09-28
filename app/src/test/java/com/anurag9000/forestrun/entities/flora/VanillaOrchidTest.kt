@@ -5,11 +5,15 @@ import android.graphics.Bitmap
 import android.graphics.RectF
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.engine.GameStateManager
+import com.anurag9000.forestrun.engine.GameConstants
+import com.anurag9000.forestrun.engine.EntityManager
+import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.ReadabilityProfile
 import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
+import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Player
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -57,6 +61,50 @@ class VanillaOrchidTest {
 
         player.hitbox.set(threadLeft, bottomHitbox.top - 6f, threadRight, bottomHitbox.top - 1f)
         assertEquals(CollisionResult.MERCY_MISS, orchid.onCollision(player, gameState))
+    }
+
+    @Test
+    fun `falling Player and moving Orchid upper band contact between sampled endpoints`() {
+        val orchid = VanillaOrchid(
+            context = context,
+            startX = 650f,
+            groundY = 885.6f,
+            sprite = spriteManager.orchidSprite.copy()
+        )
+        orchid.shouldRecordPersistence = false
+        val initialUpper = rectField(orchid, "topHitbox")
+        val player = Player(1920, 1080, spriteManager)
+        val state = GameStateManager(context) { false }
+        val manager = EntityManager(context, 1920f, 1080f, spriteManager)
+        manager.activeEntities += orchid
+
+        state.update(10_000f)
+        state.update(0.05f)
+        assertEquals(GameConstants.MAX_SCROLL_SPEED, state.scrollSpeed, 0f)
+        player.update(0.05f, state.scrollSpeed)
+        val bodyLeft = initialUpper.left - 60f
+        val before = RectF(
+            bodyLeft, initialUpper.bottom - 42f,
+            initialUpper.left - 4f, initialUpper.bottom - 2f
+        )
+        val after = RectF(
+            bodyLeft, initialUpper.bottom + 2f,
+            initialUpper.left - 4f, initialUpper.bottom + 42f
+        )
+        player.previousHitbox.set(before)
+        player.hitbox.set(after)
+
+        manager.update(0.05f, state, player, runMode = RunMode.DEBUG_SCENARIO)
+        assertEquals(initialUpper, rectField(orchid, "previousTopHitbox"))
+        assertTrue(!RectF.intersects(before, initialUpper))
+        assertTrue(!RectF.intersects(after, rectField(orchid, "topHitbox")))
+        assertTrue(!RectF.intersects(after, rectField(orchid, "bottomHitbox")))
+
+        val frame = requireNotNull(manager.checkCollisions(player, state))
+        assertEquals(CollisionResult.HIT, frame.result)
+        assertEquals(EncounterOutcome.HIT, orchid.encounterOutcome)
+        assertEquals(0, state.mercyHearts)
+        assertEquals(0, state.cleanPassesThisRun)
     }
 
     @Test

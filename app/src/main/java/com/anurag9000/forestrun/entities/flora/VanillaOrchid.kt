@@ -10,6 +10,7 @@ import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.PersistentMemoryManager
 import com.anurag9000.forestrun.engine.ReadabilityProfile
 import com.anurag9000.forestrun.engine.SpriteSizing
+import com.anurag9000.forestrun.engine.SweptCoreOverlap
 import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.engine.SwayComponent
 import com.anurag9000.forestrun.entities.CollisionResult
@@ -39,6 +40,8 @@ class VanillaOrchid(
     // Two distinct hitboxes
     private val bottomHitbox = RectF()
     private val topHitbox    = RectF()
+    private val previousBottomHitbox = RectF()
+    private val previousTopHitbox = RectF()
     private val threadRect   = RectF()
 
     private val bottomRect   = RectF()
@@ -79,6 +82,9 @@ class VanillaOrchid(
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
+        // Retain each real danger band, not the solid-looking aggregate span.
+        previousBottomHitbox.set(bottomHitbox)
+        previousTopHitbox.set(topHitbox)
         x -= scrollSpeed * deltaTime
         currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
         updateCollisionGeometry()
@@ -139,6 +145,18 @@ class VanillaOrchid(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, bottomHitbox) ||
             RectF.intersects(player.hitbox, topHitbox)) return CollisionResult.HIT
+        // A legal bounded frame can cross either moving lethal band between
+        // samples. Resolve each band at the SAME time as the Player, without
+        // ever filling the intentional collision-free thread between them.
+        if (hasMotionSample && player.hasMotionSample &&
+            (SweptCoreOverlap.intersects(
+                player.previousHitbox, player.hitbox,
+                previousBottomHitbox, bottomHitbox
+            ) || SweptCoreOverlap.intersects(
+                player.previousHitbox, player.hitbox,
+                previousTopHitbox, topHitbox
+            ))
+        ) return CollisionResult.HIT
         if (!threadRect.isEmpty &&
             threadRect.contains(player.hitbox.left, player.hitbox.top, player.hitbox.right, player.hitbox.bottom)
         ) {
