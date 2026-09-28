@@ -346,6 +346,15 @@ class EntityManager internal constructor(
         entity.observedMercyContact = false
         entity.encounterOutcome = EncounterOutcome.CLEAN_PASS
         recordResolvedEncounter(entity)
+
+        // Relationship-specific safe departures (currently Cat's spare/wave)
+        // own their reward/stat/presentation exclusively. Do not stack an
+        // ordinary clean pass, pass history/cue, or optional clean-pass Orb on
+        // the same resolved interaction.
+        if (entity.resolveSpecialSafeDeparture(player, gameState)) {
+            return
+        }
+
         entity.performUniqueAction(player, gameState)
         gameState.recordCleanPass()
 

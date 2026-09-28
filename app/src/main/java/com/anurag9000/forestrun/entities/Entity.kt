@@ -67,6 +67,21 @@ abstract class Entity(val context: Context) {
     open fun performUniqueAction(player: Player, gameState: GameStateManager) = Unit
 
     /**
+     * Claim a relationship-specific safe departure that replaces ordinary
+     * clean-pass accounting, pass presentation, and optional pass Orb reward.
+     *
+     * The technical lifecycle still resolves through [EncounterOutcome.CLEAN_PASS]
+     * because the canonical terminal vocabulary deliberately has no SPARED
+     * member. Returning true means the entity has already applied its exclusive
+     * special reward/stat/presentation and the manager must not also treat the
+     * same departure as an ordinary pass.
+     */
+    open fun resolveSpecialSafeDeparture(
+        player: Player,
+        gameState: GameStateManager
+    ): Boolean = false
+
+    /**
      * Advance telegraphs and player-reactive mechanics once per frame. This is
      * intentionally separate from [onCollision], which must be a pure query.
      */

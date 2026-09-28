@@ -253,6 +253,40 @@ class EntityOutcomeIntegrationTest {
 
 
     @Test
+    fun `Cat spare replaces ordinary pass accounting presentation and Orb lane`() {
+        val type = EntityType.CAT
+        clearTypePersistence(type)
+        val manager = manager()
+        val gameState = GameStateManager(context)
+        repeat(5) { gameState.addMercyHeart() }
+        val cat = createEntity(type, startX = -1_000f)
+        cat.hitbox.set(
+            player.hitbox.left - 220f,
+            player.hitbox.top,
+            player.hitbox.left - 120f,
+            player.hitbox.bottom
+        )
+        manager.activeEntities += cat
+
+        assertNull(manager.checkCollisions(player, gameState))
+        assertEquals(EncounterOutcome.CLEAN_PASS, cat.encounterOutcome)
+        assertEquals(1, gameState.sparedThisRun)
+        assertEquals(0, gameState.cleanPassesThisRun)
+        assertTrue(gameState.score > 0)
+        assertTrue(gameState.seedsThisRun > 0)
+        assertEquals(1, PersistentMemoryManager.getEncounterCount(context, type))
+        assertEquals(1, PersistentMemoryManager.getSparedCount(context, type))
+        assertEquals(0, PersistentMemoryManager.getPassCount(context, type))
+        assertEquals(0, manager.seedOrbManager.activeOrbCount)
+
+        // Terminal lifecycle and relationship accounting are both exactly once.
+        assertNull(manager.checkCollisions(player, gameState))
+        assertEquals(1, gameState.sparedThisRun)
+        assertEquals(1, PersistentMemoryManager.getSparedCount(context, type))
+        assertEquals(0, PersistentMemoryManager.getPassCount(context, type))
+    }
+
+    @Test
     fun `clean pass suppresses optional Orb behind the next pending hazard`() {
         val guaranteedOrbs = SeedOrbManager { 0.5f }
         val manager = EntityManager(

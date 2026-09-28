@@ -93,17 +93,22 @@ class Cat(
         sprite.draw(canvas, RectF(x, y, x + catW, y + catH))
     }
 
+    override fun resolveSpecialSafeDeparture(
+        player: Player,
+        gameState: GameStateManager
+    ): Boolean {
+        if (playerHasPassed || waving || gameState.mercyHearts < 5) return false
+        playerHasPassed = true
+        awardKindnessReward(gameState)
+        triggerSpare()
+        gameState.recordSpare()
+        return true
+    }
+
     override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         if (playerHasPassed) return
         playerHasPassed = true
-
-        gameState.addBonus(
-            points = 500 + relationshipTuning.passBonusPoints + if (repeatFriendHistory) 22 else 0,
-            seeds = 2 + relationshipTuning.passBonusSeeds + if (repeatFriendHistory) 1 else 0
-        )
-        if (warmBond || repeatFriendHistory) {
-            ParticleManager.emit(FxPreset.SEED_COLLECT, x + catW * 0.5f, y + catH * 0.32f)
-        }
+        awardKindnessReward(gameState)
         DialogueBubbleManager.spawn(
             text = RelationshipArcSystem.lineFor(context, EntityType.CAT, RelationshipArcSystem.Event.PASS),
             anchorX = x + catW * 0.5f,
@@ -111,10 +116,15 @@ class Cat(
             fillColor = Color.rgb(255, 235, 248),
             borderColor = Color.rgb(150, 80, 130)
         )
+    }
 
-        if (gameState.mercyHearts >= 5 && !waving) {
-            triggerSpare()
-            gameState.recordSpare()
+    private fun awardKindnessReward(gameState: GameStateManager) {
+        gameState.addBonus(
+            points = 500 + relationshipTuning.passBonusPoints + if (repeatFriendHistory) 22 else 0,
+            seeds = 2 + relationshipTuning.passBonusSeeds + if (repeatFriendHistory) 1 else 0
+        )
+        if (warmBond || repeatFriendHistory) {
+            ParticleManager.emit(FxPreset.SEED_COLLECT, x + catW * 0.5f, y + catH * 0.32f)
         }
     }
 
