@@ -100,6 +100,57 @@ class RandomEncounterAdmissionIntegrationTest {
         })
     }
 
+
+    @Test
+    fun `compact max-speed random spawn keeps full sampled action lead after creation tick`() {
+        val compactPlayer = Player(640, 360, sprites)
+        val manager = EntityManager(context, 640f, 360f, sprites)
+        val state = GameStateManager(context) { false }
+
+        // Reach the supported speed ceiling while keeping deterministic local
+        // persistence isolated, then move beyond opening random-spawn lock.
+        repeat(3) { state.update(5_000f) }
+        assertEquals(GameConstants.MAX_SCROLL_SPEED, state.scrollSpeed, 0f)
+        assertTrue(state.runTimeSeconds >= 28f)
+
+        // Accumulate enough random origin spacing. The admitted entity is
+        // created and updated in this same final frame.
+        var guard = 0
+        while (manager.activeEntities.isEmpty() && guard++ < 40) {
+            manager.update(
+                deltaTime = FrameInputAdmission.MAX_DELTA_SECONDS,
+                gameState = state,
+                player = compactPlayer,
+                runMode = RunMode.NORMAL
+            )
+        }
+        assertEquals(1, manager.activeEntities.size)
+        val staged = manager.activeEntities.single()
+        val remainingLead = staged.encounterBounds.left - compactPlayer.hitbox.right
+
+        val apex = EncounterActionFeasibility.observe(
+            leadDistancePx = Float.MAX_VALUE,
+            approachSpeedPxPerSec = state.scrollSpeed,
+            requiredVerticalClearancePx = 0f,
+            jumpUpwardSpeedPxPerSec = -Player.MAX_JUMP_FORCE,
+            gravityPxPerSecSquared = Player.GRAVITY,
+            gestureDecisionSeconds = 0f
+        ).maximumBallisticRisePx
+        val reaction = EncounterActionFeasibility.observe(
+            leadDistancePx = remainingLead,
+            approachSpeedPxPerSec = state.scrollSpeed,
+            requiredVerticalClearancePx = apex,
+            jumpUpwardSpeedPxPerSec = -Player.MAX_JUMP_FORCE,
+            gravityPxPerSecSquared = Player.GRAVITY,
+            gestureDecisionSeconds = 0.075f,
+            safetyMarginSeconds = 0.08f
+        )
+        assertTrue(
+            "new random encounter lost its sampled action lead on creation frame",
+            reaction.jumpFeasible
+        )
+    }
+
     @Test
     fun `duck and stumble states hold random admission until real recovery`() {
         val manager = EntityManager(context, 1_920f, 1_080f, sprites)

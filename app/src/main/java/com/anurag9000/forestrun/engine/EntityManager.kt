@@ -134,7 +134,7 @@ class EntityManager internal constructor(
                 canAdmitRandomEncounter(player)
             ) {
                 distanceSinceRandomSpawnPx = 0f
-                spawnRandom(gameState)
+                spawnRandom(gameState, player)
             }
         }
 
@@ -588,15 +588,28 @@ class EntityManager internal constructor(
         return true
     }
 
-    private fun spawnRandom(gameState: GameStateManager) {
+    private fun spawnRandom(gameState: GameStateManager, player: Player) {
         val surfaceEligible = EntityFactory.eligibleOrdinaryPool(
             DifficultyScaler.getSpawnPool(gameState.distanceMetres, biomeManager),
             screenHeight
         )
         val pool = gameState.openingSpawnPool(surfaceEligible)
-        if (pool.isNotEmpty()) {
-            spawn(pool[Random.nextInt(pool.size)])
-        }
+        if (pool.isEmpty()) return
+
+        // The bag has already selected exactly one authorized type. Keep the
+        // existing offscreen default, but on compact/high-speed surfaces push
+        // the new origin farther out until the Player has a sampled full-jump
+        // reaction envelope even after this tick's immediate entity update.
+        val actionLeadPx = SpawnPacing.minimumRandomEncounterLeadPx(
+            gameState.scrollSpeed
+        )
+        val actionSafeStartX = (
+            player.hitbox.right.toDouble() + actionLeadPx.toDouble()
+            ).coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
+        spawn(
+            type = pool.first(),
+            startX = maxOf(spawnX, actionSafeStartX)
+        )
     }
 
     fun spawn(
