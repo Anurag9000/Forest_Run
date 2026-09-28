@@ -19,6 +19,15 @@ SOURCE_SUFFIXES = {
     ".kt", ".kts", ".java", ".py", ".js", ".ts", ".tsx", ".jsx",
     ".gradle", ".toml", ".yaml", ".yml", ".json",
 }
+REQUIRED_APPLICATION_FILES = (
+    "settings.gradle.kts",
+    "build.gradle.kts",
+    "app/build.gradle.kts",
+    "app/src/main/AndroidManifest.xml",
+    "app/src/main/java/com/anurag9000/forestrun/MainActivity.kt",
+    "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
+)
+
 SKIP_PARTS = {
     ".git", ".gradle", ".idea", "build", "docs", "Final_Assets (2)",
     ".training_control", "training_control",
@@ -110,7 +119,24 @@ def audit(root: Path = ROOT) -> Audit:
 
 
 def require_no_trainable_surface(root: Path = ROOT) -> Audit:
+    # Absence of *all* files is not evidence of an application without ML.
+    # Require the actual Android app/entrypoint/build surface before issuing
+    # a repository-wide not-applicable certificate. audit(root) remains a
+    # composable scanner for synthetic fixtures and future changes.
+    root = Path(root).resolve()
+    missing = [relative for relative in REQUIRED_APPLICATION_FILES
+               if not (root / relative).is_file()]
+    if missing:
+        raise RuntimeError(
+            "Forest_Run no-training authority cannot certify an incomplete "
+            "Android source tree: " + ", ".join(missing)
+        )
     result = audit(root)
+    if not any(name.startswith("app/src/main/") and name.endswith(".kt")
+               for name in result.scanned_files):
+        raise RuntimeError("Forest_Run no-training authority scanned no production Kotlin source")
+    if not result.android_dependencies:
+        raise RuntimeError("Forest_Run no-training authority found no Android dependencies")
     if not result.complete:
         rendered = "; ".join(
             f"{row.path}:{row.line}:{row.category}" for row in result.findings[:50]
