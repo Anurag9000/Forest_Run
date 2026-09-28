@@ -18,6 +18,7 @@ SEMANTICS = ENGINE / "GameAccessibilitySemantics.kt"
 ACTIONS = ENGINE / "LiveGameAccessibilityActions.kt"
 GEOMETRY = ENGINE / "GameAccessibilityGeometry.kt"
 ANNOUNCEMENTS = ENGINE / "AccessibilityAnnouncementPolicy.kt"
+CADENCE = ENGINE / "RuntimeCadenceClock.kt"
 
 
 class LiveAccessibilityProviderContractTest(unittest.TestCase):
@@ -31,6 +32,7 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
         cls.actions = ACTIONS.read_text(encoding="utf-8")
         cls.geometry = GEOMETRY.read_text(encoding="utf-8")
         cls.announcements = ANNOUNCEMENTS.read_text(encoding="utf-8")
+        cls.cadence = CADENCE.read_text(encoding="utf-8")
 
     def test_legacy_root_delegate_and_one_shot_migrations_are_absent(self) -> None:
         forbidden_paths = (
@@ -138,15 +140,27 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
     def test_live_announcements_are_touch_exploration_only_sampled_and_coalesced(self) -> None:
         required_live = (
             "AccessibilityAnnouncementPolicy()",
-            "ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES = 30L",
+            "RuntimeCadenceClock()",
             "manager.isTouchExplorationEnabled",
-            "debugFrameCounter % ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES != 0L",
+            "runtimeCadenceClock.consumeAccessibilityPoll()",
+            "runtimeCadenceClock.advance(deltaTime)",
             "SystemClock.uptimeMillis()",
             "announceAccessibilitySnapshot(buildAccessibilitySnapshot())",
             "?.let(::announceForAccessibility)",
         )
         for token in required_live:
             self.assertIn(token, self.game_view, token)
+        for token in (
+            "DEFAULT_ACCESSIBILITY_POLL_INTERVAL_SECONDS = 0.5f",
+            "accessibilityPollElapsedSeconds",
+            "consumeAccessibilityPoll()",
+        ):
+            self.assertIn(token, self.cadence, token)
+        self.assertNotIn("ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES", self.game_view)
+        self.assertNotIn(
+            "debugFrameCounter % ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES",
+            self.game_view,
+        )
         for token in (
             "DEFAULT_ROUTINE_INTERVAL_MS = 10_000L",
             "DEFAULT_DISTANCE_STEP_M = 100",

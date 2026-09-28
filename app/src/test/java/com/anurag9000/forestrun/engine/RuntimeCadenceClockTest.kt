@@ -40,6 +40,36 @@ class RuntimeCadenceClockTest {
     }
 
     @Test
+    fun `poll preserves overshoot instead of drifting after irregular frames`() {
+        val clock = RuntimeCadenceClock()
+        clock.advance(0.49f)
+        assertFalse(clock.consumeAccessibilityPoll())
+
+        clock.advance(0.05f)
+        assertTrue(clock.consumeAccessibilityPoll())
+        assertFalse(clock.consumeAccessibilityPoll())
+
+        // 0.04 s from the first crossing remains. Another 0.46 s should
+        // therefore reach the next half-second boundary exactly.
+        clock.advance(0.45f)
+        assertFalse(clock.consumeAccessibilityPoll())
+        clock.advance(0.01f)
+        assertTrue(clock.consumeAccessibilityPoll())
+    }
+
+    @Test
+    fun `long disabled interval produces one immediate poll without backlog burst`() {
+        val clock = RuntimeCadenceClock()
+        clock.advance(3.24f)
+        assertTrue(clock.consumeAccessibilityPoll())
+        assertFalse(clock.consumeAccessibilityPoll())
+
+        clock.advance(0.26f)
+        assertTrue(clock.consumeAccessibilityPoll())
+        assertFalse(clock.consumeAccessibilityPoll())
+    }
+
+    @Test
     fun `malformed deltas are no ops and reset clears both clocks`() {
         val clock = RuntimeCadenceClock()
         clock.advance(0.4f)

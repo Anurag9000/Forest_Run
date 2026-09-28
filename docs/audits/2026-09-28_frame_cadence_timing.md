@@ -8,7 +8,9 @@ The production `GameThread` deliberately targets 60 Hz, but it passes the measur
 
 Add a tiny `RuntimeCadenceClock` advanced by the same validated and bounded delta already admitted by `GameView`. Cinematic shimmer consumes that elapsed-seconds clock. Accessibility snapshot sampling consumes a 0.5-second elapsed-time gate, preserving the previous ideal-60-Hz intent without coupling it to the number of updates completed. The existing `AccessibilityAnnouncementPolicy` still owns semantic coalescing and its 10-second routine interval.
 
-Unit tests verify one real second partitioned into 30, 60 and 120 update slices produces the same elapsed time and two accessibility polls, plus single-consume, malformed-input and reset behavior. These are update-partition experiments, not a claim that the production loop renders at 120 Hz.
+Unit tests verify one real second partitioned into 30, 60 and 120 update slices produces the same elapsed time and two accessibility polls, plus single-consume, malformed-input and reset behavior. The cadence accumulator preserves sub-interval overshoot so irregular 33–50 ms frames do not slowly shift the nominal half-second phase; a long period without consumption collapses to one immediate poll rather than replaying a backlog. These are update-partition experiments, not a claim that the production loop renders at 120 Hz.
+
+The exact-head first validation exposed one stale Python source-contract assertion that still required the removed 30-frame constant. The contract now requires the elapsed-time clock and explicitly forbids reintroduction of the frame-count gate.
 
 ## Boundary
 

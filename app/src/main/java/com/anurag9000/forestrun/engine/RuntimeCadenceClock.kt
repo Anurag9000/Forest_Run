@@ -30,14 +30,21 @@ internal class RuntimeCadenceClock(
         accessibilityPollElapsedSeconds = finiteSaturatingAdd(
             accessibilityPollElapsedSeconds,
             deltaSeconds
-        ).coerceAtMost(accessibilityPollIntervalSeconds)
+        )
     }
 
     fun consumeAccessibilityPoll(): Boolean {
         if (accessibilityPollElapsedSeconds + EPSILON_SECONDS <
             accessibilityPollIntervalSeconds
         ) return false
-        accessibilityPollElapsedSeconds = 0f
+        // Keep the sub-interval overshoot so repeated irregular frames do not
+        // slowly push the sampling phase later. Modulo also collapses a long
+        // period with TalkBack disabled to one immediate poll rather than a
+        // burst of backlogged announcements.
+        accessibilityPollElapsedSeconds = (
+            accessibilityPollElapsedSeconds.toDouble() %
+                accessibilityPollIntervalSeconds.toDouble()
+            ).toFloat()
         return true
     }
 
