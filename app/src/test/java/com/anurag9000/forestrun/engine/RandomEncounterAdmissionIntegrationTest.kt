@@ -151,6 +151,56 @@ class RandomEncounterAdmissionIntegrationTest {
         )
     }
 
+
+    @Test
+    fun `max-speed Hedgehog retains full sampled jump window after its creation update`() {
+        val compactPlayer = Player(640, 360, sprites)
+        val manager = EntityManager(context, 640f, 360f, sprites)
+        val state = GameStateManager(context) { false }
+        repeat(3) { state.update(5_000f) }
+        assertEquals(GameConstants.MAX_SCROLL_SPEED, state.scrollSpeed, 0f)
+
+        val lead = SpawnPacing.minimumRandomEncounterLeadPx(state.scrollSpeed)
+        manager.spawn(
+            type = EntityType.HEDGEHOG,
+            startX = compactPlayer.hitbox.right + lead,
+            recordPersistence = false
+        )
+        manager.update(
+            deltaTime = FrameInputAdmission.MAX_DELTA_SECONDS,
+            gameState = state,
+            player = compactPlayer,
+            runMode = RunMode.DEBUG_SCENARIO
+        )
+
+        val staged = manager.activeEntities.single()
+        val remainingLead = staged.encounterBounds.left - compactPlayer.hitbox.right
+        val fastestApproach = state.scrollSpeed * 1.15f
+        val apex = EncounterActionFeasibility.observe(
+            leadDistancePx = Float.MAX_VALUE,
+            approachSpeedPxPerSec = fastestApproach,
+            requiredVerticalClearancePx = 0f,
+            jumpUpwardSpeedPxPerSec = -Player.MAX_JUMP_FORCE,
+            gravityPxPerSecSquared = Player.GRAVITY,
+            gestureDecisionSeconds = 0f
+        ).maximumBallisticRisePx
+        val reaction = EncounterActionFeasibility.observe(
+            leadDistancePx = remainingLead,
+            approachSpeedPxPerSec = fastestApproach,
+            requiredVerticalClearancePx = apex,
+            jumpUpwardSpeedPxPerSec = -Player.MAX_JUMP_FORCE,
+            gravityPxPerSecSquared = Player.GRAVITY,
+            gestureDecisionSeconds = 0.075f,
+            safetyMarginSeconds = 0.08f
+        )
+
+        assertEquals(495f, apex, 0.002f)
+        assertTrue(
+            "fastest immediate family consumed the full-window reaction lead",
+            reaction.jumpFeasible
+        )
+    }
+
     @Test
     fun `duck and stumble states hold random admission until real recovery`() {
         val manager = EntityManager(context, 1_920f, 1_080f, sprites)

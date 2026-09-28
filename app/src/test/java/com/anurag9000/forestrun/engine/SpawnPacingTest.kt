@@ -39,7 +39,7 @@ class SpawnPacingTest {
 
 
     @Test
-    fun `maximum speed random encounter lead covers sampled full jump plus same-frame update`() {
+    fun `maximum speed random encounter lead covers fastest full-window approach and creation frame`() {
         val speed = GameConstants.MAX_SCROLL_SPEED
         val lead = SpawnPacing.minimumRandomEncounterLeadPx(speed)
         val apex = EncounterActionFeasibility.observe(
@@ -50,11 +50,12 @@ class SpawnPacingTest {
             gravityPxPerSecSquared = com.anurag9000.forestrun.entities.Player.GRAVITY,
             gestureDecisionSeconds = 0f
         ).maximumBallisticRisePx
+        val fastestImmediateApproach = speed * 1.15f
         val afterCreationFrame = lead -
-            speed * FrameInputAdmission.MAX_DELTA_SECONDS * 1.15f
+            fastestImmediateApproach * FrameInputAdmission.MAX_DELTA_SECONDS
         val observation = EncounterActionFeasibility.observe(
             leadDistancePx = afterCreationFrame,
-            approachSpeedPxPerSec = speed,
+            approachSpeedPxPerSec = fastestImmediateApproach,
             requiredVerticalClearancePx = apex,
             jumpUpwardSpeedPxPerSec = -com.anurag9000.forestrun.entities.Player.MAX_JUMP_FORCE,
             gravityPxPerSecSquared = com.anurag9000.forestrun.entities.Player.GRAVITY,

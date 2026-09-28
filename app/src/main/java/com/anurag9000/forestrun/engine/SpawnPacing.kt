@@ -47,14 +47,16 @@ object SpawnPacing {
             gestureDecisionSeconds = GESTURE_DECISION_SECONDS,
             safetyMarginSeconds = ACTION_SAFETY_SECONDS
         )
+        val approachSpeed = (
+            speed.toDouble() * MAX_IMMEDIATE_CREATION_APPROACH_MULTIPLIER.toDouble()
+            ).coerceAtMost(Float.MAX_VALUE.toDouble())
         val actionSeconds = (
             GESTURE_DECISION_SECONDS.toDouble() +
                 ACTION_SAFETY_SECONDS.toDouble() +
                 fullJump.timeToRequiredRiseSeconds.toDouble() +
-                FrameInputAdmission.MAX_DELTA_SECONDS.toDouble() *
-                    MAX_IMMEDIATE_CREATION_APPROACH_MULTIPLIER.toDouble()
+                FrameInputAdmission.MAX_DELTA_SECONDS.toDouble()
             ).coerceAtMost(Float.MAX_VALUE.toDouble())
-        return (actionSeconds * speed.toDouble())
+        return (actionSeconds * approachSpeed)
             .coerceIn(0.0, Float.MAX_VALUE.toDouble())
             .toFloat()
     }
