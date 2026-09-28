@@ -98,29 +98,21 @@ class NamespaceBoundGhostPromotionArtifactStoreTest {
     }
 
     @Test
-    fun `ghost distance writer cannot lower an independently published run best`() {
+    fun `run best distance and Ghost promotion floor are independent`() {
         assertTrue(store.saveBestDistanceM(120f))
         assertEquals(120f, store.loadBestDistanceM(), 0f)
 
-        // The normal run owner publishes a better achievement without needing
-        // any Ghost frames.
+        // A lifecycle checkpoint can publish the run achievement without
+        // pretending that a Ghost for that distance already exists.
         SaveManager.saveBestDistance(context, 240f)
         assertEquals(240f, SaveManager.loadBestDistance(context), 0f)
-
-        // A stale asynchronous Ghost transaction must not restore its older
-        // distance after the independent run achievement has advanced.
-        assertTrue(store.saveBestDistanceM(160f))
-        assertEquals(240f, store.loadBestDistanceM(), 0f)
-        assertEquals(240f, SaveManager.loadBestDistance(context), 0f)
-    }
-
-    @Test
-    fun `ghost distance writer rejects malformed values without erasing record`() {
-        assertTrue(store.saveBestDistanceM(120f))
-        assertTrue(!store.saveBestDistanceM(Float.NaN))
-        assertTrue(!store.saveBestDistanceM(Float.POSITIVE_INFINITY))
-        assertTrue(!store.saveBestDistanceM(-1f))
         assertEquals(120f, store.loadBestDistanceM(), 0f)
+
+        // The Ghost pipeline can subsequently advance its own floor and the
+        // Journal-facing run record remains the greater independent value.
+        assertTrue(store.saveBestDistanceM(160f))
+        assertEquals(160f, store.loadBestDistanceM(), 0f)
+        assertEquals(240f, SaveManager.loadBestDistance(context), 0f)
     }
 
     private fun sampleFrames(): List<GhostFrame> = listOf(

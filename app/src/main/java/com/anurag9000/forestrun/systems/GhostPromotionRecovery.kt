@@ -458,7 +458,10 @@ internal class AtomicFileGhostPromotionReceiptStore(
 internal class AndroidGhostPromotionArtifactStore(context: Context) :
     GhostPromotionArtifactStore {
     private val appContext = context.applicationContext
-    private val persistenceNamespace = SaveManager.activePrefsNameForTests
+    private val prefs = appContext.getSharedPreferences(
+        SaveManager.activePrefsNameForTests,
+        Context.MODE_PRIVATE
+    )
 
     override fun loadGhost(): List<GhostFrame> = SaveManager.loadGhostRun(appContext)
 
@@ -466,10 +469,14 @@ internal class AndroidGhostPromotionArtifactStore(context: Context) :
         SaveManager.saveGhostRun(appContext, frames)
 
     override fun loadBestDistanceM(): Float =
-        SaveManager.loadBestDistanceForNamespace(appContext, persistenceNamespace)
+        prefs.getFloat(KEY_BEST_DISTANCE, 0f)
 
-    override fun saveBestDistanceM(distanceM: Float): Boolean =
-        SaveManager.saveBestDistanceForNamespace(
-            appContext, persistenceNamespace, distanceM
-        )
+    override fun saveBestDistanceM(distanceM: Float): Boolean {
+        val safeDistance = distanceM.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
+        return prefs.edit().putFloat(KEY_BEST_DISTANCE, safeDistance).commit()
+    }
+
+    private companion object {
+        const val KEY_BEST_DISTANCE = "best_distance"
+    }
 }
