@@ -181,35 +181,39 @@ class Wolf(
         sprite.draw(canvas, drawRect)
     }
 
-    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        // Called when player fully passes without collision
-        if (!spared && gameState.mercyHearts >= 8) {
-            spared    = true
-            wolfState = WolfState.SPARED
-            gameState.addBonus(
-                points = 220 + relationshipTuning.passBonusPoints + if (respectStandDownHistory) 70 else 0,
-                seeds = 3 + relationshipTuning.passBonusSeeds + (if (warmBond) 1 else 0) + (if (respectStandDownHistory) 1 else 0)
-            )
-            if (shouldRecordPersistence) {
-                PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
-            }
-            gameState.recordSpare()
-            ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.5f, y + wolfH * 0.40f)
-            ParticleManager.emit(FxPreset.SEED_COLLECT, x + wolfW * 0.5f, y + wolfH * 0.20f)
-            if (respectStandDownHistory) {
-                ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.32f, y + wolfH * 0.58f)
-                ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.68f, y + wolfH * 0.58f)
-            }
-            DialogueBubbleManager.spawn(
-                RelationshipArcSystem.lineFor(context, EntityType.WOLF, RelationshipArcSystem.Event.SPARE),
-                x + wolfW * 0.5f,
-                y - 20f,
-                if (respectStandDownHistory) Color.rgb(226, 238, 248) else Color.rgb(232, 236, 245),
-                if (respectStandDownHistory) Color.rgb(96, 118, 144) else Color.rgb(110, 110, 140)
-            )
-            return
+    override fun resolveSpecialSafeDeparture(
+        player: Player,
+        gameState: GameStateManager
+    ): Boolean {
+        if (spared || gameState.mercyHearts < 8) return false
+        spared = true
+        wolfState = WolfState.SPARED
+        gameState.addBonus(
+            points = 220 + relationshipTuning.passBonusPoints + if (respectStandDownHistory) 70 else 0,
+            seeds = 3 + relationshipTuning.passBonusSeeds + (if (warmBond) 1 else 0) + (if (respectStandDownHistory) 1 else 0)
+        )
+        if (shouldRecordPersistence) {
+            PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
         }
+        gameState.recordSpare()
+        ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.5f, y + wolfH * 0.40f)
+        ParticleManager.emit(FxPreset.SEED_COLLECT, x + wolfW * 0.5f, y + wolfH * 0.20f)
+        if (respectStandDownHistory) {
+            ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.32f, y + wolfH * 0.58f)
+            ParticleManager.emit(FxPreset.MERCY_STARS, x + wolfW * 0.68f, y + wolfH * 0.58f)
+        }
+        DialogueBubbleManager.spawn(
+            RelationshipArcSystem.lineFor(context, EntityType.WOLF, RelationshipArcSystem.Event.SPARE),
+            x + wolfW * 0.5f,
+            y - 20f,
+            if (respectStandDownHistory) Color.rgb(226, 238, 248) else Color.rgb(232, 236, 245),
+            if (respectStandDownHistory) Color.rgb(96, 118, 144) else Color.rgb(110, 110, 140)
+        )
+        return true
+    }
 
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
+        // Called when player fully passes without collision.
         if (!passRewarded && wolfState == WolfState.CHARGING) {
             passRewarded = true
             gameState.addBonus(

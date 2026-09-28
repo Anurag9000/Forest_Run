@@ -169,29 +169,32 @@ class Fox(
         sprite.draw(canvas, drawRect)
     }
 
-    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
-        // Check for Spare  threshold
-        if (!spared && gameState.mercyHearts >= 5) {
-            spared   = true
-            foxState = FoxState.SPARED
-            gameState.addBonus(
-                points = 120 + relationshipTuning.passBonusPoints,
-                seeds = 2 + relationshipTuning.passBonusSeeds
-            )
-            if (shouldRecordPersistence) {
-                PersistentMemoryManager.recordSpare(context, EntityType.FOX)
-            }
-            gameState.recordSpare()
-            DialogueBubbleManager.spawn(
-                RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.SPARE),
-                x + foxW * 0.55f,
-                y - 16f,
-                Color.rgb(255, 240, 220),
-                Color.rgb(190, 110, 55)
-            )
-            return
+    override fun resolveSpecialSafeDeparture(
+        player: Player,
+        gameState: GameStateManager
+    ): Boolean {
+        if (spared || gameState.mercyHearts < 5) return false
+        spared = true
+        foxState = FoxState.SPARED
+        gameState.addBonus(
+            points = 120 + relationshipTuning.passBonusPoints,
+            seeds = 2 + relationshipTuning.passBonusSeeds
+        )
+        if (shouldRecordPersistence) {
+            PersistentMemoryManager.recordSpare(context, EntityType.FOX)
         }
+        gameState.recordSpare()
+        DialogueBubbleManager.spawn(
+            RelationshipArcSystem.lineFor(context, EntityType.FOX, RelationshipArcSystem.Event.SPARE),
+            x + foxW * 0.55f,
+            y - 16f,
+            Color.rgb(255, 240, 220),
+            Color.rgb(190, 110, 55)
+        )
+        return true
+    }
 
+    override fun performUniqueAction(player: Player, gameState: GameStateManager) {
         if (!passRewarded && hasJumped && foxState != FoxState.SPARED) {
             passRewarded = true
             gameState.addBonus(

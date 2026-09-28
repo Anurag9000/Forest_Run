@@ -287,6 +287,45 @@ class EntityOutcomeIntegrationTest {
     }
 
     @Test
+    fun `Fox and Wolf spare departures do not also count as ordinary passes`() {
+        listOf(
+            EntityType.FOX to 5,
+            EntityType.WOLF to 8
+        ).forEach { (type, mercyThreshold) ->
+            clearTypePersistence(type)
+            val manager = manager()
+            val gameState = GameStateManager(context)
+            repeat(mercyThreshold) { gameState.addMercyHeart() }
+            val entity = createEntity(type, startX = -1_000f)
+            entity.hitbox.set(
+                player.hitbox.left - 220f,
+                player.hitbox.top,
+                player.hitbox.left - 120f,
+                player.hitbox.bottom
+            )
+            manager.activeEntities += entity
+
+            assertNull("$type should resolve without collision", manager.checkCollisions(player, gameState))
+            assertEquals("$type lifecycle bucket", EncounterOutcome.CLEAN_PASS, entity.encounterOutcome)
+            assertEquals("$type run spare", 1, gameState.sparedThisRun)
+            assertEquals("$type ordinary clean pass", 0, gameState.cleanPassesThisRun)
+            assertEquals("$type encounter history", 1, PersistentMemoryManager.getEncounterCount(context, type))
+            assertEquals("$type spare history", 1, PersistentMemoryManager.getSparedCount(context, type))
+            assertEquals("$type pass history", 0, PersistentMemoryManager.getPassCount(context, type))
+            assertEquals("$type generic pass Orb", 0, manager.seedOrbManager.activeOrbCount)
+            assertTrue("$type special reward", gameState.score > 0)
+            assertTrue("$type special seeds", gameState.seedsThisRun > 0)
+
+            assertNull("$type repeat resolution", manager.checkCollisions(player, gameState))
+            assertEquals("$type exactly-once spare", 1, gameState.sparedThisRun)
+            assertEquals("$type exactly-once history", 1, PersistentMemoryManager.getSparedCount(context, type))
+            ParticleManager.clear()
+            DialogueBubbleManager.clear()
+            FlavorTextManager.clear()
+        }
+    }
+
+    @Test
     fun `clean pass suppresses optional Orb behind the next pending hazard`() {
         val guaranteedOrbs = SeedOrbManager { 0.5f }
         val manager = EntityManager(
