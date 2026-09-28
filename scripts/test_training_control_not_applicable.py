@@ -63,6 +63,35 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             self.assertFalse(result.complete)
             self.assertEqual("scripts/run_all_training.py", result.findings[0].path)
 
+    def test_shell_and_android_manifest_source_are_in_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            launch = root / "scripts" / "model_runner.sh"
+            manifest = root / "app" / "src" / "main" / "AndroidManifest.xml"
+            launch.parent.mkdir(parents=True)
+            manifest.parent.mkdir(parents=True)
+            marker = "to" + "rch"
+            framework = "tensor" + "flow"
+            launch.write_text(f"python -m {marker}\\n", encoding="utf-8")
+            manifest.write_text(f'<service android:name="{framework}"/>\\n', encoding="utf-8")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual(
+                {"scripts/model_runner.sh", "app/src/main/AndroidManifest.xml"},
+                {finding.path for finding in result.findings},
+            )
+
+    def test_generated_audit_evidence_does_not_poison_future_source_scans(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            artifact = root / "artifacts" / "training_control" / "old_result.json"
+            artifact.parent.mkdir(parents=True)
+            marker = "to" + "rch"
+            artifact.write_text(f'{{"prior_failure": "{marker}"}}\\n', encoding="utf-8")
+            result = audit(root)
+            self.assertTrue(result.complete)
+            self.assertNotIn("artifacts/training_control/old_result.json", result.scanned_files)
+
     def test_empty_repository_cannot_be_certified_as_non_trainable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
