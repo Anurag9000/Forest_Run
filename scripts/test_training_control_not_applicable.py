@@ -11,7 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from training_control.forest_no_trainable_authority import audit
+from training_control.forest_no_trainable_authority import (
+    audit, require_no_trainable_surface, REQUIRED_APPLICATION_FILES,
+)
 
 
 class TrainingControlNotApplicableTest(unittest.TestCase):
@@ -44,6 +46,46 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             result = audit(root)
             self.assertFalse(result.complete)
             self.assertEqual("py" + "to" + "rch", result.findings[0].category)
+
+    def test_empty_repository_cannot_be_certified_as_non_trainable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.assertTrue(audit(root).complete)  # scanner has nothing to find
+            with self.assertRaisesRegex(RuntimeError, "incomplete Android source tree"):
+                require_no_trainable_surface(root)
+
+    def test_missing_individual_app_or_build_source_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for relative in REQUIRED_APPLICATION_FILES:
+                file = root / relative
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_text(
+                    'implementation("androidx.core:core-ktx:1.13.1")\\n'
+                    if relative == "app/build.gradle.kts" else "// retained app fixture\\n",
+                    encoding="utf-8",
+                )
+            self.assertTrue(require_no_trainable_surface(root).complete)
+            for relative in REQUIRED_APPLICATION_FILES:
+                file = root / relative
+                original = file.read_bytes()
+                file.unlink()
+                try:
+                    with self.subTest(missing=relative):
+                        with self.assertRaisesRegex(RuntimeError, "incomplete Android source tree"):
+                            require_no_trainable_surface(root)
+                finally:
+                    file.write_bytes(original)
+
+    def test_empty_android_dependency_manifest_cannot_be_certified(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for relative in REQUIRED_APPLICATION_FILES:
+                file = root / relative
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_text("// retained app fixture\\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "no Android dependencies"):
+                require_no_trainable_surface(root)
 
     def test_root_command_emits_truthful_n_a_certificate(self) -> None:
         result = subprocess.run(
