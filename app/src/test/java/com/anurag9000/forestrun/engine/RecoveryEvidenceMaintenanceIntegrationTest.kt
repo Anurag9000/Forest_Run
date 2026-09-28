@@ -11,6 +11,8 @@ import com.anurag9000.forestrun.systems.GhostArtifactManifestLoadResult
 import com.anurag9000.forestrun.systems.GhostFrame
 import com.anurag9000.forestrun.systems.GhostPromotionReceipt
 import com.anurag9000.forestrun.systems.GhostPromotionReceiptLoadResult
+import com.anurag9000.forestrun.systems.GhostPersistenceNamespace
+import com.anurag9000.forestrun.systems.NamespaceBoundGhostPromotionArtifactStore
 import com.anurag9000.forestrun.systems.GhostRunIdentity
 import java.io.File
 import org.junit.After
@@ -194,7 +196,15 @@ class RecoveryEvidenceMaintenanceIntegrationTest {
         val validManifest = manifest(frames, 700f)
         assertTrue(SaveManager.saveGhostRun(context, frames))
         assertTrue(manifestStore.save(validManifest))
-        SaveManager.saveBestDistance(context, validManifest.distanceM)
+        // A completed Ghost manifest is CLEAN only when the Ghost promotion
+        // floor has reached the same artifact distance. Run-achievement
+        // distance is intentionally independent and must not stand in for it.
+        assertTrue(
+            NamespaceBoundGhostPromotionArtifactStore(
+                context,
+                GhostPersistenceNamespace.capture()
+            ).saveBestDistanceM(validManifest.distanceM)
+        )
         promotionFile().writeBytes(byteArrayOf(1, 2, 3, 4))
         val maintenance = AndroidRecoveryEvidenceMaintenance(context)
 
