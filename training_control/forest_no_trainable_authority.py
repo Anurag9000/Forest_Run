@@ -81,9 +81,13 @@ class Audit:
 
 def _files(root: Path = ROOT) -> Iterable[Path]:
     for path in sorted(root.rglob("*")):
-        if not path.is_file() or path.name == "run_all_training.py":
+        if not path.is_file():
             continue
         relative = path.relative_to(root)
+        # Only the root audit entrypoint is exempt. A newly introduced nested
+        # script with the same filename must still be inspected for optimizers.
+        if relative.as_posix() == "run_all_training.py":
+            continue
         if any(part in SKIP_PARTS for part in relative.parts):
             continue
         if path.suffix.lower() in SOURCE_SUFFIXES or path.name in {"build.gradle.kts", "settings.gradle.kts", "gradle.properties"}:
