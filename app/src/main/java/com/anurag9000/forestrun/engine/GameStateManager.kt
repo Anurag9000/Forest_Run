@@ -54,6 +54,14 @@ class GameStateManager(
     var isNewHighScore: Boolean = false
         private set
 
+    /**
+     * True only after this run itself has successfully reached a score above
+     * the durable record observed at one of its save boundaries. This lets a
+     * repeated save preserve a legitimate NEW HIGH label without allowing a
+     * different stale run that merely ties the published record to claim it.
+     */
+    private var publishedNewHighThisRun: Boolean = false
+
     private var lastMilestone: Int = 0
     private var milestoneReady: Boolean = false
 
@@ -241,15 +249,27 @@ class GameStateManager(
         // Terminal summary creation precedes the death transition's save().
         // A concurrent run may already have published a higher achievement.
         // Debug and capture runs keep their intentionally isolated local view.
-        val bestForSummary = if (persistProgress()) {
-            maxOf(highScore, SaveManager.loadHighScore(appContext))
+        val persistenceEnabled = persistProgress()
+        val durableHighScore = if (persistenceEnabled) {
+            SaveManager.loadHighScore(appContext)
+        } else {
+            0
+        }
+        val bestForSummary = if (persistenceEnabled) {
+            maxOf(highScore, durableHighScore)
         } else {
             highScore
+        }
+        val newHighForSummary = if (persistenceEnabled) {
+            isNewHighScore &&
+                (publishedNewHighThisRun || score > durableHighScore)
+        } else {
+            isNewHighScore
         }
         return RunSummary(
             score = score,
             distanceM = distanceMetres,
-            isNewHighScore = isNewHighScore && score >= bestForSummary,
+            isNewHighScore = newHighForSummary,
             highScore = bestForSummary,
             mercyHearts = mercyHearts,
             mercyMisses = mercyMissesThisRun,
@@ -358,6 +378,7 @@ class GameStateManager(
         bloomTimer = 0f
         bloomConversionsThisRun = 0
         isNewHighScore = false
+        publishedNewHighThisRun = false
         mercySystem.reset()
         speedDebuffMultiplier = 1f
         speedDebuffTimer = 0f
@@ -371,6 +392,17 @@ class GameStateManager(
     /** Persist score without ever overwriting externally spent Garden seeds. */
     fun save() {
         if (!persistProgress()) return
+
+        // Compare before publishing. Equality with a record another run already
+        // owns is a tie, not a new record. Once this run has itself published a
+        // strictly better record, repeat saves remain idempotent.
+        val durableBefore = SaveManager.loadHighScore(appContext)
+        if (isNewHighScore && score > durableBefore) {
+            publishedNewHighThisRun = true
+        } else if (isNewHighScore && !publishedNewHighThisRun && score <= durableBefore) {
+            isNewHighScore = false
+        }
+
         SaveManager.saveHighScore(appContext, highScore)
         // Rejoin a better record saved by another run while this owner lived.
         highScore = maxOf(highScore, SaveManager.loadHighScore(appContext))

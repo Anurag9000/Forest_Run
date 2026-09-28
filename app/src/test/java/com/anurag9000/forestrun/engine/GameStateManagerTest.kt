@@ -75,6 +75,44 @@ class GameStateManagerTest {
     }
 
     @Test
+    fun `stale equal score is a tie rather than a new durable record`() {
+        val stale = GameStateManager(context)
+        val winner = GameStateManager(context)
+
+        stale.addBonus(points = 500)
+        winner.addBonus(points = 500)
+        winner.save()
+        assertEquals(500, SaveManager.loadHighScore(context))
+
+        val stalePreview = stale.buildRunSummary(lastKiller = null)
+        assertEquals(500, stalePreview.score)
+        assertEquals(500, stalePreview.highScore)
+        assertFalse(stalePreview.isNewHighScore)
+
+        stale.save()
+        assertFalse(stale.isNewHighScore)
+        assertFalse(stale.buildRunSummary(lastKiller = null).isNewHighScore)
+        assertEquals(500, SaveManager.loadHighScore(context))
+    }
+
+    @Test
+    fun `same run repeated save preserves its legitimate new high ownership`() {
+        SaveManager.saveHighScore(context, 100)
+        val state = GameStateManager(context)
+        state.addBonus(points = 500)
+
+        state.save()
+        assertTrue(state.isNewHighScore)
+        assertTrue(state.buildRunSummary(lastKiller = null).isNewHighScore)
+        assertEquals(500, SaveManager.loadHighScore(context))
+
+        state.save()
+        assertTrue(state.isNewHighScore)
+        assertTrue(state.buildRunSummary(lastKiller = null).isNewHighScore)
+        assertEquals(500, SaveManager.loadHighScore(context))
+    }
+
+    @Test
     fun `stale manager save cannot lower another run high score`() {
         val stale = GameStateManager(context)
         val recent = GameStateManager(context)
