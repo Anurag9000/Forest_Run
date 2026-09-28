@@ -39,7 +39,6 @@ import kotlin.math.floor
 import kotlin.math.hypot
 
 private const val TAG = "ForestRun"
-private const val ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES = 30L
 private const val GAME_THREAD_RESTART_RETRY_MS = 16L
 
 /**
@@ -67,6 +66,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     @Volatile
     private var gameThread: GameThread = GameThread(holder, this)
     private val gameThreadRestartGate = LatestRequestGate()
+    private val runtimeCadenceClock = RuntimeCadenceClock()
     // Serialize live runtime state shared by GameThread and Android callbacks.
     private val runtimeStateLock = Any()
     // Initial audio selection belongs to this GameView instance, not to every
@@ -885,7 +885,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private fun updateAccessibilityAnnouncements() {
         val manager = accessibilityManager ?: return
         if (!manager.isEnabled || !manager.isTouchExplorationEnabled) return
-        if (debugFrameCounter % ACCESSIBILITY_ANNOUNCEMENT_POLL_FRAMES != 0L) return
+        if (!runtimeCadenceClock.consumeAccessibilityPoll()) return
         announceAccessibilitySnapshot(buildAccessibilitySnapshot())
     }
 
@@ -1040,6 +1040,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun updateBounded(deltaTime: Float) {
         debugFrameCounter++
+        runtimeCadenceClock.advance(deltaTime)
         // Phase 15: Advance camera shake
         CameraSystem.update(deltaTime)
 
@@ -1542,7 +1543,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     emphasis = ((motif.cadenceLift + motif.shimmer) * 0.5f).coerceIn(0f, 1f),
                     bloomStrength = if (gameState.isBloomActive) 1f else bloomAfterglow * 0.55f
                 ),
-                elapsedSeconds = debugFrameCounter / 60f,
+                elapsedSeconds = runtimeCadenceClock.elapsedSeconds,
                 glowColor = runLighting.horizonGlowColor,
                 centerYFraction = 0.47f
             )
