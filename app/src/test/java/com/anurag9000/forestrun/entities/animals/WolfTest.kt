@@ -59,8 +59,8 @@ class WolfTest {
             respectState.addMercyHeart()
         }
 
-        baselineWolf.performUniqueAction(player, baselineState)
-        respectWolf.performUniqueAction(player, respectState)
+        assertTrue(baselineWolf.resolveSpecialSafeDeparture(player, baselineState))
+        assertTrue(respectWolf.resolveSpecialSafeDeparture(player, respectState))
 
         assertTrue(booleanField(respectWolf, "respectStandDownHistory"))
         assertEquals("SPARED", enumFieldName(respectWolf, "wolfState"))
