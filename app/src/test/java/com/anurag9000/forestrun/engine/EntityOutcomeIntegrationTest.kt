@@ -314,10 +314,12 @@ class EntityOutcomeIntegrationTest {
 
             // One admitted 50ms/2000px-s world movement. A 41px airborne
             // Player and a 40px core pass through each other between samples.
+            // Exercise the production motion-sampling path instead of assigning
+            // the deliberately private hasMotionSample setter.
+            player.update(0.05f, GameConstants.MAX_SCROLL_SPEED)
             val body = RectF(400f, 610f, 441f, 640f)
             player.previousHitbox.set(body)
             player.hitbox.set(body)
-            player.hasMotionSample = true
             entity.previousHitbox.set(450f, 600f, 490f, 650f)
             entity.hitbox.set(350f, 600f, 390f, 650f)
             entity.hasMotionSample = true
