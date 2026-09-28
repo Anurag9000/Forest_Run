@@ -7,6 +7,7 @@ import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.systems.SeedOrb
 import com.anurag9000.forestrun.systems.SeedOrbManager
 import kotlin.random.Random
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -71,6 +72,17 @@ class SeedOrbSpawnPolicyTest {
         val widths = floatArrayOf(640f, 960f, 1_280f, 1_920f, 2_560f)
         val heights = floatArrayOf(360f, 540f, 720f, 1_080f, 1_440f)
         val random = Random(0x5EED0B)
+        // Derive the *admitted sampled* Player envelope, rather than the
+        // unreachable 540 px continuous-parabola value at a 50 ms frame.
+        val fullJumpRise = EncounterActionFeasibility.observe(
+            leadDistancePx = 0f,
+            approachSpeedPxPerSec = GameConstants.BASE_SCROLL_SPEED,
+            requiredVerticalClearancePx = 0f,
+            jumpUpwardSpeedPxPerSec = -Player.MAX_JUMP_FORCE,
+            gravityPxPerSecSquared = Player.GRAVITY,
+            gestureDecisionSeconds = 0f
+        ).maximumBallisticRisePx
+        assertEquals(495f, fullJumpRise, 0.002f)
         var caseIndex = 0
 
         for (width in widths) {
@@ -103,8 +115,6 @@ class SeedOrbSpawnPolicyTest {
 
                     val visibleMargin = SeedOrb.RADIUS + SeedOrb.HALO_MARGIN
                     val minimumAhead = playerRight + maxOf(120f, width * 0.08f)
-                    val fullJumpRise =
-                        Player.MAX_JUMP_FORCE * Player.MAX_JUMP_FORCE / (2f * Player.GRAVITY)
                     val highestPhysicallyReachableCentre =
                         groundY - Player.BASE_HEIGHT - fullJumpRise
                     val lowestPhysicallyReachableCentre = groundY - Player.HITBOX_INSET
