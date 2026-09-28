@@ -29,6 +29,37 @@ class SaveManagerConcurrencyTest {
     }
 
     @Test
+    fun `equal concurrent high score candidates have exactly one durable owner`() {
+        val release = CountDownLatch(1)
+        val finished = CountDownLatch(2)
+        val results = java.util.concurrent.ConcurrentLinkedQueue<Boolean>()
+        val failure = AtomicReference<Throwable?>(null)
+
+        val workers = List(2) {
+            Thread {
+                try {
+                    release.await(5, TimeUnit.SECONDS)
+                    results.add(SaveManager.publishHighScoreIfBetter(context, 900))
+                } catch (error: Throwable) {
+                    failure.compareAndSet(null, error)
+                } finally {
+                    finished.countDown()
+                }
+            }
+        }
+        workers.forEach(Thread::start)
+        release.countDown()
+        assertTrue("high-score workers timed out", finished.await(5, TimeUnit.SECONDS))
+        workers.forEach { it.join(TimeUnit.SECONDS.toMillis(5)) }
+        failure.get()?.let { throw AssertionError("Concurrent high-score publish failed", it) }
+
+        assertEquals(2, results.size)
+        assertEquals(1, results.count { it })
+        assertEquals(1, results.count { !it })
+        assertEquals(900, SaveManager.loadHighScore(context))
+    }
+
+    @Test
     fun `other thread Seed write survives stale Garden follow up`() {
         SaveManager.saveLifetimeSeeds(context, 50)
         SaveManager.saveGardenProgress(context, 1)

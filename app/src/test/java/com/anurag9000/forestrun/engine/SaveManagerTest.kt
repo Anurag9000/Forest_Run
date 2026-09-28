@@ -83,6 +83,15 @@ class SaveManagerTest {
 
 
     @Test
+    fun `atomic high score publication reports the unique record owner`() {
+        assertTrue(SaveManager.publishHighScoreIfBetter(context, 900))
+        assertFalse(SaveManager.publishHighScoreIfBetter(context, 900))
+        assertFalse(SaveManager.publishHighScoreIfBetter(context, 150))
+        assertTrue(SaveManager.publishHighScoreIfBetter(context, 1_200))
+        assertEquals(1_200, SaveManager.loadHighScore(context))
+    }
+
+    @Test
     fun `score and distance records never regress under stale writes`() {
         SaveManager.saveHighScore(context, 900)
         SaveManager.saveHighScore(context, 150)

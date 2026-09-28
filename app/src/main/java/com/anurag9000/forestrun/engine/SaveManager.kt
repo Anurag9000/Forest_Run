@@ -128,12 +128,25 @@ object SaveManager {
      * read/compare/write sequence belong to one preference namespace.
      */
     fun saveHighScore(context: Context, score: Int) {
+        publishHighScoreIfBetter(context, score)
+    }
+
+    /**
+     * Atomically attempts to raise the durable record and reports whether this
+     * caller actually won that comparison/write. The ownership result must be
+     * decided under the same monitor as the monotonic write; a separate
+     * load-then-save pair cannot distinguish two concurrent equal candidates.
+     */
+    internal fun publishHighScoreIfBetter(context: Context, score: Int): Boolean {
         val candidate = score.coerceAtLeast(0)
-        synchronized(gardenWriteLock) {
+        return synchronized(gardenWriteLock) {
             val selectedPrefs = prefs(context)
             val previous = selectedPrefs.getInt(KEY_HIGH_SCORE, 0).coerceAtLeast(0)
-            if (candidate > previous) {
+            if (candidate <= previous) {
+                false
+            } else {
                 selectedPrefs.edit().putInt(KEY_HIGH_SCORE, candidate).apply()
+                true
             }
         }
     }

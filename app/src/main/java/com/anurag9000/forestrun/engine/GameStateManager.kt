@@ -55,12 +55,11 @@ class GameStateManager(
         private set
 
     /**
-     * True only after this run itself has successfully reached a score above
-     * the durable record observed at one of its save boundaries. This lets a
-     * repeated save preserve a legitimate NEW HIGH label without allowing a
-     * different stale run that merely ties the published record to claim it.
+     * Exact durable record value this run itself successfully published.
+     * Tracking a Boolean is insufficient: a run that once owned 500 must not
+     * later claim ownership of a 900 tie published first by another run.
      */
-    private var publishedNewHighThisRun: Boolean = false
+    private var publishedHighScoreThisRun: Int? = null
 
     private var lastMilestone: Int = 0
     private var milestoneReady: Boolean = false
@@ -260,9 +259,12 @@ class GameStateManager(
         } else {
             highScore
         }
+        val ownsCurrentDurableRecord =
+            publishedHighScoreThisRun == durableHighScore &&
+                score == durableHighScore
         val newHighForSummary = if (persistenceEnabled) {
             isNewHighScore &&
-                (publishedNewHighThisRun || score > durableHighScore)
+                (score > durableHighScore || ownsCurrentDurableRecord)
         } else {
             isNewHighScore
         }
@@ -378,7 +380,7 @@ class GameStateManager(
         bloomTimer = 0f
         bloomConversionsThisRun = 0
         isNewHighScore = false
-        publishedNewHighThisRun = false
+        publishedHighScoreThisRun = null
         mercySystem.reset()
         speedDebuffMultiplier = 1f
         speedDebuffTimer = 0f
@@ -393,20 +395,25 @@ class GameStateManager(
     fun save() {
         if (!persistProgress()) return
 
-        // Compare before publishing. Equality with a record another run already
-        // owns is a tie, not a new record. Once this run has itself published a
-        // strictly better record, repeat saves remain idempotent.
-        val durableBefore = SaveManager.loadHighScore(appContext)
-        if (isNewHighScore && score > durableBefore) {
-            publishedNewHighThisRun = true
-        } else if (isNewHighScore && !publishedNewHighThisRun && score <= durableBefore) {
-            isNewHighScore = false
+        // Ownership must be decided by the same atomic comparison/write that
+        // raises the record. A preceding read cannot tell which equal-scoring
+        // run actually won a race.
+        val publishedNow = SaveManager.publishHighScoreIfBetter(appContext, highScore)
+        if (publishedNow && isNewHighScore && score == highScore) {
+            publishedHighScoreThisRun = score
         }
 
-        SaveManager.saveHighScore(appContext, highScore)
-        // Rejoin a better record saved by another run while this owner lived.
-        highScore = maxOf(highScore, SaveManager.loadHighScore(appContext))
-        if (score < highScore) isNewHighScore = false
+        // Rejoin a better/equal record saved by another run while this owner
+        // lived. Equality is NEW HIGH only when this run owns that exact value.
+        val durableAfter = SaveManager.loadHighScore(appContext)
+        highScore = maxOf(highScore, durableAfter)
+        if (isNewHighScore) {
+            val ownsCurrentDurableRecord =
+                publishedHighScoreThisRun == durableAfter && score == durableAfter
+            if (score < durableAfter || (score == durableAfter && !ownsCurrentDurableRecord)) {
+                isNewHighScore = false
+            }
+        }
         persistentHighScoreFloor = maxOf(persistentHighScoreFloor, highScore)
         lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext)
     }

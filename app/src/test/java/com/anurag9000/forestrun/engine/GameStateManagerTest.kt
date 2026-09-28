@@ -96,6 +96,36 @@ class GameStateManagerTest {
     }
 
     @Test
+    fun `prior record ownership cannot leak into a later tie owned by another run`() {
+        val first = GameStateManager(context)
+        first.addBonus(points = 500)
+        first.save()
+        assertTrue(first.isNewHighScore)
+        assertEquals(500, SaveManager.loadHighScore(context))
+
+        // The first run keeps going locally, but another run publishes 900
+        // before the first run reaches its next save boundary.
+        first.addBonus(points = 400)
+        val second = GameStateManager(context)
+        second.addBonus(points = 900)
+        second.save()
+        assertTrue(second.isNewHighScore)
+        assertEquals(900, SaveManager.loadHighScore(context))
+
+        val tiedPreview = first.buildRunSummary(lastKiller = null)
+        assertEquals(900, tiedPreview.score)
+        assertEquals(900, tiedPreview.highScore)
+        assertFalse(tiedPreview.isNewHighScore)
+
+        first.save()
+        assertFalse(first.isNewHighScore)
+
+        // A genuinely higher continuation becomes eligible again.
+        first.addBonus(points = 1)
+        assertTrue(first.buildRunSummary(lastKiller = null).isNewHighScore)
+    }
+
+    @Test
     fun `same run repeated save preserves its legitimate new high ownership`() {
         SaveManager.saveHighScore(context, 100)
         val state = GameStateManager(context)
