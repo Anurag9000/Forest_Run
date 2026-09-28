@@ -8,6 +8,7 @@ import com.anurag9000.forestrun.entities.Entity
 import com.anurag9000.forestrun.entities.EntityFactory
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
+import com.anurag9000.forestrun.entities.PlayerState
 import com.anurag9000.forestrun.entities.animals.Cat
 import com.anurag9000.forestrun.entities.animals.Dog
 import com.anurag9000.forestrun.entities.animals.Fox
@@ -129,7 +130,8 @@ class EntityManager internal constructor(
                 scrollSpeedPxPerSec = gameState.scrollSpeed
             )
             if (!gameState.shouldLockRandomOpeningSpawns() &&
-                distanceSinceRandomSpawnPx >= requiredGapPx
+                distanceSinceRandomSpawnPx >= requiredGapPx &&
+                canAdmitRandomEncounter(player)
             ) {
                 distanceSinceRandomSpawnPx = 0f
                 spawnRandom(gameState)
@@ -555,6 +557,35 @@ class EntityManager internal constructor(
                 ParticleManager.emit(FxPreset.SEED_COLLECT, x, y - 12f)
             }
         }
+    }
+
+    /**
+     * Random encounter sequencing is admitted from the real live state rather
+     * than from origin spacing alone. A second ordinary encounter is not
+     * staged while the previous persistent encounter is unresolved or while
+     * the Player is still committed to jump/duck/stumble recovery.
+     *
+     * Deterministic scenario entities have shouldRecordPersistence=false and
+     * run in modes where random spawning is disabled, so their authored
+     * overlap schedules are unaffected.
+     */
+    internal fun canAdmitRandomEncounter(player: Player): Boolean {
+        val playerReady = player.state == PlayerState.RUNNING ||
+            player.state == PlayerState.LANDING
+        if (!playerReady) return false
+
+        var index = 0
+        while (index < activeEntities.size) {
+            val entity = activeEntities[index]
+            if (entity.isActive &&
+                entity.shouldRecordPersistence &&
+                entity.encounterOutcome == EncounterOutcome.PENDING
+            ) {
+                return false
+            }
+            index++
+        }
+        return true
     }
 
     private fun spawnRandom(gameState: GameStateManager) {
