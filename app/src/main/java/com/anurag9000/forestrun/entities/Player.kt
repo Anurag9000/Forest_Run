@@ -439,6 +439,12 @@ class Player(
         if (newState == PlayerState.REST) {
             currentAnimation.setFrame(currentAnimation.frameCount - 1)
         }
+
+        // Input callbacks are delivered before the next simulation tick. A
+        // stance change therefore begins *before* that frame's motion sweep,
+        // rather than being an interpolated upright-to-duck or ground-to-jump
+        // collision body. update() captures this already-current core.
+        updateHitbox()
     }
 
     private fun updateHitbox() {

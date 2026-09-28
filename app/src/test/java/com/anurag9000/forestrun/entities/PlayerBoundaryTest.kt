@@ -3,7 +3,10 @@ package com.anurag9000.forestrun.entities
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.engine.SpriteManager
+import com.anurag9000.forestrun.engine.SweptCoreOverlap
+import android.graphics.RectF
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -109,6 +112,73 @@ class PlayerBoundaryTest {
 
         assertTrue(player.groundY.isFinite())
         assertEquals(1080f * 0.82f, player.groundY, 0.001f)
+    }
+
+
+    @Test
+    fun `input stance transitions publish physical collision geometry immediately`() {
+        val croucher = player()
+        val standingTop = croucher.hitbox.top
+        croucher.onDuckPressed()
+        assertEquals(PlayerState.DUCKING, croucher.state)
+        assertFootAnchoredHitbox(croucher)
+        assertTrue(croucher.hitbox.top > standingTop)
+
+        // A frame admitted after the gesture must begin in the duck stance.
+        val duckCore = RectF(croucher.hitbox)
+        croucher.update(0.05f)
+        assertEquals(duckCore, croucher.previousHitbox)
+        assertEquals(duckCore, croucher.hitbox)
+
+        croucher.onDuckReleased()
+        assertEquals(PlayerState.RUNNING, croucher.state)
+        assertFootAnchoredHitbox(croucher)
+        assertTrue(croucher.hitbox.top < duckCore.top)
+        val releasedCore = RectF(croucher.hitbox)
+        croucher.update(0.05f)
+        assertEquals(releasedCore, croucher.previousHitbox)
+
+        val jumper = player()
+        jumper.onJumpPressed()
+        assertEquals(PlayerState.JUMP_START, jumper.state)
+        assertFootAnchoredHitbox(jumper)
+        val launchCore = RectF(jumper.hitbox)
+        jumper.update(0.05f)
+        assertEquals(launchCore, jumper.previousHitbox)
+    }
+
+    @Test
+    fun `preframe duck does not invent a same time collision with low flyer`() {
+        val croucher = player()
+        val fullHeight = RectF(croucher.hitbox)
+        croucher.onDuckPressed()
+        val duckAtInput = RectF(croucher.hitbox)
+        val flyerTop = fullHeight.top + 2f
+        val flyerBottom = duckAtInput.top - 2f
+        assertTrue("fixture must pass the old upright body", flyerTop < flyerBottom)
+        val beforeBird = RectF(
+            croucher.hitbox.right + 30f, flyerTop,
+            croucher.hitbox.right + 54f, flyerBottom
+        )
+        val afterBird = RectF(
+            croucher.hitbox.left - 54f, flyerTop,
+            croucher.hitbox.left - 30f, flyerBottom
+        )
+
+        croucher.update(0.05f)
+        assertEquals(duckAtInput, croucher.previousHitbox)
+        assertFalse(
+            "a duck before physics must not sweep the old upright body into the flyer",
+            SweptCoreOverlap.intersects(
+                croucher.previousHitbox, croucher.hitbox, beforeBird, afterBird
+            )
+        )
+        assertTrue(
+            "the stale upright sample would have manufactured contact",
+            SweptCoreOverlap.intersects(
+                fullHeight, croucher.hitbox, beforeBird, afterBird
+            )
+        )
     }
 
     @Test
