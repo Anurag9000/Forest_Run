@@ -9,6 +9,7 @@ import com.anurag9000.forestrun.engine.BirdEncounterFlavor
 import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.ReadabilityProfile
 import com.anurag9000.forestrun.engine.SpriteSizing
+import com.anurag9000.forestrun.engine.SweptCoreOverlap
 import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Entity
@@ -75,6 +76,10 @@ class ChickadeeGroup(
         RectF(bx + 3f, altitudes[i] - birdH / 2f + 3f, bx + birdW - 3f, altitudes[i] + birdH / 2f - 3f)
     }
 
+    // Preserve each independently moving bird core, never the aggregate
+    // silhouette or advertised unoccupied safe lane.
+    private val previousBirdRects = Array(birdCount) { i -> RectF(birdRects[i]) }
+
     init {
         x = startX
         y = groundY * 0.4f
@@ -83,6 +88,7 @@ class ChickadeeGroup(
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
+        for (i in birdRects.indices) previousBirdRects[i].set(birdRects[i])
         x -= scrollSpeed * deltaTime
         sprite.update(deltaTime)
 
@@ -175,8 +181,15 @@ class ChickadeeGroup(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         var nearMiss = false
         val mercyPad = readability.mercyPaddingPx
-        for (rect in birdRects) {
-            if (RectF.intersects(player.hitbox, rect)) return CollisionResult.HIT
+        for (index in birdRects.indices) {
+            val rect = birdRects[index]
+            if (RectF.intersects(player.hitbox, rect) ||
+                (hasMotionSample && player.hasMotionSample &&
+                    SweptCoreOverlap.intersects(
+                        player.previousHitbox, player.hitbox,
+                        previousBirdRects[index], rect
+                    ))
+            ) return CollisionResult.HIT
             if (intersectsExpanded(player.hitbox, rect, mercyPad)) nearMiss = true
         }
         return if (nearMiss) CollisionResult.MERCY_MISS else CollisionResult.NONE
