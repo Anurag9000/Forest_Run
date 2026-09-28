@@ -5,7 +5,10 @@ import android.graphics.RectF
 import com.anurag9000.forestrun.engine.EntityManager
 import com.anurag9000.forestrun.entities.EncounterOutcome
 import androidx.test.core.app.ApplicationProvider
+import com.anurag9000.forestrun.engine.FrameInputAdmission
+import com.anurag9000.forestrun.engine.GameConstants
 import com.anurag9000.forestrun.engine.GameStateManager
+import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Player
@@ -49,6 +52,46 @@ class HedgehogTest {
         hedgehog.update(0.25f, 0f)
         assertTrue(booleanField(hedgehog, "armed"))
         assertEquals(CollisionResult.STUMBLE, hedgehog.onCollision(player, gameState))
+    }
+
+
+    @Test
+    fun `max-speed warning preserves authored reaction time after sampled admission`() {
+        val player = Player(1920, 1080, spriteManager)
+        val state = GameStateManager(context) { false }
+        repeat(3) { state.update(5_000f) }
+        assertEquals(GameConstants.MAX_SCROLL_SPEED, state.scrollSpeed, 0f)
+
+        val probe = newHedgehog(startX = 0f)
+        probe.updatePlayerInteraction(player, state)
+        val probeWarning = rectField(probe, "warningRect")
+        val warningLeadDuration = floatField(probe, "warningLeadDurationSec")
+        val warningReach = probe.hitbox.left - probeWarning.left
+        val approachSpeed = state.scrollSpeed * 1.15f
+        assertTrue(
+            warningReach + 0.001f >=
+                approachSpeed * (warningLeadDuration + FrameInputAdmission.MAX_DELTA_SECONDS)
+        )
+
+        // Stage just outside the warning plane. One maximum admitted frame
+        // crosses into detection; the remaining body gap must still represent
+        // at least the complete authored reaction duration.
+        val desiredBodyLeft = player.hitbox.right + warningReach + 1f
+        val hedgehog = newHedgehog(startX = desiredBodyLeft - probe.hitbox.left)
+        hedgehog.shouldRecordPersistence = false
+        val manager = EntityManager(context, 1920f, 1080f, spriteManager)
+        manager.activeEntities += hedgehog
+
+        assertFalse(booleanField(hedgehog, "warned"))
+        manager.update(0.05f, state, player, runMode = RunMode.DEBUG_SCENARIO)
+        assertTrue(booleanField(hedgehog, "warned"))
+        assertEquals(CollisionResult.NONE, hedgehog.onCollision(player, state))
+
+        val remainingGap = hedgehog.hitbox.left - player.hitbox.right
+        assertTrue(remainingGap > 0f)
+        assertTrue(
+            remainingGap / approachSpeed + 0.0001f >= warningLeadDuration
+        )
     }
 
     @Test
@@ -146,12 +189,25 @@ class HedgehogTest {
         assertTrue(clearedState.seedsThisRun > baselineState.seedsThisRun)
     }
 
-    private fun newHedgehog() = Hedgehog(
+    private fun newHedgehog(startX: Float = 520f) = Hedgehog(
         context = context,
-        startX = 520f,
+        startX = startX,
         groundY = 885.6f,
         sprite = spriteManager.hedgehogSprite.copy()
     )
+
+
+    private fun floatField(hedgehog: Hedgehog, name: String): Float {
+        val field = Hedgehog::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        return field.getFloat(hedgehog)
+    }
+
+    private fun rectField(hedgehog: Hedgehog, name: String): RectF {
+        val field = Hedgehog::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        return RectF(field.get(hedgehog) as RectF)
+    }
 
     private fun booleanField(hedgehog: Hedgehog, name: String): Boolean {
         val field = Hedgehog::class.java.getDeclaredField(name)

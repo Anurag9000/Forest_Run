@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import com.anurag9000.forestrun.engine.AnimalEncounterFlavor
+import com.anurag9000.forestrun.engine.FrameInputAdmission
 import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.PersistentMemoryManager
 import com.anurag9000.forestrun.engine.ReadabilityProfile
@@ -36,6 +37,10 @@ class Hedgehog(
     private val groundY: Float,
     private val sprite: SpriteSheet
 ) : Entity(context) {
+
+    private companion object {
+        const val APPROACH_SPEED_MULTIPLIER = 1.15f
+    }
 
     private val readability = ReadabilityProfile.entityForGround(EntityType.HEDGEHOG, groundY)
     private val hogH  = readability.heightPx
@@ -77,7 +82,7 @@ class Hedgehog(
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
-        x -= (scrollSpeed * 1.15f) * deltaTime  // Slightly faster than scroll speed (sneaky!)
+        x -= (scrollSpeed * APPROACH_SPEED_MULTIPLIER) * deltaTime  // Slightly faster than scroll speed
         pulse += deltaTime * 5.5f
         if (warned && !armed) {
             warningLeadTimer = (warningLeadTimer - deltaTime).coerceAtLeast(0f)
@@ -144,8 +149,22 @@ class Hedgehog(
     }
 
     override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {
+        // Detection must buy the authored warning duration in world space, not
+        // merely paint a short fixed halo. Add one maximum admitted frame of
+        // approach so sampling cannot consume the entire reaction margin before
+        // the warning callback is observed.
+        val safeWorldSpeed = gameState.scrollSpeed.takeIf {
+            it.isFinite() && it >= 0f
+        } ?: 0f
+        val sampledReactionLeadPx =
+            safeWorldSpeed * APPROACH_SPEED_MULTIPLIER *
+                (warningLeadDurationSec + FrameInputAdmission.MAX_DELTA_SECONDS)
+        val warningLeadPx = maxOf(
+            readability.stagingPaddingPx * 5f,
+            sampledReactionLeadPx
+        )
         warningRect.set(
-            hitbox.left - readability.stagingPaddingPx * 5f,
+            hitbox.left - warningLeadPx,
             hitbox.top - readability.stagingPaddingPx,
             hitbox.right + readability.stagingPaddingPx,
             hitbox.bottom + readability.stagingPaddingPx
