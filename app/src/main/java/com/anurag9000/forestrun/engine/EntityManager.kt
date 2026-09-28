@@ -8,9 +8,12 @@ import com.anurag9000.forestrun.entities.Entity
 import com.anurag9000.forestrun.entities.EntityFactory
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
+import com.anurag9000.forestrun.entities.animals.Cat
 import com.anurag9000.forestrun.entities.animals.Dog
+import com.anurag9000.forestrun.entities.animals.Fox
 import com.anurag9000.forestrun.entities.animals.Hedgehog
 import com.anurag9000.forestrun.entities.animals.Wolf
+import com.anurag9000.forestrun.entities.birds.Duck
 import com.anurag9000.forestrun.entities.birds.Eagle
 import com.anurag9000.forestrun.entities.birds.Owl
 import com.anurag9000.forestrun.entities.flora.Cactus
@@ -224,16 +227,17 @@ class EntityManager internal constructor(
     }
 
     /**
-     * Recovery frames may move a narrow physical core completely through the
-     * Player between endpoint samples. Only species whose primary core has an
-     * unconditional, single-body consequence are eligible; do not sweep flock
-     * aggregate boxes, staged birds, Dog's harmless buddy mode, or tree/window
-     * aggregates that intentionally contain transparent safe lanes.
+     * Recovery frames can carry even a single-body physical core through the
+     * narrower airborne Player between endpoint samples. Only primary cores
+     * with unconditional collision severity are eligible. Do not sweep
+     * aggregate flock/tree/window boxes, staged divers or Dog's buddy mode.
+     * Dog separately sweeps its own hazardous body and bark projectiles.
      */
     private fun sweptNarrowCoreResult(entity: Entity, player: Player): CollisionResult {
         val contact = when (entity) {
-            is Cactus, is LilyOfValley -> CollisionResult.HIT
-            is Hedgehog -> CollisionResult.STUMBLE
+            is Cactus, is LilyOfValley, is Hyacinth, is Eucalyptus,
+            is Duck, is Cat -> CollisionResult.HIT
+            is Hedgehog, is Fox, is Wolf -> CollisionResult.STUMBLE
             else -> return CollisionResult.NONE
         }
         if (!entity.hasMotionSample || !player.hasMotionSample ||

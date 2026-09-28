@@ -292,6 +292,57 @@ class EntityOutcomeIntegrationTest {
     }
 
     @Test
+    fun `all unconditional primary cores honor simultaneous swept contact and severity`() {
+        val expected = listOf(
+            EntityType.CACTUS to CollisionResult.HIT,
+            EntityType.LILY_OF_VALLEY to CollisionResult.HIT,
+            EntityType.HYACINTH to CollisionResult.HIT,
+            EntityType.EUCALYPTUS to CollisionResult.HIT,
+            EntityType.DUCK to CollisionResult.HIT,
+            EntityType.CAT to CollisionResult.HIT,
+            EntityType.HEDGEHOG to CollisionResult.STUMBLE,
+            EntityType.FOX to CollisionResult.STUMBLE,
+            EntityType.WOLF to CollisionResult.STUMBLE
+        )
+        expected.forEach { (type, outcome) ->
+            clearPersistence()
+            val manager = manager()
+            val state = GameStateManager(context) { false }
+            val entity = createEntity(type, 1_000f)
+            entity.shouldRecordPersistence = false
+            manager.activeEntities.add(entity)
+
+            // One admitted 50ms/2000px-s world movement. A 41px airborne
+            // Player and a 40px core pass through each other between samples.
+            val body = RectF(400f, 610f, 441f, 640f)
+            player.previousHitbox.set(body)
+            player.hitbox.set(body)
+            player.hasMotionSample = true
+            entity.previousHitbox.set(450f, 600f, 490f, 650f)
+            entity.hitbox.set(350f, 600f, 390f, 650f)
+            entity.hasMotionSample = true
+
+            assertTrue(
+                "type=$type: endpoint alone already reported direct contact",
+                entity.onCollision(player, state) != outcome
+            )
+            val frame = requireNotNull(manager.checkCollisions(player, state)) {
+                "type=$type lost mid-frame contact"
+            }
+            assertSame(entity, frame.entity)
+            assertEquals("type=$type severity", outcome, frame.result)
+            assertEquals(
+                "type=$type final encounter state",
+                if (outcome == CollisionResult.HIT) EncounterOutcome.HIT
+                else EncounterOutcome.STUMBLE,
+                entity.encounterOutcome
+            )
+            assertEquals(0, state.mercyHearts)
+            assertEquals(0, state.cleanPassesThisRun)
+        }
+    }
+
+    @Test
     fun `debug entities never write encounter or clean pass history`() {
         EntityType.entries.forEach { type ->
             clearTypePersistence(type)
