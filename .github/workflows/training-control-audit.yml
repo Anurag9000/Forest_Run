@@ -32,6 +32,8 @@ jobs:
           run_all_training.py
           training_control/forest_no_trainable_authority.py
           training_control/dataset_cohort_not_applicable_v1.py
+      - name: Regress absent Android tree and injected training markers
+        run: python -m unittest -v scripts/test_training_control_not_applicable.py
       - name: Certify no retained trainable surface
         run: python run_all_training.py --training-control-audit
       - name: Upload applicability certificate
