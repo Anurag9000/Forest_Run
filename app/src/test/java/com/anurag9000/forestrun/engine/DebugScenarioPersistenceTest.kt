@@ -128,7 +128,7 @@ class DebugScenarioPersistenceTest {
         assertEquals(0, PersistentMemoryManager.getKindnessStreak(context, EntityType.CAT))
     }
     @Test
-    fun `debug Fox and Wolf spare events never persist while ordinary spares do`() {
+    fun `Fox and Wolf exclusive spare history respects debug persistence boundary`() {
         val player = Player(1_920, 1_080, spriteManager)
         val gameState = GameStateManager(context)
         repeat(8) { gameState.addMercyHeart() }
@@ -169,8 +169,8 @@ class DebugScenarioPersistenceTest {
                     PersistentMemoryManager.getEncounterCount(context, type)
                 )
                 assertEquals(
-                    "$type clean-pass history must respect run persistence",
-                    expected,
+                    "$type exclusive spare must not also write ordinary pass history",
+                    0,
                     PersistentMemoryManager.getPassCount(context, type)
                 )
             }
