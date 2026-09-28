@@ -71,7 +71,7 @@ internal class NamespaceBoundGhostPromotionArtifactStore(
     namespace: GhostPersistenceNamespace
 ) : GhostPromotionArtifactStore {
     private val appContext = context.applicationContext
-    private val prefs = appContext.getSharedPreferences(namespace.prefsName, Context.MODE_PRIVATE)
+    private val persistenceNamespace = namespace.prefsName
     private val atomicFile = AtomicFile(File(appContext.filesDir, namespace.ghostFilename))
 
     override fun loadGhost(): List<GhostFrame> {
@@ -159,18 +159,17 @@ internal class NamespaceBoundGhostPromotionArtifactStore(
     }
 
     override fun loadBestDistanceM(): Float =
-        prefs.getFloat(KEY_BEST_DISTANCE, 0f)
+        SaveManager.loadBestDistanceForNamespace(appContext, persistenceNamespace)
 
-    override fun saveBestDistanceM(distanceM: Float): Boolean {
-        val safeDistance = distanceM.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
-        return prefs.edit().putFloat(KEY_BEST_DISTANCE, safeDistance).commit()
-    }
+    override fun saveBestDistanceM(distanceM: Float): Boolean =
+        SaveManager.saveBestDistanceForNamespace(
+            appContext, persistenceNamespace, distanceM
+        )
 
     private fun hasRecoverableGhostFile(): Boolean =
         atomicFile.baseFile.exists() || File(atomicFile.baseFile.path + ".bak").exists()
 
     private companion object {
-        const val KEY_BEST_DISTANCE = "best_distance"
         const val LEGACY_GHOST_HEADER_BYTES = 4L
         const val VERSIONED_GHOST_HEADER_BYTES = 12L
         const val GHOST_FRAME_BYTES = 24L

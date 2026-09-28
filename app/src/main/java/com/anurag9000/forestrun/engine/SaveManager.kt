@@ -157,20 +157,75 @@ object SaveManager {
     // ── Best distance ─────────────────────────────────────────────────────
 
     fun saveBestDistance(context: Context, distanceM: Float) {
-        // Invalid geometry/measurement must not erase a real achievement.
+        // Best run distance is an achievement in its own right, independent
+        // of whether a best-ghost artifact can be accepted or written.
         if (!distanceM.isFinite() || distanceM <= 0f) return
         synchronized(gardenWriteLock) {
-            val selectedPrefs = prefs(context)
-            val previous = selectedPrefs.getFloat(KEY_BEST_DIST, 0f)
-                .takeIf { it.isFinite() && it >= 0f } ?: 0f
-            if (distanceM > previous) {
-                selectedPrefs.edit().putFloat(KEY_BEST_DIST, distanceM).apply()
-            }
+            writeBestDistanceLocked(
+                context = context,
+                prefsName = activePrefsName,
+                distanceM = distanceM,
+                durableCommit = false
+            )
         }
     }
 
-    fun loadBestDistance(context: Context): Float =
-        prefs(context).getFloat(KEY_BEST_DIST, 0f)
+    fun loadBestDistance(context: Context): Float = synchronized(gardenWriteLock) {
+        loadBestDistanceLocked(context, activePrefsName)
+    }
+
+    /**
+     * Namespace-bound ghost workers share the same monotonic record owner.
+     * Returning true means the requested floor is already satisfied or was
+     * durably committed; malformed candidates fail closed.
+     */
+    internal fun saveBestDistanceForNamespace(
+        context: Context,
+        prefsName: String,
+        distanceM: Float
+    ): Boolean {
+        if (prefsName.isBlank() || !distanceM.isFinite() || distanceM < 0f) return false
+        return synchronized(gardenWriteLock) {
+            writeBestDistanceLocked(
+                context = context,
+                prefsName = prefsName,
+                distanceM = distanceM,
+                durableCommit = true
+            )
+        }
+    }
+
+    internal fun loadBestDistanceForNamespace(
+        context: Context,
+        prefsName: String
+    ): Float {
+        if (prefsName.isBlank()) return 0f
+        return synchronized(gardenWriteLock) {
+            loadBestDistanceLocked(context, prefsName)
+        }
+    }
+
+    private fun writeBestDistanceLocked(
+        context: Context,
+        prefsName: String,
+        distanceM: Float,
+        durableCommit: Boolean
+    ): Boolean {
+        val selectedPrefs = context.applicationContext
+            .getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val previous = selectedPrefs.getFloat(KEY_BEST_DIST, 0f)
+            .takeIf { it.isFinite() && it >= 0f } ?: 0f
+        if (distanceM <= previous) return true
+        val editor = selectedPrefs.edit().putFloat(KEY_BEST_DIST, distanceM)
+        if (durableCommit) return editor.commit()
+        editor.apply()
+        return true
+    }
+
+    private fun loadBestDistanceLocked(context: Context, prefsName: String): Float =
+        context.applicationContext
+            .getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getFloat(KEY_BEST_DIST, 0f)
             .takeIf { it.isFinite() && it >= 0f } ?: 0f
 
     // ── Lifetime seeds ────────────────────────────────────────────────────

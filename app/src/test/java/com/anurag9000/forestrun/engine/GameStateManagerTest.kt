@@ -160,6 +160,44 @@ class GameStateManagerTest {
     }
 
     @Test
+    fun `save publishes best distance even when no Ghost promotion exists`() {
+        val state = GameStateManager(context)
+        repeat(20) { state.update(FrameInputAdmission.MAX_DELTA_SECONDS) }
+        assertTrue(state.distanceMetres > 0f)
+
+        state.save()
+
+        assertEquals(state.distanceMetres, SaveManager.loadBestDistance(context), 0.0001f)
+    }
+
+    @Test
+    fun `stale run save cannot lower a newer best distance`() {
+        val stale = GameStateManager(context)
+        val recent = GameStateManager(context)
+        repeat(20) { stale.update(FrameInputAdmission.MAX_DELTA_SECONDS) }
+        repeat(100) { recent.update(FrameInputAdmission.MAX_DELTA_SECONDS) }
+        assertTrue(recent.distanceMetres > stale.distanceMetres)
+
+        recent.save()
+        val durableBest = SaveManager.loadBestDistance(context)
+        stale.save()
+
+        assertEquals(recent.distanceMetres, durableBest, 0.0001f)
+        assertEquals(durableBest, SaveManager.loadBestDistance(context), 0.0001f)
+    }
+
+    @Test
+    fun `nonpersistent run cannot publish best distance`() {
+        val debug = GameStateManager(context) { false }
+        repeat(100) { debug.update(FrameInputAdmission.MAX_DELTA_SECONDS) }
+        assertTrue(debug.distanceMetres > 0f)
+
+        debug.save()
+
+        assertEquals(0f, SaveManager.loadBestDistance(context), 0f)
+    }
+
+    @Test
     fun `collecting seeds activates bloom and persists lifetime seeds`() {
         val state = GameStateManager(context)
 

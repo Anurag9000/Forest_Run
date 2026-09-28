@@ -97,6 +97,32 @@ class NamespaceBoundGhostPromotionArtifactStoreTest {
         assertEquals(frames, store.loadGhost())
     }
 
+    @Test
+    fun `ghost distance writer cannot lower an independently published run best`() {
+        assertTrue(store.saveBestDistanceM(120f))
+        assertEquals(120f, store.loadBestDistanceM(), 0f)
+
+        // The normal run owner publishes a better achievement without needing
+        // any Ghost frames.
+        SaveManager.saveBestDistance(context, 240f)
+        assertEquals(240f, SaveManager.loadBestDistance(context), 0f)
+
+        // A stale asynchronous Ghost transaction must not restore its older
+        // distance after the independent run achievement has advanced.
+        assertTrue(store.saveBestDistanceM(160f))
+        assertEquals(240f, store.loadBestDistanceM(), 0f)
+        assertEquals(240f, SaveManager.loadBestDistance(context), 0f)
+    }
+
+    @Test
+    fun `ghost distance writer rejects malformed values without erasing record`() {
+        assertTrue(store.saveBestDistanceM(120f))
+        assertTrue(!store.saveBestDistanceM(Float.NaN))
+        assertTrue(!store.saveBestDistanceM(Float.POSITIVE_INFINITY))
+        assertTrue(!store.saveBestDistanceM(-1f))
+        assertEquals(120f, store.loadBestDistanceM(), 0f)
+    }
+
     private fun sampleFrames(): List<GhostFrame> = listOf(
         GhostFrame(
             t = 0f,

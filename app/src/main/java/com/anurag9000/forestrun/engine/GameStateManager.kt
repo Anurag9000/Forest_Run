@@ -415,6 +415,10 @@ class GameStateManager(
             }
         }
         persistentHighScoreFloor = maxOf(persistentHighScoreFloor, highScore)
+
+        // Best distance is durable run memory even when no Ghost exists or a
+        // Ghost promotion is rejected. SaveManager keeps this monotonic.
+        SaveManager.saveBestDistance(appContext, distanceMetres)
         lifetimeSeeds = SaveManager.loadLifetimeSeeds(appContext)
     }
 
