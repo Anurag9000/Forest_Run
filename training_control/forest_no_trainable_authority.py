@@ -17,7 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 SOURCE_SUFFIXES = {
     ".kt", ".kts", ".java", ".py", ".js", ".ts", ".tsx", ".jsx",
-    ".gradle", ".toml", ".yaml", ".yml", ".json",
+    ".gradle", ".toml", ".yaml", ".yml", ".json", ".xml",
+    ".sh", ".bash", ".bat", ".cmd", ".ps1",
 }
 REQUIRED_APPLICATION_FILES = (
     "settings.gradle.kts",
@@ -30,7 +31,8 @@ REQUIRED_APPLICATION_FILES = (
 
 SKIP_PARTS = {
     ".git", ".gradle", ".idea", "build", "docs", "Final_Assets (2)",
-    ".training_control", "training_control",
+    ".training_control", "training_control", "artifacts",
+    ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache",
 }
 # These expressions intentionally target training/model-framework semantics rather
 # than generic words such as "model" that are common in ordinary application code.
