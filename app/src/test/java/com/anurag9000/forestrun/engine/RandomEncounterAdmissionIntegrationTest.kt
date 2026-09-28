@@ -202,6 +202,56 @@ class RandomEncounterAdmissionIntegrationTest {
     }
 
     @Test
+    fun `random staging ignores temporary slow when computing future reaction lead`() {
+        val compactPlayer = Player(640, 360, sprites)
+        val manager = EntityManager(context, 640f, 360f, sprites)
+        val state = GameStateManager(context) { false }
+
+        // Reach the production speed ceiling, then leave only one frame of a
+        // 50% slow. The encounter will spend most of its approach after the
+        // world returns to full speed.
+        repeat(3) { state.update(5_000f) }
+        assertEquals(GameConstants.MAX_SCROLL_SPEED, state.undebuffedScrollSpeed, 0f)
+        state.applySpeedDebuff(0.5f, 100)
+        state.update(FrameInputAdmission.MAX_DELTA_SECONDS)
+        assertEquals(GameConstants.MAX_SCROLL_SPEED * 0.5f, state.scrollSpeed, 0f)
+        assertEquals(GameConstants.MAX_SCROLL_SPEED, state.undebuffedScrollSpeed, 0f)
+
+        // Blocked time retains the production spacing counter. Seed it beyond
+        // the existing gap so this frame exercises only live action admission.
+        val gapField = EntityManager::class.java.getDeclaredField(
+            "distanceSinceRandomSpawnPx"
+        )
+        gapField.isAccessible = true
+        gapField.setFloat(manager, Float.MAX_VALUE)
+
+        manager.update(
+            deltaTime = FrameInputAdmission.MAX_DELTA_SECONDS,
+            gameState = state,
+            player = compactPlayer,
+            runMode = RunMode.NORMAL
+        )
+        assertEquals(1, manager.activeEntities.size)
+
+        val staged = manager.activeEntities.single()
+        val requiredRecoveryLead = SpawnPacing.minimumRandomEncounterLeadPx(
+            state.undebuffedScrollSpeed
+        )
+        val initialCoreLead =
+            staged.previousHitbox.left - compactPlayer.hitbox.right
+        assertTrue(
+            "temporary slow incorrectly shortened random encounter staging",
+            initialCoreLead + 0.001f >= requiredRecoveryLead
+        )
+
+        // The temporary slow expires; the next published frame speed is the
+        // same undebuffed speed that admission budgeted.
+        state.update(FrameInputAdmission.MAX_DELTA_SECONDS)
+        state.update(FrameInputAdmission.MAX_DELTA_SECONDS)
+        assertEquals(GameConstants.MAX_SCROLL_SPEED, state.scrollSpeed, 0f)
+    }
+
+    @Test
     fun `duck and stumble states hold random admission until real recovery`() {
         val manager = EntityManager(context, 1_920f, 1_080f, sprites)
         assertTrue(manager.canAdmitRandomEncounter(player))

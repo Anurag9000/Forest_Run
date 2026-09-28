@@ -601,7 +601,7 @@ class EntityManager internal constructor(
         // the new origin farther out until the Player has a sampled full-jump
         // reaction envelope even after this tick's immediate entity update.
         val actionLeadPx = SpawnPacing.minimumRandomEncounterLeadPx(
-            gameState.scrollSpeed
+            maxOf(gameState.scrollSpeed, gameState.undebuffedScrollSpeed)
         )
         val actionSafeStartX = (
             player.hitbox.right.toDouble() + actionLeadPx.toDouble()

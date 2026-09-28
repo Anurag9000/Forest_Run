@@ -29,6 +29,15 @@ class GameStateManager(
     var scrollSpeed: Float = GameConstants.BASE_SCROLL_SPEED
         private set
 
+    /**
+     * Current distance-driven world speed before a temporary gameplay debuff.
+     * Random encounter staging uses this future-recoverable ceiling so a
+     * short-lived slow effect cannot buy less reaction distance than the same
+     * encounter will consume after the debuff expires.
+     */
+    val undebuffedScrollSpeed: Float
+        get() = baseScrollSpeedForDistance(distanceMetres)
+
     var distanceMetres: Float = 0f
         private set
 
@@ -148,11 +157,7 @@ class GameStateManager(
         // Orbs, distance and score. Computing a new speed after distance moved
         // made the world scroll at a different speed from the recorded run.
         // New distance affects acceleration on the next frame.
-        val baseSpeed = MathUtils.clamp(
-            GameConstants.BASE_SCROLL_SPEED + distanceMetres * GameConstants.SPEED_PER_METRE,
-            GameConstants.BASE_SCROLL_SPEED,
-            GameConstants.MAX_SCROLL_SPEED
-        )
+        val baseSpeed = undebuffedScrollSpeed
         val safeDebuff = speedDebuffMultiplier.takeIf { it.isFinite() && it > 0f }
             ?.coerceAtMost(1f)
             ?: 1f
@@ -479,6 +484,15 @@ class GameStateManager(
         if (!delta.isFinite() || delta <= 0f) return value
         val sum = value.toDouble() + delta.toDouble()
         return sum.coerceAtMost(Float.MAX_VALUE.toDouble()).toFloat()
+    }
+
+    private fun baseScrollSpeedForDistance(distance: Float): Float {
+        val safeDistance = distance.takeIf { it.isFinite() && it >= 0f } ?: 0f
+        return MathUtils.clamp(
+            GameConstants.BASE_SCROLL_SPEED + safeDistance * GameConstants.SPEED_PER_METRE,
+            GameConstants.BASE_SCROLL_SPEED,
+            GameConstants.MAX_SCROLL_SPEED
+        )
     }
 
     private fun safeNonNegativeProduct(first: Float, second: Float): Float {
