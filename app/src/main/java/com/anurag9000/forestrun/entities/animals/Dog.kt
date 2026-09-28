@@ -15,6 +15,7 @@ import com.anurag9000.forestrun.engine.SpriteSizing
 import com.anurag9000.forestrun.engine.SweptCoreOverlap
 import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.entities.CollisionResult
+import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Entity
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
