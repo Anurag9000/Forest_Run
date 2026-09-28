@@ -100,8 +100,29 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    payload = build_certificate()
     output = _within_root(args.output)
+    if output == ROOT or output.is_dir():
+        raise ValueError("certificate output must be a file inside the repository")
+    # An earlier PASS is not valid evidence for a later failed source audit.
+    # Clear it before reading the current source, so even an unexpected audit
+    # or publication error cannot leave an old success at this path.
+    output.unlink(missing_ok=True)
+    try:
+        payload = build_certificate()
+    except Exception as exc:
+        payload = {
+            "schema_version": 2,
+            "repository": REPOSITORY,
+            "status": "fail",
+            "classification": "unresolved",
+            "ml_training_applicable": None,
+            "authority": "training_control/forest_no_trainable_authority.py",
+            "error": str(exc),
+            "execution_claim_emitted": False,
+        }
+        _atomic_json(output, payload)
+        print(json.dumps(payload, sort_keys=True))
+        return 2
     _atomic_json(output, payload)
     print(json.dumps(payload, sort_keys=True))
     return 0
