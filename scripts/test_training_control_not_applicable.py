@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import io
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+import run_all_training as launcher
 
 from training_control.forest_no_trainable_authority import (
     audit, require_no_trainable_surface, REQUIRED_APPLICATION_FILES,
@@ -86,6 +91,39 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
                 file.write_text("// retained app fixture\\n", encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "no Android dependencies"):
                 require_no_trainable_surface(root)
+
+    def test_failed_audit_replaces_previous_pass_with_failure_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "coverage.json"
+            output.write_text('{"status":"pass"}', encoding="utf-8")
+            with mock.patch.object(launcher, "ROOT", root), \
+                 mock.patch.object(launcher, "build_certificate",
+                                   side_effect=RuntimeError("retained ML marker")), \
+                 redirect_stdout(io.StringIO()) as stdout:
+                status = launcher.main(["--output", str(output)])
+            self.assertEqual(status, 2)
+            report = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual("fail", report["status"])
+            self.assertEqual("unresolved", report["classification"])
+            self.assertIsNone(report["ml_training_applicable"])
+            self.assertFalse(report["execution_claim_emitted"])
+            self.assertIn("retained ML marker", report["error"])
+            self.assertNotIn('"status": "pass"', stdout.getvalue())
+
+    def test_publication_error_cannot_leave_old_pass_at_output_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "coverage.json"
+            output.write_text('{"status":"pass"}', encoding="utf-8")
+            with mock.patch.object(launcher, "ROOT", root), \
+                 mock.patch.object(launcher, "build_certificate",
+                                   return_value={"status": "pass"}), \
+                 mock.patch.object(launcher, "_atomic_json",
+                                   side_effect=OSError("disk unavailable")):
+                with self.assertRaisesRegex(OSError, "disk unavailable"):
+                    launcher.main(["--output", str(output)])
+            self.assertFalse(output.exists(), "stale PASS must not survive failed publication")
 
     def test_root_command_emits_truthful_n_a_certificate(self) -> None:
         result = subprocess.run(
