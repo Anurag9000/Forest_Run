@@ -70,6 +70,57 @@ class EagleDepartureIntegrationTest {
     }
 
     @Test
+    fun `final vertical Eagle escape segment cannot tunnel through player into clean pass`() {
+        val eagle = Eagle(
+            context = context,
+            startX = player.hitbox.left,
+            screenWidth = 1_920f,
+            groundY = 885.6f,
+            sprite = sprites.eagleSprite.copy()
+        ).apply { shouldRecordPersistence = false }
+
+        // Give the stationary Player a real previous/current motion sample.
+        player.update(0.05f, state.scrollSpeed)
+
+        val insetX = eagle.hitbox.left - eagle.x
+        val insetY = eagle.hitbox.top - eagle.y
+        val coreHeight = eagle.hitbox.height()
+        eagle.x = player.hitbox.left - insetX + 4f
+        eagle.y = player.hitbox.top - coreHeight - insetY - 12f
+        eagle.hitbox.offsetTo(eagle.x + insetX, eagle.y + insetY)
+
+        Eagle::class.java.getDeclaredField("isLocked").apply {
+            isAccessible = true
+            setBoolean(eagle, true)
+        }
+        Eagle::class.java.getDeclaredField("hasEnteredHorizontalViewport").apply {
+            isAccessible = true
+            setBoolean(eagle, true)
+        }
+        Eagle::class.java.getDeclaredField("velX").apply {
+            isAccessible = true
+            setFloat(eagle, 0f)
+        }
+        Eagle::class.java.getDeclaredField("velY").apply {
+            isAccessible = true
+            setFloat(eagle, 10_000f)
+        }
+        manager.activeEntities.add(eagle)
+
+        manager.update(0.05f, state, player, runMode = RunMode.DEBUG_SCENARIO)
+        assertFalse(eagle.isActive)
+        assertTrue(eagle.hasCompletedAttackEscape)
+        assertTrue(manager.activeEntities.isEmpty())
+
+        val frame = requireNotNull(manager.checkCollisions(player, state))
+        assertEquals(CollisionResult.HIT, frame.result)
+        assertTrue(frame.entity === eagle)
+        assertEquals(EncounterOutcome.HIT, eagle.encounterOutcome)
+        assertEquals(0, state.cleanPassesThisRun)
+        assertNull(manager.checkCollisions(player, state))
+    }
+
+    @Test
     fun `completed Eagle escape preserves Bloom conversion exclusivity`() {
         val eagle = lockedEagle()
         state.debugActivateBloom()

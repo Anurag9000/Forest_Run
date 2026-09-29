@@ -66,6 +66,47 @@ class OwlDepartureIntegrationTest {
     }
 
     @Test
+    fun `final vertical Owl escape segment cannot tunnel through player into clean pass`() {
+        val owl = newOwl()
+        player.update(0.05f, state.scrollSpeed)
+
+        // Enter the genuine dive state, then stage one final high-speed segment
+        // whose endpoints straddle the Player and whose end leaves the surface.
+        owl.triggerDive(player.hitbox.centerX(), player.hitbox.centerY())
+        Owl::class.java.getDeclaredField("hasWarned").apply {
+            isAccessible = true
+            setBoolean(owl, true)
+        }
+        val insetX = owl.hitbox.left - owl.x
+        val insetY = owl.hitbox.top - owl.y
+        val coreHeight = owl.hitbox.height()
+        owl.x = player.hitbox.left - insetX + 4f
+        owl.y = player.hitbox.top - coreHeight - insetY - 12f
+        owl.hitbox.offsetTo(owl.x + insetX, owl.y + insetY)
+        Owl::class.java.getDeclaredField("velX").apply {
+            isAccessible = true
+            setFloat(owl, 0f)
+        }
+        Owl::class.java.getDeclaredField("velY").apply {
+            isAccessible = true
+            setFloat(owl, 10_000f)
+        }
+        manager.activeEntities.add(owl)
+
+        manager.update(0.05f, state, player, runMode = RunMode.DEBUG_SCENARIO)
+        assertFalse(owl.isActive)
+        assertTrue(owl.hasCompletedDiveEscape)
+        assertTrue(manager.activeEntities.isEmpty())
+
+        val frame = requireNotNull(manager.checkCollisions(player, state))
+        assertEquals(com.anurag9000.forestrun.entities.CollisionResult.HIT, frame.result)
+        assertTrue(frame.entity === owl)
+        assertEquals(EncounterOutcome.HIT, owl.encounterOutcome)
+        assertEquals(0, state.cleanPassesThisRun)
+        assertNull(manager.checkCollisions(player, state))
+    }
+
+    @Test
     fun `completed Owl escape under Bloom is exclusive conversion`() {
         val owl = warnedDivingOwl()
         state.debugActivateBloom()

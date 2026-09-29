@@ -177,6 +177,12 @@ class EntityManager internal constructor(
      */
     fun checkCollisions(player: Player, gameState: GameStateManager): CollisionFrame? {
         if (!gameState.isBloomActive) {
+            // Owl/Eagle can finish a vertical dive and be removed during
+            // update() before this collision phase runs. Their final motion
+            // segment still belongs to this simulation interval and must win
+            // terminal HIT arbitration before a deferred safe-departure reward.
+            resolveCompletedBirdHit(player, gameState)?.let { return it }
+
             var selectedEntity: Entity? = null
             var selectedResult = CollisionResult.NONE
             var selectedPriority = 0
@@ -250,6 +256,42 @@ class EntityManager internal constructor(
                 entity.previousHitbox, entity.hitbox
             )
         ) contact else CollisionResult.NONE
+    }
+
+    private fun resolveCompletedBirdHit(
+        player: Player,
+        gameState: GameStateManager
+    ): CollisionFrame? {
+        var index = 0
+        while (index < completedBirdEscapes.size) {
+            val bird = completedBirdEscapes[index]
+            if (bird.encounterOutcome == EncounterOutcome.PENDING) {
+                val sampledHit = bird.onCollision(player, gameState) == CollisionResult.HIT
+                val sweptHit =
+                    bird.hasMotionSample && player.hasMotionSample &&
+                        isFiniteNonEmpty(bird.previousHitbox) &&
+                        isFiniteNonEmpty(bird.hitbox) &&
+                        isFiniteNonEmpty(player.previousHitbox) &&
+                        isFiniteNonEmpty(player.hitbox) &&
+                        SweptCoreOverlap.intersects(
+                            player.previousHitbox,
+                            player.hitbox,
+                            bird.previousHitbox,
+                            bird.hitbox
+                        )
+                if (sampledHit || sweptHit) {
+                    completedBirdEscapes.removeAt(index)
+                    bird.onOutcomeSelected(CollisionResult.HIT, player, gameState)
+                    bird.encounterOutcome = EncounterOutcome.HIT
+                    bird.observedMercyContact = false
+                    bird.hasBeenPassed = true
+                    recordResolvedEncounter(bird)
+                    return CollisionFrame(CollisionResult.HIT, bird)
+                }
+            }
+            index++
+        }
+        return null
     }
 
     private fun collisionPriority(result: CollisionResult): Int = when (result) {
