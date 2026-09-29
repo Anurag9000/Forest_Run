@@ -20,6 +20,14 @@ SOURCE_SUFFIXES = {
     ".gradle", ".toml", ".yaml", ".yml", ".json", ".xml",
     ".sh", ".bash", ".bat", ".cmd", ".ps1",
 }
+MODEL_ARTIFACT_SUFFIXES = {
+    ".tflite", ".onnx", ".ort", ".pt", ".pth", ".ckpt", ".safetensors",
+    ".keras", ".mlmodel", ".mlpackage",
+}
+DEPENDENCY_CONFIG_RE = re.compile(
+    r"^[A-Za-z_][A-Za-z0-9_]*(?:Implementation|Api|CompileOnly|RuntimeOnly|"
+    r"Processor|Kapt|Ksp)?\\s*\\("
+)
 REQUIRED_APPLICATION_FILES = (
     "settings.gradle.kts",
     "build.gradle.kts",
@@ -44,7 +52,11 @@ FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("optimizer", re.compile(r"\b(optimizer|optimiser)\.(step|zero_grad)|\bAdamW?\s*\(|\bSGD\s*\(", re.I)),
     ("backprop", re.compile(r"\.backward\s*\(|gradient[_ -]?descent|backpropagation", re.I)),
     ("training-loop", re.compile(r"\b(train|training)[_ -]?(epoch|step|loop)|early[_ -]?stopping", re.I)),
-    ("ml-dependency", re.compile(r"implementation\s*\([^\n]*(tensorflow|pytorch|onnxruntime|mlkit)", re.I)),
+    ("ml-dependency", re.compile(
+        r"(org[.:]tensorflow|tensorflow[-_. ]?lite|org[.:]pytorch|"
+        r"onnxruntime|com[.:]google[.:]mlkit|com[.:]google[.:]mediapipe|"
+        r"deeplearning4j|org[.:]nd4j)", re.I
+    )),
 )
 
 
@@ -97,15 +109,30 @@ def _files(root: Path = ROOT) -> Iterable[Path]:
 
 
 def _dependencies(root: Path = ROOT) -> tuple[str, ...]:
-    path = root / "app" / "build.gradle.kts"
-    if not path.is_file():
-        return ()
     dependencies: list[str] = []
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        stripped = line.strip()
-        if stripped.startswith(("implementation(", "api(", "compileOnly(")):
-            dependencies.append(stripped)
+    for path in sorted(root.glob("**/*.gradle*")):
+        if any(part in SKIP_PARTS for part in path.relative_to(root).parts):
+            continue
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            stripped = line.strip()
+            if DEPENDENCY_CONFIG_RE.match(stripped):
+                dependencies.append(f"{path.relative_to(root).as_posix()}:{stripped}")
     return tuple(dependencies)
+
+
+def _model_artifact_findings(root: Path = ROOT) -> tuple[Finding, ...]:
+    findings: list[Finding] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root)
+        if any(part in SKIP_PARTS for part in relative.parts):
+            continue
+        if path.suffix.lower() in MODEL_ARTIFACT_SUFFIXES:
+            findings.append(Finding(
+                relative.as_posix(), 0, "ml-model-artifact", path.name[:240]
+            ))
+    return tuple(findings)
 
 
 def audit(root: Path = ROOT) -> Audit:
@@ -121,6 +148,7 @@ def audit(root: Path = ROOT) -> Audit:
                     findings.append(
                         Finding(relative, line_number, category, line.strip()[:240])
                     )
+    findings.extend(_model_artifact_findings(root))
     return Audit(tuple(scanned), tuple(findings), _dependencies(root))
 
 
