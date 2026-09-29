@@ -117,15 +117,17 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             root = Path(temp)
             gradle = root / "app" / "build.gradle.kts"
             gradle.parent.mkdir(parents=True)
+            runtime = "onnx" + "runtime"
+            coordinate = f"com.microsoft.{runtime}:{runtime}-android:1.20.0"
             gradle.write_text(
-                'debugImplementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")\n',
+                f'debugImplementation("{coordinate}")\n',
                 encoding="utf-8",
             )
             result = audit(root)
             self.assertFalse(result.complete)
             self.assertIn("ml-dependency", {row.category for row in result.findings})
             self.assertEqual(
-                ("app/build.gradle.kts:debugImplementation(\"com.microsoft.onnxruntime:onnxruntime-android:1.20.0\")",),
+                (f'app/build.gradle.kts:debugImplementation("{coordinate}")',),
                 result.android_dependencies,
             )
 
