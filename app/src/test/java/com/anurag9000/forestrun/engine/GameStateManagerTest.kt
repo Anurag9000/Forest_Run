@@ -418,7 +418,10 @@ class GameStateManagerTest {
         state.resetRun()
 
         assertEquals(0f, state.runTimeSeconds, 0.0001f)
-        assertEquals("Find The Stride", state.openingGuidanceCue?.title)
+        // resetRun restores the canonical authored opening: Duck is seeded first,
+        // so the guidance must again teach the duck response rather than the
+        // older pre-alignment jump cue.
+        assertEquals("Duck The Low Flyer", state.openingGuidanceCue?.title)
         assertTrue(state.openingGuidanceCue?.chips?.none { it.isComplete } == true)
     }
 
