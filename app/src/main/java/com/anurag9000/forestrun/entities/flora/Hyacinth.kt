@@ -12,6 +12,7 @@ import com.anurag9000.forestrun.engine.ReadabilityProfile
 import com.anurag9000.forestrun.engine.SpriteSizing
 import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.engine.SwayComponent
+import com.anurag9000.forestrun.engine.SweptCoreOverlap
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Entity
 import com.anurag9000.forestrun.entities.EntityType
@@ -39,6 +40,8 @@ class Hyacinth(
     private val hitTopY     = floraHeight * readability.hitInsetYRatio
     private val drawRect    = RectF()
     private val brushBox    = RectF()
+    private val previousBrushBox = RectF()
+    private var hasBrushMotionSample = false
 
     /** The complete collision-relevant brush span must clear before pass credit. */
     override val encounterBounds: RectF
@@ -87,6 +90,14 @@ class Hyacinth(
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
+        previousBrushBox.set(brushBox)
+        hasBrushMotionSample =
+            previousBrushBox.left.isFinite() &&
+                previousBrushBox.top.isFinite() &&
+                previousBrushBox.right.isFinite() &&
+                previousBrushBox.bottom.isFinite() &&
+                previousBrushBox.left < previousBrushBox.right &&
+                previousBrushBox.top < previousBrushBox.bottom
         x -= scrollSpeed * deltaTime
         rhythmPulse += deltaTime * 3f
         currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
@@ -153,6 +164,18 @@ class Hyacinth(
         if (RectF.intersects(player.hitbox, hitbox)) return CollisionResult.HIT
         // The drawn soft fringe is actual contact, not an avoided near-miss.
         if (RectF.intersects(player.hitbox, brushBox)) return CollisionResult.STUMBLE
+        if (
+            hasBrushMotionSample &&
+            player.hasMotionSample &&
+            SweptCoreOverlap.intersects(
+                player.previousHitbox,
+                player.hitbox,
+                previousBrushBox,
+                brushBox
+            )
+        ) {
+            return CollisionResult.STUMBLE
+        }
         val mercyPad = readability.mercyPaddingPx
         if (intersectsExpanded(player.hitbox, brushBox, mercyPad)) return CollisionResult.MERCY_MISS
         return CollisionResult.NONE

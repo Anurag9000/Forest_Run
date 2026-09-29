@@ -10,6 +10,8 @@ import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.engine.EntityManager
 import com.anurag9000.forestrun.entities.Player
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -68,6 +70,63 @@ class HyacinthTest {
             brushRect.top - 20f
         )
         assertEquals(CollisionResult.NONE, hyacinth.onCollision(player, gameState))
+    }
+
+    @Test
+    fun `soft brush detects midframe contact when both endpoint samples miss`() {
+        val hyacinth = Hyacinth(
+            context = context,
+            startX = 620f,
+            groundY = 885.6f,
+            sprite = spriteManager.hyacinthSprite.copy()
+        )
+        val player = Player(1920, 1080, spriteManager)
+        val state = GameStateManager(context)
+        val manager = EntityManager(context, 1_920f, 1_080f, spriteManager)
+        manager.activeEntities += hyacinth
+
+        val coreBefore = RectF(hyacinth.hitbox)
+        val brushBefore = RectF(hyacinth.encounterBounds)
+        val playerLeft = brushBefore.left - 30f
+        val playerTop = brushBefore.top + 3f
+        val playerBottom = coreBefore.top - 3f
+        assertTrue(playerBottom > playerTop)
+        val playerRect = RectF(
+            playerLeft,
+            playerTop,
+            playerLeft + 10f,
+            playerBottom
+        )
+
+        // Let Player own a real previous/current sample, then keep the test
+        // rectangle stationary in the visible brush-only vertical band.
+        player.hitbox.set(playerRect)
+        player.update(0.001f, state.scrollSpeed)
+        assertTrue(player.hasMotionSample)
+        assertEquals(playerRect, player.previousHitbox)
+        player.hitbox.set(playerRect)
+
+        assertFalse(RectF.intersects(player.hitbox, coreBefore))
+        assertFalse(RectF.intersects(player.hitbox, brushBefore))
+
+        // Hyacinth moves 100 px left in one admitted recovery frame. Its brush
+        // begins to the right of the Player and ends fully to the left, so the
+        // only physical contact occurs between endpoint samples.
+        manager.update(
+            deltaTime = 0.05f,
+            gameState = state,
+            player = player,
+            runMode = com.anurag9000.forestrun.engine.RunMode.DEBUG_SCENARIO
+        )
+        assertFalse(RectF.intersects(player.hitbox, hyacinth.hitbox))
+        assertFalse(RectF.intersects(player.hitbox, hyacinth.encounterBounds))
+
+        val frame = requireNotNull(manager.checkCollisions(player, state))
+        assertEquals(CollisionResult.STUMBLE, frame.result)
+        assertTrue(frame.entity === hyacinth)
+        assertEquals(EncounterOutcome.STUMBLE, hyacinth.encounterOutcome)
+        assertEquals(0, state.cleanPassesThisRun)
+        assertEquals(0, state.mercyHearts)
     }
 
     @Test
