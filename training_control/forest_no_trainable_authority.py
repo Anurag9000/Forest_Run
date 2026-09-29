@@ -25,8 +25,9 @@ MODEL_ARTIFACT_SUFFIXES = {
     ".keras", ".mlmodel", ".mlpackage",
 }
 DEPENDENCY_CONFIG_RE = re.compile(
-    r"^[A-Za-z_][A-Za-z0-9_]*(?:Implementation|Api|CompileOnly|RuntimeOnly|"
-    r"Processor|Kapt|Ksp)?\\s*\\("
+    r"^(?:implementation|api|compileOnly|runtimeOnly|annotationProcessor|kapt|ksp|"
+    r"[A-Za-z_][A-Za-z0-9_]*(?:Implementation|Api|CompileOnly|RuntimeOnly|"
+    r"AnnotationProcessor))\s*\("
 )
 REQUIRED_APPLICATION_FILES = (
     "settings.gradle.kts",
