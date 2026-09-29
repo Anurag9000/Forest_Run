@@ -80,6 +80,14 @@ object OpeningReadabilityGuide {
         )
 
         return when {
+            // Normal runs seed Duck as the first authored encounter. Keep its
+            // canonical ducking lesson visible through the initial lockout.
+            time < RANDOM_SPAWN_LOCKOUT_SEC && !inputState.duckSeen -> OpeningGuidanceCue(
+                title = "Duck The Low Flyer",
+                line = "Swipe down when the first wings skim the lane.",
+                accentColor = ACCENT_ROUTE,
+                chips = chips
+            )
             time < 3.2f && !inputState.jumpSeen -> OpeningGuidanceCue(
                 title = "Find The Stride",
                 line = "Tap to clear the first low lane.",

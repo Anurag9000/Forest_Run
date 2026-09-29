@@ -11,33 +11,42 @@ import org.junit.Test
 class OpeningReadabilityGuideTest {
 
     @Test
-    fun `opening guidance walks through tap hold duck prompts`() {
-        val tapCue = OpeningReadabilityGuide.cueFor(
+    fun `opening guidance follows seeded Duck then tap hold and late duck fallback`() {
+        val firstDuckCue = OpeningReadabilityGuide.cueFor(
             runTimeSeconds = 1.5f,
             inputState = OpeningInputState(),
             routeTier = PacifistRouteTier.NONE,
             mercyHearts = 0,
             kindnessChain = 0
         )
-        assertEquals("Find The Stride", tapCue?.title)
+        assertEquals("Duck The Low Flyer", firstDuckCue?.title)
+
+        val tapCue = OpeningReadabilityGuide.cueFor(
+            runTimeSeconds = 5f,
+            inputState = OpeningInputState(duckSeen = true),
+            routeTier = PacifistRouteTier.NONE,
+            mercyHearts = 0,
+            kindnessChain = 0
+        )
+        assertEquals("Tap To Hop", tapCue?.title)
 
         val holdCue = OpeningReadabilityGuide.cueFor(
             runTimeSeconds = 5f,
-            inputState = OpeningInputState(jumpSeen = true),
+            inputState = OpeningInputState(jumpSeen = true, duckSeen = true),
             routeTier = PacifistRouteTier.NONE,
             mercyHearts = 0,
             kindnessChain = 0
         )
         assertEquals("Hold For Height", holdCue?.title)
 
-        val duckCue = OpeningReadabilityGuide.cueFor(
+        val lateDuckCue = OpeningReadabilityGuide.cueFor(
             runTimeSeconds = 12f,
             inputState = OpeningInputState(jumpSeen = true, holdSeen = true),
             routeTier = PacifistRouteTier.NONE,
             mercyHearts = 0,
             kindnessChain = 0
         )
-        assertEquals("Duck The Low Lane", duckCue?.title)
+        assertEquals("Duck The Low Lane", lateDuckCue?.title)
     }
 
     @Test
@@ -109,7 +118,7 @@ class OpeningReadabilityGuideTest {
                 OpeningReadabilityGuide.spawnPoolFor(invalid, listOf(EntityType.WOLF))
             )
             assertEquals(
-                "Find The Stride",
+                "Duck The Low Flyer",
                 OpeningReadabilityGuide.cueFor(
                     runTimeSeconds = invalid,
                     inputState = OpeningInputState(),
