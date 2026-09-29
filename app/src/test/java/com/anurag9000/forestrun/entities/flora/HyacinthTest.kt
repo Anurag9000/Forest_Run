@@ -81,7 +81,16 @@ class HyacinthTest {
             sprite = spriteManager.hyacinthSprite.copy()
         )
         val player = Player(1920, 1080, spriteManager)
-        val state = GameStateManager(context)
+        val state = GameStateManager(context) { false }
+        // Exercise the actual maximum-speed recovery frame claimed below.
+        // The effective speed is derived from pre-frame distance, so advance
+        // enough times to publish the capped production value.
+        repeat(3) { state.update(5_000f) }
+        assertEquals(
+            com.anurag9000.forestrun.engine.GameConstants.MAX_SCROLL_SPEED,
+            state.scrollSpeed,
+            0f
+        )
         val manager = EntityManager(context, 1_920f, 1_080f, spriteManager)
         manager.activeEntities += hyacinth
 

@@ -13,3 +13,8 @@ A Robolectric integration regression uses the live 2,000 px/s movement step, pla
 ## Boundary
 
 This closes sampled physical contact for the existing drawn brush geometry. It does not alter Hyacinth art, sway, reward tuning, human readability, or physical-device acceptance.
+
+
+## Exact-head regression correction
+
+The first implementation's integration fixture described a 2,000 px/s recovery frame but left its `GameStateManager` at the 400 px/s initial speed, so the Hyacinth moved only 20 px during the 50 ms step and never crossed the staged Player. Android validation correctly failed that test. The fixture now advances the nonpersistent state through the production distance-speed curve and explicitly asserts `MAX_SCROLL_SPEED` before the manager update. The collision expectation remains STUMBLE; production collision code is unchanged by this correction.
