@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.EntityType
+import com.anurag9000.forestrun.entities.EntityFactory
 import com.anurag9000.forestrun.entities.Player
 import kotlin.random.Random
 import org.junit.Assert.assertEquals
