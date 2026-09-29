@@ -92,6 +92,63 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             self.assertTrue(result.complete)
             self.assertNotIn("artifacts/training_control/old_result.json", result.scanned_files)
 
+    def test_retained_ml_model_artifact_invalidates_non_ml_classification(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            asset = root / "app" / "src" / "main" / "assets" / "policy.onnx"
+            asset.parent.mkdir(parents=True)
+            asset.write_bytes(b"not-a-real-model")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual("ml-model-artifact", result.findings[0].category)
+            self.assertEqual("app/src/main/assets/policy.onnx", result.findings[0].path)
+            self.assertEqual(0, result.findings[0].line)
+
+    def test_docs_model_named_examples_do_not_create_runtime_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            example = root / "docs" / "architecture.onnx"
+            example.parent.mkdir(parents=True)
+            example.write_bytes(b"documentation-fixture")
+            self.assertTrue(audit(root).complete)
+
+    def test_non_implementation_gradle_ml_dependency_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            gradle = root / "app" / "build.gradle.kts"
+            gradle.parent.mkdir(parents=True)
+            gradle.write_text(
+                'debugImplementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")\n',
+                encoding="utf-8",
+            )
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertIn("ml-dependency", {row.category for row in result.findings})
+            self.assertEqual(
+                ("app/build.gradle.kts:debugImplementation(\"com.microsoft.onnxruntime:onnxruntime-android:1.20.0\")",),
+                result.android_dependencies,
+            )
+
+    def test_gradle_dependency_inventory_excludes_unrelated_function_calls(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            gradle = root / "app" / "build.gradle.kts"
+            gradle.parent.mkdir(parents=True)
+            gradle.write_text(
+                'create("release")\n'
+                'implementation("androidx.core:core-ktx:1.13.1")\n'
+                'testImplementation("junit:junit:4.13.2")\n',
+                encoding="utf-8",
+            )
+            result = audit(root)
+            self.assertEqual(
+                (
+                    'app/build.gradle.kts:implementation("androidx.core:core-ktx:1.13.1")',
+                    'app/build.gradle.kts:testImplementation("junit:junit:4.13.2")',
+                ),
+                result.android_dependencies,
+            )
+
     def test_empty_repository_cannot_be_certified_as_non_trainable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
