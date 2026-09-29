@@ -118,11 +118,16 @@ class HyacinthTest {
         assertFalse(RectF.intersects(player.hitbox, coreBefore))
         assertFalse(RectF.intersects(player.hitbox, brushBefore))
 
-        // Hyacinth moves 100 px left in one admitted recovery frame. Its brush
-        // begins to the right of the Player and ends fully to the left, so the
-        // only physical contact occurs between endpoint samples.
+        // Choose an admitted recovery-frame delta from the *actual* brush
+        // width and current world speed. This guarantees the brush begins
+        // wholly to the right and ends wholly to the left of the stationary
+        // Player, so contact exists only between the endpoint samples. Do not
+        // hard-code MAX_SCROLL_SPEED: a fresh GameState starts at base speed.
+        val requiredTravelPx = brushBefore.width() + 42f
+        val recoveryDelta = requiredTravelPx / state.scrollSpeed
+        assertTrue(recoveryDelta.isFinite() && recoveryDelta > 0f)
         manager.update(
-            deltaTime = 0.05f,
+            deltaTime = recoveryDelta,
             gameState = state,
             player = player,
             runMode = com.anurag9000.forestrun.engine.RunMode.DEBUG_SCENARIO
