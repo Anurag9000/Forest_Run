@@ -86,6 +86,29 @@ class StoryFragmentSystemTest {
         assertTrue(pages.contains("page_rest_killer_eagle"))
     }
 
+
+    @Test
+    fun `Garden story previews are read only until an actual Garden entry`() {
+        repeat(3) { PersistentMemoryManager.recordEncounter(context, EntityType.CAT) }
+        repeat(3) { PersistentMemoryManager.recordPass(context, EntityType.CAT) }
+        val before = SaveManager.loadUnlockedMemoryPages(context)
+
+        val reflection = StoryFragmentSystem.previewGardenReflection(context, null)
+        val weather = StoryFragmentSystem.previewWeatherThought(context, null)
+        val creature = StoryFragmentSystem.previewCreatureThought(context, EntityType.CAT)
+
+        assertNotNull(reflection)
+        assertTrue(weather.isNotBlank())
+        assertNotNull(creature)
+        assertEquals(before, SaveManager.loadUnlockedMemoryPages(context))
+
+        StoryFragmentSystem.gardenReflection(context, null)
+        StoryFragmentSystem.weatherThought(context, null)
+        StoryFragmentSystem.creatureThought(context, EntityType.CAT)
+
+        assertTrue(SaveManager.loadUnlockedMemoryPages(context).size > before.size)
+    }
+
     @Test
     fun `garden reflections unlock a page after a gentle spared run`() {
         val summary = RunSummary(

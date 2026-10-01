@@ -26,33 +26,67 @@ object StoryFragmentSystem {
         return fragment.text
     }
 
-    fun gardenReflection(context: Context, summary: RunSummary?): String? {
+    fun gardenReflection(context: Context, summary: RunSummary?): String? =
+        buildGardenReflection(context, summary, persistUnlocks = true)
+
+    fun previewGardenReflection(context: Context, summary: RunSummary?): String? =
+        buildGardenReflection(context, summary, persistUnlocks = false)
+
+    private fun buildGardenReflection(
+        context: Context,
+        summary: RunSummary?,
+        persistUnlocks: Boolean
+    ): String? {
         val appContext = context.applicationContext
         val fragment = selectGardenFragment(appContext, summary) ?: return null
-        fragment.unlocksPageId?.let { unlockMemoryPage(appContext, it) }
-        unlockGardenContextPages(appContext, summary)
+        if (persistUnlocks) {
+            fragment.unlocksPageId?.let { unlockMemoryPage(appContext, it) }
+            unlockGardenContextPages(appContext, summary)
+        }
         return fragment.text
     }
 
-    fun creatureThought(context: Context, type: EntityType?): String? {
+    fun creatureThought(context: Context, type: EntityType?): String? =
+        buildCreatureThought(context, type, persistUnlocks = true)
+
+    fun previewCreatureThought(context: Context, type: EntityType?): String? =
+        buildCreatureThought(context, type, persistUnlocks = false)
+
+    private fun buildCreatureThought(
+        context: Context,
+        type: EntityType?,
+        persistUnlocks: Boolean
+    ): String? {
         val tracked = type ?: return null
         val appContext = context.applicationContext
         val text = RelationshipArcSystem.creatureThought(appContext, tracked)
             ?: fallbackCreatureThought(appContext, tracked)
             ?: return null
-        val pageId = "page_thought_${tracked.name.lowercase()}"
-        unlockMemoryPage(appContext, pageId)
-        thoughtFamilyPage(tracked)?.let { unlockMemoryPage(appContext, it) }
-        if (PersistentMemoryManager.getPassCount(appContext, tracked) >= 3) {
-            unlockMemoryPage(appContext, "page_thought_learned_${tracked.name.lowercase()}")
-        }
-        if (PersistentMemoryManager.getHitCount(appContext, tracked) >= 2) {
-            unlockMemoryPage(appContext, "page_thought_caution_${tracked.name.lowercase()}")
+        if (persistUnlocks) {
+            val pageId = "page_thought_${tracked.name.lowercase()}"
+            unlockMemoryPage(appContext, pageId)
+            thoughtFamilyPage(tracked)?.let { unlockMemoryPage(appContext, it) }
+            if (PersistentMemoryManager.getPassCount(appContext, tracked) >= 3) {
+                unlockMemoryPage(appContext, "page_thought_learned_${tracked.name.lowercase()}")
+            }
+            if (PersistentMemoryManager.getHitCount(appContext, tracked) >= 2) {
+                unlockMemoryPage(appContext, "page_thought_caution_${tracked.name.lowercase()}")
+            }
         }
         return text
     }
 
-    fun weatherThought(context: Context, summary: RunSummary?): String {
+    fun weatherThought(context: Context, summary: RunSummary?): String =
+        buildWeatherThought(context, summary, persistUnlocks = true)
+
+    fun previewWeatherThought(context: Context, summary: RunSummary?): String =
+        buildWeatherThought(context, summary, persistUnlocks = false)
+
+    private fun buildWeatherThought(
+        context: Context,
+        summary: RunSummary?,
+        persistUnlocks: Boolean
+    ): String {
         val appContext = context.applicationContext
         val mood = summary?.forestMood ?: ForestMoodSystem.currentState(appContext).currentMood
         val peacefulBiome = PersistentMemoryManager.featuredPeaceBiome(appContext)
@@ -129,15 +163,21 @@ object StoryFragmentSystem {
                 "The wind keeps a patient pace through the garden."
             }
         }
-        unlockMemoryPage(appContext, "page_weather_${mood.name.lowercase()}")
-        summary?.pacifistRouteTier?.takeIf { it != PacifistRouteTier.NONE }?.let {
-            unlockMemoryPage(appContext, "page_weather_route_${it.name.lowercase()}")
+        if (persistUnlocks) {
+            unlockMemoryPage(appContext, "page_weather_${mood.name.lowercase()}")
+            summary?.pacifistRouteTier?.takeIf { it != PacifistRouteTier.NONE }?.let {
+                unlockMemoryPage(appContext, "page_weather_route_${it.name.lowercase()}")
+            }
+            peacefulBiome?.let {
+                unlockMemoryPage(appContext, "page_weather_biome_${it.biome.name.lowercase()}")
+            }
+            if ((summary?.bloomConversions ?: 0) >= 2) {
+                unlockMemoryPage(appContext, "page_weather_bloom")
+            }
+            repeatedKiller?.let {
+                unlockMemoryPage(appContext, "page_weather_repeat_${it.name.lowercase()}")
+            }
         }
-        peacefulBiome?.let { unlockMemoryPage(appContext, "page_weather_biome_${it.biome.name.lowercase()}") }
-        if ((summary?.bloomConversions ?: 0) >= 2) {
-            unlockMemoryPage(appContext, "page_weather_bloom")
-        }
-        repeatedKiller?.let { unlockMemoryPage(appContext, "page_weather_repeat_${it.name.lowercase()}") }
         return text
     }
 

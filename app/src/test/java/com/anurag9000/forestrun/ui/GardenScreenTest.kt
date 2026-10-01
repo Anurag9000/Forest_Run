@@ -47,6 +47,25 @@ class GardenScreenTest {
     }
 
 
+
+    @Test
+    fun `screen initialization cannot earn Garden story pages before Garden entry`() {
+        assertTrue(SaveManager.loadUnlockedMemoryPages(context).isEmpty())
+        val screen = GardenScreen(context, spriteManager, 960, 540)
+
+        screen.load()
+
+        assertTrue(SaveManager.loadUnlockedMemoryPages(context).isEmpty())
+
+        screen.refresh()
+
+        val earned = SaveManager.loadUnlockedMemoryPages(context)
+        assertTrue(earned.isNotEmpty())
+        val field = screen.javaClass.getDeclaredField("memoryPageCount")
+        field.isAccessible = true
+        assertEquals(earned.size, field.getInt(screen))
+    }
+
     @Test
     fun `Garden return moment is consumed only after its first rendered frame`() {
         val before = ReturnMomentState(

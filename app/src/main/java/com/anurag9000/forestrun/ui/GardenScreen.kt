@@ -359,14 +359,14 @@ class GardenScreen internal constructor(
         unlockedCount = SaveManager.loadGardenProgress(context).coerceIn(1, catalogue.size)
         lifeSeeds = SaveManager.loadLifetimeSeeds(context).coerceAtLeast(0)
         syncWardrobe()
-        refreshStats(prepareReturnMomentAcknowledgement = false)
+        refreshStats(enteringGarden = false)
     }
 
     fun refresh() {
         unlockedCount = SaveManager.loadGardenProgress(context).coerceIn(1, catalogue.size)
         lifeSeeds = SaveManager.loadLifetimeSeeds(context).coerceAtLeast(0)
         syncWardrobe()
-        refreshStats(prepareReturnMomentAcknowledgement = true)
+        refreshStats(enteringGarden = true)
     }
 
     fun update(deltaTime: Float) {
@@ -416,7 +416,7 @@ class GardenScreen internal constructor(
                     wardrobeMessage = CostumeManager.activePresentation(context)?.activeLine
                         ?: "${style.displayName} equipped"
                     wardrobeMessageTimer = 2.5f
-                    refreshStats(prepareReturnMomentAcknowledgement = false)
+                    refreshStats(enteringGarden = false)
                 }
             } else {
                 wardrobeMessage = style.unlockLabel
@@ -811,7 +811,7 @@ class GardenScreen internal constructor(
         wardrobeCardPaint.alpha = 255
     }
 
-    private fun refreshStats(prepareReturnMomentAcknowledgement: Boolean) {
+    private fun refreshStats(enteringGarden: Boolean) {
         bestDistance = SaveManager.loadBestDistance(context)
         lastKillerLabel = PersistentMemoryManager.getLastKiller(context)?.let { formatEntityName(it) } ?: "None"
         sparedTotal = PersistentMemoryManager.getSparedCount(context, EntityType.CAT) +
@@ -821,10 +821,29 @@ class GardenScreen internal constructor(
         lastRunSummary = SaveManager.loadLastRunSummary(context)
         forestMoodState = ForestMoodSystem.currentState(context)
         returnMoment = ReturnMomentsSystem.previewGardenMoment(context, lastRunSummary)
-        if (prepareReturnMomentAcknowledgement) {
+        if (enteringGarden) {
             returnMomentPendingAcknowledgement = returnMoment != null
         }
         val strongestBond = RelationshipArcSystem.strongestRelationship(context)
+        gardenReflectionLine = if (enteringGarden) {
+            StoryFragmentSystem.gardenReflection(context, lastRunSummary)
+        } else {
+            StoryFragmentSystem.previewGardenReflection(context, lastRunSummary)
+        }.orEmpty()
+        weatherThoughtLine = if (enteringGarden) {
+            StoryFragmentSystem.weatherThought(context, lastRunSummary)
+        } else {
+            StoryFragmentSystem.previewWeatherThought(context, lastRunSummary)
+        }
+        creatureThoughtLine = if (enteringGarden) {
+            StoryFragmentSystem.creatureThought(context, strongestBond?.first)
+        } else {
+            StoryFragmentSystem.previewCreatureThought(context, strongestBond?.first)
+        }.orEmpty()
+
+        // Story helpers above may earn persistent Garden-context pages. Build
+        // every projection only after those writes so this frame is coherent.
+        memoryPageCount = StoryFragmentSystem.memoryPageCount(context)
         sanctuaryState = GardenSanctuaryPlanner.build(context, lastRunSummary)
         returnVisitorSprite = (returnMoment?.visitor ?: sanctuaryState.featuredVisitor ?: strongestBond?.first)?.let(::spriteForVisitor)
         strongestBondLabel = strongestBond?.let { "${formatEntityName(it.first)} ${it.second.displayName}" } ?: "None"
@@ -840,10 +859,6 @@ class GardenScreen internal constructor(
         costumeSignLabel = sanctuaryState.featuredCostumeLabel.ifBlank { "None" }
         costumeSignLine = sanctuaryState.featuredCostumeLine.orEmpty()
         activeCostumeLine = sanctuaryState.activeCostumeLine.orEmpty()
-        memoryPageCount = StoryFragmentSystem.memoryPageCount(context)
-        gardenReflectionLine = StoryFragmentSystem.gardenReflection(context, lastRunSummary).orEmpty()
-        weatherThoughtLine = StoryFragmentSystem.weatherThought(context, lastRunSummary)
-        creatureThoughtLine = StoryFragmentSystem.creatureThought(context, strongestBond?.first).orEmpty()
         arrivalLine = SessionArcComposer.gardenArrivalLine(lastRunSummary, returnMoment, sanctuaryState)
         reflectionEntries = PostRunReflectionPlanner.gardenEntries(
             summary = lastRunSummary,
