@@ -321,6 +321,8 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var accessibilitySettingsOpen = false
     private val accessibilityManager = context.getSystemService(AccessibilityManager::class.java)
     private val accessibilityAnnouncementPolicy = AccessibilityAnnouncementPolicy()
+    private val accessibilityGameplayAvailabilityTracker =
+        AccessibilityGameplayActionAvailabilityTracker()
     // Delayed accessibility Duck release is owned by the activation that
     // created it. Any later Duck input or run/session transition cancels it.
     private val accessibilityDuckReleaseGate = LatestRequestGate()
@@ -883,10 +885,43 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     private fun notifyAccessibilityTreeChanged() {
         val manager = accessibilityManager ?: return
-        if (!manager.isEnabled) return
+        if (!manager.isEnabled) {
+            accessibilityGameplayAvailabilityTracker.clear()
+            return
+        }
+        accessibilityGameplayAvailabilityTracker.reset(
+            currentAccessibilityGameplayActionAvailability()
+        )
         gameAccessibilityNodeProvider.notifySemanticTreeChanged()
         if (manager.isTouchExplorationEnabled) {
             announceAccessibilitySnapshot(buildAccessibilitySnapshot())
+        }
+    }
+
+    private fun currentAccessibilityGameplayActionAvailability():
+        AccessibilityGameplayActionAvailability {
+        val live = acceptsGameplayInput() && ::player.isInitialized
+        return AccessibilityGameplayActionAvailability(
+            jumpEnabled = live && player.canStartJump,
+            duckEnabled = live && player.canStartDuck
+        )
+    }
+
+    private fun refreshAccessibilityGameplayActionAvailability() {
+        val manager = accessibilityManager ?: return
+        if (!manager.isEnabled) {
+            accessibilityGameplayAvailabilityTracker.clear()
+            return
+        }
+        val changes = accessibilityGameplayAvailabilityTracker.observe(
+            currentAccessibilityGameplayActionAvailability()
+        )
+        if (changes.jumpChanged) {
+            gameAccessibilityNodeProvider.notifyNodeChanged(AccessibilityNodeIds.RUN_JUMP)
+            gameAccessibilityNodeProvider.notifyNodeChanged(AccessibilityNodeIds.RUN_LONG_JUMP)
+        }
+        if (changes.duckChanged) {
+            gameAccessibilityNodeProvider.notifyNodeChanged(AccessibilityNodeIds.RUN_DUCK)
         }
     }
 
@@ -1036,7 +1071,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
         inputHandler.onDuckPressed = {
             if (acceptsGameplayInput()) {
-                accessibilityDuckReleaseGate.cancel()
+                // A rejected repeat press while already DUCKING must not
+                // cancel the release owner of the stance that is still live.
+                if (player.canStartDuck) accessibilityDuckReleaseGate.cancel()
                 if (::gameState.isInitialized) gameState.recordDuckInput()
                 player.onDuckPressed()
             }
@@ -1426,6 +1463,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         // Phase 14: Update all particles
         ParticleManager.update(deltaTime)
+
+        // Player stance can enable/disable semantic gameplay actions without a
+        // top-level surface transition. Publish only actual capability changes.
+        refreshAccessibilityGameplayActionAvailability()
 
         // Screen-reader run status is sampled, then coalesced by the policy into
         // surface/Bloom changes or spaced distance milestones. Never announce

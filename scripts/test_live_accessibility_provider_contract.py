@@ -109,12 +109,50 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
         )
 
         self.assertIn("accessibilityDuckReleaseGate.cancel()", self.game_view)
+        input_start = self.game_view.index("inputHandler.onDuckPressed = {")
+        input_end = self.game_view.index("inputHandler.onDuckReleased = {", input_start)
+        input_duck = self.game_view[input_start:input_end]
+        self.assertLess(
+            input_duck.index("player.canStartDuck"),
+            input_duck.index("accessibilityDuckReleaseGate.cancel()"),
+        )
         self.assertIn("jumpEnabled = surface == AccessibilitySurface.PLAYING", self.game_view)
         self.assertIn("player.canStartJump", self.game_view)
         self.assertIn("duckEnabled = surface == AccessibilitySurface.PLAYING", self.game_view)
         self.assertIn("player.canStartDuck", self.game_view)
         self.assertIn("enabled = snapshot.jumpEnabled", self.semantics)
         self.assertIn("enabled = snapshot.duckEnabled", self.semantics)
+
+    def test_gameplay_action_availability_changes_invalidate_only_affected_nodes(self) -> None:
+        self.assertIn(
+            "AccessibilityGameplayActionAvailabilityTracker()",
+            self.game_view,
+        )
+        self.assertIn(
+            "refreshAccessibilityGameplayActionAvailability()",
+            self.game_view,
+        )
+        self.assertIn(
+            "notifyNodeChanged(AccessibilityNodeIds.RUN_JUMP)",
+            self.game_view,
+        )
+        self.assertIn(
+            "notifyNodeChanged(AccessibilityNodeIds.RUN_LONG_JUMP)",
+            self.game_view,
+        )
+        self.assertIn(
+            "notifyNodeChanged(AccessibilityNodeIds.RUN_DUCK)",
+            self.game_view,
+        )
+        refresh = self.game_view.index(
+            "private fun refreshAccessibilityGameplayActionAvailability()"
+        )
+        announce = self.game_view.index(
+            "private fun updateAccessibilityAnnouncements()", refresh
+        )
+        body = self.game_view[refresh:announce]
+        self.assertIn("changes.jumpChanged", body)
+        self.assertIn("changes.duckChanged", body)
 
     def test_live_actions_route_to_real_owners_and_shared_persistence_facade(self) -> None:
         required = (
