@@ -1034,7 +1034,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private fun performAccessibilityPlantPurchase(index: Int): Boolean {
         if (appState != AppGameState.GARDEN || !::gardenScreen.isInitialized) return false
         val result = applicationPersistence.purchaseNextGardenPlant(index)
-        gardenScreen.load()
+        gardenScreen.adoptPurchaseResult(index, result)
         if (result.purchased) notifyAccessibilityTreeChanged()
         return result.purchased
     }
@@ -1043,7 +1043,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (appState != AppGameState.GARDEN || !::gardenScreen.isInitialized) return false
         val equipped = applicationPersistence.equipCostume(style)
         if (equipped) {
-            gardenScreen.load()
+            gardenScreen.adoptCommittedCostume(style)
             notifyAccessibilityTreeChanged()
         }
         return equipped

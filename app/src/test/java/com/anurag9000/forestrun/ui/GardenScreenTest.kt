@@ -99,6 +99,49 @@ class GardenScreenTest {
         bitmap.recycle()
     }
 
+
+    @Test
+    fun `post-commit purchase adopter gives semantic path the same growth presentation`() {
+        SaveManager.saveLifetimeSeeds(context, 50)
+        SaveManager.saveGardenProgress(context, 1)
+        val screen = GardenScreen(context, spriteManager, 1_920, 1_080)
+        screen.load()
+        val result = com.anurag9000.forestrun.engine.GardenPurchaseManager.purchaseNext(
+            context,
+            requestedIndex = 1
+        )
+        assertTrue(result.purchased)
+        assertNull(ParticleManager.cachedOneShotEmitterForTest(FxPreset.SEED_COLLECT))
+
+        screen.adoptPurchaseResult(1, result)
+
+        val unlockIdx = screen.javaClass.getDeclaredField("unlockIdx").apply { isAccessible = true }
+        val unlockAnim = screen.javaClass.getDeclaredField("unlockAnim").apply { isAccessible = true }
+        assertEquals(1, unlockIdx.getInt(screen))
+        assertEquals(0f, unlockAnim.getFloat(screen), 0f)
+        screen.update(1f / 60f)
+        assertNotNull(ParticleManager.cachedOneShotEmitterForTest(FxPreset.SEED_COLLECT))
+        assertEquals(2, SaveManager.loadGardenProgress(context))
+        assertEquals(30, SaveManager.loadLifetimeSeeds(context))
+    }
+
+    @Test
+    fun `post-commit costume adopter preserves touch wardrobe confirmation`() {
+        repeat(3) { SaveManager.incrementSparedCount(context, EntityType.CAT) }
+        CostumeManager.refreshUnlocks(context)
+        assertTrue(CostumeManager.equip(context, CostumeStyle.FLOWER_CROWN))
+        val screen = GardenScreen(context, spriteManager, 1_920, 1_080)
+        screen.load()
+
+        screen.adoptCommittedCostume(CostumeStyle.FLOWER_CROWN)
+
+        val message = screen.javaClass.getDeclaredField("wardrobeMessage").apply { isAccessible = true }
+        val timer = screen.javaClass.getDeclaredField("wardrobeMessageTimer").apply { isAccessible = true }
+        assertTrue((message.get(screen) as String).isNotBlank())
+        assertEquals(2.5f, timer.getFloat(screen), 0f)
+        assertEquals(CostumeStyle.FLOWER_CROWN, SaveManager.loadActiveCostume(context))
+    }
+
     @Test
     fun `unlocking next plant spends seeds and defers particles to update`() {
         SaveManager.saveLifetimeSeeds(context, 50)

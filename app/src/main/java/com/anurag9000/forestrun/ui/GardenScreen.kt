@@ -413,11 +413,7 @@ class GardenScreen internal constructor(
             val style = CostumeStyle.entries[index]
             if (style == CostumeStyle.NONE || style in unlockedCostumes) {
                 if (persistenceFacade.equipCostume(style)) {
-                    activeCostume = style
-                    wardrobeMessage = CostumeManager.activePresentation(context)?.activeLine
-                        ?: "${style.displayName} equipped"
-                    wardrobeMessageTimer = 2.5f
-                    refreshStats(enteringGarden = false)
+                    adoptCommittedCostume(style)
                 }
             } else {
                 wardrobeMessage = style.unlockLabel
@@ -438,18 +434,48 @@ class GardenScreen internal constructor(
                 tapY in cy - CARD_H / 2f..cy + CARD_H / 2f) {
                 if (i == unlockedCount) {
                     val result = purchaseInteraction.purchase(i)
-                    unlockedCount = result.unlockedCount.coerceIn(1, catalogue.size)
-                    lifeSeeds = result.remainingSeeds.coerceAtLeast(0)
-                    if (result.purchased) {
-                        unlockIdx = i
-                        unlockAnim = 0f
-                        ParticleManager.emit(FxPreset.SEED_COLLECT, cx, cy)
-                    }
+                    adoptPurchaseResult(i, result)
                 }
                 return true
             }
         }
         return false
+    }
+
+
+    /**
+     * Applies only presentation/local-cache consequences of an already-owned
+     * canonical purchase. It never spends Seeds and never emits the growth
+     * haptic; those remain with the caller's persistence/feedback owner.
+     */
+    internal fun adoptPurchaseResult(
+        requestedIndex: Int,
+        result: com.anurag9000.forestrun.engine.GardenPurchaseResult
+    ) {
+        unlockedCount = result.unlockedCount.coerceIn(1, catalogue.size)
+        lifeSeeds = result.remainingSeeds.coerceAtLeast(0)
+        if (!result.purchased || requestedIndex !in catalogue.indices) return
+
+        unlockIdx = requestedIndex
+        unlockAnim = 0f
+        val card = layoutPlan.plantCards[requestedIndex]
+        ParticleManager.emit(
+            FxPreset.SEED_COLLECT,
+            (card.left + card.right) * 0.5f,
+            (card.top + card.bottom) * 0.5f
+        )
+    }
+
+    /**
+     * Applies Garden presentation after CostumeManager has already committed
+     * the selected style. Both touch and semantic accessibility use this.
+     */
+    internal fun adoptCommittedCostume(style: CostumeStyle) {
+        activeCostume = style
+        wardrobeMessage = CostumeManager.activePresentation(context)?.activeLine
+            ?: "${style.displayName} equipped"
+        wardrobeMessageTimer = 2.5f
+        refreshStats(enteringGarden = false)
     }
 
     fun draw(canvas: Canvas) {
