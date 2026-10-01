@@ -299,6 +299,10 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
         self.assertEqual("no_retained_trainable_surface", payload["classification"])
         self.assertEqual("pass", payload["status"])
         self.assertFalse(payload["ordinary_application_registries_are_training_surfaces"])
+        scan_digest = payload["scan"]["source_manifest_sha256"]
+        dataset_digest = payload["dataset_cohorts"]["source_manifest_sha256"]
+        self.assertEqual(scan_digest, dataset_digest)
+        self.assertRegex(scan_digest, r"^[0-9a-f]{64}$")
 
 
 if __name__ == "__main__":
