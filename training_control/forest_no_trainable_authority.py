@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import hashlib
+import os
 import re
 from typing import Iterable
 
@@ -74,6 +76,7 @@ class Audit:
     scanned_files: tuple[str, ...]
     findings: tuple[Finding, ...]
     android_dependencies: tuple[str, ...]
+    source_manifest_sha256: str
 
     @property
     def complete(self) -> bool:
@@ -87,6 +90,7 @@ class Audit:
             "scanned_files": list(self.scanned_files),
             "findings": [asdict(row) for row in self.findings],
             "android_dependencies": list(self.android_dependencies),
+            "source_manifest_sha256": self.source_manifest_sha256,
             "complete": self.complete,
             "wildcard_training_exemptions": False,
             "source_configuration_only": True,
@@ -107,6 +111,38 @@ def _files(root: Path = ROOT) -> Iterable[Path]:
             continue
         if path.suffix.lower() in SOURCE_SUFFIXES or path.name in {"build.gradle.kts", "settings.gradle.kts", "gradle.properties"}:
             yield path
+
+
+def _source_manifest_sha256(root: Path, scanned_files: Iterable[str]) -> str:
+    """Hash the exact audited path+byte stream in deterministic path order."""
+    digest = hashlib.sha256()
+    for relative in sorted(scanned_files):
+        encoded = relative.encode("utf-8")
+        payload = (root / relative).read_bytes()
+        digest.update(len(encoded).to_bytes(8, "big"))
+        digest.update(encoded)
+        digest.update(len(payload).to_bytes(8, "big"))
+        digest.update(payload)
+    return digest.hexdigest()
+
+
+def _symlink_findings(root: Path = ROOT) -> tuple[Finding, ...]:
+    """Repository source provenance must never depend on out-of-tree targets."""
+    findings: list[Finding] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_symlink():
+            continue
+        relative = path.relative_to(root)
+        if any(part in SKIP_PARTS for part in relative.parts):
+            continue
+        try:
+            target = os.readlink(path)
+        except OSError:
+            target = "<unreadable>"
+        findings.append(Finding(
+            relative.as_posix(), 0, "symlink-source", str(target)[:240]
+        ))
+    return tuple(findings)
 
 
 def _dependencies(root: Path = ROOT) -> tuple[str, ...]:
@@ -150,7 +186,14 @@ def audit(root: Path = ROOT) -> Audit:
                         Finding(relative, line_number, category, line.strip()[:240])
                     )
     findings.extend(_model_artifact_findings(root))
-    return Audit(tuple(scanned), tuple(findings), _dependencies(root))
+    findings.extend(_symlink_findings(root))
+    scanned_tuple = tuple(scanned)
+    return Audit(
+        scanned_tuple,
+        tuple(findings),
+        _dependencies(root),
+        _source_manifest_sha256(root, scanned_tuple),
+    )
 
 
 def require_no_trainable_surface(root: Path = ROOT) -> Audit:
@@ -165,6 +208,15 @@ def require_no_trainable_surface(root: Path = ROOT) -> Audit:
         raise RuntimeError(
             "Forest_Run no-training authority cannot certify an incomplete "
             "Android source tree: " + ", ".join(missing)
+        )
+    linked_required = [
+        relative for relative in REQUIRED_APPLICATION_FILES
+        if (root / relative).is_symlink()
+    ]
+    if linked_required:
+        raise RuntimeError(
+            "Forest_Run no-training authority requires repository-owned regular "
+            "application files, not symlinks: " + ", ".join(linked_required)
         )
     result = audit(root)
     if not any(name.startswith("app/src/main/") and name.endswith(".kt")
