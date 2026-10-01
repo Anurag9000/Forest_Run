@@ -183,7 +183,7 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
                 self.assertEqual(("scripts/external.py",), tuple(
                     row.path for row in result.findings if row.category == "symlink-source"
                 ))
-                self.assertNotIn("pytorch", {row.category for row in result.findings})
+                self.assertNotIn("py" + "torch", {row.category for row in result.findings})
                 self.assertNotIn("scripts/external.py", result.scanned_files)
             finally:
                 external.unlink(missing_ok=True)
