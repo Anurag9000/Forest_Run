@@ -117,21 +117,13 @@ def _files(root: Path = ROOT) -> Iterable[Path]:
             yield path
 
 
-def _source_manifest_sha256(root: Path, scanned_files: Iterable[str]) -> str:
-    """Hash the exact audited path+byte stream in deterministic path order."""
-    digest = hashlib.sha256()
-    for relative in sorted(scanned_files):
-        encoded = relative.encode("utf-8")
-        source = root / relative
-        if source.is_symlink():
-            payload = ("SYMLINK:" + os.readlink(source)).encode("utf-8")
-        else:
-            payload = source.read_bytes()
-        digest.update(len(encoded).to_bytes(8, "big"))
-        digest.update(encoded)
-        digest.update(len(payload).to_bytes(8, "big"))
-        digest.update(payload)
-    return digest.hexdigest()
+def _manifest_update(digest: "hashlib._Hash", relative: str, payload: bytes) -> None:
+    """Bind exactly the same bytes that are parsed by the source scanner."""
+    encoded = relative.encode("utf-8")
+    digest.update(len(encoded).to_bytes(8, "big"))
+    digest.update(encoded)
+    digest.update(len(payload).to_bytes(8, "big"))
+    digest.update(payload)
 
 
 def _symlink_findings(root: Path = ROOT) -> tuple[Finding, ...]:
@@ -181,12 +173,16 @@ def _model_artifact_findings(root: Path = ROOT) -> tuple[Finding, ...]:
 
 
 def audit(root: Path = ROOT) -> Audit:
+    root = Path(root).resolve()
     scanned: list[str] = []
     findings: list[Finding] = []
+    manifest = hashlib.sha256()
     for path in _files(root):
         relative = path.relative_to(root).as_posix()
+        payload = path.read_bytes()
         scanned.append(relative)
-        text = path.read_text(encoding="utf-8", errors="replace")
+        _manifest_update(manifest, relative, payload)
+        text = payload.decode("utf-8", errors="replace")
         for line_number, line in enumerate(text.splitlines(), 1):
             for category, pattern in FORBIDDEN_PATTERNS:
                 if pattern.search(line):
@@ -195,12 +191,11 @@ def audit(root: Path = ROOT) -> Audit:
                     )
     findings.extend(_model_artifact_findings(root))
     findings.extend(_symlink_findings(root))
-    scanned_tuple = tuple(scanned)
     return Audit(
-        scanned_tuple,
+        tuple(scanned),
         tuple(findings),
         _dependencies(root),
-        _source_manifest_sha256(root, scanned_tuple),
+        manifest.hexdigest(),
     )
 
 
