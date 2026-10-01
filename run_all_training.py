@@ -67,7 +67,9 @@ def _atomic_json(path: Path, payload: dict[str, object]) -> None:
 
 def build_certificate() -> dict[str, object]:
     audit = require_no_trainable_surface(ROOT)
-    dataset = dataset_certificate(ROOT)
+    dataset = dataset_certificate(ROOT, audit_result=audit)
+    if dataset["source_manifest_sha256"] != audit.source_manifest_sha256:
+        raise RuntimeError("Forest Run certificate source snapshot mismatch")
     return {
         "schema_version": 2,
         "repository": REPOSITORY,
