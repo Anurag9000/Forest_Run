@@ -202,7 +202,8 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
 
     def test_state_mutation_owners_publish_semantic_tree_changes(self) -> None:
         self.assertIn("notifyAccessibilityTreeChanged()", self.game_view)
-        self.assertIn("if (!manager.isEnabled) return", self.game_view)
+        self.assertIn("if (!manager.isEnabled) {", self.game_view)
+        self.assertIn("accessibilityGameplayAvailabilityTracker.clear()", self.game_view)
         self.assertNotIn("notifySemanticTreeChanged()\n        return true", self.provider)
 
     def test_live_announcements_are_touch_exploration_only_sampled_and_coalesced(self) -> None:
