@@ -103,6 +103,10 @@ def _files(root: Path = ROOT) -> Iterable[Path]:
         if not path.is_file():
             continue
         relative = path.relative_to(root)
+        # Symlink provenance is classified separately; never dereference a
+        # source symlink while scanning for training semantics.
+        if path.is_symlink():
+            continue
         # Only the root audit entrypoint is exempt. A newly introduced nested
         # script with the same filename must still be inspected for optimizers.
         if relative.as_posix() == "run_all_training.py":
@@ -118,7 +122,11 @@ def _source_manifest_sha256(root: Path, scanned_files: Iterable[str]) -> str:
     digest = hashlib.sha256()
     for relative in sorted(scanned_files):
         encoded = relative.encode("utf-8")
-        payload = (root / relative).read_bytes()
+        source = root / relative
+        if source.is_symlink():
+            payload = ("SYMLINK:" + os.readlink(source)).encode("utf-8")
+        else:
+            payload = source.read_bytes()
         digest.update(len(encoded).to_bytes(8, "big"))
         digest.update(encoded)
         digest.update(len(payload).to_bytes(8, "big"))
