@@ -902,6 +902,32 @@ class ReturnMomentsSystemTest {
         assertTrue(moment?.line?.contains("kind", ignoreCase = true) == true || moment?.line?.contains("home", ignoreCase = true) == true)
     }
 
+
+    @Test
+    fun `preview remains repeatable until the Garden acknowledges actual presentation`() {
+        val nowMs = 8L * 24L * 60L * 60L * 1_000L
+        val before = ReturnMomentState(
+            lastActiveAtMs = 123L,
+            lastGardenGreetingDay = -1L,
+            roughRunStreak = 2
+        )
+        SaveManager.saveReturnMomentState(context, before)
+
+        val firstPreview = ReturnMomentsSystem.previewGardenMoment(context, null, nowMs)
+        val secondPreview = ReturnMomentsSystem.previewGardenMoment(context, null, nowMs)
+
+        assertEquals("Welcome Back", firstPreview?.title)
+        assertEquals(firstPreview, secondPreview)
+        assertEquals(before, SaveManager.loadReturnMomentState(context))
+
+        ReturnMomentsSystem.acknowledgeGardenMomentShown(context, nowMs)
+
+        val after = SaveManager.loadReturnMomentState(context)
+        assertEquals(nowMs, after.lastActiveAtMs)
+        assertEquals(2, after.roughRunStreak)
+        assertNull(ReturnMomentsSystem.previewGardenMoment(context, null, nowMs + 1_000L))
+    }
+
     @Test
     fun `preview garden moment does not mutate saved return state`() {
         val before = ReturnMomentState(lastActiveAtMs = 123L, lastGardenGreetingDay = 4L, roughRunStreak = 1)

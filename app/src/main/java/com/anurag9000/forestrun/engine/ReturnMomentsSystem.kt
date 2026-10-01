@@ -40,21 +40,44 @@ object ReturnMomentsSystem {
         context: Context,
         summary: RunSummary?,
         nowMs: Long = System.currentTimeMillis()
-    ): ReturnMoment? =
-        buildGardenMoment(context.applicationContext, summary, nowMs, persist = true)
+    ): ReturnMoment? {
+        val moment = previewGardenMoment(context, summary, nowMs)
+        if (moment != null) {
+            acknowledgeGardenMomentShown(context, nowMs)
+        }
+        return moment
+    }
 
     fun previewGardenMoment(
         context: Context,
         summary: RunSummary?,
         nowMs: Long = System.currentTimeMillis()
     ): ReturnMoment? =
-        buildGardenMoment(context.applicationContext, summary, nowMs, persist = false)
+        buildGardenMoment(context.applicationContext, summary, nowMs)
+
+    /**
+     * Advances the return-greeting cursor only after presentation has actually
+     * been emitted by the Garden owner. Callers must not use this for preview.
+     */
+    fun acknowledgeGardenMomentShown(
+        context: Context,
+        nowMs: Long = System.currentTimeMillis()
+    ) {
+        val appContext = context.applicationContext
+        val previous = SaveManager.loadReturnMomentState(appContext)
+        SaveManager.saveReturnMomentState(
+            appContext,
+            previous.copy(
+                lastActiveAtMs = nowMs.coerceAtLeast(0L),
+                lastGardenGreetingDay = localCalendarDayId(nowMs)
+            )
+        )
+    }
 
     private fun buildGardenMoment(
         appContext: Context,
         summary: RunSummary?,
-        nowMs: Long,
-        persist: Boolean
+        nowMs: Long
     ): ReturnMoment? {
         val previous = SaveManager.loadReturnMomentState(appContext)
         val dayId = localCalendarDayId(nowMs)
@@ -404,15 +427,6 @@ object ReturnMomentsSystem {
             else -> null
         }
 
-        if (persist) {
-            SaveManager.saveReturnMomentState(
-                appContext,
-                previous.copy(
-                    lastActiveAtMs = nowMs,
-                    lastGardenGreetingDay = dayId
-                )
-            )
-        }
         return moment
     }
 

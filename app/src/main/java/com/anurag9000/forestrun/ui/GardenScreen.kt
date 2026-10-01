@@ -138,6 +138,7 @@ class GardenScreen internal constructor(
     private var lastRunSummary: RunSummary? = null
     private var forestMoodState: ForestMoodState = ForestMoodState()
     private var returnMoment: ReturnMoment? = null
+    private var returnMomentPendingAcknowledgement = false
     private var returnVisitorSprite: SpriteSheet? = null
     private var strongestBondLabel = "None"
     private var milestoneRewardLabel = "None"
@@ -358,14 +359,14 @@ class GardenScreen internal constructor(
         unlockedCount = SaveManager.loadGardenProgress(context).coerceIn(1, catalogue.size)
         lifeSeeds = SaveManager.loadLifetimeSeeds(context).coerceAtLeast(0)
         syncWardrobe()
-        refreshStats(consumeReturnMoment = false)
+        refreshStats(prepareReturnMomentAcknowledgement = false)
     }
 
     fun refresh() {
         unlockedCount = SaveManager.loadGardenProgress(context).coerceIn(1, catalogue.size)
         lifeSeeds = SaveManager.loadLifetimeSeeds(context).coerceAtLeast(0)
         syncWardrobe()
-        refreshStats(consumeReturnMoment = true)
+        refreshStats(prepareReturnMomentAcknowledgement = true)
     }
 
     fun update(deltaTime: Float) {
@@ -415,7 +416,7 @@ class GardenScreen internal constructor(
                     wardrobeMessage = CostumeManager.activePresentation(context)?.activeLine
                         ?: "${style.displayName} equipped"
                     wardrobeMessageTimer = 2.5f
-                    refreshStats(consumeReturnMoment = false)
+                    refreshStats(prepareReturnMomentAcknowledgement = false)
                 }
             } else {
                 wardrobeMessage = style.unlockLabel
@@ -482,6 +483,12 @@ class GardenScreen internal constructor(
             canvas.drawText(moment.title, cw / 2f, ch * 0.16f, returnTitlePaint)
             drawWrappedCenteredText(canvas, moment.line, cw / 2f, ch * 0.182f, cw * 0.60f, returnLinePaint)
             drawReturnVisitor(canvas, cw, ch)
+            // Consumption follows successful presentation commands. Merely
+            // entering/refreshing Garden must not burn an unseen return moment.
+            if (returnMomentPendingAcknowledgement) {
+                ReturnMomentsSystem.acknowledgeGardenMomentShown(context)
+                returnMomentPendingAcknowledgement = false
+            }
         }
         if (returnMoment == null && sanctuaryState.featuredVisitor != null && sanctuaryState.featuredVisitorLine.isNotBlank()) {
             if (sanctuaryState.featuredVisitorTitle.isNotBlank()) {
@@ -804,7 +811,7 @@ class GardenScreen internal constructor(
         wardrobeCardPaint.alpha = 255
     }
 
-    private fun refreshStats(consumeReturnMoment: Boolean) {
+    private fun refreshStats(prepareReturnMomentAcknowledgement: Boolean) {
         bestDistance = SaveManager.loadBestDistance(context)
         lastKillerLabel = PersistentMemoryManager.getLastKiller(context)?.let { formatEntityName(it) } ?: "None"
         sparedTotal = PersistentMemoryManager.getSparedCount(context, EntityType.CAT) +
@@ -813,10 +820,9 @@ class GardenScreen internal constructor(
         friendshipTotal = Biome.entries.sumOf { PersistentMemoryManager.getBiomeFriendship(context, it) }
         lastRunSummary = SaveManager.loadLastRunSummary(context)
         forestMoodState = ForestMoodSystem.currentState(context)
-        returnMoment = if (consumeReturnMoment) {
-            ReturnMomentsSystem.resolveGardenMoment(context, lastRunSummary)
-        } else {
-            ReturnMomentsSystem.previewGardenMoment(context, lastRunSummary)
+        returnMoment = ReturnMomentsSystem.previewGardenMoment(context, lastRunSummary)
+        if (prepareReturnMomentAcknowledgement) {
+            returnMomentPendingAcknowledgement = returnMoment != null
         }
         val strongestBond = RelationshipArcSystem.strongestRelationship(context)
         sanctuaryState = GardenSanctuaryPlanner.build(context, lastRunSummary)

@@ -1,8 +1,11 @@
 package com.anurag9000.forestrun.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.engine.CostumeManager
+import com.anurag9000.forestrun.engine.ReturnMomentState
 import com.anurag9000.forestrun.engine.SaveManager
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CostumeStyle
@@ -41,6 +44,36 @@ class GardenScreenTest {
     fun tearDown() {
         ParticleManager.resetOneShotEmitterCacheForTests()
         SaveManager.usePrimaryPreferences()
+    }
+
+
+    @Test
+    fun `Garden return moment is consumed only after its first rendered frame`() {
+        val before = ReturnMomentState(
+            lastActiveAtMs = 0L,
+            lastGardenGreetingDay = -1L,
+            roughRunStreak = 0
+        )
+        SaveManager.saveReturnMomentState(context, before)
+        val screen = GardenScreen(context, spriteManager, 960, 540)
+
+        screen.load()
+        screen.refresh()
+
+        // Entry and refresh prepare presentation but do not consume it.
+        assertEquals(before, SaveManager.loadReturnMomentState(context))
+
+        val bitmap = Bitmap.createBitmap(960, 540, Bitmap.Config.ARGB_8888)
+        screen.draw(Canvas(bitmap))
+
+        val afterFirstDraw = SaveManager.loadReturnMomentState(context)
+        assertTrue(afterFirstDraw.lastGardenGreetingDay >= 0L)
+        assertTrue(afterFirstDraw.lastActiveAtMs > 0L)
+
+        // Further frames do not create a second consumption transition.
+        screen.draw(Canvas(bitmap))
+        assertEquals(afterFirstDraw, SaveManager.loadReturnMomentState(context))
+        bitmap.recycle()
     }
 
     @Test
