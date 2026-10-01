@@ -151,6 +151,65 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
                 result.android_dependencies,
             )
 
+    def test_source_manifest_digest_is_stable_and_content_sensitive(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "scripts" / "ordinary_release.py"
+            source.parent.mkdir(parents=True)
+            source.write_text("value = 1\n", encoding="utf-8")
+            first = audit(root)
+            second = audit(root)
+            self.assertEqual(first.source_manifest_sha256, second.source_manifest_sha256)
+            self.assertRegex(first.source_manifest_sha256, r"^[0-9a-f]{64}$")
+            source.write_text("value = 2\n", encoding="utf-8")
+            third = audit(root)
+            self.assertNotEqual(first.source_manifest_sha256, third.source_manifest_sha256)
+
+    def test_symlinked_source_fails_without_dereferencing_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            external = root.parent / (root.name + "-external-trainer.py")
+            marker = "to" + "rch"
+            external.write_text(f"import {marker}\n", encoding="utf-8")
+            linked = root / "scripts" / "external.py"
+            linked.parent.mkdir(parents=True)
+            try:
+                linked.symlink_to(external)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+            try:
+                result = audit(root)
+                self.assertFalse(result.complete)
+                self.assertEqual(("scripts/external.py",), tuple(
+                    row.path for row in result.findings if row.category == "symlink-source"
+                ))
+                self.assertNotIn("pytorch", {row.category for row in result.findings})
+                self.assertNotIn("scripts/external.py", result.scanned_files)
+            finally:
+                external.unlink(missing_ok=True)
+
+    def test_required_application_file_symlink_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for relative in REQUIRED_APPLICATION_FILES:
+                file = root / relative
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_text(
+                    'implementation("androidx.core:core-ktx:1.13.1")\n'
+                    if relative == "app/build.gradle.kts" else "// retained app fixture\n",
+                    encoding="utf-8",
+                )
+            required = root / "app/src/main/java/com/anurag9000/forestrun/MainActivity.kt"
+            target = root / "MainActivity.real.kt"
+            target.write_text(required.read_text(encoding="utf-8"), encoding="utf-8")
+            required.unlink()
+            try:
+                required.symlink_to(target)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+            with self.assertRaisesRegex(RuntimeError, "not symlinks"):
+                require_no_trainable_surface(root)
+
     def test_empty_repository_cannot_be_certified_as_non_trainable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
