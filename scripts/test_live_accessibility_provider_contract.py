@@ -98,7 +98,17 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
         duck = self.game_view[duck_start:duck_end]
         self.assertLess(duck.index("player.canStartDuck"), duck.index("pressed.invoke()"))
         self.assertLess(duck.index("player.canStartDuck"), duck.index("postDelayed("))
+        self.assertLess(duck.index("pressed.invoke()"), duck.index("accessibilityDuckReleaseGate.begin()"))
+        self.assertLess(
+            duck.index("accessibilityDuckReleaseGate.isCurrent(releaseToken)"),
+            duck.index("released.invoke()"),
+        )
+        self.assertLess(
+            duck.index("player.state == PlayerState.DUCKING"),
+            duck.index("released.invoke()"),
+        )
 
+        self.assertIn("accessibilityDuckReleaseGate.cancel()", self.game_view)
         self.assertIn("jumpEnabled = surface == AccessibilitySurface.PLAYING", self.game_view)
         self.assertIn("player.canStartJump", self.game_view)
         self.assertIn("duckEnabled = surface == AccessibilitySurface.PLAYING", self.game_view)

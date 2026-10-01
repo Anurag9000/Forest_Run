@@ -321,6 +321,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var accessibilitySettingsOpen = false
     private val accessibilityManager = context.getSystemService(AccessibilityManager::class.java)
     private val accessibilityAnnouncementPolicy = AccessibilityAnnouncementPolicy()
+    // Delayed accessibility Duck release is owned by the activation that
+    // created it. Any later Duck input or run/session transition cancels it.
+    private val accessibilityDuckReleaseGate = LatestRequestGate()
     private val liveAccessibilityActions by lazy {
         LiveGameAccessibilityActions(
             menuPrimaryAction = ::performAccessibilityMenuPrimary,
@@ -765,6 +768,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         if (!result.mayAdoptAfterState) return false
         appState = result.transition.after.appState
         runState = result.transition.after.runState
+        accessibilityDuckReleaseGate.cancel()
         accessibilitySettingsOpen = false
         notifyAccessibilityTreeChanged()
         return true
@@ -971,10 +975,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         val pressed = inputHandler.onDuckPressed ?: return false
         val released = inputHandler.onDuckReleased ?: return false
         pressed.invoke()
+        // Capture ownership only after the real press callback. The shared
+        // callback invalidates any older delayed accessibility release.
+        val releaseToken = accessibilityDuckReleaseGate.begin()
         postDelayed(
             {
                 synchronized(runtimeStateLock) {
-                    if (acceptsGameplayInput()) released.invoke()
+                    if (
+                        accessibilityDuckReleaseGate.isCurrent(releaseToken) &&
+                        acceptsGameplayInput() &&
+                        player.state == PlayerState.DUCKING
+                    ) {
+                        accessibilityDuckReleaseGate.cancel()
+                        released.invoke()
+                    }
                 }
             },
             280L
@@ -1022,11 +1036,13 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }
         inputHandler.onDuckPressed = {
             if (acceptsGameplayInput()) {
+                accessibilityDuckReleaseGate.cancel()
                 if (::gameState.isInitialized) gameState.recordDuckInput()
                 player.onDuckPressed()
             }
         }
         inputHandler.onDuckReleased = {
+            accessibilityDuckReleaseGate.cancel()
             if (acceptsGameplayInput()) player.onDuckReleased()
         }
     }
