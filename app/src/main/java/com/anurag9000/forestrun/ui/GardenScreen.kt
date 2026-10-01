@@ -139,6 +139,7 @@ class GardenScreen internal constructor(
     private var forestMoodState: ForestMoodState = ForestMoodState()
     private var returnMoment: ReturnMoment? = null
     private var returnMomentPendingAcknowledgement = false
+    private var returnMomentPreparedAtMs = 0L
     private var returnVisitorSprite: SpriteSheet? = null
     private var strongestBondLabel = "None"
     private var milestoneRewardLabel = "None"
@@ -486,8 +487,12 @@ class GardenScreen internal constructor(
             // Consumption follows successful presentation commands. Merely
             // entering/refreshing Garden must not burn an unseen return moment.
             if (returnMomentPendingAcknowledgement) {
-                ReturnMomentsSystem.acknowledgeGardenMomentShown(context)
+                ReturnMomentsSystem.acknowledgeGardenMomentShown(
+                    context,
+                    nowMs = returnMomentPreparedAtMs
+                )
                 returnMomentPendingAcknowledgement = false
+                returnMomentPreparedAtMs = 0L
             }
         }
         if (returnMoment == null && sanctuaryState.featuredVisitor != null && sanctuaryState.featuredVisitorLine.isNotBlank()) {
@@ -820,9 +825,21 @@ class GardenScreen internal constructor(
         friendshipTotal = Biome.entries.sumOf { PersistentMemoryManager.getBiomeFriendship(context, it) }
         lastRunSummary = SaveManager.loadLastRunSummary(context)
         forestMoodState = ForestMoodSystem.currentState(context)
-        returnMoment = ReturnMomentsSystem.previewGardenMoment(context, lastRunSummary)
         if (enteringGarden) {
+            // Selection and later consumption are one logical presentation.
+            // Keep their local-day identity stable even if the first draw
+            // crosses midnight after this transition.
+            val preparedAtMs = System.currentTimeMillis().coerceAtLeast(0L)
+            returnMoment = ReturnMomentsSystem.previewGardenMoment(
+                context,
+                lastRunSummary,
+                nowMs = preparedAtMs
+            )
             returnMomentPendingAcknowledgement = returnMoment != null
+            returnMomentPreparedAtMs =
+                if (returnMomentPendingAcknowledgement) preparedAtMs else 0L
+        } else if (!returnMomentPendingAcknowledgement) {
+            returnMoment = ReturnMomentsSystem.previewGardenMoment(context, lastRunSummary)
         }
         val strongestBond = RelationshipArcSystem.strongestRelationship(context)
         gardenReflectionLine = if (enteringGarden) {

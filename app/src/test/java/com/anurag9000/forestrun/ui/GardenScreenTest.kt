@@ -81,13 +81,17 @@ class GardenScreenTest {
 
         // Entry and refresh prepare presentation but do not consume it.
         assertEquals(before, SaveManager.loadReturnMomentState(context))
+        val preparedField = screen.javaClass.getDeclaredField("returnMomentPreparedAtMs")
+        preparedField.isAccessible = true
+        val preparedAtMs = preparedField.getLong(screen)
+        assertTrue(preparedAtMs > 0L)
 
         val bitmap = Bitmap.createBitmap(960, 540, Bitmap.Config.ARGB_8888)
         screen.draw(Canvas(bitmap))
 
         val afterFirstDraw = SaveManager.loadReturnMomentState(context)
         assertTrue(afterFirstDraw.lastGardenGreetingDay >= 0L)
-        assertTrue(afterFirstDraw.lastActiveAtMs > 0L)
+        assertEquals(preparedAtMs, afterFirstDraw.lastActiveAtMs)
 
         // Further frames do not create a second consumption transition.
         screen.draw(Canvas(bitmap))
