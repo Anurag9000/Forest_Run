@@ -74,6 +74,19 @@ class Player(
     var state: PlayerState = PlayerState.RUNNING
         private set
 
+    /** True only when a fresh jump press can actually start locomotion. */
+    val canStartJump: Boolean
+        get() = state == PlayerState.RUNNING || state == PlayerState.LANDING
+
+    /**
+     * True only when a duck press can take ownership of the current stance.
+     * JUMP_START remains intentionally cancellable by duck gesture arbitration.
+     */
+    val canStartDuck: Boolean
+        get() = state == PlayerState.RUNNING ||
+            state == PlayerState.LANDING ||
+            state == PlayerState.JUMP_START
+
     private var stateTimer = 0f
     private var apexTimer = 0f
     private var presentationElapsed = 0f
@@ -147,7 +160,7 @@ class Player(
 
     /** Starts the jump immediately; release trims it to the requested height. */
     fun onJumpPressed() {
-        if (state != PlayerState.RUNNING && state != PlayerState.LANDING) return
+        if (!canStartJump) return
 
         y = groundY - BASE_HEIGHT
         velocityY = MAX_JUMP_FORCE
@@ -170,6 +183,7 @@ class Player(
     }
 
     fun onDuckPressed() {
+        if (!canStartDuck) return
         when (state) {
             PlayerState.RUNNING,
             PlayerState.LANDING -> transitionTo(PlayerState.DUCKING)

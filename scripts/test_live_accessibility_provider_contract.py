@@ -86,6 +86,26 @@ class LiveAccessibilityProviderContractTest(unittest.TestCase):
         self.assertIn("AccessibilitySurface.GARDEN", self.game_view)
         self.assertIn("AccessibilitySurface.REST", self.game_view)
 
+    def test_live_gameplay_actions_preflight_player_stance_before_callbacks(self) -> None:
+        jump_start = self.game_view.index("private fun performAccessibilityJump(")
+        jump_end = self.game_view.index("private fun performAccessibilityDuck()", jump_start)
+        jump = self.game_view[jump_start:jump_end]
+        self.assertLess(jump.index("player.canStartJump"), jump.index("pressed.invoke()"))
+        self.assertLess(jump.index("player.canStartJump"), jump.index("released.invoke("))
+
+        duck_start = jump_end
+        duck_end = self.game_view.index("private fun performAccessibilityPlantPurchase(", duck_start)
+        duck = self.game_view[duck_start:duck_end]
+        self.assertLess(duck.index("player.canStartDuck"), duck.index("pressed.invoke()"))
+        self.assertLess(duck.index("player.canStartDuck"), duck.index("postDelayed("))
+
+        self.assertIn("jumpEnabled = surface == AccessibilitySurface.PLAYING", self.game_view)
+        self.assertIn("player.canStartJump", self.game_view)
+        self.assertIn("duckEnabled = surface == AccessibilitySurface.PLAYING", self.game_view)
+        self.assertIn("player.canStartDuck", self.game_view)
+        self.assertIn("enabled = snapshot.jumpEnabled", self.semantics)
+        self.assertIn("enabled = snapshot.duckEnabled", self.semantics)
+
     def test_live_actions_route_to_real_owners_and_shared_persistence_facade(self) -> None:
         required = (
             "sessionEventAction = ::applyRunSessionEvent",

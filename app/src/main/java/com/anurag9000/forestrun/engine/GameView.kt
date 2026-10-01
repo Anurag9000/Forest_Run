@@ -838,6 +838,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
             seeds = gardenSeeds,
             bloomReady = bloomReady,
             bloomActive = bloomActive,
+            jumpEnabled = surface == AccessibilitySurface.PLAYING &&
+                ::player.isInitialized && player.canStartJump,
+            duckEnabled = surface == AccessibilitySurface.PLAYING &&
+                ::player.isInitialized && player.canStartDuck,
             gardenUnlockedPlants = gardenUnlocked,
             gardenTotalPlants = GardenEconomy.catalogueSize,
             nextPlantCost = nextPlantCost,
@@ -952,7 +956,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun performAccessibilityJump(holdSeconds: Float): Boolean {
-        if (!acceptsGameplayInput()) return false
+        if (!acceptsGameplayInput() || !::player.isInitialized || !player.canStartJump) return false
         val pressed = inputHandler.onJumpPressed ?: return false
         val released = inputHandler.onJumpReleased ?: return false
         pressed.invoke()
@@ -963,7 +967,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     private fun performAccessibilityDuck(): Boolean {
-        if (!acceptsGameplayInput()) return false
+        if (!acceptsGameplayInput() || !::player.isInitialized || !player.canStartDuck) return false
         val pressed = inputHandler.onDuckPressed ?: return false
         val released = inputHandler.onDuckReleased ?: return false
         pressed.invoke()

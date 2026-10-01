@@ -40,6 +40,42 @@ class PlayerBoundaryTest {
     }
 
     @Test
+    fun `action admission follows the same state authority as Player input`() {
+        val player = player()
+        assertTrue(player.canStartJump)
+        assertTrue(player.canStartDuck)
+
+        player.onJumpPressed()
+        assertEquals(PlayerState.JUMP_START, player.state)
+        assertFalse(player.canStartJump)
+        assertTrue(player.canStartDuck)
+
+        // Once launch becomes real flight, neither a second jump nor duck may
+        // claim this motion. A semantic action must therefore fail closed.
+        player.update(0.05f)
+        assertEquals(PlayerState.JUMPING, player.state)
+        assertFalse(player.canStartJump)
+        assertFalse(player.canStartDuck)
+
+        val velocityBeforeRejectedPress = player.velocityY
+        player.onJumpPressed()
+        player.onDuckPressed()
+        assertEquals(PlayerState.JUMPING, player.state)
+        assertEquals(velocityBeforeRejectedPress, player.velocityY, 0f)
+    }
+
+    @Test
+    fun `jump-start duck cancellation remains an admitted action`() {
+        val player = player()
+        player.onJumpPressed()
+        assertTrue(player.canStartDuck)
+        player.onDuckPressed()
+        assertEquals(PlayerState.DUCKING, player.state)
+        assertFalse(player.canStartJump)
+        assertFalse(player.canStartDuck)
+    }
+
+    @Test
     fun `invalid frame deltas do not mutate running Player`() {
         val player = player()
         val initialY = player.y

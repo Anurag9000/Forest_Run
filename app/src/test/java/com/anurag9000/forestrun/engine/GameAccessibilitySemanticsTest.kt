@@ -74,6 +74,41 @@ class GameAccessibilitySemanticsTest {
     }
 
     @Test
+    fun playingActionsReflectCurrentPlayerStanceAdmission() {
+        val airborne = GameAccessibilitySemantics.build(
+            AccessibilitySemanticSnapshot(
+                surface = AccessibilitySurface.PLAYING,
+                jumpEnabled = false,
+                duckEnabled = false
+            )
+        )
+        val airborneJump = airborne.single { it.id == AccessibilityNodeIds.RUN_JUMP }
+        val airborneLongJump = airborne.single { it.id == AccessibilityNodeIds.RUN_LONG_JUMP }
+        val airborneDuck = airborne.single { it.id == AccessibilityNodeIds.RUN_DUCK }
+        assertFalse(airborneJump.enabled)
+        assertFalse(airborneLongJump.enabled)
+        assertFalse(airborneDuck.enabled)
+        assertTrue(airborneJump.actions.isEmpty())
+        assertTrue(airborneLongJump.actions.isEmpty())
+        assertTrue(airborneDuck.actions.isEmpty())
+
+        val launchWindow = GameAccessibilitySemantics.build(
+            AccessibilitySemanticSnapshot(
+                surface = AccessibilitySurface.PLAYING,
+                jumpEnabled = false,
+                duckEnabled = true
+            )
+        )
+        assertTrue(
+            launchWindow.single { it.id == AccessibilityNodeIds.RUN_JUMP }.actions.isEmpty()
+        )
+        assertEquals(
+            setOf(AccessibilitySemanticAction.DUCK),
+            launchWindow.single { it.id == AccessibilityNodeIds.RUN_DUCK }.actions
+        )
+    }
+
+    @Test
     fun settingsDescribeCurrentBooleanState() {
         val nodes = GameAccessibilitySemantics.build(
             AccessibilitySemanticSnapshot(

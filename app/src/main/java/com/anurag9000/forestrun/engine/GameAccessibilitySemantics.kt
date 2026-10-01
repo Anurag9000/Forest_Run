@@ -67,6 +67,8 @@ internal data class AccessibilitySemanticSnapshot(
     val seeds: Int = 0,
     val bloomReady: Boolean = false,
     val bloomActive: Boolean = false,
+    val jumpEnabled: Boolean = true,
+    val duckEnabled: Boolean = true,
     val gardenUnlockedPlants: Int = 0,
     val gardenTotalPlants: Int = 9,
     val nextPlantCost: Int? = null,
@@ -198,23 +200,26 @@ internal object GameAccessibilitySemantics {
                         "${snapshot.seeds} Seeds, $bloom",
                 liveRegion = true
             ),
-            node(
+            actionNode(
                 id = AccessibilityNodeIds.RUN_JUMP,
                 order = 20,
                 label = "Jump",
-                action = AccessibilitySemanticAction.JUMP
+                action = AccessibilitySemanticAction.JUMP,
+                enabled = snapshot.jumpEnabled
             ),
-            node(
+            actionNode(
                 id = AccessibilityNodeIds.RUN_LONG_JUMP,
                 order = 30,
                 label = "Long jump",
-                action = AccessibilitySemanticAction.LONG_JUMP
+                action = AccessibilitySemanticAction.LONG_JUMP,
+                enabled = snapshot.jumpEnabled
             ),
-            node(
+            actionNode(
                 id = AccessibilityNodeIds.RUN_DUCK,
                 order = 40,
                 label = "Duck",
-                action = AccessibilitySemanticAction.DUCK
+                action = AccessibilitySemanticAction.DUCK,
+                enabled = snapshot.duckEnabled
             )
         )
     }
@@ -348,11 +353,20 @@ internal object GameAccessibilitySemantics {
         order: Int,
         label: String,
         action: AccessibilitySemanticAction
+    ): AccessibilitySemanticNode = actionNode(id, order, label, action, enabled = true)
+
+    private fun actionNode(
+        id: Int,
+        order: Int,
+        label: String,
+        action: AccessibilitySemanticAction,
+        enabled: Boolean
     ): AccessibilitySemanticNode = AccessibilitySemanticNode(
         id = id,
         focusOrder = order,
         label = label,
-        actions = setOf(action)
+        actions = if (enabled) setOf(action) else emptySet(),
+        enabled = enabled
     )
 
     private fun toggleNode(
