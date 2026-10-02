@@ -70,6 +70,8 @@ def build_certificate() -> dict[str, object]:
     dataset = dataset_certificate(ROOT, audit_result=audit)
     if dataset["source_manifest_sha256"] != audit.source_manifest_sha256:
         raise RuntimeError("Forest Run certificate source snapshot mismatch")
+    if dataset["scope_manifest_sha256"] != audit.scope_manifest_sha256:
+        raise RuntimeError("Forest Run certificate scope inventory mismatch")
     return {
         "schema_version": 2,
         "repository": REPOSITORY,
