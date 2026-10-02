@@ -67,6 +67,14 @@ class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
                     body.rindex("}"),
                 )
 
+        resize_policy = surface.index("SurfaceResizePolicy.requiresActivityRecreation(")
+        width_mutation = surface.index("screenWidth  = width")
+        callback = surface.index("post(onSurfaceResizeRequired)")
+        lock_end = surface.index("\n        }", surface.index("if (!requiresRecreation)"))
+        self.assertLess(resize_policy, width_mutation)
+        self.assertLess(lock_end, callback)
+        self.assertIn("if (!requiresRecreation)", surface)
+
         # The initial inert default is a separate constructor expression;
         # every subsequent transform replacement uses the shared helper.
         initialization = self.region(

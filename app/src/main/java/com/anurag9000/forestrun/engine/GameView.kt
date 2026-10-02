@@ -54,7 +54,10 @@ private const val GAME_THREAD_RESTART_RETRY_MS = 16L
  *  - Phase 6: [SpriteManager] loaded, passed to Player
  *  - Phase 12: [EntityManager] spawner + collision loop live
  */
-class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+class GameView(
+    context: Context,
+    private val onSurfaceResizeRequired: () -> Unit = {}
+) : SurfaceView(context), SurfaceHolder.Callback {
     @Volatile
     internal var debugFrameCounter: Long = 0
     private val debugToolsEnabled =
@@ -548,10 +551,29 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        var requiresRecreation = false
         synchronized(runtimeStateLock) {
-            screenWidth  = width
-            screenHeight = height
-            rebuildSafeContentTransform()
+            requiresRecreation = SurfaceResizePolicy.requiresActivityRecreation(
+                previousWidth = screenWidth,
+                previousHeight = screenHeight,
+                newWidth = width,
+                newHeight = height,
+                dimensionBoundSystemsInitialized =
+                    ::player.isInitialized ||
+                        ::entityManager.isInitialized ||
+                        ::parallaxBackground.isInitialized
+            )
+            if (!requiresRecreation) {
+                screenWidth  = width
+                screenHeight = height
+                rebuildSafeContentTransform()
+            }
+        }
+        if (requiresRecreation) {
+            // Never call Activity.recreate() while holding the runtime monitor.
+            // The current GameView keeps its coherent old logical dimensions
+            // until Android replaces it with a freshly constructed surface.
+            post(onSurfaceResizeRequired)
         }
     }
 

@@ -18,6 +18,29 @@ class SurfaceResizePolicyTest {
         )
     }
 
+
+    @Test
+    fun `initialized real pixel resize requires coherent recreation even without config change`() {
+        assertTrue(
+            SurfaceResizePolicy.requiresActivityRecreation(
+                previousWidth = 1920,
+                previousHeight = 1080,
+                newWidth = 1918,
+                newHeight = 1080,
+                dimensionBoundSystemsInitialized = true
+            )
+        )
+        assertFalse(
+            SurfaceResizePolicy.requiresActivityRecreation(
+                previousWidth = 1920,
+                previousHeight = 1080,
+                newWidth = 1918,
+                newHeight = 1080,
+                dimensionBoundSystemsInitialized = false
+            )
+        )
+    }
+
     @Test
     fun `same dimensions do not trigger a recreation loop`() {
         assertFalse(

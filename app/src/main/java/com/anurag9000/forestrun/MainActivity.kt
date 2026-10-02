@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private var hasPaused = false
     private var configurationWidthDp = 0
     private var configurationHeightDp = 0
+    private var surfaceRecreationRequested = false
     private val debugLaunchGate = LatestRequestGate()
 
     companion object {
@@ -67,7 +68,7 @@ class MainActivity : AppCompatActivity() {
         handleRecoveryMaintenanceIntent(intent, allowMutation = true)
         FeedbackSettings.init(this)
         RuntimeAssetValidator.validateRelease(this)
-        gameView = GameView(this)
+        gameView = GameView(this, ::requestSurfaceRecreation)
         setContentView(gameView)
         recoveryEvidenceDialog = RecoveryEvidenceDialogCoordinator(this)
         gameView.post(recoveryEvidenceDialog::showIfNeeded)
@@ -96,9 +97,15 @@ class MainActivity : AppCompatActivity() {
         configurationWidthDp = newConfig.screenWidthDp
         configurationHeightDp = newConfig.screenHeightDp
         super.onConfigurationChanged(newConfig)
-        if (shouldRecreate && !isFinishing && !isDestroyed) {
-            recreate()
+        if (shouldRecreate) {
+            requestSurfaceRecreation()
         }
+    }
+
+    private fun requestSurfaceRecreation() {
+        if (surfaceRecreationRequested || isFinishing || isDestroyed) return
+        surfaceRecreationRequested = true
+        recreate()
     }
 
     /**
