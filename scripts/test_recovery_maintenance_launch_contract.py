@@ -80,7 +80,7 @@ class RecoveryMaintenanceLaunchContractTest(unittest.TestCase):
             "handleRecoveryMaintenanceIntent(intent, allowMutation = true)"
         )
         feedback = create.index("FeedbackSettings.init(this)")
-        game_view = create.index("gameView = GameView(this)")
+        game_view = create.index("gameView = GameView(")
         self.assertLess(repair, maintenance)
         self.assertLess(maintenance, feedback)
         self.assertLess(maintenance, game_view)
