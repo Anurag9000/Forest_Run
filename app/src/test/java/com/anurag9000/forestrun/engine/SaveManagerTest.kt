@@ -349,6 +349,27 @@ class SaveManagerTest {
     }
 
     @Test
+    fun `permanent costume merge removes legacy NONE sentinel without losing unlocks`() {
+        context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putStringSet("unlocked_costumes", setOf("NONE", "FOREST_SCARF"))
+            .commit()
+
+        SaveManager.saveUnlockedCostumes(context, setOf(CostumeStyle.BLOOM_RIBBON))
+
+        assertEquals(
+            setOf(CostumeStyle.FOREST_SCARF, CostumeStyle.BLOOM_RIBBON),
+            SaveManager.loadUnlockedCostumes(context)
+        )
+        assertEquals(
+            setOf("FOREST_SCARF", "BLOOM_RIBBON"),
+            context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
+                .getStringSet("unlocked_costumes", emptySet())
+                .orEmpty()
+        )
+    }
+
+    @Test
     fun `memory pages persist across reloads`() {
         SaveManager.saveUnlockedMemoryPages(context, setOf("page_repeat_wolf", "page_after_best"))
 

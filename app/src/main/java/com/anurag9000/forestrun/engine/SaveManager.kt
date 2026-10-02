@@ -422,12 +422,13 @@ object SaveManager {
             .toSet()
         withGardenCurrencyLock {
             val selectedPrefs = prefs(context)
-            val existing = selectedPrefs
+            val stored = selectedPrefs
                 .getStringSet(KEY_UNLOCKED_COSTUMES, emptySet())
                 .orEmpty()
                 .toSet()
+            val existing = stored - CostumeStyle.NONE.name
             val merged = existing + raw
-            if (merged != existing) {
+            if (merged != stored) {
                 selectedPrefs.edit().putStringSet(KEY_UNLOCKED_COSTUMES, merged).apply()
             }
         }
