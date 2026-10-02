@@ -8,7 +8,7 @@ Forest Run admits recovery frames up to 50 ms and world speed up to 2,000 px/s, 
 
 Cherry Blossom snapshots its actual trunk and branch rectangles immediately before movement and applies the existing exact same-time `SweptCoreOverlap` solver to each solid component whenever both EntityManager and Player have valid motion samples. The public aggregate encounter box and decorative storm veil are never swept, so the empty lower side and mercy presentation are not converted into hidden solid geometry. Endpoint collision, mercy padding, scoring, art, sway and pass bounds are unchanged.
 
-A Robolectric regression uses the real Player, EntityManager, max supported scroll speed and max admitted frame. It stages the trunk wholly right of the Player at the previous endpoint and wholly left at the current endpoint, proves both endpoint trunk rectangles and the final branch miss, then requires one terminal HIT with no mercy or clean-pass reward.
+A Robolectric regression derives the real Player's FALLING collision dimensions, positions that physically sized body below the branch but inside the trunk's vertical span, and uses EntityManager at the max supported scroll speed/max admitted frame. It first proves the combined falling-body + trunk width is smaller than the legal 100 px displacement, then stages the trunk wholly right at the previous endpoint and wholly left at the current endpoint. Both endpoint trunk rectangles and the branch miss; the same-time sweep must still produce one terminal HIT with no mercy or clean-pass reward. The initial grounded fixture was intentionally corrected after exact-head CI showed its wider RUNNING body could not satisfy the claimed full endpoint tunnel.
 
 ## Boundary
 

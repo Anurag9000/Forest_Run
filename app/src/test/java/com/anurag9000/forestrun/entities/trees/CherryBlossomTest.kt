@@ -12,6 +12,7 @@ import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Player
+import com.anurag9000.forestrun.entities.PlayerState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -66,8 +67,40 @@ class CherryBlossomTest {
         repeat(3) { state.update(5_000f) }
         assertEquals(GameConstants.MAX_SCROLL_SPEED, state.scrollSpeed, 0f)
 
+        // Obtain the real narrow FALLING collision dimensions instead of
+        // assuming the wider grounded RUNNING body can be fully tunneled.
+        player.onJumpPressed()
+        var guard = 0
+        while (player.state != PlayerState.FALLING && guard++ < 40) {
+            player.update(FrameInputAdmission.MAX_DELTA_SECONDS, state.scrollSpeed)
+        }
+        assertEquals(PlayerState.FALLING, player.state)
+        val fallingWidth = player.hitbox.width()
+        val fallingHeight = player.hitbox.height()
+
         val probe = cherry()
-        val trunkOffset = rectField(probe, "trunkHitbox").left - probe.x
+        val probeTrunk = rectField(probe, "trunkHitbox")
+        val probeBranch = rectField(probe, "branchHitbox")
+        val movementPx =
+            GameConstants.MAX_SCROLL_SPEED * FrameInputAdmission.MAX_DELTA_SECONDS
+        assertTrue(
+            "fixture requires a physically possible endpoint tunnel",
+            fallingWidth + probeTrunk.width() < movementPx
+        )
+
+        // Place that actual Player-sized falling body below the branch while
+        // remaining inside the trunk's vertical span. This isolates the narrow
+        // trunk; the production sweep receives a valid stationary Player sample.
+        val bodyLeft = player.hitbox.left
+        val bodyTop = probeBranch.bottom + 4f
+        assertTrue(bodyTop + fallingHeight < probeTrunk.bottom)
+        player.previousHitbox.set(
+            bodyLeft, bodyTop, bodyLeft + fallingWidth, bodyTop + fallingHeight
+        )
+        player.hitbox.set(player.previousHitbox)
+        player.hasMotionSample = true
+
+        val trunkOffset = probeTrunk.left - probe.x
         val startX = player.hitbox.right + 3f - trunkOffset
         val cherry = CherryBlossom(
             context = context,
@@ -82,8 +115,8 @@ class CherryBlossomTest {
         val before = rectField(cherry, "trunkHitbox")
         assertTrue(before.left > player.hitbox.right)
         assertFalse(RectF.intersects(player.hitbox, before))
+        assertFalse(RectF.intersects(player.hitbox, rectField(cherry, "branchHitbox")))
 
-        player.update(FrameInputAdmission.MAX_DELTA_SECONDS, state.scrollSpeed)
         manager.update(
             deltaTime = FrameInputAdmission.MAX_DELTA_SECONDS,
             gameState = state,
