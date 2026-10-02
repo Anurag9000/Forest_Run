@@ -677,9 +677,19 @@ object SaveManager {
         (value as? Int)?.coerceIn(0, MAX_DERIVED_COUNTER) ?: 0
 
     private fun incrementInt(context: Context, key: String) {
-        val prefs = prefs(context)
-        val current = boundedDerivedCounter(prefs.all[key])
-        val next = if (current >= MAX_DERIVED_COUNTER) MAX_DERIVED_COUNTER else current + 1
-        prefs.edit().putInt(key, next).apply()
+        // Every derived counter is a read-modify-write transaction. Use the
+        // existing reentrant progression lock so concurrent encounter/history,
+        // route, friendship, recovery, or lifecycle mutations cannot collapse
+        // two logical events into one persisted increment.
+        synchronized(gardenWriteLock) {
+            val prefs = prefs(context)
+            val current = boundedDerivedCounter(prefs.all[key])
+            val next = if (current >= MAX_DERIVED_COUNTER) {
+                MAX_DERIVED_COUNTER
+            } else {
+                current + 1
+            }
+            prefs.edit().putInt(key, next).apply()
+        }
     }
 }

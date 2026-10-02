@@ -59,6 +59,42 @@ class SaveManagerConcurrencyTest {
         assertEquals(900, SaveManager.loadHighScore(context))
     }
 
+
+    @Test
+    fun `derived progression counter keeps every concurrent logical increment`() {
+        val workerCount = 8
+        val incrementsPerWorker = 125
+        val start = CountDownLatch(1)
+        val finished = CountDownLatch(workerCount)
+        val error = AtomicReference<Throwable?>(null)
+
+        val workers = List(workerCount) {
+            Thread {
+                try {
+                    start.await(5, TimeUnit.SECONDS)
+                    repeat(incrementsPerWorker) {
+                        SaveManager.incrementEncounterCount(context, EntityType.CAT)
+                    }
+                } catch (failure: Throwable) {
+                    error.compareAndSet(null, failure)
+                } finally {
+                    finished.countDown()
+                }
+            }
+        }
+
+        workers.forEach(Thread::start)
+        start.countDown()
+        assertTrue("counter workers timed out", finished.await(10, TimeUnit.SECONDS))
+        workers.forEach { it.join(TimeUnit.SECONDS.toMillis(5)) }
+        error.get()?.let { throw AssertionError("Concurrent counter increment failed", it) }
+
+        assertEquals(
+            workerCount * incrementsPerWorker,
+            SaveManager.loadEncounterCount(context, EntityType.CAT)
+        )
+    }
+
     @Test
     fun `other thread Seed write survives stale Garden follow up`() {
         SaveManager.saveLifetimeSeeds(context, 50)
