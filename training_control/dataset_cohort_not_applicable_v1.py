@@ -37,6 +37,7 @@ def certificate(
         "authority": "training_control/forest_no_trainable_authority.py",
         "scanned_file_count": len(audit.scanned_files),
         "source_manifest_sha256": audit.source_manifest_sha256,
+        "scope_manifest_sha256": audit.scope_manifest_sha256,
         "finding_count": len(audit.findings),
     }
 
