@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.entities.EntityType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,6 +26,49 @@ class ForestMoodSystemTest {
             .edit()
             .clear()
             .commit()
+    }
+
+    @Test
+    fun `concurrent completed runs cannot collapse total or per-mood counts`() {
+        val gentle = summary(
+            forestMood = ForestMood.GENTLE,
+            sparedCount = 1,
+            hitsTaken = 0
+        )
+        val fearful = summary(
+            forestMood = ForestMood.FEARFUL,
+            sparedCount = 0,
+            hitsTaken = 2
+        )
+
+        repeat(50) { round ->
+            SaveManager.saveForestMoodState(context, ForestMoodState())
+            val start = CountDownLatch(1)
+            val done = CountDownLatch(2)
+            val failure = AtomicReference<Throwable?>(null)
+            val workers = listOf(gentle, fearful).map { run ->
+                Thread {
+                    try {
+                        start.await()
+                        ForestMoodSystem.recordRun(context, run)
+                    } catch (error: Throwable) {
+                        failure.compareAndSet(null, error)
+                    } finally {
+                        done.countDown()
+                    }
+                }
+            }
+            workers.forEach(Thread::start)
+            start.countDown()
+            assertTrue("forest mood workers timed out", done.await(10, TimeUnit.SECONDS))
+            failure.get()?.let { throw AssertionError("Concurrent mood write failed", it) }
+
+            val state = SaveManager.loadForestMoodState(context)
+            assertEquals("round=$round total run lost", 2, state.totalRuns)
+            assertEquals("round=$round gentle run lost", 1, state.gentleRuns)
+            assertEquals("round=$round fearful run lost", 1, state.fearfulRuns)
+            assertEquals(1, state.moodStreak)
+        }
     }
 
     @Test

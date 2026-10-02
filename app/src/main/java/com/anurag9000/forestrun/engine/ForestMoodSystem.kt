@@ -115,41 +115,40 @@ object ForestMoodSystem {
 
     fun recordRun(context: Context, summary: RunSummary): ForestMoodState {
         val mood = summary.forestMood
-        val previous = SaveManager.loadForestMoodState(context.applicationContext)
-        val nextStreak = if (previous.currentMood == mood) {
-            saturatingIncrement(previous.moodStreak)
-        } else {
-            1
+        return SaveManager.updateForestMoodState(context.applicationContext) { previous ->
+            val nextStreak = if (previous.currentMood == mood) {
+                saturatingIncrement(previous.moodStreak)
+            } else {
+                1
+            }
+            val nextTotalRuns = saturatingIncrement(previous.totalRuns)
+            when (mood) {
+                ForestMood.GENTLE -> previous.copy(
+                    currentMood = mood,
+                    moodStreak = nextStreak,
+                    totalRuns = nextTotalRuns,
+                    gentleRuns = saturatingIncrement(previous.gentleRuns)
+                )
+                ForestMood.RECKLESS -> previous.copy(
+                    currentMood = mood,
+                    moodStreak = nextStreak,
+                    totalRuns = nextTotalRuns,
+                    recklessRuns = saturatingIncrement(previous.recklessRuns)
+                )
+                ForestMood.FEARFUL -> previous.copy(
+                    currentMood = mood,
+                    moodStreak = nextStreak,
+                    totalRuns = nextTotalRuns,
+                    fearfulRuns = saturatingIncrement(previous.fearfulRuns)
+                )
+                ForestMood.STEADY -> previous.copy(
+                    currentMood = mood,
+                    moodStreak = nextStreak,
+                    totalRuns = nextTotalRuns,
+                    steadyRuns = saturatingIncrement(previous.steadyRuns)
+                )
+            }
         }
-        val nextTotalRuns = saturatingIncrement(previous.totalRuns)
-        val updated = when (mood) {
-            ForestMood.GENTLE -> previous.copy(
-                currentMood = mood,
-                moodStreak = nextStreak,
-                totalRuns = nextTotalRuns,
-                gentleRuns = saturatingIncrement(previous.gentleRuns)
-            )
-            ForestMood.RECKLESS -> previous.copy(
-                currentMood = mood,
-                moodStreak = nextStreak,
-                totalRuns = nextTotalRuns,
-                recklessRuns = saturatingIncrement(previous.recklessRuns)
-            )
-            ForestMood.FEARFUL -> previous.copy(
-                currentMood = mood,
-                moodStreak = nextStreak,
-                totalRuns = nextTotalRuns,
-                fearfulRuns = saturatingIncrement(previous.fearfulRuns)
-            )
-            ForestMood.STEADY -> previous.copy(
-                currentMood = mood,
-                moodStreak = nextStreak,
-                totalRuns = nextTotalRuns,
-                steadyRuns = saturatingIncrement(previous.steadyRuns)
-            )
-        }
-        SaveManager.saveForestMoodState(context.applicationContext, updated)
-        return updated
     }
 
     fun currentState(context: Context): ForestMoodState =

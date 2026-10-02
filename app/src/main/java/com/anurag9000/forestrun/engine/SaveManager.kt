@@ -601,7 +601,52 @@ object SaveManager {
         loadDerivedCounter(context, "friendship_${biome.name.lowercase()}")
 
     fun saveForestMoodState(context: Context, state: ForestMoodState) {
-        prefs(context).edit()
+        withGardenCurrencyLock {
+            writeForestMoodState(prefs(context), state)
+        }
+    }
+
+    fun updateForestMoodState(
+        context: Context,
+        transform: (ForestMoodState) -> ForestMoodState
+    ): ForestMoodState = withGardenCurrencyLock {
+        val selectedPrefs = prefs(context)
+        val previous = readForestMoodState(selectedPrefs)
+        val next = transform(previous)
+        writeForestMoodState(selectedPrefs, next)
+        readForestMoodState(selectedPrefs)
+    }
+
+    fun loadForestMoodState(context: Context): ForestMoodState =
+        withGardenCurrencyLock {
+            readForestMoodState(prefs(context))
+        }
+
+    private fun readForestMoodState(
+        statePrefs: android.content.SharedPreferences
+    ): ForestMoodState {
+        val currentMood = statePrefs
+            .getString(KEY_FOREST_MOOD, ForestMood.STEADY.name)
+            ?.let { raw ->
+                runCatching { ForestMood.valueOf(raw) }.getOrDefault(ForestMood.STEADY)
+            }
+            ?: ForestMood.STEADY
+        return ForestMoodState(
+            currentMood = currentMood,
+            moodStreak = statePrefs.getInt(KEY_FOREST_MOOD_STREAK, 0).coerceAtLeast(0),
+            totalRuns = statePrefs.getInt(KEY_FOREST_TOTAL_RUNS, 0).coerceAtLeast(0),
+            gentleRuns = statePrefs.getInt(KEY_FOREST_GENTLE_RUNS, 0).coerceAtLeast(0),
+            recklessRuns = statePrefs.getInt(KEY_FOREST_RECKLESS_RUNS, 0).coerceAtLeast(0),
+            fearfulRuns = statePrefs.getInt(KEY_FOREST_FEARFUL_RUNS, 0).coerceAtLeast(0),
+            steadyRuns = statePrefs.getInt(KEY_FOREST_STEADY_RUNS, 0).coerceAtLeast(0)
+        )
+    }
+
+    private fun writeForestMoodState(
+        statePrefs: android.content.SharedPreferences,
+        state: ForestMoodState
+    ) {
+        statePrefs.edit()
             .putString(KEY_FOREST_MOOD, state.currentMood.name)
             .putInt(KEY_FOREST_MOOD_STREAK, state.moodStreak.coerceAtLeast(0))
             .putInt(KEY_FOREST_TOTAL_RUNS, state.totalRuns.coerceAtLeast(0))
@@ -610,22 +655,6 @@ object SaveManager {
             .putInt(KEY_FOREST_FEARFUL_RUNS, state.fearfulRuns.coerceAtLeast(0))
             .putInt(KEY_FOREST_STEADY_RUNS, state.steadyRuns.coerceAtLeast(0))
             .apply()
-    }
-
-    fun loadForestMoodState(context: Context): ForestMoodState {
-        val prefs = prefs(context)
-        val currentMood = prefs.getString(KEY_FOREST_MOOD, ForestMood.STEADY.name)?.let { raw ->
-            runCatching { ForestMood.valueOf(raw) }.getOrDefault(ForestMood.STEADY)
-        } ?: ForestMood.STEADY
-        return ForestMoodState(
-            currentMood = currentMood,
-            moodStreak = prefs.getInt(KEY_FOREST_MOOD_STREAK, 0),
-            totalRuns = prefs.getInt(KEY_FOREST_TOTAL_RUNS, 0),
-            gentleRuns = prefs.getInt(KEY_FOREST_GENTLE_RUNS, 0),
-            recklessRuns = prefs.getInt(KEY_FOREST_RECKLESS_RUNS, 0),
-            fearfulRuns = prefs.getInt(KEY_FOREST_FEARFUL_RUNS, 0),
-            steadyRuns = prefs.getInt(KEY_FOREST_STEADY_RUNS, 0)
-        )
     }
 
     fun saveReturnMomentState(context: Context, state: ReturnMomentState) {
