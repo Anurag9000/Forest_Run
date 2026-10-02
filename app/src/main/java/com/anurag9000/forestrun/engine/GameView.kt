@@ -623,6 +623,8 @@ class GameView(
         gameThreadRestartGate.cancel()
         val threadStopped = stopThread()
         LeitmotifManager.pause()   // Phase 20
+        SfxManager.stopActivePlayback()
+        HapticManager.cancel()
         if (threadStopped && ::gameState.isInitialized && runMode.persistsProgress) {
             gameState.save()   // persist ordinary-play high score only
         } else if (!threadStopped && ::gameState.isInitialized && runMode.persistsProgress) {

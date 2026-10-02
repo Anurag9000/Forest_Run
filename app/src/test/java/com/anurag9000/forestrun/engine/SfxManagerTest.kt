@@ -6,6 +6,34 @@ import org.junit.Test
 
 class SfxManagerTest {
 
+
+    @Test
+    fun `transient stream ledger is bounded ignores invalid ids and drains exactly once`() {
+        val ledger = SoundStreamLedger(capacity = 3)
+        ledger.record(0)
+        ledger.record(-4)
+        ledger.record(11)
+        ledger.record(12)
+        ledger.record(13)
+        ledger.record(14)
+
+        assertEquals(3, ledger.sizeForTests())
+        assertEquals(listOf(12, 13, 14), ledger.drain())
+        assertEquals(0, ledger.sizeForTests())
+        assertTrue(ledger.drain().isEmpty())
+    }
+
+    @Test
+    fun `stream ledger rejects nonpositive capacity`() {
+        var rejected = false
+        try {
+            SoundStreamLedger(capacity = 0)
+        } catch (_: IllegalArgumentException) {
+            rejected = true
+        }
+        assertTrue(rejected)
+    }
+
     @Test
     fun `bloom ready profile is bright and anticipatory`() {
         val profile = buildBloomSfxProfile(SfxManager.BloomSfxEvent.READY, conversionsInBurst = 0)

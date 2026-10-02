@@ -4,7 +4,40 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import android.util.Log
+import java.util.ArrayDeque
 import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Bounded ownership of SoundPool stream identifiers. SoundPool has no
+ * completion callback, so natural completions cannot be eagerly removed; a
+ * bounded ledger is sufficient for lifecycle/audio-disable cancellation while
+ * preventing long-session bookkeeping growth.
+ */
+internal class SoundStreamLedger(private val capacity: Int) {
+    private val streamIds = ArrayDeque<Int>(capacity.coerceAtLeast(1))
+
+    init {
+        require(capacity > 0) { "Sound stream ledger capacity must be positive." }
+    }
+
+    @Synchronized
+    fun record(streamId: Int) {
+        if (streamId <= 0) return
+        while (streamIds.size >= capacity) streamIds.removeFirst()
+        streamIds.addLast(streamId)
+    }
+
+    @Synchronized
+    fun drain(): List<Int> {
+        if (streamIds.isEmpty()) return emptyList()
+        val snapshot = streamIds.toList()
+        streamIds.clear()
+        return snapshot
+    }
+
+    @Synchronized
+    internal fun sizeForTests(): Int = streamIds.size
+}
 
 /** Low-latency short-effect playback with explicit generation-safe load readiness. */
 object SfxManager {
@@ -25,6 +58,7 @@ object SfxManager {
     private var pool: SoundPool? = null
     private val sampleReadiness = SoundSampleReadiness()
     private val optionalSampleIds = ConcurrentHashMap.newKeySet<Int>()
+    private val activeStreams = SoundStreamLedger(MAX_STREAMS * 4)
 
     private var idJump = 0
     private var idLand = 0
@@ -56,6 +90,7 @@ object SfxManager {
             .build()
         val generation = sampleReadiness.beginGeneration()
         optionalSampleIds.clear()
+        activeStreams.drain()
 
         newPool.setOnLoadCompleteListener { callbackPool, sampleId, status ->
             synchronized(SfxManager) {
@@ -115,15 +150,31 @@ object SfxManager {
         idHit = load("sfx_hit")
     }
 
+    @Synchronized
     private fun play(id: Int, volume: Float = 1f, rate: Float = RATE_1X) {
         if (!FeedbackSettings.audioEnabled || !sampleReadiness.isReady(id)) return
         val activePool = pool ?: return
         val safeVolume = volume.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
         val safeRate = rate.takeIf { it.isFinite() }?.coerceIn(0.5f, 2f) ?: RATE_1X
-        runCatching {
+        val streamId = runCatching {
             activePool.play(id, safeVolume, safeVolume, PRIORITY, NO_LOOP, safeRate)
         }.onFailure { error ->
             Log.w(TAG, "SFX playback failed for sample id=$id", error)
+        }.getOrDefault(0)
+        activeStreams.record(streamId)
+    }
+
+    /**
+     * Short effects are transient foreground feedback. Stop every recently
+     * admitted stream when the Activity pauses or audio is disabled; unlike an
+     * auto-pause/auto-resume pair this cannot replay a stale hit/bark after a
+     * long background interval.
+     */
+    @Synchronized
+    fun stopActivePlayback() {
+        val activePool = pool
+        activeStreams.drain().forEach { streamId ->
+            runCatching { activePool?.stop(streamId) }
         }
     }
 
@@ -167,6 +218,7 @@ object SfxManager {
 
     @Synchronized
     fun destroy() {
+        stopActivePlayback()
         sampleReadiness.invalidate()
         optionalSampleIds.clear()
         val oldPool = pool

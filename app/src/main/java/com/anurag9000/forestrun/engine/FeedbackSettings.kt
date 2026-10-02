@@ -55,6 +55,7 @@ object FeedbackSettings {
 
         if (reducedMotion) CameraSystem.reset()
         if (!hapticsEnabled) HapticManager.cancel()
+        if (!audioEnabled) SfxManager.stopActivePlayback()
         LeitmotifManager.setAudioEnabled(audioEnabled)
     }
 
@@ -75,6 +76,7 @@ object FeedbackSettings {
     fun setAudioEnabled(context: Context, enabled: Boolean) {
         audioEnabled = enabled
         persist(context, KEY_AUDIO_ENABLED, enabled)
+        if (!enabled) SfxManager.stopActivePlayback()
         LeitmotifManager.setAudioEnabled(enabled)
     }
 
