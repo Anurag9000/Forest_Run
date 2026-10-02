@@ -190,14 +190,14 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             root = Path(temp)
             requirements = root / "requirements-ci.txt"
             requirements.write_text(
-                "# torch==0.0 is documentation only\\n"
-                + ("to" + "rch") + "==2.5.1\\n",
+                "# torch==0.0 is documentation only\n"
+                + ("to" + "rch") + "==2.5.1\n",
                 encoding="utf-8",
             )
             result = audit(root)
             self.assertFalse(result.complete)
             self.assertEqual("pytorch", result.findings[0].category)
-            requirements.write_text("# torch==0.0 is documentation only\\n", encoding="utf-8")
+            requirements.write_text("# torch==0.0 is documentation only\n", encoding="utf-8")
             self.assertTrue(audit(root).complete)
 
     def test_model_artifact_in_product_asset_archive_is_not_hidden_by_source_skip(self) -> None:
