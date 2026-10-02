@@ -82,6 +82,26 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             self.assertEqual("pytorch", result.findings[0].category)
             self.assertEqual("app/dynamic_loader.py", result.findings[0].path)
 
+
+    def test_direct_importlib_helper_alias_still_detects_executable_framework_load(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "app" / "aliased_loader.py"
+            source.parent.mkdir(parents=True)
+            framework = "to" + "rch"
+            source.write_text(
+                "from importlib import import_module as load_module\n"
+                f"backend = load_module('{framework}')\n",
+                encoding="utf-8",
+            )
+
+            result = audit(root)
+
+            self.assertFalse(result.complete)
+            self.assertEqual(1, len(result.findings))
+            self.assertEqual("pytorch", result.findings[0].category)
+            self.assertEqual("app/aliased_loader.py", result.findings[0].path)
+
     def test_dunder_dynamic_framework_import_still_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -226,11 +226,25 @@ def _python_dynamic_import_findings(relative: str, text: str) -> tuple[Finding, 
         return ()
     findings: list[Finding] = []
     source_lines = text.splitlines()
+
+    # Resolve the direct helper names that are genuinely bound from importlib.
+    # This keeps prose/string masking while covering:
+    #   from importlib import import_module
+    #   from importlib import import_module as load_module
+    direct_import_helpers: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or node.module != "importlib":
+            continue
+        for alias in node.names:
+            if alias.name == "import_module":
+                direct_import_helpers.add(alias.asname or alias.name)
+
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call) or not node.args:
             continue
         is_dynamic_import = (
-            isinstance(node.func, ast.Name) and node.func.id == "__import__"
+            isinstance(node.func, ast.Name) and
+            (node.func.id == "__import__" or node.func.id in direct_import_helpers)
         ) or (
             isinstance(node.func, ast.Attribute)
             and node.func.attr == "import_module"
