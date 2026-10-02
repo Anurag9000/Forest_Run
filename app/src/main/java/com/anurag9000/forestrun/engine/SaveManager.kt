@@ -663,7 +663,22 @@ object SaveManager {
             .toSet()
 
     fun saveUnlockedHistoryMarks(context: Context, marks: Set<String>) {
-        prefs(context).edit().putStringSet(KEY_UNLOCKED_HISTORY_MARKS, marks).apply()
+        // History marks are permanent unlocks. Merge under the progression lock
+        // so independent relationship/history refreshes cannot overwrite one
+        // another's newly discovered mark with a stale whole-set snapshot.
+        withGardenCurrencyLock {
+            val selectedPrefs = prefs(context)
+            val existing = selectedPrefs
+                .getStringSet(KEY_UNLOCKED_HISTORY_MARKS, emptySet())
+                .orEmpty()
+                .toSet()
+            val merged = existing + marks
+            if (merged != existing) {
+                selectedPrefs.edit()
+                    .putStringSet(KEY_UNLOCKED_HISTORY_MARKS, merged)
+                    .apply()
+            }
+        }
     }
 
     fun loadUnlockedHistoryMarks(context: Context): Set<String> =

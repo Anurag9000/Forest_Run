@@ -173,6 +173,36 @@ class SaveManagerConcurrencyTest {
     }
 
     @Test
+    fun `concurrent permanent history unlock writes preserve the union`() {
+        val first = setOf("history_kindness_cat", "history_clean_pass_cactus")
+        val second = setOf("history_tender_wolf", "history_peace_meadow")
+        val start = CountDownLatch(1)
+        val finished = CountDownLatch(2)
+        val error = AtomicReference<Throwable?>(null)
+
+        val workers = listOf(first, second).map { marks ->
+            Thread {
+                try {
+                    start.await()
+                    repeat(100) {
+                        SaveManager.saveUnlockedHistoryMarks(context, marks)
+                    }
+                } catch (failure: Throwable) {
+                    error.compareAndSet(null, failure)
+                } finally {
+                    finished.countDown()
+                }
+            }
+        }
+        workers.forEach(Thread::start)
+        start.countDown()
+        assertTrue("history unlock workers timed out", finished.await(10, TimeUnit.SECONDS))
+        error.get()?.let { throw AssertionError("Concurrent history unlock failed", it) }
+
+        assertEquals(first + second, SaveManager.loadUnlockedHistoryMarks(context))
+    }
+
+    @Test
     fun `run earned Seeds and Garden purchase serialize on one currency lock`() {
         SaveManager.saveLifetimeSeeds(context, 50)
         SaveManager.saveGardenProgress(context, 1)
