@@ -7,6 +7,9 @@ import com.anurag9000.forestrun.entities.CostumeStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,6 +27,50 @@ class RelationshipArcSystemTest {
             .edit()
             .clear()
             .commit()
+    }
+
+    @Test
+    fun `concurrent relationship events leave cached stage equal to canonical recomputation`() {
+        repeat(40) { round ->
+            context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .clear()
+                .commit()
+            repeat(5) { PersistentMemoryManager.recordEncounter(context, EntityType.WOLF) }
+
+            val start = CountDownLatch(1)
+            val finished = CountDownLatch(2)
+            val error = AtomicReference<Throwable?>(null)
+            val spareWorker = Thread {
+                try {
+                    start.await()
+                    repeat(4) { PersistentMemoryManager.recordSpare(context, EntityType.WOLF) }
+                } catch (failure: Throwable) {
+                    error.compareAndSet(null, failure)
+                } finally {
+                    finished.countDown()
+                }
+            }
+            val hitWorker = Thread {
+                try {
+                    start.await()
+                    repeat(4) { PersistentMemoryManager.recordHit(context, EntityType.WOLF) }
+                } catch (failure: Throwable) {
+                    error.compareAndSet(null, failure)
+                } finally {
+                    finished.countDown()
+                }
+            }
+            spareWorker.start()
+            hitWorker.start()
+            start.countDown()
+            assertTrue("relationship workers timed out", finished.await(10, TimeUnit.SECONDS))
+            error.get()?.let { throw AssertionError("Concurrent relationship event failed", it) }
+
+            val cached = RelationshipArcSystem.stageFor(context, EntityType.WOLF)
+            val recomputed = RelationshipArcSystem.refreshStage(context, EntityType.WOLF)
+            assertEquals("round=$round cached stage drifted", recomputed, cached)
+        }
     }
 
     @Test

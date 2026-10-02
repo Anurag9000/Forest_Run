@@ -105,18 +105,21 @@ object RelationshipArcSystem {
 
     fun refreshStage(context: Context, type: EntityType): RelationshipStage {
         if (!isTracked(type)) return RelationshipStage.FIRST_IMPRESSION
-        val stage = computeStage(
-            type = type,
-            encounters = SaveManager.loadEncounterCount(context.applicationContext, type),
-            cleanPasses = SaveManager.loadCleanPassCount(context.applicationContext, type),
-            spared = SaveManager.loadSparedCount(context.applicationContext, type),
-            hits = SaveManager.loadHitCount(context.applicationContext, type)
-        )
-        SaveManager.saveRelationshipStage(context.applicationContext, type, stage)
-        if (stage == RelationshipStage.MILESTONE) {
-            unlockMilestone(context.applicationContext, type)
+        val appContext = context.applicationContext
+        return SaveManager.withGardenCurrencyLock {
+            val stage = computeStage(
+                type = type,
+                encounters = SaveManager.loadEncounterCount(appContext, type),
+                cleanPasses = SaveManager.loadCleanPassCount(appContext, type),
+                spared = SaveManager.loadSparedCount(appContext, type),
+                hits = SaveManager.loadHitCount(appContext, type)
+            )
+            SaveManager.saveRelationshipStage(appContext, type, stage)
+            if (stage == RelationshipStage.MILESTONE) {
+                unlockMilestone(appContext, type)
+            }
+            stage
         }
-        return stage
     }
 
     fun stageFor(context: Context, type: EntityType): RelationshipStage {
