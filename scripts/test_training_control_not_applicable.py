@@ -200,6 +200,31 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             requirements.write_text("# torch==0.0 is documentation only\n", encoding="utf-8")
             self.assertTrue(audit(root).complete)
 
+    def test_extensionless_gradle_wrapper_is_scanned_for_training_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            wrapper = root / "gradlew"
+            wrapper.write_text("python -m " + ("to" + "rch") + "\n", encoding="utf-8")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual(("gradlew",), result.scanned_files)
+            self.assertEqual("pytorch", result.findings[0].category)
+
+    def test_uninspected_binary_code_artifact_fails_closed_but_gradle_wrapper_jar_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            wrapper = root / "gradle" / "wrapper" / "gradle-wrapper.jar"
+            wrapper.parent.mkdir(parents=True)
+            wrapper.write_bytes(b"known-build-tool-fixture")
+            self.assertTrue(audit(root).complete)
+            opaque = root / "app" / "libs" / "runtime.aar"
+            opaque.parent.mkdir(parents=True)
+            opaque.write_bytes(b"uninspected-code")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            rows = [row for row in result.findings if row.category == "opaque-code-artifact"]
+            self.assertEqual(["app/libs/runtime.aar"], [row.path for row in rows])
+
     def test_model_artifact_in_product_asset_archive_is_not_hidden_by_source_skip(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
