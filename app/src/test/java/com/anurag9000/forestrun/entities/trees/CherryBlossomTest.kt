@@ -1,6 +1,7 @@
 package com.anurag9000.forestrun.entities.trees
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.RectF
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.engine.EntityManager
@@ -78,7 +79,10 @@ class CherryBlossomTest {
         val fallingWidth = player.hitbox.width()
         val fallingHeight = player.hitbox.height()
 
-        val probe = cherry()
+        // Use the minimum legal sprite width so this regression exercises
+        // the component sweep independently of today's production-art aspect
+        // ratio. The production sprite may be wide enough for endpoint overlap.
+        val probe = thinCherry()
         val probeTrunk = rectField(probe, "trunkHitbox")
         val probeBranch = rectField(probe, "branchHitbox")
         val movementPx =
@@ -102,13 +106,7 @@ class CherryBlossomTest {
 
         val trunkOffset = probeTrunk.left - probe.x
         val startX = player.hitbox.right + 3f - trunkOffset
-        val cherry = CherryBlossom(
-            context = context,
-            startX = startX,
-            screenHeight = 1080f,
-            groundY = 885.6f,
-            sprite = spriteManager.cherryBlossomSprite.copy()
-        )
+        val cherry = thinCherry(startX)
         val manager = EntityManager(context, 1_920f, 1_080f, spriteManager)
         manager.activeEntities += cherry
 
@@ -167,6 +165,18 @@ class CherryBlossomTest {
         screenHeight = 1080f,
         groundY = 885.6f,
         sprite = spriteManager.cherryBlossomSprite.copy()
+    )
+
+    private fun thinCherry(startX: Float = 640f) = CherryBlossom(
+        context = context,
+        startX = startX,
+        screenHeight = 1080f,
+        groundY = 885.6f,
+        sprite = SpriteSheet(
+            Bitmap.createBitmap(8, 10, Bitmap.Config.ARGB_8888),
+            frameCount = 4,
+            framesPerSec = 8f
+        )
     )
 
     private fun assertEncloses(outer: RectF, inner: RectF) {
