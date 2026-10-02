@@ -24,17 +24,19 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SUFFIXES = {
     ".kt", ".kts", ".java", ".py", ".js", ".ts", ".tsx", ".jsx",
     ".gradle", ".toml", ".yaml", ".yml", ".json", ".xml",
-    ".sh", ".bash", ".bat", ".cmd", ".ps1", ".ipynb",
+    ".sh", ".bash", ".bat", ".cmd", ".ps1", ".ipynb", ".properties", ".pro",
 }
 DEPENDENCY_TEXT_NAMES = {
     "Pipfile", "Pipfile.lock", "poetry.lock", "uv.lock", "requirements.txt",
     "requirements-dev.txt", "requirements-test.txt", "constraints.txt",
-    "Dockerfile",
+    "Dockerfile", "gradlew", "Makefile", "makefile", "Justfile",
 }
 MODEL_ARTIFACT_SUFFIXES = {
     ".tflite", ".onnx", ".ort", ".pt", ".pth", ".ckpt", ".safetensors",
     ".keras", ".mlmodel", ".mlpackage",
 }
+OPAQUE_CODE_SUFFIXES = {".jar", ".aar", ".so", ".dll", ".dylib", ".whl"}
+OPAQUE_CODE_ALLOWLIST = {"gradle/wrapper/gradle-wrapper.jar"}
 DEPENDENCY_CONFIG_RE = re.compile(
     r"^(?:implementation|api|compileOnly|runtimeOnly|annotationProcessor|kapt|ksp|"
     r"[A-Za-z_][A-Za-z0-9_]*(?:Implementation|Api|CompileOnly|RuntimeOnly|"
@@ -250,6 +252,21 @@ def _dependencies(root: Path = ROOT) -> tuple[str, ...]:
     return tuple(dependencies)
 
 
+def _opaque_code_findings(root: Path = ROOT) -> tuple[Finding, ...]:
+    """Fail closed on uninspected executable archives/native libraries."""
+    findings: list[Finding] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.is_symlink():
+            continue
+        relative = path.relative_to(root)
+        if any(part in MODEL_ARTIFACT_SKIP_PARTS for part in relative.parts):
+            continue
+        rel = relative.as_posix()
+        if path.suffix.lower() in OPAQUE_CODE_SUFFIXES and rel not in OPAQUE_CODE_ALLOWLIST:
+            findings.append(Finding(rel, 0, "opaque-code-artifact", path.name[:240]))
+    return tuple(findings)
+
+
 def _model_artifact_findings(root: Path = ROOT) -> tuple[Finding, ...]:
     findings: list[Finding] = []
     for path in sorted(root.rglob("*")):
@@ -392,6 +409,7 @@ def audit(root: Path = ROOT) -> Audit:
         if python_like and not notebook_findings:
             findings.extend(_python_dynamic_import_findings(relative, text))
     findings.extend(_model_artifact_findings(root))
+    findings.extend(_opaque_code_findings(root))
     findings.extend(_symlink_findings(root))
     return Audit(
         tuple(scanned),
