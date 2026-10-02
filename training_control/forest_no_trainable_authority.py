@@ -145,6 +145,60 @@ def _manifest_update(digest: "hashlib._Hash", relative: str, payload: bytes) -> 
     digest.update(payload)
 
 
+def _scope_manifest(root: Path) -> str:
+    """Bind path/type inventory for every repository-owned non-evidence input.
+
+    Source bytes are separately bound by source_manifest_sha256. This digest
+    exists so adding an unscanned model artifact, notebook, script or asset
+    path cannot leave an old applicability certificate looking current.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root)
+        if any(part in SCOPE_SKIP_PARTS for part in relative.parts):
+            continue
+        if not path.is_file() and not path.is_symlink():
+            continue
+        kind = "symlink" if path.is_symlink() else "file"
+        payload = os.readlink(path).encode("utf-8", "replace") if path.is_symlink() else b""
+        _manifest_update(digest, f"{kind}:{relative.as_posix()}", payload)
+    return digest.hexdigest()
+
+
+def _notebook_code(relative: str, payload: bytes) -> tuple[str, tuple[Finding, ...]]:
+    """Extract executable notebook cells while ignoring Markdown prose."""
+    try:
+        notebook = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return "", (Finding(relative, 0, "notebook-parse-error", str(exc)[:240]),)
+    cells = notebook.get("cells")
+    if not isinstance(cells, list):
+        return "", (Finding(relative, 0, "notebook-parse-error", "missing cells list"),)
+    chunks: list[str] = []
+    for cell in cells:
+        if not isinstance(cell, dict) or cell.get("cell_type") != "code":
+            continue
+        source = cell.get("source", "")
+        if isinstance(source, list):
+            chunks.append("".join(str(item) for item in source))
+        elif isinstance(source, str):
+            chunks.append(source)
+        else:
+            return "", (Finding(
+                relative, 0, "notebook-parse-error", "code cell source is not text/list"
+            ),)
+    return "\n".join(chunks), ()
+
+
+def _dependency_executable_lines(path: Path, text: str) -> list[str]:
+    """Ignore comments in simple dependency manifests, not active entries."""
+    if path.name in DEPENDENCY_TEXT_NAMES or (
+        path.name.startswith("requirements-") and path.suffix.lower() == ".txt"
+    ):
+        return ["" if line.lstrip().startswith("#") else line for line in text.splitlines()]
+    return text.splitlines()
+
+
 def _symlink_findings(root: Path = ROOT) -> tuple[Finding, ...]:
     """Repository source provenance must never depend on out-of-tree targets."""
     findings: list[Finding] = []
