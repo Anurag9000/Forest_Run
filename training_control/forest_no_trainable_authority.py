@@ -10,9 +10,12 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import ast
 import hashlib
+import io
 import os
 import re
+import tokenize
 from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -172,6 +175,82 @@ def _model_artifact_findings(root: Path = ROOT) -> tuple[Finding, ...]:
     return tuple(findings)
 
 
+
+def _python_executable_lines(text: str) -> list[str]:
+    """Mask Python string/comment tokens while preserving source line numbers.
+
+    The authority scans executable syntax, not prose in test assertions,
+    docstrings or comments. Tokenization failure falls back to the original
+    text, which is intentionally conservative rather than hiding a marker.
+    """
+    raw_lines = text.splitlines()
+    masked = [list(line) for line in raw_lines]
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(text).readline)
+        for token in tokens:
+            if token.type not in {tokenize.STRING, tokenize.COMMENT}:
+                continue
+            (start_row, start_col), (end_row, end_col) = token.start, token.end
+            for row in range(start_row - 1, end_row):
+                if row < 0 or row >= len(masked):
+                    continue
+                left = start_col if row == start_row - 1 else 0
+                right = end_col if row == end_row - 1 else len(masked[row])
+                right = min(right, len(masked[row]))
+                for index in range(min(left, right), right):
+                    masked[row][index] = " "
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        return raw_lines
+    return ["".join(line) for line in masked]
+
+
+def _python_dynamic_import_findings(relative: str, text: str) -> tuple[Finding, ...]:
+    """Catch ML frameworks loaded from string literals via import helpers."""
+    framework_categories = {
+        "torch": "pytorch",
+        "pytorch": "pytorch",
+        "torchvision": "pytorch",
+        "torchaudio": "pytorch",
+        "tensorflow": "tensorflow",
+        "keras": "tensorflow",
+        "jax": "jax",
+        "flax": "jax",
+        "optax": "jax",
+        "haiku": "jax",
+        "sklearn": "sklearn",
+        "scikit-learn": "sklearn",
+    }
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return ()
+    findings: list[Finding] = []
+    source_lines = text.splitlines()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        is_dynamic_import = (
+            isinstance(node.func, ast.Name) and node.func.id == "__import__"
+        ) or (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "import_module"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "importlib"
+        )
+        if not is_dynamic_import:
+            continue
+        argument = node.args[0]
+        if not isinstance(argument, ast.Constant) or not isinstance(argument.value, str):
+            continue
+        root = argument.value.strip().lower().split(".", 1)[0]
+        category = framework_categories.get(root)
+        if category is None:
+            continue
+        excerpt = source_lines[node.lineno - 1].strip()[:240] if node.lineno <= len(source_lines) else ""
+        findings.append(Finding(relative, node.lineno, category, excerpt))
+    return tuple(findings)
+
+
 def audit(root: Path = ROOT) -> Audit:
     root = Path(root).resolve()
     scanned: list[str] = []
@@ -183,12 +262,19 @@ def audit(root: Path = ROOT) -> Audit:
         scanned.append(relative)
         _manifest_update(manifest, relative, payload)
         text = payload.decode("utf-8", errors="replace")
-        for line_number, line in enumerate(text.splitlines(), 1):
+        source_lines = text.splitlines()
+        executable_lines = (
+            _python_executable_lines(text)
+            if path.suffix.lower() == ".py"
+            else source_lines
+        )
+        for line_number, line in enumerate(executable_lines, 1):
             for category, pattern in FORBIDDEN_PATTERNS:
                 if pattern.search(line):
-                    findings.append(
-                        Finding(relative, line_number, category, line.strip()[:240])
-                    )
+                    excerpt = source_lines[line_number - 1].strip()[:240]
+                    findings.append(Finding(relative, line_number, category, excerpt))
+        if path.suffix.lower() == ".py":
+            findings.extend(_python_dynamic_import_findings(relative, text))
     findings.extend(_model_artifact_findings(root))
     findings.extend(_symlink_findings(root))
     return Audit(
