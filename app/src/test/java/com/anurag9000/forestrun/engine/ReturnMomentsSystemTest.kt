@@ -7,6 +7,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,6 +27,69 @@ class ReturnMomentsSystemTest {
             .edit()
             .clear()
             .commit()
+    }
+
+    @Test
+    fun `concurrent run outcome and rendered greeting preserve both state transitions`() {
+        val roughSummary = RunSummary(
+            score = 100,
+            distanceM = 200f,
+            isNewHighScore = false,
+            highScore = 100,
+            mercyHearts = 0,
+            mercyMisses = 0,
+            kindnessChain = 0,
+            cleanPasses = 0,
+            sparedCount = 0,
+            hitsTaken = 2,
+            seedsCollected = 0,
+            bloomConversions = 0,
+            lastKiller = EntityType.WOLF,
+            restQuote = "",
+            forestMood = ForestMood.FEARFUL
+        )
+
+        repeat(50) { round ->
+            SaveManager.saveReturnMomentState(context, ReturnMomentState())
+            val start = CountDownLatch(1)
+            val done = CountDownLatch(2)
+            val failure = AtomicReference<Throwable?>(null)
+            val dayMs = (5L + round) * 24L * 60L * 60L * 1_000L
+
+            val outcome = Thread {
+                try {
+                    start.await()
+                    ReturnMomentsSystem.recordRunOutcome(context, roughSummary, dayMs + 1_000L)
+                } catch (error: Throwable) {
+                    failure.compareAndSet(null, error)
+                } finally {
+                    done.countDown()
+                }
+            }
+            val greeting = Thread {
+                try {
+                    start.await()
+                    ReturnMomentsSystem.acknowledgeGardenMomentShown(context, dayMs)
+                } catch (error: Throwable) {
+                    failure.compareAndSet(null, error)
+                } finally {
+                    done.countDown()
+                }
+            }
+            outcome.start()
+            greeting.start()
+            start.countDown()
+            assertTrue("return-state workers timed out", done.await(10, TimeUnit.SECONDS))
+            failure.get()?.let { throw AssertionError("Concurrent return transition failed", it) }
+
+            val state = SaveManager.loadReturnMomentState(context)
+            assertEquals("round=$round rough streak lost", 1, state.roughRunStreak)
+            assertEquals(
+                "round=$round rendered greeting day lost",
+                ReturnMomentsSystem.localCalendarDayIdForTests(dayMs),
+                state.lastGardenGreetingDay
+            )
+        }
     }
 
     @Test

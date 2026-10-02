@@ -629,7 +629,38 @@ object SaveManager {
     }
 
     fun saveReturnMomentState(context: Context, state: ReturnMomentState) {
+        withGardenCurrencyLock {
+            writeReturnMomentState(prefs(context), state)
+        }
+    }
+
+    fun updateReturnMomentState(
+        context: Context,
+        transform: (ReturnMomentState) -> ReturnMomentState
+    ): ReturnMomentState = withGardenCurrencyLock {
         val statePrefs = prefs(context)
+        val previous = readReturnMomentState(statePrefs)
+        val next = transform(previous)
+        writeReturnMomentState(statePrefs, next)
+        readReturnMomentState(statePrefs)
+    }
+
+    fun loadReturnMomentState(context: Context): ReturnMomentState =
+        withGardenCurrencyLock {
+            readReturnMomentState(prefs(context))
+        }
+
+    private fun readReturnMomentState(statePrefs: android.content.SharedPreferences): ReturnMomentState =
+        ReturnMomentState(
+            lastActiveAtMs = statePrefs.getLong(KEY_LAST_ACTIVE_AT_MS, 0L).coerceAtLeast(0L),
+            lastGardenGreetingDay = statePrefs.getLong(KEY_LAST_GARDEN_GREETING_DAY, -1L).coerceAtLeast(-1L),
+            roughRunStreak = statePrefs.getInt(KEY_ROUGH_RUN_STREAK, 0).coerceAtLeast(0)
+        )
+
+    private fun writeReturnMomentState(
+        statePrefs: android.content.SharedPreferences,
+        state: ReturnMomentState
+    ) {
         val previousRoughStreak = statePrefs.getInt(KEY_ROUGH_RUN_STREAK, 0).coerceAtLeast(0)
         val safeRoughStreak = when {
             state.roughRunStreak >= 0 -> state.roughRunStreak
@@ -641,15 +672,6 @@ object SaveManager {
             .putLong(KEY_LAST_GARDEN_GREETING_DAY, state.lastGardenGreetingDay.coerceAtLeast(-1L))
             .putInt(KEY_ROUGH_RUN_STREAK, safeRoughStreak)
             .apply()
-    }
-
-    fun loadReturnMomentState(context: Context): ReturnMomentState {
-        val statePrefs = prefs(context)
-        return ReturnMomentState(
-            lastActiveAtMs = statePrefs.getLong(KEY_LAST_ACTIVE_AT_MS, 0L).coerceAtLeast(0L),
-            lastGardenGreetingDay = statePrefs.getLong(KEY_LAST_GARDEN_GREETING_DAY, -1L).coerceAtLeast(-1L),
-            roughRunStreak = statePrefs.getInt(KEY_ROUGH_RUN_STREAK, 0).coerceAtLeast(0)
-        )
     }
 
     fun saveUnlockedMemoryPages(context: Context, pages: Set<String>) {

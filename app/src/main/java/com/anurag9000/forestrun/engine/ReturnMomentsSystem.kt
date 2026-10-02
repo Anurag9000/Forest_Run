@@ -19,12 +19,10 @@ object ReturnMomentsSystem {
     private const val LONG_ABSENCE_MS = 36L * 60L * 60L * 1_000L
 
     fun recordRunOutcome(context: Context, summary: RunSummary, nowMs: Long = System.currentTimeMillis()) {
-        val previous = SaveManager.loadReturnMomentState(context.applicationContext)
         val roughRun = summary.forestMood == ForestMood.FEARFUL ||
             (summary.hitsTaken >= 2 && summary.distanceM < 650f) ||
             (summary.hitsTaken > 0 && summary.kindnessChain == 0 && summary.seedsCollected < 4)
-        SaveManager.saveReturnMomentState(
-            context.applicationContext,
+        SaveManager.updateReturnMomentState(context.applicationContext) { previous ->
             previous.copy(
                 lastActiveAtMs = nowMs,
                 roughRunStreak = if (roughRun) {
@@ -33,7 +31,7 @@ object ReturnMomentsSystem {
                     0
                 }
             )
-        )
+        }
     }
 
     fun resolveGardenMoment(
@@ -64,14 +62,12 @@ object ReturnMomentsSystem {
         nowMs: Long = System.currentTimeMillis()
     ) {
         val appContext = context.applicationContext
-        val previous = SaveManager.loadReturnMomentState(appContext)
-        SaveManager.saveReturnMomentState(
-            appContext,
+        SaveManager.updateReturnMomentState(appContext) { previous ->
             previous.copy(
                 lastActiveAtMs = nowMs.coerceAtLeast(0L),
                 lastGardenGreetingDay = localCalendarDayId(nowMs)
             )
-        )
+        }
     }
 
     private fun buildGardenMoment(
