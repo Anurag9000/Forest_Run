@@ -174,7 +174,10 @@ class CherryBlossomTest {
         screenHeight = 1080f,
         groundY = 885.6f,
         sprite = SpriteSheet(
-            Bitmap.createBitmap(8, 10, Bitmap.Config.ARGB_8888),
+            // Four 16x128 frames: this matches SpriteManager's tree fallback
+            // geometry and satisfies its >=8px frame-edge validation contract,
+            // while Cherry still resolves to its authored minimum display width.
+            Bitmap.createBitmap(64, 128, Bitmap.Config.ARGB_8888),
             frameCount = 4,
             framesPerSec = 8f
         )
