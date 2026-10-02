@@ -416,12 +416,28 @@ object SaveManager {
     // ── Costumes ──────────────────────────────────────────────────────────
 
     fun saveUnlockedCostumes(context: Context, costumes: Set<CostumeStyle>) {
-        val raw = costumes.map { it.name }.toSet()
-        prefs(context).edit().putStringSet(KEY_UNLOCKED_COSTUMES, raw).apply()
+        val raw = costumes
+            .filterNot { it == CostumeStyle.NONE }
+            .map { it.name }
+            .toSet()
+        withGardenCurrencyLock {
+            val selectedPrefs = prefs(context)
+            val existing = selectedPrefs
+                .getStringSet(KEY_UNLOCKED_COSTUMES, emptySet())
+                .orEmpty()
+                .toSet()
+            val merged = existing + raw
+            if (merged != existing) {
+                selectedPrefs.edit().putStringSet(KEY_UNLOCKED_COSTUMES, merged).apply()
+            }
+        }
     }
 
     fun loadUnlockedCostumes(context: Context): Set<CostumeStyle> {
-        val raw = prefs(context).getStringSet(KEY_UNLOCKED_COSTUMES, emptySet()).orEmpty()
+        val raw = prefs(context)
+            .getStringSet(KEY_UNLOCKED_COSTUMES, emptySet())
+            .orEmpty()
+            .toSet()
         return raw.mapNotNull { name -> runCatching { CostumeStyle.valueOf(name) }.getOrNull() }.toSet()
     }
 
@@ -637,11 +653,24 @@ object SaveManager {
     }
 
     fun saveUnlockedMemoryPages(context: Context, pages: Set<String>) {
-        prefs(context).edit().putStringSet(KEY_UNLOCKED_MEMORY_PAGES, pages).apply()
+        withGardenCurrencyLock {
+            val selectedPrefs = prefs(context)
+            val existing = selectedPrefs
+                .getStringSet(KEY_UNLOCKED_MEMORY_PAGES, emptySet())
+                .orEmpty()
+                .toSet()
+            val merged = existing + pages
+            if (merged != existing) {
+                selectedPrefs.edit().putStringSet(KEY_UNLOCKED_MEMORY_PAGES, merged).apply()
+            }
+        }
     }
 
     fun loadUnlockedMemoryPages(context: Context): Set<String> =
-        prefs(context).getStringSet(KEY_UNLOCKED_MEMORY_PAGES, emptySet()).orEmpty()
+        prefs(context)
+            .getStringSet(KEY_UNLOCKED_MEMORY_PAGES, emptySet())
+            .orEmpty()
+            .toSet()
 
     fun saveRelationshipStage(context: Context, type: EntityType, stage: RelationshipStage) {
         prefs(context).edit().putString("relationship_stage_${type.name.lowercase()}", stage.name).apply()
@@ -654,11 +683,26 @@ object SaveManager {
 
     fun saveUnlockedRelationshipMilestones(context: Context, milestones: Set<EntityType>) {
         val raw = milestones.map { it.name }.toSet()
-        prefs(context).edit().putStringSet(KEY_UNLOCKED_RELATIONSHIP_MILESTONES, raw).apply()
+        withGardenCurrencyLock {
+            val selectedPrefs = prefs(context)
+            val existing = selectedPrefs
+                .getStringSet(KEY_UNLOCKED_RELATIONSHIP_MILESTONES, emptySet())
+                .orEmpty()
+                .toSet()
+            val merged = existing + raw
+            if (merged != existing) {
+                selectedPrefs.edit()
+                    .putStringSet(KEY_UNLOCKED_RELATIONSHIP_MILESTONES, merged)
+                    .apply()
+            }
+        }
     }
 
     fun loadUnlockedRelationshipMilestones(context: Context): Set<EntityType> =
-        prefs(context).getStringSet(KEY_UNLOCKED_RELATIONSHIP_MILESTONES, emptySet()).orEmpty()
+        prefs(context)
+            .getStringSet(KEY_UNLOCKED_RELATIONSHIP_MILESTONES, emptySet())
+            .orEmpty()
+            .toSet()
             .mapNotNull { raw -> runCatching { EntityType.valueOf(raw) }.getOrNull() }
             .toSet()
 
@@ -682,7 +726,10 @@ object SaveManager {
     }
 
     fun loadUnlockedHistoryMarks(context: Context): Set<String> =
-        prefs(context).getStringSet(KEY_UNLOCKED_HISTORY_MARKS, emptySet()).orEmpty()
+        prefs(context)
+            .getStringSet(KEY_UNLOCKED_HISTORY_MARKS, emptySet())
+            .orEmpty()
+            .toSet()
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(activePrefsName, Context.MODE_PRIVATE)

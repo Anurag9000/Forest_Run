@@ -2,6 +2,8 @@ package com.anurag9000.forestrun.engine
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.anurag9000.forestrun.entities.CostumeStyle
+import com.anurag9000.forestrun.entities.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -200,6 +202,69 @@ class SaveManagerConcurrencyTest {
         error.get()?.let { throw AssertionError("Concurrent history unlock failed", it) }
 
         assertEquals(first + second, SaveManager.loadUnlockedHistoryMarks(context))
+    }
+
+    @Test
+    fun `all permanent unlock sets preserve concurrent independent discoveries`() {
+        val start = CountDownLatch(1)
+        val finished = CountDownLatch(2)
+        val error = AtomicReference<Throwable?>(null)
+
+        val first = Thread {
+            try {
+                start.await()
+                repeat(100) {
+                    SaveManager.saveUnlockedMemoryPages(context, setOf("page_alpha"))
+                    SaveManager.saveUnlockedRelationshipMilestones(
+                        context, setOf(EntityType.CAT)
+                    )
+                    SaveManager.saveUnlockedCostumes(
+                        context, setOf(CostumeStyle.FOREST_SCARF)
+                    )
+                }
+            } catch (failure: Throwable) {
+                error.compareAndSet(null, failure)
+            } finally {
+                finished.countDown()
+            }
+        }
+        val second = Thread {
+            try {
+                start.await()
+                repeat(100) {
+                    SaveManager.saveUnlockedMemoryPages(context, setOf("page_beta"))
+                    SaveManager.saveUnlockedRelationshipMilestones(
+                        context, setOf(EntityType.EAGLE)
+                    )
+                    SaveManager.saveUnlockedCostumes(
+                        context, setOf(CostumeStyle.BLOOM_RIBBON)
+                    )
+                }
+            } catch (failure: Throwable) {
+                error.compareAndSet(null, failure)
+            } finally {
+                finished.countDown()
+            }
+        }
+
+        first.start()
+        second.start()
+        start.countDown()
+        assertTrue("permanent unlock workers timed out", finished.await(10, TimeUnit.SECONDS))
+        error.get()?.let { throw AssertionError("Concurrent permanent unlock failed", it) }
+
+        assertEquals(
+            setOf("page_alpha", "page_beta"),
+            SaveManager.loadUnlockedMemoryPages(context)
+        )
+        assertEquals(
+            setOf(EntityType.CAT, EntityType.EAGLE),
+            SaveManager.loadUnlockedRelationshipMilestones(context)
+        )
+        assertEquals(
+            setOf(CostumeStyle.FOREST_SCARF, CostumeStyle.BLOOM_RIBBON),
+            SaveManager.loadUnlockedCostumes(context)
+        )
     }
 
     @Test
