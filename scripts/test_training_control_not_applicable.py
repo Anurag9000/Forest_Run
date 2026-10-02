@@ -437,10 +437,14 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
         dataset_digest = payload["dataset_cohorts"]["source_manifest_sha256"]
         scope_digest = payload["scan"]["scope_manifest_sha256"]
         dataset_scope_digest = payload["dataset_cohorts"]["scope_manifest_sha256"]
+        authority_digest = payload["scan"]["authority_manifest_sha256"]
+        dataset_authority_digest = payload["dataset_cohorts"]["authority_manifest_sha256"]
         self.assertEqual(scan_digest, dataset_digest)
         self.assertEqual(scope_digest, dataset_scope_digest)
+        self.assertEqual(authority_digest, dataset_authority_digest)
         self.assertRegex(scan_digest, r"^[0-9a-f]{64}$")
         self.assertRegex(scope_digest, r"^[0-9a-f]{64}$")
+        self.assertRegex(authority_digest, r"^[0-9a-f]{64}$")
 
 
 if __name__ == "__main__":
