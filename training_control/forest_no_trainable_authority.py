@@ -13,6 +13,7 @@ from pathlib import Path
 import ast
 import hashlib
 import io
+import json
 import os
 import re
 import tokenize
@@ -54,6 +55,7 @@ VOLATILE_SKIP_PARTS = {
 }
 SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs", "Final_Assets (2)", "training_control"}
 MODEL_ARTIFACT_SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs", "training_control"}
+SCOPE_SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs", "training_control"}
 # These expressions intentionally target training/model-framework semantics rather
 # than generic words such as "model" that are common in ordinary application code.
 FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -86,6 +88,7 @@ class Audit:
     findings: tuple[Finding, ...]
     android_dependencies: tuple[str, ...]
     source_manifest_sha256: str
+    scope_manifest_sha256: str
 
     @property
     def complete(self) -> bool:
@@ -100,6 +103,7 @@ class Audit:
             "findings": [asdict(row) for row in self.findings],
             "android_dependencies": list(self.android_dependencies),
             "source_manifest_sha256": self.source_manifest_sha256,
+            "scope_manifest_sha256": self.scope_manifest_sha256,
             "complete": self.complete,
             "wildcard_training_exemptions": False,
             "source_configuration_only": True,
