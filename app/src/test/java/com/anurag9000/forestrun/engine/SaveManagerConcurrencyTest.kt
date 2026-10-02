@@ -219,7 +219,7 @@ class SaveManagerConcurrencyTest {
                         context, setOf(EntityType.CAT)
                     )
                     SaveManager.saveUnlockedCostumes(
-                        context, setOf(CostumeStyle.FOREST_SCARF)
+                        context, setOf(CostumeStyle.FLOWER_CROWN)
                     )
                 }
             } catch (failure: Throwable) {
@@ -262,7 +262,7 @@ class SaveManagerConcurrencyTest {
             SaveManager.loadUnlockedRelationshipMilestones(context)
         )
         assertEquals(
-            setOf(CostumeStyle.FOREST_SCARF, CostumeStyle.BLOOM_RIBBON),
+            setOf(CostumeStyle.FLOWER_CROWN, CostumeStyle.BLOOM_RIBBON),
             SaveManager.loadUnlockedCostumes(context)
         )
     }

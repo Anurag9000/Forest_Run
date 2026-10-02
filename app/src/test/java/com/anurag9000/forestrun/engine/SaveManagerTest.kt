@@ -352,17 +352,17 @@ class SaveManagerTest {
     fun `permanent costume merge removes legacy NONE sentinel without losing unlocks`() {
         context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
-            .putStringSet("unlocked_costumes", setOf("NONE", "FOREST_SCARF"))
+            .putStringSet("unlocked_costumes", setOf("NONE", "FLOWER_CROWN"))
             .commit()
 
         SaveManager.saveUnlockedCostumes(context, setOf(CostumeStyle.BLOOM_RIBBON))
 
         assertEquals(
-            setOf(CostumeStyle.FOREST_SCARF, CostumeStyle.BLOOM_RIBBON),
+            setOf(CostumeStyle.FLOWER_CROWN, CostumeStyle.BLOOM_RIBBON),
             SaveManager.loadUnlockedCostumes(context)
         )
         assertEquals(
-            setOf("FOREST_SCARF", "BLOOM_RIBBON"),
+            setOf("FLOWER_CROWN", "BLOOM_RIBBON"),
             context.getSharedPreferences(SaveManager.PREFS_NAME, Context.MODE_PRIVATE)
                 .getStringSet("unlocked_costumes", emptySet())
                 .orEmpty()
