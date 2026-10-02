@@ -98,7 +98,7 @@ class CherryBlossomTest {
             bodyLeft, bodyTop, bodyLeft + fallingWidth, bodyTop + fallingHeight
         )
         player.hitbox.set(player.previousHitbox)
-        player.hasMotionSample = true
+        assertTrue("real jump must establish a Player motion sample", player.hasMotionSample)
 
         val trunkOffset = probeTrunk.left - probe.x
         val startX = player.hitbox.right + 3f - trunkOffset
