@@ -345,19 +345,31 @@ def audit(root: Path = ROOT) -> Audit:
         payload = path.read_bytes()
         scanned.append(relative)
         _manifest_update(manifest, relative, payload)
-        text = payload.decode("utf-8", errors="replace")
+
+        notebook_findings: tuple[Finding, ...] = ()
+        if path.suffix.lower() == ".ipynb":
+            text, notebook_findings = _notebook_code(relative, payload)
+            findings.extend(notebook_findings)
+            python_like = True
+        else:
+            text = payload.decode("utf-8", errors="replace")
+            python_like = path.suffix.lower() == ".py"
+
         source_lines = text.splitlines()
-        executable_lines = (
-            _python_executable_lines(text)
-            if path.suffix.lower() == ".py"
-            else source_lines
-        )
+        if python_like:
+            executable_lines = _python_executable_lines(text)
+        else:
+            executable_lines = _dependency_executable_lines(path, text)
+
         for line_number, line in enumerate(executable_lines, 1):
             for category, pattern in FORBIDDEN_PATTERNS:
                 if pattern.search(line):
-                    excerpt = source_lines[line_number - 1].strip()[:240]
+                    excerpt = (
+                        source_lines[line_number - 1].strip()[:240]
+                        if line_number <= len(source_lines) else ""
+                    )
                     findings.append(Finding(relative, line_number, category, excerpt))
-        if path.suffix.lower() == ".py":
+        if python_like and not notebook_findings:
             findings.extend(_python_dynamic_import_findings(relative, text))
     findings.extend(_model_artifact_findings(root))
     findings.extend(_symlink_findings(root))
@@ -366,6 +378,7 @@ def audit(root: Path = ROOT) -> Audit:
         tuple(findings),
         _dependencies(root),
         manifest.hexdigest(),
+        _scope_manifest(root),
     )
 
 
