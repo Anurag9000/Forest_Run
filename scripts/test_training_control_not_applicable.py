@@ -156,6 +156,61 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             self.assertTrue(result.complete)
             self.assertNotIn("artifacts/training_control/old_result.json", result.scanned_files)
 
+    def test_notebook_markdown_is_ignored_but_code_cell_framework_import_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            notebook = root / "experiments" / "probe.ipynb"
+            notebook.parent.mkdir(parents=True)
+            notebook.write_text(json.dumps({
+                "cells": [
+                    {"cell_type": "markdown", "source": ["torch tensorflow prose only"]},
+                    {"cell_type": "code", "source": ["import " + ("to" + "rch") + "\\n"]},
+                ],
+                "metadata": {},
+                "nbformat": 4,
+                "nbformat_minor": 5,
+            }), encoding="utf-8")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual(("experiments/probe.ipynb",), result.scanned_files)
+            self.assertEqual("pytorch", result.findings[0].category)
+
+    def test_malformed_notebook_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            notebook = root / "experiments" / "broken.ipynb"
+            notebook.parent.mkdir(parents=True)
+            notebook.write_text("{not-json", encoding="utf-8")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual("notebook-parse-error", result.findings[0].category)
+
+    def test_dependency_text_manifests_detect_active_framework_but_ignore_comments(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            requirements = root / "requirements-ci.txt"
+            requirements.write_text(
+                "# torch==0.0 is documentation only\\n"
+                + ("to" + "rch") + "==2.5.1\\n",
+                encoding="utf-8",
+            )
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual("pytorch", result.findings[0].category)
+            requirements.write_text("# torch==0.0 is documentation only\\n", encoding="utf-8")
+            self.assertTrue(audit(root).complete)
+
+    def test_model_artifact_in_product_asset_archive_is_not_hidden_by_source_skip(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            artifact = root / "Final_Assets (2)" / "models" / "policy.tflite"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_bytes(b"fixture")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            rows = [row for row in result.findings if row.category == "ml-model-artifact"]
+            self.assertEqual(["Final_Assets (2)/models/policy.tflite"], [row.path for row in rows])
+
     def test_retained_ml_model_artifact_invalidates_non_ml_classification(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -214,6 +269,21 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
                 ),
                 result.android_dependencies,
             )
+
+    def test_scope_manifest_changes_when_unscanned_product_path_is_added(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "scripts" / "ordinary_release.py"
+            source.parent.mkdir(parents=True)
+            source.write_text("value = 1\\n", encoding="utf-8")
+            first = audit(root)
+            asset = root / "Final_Assets (2)" / "char" / "new_sprite.png"
+            asset.parent.mkdir(parents=True)
+            asset.write_bytes(b"png-fixture")
+            second = audit(root)
+            self.assertEqual(first.source_manifest_sha256, second.source_manifest_sha256)
+            self.assertNotEqual(first.scope_manifest_sha256, second.scope_manifest_sha256)
+            self.assertRegex(second.scope_manifest_sha256, r"^[0-9a-f]{64}$")
 
     def test_source_manifest_digest_is_stable_and_content_sensitive(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -365,8 +435,12 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
         self.assertFalse(payload["ordinary_application_registries_are_training_surfaces"])
         scan_digest = payload["scan"]["source_manifest_sha256"]
         dataset_digest = payload["dataset_cohorts"]["source_manifest_sha256"]
+        scope_digest = payload["scan"]["scope_manifest_sha256"]
+        dataset_scope_digest = payload["dataset_cohorts"]["scope_manifest_sha256"]
         self.assertEqual(scan_digest, dataset_digest)
+        self.assertEqual(scope_digest, dataset_scope_digest)
         self.assertRegex(scan_digest, r"^[0-9a-f]{64}$")
+        self.assertRegex(scope_digest, r"^[0-9a-f]{64}$")
 
 
 if __name__ == "__main__":
