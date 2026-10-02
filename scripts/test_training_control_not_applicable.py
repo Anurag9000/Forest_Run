@@ -52,6 +52,50 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             self.assertFalse(result.complete)
             self.assertEqual("py" + "to" + "rch", result.findings[0].category)
 
+    def test_python_comments_and_string_literals_do_not_create_training_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "scripts" / "audit_expectations.py"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                "# torch tensorflow jax sklearn are words in prose only\n"
+                "expected = 'pytorch tensorflow jax sklearn optimizer.step backward'\n"
+                "joined = 'py' + 'torch'\n",
+                encoding="utf-8",
+            )
+            result = audit(root)
+            self.assertTrue(result.complete, result.findings)
+
+    def test_dynamic_framework_import_string_still_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "app" / "dynamic_loader.py"
+            source.parent.mkdir(parents=True)
+            framework = "to" + "rch"
+            source.write_text(
+                "import importlib\n"
+                f"backend = importlib.import_module('{framework}')\n",
+                encoding="utf-8",
+            )
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual("pytorch", result.findings[0].category)
+            self.assertEqual("app/dynamic_loader.py", result.findings[0].path)
+
+    def test_dunder_dynamic_framework_import_still_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "scripts" / "loader.py"
+            source.parent.mkdir(parents=True)
+            framework = "tensor" + "flow"
+            source.write_text(
+                f"backend = __import__('{framework}')\n",
+                encoding="utf-8",
+            )
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual("tensorflow", result.findings[0].category)
+
     def test_only_root_launcher_is_exempt_not_new_nested_train_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
