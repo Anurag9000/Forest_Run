@@ -23,7 +23,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SUFFIXES = {
     ".kt", ".kts", ".java", ".py", ".js", ".ts", ".tsx", ".jsx",
     ".gradle", ".toml", ".yaml", ".yml", ".json", ".xml",
-    ".sh", ".bash", ".bat", ".cmd", ".ps1",
+    ".sh", ".bash", ".bat", ".cmd", ".ps1", ".ipynb",
+}
+DEPENDENCY_TEXT_NAMES = {
+    "Pipfile", "Pipfile.lock", "poetry.lock", "uv.lock", "requirements.txt",
+    "requirements-dev.txt", "requirements-test.txt", "constraints.txt",
+    "Dockerfile",
 }
 MODEL_ARTIFACT_SUFFIXES = {
     ".tflite", ".onnx", ".ort", ".pt", ".pth", ".ckpt", ".safetensors",
@@ -43,11 +48,12 @@ REQUIRED_APPLICATION_FILES = (
     "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
 )
 
-SKIP_PARTS = {
-    ".git", ".gradle", ".idea", "build", "docs", "Final_Assets (2)",
-    ".training_control", "training_control", "artifacts",
+VOLATILE_SKIP_PARTS = {
+    ".git", ".gradle", ".idea", "build", ".training_control", "artifacts",
     ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache",
 }
+SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs", "Final_Assets (2)", "training_control"}
+MODEL_ARTIFACT_SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs", "training_control"}
 # These expressions intentionally target training/model-framework semantics rather
 # than generic words such as "model" that are common in ordinary application code.
 FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -116,7 +122,13 @@ def _files(root: Path = ROOT) -> Iterable[Path]:
             continue
         if any(part in SKIP_PARTS for part in relative.parts):
             continue
-        if path.suffix.lower() in SOURCE_SUFFIXES or path.name in {"build.gradle.kts", "settings.gradle.kts", "gradle.properties"}:
+        dependency_text = (
+            path.name in DEPENDENCY_TEXT_NAMES
+            or (path.name.startswith("requirements-") and path.suffix.lower() == ".txt")
+        )
+        if path.suffix.lower() in SOURCE_SUFFIXES or dependency_text or path.name in {
+            "build.gradle.kts", "settings.gradle.kts", "gradle.properties",
+        }:
             yield path
 
 
@@ -166,7 +178,7 @@ def _model_artifact_findings(root: Path = ROOT) -> tuple[Finding, ...]:
         if not path.is_file():
             continue
         relative = path.relative_to(root)
-        if any(part in SKIP_PARTS for part in relative.parts):
+        if any(part in MODEL_ARTIFACT_SKIP_PARTS for part in relative.parts):
             continue
         if path.suffix.lower() in MODEL_ARTIFACT_SUFFIXES:
             findings.append(Finding(
