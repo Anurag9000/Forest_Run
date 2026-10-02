@@ -58,9 +58,13 @@ object PersistentMemoryManager {
 
     fun recordSpare(context: Context, type: EntityType) {
         val appContext = context.applicationContext
-        SaveManager.incrementSparedCount(appContext, type)
-        SaveManager.incrementKindnessStreak(appContext, type)
-        SaveManager.resetTenderStreak(appContext, type)
+        // The paired streak transition is one logical memory event: a spare
+        // advances warmth and clears tension atomically with its spare count.
+        SaveManager.withGardenCurrencyLock {
+            SaveManager.incrementSparedCount(appContext, type)
+            SaveManager.incrementKindnessStreak(appContext, type)
+            SaveManager.resetTenderStreak(appContext, type)
+        }
         refreshHistoryUnlockState(appContext)
         if (RelationshipArcSystem.isTracked(type)) {
             RelationshipArcSystem.refreshStage(appContext, type)
@@ -69,10 +73,14 @@ object PersistentMemoryManager {
 
     fun recordHit(context: Context, type: EntityType) {
         val appContext = context.applicationContext
-        SaveManager.incrementHitCount(appContext, type)
-        SaveManager.incrementTenderStreak(appContext, type)
-        SaveManager.resetKindnessStreak(appContext, type)
-        SaveManager.saveLastKiller(appContext, type)
+        // Likewise, a hit advances tension, clears warmth and publishes the
+        // killer as one serialized persistent-memory transition.
+        SaveManager.withGardenCurrencyLock {
+            SaveManager.incrementHitCount(appContext, type)
+            SaveManager.incrementTenderStreak(appContext, type)
+            SaveManager.resetKindnessStreak(appContext, type)
+            SaveManager.saveLastKiller(appContext, type)
+        }
         refreshHistoryUnlockState(appContext)
         if (RelationshipArcSystem.isTracked(type)) {
             RelationshipArcSystem.refreshStage(appContext, type)

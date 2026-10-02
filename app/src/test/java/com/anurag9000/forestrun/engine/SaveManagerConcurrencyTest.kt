@@ -123,6 +123,56 @@ class SaveManagerConcurrencyTest {
 
 
     @Test
+    fun `concurrent spare and hit memory events remain serializable as whole transitions`() {
+        val rounds = 200
+        val start = CountDownLatch(1)
+        val finished = CountDownLatch(2)
+        val error = AtomicReference<Throwable?>(null)
+
+        val spareWorker = Thread {
+            try {
+                start.await()
+                repeat(rounds) {
+                    PersistentMemoryManager.recordSpare(context, EntityType.WOLF)
+                }
+            } catch (failure: Throwable) {
+                error.compareAndSet(null, failure)
+            } finally {
+                finished.countDown()
+            }
+        }
+        val hitWorker = Thread {
+            try {
+                start.await()
+                repeat(rounds) {
+                    PersistentMemoryManager.recordHit(context, EntityType.WOLF)
+                }
+            } catch (failure: Throwable) {
+                error.compareAndSet(null, failure)
+            } finally {
+                finished.countDown()
+            }
+        }
+
+        spareWorker.start()
+        hitWorker.start()
+        start.countDown()
+        assertTrue("memory event workers timed out", finished.await(15, TimeUnit.SECONDS))
+        error.get()?.let { throw AssertionError("Concurrent memory event failed", it) }
+
+        assertEquals(rounds, SaveManager.loadSparedCount(context, EntityType.WOLF))
+        assertEquals(rounds, SaveManager.loadHitCount(context, EntityType.WOLF))
+        val kindness = SaveManager.loadKindnessStreak(context, EntityType.WOLF)
+        val tenderness = SaveManager.loadTenderStreak(context, EntityType.WOLF)
+
+        assertTrue(
+            "streak pair is not serializable: kindness=$kindness tenderness=$tenderness",
+            (kindness > 0 && tenderness == 0) || (kindness == 0 && tenderness > 0)
+        )
+        assertEquals(EntityType.WOLF, SaveManager.loadLastKiller(context))
+    }
+
+    @Test
     fun `run earned Seeds and Garden purchase serialize on one currency lock`() {
         SaveManager.saveLifetimeSeeds(context, 50)
         SaveManager.saveGardenProgress(context, 1)

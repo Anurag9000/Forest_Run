@@ -478,7 +478,9 @@ object SaveManager {
     }
 
     fun resetKindnessStreak(context: Context, type: EntityType) {
-        prefs(context).edit().putInt("kindness_streak_${type.name.lowercase()}", 0).apply()
+        withGardenCurrencyLock {
+            prefs(context).edit().putInt("kindness_streak_${type.name.lowercase()}", 0).apply()
+        }
     }
 
     fun loadKindnessStreak(context: Context, type: EntityType): Int =
@@ -489,7 +491,9 @@ object SaveManager {
     }
 
     fun resetTenderStreak(context: Context, type: EntityType) {
-        prefs(context).edit().putInt("tender_streak_${type.name.lowercase()}", 0).apply()
+        withGardenCurrencyLock {
+            prefs(context).edit().putInt("tender_streak_${type.name.lowercase()}", 0).apply()
+        }
     }
 
     fun loadTenderStreak(context: Context, type: EntityType): Int =
