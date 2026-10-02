@@ -50,11 +50,16 @@ class ReturnMomentsSystemTest {
         )
 
         repeat(50) { round ->
+            val dayMs = (5L + round) * 24L * 60L * 60L * 1_000L
             SaveManager.saveReturnMomentState(context, ReturnMomentState())
+            ReturnMomentsSystem.acknowledgeGardenMomentShown(context, dayMs)
+            val expectedGreetingDay =
+                SaveManager.loadReturnMomentState(context).lastGardenGreetingDay
+            SaveManager.saveReturnMomentState(context, ReturnMomentState())
+
             val start = CountDownLatch(1)
             val done = CountDownLatch(2)
             val failure = AtomicReference<Throwable?>(null)
-            val dayMs = (5L + round) * 24L * 60L * 60L * 1_000L
 
             val outcome = Thread {
                 try {
@@ -86,7 +91,7 @@ class ReturnMomentsSystemTest {
             assertEquals("round=$round rough streak lost", 1, state.roughRunStreak)
             assertEquals(
                 "round=$round rendered greeting day lost",
-                ReturnMomentsSystem.localCalendarDayIdForTests(dayMs),
+                expectedGreetingDay,
                 state.lastGardenGreetingDay
             )
         }
