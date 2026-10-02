@@ -49,6 +49,12 @@ REQUIRED_APPLICATION_FILES = (
     "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
 )
 
+AUTHORITY_RELATIVE_FILES = (
+    "run_all_training.py",
+    "training_control/forest_no_trainable_authority.py",
+    "training_control/dataset_cohort_not_applicable_v1.py",
+)
+
 VOLATILE_SKIP_PARTS = {
     ".git", ".gradle", ".idea", "build", ".training_control", "artifacts",
     ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache",
@@ -89,6 +95,7 @@ class Audit:
     android_dependencies: tuple[str, ...]
     source_manifest_sha256: str
     scope_manifest_sha256: str
+    authority_manifest_sha256: str
 
     @property
     def complete(self) -> bool:
@@ -104,6 +111,7 @@ class Audit:
             "android_dependencies": list(self.android_dependencies),
             "source_manifest_sha256": self.source_manifest_sha256,
             "scope_manifest_sha256": self.scope_manifest_sha256,
+            "authority_manifest_sha256": self.authority_manifest_sha256,
             "complete": self.complete,
             "wildcard_training_exemptions": False,
             "source_configuration_only": True,
@@ -143,6 +151,18 @@ def _manifest_update(digest: "hashlib._Hash", relative: str, payload: bytes) -> 
     digest.update(encoded)
     digest.update(len(payload).to_bytes(8, "big"))
     digest.update(payload)
+
+
+def _authority_manifest() -> str:
+    """Bind the exact local code that decides and publishes applicability."""
+    digest = hashlib.sha256()
+    for relative in AUTHORITY_RELATIVE_FILES:
+        path = ROOT / relative
+        if not path.is_file() or path.is_symlink():
+            _manifest_update(digest, f"missing:{relative}", b"")
+            continue
+        _manifest_update(digest, relative, path.read_bytes())
+    return digest.hexdigest()
 
 
 def _scope_manifest(root: Path) -> str:
@@ -379,6 +399,7 @@ def audit(root: Path = ROOT) -> Audit:
         _dependencies(root),
         manifest.hexdigest(),
         _scope_manifest(root),
+        _authority_manifest(),
     )
 
 
