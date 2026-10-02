@@ -10,6 +10,7 @@ import com.anurag9000.forestrun.engine.GameConstants
 import com.anurag9000.forestrun.engine.GameStateManager
 import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.SpriteManager
+import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Player
