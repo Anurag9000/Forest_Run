@@ -3,11 +3,17 @@ package com.anurag9000.forestrun.entities.trees
 import android.content.Context
 import android.graphics.RectF
 import androidx.test.core.app.ApplicationProvider
+import com.anurag9000.forestrun.engine.EntityManager
+import com.anurag9000.forestrun.engine.FrameInputAdmission
+import com.anurag9000.forestrun.engine.GameConstants
 import com.anurag9000.forestrun.engine.GameStateManager
+import com.anurag9000.forestrun.engine.RunMode
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.CollisionResult
+import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.Player
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -51,6 +57,53 @@ class CherryBlossomTest {
             branchHitbox.top - 2f
         )
         assertEquals(CollisionResult.MERCY_MISS, cherry.onCollision(player, gameState))
+    }
+
+    @Test
+    fun `legal recovery step cannot tunnel completely through the solid trunk`() {
+        val player = Player(1920, 1080, spriteManager)
+        val state = GameStateManager(context) { false }
+        repeat(3) { state.update(5_000f) }
+        assertEquals(GameConstants.MAX_SCROLL_SPEED, state.scrollSpeed, 0f)
+
+        val probe = cherry()
+        val trunkOffset = rectField(probe, "trunkHitbox").left - probe.x
+        val startX = player.hitbox.right + 3f - trunkOffset
+        val cherry = CherryBlossom(
+            context = context,
+            startX = startX,
+            screenHeight = 1080f,
+            groundY = 885.6f,
+            sprite = spriteManager.cherryBlossomSprite.copy()
+        )
+        val manager = EntityManager(context, 1_920f, 1_080f, spriteManager)
+        manager.activeEntities += cherry
+
+        val before = rectField(cherry, "trunkHitbox")
+        assertTrue(before.left > player.hitbox.right)
+        assertFalse(RectF.intersects(player.hitbox, before))
+
+        player.update(FrameInputAdmission.MAX_DELTA_SECONDS, state.scrollSpeed)
+        manager.update(
+            deltaTime = FrameInputAdmission.MAX_DELTA_SECONDS,
+            gameState = state,
+            player = player,
+            runMode = RunMode.DEBUG_SCENARIO
+        )
+
+        val after = rectField(cherry, "trunkHitbox")
+        assertTrue(after.right < player.hitbox.left)
+        assertFalse(RectF.intersects(player.hitbox, after))
+        assertFalse(
+            "branch endpoint must not be the reason this fixture hits",
+            RectF.intersects(player.hitbox, rectField(cherry, "branchHitbox"))
+        )
+
+        val frame = requireNotNull(manager.checkCollisions(player, state))
+        assertEquals(CollisionResult.HIT, frame.result)
+        assertEquals(EncounterOutcome.HIT, cherry.encounterOutcome)
+        assertEquals(0, state.mercyMissesThisRun)
+        assertEquals(0, state.cleanPassesThisRun)
     }
 
     @Test

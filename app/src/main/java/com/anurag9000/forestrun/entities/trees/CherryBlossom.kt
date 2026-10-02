@@ -11,6 +11,7 @@ import com.anurag9000.forestrun.engine.ReadabilityProfile
 import com.anurag9000.forestrun.engine.SpriteSizing
 import com.anurag9000.forestrun.engine.SpriteSheet
 import com.anurag9000.forestrun.engine.SwayComponent
+import com.anurag9000.forestrun.engine.SweptCoreOverlap
 import com.anurag9000.forestrun.engine.TreeEncounterFlavor
 import com.anurag9000.forestrun.entities.CollisionResult
 import com.anurag9000.forestrun.entities.Entity
@@ -42,6 +43,10 @@ class CherryBlossom(
     private val trunkTop         = groundY - treeHeight * 0.34f
     private val trunkHitbox     = RectF()
     private val branchHitbox    = RectF()
+    // Retain the two real solid components independently. Sweeping the public
+    // aggregate would incorrectly fill the intentional empty lower side.
+    private val previousTrunkHitbox  = RectF()
+    private val previousBranchHitbox = RectF()
     private val stormVeilRect   = RectF()
     private val drawRect        = RectF()
     private val gustPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -73,6 +78,8 @@ class CherryBlossom(
     }
 
     override fun update(deltaTime: Float, scrollSpeed: Float) {
+        previousTrunkHitbox.set(trunkHitbox)
+        previousBranchHitbox.set(branchHitbox)
         x -= scrollSpeed * deltaTime
         gustPulse += deltaTime * 2.7f
         currentSway = swayComponent?.getOffset(deltaTime) ?: 0f
@@ -134,6 +141,19 @@ class CherryBlossom(
     override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {
         if (RectF.intersects(player.hitbox, trunkHitbox) ||
             RectF.intersects(player.hitbox, branchHitbox)) return CollisionResult.HIT
+        // A legal recovery frame can carry a narrow solid component completely
+        // through the Player between endpoint samples. Sweep each physical
+        // component at the same time as Player motion; never sweep the aggregate
+        // encounter box or the decorative storm veil.
+        if (hasMotionSample && player.hasMotionSample &&
+            (SweptCoreOverlap.intersects(
+                player.previousHitbox, player.hitbox,
+                previousTrunkHitbox, trunkHitbox
+            ) || SweptCoreOverlap.intersects(
+                player.previousHitbox, player.hitbox,
+                previousBranchHitbox, branchHitbox
+            ))
+        ) return CollisionResult.HIT
         val mercyPad = readability.mercyPaddingPx
         if (
             intersectsExpanded(
