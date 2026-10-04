@@ -311,8 +311,26 @@ def _python_executable_lines(text: str) -> list[str]:
     return ["".join(line) for line in masked]
 
 
+def _constant_string(node: ast.AST) -> str | None:
+    """Conservatively fold only string expressions with no runtime inputs."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _constant_string(node.left)
+        right = _constant_string(node.right)
+        return left + right if left is not None and right is not None else None
+    if isinstance(node, ast.JoinedStr):
+        chunks: list[str] = []
+        for value in node.values:
+            if not isinstance(value, ast.Constant) or not isinstance(value.value, str):
+                return None
+            chunks.append(value.value)
+        return "".join(chunks)
+    return None
+
+
 def _python_dynamic_import_findings(relative: str, text: str) -> tuple[Finding, ...]:
-    """Catch ML frameworks loaded from string literals via import helpers."""
+    """Catch executable ML imports through common dynamic-import spellings."""
     framework_categories = {
         "torch": "pytorch",
         "pytorch": "pytorch",
@@ -334,40 +352,57 @@ def _python_dynamic_import_findings(relative: str, text: str) -> tuple[Finding, 
     findings: list[Finding] = []
     source_lines = text.splitlines()
 
-    # Resolve the direct helper names that are genuinely bound from importlib.
-    # This keeps prose/string masking while covering:
-    #   from importlib import import_module
-    #   from importlib import import_module as load_module
-    direct_import_helpers: set[str] = set()
+    direct_import_helpers: set[str] = {"__import__"}
+    importlib_aliases: set[str] = {"importlib"}
+    builtins_aliases: set[str] = {"builtins"}
+
     for node in ast.walk(tree):
-        if not isinstance(node, ast.ImportFrom) or node.module != "importlib":
-            continue
-        for alias in node.names:
-            if alias.name == "import_module":
-                direct_import_helpers.add(alias.asname or alias.name)
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "importlib":
+                    importlib_aliases.add(alias.asname or alias.name)
+                elif alias.name == "builtins":
+                    builtins_aliases.add(alias.asname or alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module == "importlib":
+                for alias in node.names:
+                    if alias.name == "import_module":
+                        direct_import_helpers.add(alias.asname or alias.name)
+            elif node.module == "builtins":
+                for alias in node.names:
+                    if alias.name == "__import__":
+                        direct_import_helpers.add(alias.asname or alias.name)
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call) or not node.args:
             continue
         is_dynamic_import = (
-            isinstance(node.func, ast.Name) and
-            (node.func.id == "__import__" or node.func.id in direct_import_helpers)
+            isinstance(node.func, ast.Name)
+            and node.func.id in direct_import_helpers
         ) or (
             isinstance(node.func, ast.Attribute)
             and node.func.attr == "import_module"
             and isinstance(node.func.value, ast.Name)
-            and node.func.value.id == "importlib"
+            and node.func.value.id in importlib_aliases
+        ) or (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "__import__"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id in builtins_aliases
         )
         if not is_dynamic_import:
             continue
-        argument = node.args[0]
-        if not isinstance(argument, ast.Constant) or not isinstance(argument.value, str):
+        module_name = _constant_string(node.args[0])
+        if module_name is None:
             continue
-        root = argument.value.strip().lower().split(".", 1)[0]
+        root = module_name.strip().lower().split(".", 1)[0]
         category = framework_categories.get(root)
         if category is None:
             continue
-        excerpt = source_lines[node.lineno - 1].strip()[:240] if node.lineno <= len(source_lines) else ""
+        excerpt = (
+            source_lines[node.lineno - 1].strip()[:240]
+            if node.lineno <= len(source_lines) else ""
+        )
         findings.append(Finding(relative, node.lineno, category, excerpt))
     return tuple(findings)
 
