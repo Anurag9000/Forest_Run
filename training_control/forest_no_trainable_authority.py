@@ -61,9 +61,9 @@ VOLATILE_SKIP_PARTS = {
     ".git", ".gradle", ".idea", "build", ".training_control", "artifacts",
     ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache",
 }
-SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs", "Final_Assets (2)", "training_control"}
-MODEL_ARTIFACT_SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs", "training_control"}
-SCOPE_SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs", "training_control"}
+SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs", "Final_Assets (2)"}
+MODEL_ARTIFACT_SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs"}
+SCOPE_SKIP_PARTS = VOLATILE_SKIP_PARTS | {"docs"}
 # These expressions intentionally target training/model-framework semantics rather
 # than generic words such as "model" that are common in ordinary application code.
 FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -130,10 +130,9 @@ def _files(root: Path = ROOT) -> Iterable[Path]:
         # source symlink while scanning for training semantics.
         if path.is_symlink():
             continue
-        # Only the root audit entrypoint is exempt. A newly introduced nested
-        # script with the same filename must still be inspected for optimizers.
-        if relative.as_posix() == "run_all_training.py":
-            continue
+        # The root entrypoint and training-control authority are scanned too.
+        # Python docstrings/string literals are masked below, so policy prose may
+        # name ML frameworks without exempting executable imports or optimizers.
         if any(part in SKIP_PARTS for part in relative.parts):
             continue
         dependency_text = (
