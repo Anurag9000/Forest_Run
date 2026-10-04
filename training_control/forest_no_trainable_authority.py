@@ -33,9 +33,9 @@ DEPENDENCY_TEXT_NAMES = {
 }
 MODEL_ARTIFACT_SUFFIXES = {
     ".tflite", ".onnx", ".ort", ".pt", ".pth", ".ckpt", ".safetensors",
-    ".keras", ".mlmodel", ".mlpackage",
+    ".keras", ".mlmodel", ".mlpackage", ".h5", ".hdf5", ".pb",
 }
-OPAQUE_CODE_SUFFIXES = {".jar", ".aar", ".so", ".dll", ".dylib", ".whl"}
+OPAQUE_CODE_SUFFIXES = {".jar", ".aar", ".so", ".dll", ".dylib", ".whl", ".apk", ".aab", ".dex", ".class"}
 OPAQUE_CODE_ALLOWLIST = {"gradle/wrapper/gradle-wrapper.jar"}
 DEPENDENCY_CONFIG_RE = re.compile(
     r"^(?:implementation|api|compileOnly|runtimeOnly|annotationProcessor|kapt|ksp|"
