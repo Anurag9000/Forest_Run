@@ -446,6 +446,52 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "not symlinks"):
                 require_no_trainable_surface(root)
 
+    def test_root_training_entrypoint_is_not_semantically_exempt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            entry = root / "run_all_training.py"
+            marker = "to" + "rch"
+            entry.write_text(f"import {marker}\n", encoding="utf-8")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertIn("run_all_training.py", result.scanned_files)
+            self.assertIn("pytorch", {row.category for row in result.findings})
+
+    def test_new_training_control_source_cannot_hide_ml_import(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "training_control" / "hidden_trainer.py"
+            source.parent.mkdir(parents=True)
+            framework = "tensor" + "flow"
+            source.write_text(f"import {framework}\n", encoding="utf-8")
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertIn("training_control/hidden_trainer.py", result.scanned_files)
+            self.assertIn("tensorflow", {row.category for row in result.findings})
+
+    def test_policy_strings_in_training_control_do_not_create_false_ml_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "training_control" / "policy.py"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                'POLICY = "torch tensorflow optimizer.step backward()"\n',
+                encoding="utf-8",
+            )
+            result = audit(root)
+            self.assertTrue(result.complete)
+            self.assertIn("training_control/policy.py", result.scanned_files)
+
+    def test_model_artifact_under_training_control_is_not_exempt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            artifact = root / "training_control" / "policy.onnx"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_bytes(b"fixture")
+            result = audit(root)
+            rows = [row for row in result.findings if row.category == "ml-model-artifact"]
+            self.assertEqual(["training_control/policy.onnx"], [row.path for row in rows])
+
     def test_empty_repository_cannot_be_certified_as_non_trainable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
