@@ -83,6 +83,52 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             self.assertEqual("app/dynamic_loader.py", result.findings[0].path)
 
 
+    def test_aliased_importlib_and_constant_composed_framework_name_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "scripts" / "dynamic_backend.py"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                "import importlib as il\n"
+                "backend = il.import_module('to' + 'rch')\n",
+                encoding="utf-8",
+            )
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual("pytorch", result.findings[0].category)
+
+    def test_builtins_dynamic_import_aliases_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "scripts" / "dynamic_backend.py"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                "import builtins as bi\n"
+                "from builtins import __import__ as load\n"
+                "one = bi.__import__('tensor' + 'flow')\n"
+                "two = load('j' + 'ax')\n",
+                encoding="utf-8",
+            )
+            result = audit(root)
+            self.assertFalse(result.complete)
+            self.assertEqual(
+                {"tensorflow", "jax"},
+                {finding.category for finding in result.findings},
+            )
+
+    def test_runtime_variable_dynamic_import_is_review_neutral_without_literal_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "scripts" / "plugin_loader.py"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                "import importlib as il\n"
+                "def load(name):\n"
+                "    return il.import_module(name)\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(audit(root).complete)
+
     def test_direct_importlib_helper_alias_still_detects_executable_framework_load(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -224,6 +270,37 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             self.assertFalse(result.complete)
             rows = [row for row in result.findings if row.category == "opaque-code-artifact"]
             self.assertEqual(["app/libs/runtime.aar"], [row.path for row in rows])
+
+    def test_compiled_android_and_jvm_artifacts_fail_closed(self) -> None:
+        for suffix in (".apk", ".aab", ".dex", ".class"):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                artifact = root / "app" / "libs" / ("retained" + suffix)
+                artifact.parent.mkdir(parents=True)
+                artifact.write_bytes(b"opaque-runtime-fixture")
+                result = audit(root)
+                self.assertFalse(result.complete)
+                rows = [
+                    row for row in result.findings
+                    if row.category == "opaque-code-artifact"
+                ]
+                self.assertEqual([artifact.relative_to(root).as_posix()],
+                                 [row.path for row in rows])
+
+    def test_additional_serialized_model_formats_fail_closed(self) -> None:
+        for suffix in (".h5", ".hdf5", ".pb"):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                artifact = root / "app" / "src" / "main" / "assets" / ("policy" + suffix)
+                artifact.parent.mkdir(parents=True)
+                artifact.write_bytes(b"serialized-model-fixture")
+                result = audit(root)
+                rows = [
+                    row for row in result.findings
+                    if row.category == "ml-model-artifact"
+                ]
+                self.assertEqual([artifact.relative_to(root).as_posix()],
+                                 [row.path for row in rows])
 
     def test_model_artifact_in_product_asset_archive_is_not_hidden_by_source_skip(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
