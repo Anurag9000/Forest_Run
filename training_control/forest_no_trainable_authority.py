@@ -34,6 +34,10 @@ DEPENDENCY_TEXT_NAMES = {
 MODEL_ARTIFACT_SUFFIXES = {
     ".tflite", ".onnx", ".ort", ".pt", ".pth", ".ckpt", ".safetensors",
     ".keras", ".mlmodel", ".mlpackage", ".h5", ".hdf5", ".pb",
+    ".joblib", ".pkl", ".pickle", ".npz",
+}
+OPAQUE_ARCHIVE_SUFFIXES = {
+    ".zip", ".tar", ".tgz", ".tar.gz", ".tar.bz2", ".tar.xz", ".7z", ".rar",
 }
 OPAQUE_CODE_SUFFIXES = {".jar", ".aar", ".so", ".dll", ".dylib", ".whl", ".apk", ".aab", ".dex", ".class"}
 OPAQUE_CODE_ALLOWLIST = {"gradle/wrapper/gradle-wrapper.jar"}
@@ -251,6 +255,29 @@ def _dependencies(root: Path = ROOT) -> tuple[str, ...]:
     return tuple(dependencies)
 
 
+def _opaque_archive_findings(root: Path = ROOT) -> tuple[Finding, ...]:
+    """Fail closed on retained archives whose contents are not source-scanned.
+
+    Documentation/evidence archives remain outside this source applicability
+    authority. Product/runtime archives cannot be treated as evidence of
+    absence because a model, trainer, native library or script can be hidden
+    inside while only the outer path participates in the scope manifest.
+    """
+    findings: list[Finding] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.is_symlink():
+            continue
+        relative = path.relative_to(root)
+        if any(part in MODEL_ARTIFACT_SKIP_PARTS for part in relative.parts):
+            continue
+        lowered = path.name.lower()
+        if any(lowered.endswith(suffix) for suffix in OPAQUE_ARCHIVE_SUFFIXES):
+            findings.append(Finding(
+                relative.as_posix(), 0, "opaque-source-archive", path.name[:240]
+            ))
+    return tuple(findings)
+
+
 def _opaque_code_findings(root: Path = ROOT) -> tuple[Finding, ...]:
     """Fail closed on uninspected executable archives/native libraries."""
     findings: list[Finding] = []
@@ -443,6 +470,7 @@ def audit(root: Path = ROOT) -> Audit:
         if python_like and not notebook_findings:
             findings.extend(_python_dynamic_import_findings(relative, text))
     findings.extend(_model_artifact_findings(root))
+    findings.extend(_opaque_archive_findings(root))
     findings.extend(_opaque_code_findings(root))
     findings.extend(_symlink_findings(root))
     return Audit(
