@@ -302,6 +302,40 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
                 self.assertEqual([artifact.relative_to(root).as_posix()],
                                  [row.path for row in rows])
 
+    def test_opaque_product_archives_fail_closed_even_without_visible_ml_tokens(self) -> None:
+        for name in ("models.zip", "runtime.tar", "bundle.tgz", "package.tar.gz", "assets.7z"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                artifact = root / "app" / "src" / "main" / "assets" / name
+                artifact.parent.mkdir(parents=True)
+                artifact.write_bytes(b"opaque-archive-fixture")
+                result = audit(root)
+                rows = [row for row in result.findings
+                        if row.category == "opaque-source-archive"]
+                self.assertEqual([artifact.relative_to(root).as_posix()],
+                                 [row.path for row in rows])
+
+    def test_serialized_python_model_formats_fail_closed(self) -> None:
+        for suffix in (".joblib", ".pkl", ".pickle", ".npz"):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                artifact = root / "app" / "src" / "main" / "assets" / ("policy" + suffix)
+                artifact.parent.mkdir(parents=True)
+                artifact.write_bytes(b"serialized-model-fixture")
+                result = audit(root)
+                rows = [row for row in result.findings
+                        if row.category == "ml-model-artifact"]
+                self.assertEqual([artifact.relative_to(root).as_posix()],
+                                 [row.path for row in rows])
+
+    def test_documentation_archive_remains_outside_product_source_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            archive = root / "docs" / "release-notes.zip"
+            archive.parent.mkdir(parents=True)
+            archive.write_bytes(b"documentation-only")
+            self.assertTrue(audit(root).complete)
+
     def test_model_artifact_in_product_asset_archive_is_not_hidden_by_source_skip(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
