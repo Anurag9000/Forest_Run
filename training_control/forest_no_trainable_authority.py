@@ -172,11 +172,11 @@ def _authority_manifest(root: Path = ROOT) -> str:
 
 
 def _scope_manifest(root: Path) -> str:
-    """Bind path/type inventory for every repository-owned non-evidence input.
+    """Bind path, type, size and bytes for every repository-owned input.
 
-    Source bytes are separately bound by source_manifest_sha256. This digest
-    exists so adding an unscanned model artifact, notebook, script or asset
-    path cannot leave an old applicability certificate looking current.
+    Source bytes are also bound by source_manifest_sha256. This broader digest
+    covers unscanned assets and allow-listed opaque build tooling so replacing
+    a file at the same path cannot inherit an older applicability certificate.
     """
     digest = hashlib.sha256()
     for path in sorted(root.rglob("*")):
