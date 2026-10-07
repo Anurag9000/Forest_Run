@@ -421,6 +421,33 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
             self.assertNotEqual(first.scope_manifest_sha256, second.scope_manifest_sha256)
             self.assertRegex(second.scope_manifest_sha256, r"^[0-9a-f]{64}$")
 
+    def test_scope_manifest_is_content_sensitive_for_same_unscanned_asset_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            asset = root / "Final_Assets (2)" / "char" / "runner.png"
+            asset.parent.mkdir(parents=True)
+            asset.write_bytes(b"first-png-fixture")
+            first = audit(root)
+            asset.write_bytes(b"second-png-fixture")
+            second = audit(root)
+            self.assertEqual(first.scanned_files, second.scanned_files)
+            self.assertEqual(first.source_manifest_sha256, second.source_manifest_sha256)
+            self.assertNotEqual(first.scope_manifest_sha256, second.scope_manifest_sha256)
+
+    def test_authority_manifest_is_bound_to_the_root_being_audited(self) -> None:
+        with tempfile.TemporaryDirectory() as left_temp, tempfile.TemporaryDirectory() as right_temp:
+            left = Path(left_temp)
+            right = Path(right_temp)
+            for root, payload in ((left, b"left-authority\n"), (right, b"right-authority\n")):
+                entry = root / "run_all_training.py"
+                entry.write_bytes(payload)
+            left_result = audit(left)
+            right_result = audit(right)
+            self.assertNotEqual(
+                left_result.authority_manifest_sha256,
+                right_result.authority_manifest_sha256,
+            )
+
     def test_source_manifest_digest_is_stable_and_content_sensitive(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
