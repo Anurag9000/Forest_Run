@@ -158,11 +158,12 @@ def _manifest_update(digest: "hashlib._Hash", relative: str, payload: bytes) -> 
     digest.update(payload)
 
 
-def _authority_manifest() -> str:
-    """Bind the exact local code that decides and publishes applicability."""
+def _authority_manifest(root: Path = ROOT) -> str:
+    """Bind the exact authority code for the repository root being audited."""
+    root = Path(root).resolve()
     digest = hashlib.sha256()
     for relative in AUTHORITY_RELATIVE_FILES:
-        path = ROOT / relative
+        path = root / relative
         if not path.is_file() or path.is_symlink():
             _manifest_update(digest, f"missing:{relative}", b"")
             continue
@@ -185,7 +186,23 @@ def _scope_manifest(root: Path) -> str:
         if not path.is_file() and not path.is_symlink():
             continue
         kind = "symlink" if path.is_symlink() else "file"
-        payload = os.readlink(path).encode("utf-8", "replace") if path.is_symlink() else b""
+        if path.is_symlink():
+            payload = os.readlink(path).encode("utf-8", "replace")
+        else:
+            # Bind unscanned assets and allow-listed opaque build tooling by
+            # content as well as path. Source text is redundantly protected by
+            # source_manifest_sha256; this full-scope digest prevents a same-path
+            # binary replacement from inheriting an older applicability proof.
+            file_hash = hashlib.sha256()
+            size = 0
+            with path.open("rb") as handle:
+                while True:
+                    chunk = handle.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    file_hash.update(chunk)
+            payload = size.to_bytes(8, "big") + file_hash.digest()
         _manifest_update(digest, f"{kind}:{relative.as_posix()}", payload)
     return digest.hexdigest()
 
@@ -479,7 +496,7 @@ def audit(root: Path = ROOT) -> Audit:
         _dependencies(root),
         manifest.hexdigest(),
         _scope_manifest(root),
-        _authority_manifest(),
+        _authority_manifest(root),
     )
 
 
