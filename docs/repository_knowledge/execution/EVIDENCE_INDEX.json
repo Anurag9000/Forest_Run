@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "4845d9f38e5ebb67c0d33d59709ae31c71a2d26d comparison base; pending numeric-user lookup correction",
+  "repository_revision": "323320b56137e99211c3955223040f69537947d3 comparison base; pending installed-runner discovery validation",
   "snapshot_date": "2026-10-27",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -1347,6 +1347,36 @@
       ],
       "result": "Focused host suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors in 18.276 seconds. Focused suite includes bash -n.",
       "limitations": "Host-only regression evidence. The corrected direct instrumentation command has not run on API35; process-death persistence is unverified."
+    },
+    {
+      "id": "EVID-097",
+      "type": "authenticated exact-candidate API35 log identifies hard-coded instrumentation component mismatch",
+      "path": "GitHub Actions run 40488634560, API 35 job 122138554779; artifact 12728526107",
+      "revision": "323320b56137e99211c3955223040f69537947d3",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-A-036",
+        "TASK-C-008",
+        "TASK-C-011",
+        "FIND-018",
+        "GAP-008"
+      ],
+      "observation": "Host/release/lint/package passed; API35 ordinary connectedDebugAndroidTest passed 28 tests with zero failures/ignored. The numeric user lookup and separate extra name/value arguments advanced to instrumentation launch, which failed with `Unable to find instrumentation info for ComponentInfo{com.anurag9000.forestrun.debug.test/androidx.test.runner.AndroidJUnitRunner}`. The prepare test body, force-stop, and restoration did not run. The hard-coded test package component does not match the instrumentation component registered on the emulator. Artifact `connected-validation-323320b56137e99211c3955223040f69537947d3` was uploaded and inspected via job log context only; the artifact zip was downloaded but not unpacked.",
+      "limitations": "Confirms a runner package identity defect, not a persistence implementation defect. Hosted API35 emulator only; no runtime test body for process-death scenario."
+    },
+    {
+      "id": "EVID-098",
+      "type": "local regression and full host tooling tests for installed instrumentation component discovery",
+      "path": "scripts/run_connected_validation.sh; scripts/test_connected_validation_runner.py",
+      "revision": "323320b56137e99211c3955223040f69537947d3 plus local dynamic component lookup",
+      "date": "2026-10-27",
+      "commands": [
+        "bash -n scripts/run_connected_validation.sh",
+        "PYTHONPATH=scripts python3 -m unittest test_connected_validation_runner",
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "Focused host suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors in 17.976 seconds. Focused suite includes bash -n.",
+      "limitations": "Host-only contract evidence. Dynamic component resolution and process-death stages have not run on API35."
     }
   ]
 }

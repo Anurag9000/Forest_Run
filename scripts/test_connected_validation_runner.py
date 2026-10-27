@@ -129,6 +129,11 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
     def test_process_death_instrumentation_resolves_a_numeric_android_user(self) -> None:
         self.assertIn('shell am get-current-user', self.script)
         self.assertIn('[[ ! "${android_user_id}" =~ ^[0-9]+$ ]]', self.script)
+        self.assertIn('shell pm list instrumentation', self.script)
+        self.assertIn('target="(target=${PROCESS_TEST_TARGET_PACKAGE})"', self.script)
+        self.assertIn('runner_component_count="$(grep -c . <<<"${runner_components}" || true)"', self.script)
+        self.assertIn('"${runner_component}" 2>&1)', self.script)
+        self.assertNotIn('PROCESS_TEST_RUNNER_COMPONENT=', self.script)
         self.assertIn('shell am instrument --user "${android_user_id}" -w -r', self.script)
         self.assertIn('-e class "${PROCESS_TEST_CLASS}"', self.script)
         self.assertIn('-e forestRunProcessDeathStage "${stage}"', self.script)

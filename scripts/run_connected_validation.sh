@@ -34,7 +34,6 @@ readonly POLL_SECONDS=5
 readonly PHYSICAL_PROFILE_ANNOTATION="androidx.test.filters.LargeTest"
 readonly PROCESS_TEST_CLASS="com.anurag9000.forestrun.ProcessDeathPersistenceInstrumentedTest"
 readonly PROCESS_TEST_TARGET_PACKAGE="com.anurag9000.forestrun.debug"
-readonly PROCESS_TEST_RUNNER_COMPONENT="com.anurag9000.forestrun.debug.test/androidx.test.runner.AndroidJUnitRunner"
 PROCESS_TEST_CLEANUP_REQUIRED=0
 
 if [[ ! "${READINESS_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
@@ -107,6 +106,10 @@ run_process_death_instrumentation() {
   local output
   local successful_test_records
   local android_user_id
+  local instrumentation_listing
+  local runner_components
+  local runner_component
+  local runner_component_count
 
   if ! android_user_id="$(timeout 15s adb -s "${SERIAL}" shell am get-current-user 2>&1)"; then
     printf '%s\n' "${android_user_id}" >&2
@@ -119,10 +122,28 @@ run_process_death_instrumentation() {
     return 1
   fi
 
+  if ! instrumentation_listing="$(timeout 15s adb -s "${SERIAL}" shell pm list instrumentation 2>&1)"; then
+    printf '%s\n' "${instrumentation_listing}" >&2
+    echo "Unable to list installed instrumentation before '${stage}' stage." >&2
+    return 1
+  fi
+  instrumentation_listing="${instrumentation_listing//$'\r'/}"
+  runner_components="$(awk \
+    -v target="(target=${PROCESS_TEST_TARGET_PACKAGE})" \
+    '$0 ~ /androidx\.test\.runner\.AndroidJUnitRunner/ && index($0, target) > 0 { component = $1; sub(/^instrumentation:/, "", component); print component }' \
+    <<<"${instrumentation_listing}")"
+  runner_component_count="$(grep -c . <<<"${runner_components}" || true)"
+  if [[ "${runner_component_count}" -ne 1 ]]; then
+    printf '%s\n' "${instrumentation_listing}" >&2
+    echo "Expected exactly one AndroidJUnitRunner for target '${PROCESS_TEST_TARGET_PACKAGE}', found ${runner_component_count}." >&2
+    return 1
+  fi
+  runner_component="${runner_components}"
+
   if ! output="$(timeout "${timeout_seconds}s" adb -s "${SERIAL}" shell am instrument --user "${android_user_id}" -w -r \
     -e class "${PROCESS_TEST_CLASS}" \
     -e forestRunProcessDeathStage "${stage}" \
-    "${PROCESS_TEST_RUNNER_COMPONENT}" 2>&1)"; then
+    "${runner_component}" 2>&1)"; then
     printf '%s\n' "${output}" >&2
     echo "Instrumentation command failed during '${stage}' stage." >&2
     return 1
