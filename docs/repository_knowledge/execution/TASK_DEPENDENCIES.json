@@ -242,6 +242,11 @@
       "from": "TASK-C-013",
       "to": "TASK-E-001",
       "reason": "Final release reconciliation must account for whether the named Owl screenshot demonstrates the intended interaction."
+    },
+    {
+      "from": "TASK-A-036",
+      "to": "TASK-C-008",
+      "reason": "The process-death verification cannot complete until the direct instrumentation user-selection failure is corrected."
     }
   ],
   "parallel_waves": [

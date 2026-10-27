@@ -8,7 +8,7 @@
     "preexisting_dirty_paths": 166,
     "initial_visible_paths_reported": 961
   },
-  "current_inventory_count": 1007,
+  "current_inventory_count": 1008,
   "scope": "Union of tracked paths and visible workspace paths, excluding .git internals and ignored build/.gradle trees. Tracked release paths hidden by ignore rules are retained. New docs are included.",
   "coverage_semantics": "INVENTORIED means path/classification only; PARTIALLY_INSPECTED means bounded changed regions or prior map consultation; FULLY_STATICALLY_INSPECTED is reserved for complete small-file reading; generated exclusions have reasons. No inventory state implies runtime verification.",
   "records": [
@@ -20000,8 +20000,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "6aa166864a4b5c5768f4922d28fcce4bb821de89a682d406245bcd8f8c9ad427",
-      "worktree_content_bytes": 42484,
+      "worktree_content_sha256": "898888056654a423c1679f24a808e8a2b135a3356147e3491aaaa3a76c4fedd6",
+      "worktree_content_bytes": 43574,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24196,8 +24196,8 @@
       ],
       "file_type": "json",
       "language_or_format": "JSON",
-      "worktree_content_sha256": "4f65fdb50dac07da575b8ccc1e561b72a19fb30fca571e6ce492e069dca66159",
-      "worktree_content_bytes": 438897,
+      "worktree_content_sha256": "7005c0874df5008e605efcff471fc9819c288226fc8da7591ba9ab14901acb8f",
+      "worktree_content_bytes": 446719,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24257,8 +24257,8 @@
       ],
       "file_type": "json",
       "language_or_format": "JSON",
-      "worktree_content_sha256": "e59490066aae0f8cbbf42a3636a086b8f5fd76efdfde0f3ed9c266a58bd563c5",
-      "worktree_content_bytes": 82192,
+      "worktree_content_sha256": "9493064b5576b720289e06fad5b4c08c3bad485e2b471f1ca7cb75be03613985",
+      "worktree_content_bytes": 85991,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24290,8 +24290,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "b93ede4f9773dac5901997aa71ace2fe59c5af487d64beab38355d5771c87e5c",
-      "worktree_content_bytes": 4920,
+      "worktree_content_sha256": "b7cf390de3fe67aa2937b8899089b63a4e8cdd6f00a8194b2b2c3ed200ee934f",
+      "worktree_content_bytes": 5518,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24323,8 +24323,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "b783de5a1669e9b154592c4c9cf51fadc91df573e64ef7b506b579b1b9e5bd13",
-      "worktree_content_bytes": 3193,
+      "worktree_content_sha256": "7ef36c18bef864f9c8948c56df1f5f9be95f1bf6609f3206861c1fa18645442b",
+      "worktree_content_bytes": 3328,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24389,8 +24389,8 @@
       ],
       "file_type": "jsonl",
       "language_or_format": "Unknown or binary",
-      "worktree_content_sha256": "6af47baa025f1dd929ab4e116670aff9af155b58dbbbe496fa4ab9a48c187b94",
-      "worktree_content_bytes": 36816,
+      "worktree_content_sha256": "4fbcfec87a80a766819d38aa7e83af24d6f7d5eb21507e2cf3176ccc872c8405",
+      "worktree_content_bytes": 38093,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -32280,8 +32280,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "1d2f0438476a030f8799f293187ed84cf97a8b4130a77662e4f6492ec7cc04d4",
-      "worktree_content_bytes": 27582,
+      "worktree_content_sha256": "87ca8288fbfc4fc5c841205a38fb362dbb563c9bd388156bc6757ed05617b339",
+      "worktree_content_bytes": 28232,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -32450,8 +32450,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "6af85e4bcf89048e9dbc8dc06b932e77864a22d748a8cd11367982baeb4e3b75",
-      "worktree_content_bytes": 14602,
+      "worktree_content_sha256": "518e46d60b0d7b10d2eb6383d9c81de5e026cb007a0bb9f6bc7cc3341245b411",
+      "worktree_content_bytes": 15441,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -32490,12 +32490,54 @@
       "worktree_content_sha256": "0fcb1e231dc3da64720197254dac9f7edc67409ac9d01de4e5c848d5e7498740",
       "worktree_content_bytes": 4458,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
+    },
+    {
+      "id": "FILE-9C8F9C5918B7",
+      "path": "docs/repository_knowledge/verification_delta_2026-10-27_process-death-runner.md",
+      "classification": "dated verification evidence and current runner delta",
+      "worktree_status": "created_by_current_investigation",
+      "coverage_status": "DOCUMENTED",
+      "source_revision": "7870bc678fcc3412a45a44eaf820ac2685111899 plus uncommitted --user current correction",
+      "prior_evidence": "EVID-089; authenticated follow-up EVID-090 and EVID-092; local host test evidence EVID-091",
+      "inspection_detail": "Documents authenticated API35 job logs, local regression results, the runner defect and exact remaining connected acceptance criteria.",
+      "symbols_or_consumers": [
+        "TASK-A-036",
+        "TASK-C-008",
+        "TASK-C-011",
+        "EVID-090",
+        "EVID-091",
+        "EVID-092"
+      ],
+      "relationships": [
+        "scripts/run_connected_validation.sh",
+        "scripts/test_connected_validation_runner.py",
+        "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json",
+        "docs/repository_knowledge/execution/EVIDENCE_INDEX.json"
+      ],
+      "evidence_ref": "EVID-090; EVID-091; EVID-092",
+      "next_action": "Reuse; update after exact-candidate API35 connected run.",
+      "related_goal_ids": [
+        "GOAL-003",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-003"
+      ],
+      "documentation_refs": [
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
+        "docs/repository_knowledge/verification_delta_2026-10-27_exact-main.md"
+      ],
+      "file_type": "md",
+      "language_or_format": "Markdown",
+      "worktree_content_sha256": "a119d44cca74441d2a0da3622a647e5ebfd25c2b9cb7dd4dc20c23aa2aec0e91",
+      "worktree_content_bytes": 2444,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     }
   ],
   "coverage_counts": {
     "FULLY_STATICALLY_INSPECTED": 951,
     "PARTIALLY_INSPECTED": 17,
-    "DOCUMENTED": 36,
+    "DOCUMENTED": 37,
     "EXCLUDED_WITH_REASON": 3
   },
   "inspection_update": {

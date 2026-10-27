@@ -126,6 +126,13 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
         self.assertIn("emulator-${EMULATOR_PORT:-5554}", self.script)
         self.assertIn('export ANDROID_SERIAL="${SERIAL}"', self.script)
 
+    def test_process_death_instrumentation_selects_a_concrete_android_user(self) -> None:
+        self.assertIn(
+            'shell am instrument --user current -w -r',
+            self.script,
+            "am instrument rejects its implicit USER_CURRENT sentinel on the API 35 emulator",
+        )
+
     def test_serial_presence_probe_uses_exact_awk_field_match(self) -> None:
         self.assertIn('$1 == serial', self.script)
         self.assertNotIn('grep -q "^${SERIAL}', self.script)

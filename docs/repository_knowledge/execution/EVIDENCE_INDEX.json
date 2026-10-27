@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "1d1a73451ad59e088d4117216d07162628913ff8",
+  "repository_revision": "7870bc678fcc3412a45a44eaf820ac2685111899 comparison base; pending local --user current correction",
   "snapshot_date": "2026-10-27",
-  "evidence_authority_rule": "Source and current specifications establish static contracts; historical audits establish revision-bounded evidence only; no application execution occurred in this phase.",
+  "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
     {
       "id": "EVID-001",
@@ -1235,6 +1235,54 @@
       ],
       "result": "Host/release/lint/package validation job succeeded, including compile/test/lint/assemble/release hardening and source immutability. API 35 connected validation job failed at the named step; connected artifact upload step succeeded. Public job annotation reports only \"/usr/bin/sh\" exit code 1.",
       "limitations": "Detailed workflow logs and uploaded artifact contents were not accessible from the unauthenticated public page. The failing command within run_connected_validation.sh is unknown; this is failure evidence, not proof of a specific root cause and not process-death durability evidence."
+    },
+    {
+      "id": "EVID-090",
+      "type": "authenticated connected-workflow failure log diagnosis",
+      "path": "GitHub Actions run 40480503602, job 122111792697; workflow artifact 12722894227",
+      "revision": "d8afcd8ea8703043157abc1e08c3b9c6b2cfcb53",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-C-008",
+        "TASK-A-036",
+        "FIND-018",
+        "GAP-008"
+      ],
+      "observation": "Ordinary API 35 connectedDebugAndroidTest completed 28 tests with 0 failed and 0 ignored. The separate process-death driver failed at its prepare instrumentation stage because `am instrument` rejected the implicit Android user sentinel: `Error: Invalid userId -2`. Failure trap cleanup retried and received the same error. Detailed job logs were retrieved with the connected GitHub integration; artifact 12722894227 was uploaded (SHA-256 a0d5c0d4adc6a203dd61b0e75dfd22aa3093513234033c3ad2bc446756af0929).",
+      "limitations": "This failure did not execute the prepare test body, force-stop, or restore assertion. It proves a runner invocation defect on the API 35 emulator, not a production persistence defect. The downloaded artifact was not needed to identify the exact error; artifact contents were not unpacked."
+    },
+    {
+      "id": "EVID-091",
+      "type": "local regression and full host tooling tests after explicit Android-user selection fix",
+      "path": "scripts/test_connected_validation_runner.py; scripts/run_connected_validation.sh",
+      "revision": "7870bc678fcc3412a45a44eaf820ac2685111899 plus uncommitted --user current correction",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-A-036",
+        "TASK-C-008"
+      ],
+      "commands": [
+        "PYTHONPATH=. python3 -m unittest test_connected_validation_runner (scripts/)",
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "Focused runner suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors. Initial run: 18.271 seconds; post-reconciliation rerun: 18.294 seconds. The focused suite includes bash -n.",
+      "limitations": "Local host-side contract evidence only. It does not establish that the API 35 `am instrument --user current` command executes successfully or that process-death restoration passes. One expected duplicate-name ZIP warning appeared in a negative-path test; generated `.training_control/coverage_report.json` remains untracked and preserved."
+    },
+    {
+      "id": "EVID-092",
+      "type": "authenticated exact-7870 API35 connected log confirms old-candidate runner defect",
+      "path": "GitHub Actions run 40482368151, API 35 job 122117493531",
+      "revision": "7870bc678fcc3412a45a44eaf820ac2685111899",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-A-036",
+        "TASK-C-008",
+        "TASK-C-011",
+        "FIND-018",
+        "GAP-008"
+      ],
+      "observation": "The host/release/lint/package job succeeded. API35 ordinary connectedDebugAndroidTest completed 28 tests with zero failures/ignored. The subsequent process-death prepare invocation and failure cleanup both returned `Error: Invalid userId -2`; the test body and force-stop/restore stages were not reached. This is the same runner defect directly established in EVID-090, on the old 7870 candidate before the local --user current correction.",
+      "limitations": "This run checked 7870bc678fcc3412a45a44eaf820ac2685111899, not the local fix. It is corroboration of the defect, not verification of the correction or process-death persistence. Hosted API35 emulator only."
     }
   ]
 }

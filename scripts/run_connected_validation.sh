@@ -107,7 +107,7 @@ run_process_death_instrumentation() {
   local output
   local successful_test_records
 
-  if ! output="$(timeout "${timeout_seconds}s" adb -s "${SERIAL}" shell am instrument -w -r \
+  if ! output="$(timeout "${timeout_seconds}s" adb -s "${SERIAL}" shell am instrument --user current -w -r \
     -e class="${PROCESS_TEST_CLASS}" \
     -e forestRunProcessDeathStage="${stage}" \
     "${PROCESS_TEST_RUNNER_COMPONENT}" 2>&1)"; then
