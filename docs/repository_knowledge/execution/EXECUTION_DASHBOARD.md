@@ -2,6 +2,8 @@
 
 **Snapshot:** 2026-10-27. Source candidate base `origin/main` at `21efd764a5c9f7773a70ac50f2569153e01f914b` plus the reviewed current worktree delta. The original local checkout at `eeccc677107f69039dbf71053c18a9038d4b5ff6` and its pre-existing changes remain preserved.
 
+**Published source commit:** `df705c65c7f0a7ef03669a0c6767de5f381b418a` is verified on `origin/main`; two push-triggered workflow checks passed and Android validation remained in progress at the EVID-073 snapshot.
+
 **Current phase:** Evidence-backed source completion and authorized verification. The named OWL_DIVE store capture now receives a scheduled jump; visible screenshot state remains blocked pending a device.
 
 ## Project state

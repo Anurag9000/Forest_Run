@@ -28,6 +28,8 @@ Read `execution/NEXT_ACTIONS.md`, then select only tasks authorized for the acti
 
 Later deferred tasks cover measurement-first performance work (Phase B), external release/device/human/creative/supply-chain/privacy/signing evidence (Phase D), and targeted residual reconciliation (Phase E). Testing/runtime tasks C-001–C-004 and C-006 remain canceled under their original scope; C-005 is static contract reconciliation already completed. C-007–C-011 have partial suite-level evidence under EVID-072; C-012 concurrency-specific and C-013 OWL_DIVE device screenshot verification remain deferred/blocked. Static opportunities are not measured bottlenecks. External approvals and physical/human acceptance cannot be inferred from repository code.
 
+Published source commit `df705c65c7f0a7ef03669a0c6767de5f381b418a` was verified on `origin/main`; use EVID-073 for the push and hosted-CI status snapshot. The source-test/build outcomes remain in EVID-072.
+
 ## Resumption procedure
 
 1. Read this handoff and `docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md`.

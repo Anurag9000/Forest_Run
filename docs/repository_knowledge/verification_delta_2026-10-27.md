@@ -32,3 +32,10 @@ Static scenario review found that the Play capture manifest maps `07-owl.png` to
 ## Ledger interpretation
 
 The full Python and JVM suites, lint, and APK assembly provide fresh evidence for source-level regression coverage. They do not prove every acceptance gate complete. `TASK-C-007` through `TASK-C-011` are recorded as partially completed at this evidence level; `TASK-C-012` remains deferred because no deterministic concurrency-specific run was separately performed. `TASK-C-013` tracks visible OWL_DIVE capture verification and is blocked by unavailable `adb`/device access. Phase D external release gates remain open. `TASK-E-001` remains deferred pending connected/device evidence and accountable external release evidence.
+
+
+## Publication and hosted CI status
+
+The reviewed source-completion candidate was committed as `df705c65c7f0a7ef03669a0c6767de5f381b418a` and pushed directly to `origin/main`. A post-push `ls-remote` and fetch both observed that revision on `refs/heads/main`. This commit is based on `21efd764a5c9f7773a70ac50f2569153e01f914b`; its exact source payload is the tested candidate described above.
+
+The push-triggered `Estate local training-control certificate` run [40467805058](https://github.com/Anurag9000/Forest_Run/actions/runs/40467805058) and `Training-control applicability audit` run [40467804987](https://github.com/Anurag9000/Forest_Run/actions/runs/40467804987) completed successfully. Android validation [40467805038](https://github.com/Anurag9000/Forest_Run/actions/runs/40467805038) was still in progress at the compile/test/lint/assembly/release-hardening step when observed. EVID-073 records this publication and CI snapshot.

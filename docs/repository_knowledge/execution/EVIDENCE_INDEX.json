@@ -897,7 +897,7 @@
         "GAP-005",
         "REQ-018"
       ],
-      "disposition": "Four non-overlapping static declaration shards dispositioned 256 production paths and contain 6,050 rows before merge with 91 prior records. The final symbol inventory has 6,137 unique path/name/start-line records; four exact-location overlaps preserve the earlier detailed record, while distinct same-name overloads remain separate. Every merged path exists and every parseable source line/range is in bounds; IDs and declaration-location keys are unique. The A–M shard records counts/reasons for excluded local declarations. This is declaration-level indexing, not a comprehensive caller graph or runtime validation.",
+      "disposition": "Four non-overlapping static declaration shards dispositioned 256 production paths and contain 6,050 rows before merge with 91 prior records. The final symbol inventory has 6,137 unique path/name/start-line records; four exact-location overlaps preserve the earlier detailed record, while distinct same-name overloads remain separate. Every merged path exists and every parseable source line/range is in bounds; IDs and declaration-location keys are unique. The A\u2013M shard records counts/reasons for excluded local declarations. This is declaration-level indexing, not a comprehensive caller graph or runtime validation.",
       "limitations": "Static source and JSON checks only. Some brief purpose descriptions are context/signature-derived and cross-file consumers are incomplete unless established by prior detailed records. Kotlin non-engine member properties are restricted to top-level/direct type-scope declarations. No tests/builds/scripts/app workflows were executed."
     },
     {
@@ -918,7 +918,7 @@
         "TASK-C-011",
         "TASK-E-001"
       ],
-      "disposition": "The matrix maps all 19 requirements, 14 universal mechanism families and 12 verification categories to Forest Run-specific rationale, owners/evidence, current status and future task contracts. Five newly identified focused/full verification tasks C-007–C-011 are DEFERRED because the embedded repository investigation scope prohibits tests/builds/workflows; existing 389 test-contract rows remain NOT_EXECUTED. Existing physical performance and external release work remains in Phase B/D. Independent source-gap audit found no new requirement-backed source change; 162 non-documentation content hashes match the recorded snapshot.",
+      "disposition": "The matrix maps all 19 requirements, 14 universal mechanism families and 12 verification categories to Forest Run-specific rationale, owners/evidence, current status and future task contracts. Five newly identified focused/full verification tasks C-007\u2013C-011 are DEFERRED because the embedded repository investigation scope prohibits tests/builds/workflows; existing 389 test-contract rows remain NOT_EXECUTED. Existing physical performance and external release work remains in Phase B/D. Independent source-gap audit found no new requirement-backed source change; 162 non-documentation content hashes match the recorded snapshot.",
       "limitations": "Documentation and source-hash checks only. No tests, builds, scripts or application workflows executed. Human/device/external acceptance remains unproven; older C tasks remain canceled and are not revived."
     },
     {
@@ -935,7 +935,7 @@
         "REQ-019",
         "CAP-016"
       ],
-      "disposition": "Static checks parsed 15 repository JSON documents; verified 19/19 requirement rows, 14 mechanism rows, 12 verification rows, 55 unique tasks (35 completed/15 deferred/5 canceled), 15 unique findings, six gap records, 6,137 unique located symbol records, and 1,003 file records (950 fully static/17 partial/33 documented/3 excluded). All task evidence/dependency/requirement/capability references resolve, 35 dependency edges are acyclic, 63 local links resolve, new matrix files are in file_inventory, and 162 non-documentation source content hashes match. New C-007–C-011 tasks are deferred; no test/build/script/application workflow executed.",
+      "disposition": "Static checks parsed 15 repository JSON documents; verified 19/19 requirement rows, 14 mechanism rows, 12 verification rows, 55 unique tasks (35 completed/15 deferred/5 canceled), 15 unique findings, six gap records, 6,137 unique located symbol records, and 1,003 file records (950 fully static/17 partial/33 documented/3 excluded). All task evidence/dependency/requirement/capability references resolve, 35 dependency edges are acyclic, 63 local links resolve, new matrix files are in file_inventory, and 162 non-documentation source content hashes match. New C-007\u2013C-011 tasks are deferred; no test/build/script/application workflow executed.",
       "limitations": "Static consistency and source hash comparison only; no runtime or test correctness is established. External release, human/device acceptance and performance gates remain deferred."
     },
     {
@@ -986,6 +986,22 @@
       ],
       "disposition": "Full Python suite: 1,387 passed; Gradle JVM suite: 1,297 passed, 0 failures/errors/skips; lintDebug/lintRelease/assembleDebug/assembleRelease passed. Source correction schedules OWL_DIVE TAP_JUMP at 1.80s. A separate local Java 21 attempt crashed in C2; disabling C2 and increasing code cache allowed success. Android connected instrumentation not run (adb unavailable).",
       "limitations": "Tests/build ran on an isolated detached worktree overlay based on origin/main; the upstream no-training authority/test were retained and the dirty local replacement test was not overlaid. No physical screenshot, connected instrumentation, external acceptance, release signing, or Play workflow was run. Local original worktree was preserved."
+    },
+    {
+      "id": "EVID-073",
+      "type": "authorized direct-main publication and hosted CI status snapshot",
+      "path": "docs/repository_knowledge/verification_delta_2026-10-27.md; docs/repository_knowledge/execution/EVIDENCE_INDEX.json; Git remote refs/heads/main; GitHub Actions run records",
+      "revision": "Source-completion candidate df705c65c7f0a7ef03669a0c6767de5f381b418a, based on 21efd764a5c9f7773a70ac50f2569153e01f914b; pushed to origin/main and remote ref independently confirmed at the time of observation.",
+      "supports": [
+        "TASK-A-035",
+        "TASK-C-007",
+        "TASK-C-008",
+        "TASK-C-009",
+        "TASK-C-010",
+        "TASK-C-011"
+      ],
+      "disposition": "Direct push to origin main succeeded; ls-remote and fetch both returned df705c65c7f0a7ef03669a0c6767de5f381b418a. GitHub Actions runs 40467805058 (Estate local training-control certificate) and 40467804987 (Training-control applicability audit) completed successfully. Run 40467805038 (Android validation) was observed in progress at its compile/test/lint/assemble/release-hardening step.",
+      "limitations": "Hosted Android validation had not completed in the status snapshot. Hosted CI does not establish connected physical-device, human acceptance, screenshot-state or external release approval. The original dirty local checkout was preserved; publication used the isolated reviewed candidate."
     }
   ]
 }

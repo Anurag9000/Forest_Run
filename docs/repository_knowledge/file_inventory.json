@@ -20034,7 +20034,11 @@
       "worktree_content_bytes": 455372,
       "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR",
       "assigned_owner": null,
-      "active_task_id": null
+      "active_task_id": null,
+      "post_investigation_content_sha256": "ecdabd92becd0aa353205b0e5b96a9373d9d661d9b35191de6e196150e0d646d",
+      "post_investigation_content_bytes": 455390,
+      "post_investigation_hash_date": "2026-10-27",
+      "post_investigation_note": "Private machine-local absolute path removed for repository publication; task-start hash remains in worktree_content_sha256 and working_tree_snapshot_id."
     },
     {
       "id": "FILE-C2A667FF6BA7",
@@ -20069,7 +20073,11 @@
       "worktree_content_bytes": 94240,
       "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR",
       "assigned_owner": null,
-      "active_task_id": null
+      "active_task_id": null,
+      "post_investigation_content_sha256": "c31cd70f6faaa8c1570156ac0687688f3dc56e013e7ecfe10f1edd9712f4376d",
+      "post_investigation_content_bytes": 94240,
+      "post_investigation_hash_date": "2026-10-27",
+      "post_investigation_note": "Private machine-local absolute path removed for repository publication; task-start hash remains in worktree_content_sha256 and working_tree_snapshot_id."
     },
     {
       "id": "FILE-3B96FDCB2BD4",
@@ -32309,9 +32317,9 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "9d0981e784dd202942a2e80de16504f62014e24d1606a7eab0ed7479758ba7b5",
-      "worktree_content_bytes": 5518,
-      "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR"
+      "worktree_content_sha256": "15c028de21f8a7a592df115a0bbbc7f54730907b97c73a7dac7e79c434d4a449",
+      "worktree_content_bytes": 6466,
+      "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR_AFTER_PUBLICATION_UPDATE"
     }
   ],
   "coverage_counts": {
