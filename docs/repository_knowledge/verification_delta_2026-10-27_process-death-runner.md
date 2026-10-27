@@ -13,6 +13,13 @@ This supplement reconciles authenticated API 35 workflow logs against the prior 
 
 ## Current disposition
 
-The runner defect is source-addressed locally. This is not yet connected verification of the correction. `TASK-A-036` remains partially completed until the correction is published and an exact-SHA API 35 run demonstrates process-death prepare, confirmed absence of the target process after force-stop, and successful fresh-process restore. `TASK-C-008` and dependent `TASK-C-011` remain partial. Even a passing hosted emulator run will not establish physical-device/OEM durability.
+The first local alias correction failed on exact SHA 4845 (EVID-093). A numeric foreground-user lookup is now source-addressed locally and its host contracts pass (EVID-094); it has not yet been published or connected-tested. `TASK-A-036` remains partially completed until an exact-SHA API 35 run demonstrates process-death prepare, confirmed absence of the target process after force-stop, and successful fresh-process restore. `TASK-C-008` and dependent `TASK-C-011` remain partial. Even a passing hosted emulator run will not establish physical-device/OEM durability.
 
-The earlier matrix and dated verification reports remain historical snapshots; use this supplement, `EVID-090`–`EVID-092`, and the current execution dashboard for the latest status. No Android test workflow was launched from the local machine. The workflow evidence cited above came from already-triggered GitHub runs.
+The earlier matrix and dated verification reports remain historical snapshots; use this supplement, `EVID-090`–`EVID-094`, and the current execution dashboard for the latest status. No Android test workflow was launched from the local machine. The workflow evidence cited above came from already-triggered GitHub runs.
+
+
+### Exact 4845 candidate disproves the `current` alias correction
+
+Run `40484661395` checked exact SHA `4845d9f38e5ebb67c0d33d59709ae31c71a2d26d`. The host compile/test/lint/packaging job passed. API35 ordinary connected instrumentation again passed 28/28, but direct instrumentation with `--user current` still failed before the process-death test body: the emulator reported `Invalid userId -2` in both prepare and cleanup (EVID-093). The platform advertises the alias in help, but this `am instrument` path resolves it to the rejected sentinel. Thus the first correction does not work and no force-stop or restoration evidence was produced.
+
+The current local source now obtains the concrete foreground user with `adb shell am get-current-user`, rejects failed/empty/non-numeric output, and invokes `am instrument --user <numeric-id>`. The host regression test asserts query, numeric validation, and use of the resolved ID. `bash -n` and the focused 13-test suite passed; the full scripts suite passed 1,388/1,388 with zero failures/errors in 18.387 seconds (EVID-094). This numeric lookup implementation remains unpushed and has not been exercised by hosted API35. The next candidate must establish prepare, process absence after force-stop, and verify before TASK-A-036/TASK-C-008 can close.

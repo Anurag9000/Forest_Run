@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "7870bc678fcc3412a45a44eaf820ac2685111899 comparison base; pending local --user current correction",
+  "repository_revision": "4845d9f38e5ebb67c0d33d59709ae31c71a2d26d comparison base; pending numeric-user lookup correction",
   "snapshot_date": "2026-10-27",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -1266,7 +1266,7 @@
         "python3 -m unittest discover -s scripts -p 'test_*.py'"
       ],
       "result": "Focused runner suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors. Initial run: 18.271 seconds; post-reconciliation rerun: 18.294 seconds. The focused suite includes bash -n.",
-      "limitations": "Local host-side contract evidence only. It does not establish that the API 35 `am instrument --user current` command executes successfully or that process-death restoration passes. One expected duplicate-name ZIP warning appeared in a negative-path test; generated `.training_control/coverage_report.json` remains untracked and preserved."
+      "limitations": "This evidence validates the first attempted --user current correction only; its exact API35 workflow later failed with the same Invalid userId -2 error (EVID-093). A numeric am get-current-user implementation has since replaced that attempted fix and requires fresh host-suite and connected validation."
     },
     {
       "id": "EVID-092",
@@ -1283,6 +1283,40 @@
       ],
       "observation": "The host/release/lint/package job succeeded. API35 ordinary connectedDebugAndroidTest completed 28 tests with zero failures/ignored. The subsequent process-death prepare invocation and failure cleanup both returned `Error: Invalid userId -2`; the test body and force-stop/restore stages were not reached. This is the same runner defect directly established in EVID-090, on the old 7870 candidate before the local --user current correction.",
       "limitations": "This run checked 7870bc678fcc3412a45a44eaf820ac2685111899, not the local fix. It is corroboration of the defect, not verification of the correction or process-death persistence. Hosted API35 emulator only."
+    },
+    {
+      "id": "EVID-093",
+      "type": "authenticated exact-candidate API35 log rejects Android current-user alias",
+      "path": "GitHub Actions run 40484661395, API 35 job 122126351176",
+      "revision": "4845d9f38e5ebb67c0d33d59709ae31c71a2d26d",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-A-036",
+        "TASK-C-008",
+        "TASK-C-011",
+        "FIND-018",
+        "GAP-008"
+      ],
+      "observation": "Host/release/lint/package job succeeded. Ordinary API35 connectedDebugAndroidTest completed 28 tests with zero failures/ignored. The process-death prepare and cleanup invocations used `am instrument --user current`; the API35 emulator still resolved this alias to user sentinel -2 and returned `Error: Invalid userId -2` before executing the test body. Neither force-stop nor restore stage ran.",
+      "limitations": "This is failure evidence for the attempted alias fix, not a persistence result. The workflow was bound to exact SHA 4845d9f38e5ebb67c0d33d59709ae31c71a2d26d."
+    },
+    {
+      "id": "EVID-094",
+      "type": "local regression and full host tooling tests for numeric Android-user lookup",
+      "path": "scripts/run_connected_validation.sh; scripts/test_connected_validation_runner.py",
+      "revision": "4845d9f38e5ebb67c0d33d59709ae31c71a2d26d plus current uncommitted numeric-user correction",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-A-036",
+        "TASK-C-008"
+      ],
+      "commands": [
+        "bash -n scripts/run_connected_validation.sh",
+        "PYTHONPATH=scripts python3 -m unittest test_connected_validation_runner",
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "Focused host suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors in 18.387 seconds. Focused suite includes bash -n.",
+      "limitations": "Host-only static/contract evidence. The exact numeric-user lookup and instrumentation have not yet run on hosted API35; process-death durability remains unknown."
     }
   ]
 }

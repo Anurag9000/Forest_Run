@@ -106,8 +106,20 @@ run_process_death_instrumentation() {
   local timeout_seconds="${2:-${READINESS_TIMEOUT_SECONDS}}"
   local output
   local successful_test_records
+  local android_user_id
 
-  if ! output="$(timeout "${timeout_seconds}s" adb -s "${SERIAL}" shell am instrument --user current -w -r \
+  if ! android_user_id="$(timeout 15s adb -s "${SERIAL}" shell am get-current-user 2>&1)"; then
+    printf '%s\n' "${android_user_id}" >&2
+    echo "Unable to determine the current Android user before '${stage}' instrumentation." >&2
+    return 1
+  fi
+  android_user_id="${android_user_id//$'\r'/}"
+  if [[ ! "${android_user_id}" =~ ^[0-9]+$ ]]; then
+    echo "Android returned a non-numeric current user before '${stage}' instrumentation: ${android_user_id}" >&2
+    return 1
+  fi
+
+  if ! output="$(timeout "${timeout_seconds}s" adb -s "${SERIAL}" shell am instrument --user "${android_user_id}" -w -r \
     -e class="${PROCESS_TEST_CLASS}" \
     -e forestRunProcessDeathStage="${stage}" \
     "${PROCESS_TEST_RUNNER_COMPONENT}" 2>&1)"; then
