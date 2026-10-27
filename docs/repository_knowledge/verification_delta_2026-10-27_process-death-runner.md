@@ -37,3 +37,10 @@ Android's instrumentation option contract is `-e <NAME> <VALUE>`; the runner con
 Run `40488634560` on exact SHA `323320b56137e99211c3955223040f69537947d3` passed host checks and all 28 ordinary API35 connected tests. Numeric user resolution and separate extra pairs advanced to launch, where Android returned `Unable to find instrumentation info for ComponentInfo{com.anurag9000.forestrun.debug.test/androidx.test.runner.AndroidJUnitRunner}` (EVID-097). The prepare test, force-stop, and restore did not execute. This establishes that the hard-coded component string does not match the instrumentation package registered by the installed test APK.
 
 The current local runner queries `pm list instrumentation`, selects exactly one `androidx.test.runner.AndroidJUnitRunner` whose target is the debug application, rejects zero or ambiguous matches, and invokes the resolved component. The focused 13-test contract and full scripts suite pass (1,388 tests, zero failures/errors in 17.976 seconds; EVID-098). The next exact API35 workflow must confirm component discovery and proceed through prepare, force-stop/no-PID, and verify.
+
+
+### Exact facd8c06 candidate finds the AndroidTest APK was no longer installed
+
+Run `40490608390` checked `facd8c06b351a46bd3fa6a58354b41c72847c402`. Host gates and the ordinary API35 connected suite passed. The post-Gradle `pm list instrumentation` query found zero `AndroidJUnitRunner` entries for the debug target and the runner failed closed (EVID-099); direct process-death test execution did not start.
+
+The local driver now checks the candidate output paths and reinstalls both `app-debug.apk` and `app-debug-androidTest.apk` with `adb install -r` before runner discovery. It then filters by target package and fails if the result is missing or ambiguous. The focused runner contract and full Python tooling suite pass: 13 focused tests and 1,388 full tests, zero failures/errors in 17.860 seconds (EVID-100). The next exact API35 run must confirm both installs, one registered runner, prepare success, no target PID after force-stop, and fresh-process verify.

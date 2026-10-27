@@ -34,6 +34,8 @@ readonly POLL_SECONDS=5
 readonly PHYSICAL_PROFILE_ANNOTATION="androidx.test.filters.LargeTest"
 readonly PROCESS_TEST_CLASS="com.anurag9000.forestrun.ProcessDeathPersistenceInstrumentedTest"
 readonly PROCESS_TEST_TARGET_PACKAGE="com.anurag9000.forestrun.debug"
+readonly PROCESS_TEST_APP_APK="${ROOT_DIR}/app/build/outputs/apk/debug/app-debug.apk"
+readonly PROCESS_TEST_INSTRUMENTATION_APK="${ROOT_DIR}/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
 PROCESS_TEST_CLEANUP_REQUIRED=0
 
 if [[ ! "${READINESS_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
@@ -110,6 +112,8 @@ run_process_death_instrumentation() {
   local runner_components
   local runner_component
   local runner_component_count
+  local apk_path
+  local install_output
 
   if ! android_user_id="$(timeout 15s adb -s "${SERIAL}" shell am get-current-user 2>&1)"; then
     printf '%s\n' "${android_user_id}" >&2
@@ -121,6 +125,19 @@ run_process_death_instrumentation() {
     echo "Android returned a non-numeric current user before '${stage}' instrumentation: ${android_user_id}" >&2
     return 1
   fi
+
+  for apk_path in "${PROCESS_TEST_APP_APK}" "${PROCESS_TEST_INSTRUMENTATION_APK}"; do
+    if [[ ! -f "${apk_path}" ]]; then
+      echo "Required candidate APK is missing before '${stage}' instrumentation: ${apk_path}" >&2
+      return 1
+    fi
+    if ! install_output="$(timeout 90s adb -s "${SERIAL}" install -r "${apk_path}" 2>&1)"; then
+      printf '%s\n' "${install_output}" >&2
+      echo "Unable to install candidate APK before '${stage}' instrumentation: ${apk_path}" >&2
+      return 1
+    fi
+    printf '%s\n' "${install_output}"
+  done
 
   if ! instrumentation_listing="$(timeout 15s adb -s "${SERIAL}" shell pm list instrumentation 2>&1)"; then
     printf '%s\n' "${instrumentation_listing}" >&2

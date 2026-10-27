@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "323320b56137e99211c3955223040f69537947d3 comparison base; pending installed-runner discovery validation",
+  "repository_revision": "facd8c06b351a46bd3fa6a58354b41c72847c402 comparison base; pending candidate APK reinstall validation",
   "snapshot_date": "2026-10-27",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -1377,6 +1377,36 @@
       ],
       "result": "Focused host suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors in 17.976 seconds. Focused suite includes bash -n.",
       "limitations": "Host-only contract evidence. Dynamic component resolution and process-death stages have not run on API35."
+    },
+    {
+      "id": "EVID-099",
+      "type": "authenticated exact-candidate API35 log shows test instrumentation package was absent after Gradle connected suite",
+      "path": "GitHub Actions run 40490608390, API35 job 122145273353",
+      "revision": "facd8c06b351a46bd3fa6a58354b41c72847c402",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-A-036",
+        "TASK-C-008",
+        "TASK-C-011",
+        "FIND-018",
+        "GAP-008"
+      ],
+      "observation": "Host/release/lint/package passed and API35 ordinary connected tests passed 28/28. After the Gradle connected suite, `pm list instrumentation` returned no AndroidJUnitRunner for target `com.anurag9000.forestrun.debug`; the driver failed closed with `found 0` before direct process-death instrumentation. Prepare/force-stop/restore did not run. This establishes that the direct stage needs the candidate app and AndroidTest APK installed after Gradle cleanup.",
+      "limitations": "No test body or persistence behavior was exercised. Hosted API35 emulator only."
+    },
+    {
+      "id": "EVID-100",
+      "type": "local APK reinstall and instrumentation-discovery regression contract plus full host suite",
+      "path": "scripts/run_connected_validation.sh; scripts/test_connected_validation_runner.py",
+      "revision": "facd8c06b351a46bd3fa6a58354b41c72847c402 plus local candidate-APK reinstall delta",
+      "date": "2026-10-27",
+      "commands": [
+        "bash -n scripts/run_connected_validation.sh",
+        "PYTHONPATH=scripts python3 -m unittest test_connected_validation_runner",
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "Focused host suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors in 17.860 seconds. Focused suite includes bash -n.",
+      "limitations": "Host-only checks. Exact install paths and API35 process-death stages await the next hosted run."
     }
   ]
 }

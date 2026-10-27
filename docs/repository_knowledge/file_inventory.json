@@ -20000,8 +20000,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "811231326f99f48f9e02f3fe73f80e21e8b81b5aabe6f0147e5d531050cfc831",
-      "worktree_content_bytes": 44435,
+      "worktree_content_sha256": "663790383f99c4fe330ce6fd5964964f9d352c37c62492d99398cd220937dfbb",
+      "worktree_content_bytes": 44605,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24196,8 +24196,8 @@
       ],
       "file_type": "json",
       "language_or_format": "JSON",
-      "worktree_content_sha256": "2686978d187a8cc6064d4a454eaff4a6d00b0b4c031ba85caa01a3d7af30aff2",
-      "worktree_content_bytes": 449654,
+      "worktree_content_sha256": "80f661c3f2b22572d6fe28d6d874d8d9ecdd4c5bce46658ce5648c161352217f",
+      "worktree_content_bytes": 450192,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24257,8 +24257,8 @@
       ],
       "file_type": "json",
       "language_or_format": "JSON",
-      "worktree_content_sha256": "c7b028d58ceb7e4e51db4139c17fc272859fa9c23277260afc0eb588948e8af4",
-      "worktree_content_bytes": 92400,
+      "worktree_content_sha256": "97fa6ca101d2d5a470a1869cc556499a1b32c57fb0ddf96d7f2ac2eb7eefe6dd",
+      "worktree_content_bytes": 94336,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24290,8 +24290,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "6a5aa257419eaba03cfa9935033265216904e3f41658e5c7db9b34e37f927b26",
-      "worktree_content_bytes": 6001,
+      "worktree_content_sha256": "f27cba4759319f187aee77748f25dbb90029afa71bf2875386224409595136ad",
+      "worktree_content_bytes": 6055,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24323,8 +24323,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "93af47715b390cc6e4a7065990c928ec4307280d066832d079f637233ad8adbe",
-      "worktree_content_bytes": 3453,
+      "worktree_content_sha256": "62d45bef7a26db0803e4ea04deea9b4ab5bba88d433cdb93d4eb04e7be8cd712",
+      "worktree_content_bytes": 3513,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24389,8 +24389,8 @@
       ],
       "file_type": "jsonl",
       "language_or_format": "Unknown or binary",
-      "worktree_content_sha256": "c4c3f9f01c090aced382e2c6042a75709bb382bd6c7382ec51d22223454df251",
-      "worktree_content_bytes": 39966,
+      "worktree_content_sha256": "94763bb1850b8f5f637d1e4bef1d79a3568afdabf66bce95aa25c11a138a9c9b",
+      "worktree_content_bytes": 40569,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -32280,8 +32280,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "7cc6e2aaa22fe7df96be4d5f5a198298fb90954a0c85425b6d3853377bf0077d",
-      "worktree_content_bytes": 28505,
+      "worktree_content_sha256": "6a2ab628a7c7dc324fed93a677f0c0cbb88f3cddf13d3d38ae39270694e459a6",
+      "worktree_content_bytes": 28532,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -32529,8 +32529,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "f2f10d9baf39fd378a83d49aca8f14522308bb89c9e2f7d60e027078aba436d9",
-      "worktree_content_bytes": 6058,
+      "worktree_content_sha256": "df584ec8fcef59f8e45873cc08015bba60eb8980196f12f360ce22035ca58518",
+      "worktree_content_bytes": 7028,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     }
   ],

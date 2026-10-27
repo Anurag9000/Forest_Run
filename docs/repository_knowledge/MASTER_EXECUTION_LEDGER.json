@@ -1336,7 +1336,7 @@
       {
         "id": "FIND-018",
         "kind": "API 35 connected process-death runner failure",
-        "statement": "The API35 standard connected suite passes 28 tests, but process-death setup has been blocked by successive direct-runner invocation defects before test execution: omitted/default user (-2), `--user current` alias (-2), malformed `-e` pairs, and a hard-coded test component absent from installed instrumentation info (EVID-090/092/093/095/097). Current local code resolves numeric user, passes separate extra key/value arguments, and dynamically discovers exactly one AndroidJUnitRunner for the debug target. Host tests pass; full suite result and exact hosted validation remain pending.",
+        "statement": "The API35 standard connected suite passes 28 tests, but process-death setup has been blocked by successive direct-runner invocation issues before test execution: user ID selection, malformed -e pairs, hard-coded component mismatch, then zero registered runner after Gradle cleanup because the test APK is no longer installed (EVID-090/092/093/095/097/099). Current local code installs the exact candidate app and AndroidTest APKs with replacement, then resolves one registered runner. Host tests pass; full-suite and exact hosted validation remain pending.",
         "evidence": [
           "EVID-090",
           "EVID-091"
@@ -1352,7 +1352,7 @@
         "related_capability_ids": [
           "CAP-003"
         ],
-        "status": "DIRECT CONNECTED RUNNER DEFECTS CONFIRMED; numeric user, extra pairs, and component discovery corrected locally, exact run pending"
+        "status": "DIRECT CONNECTED RUNNER SETUP DEFECTS CONFIRMED; candidate APK reinstall/discovery correction in progress"
       }
     ],
     "gaps": [
@@ -6671,7 +6671,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Verify successful/failed repair gates both gameplay and Journal startup; domain stores preserve namespace and recovery boundaries; Journal projection remains read-only; interruption, malformed state, retry/restart and multi-domain pending cases follow documented contracts.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "At exact main, the four named local persistence/Journal JVM classes passed 16 tests (included in EVID-076); the exact-main hosted API 35 workflow also passed the lifecycle/Journal connected path (EVID-078). No new source defect was established. A two-stage LargeTest candidate for host-verified process death and fresh-launch restoration has been added; its AndroidTest APK compiles (EVID-080), but no connected execution evidence exists. First published test candidate failed its host runner-contract check; runner correction passes all 12 focused tests and the full 1,387 Python host tooling tests (EVID-082/EVID-083). The exact d3 hosted API35 connected job failed before durable-state evidence; code review identified a host-versus-device `$?` expansion flaw in the process-query marker and corrected it locally (EVID-086/EVID-087). The corrected worktree passes 12 focused runner tests and all 1,387 Python host tests (EVID-083). The corrected exact d8 candidate passed its host/release/lint/package job, but the API35 connected job again failed at the connected-validation step with only a generic shell exit 1 visible publicly (EVID-089); uploaded artifacts exist but their contents/logs were inaccessible. No process-death result or specific failure location is established. EVID-090 and EVID-092 establish the precise d8 and old-7870 connected failures: the ordinary API35 suite passed 28/28, but direct process-death prepare/cleanup failed before the test body with `Invalid userId -2` because the runner omitted `--user current`. TASK-A-036 adds that selector and a regression contract; local focused and full Python suites pass (EVID-091), while exact-candidate connected durability remains pending. Exact 4845 API35 logs show --user current still resolves to Invalid userId -2 after 28/28 ordinary connected tests; no process-death test body ran (EVID-093). A numeric am get-current-user correction is now local, with focused tests passing and full 1,388-test suite passes (EVID-094). Exact eb326dd0 API35 logs show numeric user selection progressed, but the runner failed before test execution with `No instrumentation found` because extra arguments were packed incorrectly (EVID-095); separate key/value arguments are now local and require full-suite/connected rerun (EVID-096). Exact 323320b5 API35 logs show numeric user and separated extras advanced to launch, but hard-coded instrumentation component was not registered (EVID-097). Current local runner resolves the component from `pm list instrumentation`; focused 13 and full 1,388 host tests pass; new connected run remains pending (EVID-098).",
+        "current_state": "At exact main, the four named local persistence/Journal JVM classes passed 16 tests (included in EVID-076); the exact-main hosted API 35 workflow also passed the lifecycle/Journal connected path (EVID-078). No new source defect was established. A two-stage LargeTest candidate for host-verified process death and fresh-launch restoration has been added; its AndroidTest APK compiles (EVID-080), but no connected execution evidence exists. First published test candidate failed its host runner-contract check; runner correction passes all 12 focused tests and the full 1,387 Python host tooling tests (EVID-082/EVID-083). The exact d3 hosted API35 connected job failed before durable-state evidence; code review identified a host-versus-device `$?` expansion flaw in the process-query marker and corrected it locally (EVID-086/EVID-087). The corrected worktree passes 12 focused runner tests and all 1,387 Python host tests (EVID-083). The corrected exact d8 candidate passed its host/release/lint/package job, but the API35 connected job again failed at the connected-validation step with only a generic shell exit 1 visible publicly (EVID-089); uploaded artifacts exist but their contents/logs were inaccessible. No process-death result or specific failure location is established. EVID-090 and EVID-092 establish the precise d8 and old-7870 connected failures: the ordinary API35 suite passed 28/28, but direct process-death prepare/cleanup failed before the test body with `Invalid userId -2` because the runner omitted `--user current`. TASK-A-036 adds that selector and a regression contract; local focused and full Python suites pass (EVID-091), while exact-candidate connected durability remains pending. Exact 4845 API35 logs show --user current still resolves to Invalid userId -2 after 28/28 ordinary connected tests; no process-death test body ran (EVID-093). A numeric am get-current-user correction is now local, with focused tests passing and full 1,388-test suite passes (EVID-094). Exact eb326dd0 API35 logs show numeric user selection progressed, but the runner failed before test execution with `No instrumentation found` because extra arguments were packed incorrectly (EVID-095); separate key/value arguments are now local and require full-suite/connected rerun (EVID-096). Exact 323320b5 API35 logs show numeric user and separated extras advanced to launch, but hard-coded instrumentation component was not registered (EVID-097). Current local runner resolves the component from `pm list instrumentation`; focused 13 and full 1,388 host tests pass; new connected run remains pending (EVID-098). Exact facd8c06 API35 logs show zero registered instrumentation after Gradle cleanup (EVID-099). Local code now reinstalls candidate app and AndroidTest APKs before discovery; focused 13 and full 1,388 host tests pass (EVID-100).",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "app/src/test/java/com/anurag9000/forestrun/SaveIntegrityStartupGateTest.kt",
@@ -6751,10 +6751,12 @@
           "EVID-095",
           "EVID-096",
           "EVID-097",
-          "EVID-098"
+          "EVID-098",
+          "EVID-099",
+          "EVID-100"
         ],
         "uncertainty": "The exact failure is established as the process-death runner omitting --user current: old candidates fail before prepare with Invalid userId -2. Whether the corrected invocation reaches prepare/force-stop/restore and whether persisted state survives remain unverified.",
-        "remaining_work": "Publish and validate numeric user, separated extras, and installed runner-component discovery; require API35 prepare pass, no PID after force-stop, and restore success before closure.",
+        "remaining_work": "Publish and validate candidate APK reinstall and runner discovery; require prepare pass, no target PID after force-stop, and restore success before closure.",
         "completion_evidence": [
           "EVID-072",
           "EVID-076: 16 named local JVM tests passed; EVID-078: exact-main hosted API 35 connected workflow passed, including ForestJournalLifecycleInstrumentedTest.",
@@ -7058,7 +7060,9 @@
           "EVID-095",
           "EVID-096",
           "EVID-097",
-          "EVID-098"
+          "EVID-098",
+          "EVID-099",
+          "EVID-100"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
         "remaining_work": "After TASK-C-008 has a successful or fully explained connected outcome, perform targeted integration reconciliation; do not rerun unchanged full suites.",
@@ -7349,7 +7353,7 @@
       },
       {
         "id": "TASK-A-036",
-        "title": "Invoke process-death instrumentation with resolved user, extras, and runner component",
+        "title": "Install and invoke the candidate process-death instrumentation runner",
         "parent_ids": [
           "GOAL-003",
           "GOAL-005"
@@ -7363,22 +7367,22 @@
         ],
         "category": "implementation and regression correction",
         "target_phase": "A - authorized source completion",
-        "objective": "Resolve the active foreground user and installed instrumentation component, pass Android extras as separate name/value arguments, and guard the direct connected-runner contract with host regression tests.",
+        "objective": "Ensure the exact candidate debug and AndroidTest APKs are installed, resolve the registered runner for the debug target, and invoke its process-death test with numeric user and correctly paired extras.",
         "motivation": "Exact API 35 CI logs show the process-death prepare stage fails before executing its test because am instrument reports Invalid userId -2.",
-        "current_state": "The omitted/current user and malformed -e failures are corrected locally (EVID-090/092/093/095). Exact 323320b5 then showed the hard-coded test component was not registered (EVID-097). Current code resolves the runner via pm list instrumentation, and focused contracts and full suite pass 1,388/1,388 (EVID-098); exact connected rerun is pending.",
-        "required_final_state": "The runner retrieves a numeric foreground user ID; finds exactly one AndroidJUnitRunner registered for the debug target; passes each -e key/value as distinct arguments; preserves the one-test raw-result contract; and exact API35 process-death prepare/force-stop/verify stages succeed.",
+        "current_state": "Numeric user, separate extras, and dynamic component filtering are implemented locally (EVID-090\u2013EVID-098). Exact facd8c06 API35 logs show the registered test runner is absent after Gradle cleanup (EVID-099). Current local code reinstalls exact app and AndroidTest APKs before lookup; focused contracts and full suite pass 1,388/1,388 (EVID-100).",
+        "required_final_state": "The runner resolves a numeric foreground user; reinstalls the exact candidate debug and AndroidTest APKs without clearing app data; discovers exactly one AndroidJUnitRunner registered for the debug target; passes -e arguments as separate name/value pairs; preserves test-result validation; and exact API35 process-death prepare/force-stop/verify succeeds.",
         "scope": [
           "scripts/run_connected_validation.sh::run_process_death_instrumentation",
           "scripts/test_connected_validation_runner.py::ConnectedValidationRunnerContractTest",
-          "API35 run 40488634560 / job 122138554779 (hard-coded component failure); next exact-SHA run exercises installed component discovery"
+          "API35 run 40490608390 / job 122145273353 (zero installed runners); next exact-SHA run validates APK reinstall and registration"
         ],
         "required_actions": [
-          "Query `adb shell am get-current-user` before direct process-death instrumentation.",
-          "Reject failed, empty, or non-numeric user output.",
-          "Query `adb shell pm list instrumentation` and select exactly one AndroidJUnitRunner whose target is the debug application. Fail with diagnostic output on zero or ambiguous matches.",
-          "Pass the numeric user ID and each `-e <NAME> <VALUE>` pair as distinct arguments.",
-          "Cover lookup, validation, component resolution, and key/value pairing in host contracts.",
-          "Run focused/full Python tooling tests, publish, and inspect exact-SHA API35 logs for prepare, no target PID after force-stop, verify, artifacts, and source immutability."
+          "Resolve numeric foreground user and validate output.",
+          "Verify both exact-candidate APK paths exist; reinstall target and AndroidTest APK with `adb install -r` before querying the registered runner.",
+          "Query `pm list instrumentation`, select exactly one AndroidJUnitRunner targeting the debug app, and fail with diagnostics on zero/multiple matches.",
+          "Invoke the discovered component with numeric user and separate `-e <NAME> <VALUE>` pairs.",
+          "Keep regression contracts for candidate paths/install commands, user validation, component discovery, argument pairing, and structured instrumentation result checks.",
+          "Run focused/full host tooling; publish and inspect exact API35 logs for prepare, no target PID after force-stop, verify, artifacts, and source immutability."
         ],
         "inputs": [
           "EVID-089",
@@ -7386,6 +7390,7 @@
           "EVID-093",
           "EVID-095",
           "EVID-097",
+          "EVID-099",
           "TASK-C-008",
           "scripts/run_connected_validation.sh",
           "scripts/test_connected_validation_runner.py"
@@ -7428,23 +7433,26 @@
           "EVID-095",
           "EVID-096",
           "EVID-097",
-          "EVID-098"
+          "EVID-098",
+          "EVID-099",
+          "EVID-100"
         ],
-        "uncertainty": "Authenticated API35 logs prove missing/default user, current alias, malformed extras, and hard-coded component blocked test execution in successive candidates. Current numeric user, separated extras, and installed-component lookup are locally implemented but not yet run on API35. Persistence restoration remains unknown.",
-        "remaining_work": "Finish the full host suite; publish runner discovery correction; exact-SHA API35 logs must show prepare success, no target PID after force-stop, and fresh-process verify success. Do not generalize emulator evidence to physical/OEM durability.",
+        "uncertainty": "The current workflow uninstalls or otherwise leaves no matching instrumentation registered after the standard suite. Local reinstall is implemented, but APK output path, install behavior, runner registration and state preservation have not been exercised on the emulator; persistence remains unknown.",
+        "remaining_work": "Finish full suite; publish APK reinstall/discovery correction; exact API35 run must show APK installs, one registered runner, prepare success, no target PID after force-stop, and verify success. Do not generalize emulator evidence to OEM devices.",
         "completion_evidence": [
           "Local focused runner contract: 13 passed; full Python scripts suite: 1,388 passed, EVID-091.",
           "Numeric-user lookup regression contract: 13 focused tests and 1,388 full Python tooling tests passed, EVID-094.",
           "Separate -e name/value contract: 13 focused runner tests and 1,388 full Python tooling tests passed, EVID-096.",
-          "Dynamic instrumentation-component discovery: 13 focused runner tests and 1,388 full Python tooling tests passed, EVID-098."
+          "Dynamic instrumentation-component discovery: 13 focused runner tests and 1,388 full Python tooling tests passed, EVID-098.",
+          "Candidate APK reinstall/runner discovery contract: 13 focused and 1,388 full Python tooling tests passed, EVID-100."
         ],
         "related_prior_work": [
           "TASK-C-008",
           "TASK-C-011",
           "EVID-080 through EVID-089"
         ],
-        "last_reconciled_revision": "323320b56137e99211c3955223040f69537947d3 plus local installed-component discovery; host tests passed",
-        "next_action": "Publish component discovery correction; inspect exact-SHA API35 prepare, force-stop/no-PID, and verify stages.",
+        "last_reconciled_revision": "facd8c06b351a46bd3fa6a58354b41c72847c402 plus local candidate APK reinstall; host tests passed",
+        "next_action": "Publish the APK reinstall and discovery correction; inspect exact-SHA API35 stages and logs.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
@@ -8039,8 +8047,8 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "323320b56137e99211c3955223040f69537947d3",
-    "working_tree_delta": "numeric am get-current-user; separate -e key/value arguments; dynamically select unique installed AndroidJUnitRunner for target package; regression contract",
+    "base_revision": "facd8c06b351a46bd3fa6a58354b41c72847c402",
+    "working_tree_delta": "install exact candidate debug and AndroidTest APKs with adb install -r before pm list instrumentation; dynamic runner lookup; regression contract",
     "evidence_ids": [
       "EVID-089",
       "EVID-090",
@@ -8051,8 +8059,10 @@
       "EVID-095",
       "EVID-096",
       "EVID-097",
-      "EVID-098"
+      "EVID-098",
+      "EVID-099",
+      "EVID-100"
     ],
-    "status": "API35 ordinary suite passed; direct invocation reached component lookup but hard-coded instrumentation component was not registered. Dynamic installed-component discovery passes 13 focused and 1,388 full host tests; exact-SHA API35 validation pending."
+    "status": "API35 ordinary tests passed; Gradle cleanup left no instrumentation registered. Local reinstall of exact app/test APKs and component discovery pass 13 focused and 1,388 full host tests; exact hosted validation is pending."
   }
 }
