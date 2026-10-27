@@ -121,3 +121,8 @@ Candidate `d8afcd8ea8703043157abc1e08c3b9c6b2cfcb53` completed hosted run `40480
 ### Local Android user-selector correction (not yet hosted)
 
 The working delta adds `--user current` to the direct process-death `am instrument` call and asserts that selector in `test_connected_validation_runner.py` (TASK-A-036). Focused runner tests pass 13/13 and the full host Python tooling suite passes 1,388/1,388 (EVID-091). These host checks do not prove API35 command acceptance or process-death restoration. Publish the correction, then require exact-candidate logs for prepare pass, no target PID after force-stop, verify pass, artifact upload, and source immutability before closing TASK-A-036/TASK-C-008.
+
+
+## Current disposition after exact candidate b9a79b23
+
+The later exact-candidate run 40492450144 resolves the runner path and passes the process-death prepare/force-stop/no-PID/fresh-process restore sequence (EVID-101). The older pending statements in this file describe their own candidate snapshots only. Current task status is in the master ledger and `EXECUTION_DASHBOARD.md`: TASK-A-036 and hosted API35 TASK-C-008 are complete; TASK-C-011 retains targeted integration reconciliation.

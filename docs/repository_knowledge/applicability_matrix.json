@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "repository": "Forest_Run",
-  "source_revision": "1d1a73451ad59e088d4117216d07162628913ff8",
+  "source_revision": "Current exact tested candidate b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b; source evidence revision-bounded",
   "snapshot_date": "2026-10-27",
   "authority": "This matrix maps current repository requirements and applicable universal mechanisms; MASTER_EXECUTION_LEDGER.json remains source of project goal/task state.",
   "current_scope_constraints": [
@@ -9,7 +9,7 @@
     "Python/JVM test contracts describe source assertions. Execution outcomes are recorded in EVID-072, exact-head EVID-074 and focused concurrency EVID-075.",
     "The current exact-main source candidate is 1d1a73451ad59e088d4117216d07162628913ff8; changes from d1 are documentation-only. The original dirty checkout remains preserved.",
     "Focused exact-main evidence: EVID-076 (113 Python, 129 JVM/UI); hosted exact-main API35 workflow: EVID-078. Visual review EVID-077 is human-review evidence, not source validation.",
-    "TASK-C-009 and the automated/API35 scope of TASK-C-010 are complete. TASK-C-007 authored mechanics scope is complete (EVID-079); TASK-C-008 process-kill/restore durability remains."
+    "TASK-C-009 and automated/API35 scope of TASK-C-010 are complete. TASK-C-007 authored mechanics scope is complete (EVID-079); TASK-C-008 is complete at hosted API35 process-death scope (EVID-101), while physical/OEM durability remains separate."
   ],
   "requirement_rows": [
     {
@@ -21,7 +21,7 @@
       ],
       "universal_disposition": "REQUIRED_WITH_ADAPTATION",
       "repository_rationale": "Android activity, SurfaceView and fixed-landscape lifecycle are core product contracts. Preserve the existing Activity/GameView/GameThread ownership; do not introduce a generic service or runner.",
-      "architectural_owner": "MainActivity → GameView → GameThread, Android configuration/Manifest.",
+      "architectural_owner": "MainActivity \u2192 GameView \u2192 GameThread, Android configuration/Manifest.",
       "implementation_state": "SUBSTANTIALLY_COMPLETE; source and prior map evidence",
       "verification_criteria": "Static path/manifest inspection; focused lifecycle/configuration tests; Android compile/build and ordinary connected startup after authorization.",
       "future_task_ids": [
@@ -71,7 +71,7 @@
       "universal_disposition": "REQUIRED",
       "repository_rationale": "A failed durable repair must not expose stale or unsafe persisted state to gameplay or Journal projection. Keep the gate at each Android entry path, backed by SaveIntegrityManager.",
       "architectural_owner": "SaveIntegrityManager, SaveIntegrityStartupGate, MainActivity and ForestJournalActivity.",
-      "implementation_state": "Statically integrated; runtime unverified",
+      "implementation_state": "Statically integrated; hosted API35 process-death/restore verified (EVID-101); physical/OEM durability unverified",
       "verification_criteria": "Success/failure/partial write, lifecycle launch, restart/retry and Journal gate tests; durable state inspection after restart.",
       "future_task_ids": [
         "TASK-C-008"
@@ -81,7 +81,7 @@
         "app/src/main/java/com/anurag9000/forestrun/MainActivity.kt:60-70,118-121",
         "app/src/main/java/com/anurag9000/forestrun/ForestJournalActivity.kt:59-83"
       ],
-      "current_execution_status": "PARTIAL; process-kill/restore durability remains (EVID-076/EVID-078)",
+      "current_execution_status": "TASK-C-008 complete at hosted API35 scope (EVID-101); no generalization beyond tested emulator.",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -409,8 +409,8 @@
       "universal_disposition": "REQUIRED_WITH_ADAPTATION",
       "repository_rationale": "Repository knowledge reconstruction requires source-test contracts and coverage dispositions; current contract inventory is passive evidence, not executed tests.",
       "architectural_owner": "file, symbol, test contract and evidence ledgers.",
-      "implementation_state": "389 source-contract records are passive inventory; full Python/JVM suites, lint, packaging and exact-head API 35 connected validation passed (EVID-072/EVID-074); focused concurrency checks passed (EVID-075); physical/human acceptance remains open.",
-      "verification_criteria": "EVID-072 records full local Python/JVM, lint and package results; EVID-074 records exact-head hosted host and connected suite success; EVID-075 records focused Python/JVM concurrency results. Residual device/human acceptance stays in C-007–C-011/C-013 and external tasks.",
+      "implementation_state": "389 source-contract records are passive inventory; full Python/JVM suites, lint, packaging and exact-head API 35 connected validation passed (EVID-072/EVID-074); focused concurrency checks passed (EVID-075); physical/human acceptance remains open. Exact candidate hosted API35 ordinary and process-death connected checks passed (EVID-101).",
+      "verification_criteria": "EVID-072 records full local Python/JVM, lint and package results; EVID-074 records exact-head hosted host and connected suite success; EVID-075 records focused Python/JVM concurrency results. Residual device/human acceptance stays in C-007\u2013C-011/C-013 and external tasks. Exact-candidate API35 connected results are in EVID-101; targeted integration reconciliation remains under TASK-C-011.",
       "future_task_ids": [
         "TASK-C-011",
         "TASK-C-012"
@@ -418,9 +418,10 @@
       "evidence_refs": [
         "EVID-072",
         "EVID-074",
-        "EVID-075"
+        "EVID-075",
+        "EVID-101"
       ],
-      "current_execution_status": "PARTIALLY_VERIFIED",
+      "current_execution_status": "TASK-C-011 complete for documented regression/integration scope after exact-candidate reconciliation (EVID-101/EVID-102); external acceptance remains separate.",
       "execution_constraint": "No device or external acceptance claim without candidate-bound evidence."
     },
     {
@@ -550,7 +551,7 @@
         "REQ-008",
         "REQ-009"
       ],
-      "verification": "Close through TASK-D-001–TASK-D-007 and final TASK-E-001."
+      "verification": "Close through TASK-D-001\u2013TASK-D-007 and final TASK-E-001."
     },
     {
       "id": "APL-M-009",

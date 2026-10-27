@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "facd8c06b351a46bd3fa6a58354b41c72847c402 comparison base; pending candidate APK reinstall validation",
+  "repository_revision": "Investigation baseline eeccc677107f69039dbf71053c18a9038d4b5ff6; latest exact-candidate verification b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
   "snapshot_date": "2026-10-27",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -1407,6 +1407,48 @@
       ],
       "result": "Focused host suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors in 17.860 seconds. Focused suite includes bash -n.",
       "limitations": "Host-only checks. Exact install paths and API35 process-death stages await the next hosted run."
+    },
+    {
+      "id": "EVID-101",
+      "type": "exact-candidate hosted API35 validation of candidate APK reinstall and process-death persistence path",
+      "path": "GitHub Actions run 40492450144; host job 122149477546; API35 job 122152029548; artifacts 12729190779 and 12729931477",
+      "revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-A-036",
+        "TASK-C-008",
+        "TASK-C-011",
+        "FIND-018",
+        "GAP-008"
+      ],
+      "observation": "Both jobs succeeded. Host job ran source contracts and Python tooling, Gradle dependency checks, debug JVM unit tests, debug/release lint, debug and AndroidTest APK assembly, release bundle/R8, source-immutability checks, and page-size package inspection. API35 connected suite passed 28 ordinary tests with zero skips/failures. The runner installed app-debug.apk and app-debug-androidTest.apk successfully using reinstall mode; discovered and invoked the registered AndroidJUnitRunner. Process-death prepare reported OK (1 test). Host force-stop was followed by confirmation that the target app had no running process. A second instrumentation invocation reported OK (1 test) and verified persisted game state. Connected artifacts were uploaded.",
+      "commands": [
+        "python3 -m unittest discover -s scripts -p 'test_*.py' (GitHub host job)",
+        "./gradlew --no-daemon --stacktrace --warning-mode all -PcandidateCommitSha=\"$GITHUB_SHA\" compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease",
+        "./gradlew connectedDebugAndroidTest (API 35 emulator job)",
+        "scripts/run_connected_validation.sh direct process-death prepare and verify stages"
+      ],
+      "result": "Exact candidate run 40492450144 succeeded. Python tooling suite: 1,388 tests passed in 27.150 seconds. The specified Gradle task set, including testDebugUnitTest, both lint tasks, debug/AndroidTest assembly and release bundle, completed BUILD SUCCESSFUL in 4m31s. API35 ordinary connected tests: 28/28. Process-death prepare: 1/1; fresh-process restore: 1/1; host confirmed target app process absent between stages. Both artifacts uploaded: android-validation-b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b (12729190779) and connected-validation-b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b (12729931477).",
+      "limitations": "Hosted API35 emulator only. Emulator output included nonfatal console/graphics buffer warnings while the job and tests succeeded. Does not establish physical-device/OEM-specific storage/process behavior, power-loss durability, human/device acceptance, or external release gates."
+    },
+    {
+      "id": "EVID-102",
+      "type": "targeted regression-to-integration reconciliation for TASK-C-011",
+      "path": "git diff 1d1a73451ad59e088d4117216d07162628913ff8..b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b; task records TASK-C-007 through TASK-C-012; GitHub Actions run 40492450144",
+      "revision": "1d1a73451ad59e088d4117216d07162628913ff8..b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-C-011",
+        "TASK-E-001"
+      ],
+      "observation": "Targeted comparison found only one added AndroidTest file (ProcessDeathPersistenceInstrumentedTest.kt), runner/runner-contract script modifications, and documentation/ledger changes since the prior exact-main candidate. No production gameplay, persistence, accessibility, or concurrency source paths changed, so EVID-076/EVID-079/EVID-075 remain applicable to their stated scopes. The exact b9 candidate CI run then passed full host validation, API35 ordinary connected suite (28/28), and process-death prepare/no-PID/restore integration (EVID-101). Candidate source immutability checks passed. No requirement-level integration contradiction or additional source-addressable defect was found in this targeted reconciliation.",
+      "commands": [
+        "git diff --name-status 1d1a73451ad59e088d4117216d07162628913ff8..b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
+        "Review TASK-C-007 through TASK-C-012 linked evidence and dependency records",
+        "GitHub Actions run 40492450144 logs for exact candidate"
+      ],
+      "result": "TASK-C-011 acceptance is satisfied for its documented host/JVM/lint/package/API35 regression and integration scope. Candidate screenshot, physical-device, human, legal/licensing, security/privacy, signing, Play delivery, and accountable release checks remain separately tracked; no full project release claim is made.",
+      "limitations": "The source delta check does not prove runtime behavior outside exact candidate CI. It does not satisfy human/device/external release gates or generalize to OEM devices."
     }
   ]
 }
