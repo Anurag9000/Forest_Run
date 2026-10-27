@@ -8,7 +8,7 @@
     "preexisting_dirty_paths": 166,
     "initial_visible_paths_reported": 961
   },
-  "current_inventory_count": 1005,
+  "current_inventory_count": 1007,
   "scope": "Union of tracked paths and visible workspace paths, excluding .git internals and ignored build/.gradle trees. Tracked release paths hidden by ignore rules are retained. New docs are included.",
   "coverage_semantics": "INVENTORIED means path/classification only; PARTIALLY_INSPECTED means bounded changed regions or prior map consultation; FULLY_STATICALLY_INSPECTED is reserved for complete small-file reading; generated exclusions have reasons. No inventory state implies runtime verification.",
   "records": [
@@ -19999,7 +19999,10 @@
         "docs/REPO_MEMORY_MAP.md"
       ],
       "file_type": "md",
-      "language_or_format": "Markdown"
+      "language_or_format": "Markdown",
+      "worktree_content_sha256": "994e002efa5fa1e1fef92279472834cd2b6379ce0974d374bd8e356935675580",
+      "worktree_content_bytes": 41710,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-36328969B72B",
@@ -24120,7 +24123,10 @@
       ],
       "documentation_refs": [
         "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
-      ]
+      ],
+      "worktree_content_sha256": "37c0b29ebb792bcaac46218c16189e89122955f8ef43f9ec6efc78bd357811a0",
+      "worktree_content_bytes": 12419,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-BCBD97356419",
@@ -24189,7 +24195,10 @@
         "docs/REPO_MEMORY_MAP.md"
       ],
       "file_type": "json",
-      "language_or_format": "JSON"
+      "language_or_format": "JSON",
+      "worktree_content_sha256": "25c855620dfd738d6218fcace1f94dbe129cef4f50962bea06ab83ea6c82f9cc",
+      "worktree_content_bytes": 437265,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-975C099D6EF0",
@@ -24247,7 +24256,10 @@
         "docs/REPO_MEMORY_MAP.md"
       ],
       "file_type": "json",
-      "language_or_format": "JSON"
+      "language_or_format": "JSON",
+      "worktree_content_sha256": "9e7483b45c1aabcb715c7ee6a8de471821ab83f490c9f2571afd72a0389dc87f",
+      "worktree_content_bytes": 72753,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-4A32CB773A95",
@@ -24277,7 +24289,10 @@
         "docs/REPO_MEMORY_MAP.md"
       ],
       "file_type": "md",
-      "language_or_format": "Markdown"
+      "language_or_format": "Markdown",
+      "worktree_content_sha256": "8296ffaece9477e26a88cbe33ded7ea989a07192c87b3349dd212ebae9d6eba2",
+      "worktree_content_bytes": 4447,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-3CB2D63ADBCC",
@@ -24307,7 +24322,10 @@
         "docs/REPO_MEMORY_MAP.md"
       ],
       "file_type": "md",
-      "language_or_format": "Markdown"
+      "language_or_format": "Markdown",
+      "worktree_content_sha256": "b3f44b55ff35aaed00d48d54751c44a9ed2d1c818a954674326b26a92bd809ff",
+      "worktree_content_bytes": 2563,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-78AFBC87921F",
@@ -24337,7 +24355,10 @@
         "docs/REPO_MEMORY_MAP.md"
       ],
       "file_type": "json",
-      "language_or_format": "JSON"
+      "language_or_format": "JSON",
+      "worktree_content_sha256": "81bf87cb586f5026e4b7bef491e75a4eb3c898b2910f2ff1d96a56342d1cbb22",
+      "worktree_content_bytes": 9706,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-D6F2DA17CDD3",
@@ -24367,7 +24388,10 @@
         "docs/REPO_MEMORY_MAP.md"
       ],
       "file_type": "jsonl",
-      "language_or_format": "Unknown or binary"
+      "language_or_format": "Unknown or binary",
+      "worktree_content_sha256": "53d2c61995cdba1fe4c6b614734b5f4476cf946764aeb5ac45cea3a81a3b02c1",
+      "worktree_content_bytes": 33662,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-2CE990D2D6A0",
@@ -26848,15 +26872,19 @@
       "id": "FILE-84AC0590F6F4",
       "path": "scripts/run_connected_validation.sh",
       "classification": "evidence/release/maintenance tooling",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "modified_by_this_investigation",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "base 1d1a73451ad59e088d4117216d07162628913ff8 plus current uncommitted delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Text body read in full; see static handoff; workflows/scripts not executed.",
+      "inspection_detail": "Entire shell workflow read; new process-death prepare/verify/cleanup stages reviewed. Raw am instrumentation output is checked for a single passing test result (AOSP status code contract); bash -n passed. Connected workflow has not been executed.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-036",
-      "next_action": "Reuse bounded static findings; no execution is implied.",
+      "relationships": [
+        "TASK-C-008",
+        "TASK-C-011",
+        "EVID-080"
+      ],
+      "evidence_ref": "EVID-080",
+      "next_action": "Run the new connected stage only on an authorized connected runner; do not infer runtime success from static review or compilation.",
       "related_goal_ids": [
         "GOAL-005"
       ],
@@ -32251,7 +32279,10 @@
         "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json"
       ],
       "file_type": "md",
-      "language_or_format": "Markdown"
+      "language_or_format": "Markdown",
+      "worktree_content_sha256": "1d2f0438476a030f8799f293187ed84cf97a8b4130a77662e4f6492ec7cc04d4",
+      "worktree_content_bytes": 27582,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-74C2425AF4E0",
@@ -32285,7 +32316,10 @@
         "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json"
       ],
       "file_type": "json",
-      "language_or_format": "JSON"
+      "language_or_format": "JSON",
+      "worktree_content_sha256": "b62059c011bc3c730f27cf3829fd86e5e231ea5731491fd67b71e14883c58582",
+      "worktree_content_bytes": 44207,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-F0934C2ED388",
@@ -32368,31 +32402,105 @@
       "worktree_content_sha256": "e0ef6a0bc037f514572d71855920de460402ba6ee5f69238a81fd4c055df0240",
       "worktree_content_bytes": 15431,
       "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR_AFTER_PUBLICATION_UPDATE"
+    },
+    {
+      "id": "FILE-863F927DB78E",
+      "path": "docs/repository_knowledge/verification_delta_2026-10-27_exact-main.md",
+      "classification": "exact-main verification and asset evidence documentation",
+      "worktree_status": "created_by_this_investigation",
+      "coverage_status": "DOCUMENTED",
+      "source_revision": "1d1a73451ad59e088d4117216d07162628913ff8",
+      "prior_evidence": "EVID-072/EVID-074/EVID-075 reused where source/test scope is unchanged; exact-main targeted evidence EVID-076/EVID-078/EVID-079 and visual review EVID-077 are new.",
+      "inspection_detail": "Records exact-main focused Python/JVM tests, hosted Android validation, and visual review of 29 runtime sprite sheets; links evidence limitations and residual tasks.",
+      "symbols_or_consumers": [],
+      "relationships": [
+        "EVID-076",
+        "EVID-077",
+        "EVID-078",
+        "TASK-C-007",
+        "TASK-C-008",
+        "TASK-C-009",
+        "TASK-C-010",
+        "TASK-C-011",
+        "TASK-D-002",
+        "TASK-D-003",
+        "EVID-079"
+      ],
+      "evidence_ref": "EVID-076; EVID-077; EVID-078; EVID-079",
+      "next_action": "Refresh only when source, test, or external acceptance evidence changes.",
+      "related_goal_ids": [
+        "GOAL-001",
+        "GOAL-002",
+        "GOAL-003",
+        "GOAL-004",
+        "GOAL-005",
+        "GOAL-006"
+      ],
+      "related_capability_ids": [
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CAP-004",
+        "CAP-005",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
+        "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json"
+      ],
+      "file_type": "md",
+      "language_or_format": "Markdown",
+      "worktree_content_sha256": "409cf5cb39d06bb5f3171e030e88871b1d7a1c4d282b881b5208c5fb9365bde3",
+      "worktree_content_bytes": 11661,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
+    },
+    {
+      "id": "FILE-7C008PROCDEATH",
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/ProcessDeathPersistenceInstrumentedTest.kt",
+      "classification": "connected instrumentation test for durable persistence across process death",
+      "worktree_status": "created_by_this_investigation",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "base 1d1a73451ad59e088d4117216d07162628913ff8 plus current uncommitted delta",
+      "prior_evidence": "TASK-C-008 previously lacked process-kill/restore execution evidence; implementation added as a candidate follow-up.",
+      "inspection_detail": "Test body read in full; prepare, verify, cleanup stages and ActivityScenario launch traced. AndroidTest APK compilation passed; connected execution not performed.",
+      "symbols_or_consumers": [
+        "ProcessDeathPersistenceInstrumentedTest.durableGameStateSurvivesHostVerifiedProcessDeath",
+        "prepareDurableState",
+        "verifyRestoredDurableState"
+      ],
+      "relationships": [
+        "TASK-C-008",
+        "TASK-C-011",
+        "EVID-080"
+      ],
+      "evidence_ref": "EVID-080",
+      "next_action": "Execute via scripts/run_connected_validation.sh on an authorized connected runner; keep task partial until connected evidence exists.",
+      "related_goal_ids": [
+        "GOAL-003"
+      ],
+      "related_capability_ids": [
+        "CAP-003"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/verification_delta_2026-10-27_exact-main.md",
+        "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "worktree_content_sha256": "0fcb1e231dc3da64720197254dac9f7edc67409ac9d01de4e5c848d5e7498740",
+      "worktree_content_bytes": 4458,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     }
   ],
   "coverage_counts": {
-    "EXCLUDED_WITH_REASON": 3,
-    "FULLY_STATICALLY_INSPECTED": 950,
+    "FULLY_STATICALLY_INSPECTED": 951,
     "PARTIALLY_INSPECTED": 17,
-    "DOCUMENTED": 35
+    "DOCUMENTED": 36,
+    "EXCLUDED_WITH_REASON": 3
   },
   "inspection_update": {
     "date": "2026-10-27",
-    "revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; clean candidate matched origin/main",
-    "completed_batches": [
-      "source-completion re-audit: gameplay/scenarios/persistence/accessibility-audio/assets/docs-release; EVID-074",
-      "focused concurrency verification and per-file execution status reconciliation; EVID-075"
-    ],
-    "coverage_counts": {
-      "EXCLUDED_WITH_REASON": 3,
-      "FULLY_STATICALLY_INSPECTED": 950,
-      "PARTIALLY_INSPECTED": 17,
-      "DOCUMENTED": 35
-    },
-    "note": "Added one source-completion reconciliation record after six bounded parallel workstreams and exact-head CI completion. Reconciled all 389 test-contract rows to full Python/JVM or API 35 results, explicit @LargeTest exclusions, or support-source N/A. Prior dirty checkout and its hashed source snapshot remain preserved; no source gap was found.",
-    "inventory_count": 1005,
-    "in_progress_batches": [],
-    "evidence_id": "EVID-074"
+    "delta": "Added the TASK-C-008 test candidate and updated connected validation driver coverage. New AndroidTest file is statically inspected and compiles; actual connected process-death behavior remains unverified. Other counts retain prior inspection coverage."
   },
   "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9",
   "working_tree_hash_policy": {

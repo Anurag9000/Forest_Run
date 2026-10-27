@@ -1,13 +1,15 @@
 {
   "schema_version": "1.0.0",
   "repository": "Forest_Run",
-  "source_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c (source payload based on df705c65c7f0a7ef03669a0c6767de5f381b418a)",
+  "source_revision": "1d1a73451ad59e088d4117216d07162628913ff8",
   "snapshot_date": "2026-10-27",
   "authority": "This matrix maps current repository requirements and applicable universal mechanisms; MASTER_EXECUTION_LEDGER.json remains source of project goal/task state.",
   "current_scope_constraints": [
-    "Original checkout had pre-existing user changes and remains preserved; verification used clean detached d1 candidate matching origin/main.",
     "The user authorized source completion and repository verification. Connected emulator evidence is candidate-bound; physical-device and external release acceptance remain resource/owner dependent.",
-    "Python/JVM test contracts describe source assertions. Execution outcomes are recorded in EVID-072, exact-head EVID-074 and focused concurrency EVID-075."
+    "Python/JVM test contracts describe source assertions. Execution outcomes are recorded in EVID-072, exact-head EVID-074 and focused concurrency EVID-075.",
+    "The current exact-main source candidate is 1d1a73451ad59e088d4117216d07162628913ff8; changes from d1 are documentation-only. The original dirty checkout remains preserved.",
+    "Focused exact-main evidence: EVID-076 (113 Python, 129 JVM/UI); hosted exact-main API35 workflow: EVID-078. Visual review EVID-077 is human-review evidence, not source validation.",
+    "TASK-C-009 and the automated/API35 scope of TASK-C-010 are complete. TASK-C-007 authored mechanics scope is complete (EVID-079); TASK-C-008 process-kill/restore durability remains."
   ],
   "requirement_rows": [
     {
@@ -29,7 +31,7 @@
         "README.md",
         "docs/ARCHITECTURE.md"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PASSED_AUTOMATED_API35_SCOPE (EVID-076/EVID-078); human/device acceptance separate",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -56,7 +58,7 @@
         "docs/AUDIT_LEDGER.md",
         "docs/DETERMINISTIC_SCENARIO_EVIDENCE.md"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -79,7 +81,7 @@
         "app/src/main/java/com/anurag9000/forestrun/MainActivity.kt:60-70,118-121",
         "app/src/main/java/com/anurag9000/forestrun/ForestJournalActivity.kt:59-83"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PARTIAL; process-kill/restore durability remains (EVID-076/EVID-078)",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -104,7 +106,7 @@
         "docs/RUN_OUTCOME_RECOVERY.md",
         "docs/GHOST_PERSISTENCE_RECOVERY.md"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PARTIAL; process-kill/restore durability remains (EVID-076/EVID-078)",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -128,7 +130,7 @@
         "app/src/main/java/com/anurag9000/forestrun/engine/HapticManager.kt",
         "app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PASSED_AUTOMATED_API35_SCOPE (EVID-076/EVID-078); human/device acceptance separate",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -153,7 +155,7 @@
         "scripts/stable_file_reader.py",
         "scripts/strict_json.py"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PASSED_AT_AUTHORED_SCOPE (EVID-076); platform limits retained",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -269,7 +271,7 @@
         "docs/audits/2026-08-06_documentation_reconciliation_audit.md:326-336",
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:48-58"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -291,7 +293,7 @@
         "docs/audits/2026-08-06_documentation_reconciliation_audit.md:338-342",
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:60-62"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -313,7 +315,7 @@
         "docs/audits/2026-08-06_documentation_reconciliation_audit.md:344-356",
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:64-76"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -335,7 +337,7 @@
         "docs/audits/2026-08-06_documentation_reconciliation_audit.md:358-362",
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:78-92"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PARTIAL; process-kill/restore durability remains (EVID-076/EVID-078)",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -356,7 +358,7 @@
       "evidence_refs": [
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:94-107"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {
@@ -377,7 +379,7 @@
       "evidence_refs": [
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:109-122"
       ],
-      "current_execution_status": "NOT_EXECUTED",
+      "current_execution_status": "PARTIAL; process-kill/restore durability remains (EVID-076/EVID-078)",
       "execution_constraint": "No tests/builds/application workflows in this phase."
     },
     {

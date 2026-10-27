@@ -32,6 +32,10 @@ readonly SERIAL="${ANDROID_SERIAL:-emulator-${EMULATOR_PORT:-5554}}"
 readonly READINESS_TIMEOUT_SECONDS="${FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS:-240}"
 readonly POLL_SECONDS=5
 readonly PHYSICAL_PROFILE_ANNOTATION="androidx.test.filters.LargeTest"
+readonly PROCESS_TEST_CLASS="com.anurag9000.forestrun.ProcessDeathPersistenceInstrumentedTest"
+readonly PROCESS_TEST_TARGET_PACKAGE="com.anurag9000.forestrun.debug"
+readonly PROCESS_TEST_RUNNER_COMPONENT="com.anurag9000.forestrun.debug.test/androidx.test.runner.AndroidJUnitRunner"
+PROCESS_TEST_CLEANUP_REQUIRED=0
 
 if [[ ! "${READINESS_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
   echo "FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS must be a positive integer." >&2
@@ -82,6 +86,11 @@ dump_emulator_diagnostics() {
     return
   fi
 
+  if [[ "${PROCESS_TEST_CLEANUP_REQUIRED}" -eq 1 ]]; then
+    echo "Attempting to clear process-death instrumentation state after failure." >&2
+    run_process_death_instrumentation cleanup 30 || true
+  fi
+
   echo "Connected validation failed; collecting bounded emulator diagnostics." >&2
   adb -s "${SERIAL}" get-state || true
   adb -s "${SERIAL}" shell getprop || true
@@ -91,6 +100,39 @@ dump_emulator_diagnostics() {
   exit "${status}"
 }
 trap dump_emulator_diagnostics EXIT
+
+run_process_death_instrumentation() {
+  local stage="$1"
+  local timeout_seconds="${2:-${READINESS_TIMEOUT_SECONDS}}"
+  local output
+  local successful_test_records
+
+  if ! output="$(timeout "${timeout_seconds}s" adb -s "${SERIAL}" shell am instrument -w -r \
+    -e class="${PROCESS_TEST_CLASS}" \
+    -e forestRunProcessDeathStage="${stage}" \
+    "${PROCESS_TEST_RUNNER_COMPONENT}" 2>&1)"; then
+    printf '%s\n' "${output}" >&2
+    echo "Instrumentation command failed during '${stage}' stage." >&2
+    return 1
+  fi
+  output="${output//$'\r'/}"
+  printf '%s\n' "${output}"
+
+  # The am instrument client reports structured status output and may exit zero
+  # even when a JUnit test fails. Require one successful test result and the
+  # normal successful session terminator, while rejecting assertion/error codes.
+  if grep -Eq '^INSTRUMENTATION_STATUS_CODE: -[12]$|^INSTRUMENTATION_FAILED:|^INSTRUMENTATION_RESULT: shortMsg=' <<<"${output}"; then
+    echo "Instrumentation reported a failed test or aborted session during '${stage}'." >&2
+    return 1
+  fi
+  successful_test_records="$(grep -c '^INSTRUMENTATION_STATUS_CODE: 0$' <<<"${output}" || true)"
+  if ! grep -q '^INSTRUMENTATION_STATUS: numtests=1$' <<<"${output}" ||
+     [[ "${successful_test_records}" -ne 1 ]] ||
+     ! grep -q '^INSTRUMENTATION_CODE: -1$' <<<"${output}"; then
+    echo "Instrumentation did not report exactly one passing test and a successful session during '${stage}'." >&2
+    return 1
+  fi
+}
 
 wait_for_android_services() {
   local deadline=$((SECONDS + READINESS_TIMEOUT_SECONDS))
@@ -126,6 +168,40 @@ wait_for_android_services
   --no-daemon \
   --stacktrace \
   --console=plain
+
+# This LargeTest is intentionally excluded above and selected only here. The
+# host shell survives the target-only force-stop and verifies that no target
+# process remains before a new instrumentation invocation checks durable state.
+PROCESS_TEST_CLEANUP_REQUIRED=1
+run_process_death_instrumentation prepare
+
+adb -s "${SERIAL}" shell am force-stop "${PROCESS_TEST_TARGET_PACKAGE}"
+if ! adb -s "${SERIAL}" get-state 2>/dev/null | grep -qx 'device'; then
+  echo "Device ${SERIAL} disconnected before process-death verification." >&2
+  exit 1
+fi
+readonly PIDOF_PATH="$(adb -s "${SERIAL}" shell command -v pidof 2>/dev/null | tr -d '\r')"
+if [[ -z "${PIDOF_PATH}" ]]; then
+  echo "Cannot verify target process termination: device has no pidof command." >&2
+  exit 1
+fi
+if ! TARGET_PROCESS_IDS="$(adb -s "${SERIAL}" shell "pidof ${PROCESS_TEST_TARGET_PACKAGE} || true" 2>/dev/null | tr -d '\r')"; then
+  echo "Could not query target process state after force-stop." >&2
+  exit 1
+fi
+if ! adb -s "${SERIAL}" get-state 2>/dev/null | grep -qx 'device'; then
+  echo "Device ${SERIAL} disconnected while checking process termination." >&2
+  exit 1
+fi
+if [[ -n "${TARGET_PROCESS_IDS}" ]]; then
+  echo "Target process survived force-stop; refusing to claim a process boundary." >&2
+  echo "package=${PROCESS_TEST_TARGET_PACKAGE} pids=${TARGET_PROCESS_IDS}" >&2
+  exit 1
+fi
+echo "Verified ${PROCESS_TEST_TARGET_PACKAGE} has no running process after force-stop."
+
+run_process_death_instrumentation verify
+PROCESS_TEST_CLEANUP_REQUIRED=0
 
 readonly FINAL_LOCAL_CANDIDATE_SHA="$(git rev-parse --verify HEAD)"
 if [[ "${FINAL_LOCAL_CANDIDATE_SHA}" != "${EXPECTED_CANDIDATE_SHA}" ]]; then

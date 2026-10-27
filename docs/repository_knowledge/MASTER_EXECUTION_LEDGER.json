@@ -1178,14 +1178,16 @@
       {
         "id": "FIND-012",
         "kind": "visual asset/source-content observation",
-        "statement": "Static asset/source tracing shows the runtime wolf PNG contains eight visible drawings, while the renderer and explicit creative direction specify a four-frame sheet. docs/CREATIVE_DIRECTION.md:113-115 calls it a four-frame Wolf sprite, and commit a3253f7cf1f4ca27be46ed53d44c740815c5648e changed SpriteManager from eight frames to four as a named frame contract. Thus the four-frame count is intentional; the visible internal grouping of eight motifs remains an art-layout question. Hyacinth/vanilla orchid numerals remain visible in full-height crops; all five bird base/flying pairs are byte-identical and selected aliases remain as previously traced. These observations do not establish other source defects or mandatory asset changes.",
+        "statement": "Static asset/source tracing shows the runtime wolf PNG contains eight visible drawings, while the renderer and explicit creative direction specify a four-frame sheet. docs/CREATIVE_DIRECTION.md:113-115 calls it a four-frame Wolf sprite, and commit a3253f7cf1f4ca27be46ed53d44c740815c5648e changed SpriteManager from eight frames to four as a named frame contract. Thus the four-frame count is intentional; the visible internal grouping of eight motifs remains an art-layout question. Hyacinth/vanilla orchid numerals remain visible in full-height crops; all five bird base/flying pairs are byte-identical and selected aliases remain as previously traced. These observations do not establish other source defects or mandatory asset changes. Exact-main frame-by-frame review confirms Wolf is a 4-frame 1280x156 strip loaded as four frames; all five bird ordinary/flying pairs are byte-identical. Fragmented-looking pixels are a human quality-review observation, not a proven code defect.",
         "evidence": [
           "docs/repository_knowledge/asset_visual_inventory.md",
           "docs/repository_knowledge/runtime_sprite_frame_trace.md",
           "docs/repository_knowledge/inspection_TASK-A-018.md",
           "docs/CREATIVE_DIRECTION.md:113-115",
           "git commit a3253f7cf1f4ca27be46ed53d44c740815c5648e",
-          "EVID-058"
+          "EVID-058",
+          "docs/repository_knowledge/verification_delta_2026-10-27_exact-main.md",
+          "EVID-077"
         ],
         "related_goal_ids": [
           "GOAL-015"
@@ -1196,7 +1198,7 @@
         "related_capability_ids": [
           "CAP-015"
         ],
-        "status": "Wolf frame count reconciled as intentional by explicit creative contract and historical source change; internal art grouping, plant numerals, duplicate bird pixels, and visual approval remain unresolved observations without a source-change requirement."
+        "status": "Wolf four-frame count is intentional; duplicated bird pairs and perceived visual quality remain human creative/specification questions under TASK-D-002/TASK-D-003; no source change justified."
       },
       {
         "id": "FIND-013",
@@ -1290,10 +1292,14 @@
       {
         "id": "FIND-017",
         "kind": "targeted source-completion re-audit",
-        "statement": "A bounded re-audit of gameplay/input/collision/spawn, all scenario definitions, persistence/recovery, accessibility/audio/haptics, runtime assets, release documentation and CI wiring at d1f31d473f5ca9303706164b6cc817703e0e7c7c found no new confirmed requirement-backed source defect. This is a static, scope-bounded finding; it does not establish runtime, visual, auditory, device, rights or release acceptance.",
+        "statement": "A bounded re-audit of gameplay/input/collision/spawn, all scenario definitions, persistence/recovery, accessibility/audio/haptics, runtime assets, release documentation and CI wiring at d1f31d473f5ca9303706164b6cc817703e0e7c7c found no new confirmed requirement-backed source defect. This is a static, scope-bounded finding; it does not establish runtime, visual, auditory, device, rights or release acceptance. Exact-main follow-up at 1d1a73451ad59e088d4117216d07162628913ff8 found only documentation changes since d1 and no additional source-addressable defect.",
         "evidence": [
           "docs/repository_knowledge/source_completion_reconciliation_2026-10-27.md",
-          "EVID-074"
+          "EVID-074",
+          "docs/repository_knowledge/verification_delta_2026-10-27_exact-main.md",
+          "EVID-076",
+          "EVID-077",
+          "EVID-078"
         ],
         "related_goal_ids": [
           "GOAL-001",
@@ -1378,7 +1384,7 @@
           "TASK-A-032",
           "TASK-A-033"
         ],
-        "disposition": "RESOLVED at declaration-index coverage level by TASK-A-030–A-033 and EVID-067. This resolves documentation coverage for inventoried declarations, not comprehensive call-graph semantics or runtime verification.",
+        "disposition": "RESOLVED at declaration-index coverage level by TASK-A-030\u2013A-033 and EVID-067. This resolves documentation coverage for inventoried declarations, not comprehensive call-graph semantics or runtime verification.",
         "evidence_ids": [
           "EVID-069"
         ]
@@ -1390,7 +1396,7 @@
         "resolution_task_ids": [
           "TASK-A-034"
         ],
-        "disposition": "RESOLVED by docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md and applicability_matrix.json (EVID-068). Test execution is separately deferred in TASK-C-007–TASK-C-011.",
+        "disposition": "RESOLVED by docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md and applicability_matrix.json (EVID-068). Test execution is separately deferred in TASK-C-007\u2013TASK-C-011.",
         "evidence_ids": [
           "EVID-069"
         ]
@@ -2188,7 +2194,7 @@
         "target_phase": "D - engineering closure and release",
         "objective": "Conduct the specified human review of gameplay fairness/readability, comfort, TalkBack, Switch Access and physical interaction on the candidate.",
         "motivation": "Automated source tests do not establish that the experience is understandable, fair or accessible to people.",
-        "current_state": "Review protocols exist; this investigation performed no human or physical acceptance.",
+        "current_state": "Review protocols exist; this investigation performed no human or physical acceptance. Exact-main visual review covered all 29 runtime sprite sheets; detached/fragmented-looking pixels in parts of player and creature strips are review observations, not automated defects (EVID-077).",
         "required_final_state": "Named reviewers record scenario-level findings and acceptance/disposition tied to the exact candidate.",
         "scope": [
           "docs/HUMAN_ACCEPTANCE.md",
@@ -2233,7 +2239,8 @@
           "Candidate and qualified review participants."
         ],
         "evidence_ids": [
-          "EVID-010"
+          "EVID-010",
+          "EVID-077"
         ],
         "uncertainty": "Reviewer availability and acceptability thresholds are external.",
         "remaining_work": "Complete review and preserve review record.",
@@ -2263,7 +2270,7 @@
         "target_phase": "D - engineering closure and release",
         "objective": "Record accountable selections/approvals for shipping art, animation, music/SFX/haptics and rights, attribution and license obligations for creative materials.",
         "motivation": "Source asset presence and generated provenance reports do not grant rights or establish final human approval.",
-        "current_state": "Docs identify these as external gates; some bird-art alias/compact Bamboo questions remain review items.",
+        "current_state": "Docs identify these as external gates; some bird-art alias/compact Bamboo questions remain review items. Exact-main review confirms all five bird ordinary/flying pairs are byte-identical and records visual quality concerns; creative specification does not clearly require separate poses, so reviewer decision and rights provenance remain open (EVID-077).",
         "required_final_state": "Each shipping creative asset/media family has approved identity, provenance, rights/notice disposition and presentation decision tied to candidate.",
         "scope": [
           "Final_Assets (2)/",
@@ -2312,7 +2319,8 @@
           "Rights holders and accountable creative/product owners."
         ],
         "evidence_ids": [
-          "EVID-011"
+          "EVID-011",
+          "EVID-077"
         ],
         "uncertainty": "Exact rights-holder and final creative decisions are not contained in source evidence.",
         "remaining_work": "Obtain decisions and attach provenance to frozen candidate.",
@@ -4123,7 +4131,7 @@
           "Preserve the dirty worktree and report current baseline.",
           "Historical results remain revision-bounded."
         ],
-        "complexity": "High; 46–47 dated audit documents each, overlapping chronology requires deduplication.",
+        "complexity": "High; 46\u201347 dated audit documents each, overlapping chronology requires deduplication.",
         "priority": "High for recovering historical intent without replaying completed audits.",
         "execution_status": "COMPLETED",
         "owner": null,
@@ -4256,7 +4264,7 @@
           "Preserve the dirty worktree and report current baseline.",
           "Historical results remain revision-bounded."
         ],
-        "complexity": "High; 46–47 dated audit documents each, overlapping chronology requires deduplication.",
+        "complexity": "High; 46\u201347 dated audit documents each, overlapping chronology requires deduplication.",
         "priority": "High for recovering historical intent without replaying completed audits.",
         "execution_status": "COMPLETED",
         "owner": null,
@@ -4388,7 +4396,7 @@
           "Preserve the dirty worktree and report current baseline.",
           "Historical results remain revision-bounded."
         ],
-        "complexity": "High; 46–47 dated audit documents each, overlapping chronology requires deduplication.",
+        "complexity": "High; 46\u201347 dated audit documents each, overlapping chronology requires deduplication.",
         "priority": "High for recovering historical intent without replaying completed audits.",
         "execution_status": "COMPLETED",
         "owner": null,
@@ -4866,7 +4874,7 @@
         "category": "Static test-source contract documentation",
         "target_phase": "A - repository reconstruction and documentation",
         "objective": "Create one structured contract record for each of the 60 Python test files already read in TASK-A-017 and present in the file inventory but absent from test_contract_inventory.json.",
-        "motivation": "File-level coverage shows the files were read, but the reusable per-file contract ledger omits them; future verification agents should not have to rediscover each test source’s asserted behavior.",
+        "motivation": "File-level coverage shows the files were read, but the reusable per-file contract ledger omits them; future verification agents should not have to rediscover each test source\u2019s asserted behavior.",
         "current_state": "All 60 scoped Python test paths were fully statically inspected and their structured records have been merged; the complete test contract ledger has 389 paths.",
         "required_final_state": "Exactly one contract record exists per target path, describing the authored test behavior and subject symbols without claiming execution or pass/fail.",
         "scope": [
@@ -5258,7 +5266,7 @@
         ],
         "category": "Static asset-consumer integration tracing",
         "target_phase": "A - repository reconstruction and documentation",
-        "objective": "Trace the 29 packaged runtime sprite assets from path constants/registries through load and crop/frame-selection consumers, and compare visible sheet organization/duplicate aliases with the code’s expected frame counts and selection paths.",
+        "objective": "Trace the 29 packaged runtime sprite assets from path constants/registries through load and crop/frame-selection consumers, and compare visible sheet organization/duplicate aliases with the code\u2019s expected frame counts and selection paths.",
         "motivation": "A-021 found eight visible wolf drawings under a 4frames filename, labels embedded in some runtime plant strips, and five byte-identical bird base/flying aliases. Static source linkage is needed to explain actual frame consumption without presuming defects.",
         "current_state": "All 29 runtime sprite paths are traced through asset constants, loader declarations, crop math and production callers in docs/repository_knowledge/runtime_sprite_frame_trace.md. EVID-058 additionally reconciles the Wolf four-frame contract against creative direction and source history; only visual grouping, plant/alias details, rights and approval remain unresolved.",
         "required_final_state": "A source-referenced table links each relevant asset group to its loader/crop/frame count and callers, identifying whether visible discrepancies are explained, unused, or unresolved. No defect is classified without a written contract mismatch.",
@@ -5310,7 +5318,7 @@
           "EVID-058",
           "EVID-059"
         ],
-        "uncertainty": "Wolf runtime frame count is explicit and historically reconciled at four; the asset image’s eight visible motifs may be paired/composited art, but no authoritative layout source establishes their internal intent. Plant numerals, duplicated bird pixels, dog shade, and visual approval remain unresolved as non-defect observations.",
+        "uncertainty": "Wolf runtime frame count is explicit and historically reconciled at four; the asset image\u2019s eight visible motifs may be paired/composited art, but no authoritative layout source establishes their internal intent. Plant numerals, duplicated bird pixels, dog shade, and visual approval remain unresolved as non-defect observations.",
         "remaining_work": "No source work established. Preserve remaining art/layout, alias, and approval observations as unresolved until an authoritative asset/layout decision exists.",
         "completion_evidence": [
           {
@@ -6136,9 +6144,9 @@
         "implementation_or_investigation_status": "IMPLEMENTED / INVESTIGATED",
         "evidence_status": "CURRENT EVIDENCE CONFIRMED",
         "id": "TASK-A-030",
-        "title": "Kotlin production symbol inventory: engine A–M",
+        "title": "Kotlin production symbol inventory: engine A\u2013M",
         "objective": "Create a comprehensive meaningful-symbol inventory shard for 75 assigned production files in app/src/main/java/com/anurag9000/forestrun/engine/[A-M]*.kt.",
-        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 75 engine files whose basename starts A-M; reuses A-010–A-012 and full changed-file reads.",
+        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 75 engine files whose basename starts A-M; reuses A-010\u2013A-012 and full changed-file reads.",
         "current_state": "75 assigned production files are already covered at file/source-inspection level in prior passes, but not comprehensively represented in the symbol ledger.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun/engine/[A-M]*.kt",
@@ -6219,9 +6227,9 @@
         "implementation_or_investigation_status": "IMPLEMENTED / INVESTIGATED",
         "evidence_status": "CURRENT EVIDENCE CONFIRMED",
         "id": "TASK-A-031",
-        "title": "Kotlin production symbol inventory: engine N–Z",
+        "title": "Kotlin production symbol inventory: engine N\u2013Z",
         "objective": "Create a comprehensive meaningful-symbol inventory shard for 52 assigned production files in app/src/main/java/com/anurag9000/forestrun/engine/[N-Z]*.kt.",
-        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 52 engine files whose basename starts N-Z; reuses A-010–A-012 and full changed-file reads.",
+        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 52 engine files whose basename starts N-Z; reuses A-010\u2013A-012 and full changed-file reads.",
         "current_state": "52 assigned production files are already covered at file/source-inspection level in prior passes, but not comprehensively represented in the symbol ledger.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun/engine/[N-Z]*.kt",
@@ -6387,7 +6395,7 @@
         "id": "TASK-A-033",
         "title": "Kotlin production symbol inventory: non-engine packages",
         "objective": "Create a comprehensive meaningful-symbol inventory shard for 64 assigned production files in app/src/main/java/com/anurag9000/forestrun excluding engine/.",
-        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 64 production Kotlin files under entities, systems, ui, utils and root activities/facades; reuse A-010–A-024 full reads.",
+        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 64 production Kotlin files under entities, systems, ui, utils and root activities/facades; reuse A-010\u2013A-024 full reads.",
         "current_state": "64 assigned production files are already covered at file/source-inspection level in prior passes, but not comprehensively represented in the symbol ledger.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun excluding engine/",
@@ -6419,7 +6427,7 @@
         ],
         "category": "documentation / applicability reconciliation",
         "target_phase": "A - source requirements and applicability reconciliation",
-        "objective": "Map universal engineering, architecture, verification and testing requirements to Forest Run’s actual goals, existing components, evidence and scope disposition.",
+        "objective": "Map universal engineering, architecture, verification and testing requirements to Forest Run\u2019s actual goals, existing components, evidence and scope disposition.",
         "motivation": "The existing capability ledger describes project requirements but has no unified matrix explaining why generic requirements apply, where they belong, or which verification evidence would establish them.",
         "current_state": "Prior repository map and execution ledger are extensive; independent comparison found no unified applicability/testing matrix. Source snapshot remains at eeccc677107f69039dbf71053c18a9038d4b5ff6 with 162 non-documentation hashed worktree files matching inventory.",
         "required_final_state": "A linked human-readable and machine-readable matrix covers all current REQ records and relevant universal requirement families, explains architecture ownership and planned risk-based checks, and distinguishes current static evidence from unexecuted/externally blocked verification.",
@@ -6495,7 +6503,7 @@
           "EVID-069"
         ],
         "uncertainty": "Repository-specific evidence and task scope are known; future test execution requires separately permitted phase.",
-        "remaining_work": "No work remains for matrix creation. Future tests remain in TASK-C-007–TASK-C-011, deferred under current scope; external and performance tasks remain in their existing phases.",
+        "remaining_work": "No work remains for matrix creation. Future tests remain in TASK-C-007\u2013TASK-C-011, deferred under current scope; external and performance tasks remain in their existing phases.",
         "completion_evidence": [
           "EVID-068",
           "EVID-069"
@@ -6531,7 +6539,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Run the applicable existing unit/component contracts against the frozen revision; assess movement bounds, pointer ownership/cancel behavior, collision ordering/terminal uniqueness, Bloom thresholds/timing/partition invariance, and relevant boundary/negative inputs. Expected behavior comes from GAME_DESIGN.md, ARCHITECTURE.md, FRAME_INPUT_ADMISSION.md, and deterministic scenario specifications, not from current outputs alone.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Full 1,297-test JVM/Robolectric suite passed on source payload df705 and exact d1 hosted JVM/connected workflow passed. Core source re-audit found no new defect. Independent requirement-level boundary/state oracle disposition and human/device gameplay acceptance remain.",
+        "current_state": "At exact main, the four named gameplay classes passed 27 tests (EVID-076), followed by 23 exact-main FrameInputAdmission/PlayerBoundary/PlayerPhysics/PlayerJumpVelocity tests (EVID-079). Source and design-contract review found no new source defect; movement-bound, pointer ownership/cancellation, collision terminal uniqueness, Bloom thresholds/timer partition behavior are covered at the authored test/property scope.",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "app/src/test/java/com/anurag9000/forestrun/engine/InputHandlerTest.kt",
@@ -6582,31 +6590,34 @@
         "execution_constraints": "Verification was authorized. Reuse EVID-072 (full local suites/build), EVID-074 (exact-head hosted host/API35 connected pass) and EVID-075 (focused concurrency). Do not rerun unchanged passing suites; close only the task-specific independent acceptance criteria and report physical/human limits.",
         "complexity": "medium",
         "priority": "P1 risk-based; deferred",
-        "execution_status": "PARTIALLY_COMPLETED",
+        "execution_status": "COMPLETED",
         "owner": null,
-        "blockers": [
-          "Task-specific acceptance evidence remains incomplete; any physical-device or human evidence requires the appropriate device/reviewer."
-        ],
+        "blockers": [],
         "evidence_ids": [
           "EVID-068",
           "EVID-072",
           "EVID-074",
-          "EVID-075"
+          "EVID-075",
+          "EVID-076",
+          "EVID-078",
+          "EVID-079"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
-        "remaining_work": "Complete the targeted acceptance criteria and connected/device evidence specified by this task; do not infer full closure from aggregate suite passes.",
+        "remaining_work": "No remaining work within this task\u2019s authored deterministic unit/property scope. Human/perceptual gameplay fairness remains under TASK-D-001/TASK-D-002; candidate runtime OWL_DIVE visual proof remains under TASK-C-013.",
         "completion_evidence": [
-          "EVID-072"
+          "EVID-072",
+          "EVID-076: 27 tests passed across InputHandlerTest, CollisionOutcomeDispatcherTest, BloomEconomyTest and BloomTimerPartitionPropertyTest at exact main; exact-main API 35 workflow succeeded (EVID-078).",
+          "EVID-079: 23 tests passed at exact main: FrameInputAdmissionTest 5, PlayerBoundaryTest 11, PlayerPhysicsTest 4, PlayerJumpVelocityTest 3; zero failures/errors/skips. Combined with EVID-076 gameplay selection, all scoped authored contract classes passed."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted checks passed",
-        "next_action": "Resume from EVID-072 and this task contract when connected/device resources are available; preserve exact candidate identity.",
+        "last_reconciled_revision": "1d1a73451ad59e088d4117216d07162628913ff8",
+        "next_action": "Reopen only if source/specification changes or a new independently established gameplay invariant is added.",
         "investigation_coverage": "DOCUMENTED",
-        "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
+        "implementation_or_investigation_status": "VERIFIED",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
       },
       {
@@ -6625,7 +6636,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Verify successful/failed repair gates both gameplay and Journal startup; domain stores preserve namespace and recovery boundaries; Journal projection remains read-only; interruption, malformed state, retry/restart and multi-domain pending cases follow documented contracts.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Full JVM suite and exact d1 API 35 connected lifecycle/Journal paths passed; source re-audit found no new save-repair or recovery defect. Physical process-kill/restore and task-specific durability acceptance remain.",
+        "current_state": "At exact main, the four named local persistence/Journal JVM classes passed 16 tests (included in EVID-076); the exact-main hosted API 35 workflow also passed the lifecycle/Journal connected path (EVID-078). No new source defect was established. A two-stage LargeTest candidate for host-verified process death and fresh-launch restoration has been added; its AndroidTest APK compiles (EVID-080), but no connected execution evidence exists.",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "app/src/test/java/com/anurag9000/forestrun/SaveIntegrityStartupGateTest.kt",
@@ -6681,26 +6692,31 @@
         "execution_status": "PARTIALLY_COMPLETED",
         "owner": null,
         "blockers": [
-          "Task-specific acceptance evidence remains incomplete; any physical-device or human evidence requires the appropriate device/reviewer."
+          "Connected runner/device execution is unavailable in the current environment; hosted execution requires an authorized candidate publication path."
         ],
         "evidence_ids": [
           "EVID-068",
           "EVID-072",
           "EVID-074",
-          "EVID-075"
+          "EVID-075",
+          "EVID-076",
+          "EVID-078",
+          "EVID-080"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
-        "remaining_work": "Complete the targeted acceptance criteria and connected/device evidence specified by this task; do not infer full closure from aggregate suite passes.",
+        "remaining_work": "Execute the candidate-bound connected prepare -> host force-stop/no-process assertion -> fresh instrumentation verify flow on API35 or an equivalent authorized emulator; inspect cleanup and exact result. Preserve physical/OEM recovery as separate evidence.",
         "completion_evidence": [
-          "EVID-072"
+          "EVID-072",
+          "EVID-076: 16 named local JVM tests passed; EVID-078: exact-main hosted API 35 connected workflow passed, including ForestJournalLifecycleInstrumentedTest.",
+          "EVID-080: test/driver added and AndroidTest APK compiled; connected behavior remains unverified."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted checks passed",
-        "next_action": "Resume from EVID-072 and this task contract when connected/device resources are available; preserve exact candidate identity.",
+        "last_reconciled_revision": "1d1a73451ad59e088d4117216d07162628913ff8 (focused local tests and exact-main hosted workflow)",
+        "next_action": "After publication/connected-run authorization and runner availability, execute the candidate-bound connected workflow; keep partial if it cannot run or fails.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
@@ -6722,7 +6738,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Verify bounded regular-file admission, symlink/no-follow and identity-change rejection, size/schema limits, candidate/hash binding, atomic publication and rollback/old-output preservation against independent temporary-directory fixtures and producer/consumer paths.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Full 1,387-test Python suite passed on source payload df705; exact d1 stable-file-reader focused suite passed 54 tests. Evidence-tooling producer/consumer and each requirement-level safety acceptance remain partially dispositioned.",
+        "current_state": "All five named evidence-tooling test files passed 113 tests at exact main (EVID-076). Existing tests exercise bounded/identity-bound reads, symlink or identity-change rejection, strict JSON, publication/rollback, screenshot-set validation and preservation of prior outputs.",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "scripts/test_stable_file_reader.py",
@@ -6775,31 +6791,32 @@
         "execution_constraints": "Verification was authorized. Reuse EVID-072 (full local suites/build), EVID-074 (exact-head hosted host/API35 connected pass) and EVID-075 (focused concurrency). Do not rerun unchanged passing suites; close only the task-specific independent acceptance criteria and report physical/human limits.",
         "complexity": "medium",
         "priority": "P1 risk-based; deferred",
-        "execution_status": "PARTIALLY_COMPLETED",
+        "execution_status": "COMPLETED",
         "owner": null,
-        "blockers": [
-          "Task-specific acceptance evidence remains incomplete; any physical-device or human evidence requires the appropriate device/reviewer."
-        ],
+        "blockers": [],
         "evidence_ids": [
           "EVID-068",
           "EVID-072",
           "EVID-074",
-          "EVID-075"
+          "EVID-075",
+          "EVID-076",
+          "EVID-078"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
-        "remaining_work": "Complete the targeted acceptance criteria and connected/device evidence specified by this task; do not infer full closure from aggregate suite passes.",
+        "remaining_work": "No remaining work within these five authored test files at the tested Python/filesystem environment. Do not generalize to every OS/filesystem or external service.",
         "completion_evidence": [
-          "EVID-072"
+          "EVID-072",
+          "EVID-076: scoped authored tests/build checks passed at exact main; EVID-078: exact-main hosted API 35 workflow passed."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted checks passed",
-        "next_action": "Resume from EVID-072 and this task contract when connected/device resources are available; preserve exact candidate identity.",
+        "last_reconciled_revision": "1d1a73451ad59e088d4117216d07162628913ff8",
+        "next_action": "Reopen only on source/contract delta or a newly established uncovered requirement.",
         "investigation_coverage": "DOCUMENTED",
-        "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
+        "implementation_or_investigation_status": "VERIFIED",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
       },
       {
@@ -6819,7 +6836,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Verify launch/lifecycle, orientation/configuration and safe-layout behavior; virtual-node semantics and action routing; persisted reduced-motion/audio/haptic controls; no stale lifecycle owner; build variants and package resources. Keep human TalkBack acceptance distinct and delegated to the external device/reviewer tasks.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Full JVM suite, lint, debug/release packaging, and exact d1 API 35 connected instrumentation passed (hosted emulator). Physical-device diversity, manual TalkBack/Switch Access and real-candidate usability acceptance remain.",
+        "current_state": "Selected exact-main UI JVM tests passed within the 129-test selection; exact-main hosted host/release/lint/package and API 35 connected workflow passed (EVID-076/EVID-078).",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "app/src/test/java/com/anurag9000/forestrun/ui/",
@@ -6872,31 +6889,32 @@
         "execution_constraints": "Verification was authorized. Reuse EVID-072 (full local suites/build), EVID-074 (exact-head hosted host/API35 connected pass) and EVID-075 (focused concurrency). Do not rerun unchanged passing suites; close only the task-specific independent acceptance criteria and report physical/human limits.",
         "complexity": "medium",
         "priority": "P1 risk-based; deferred",
-        "execution_status": "PARTIALLY_COMPLETED",
+        "execution_status": "COMPLETED",
         "owner": null,
-        "blockers": [
-          "Task-specific acceptance evidence remains incomplete; any physical-device or human evidence requires the appropriate device/reviewer."
-        ],
+        "blockers": [],
         "evidence_ids": [
           "EVID-068",
           "EVID-072",
           "EVID-074",
-          "EVID-075"
+          "EVID-075",
+          "EVID-076",
+          "EVID-078"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
-        "remaining_work": "Complete the targeted acceptance criteria and connected/device evidence specified by this task; do not infer full closure from aggregate suite passes.",
+        "remaining_work": "Automated build/UI/API35 scope is complete. Physical-device matrix, human TalkBack/Switch Access and comfort/usability review remain in TASK-D-001/TASK-D-002.",
         "completion_evidence": [
-          "EVID-072"
+          "EVID-072",
+          "EVID-076: scoped authored tests/build checks passed at exact main; EVID-078: exact-main hosted API 35 workflow passed."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted checks passed",
-        "next_action": "Resume from EVID-072 and this task contract when connected/device resources are available; preserve exact candidate identity.",
+        "last_reconciled_revision": "1d1a73451ad59e088d4117216d07162628913ff8",
+        "next_action": "No repeat absent a source/configuration delta; human/device work remains assigned to D phase.",
         "investigation_coverage": "DOCUMENTED",
-        "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
+        "implementation_or_investigation_status": "VERIFIED",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
       },
       {
@@ -6916,7 +6934,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "After focused task contracts are complete and a candidate/revision is frozen, run the applicable complete Python unit, Android JVM/Robolectric, lint/build, and ordinary connected instrumentation gates documented by the repository. Preserve per-suite results; do not merge historical and current evidence.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Full Python/JVM suites, debug/release lint/package, and exact d1 hosted Android host plus API 35 connected workflow passed (EVID-072/EVID-074); C-012 focused concurrency also passed (EVID-075). Task remains partial until dependent C-007–C-010 acceptance criteria close.",
+        "current_state": "Exact-main hosted workflow 40471923390 passed host/release/lint/package and API 35 connected jobs (EVID-078); exact-main selected local tests passed 129 JVM/UI and 113 Python tests (EVID-076). Full Python/JVM and lint/package evidence remains reusable from EVID-072 because application/test files are unchanged from the tested payload.",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "README.md:209-217",
@@ -6965,35 +6983,41 @@
           "Current dirty tests and source belong to user-owned worktree; preserve content and record exact baseline.",
           "Generated Gradle/Python test outputs are external artifacts; do not clean or delete existing outputs."
         ],
-        "execution_constraints": "Verification was authorized and the full local/hosted regression gate passed at the recorded revisions. Keep PARTIALLY_COMPLETED while its focused C-007–C-010 prerequisites retain requirement-level residual acceptance work; do not rerun without source delta.",
+        "execution_constraints": "Verification was authorized and the full local/hosted regression gate passed at the recorded revisions. Keep PARTIALLY_COMPLETED while its focused C-007\u2013C-010 prerequisites retain requirement-level residual acceptance work; do not rerun without source delta.",
         "complexity": "high",
         "priority": "P1 risk-based; deferred",
         "execution_status": "PARTIALLY_COMPLETED",
         "owner": null,
         "blockers": [
-          "Focused requirement-level tasks TASK-C-007 through TASK-C-010 remain partially evidenced; complete their stated acceptance criteria before this integration gate closes."
+          "TASK-C-008 process-kill/restore durability remains open."
         ],
         "evidence_ids": [
           "EVID-068",
           "EVID-070",
           "EVID-072",
           "EVID-074",
-          "EVID-075"
+          "EVID-075",
+          "EVID-076",
+          "EVID-078",
+          "EVID-079"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
-        "remaining_work": "The full Python/JVM, lint/package and exact-head connected regression gate passed. Close the dependent requirement-level obligations C-007 through C-010, then retain only any explicitly scoped residual integration check; do not repeat full suites absent a source delta.",
+        "remaining_work": "Resolve the process-kill/restore durability residual in TASK-C-008; then perform only the targeted integrated closure check that residual requires. Full unchanged suites need not be repeated.",
         "completion_evidence": [
           "EVID-072: full Python (1,387) and JVM/Robolectric (1,297) suites passed, zero JVM failures/errors/skips, debug/release lint and APK assembly passed on source payload df705.",
           "EVID-074: exact d1 hosted Android host/release/lint/package and API 35 connected validation jobs passed; source/test paths are unchanged from df705.",
-          "EVID-075: focused concurrency tests passed on d1."
+          "EVID-075: focused concurrency tests passed on d1.",
+          "EVID-078: exact-main Android host/release/lint/package and API 35 connected workflow succeeded.",
+          "EVID-076: exact-main focused Python (113) and JVM/UI (129) test selections passed.",
+          "EVID-079: 23 exact-main frame-admission and Player boundary/physics/jump tests passed, closing C-007 authored test scope."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted suite complete 2026-10-27",
-        "next_action": "Close C-007–C-010 targeted acceptance items; then perform only residual changed-code/integration reconciliation.",
+        "last_reconciled_revision": "1d1a73451ad59e088d4117216d07162628913ff8 (exact-main hosted CI plus focused verification)",
+        "next_action": "Close the C-008 durability residual, then reassess whether any integration check remains necessary before TASK-E-001.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
@@ -7090,7 +7114,7 @@
         ],
         "related_prior_work": [
           "TASK-A-019/A-020 passive test-contract inventory",
-          "TASK-C-007–C-012 future verification contracts",
+          "TASK-C-007\u2013C-012 future verification contracts",
           "EVID-070 source evidence and EVID-071 documentation consistency check"
         ],
         "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c (clean; tests run 2026-10-27)",
@@ -7702,7 +7726,7 @@
         "id": "VER-001",
         "category": "Unit and mathematical/property correctness",
         "applicability": "REQUIRED",
-        "current_status": "PARTIALLY_VERIFIED: full 1,297-test JVM/Robolectric suite passed (EVID-072); per-requirement independent mathematical/state-oracle acceptance remains under TASK-C-007.",
+        "current_status": "PASSED_AT_AUTHORED_SCOPE: named gameplay/property cases passed 27 tests (EVID-076) plus 23 FrameInputAdmission/Player boundary/physics/jump tests (EVID-079); human/device fairness remains separate.",
         "future_task_ids": [
           "TASK-C-007"
         ],
@@ -7712,7 +7736,7 @@
         "id": "VER-002",
         "category": "Component tests",
         "applicability": "REQUIRED_WITH_ADAPTATION",
-        "current_status": "PARTIALLY_VERIFIED: Python/JVM full suites and focused stable-file-reader suite passed (EVID-072/EVID-075); domain-specific residual recovery and external component evidence remain.",
+        "current_status": "PARTIALLY_VERIFIED: named persistence cases passed 16 exact-main JVM tests and API35 lifecycle passed (EVID-076/EVID-078); process-kill/restore durability remains under TASK-C-008.",
         "future_task_ids": [
           "TASK-C-008",
           "TASK-C-009"
@@ -7723,7 +7747,7 @@
         "id": "VER-003",
         "category": "Integration tests",
         "applicability": "REQUIRED",
-        "current_status": "PARTIALLY_VERIFIED: exact-head API 35 Android connected suite and full source-tool suites passed (EVID-072/EVID-074); remaining producer/consumer and task-specific integration evidence is not fully dispositioned.",
+        "current_status": "PASSED_AT_AUTHORED_SCOPE: five named evidence-tooling suites passed 113 tests at exact main (EVID-076); cross-platform/external-service behavior is not implied.",
         "future_task_ids": [
           "TASK-C-008",
           "TASK-C-009",
@@ -7735,7 +7759,7 @@
         "id": "VER-004",
         "category": "Full suite",
         "applicability": "REQUIRED_BEFORE_RELEASE; DEFERRED_NOW",
-        "current_status": "PASSED at recorded full-suite scope: 1,387 Python and 1,297 JVM tests; debug/release lint/package; exact-head d1 host and API 35 connected workflow all succeeded (EVID-072/EVID-074). Physical @LargeTest suites remain intentionally unexecuted.",
+        "current_status": "PASSED at recorded full-suite scope: 1,387 Python and 1,297 JVM tests, lint/package and exact-main API35 hosted workflow passed (EVID-072/EVID-078). Physical @LargeTest suites remain unexecuted.",
         "future_task_ids": [
           "TASK-C-011"
         ],
@@ -7780,7 +7804,7 @@
         "id": "VER-008",
         "category": "Compatibility and configuration tests",
         "applicability": "REQUIRED_WITH_ADAPTATION",
-        "current_status": "PARTIALLY VERIFIED: debug/release packaging, lint and exact-head API 35 connected suite passed (EVID-072/EVID-074); other supported Android versions and physical-device/process recovery remain unverified.",
+        "current_status": "PASSED_AT_AUTOMATED_API35_SCOPE: selected UI tests, lint/package and exact-main API35 connected workflow passed (EVID-076/EVID-078); physical-device/human acceptance remains separate.",
         "future_task_ids": [
           "TASK-C-010",
           "TASK-C-011"
@@ -7852,5 +7876,14 @@
     "affected_record_ids": "stable ledger IDs",
     "evidence_ids": "EVID IDs",
     "change_details": "rationale and resulting state"
+  },
+  "latest_candidate": {
+    "base_revision": "1d1a73451ad59e088d4117216d07162628913ff8",
+    "working_tree_delta": "uncommitted authorized AndroidTest candidate, connected runner update, and documentation delta; no production app code change",
+    "evidence_ids": [
+      "EVID-080",
+      "EVID-081"
+    ],
+    "status": "process-death test candidate compiles; connected execution pending authorized publication and runner availability"
   }
 }
