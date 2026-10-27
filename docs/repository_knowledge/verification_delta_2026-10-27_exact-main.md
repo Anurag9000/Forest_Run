@@ -102,3 +102,8 @@ ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
 ```
 
 The first build attempt omitted SDK environment variables and stopped before compilation with “SDK location not found”; the retry used the already-installed SDK and succeeded. **The connected process-death test has not run.** No local `adb`/device is available in this environment, and the new candidate has not been published to the hosted runner. TASK-C-008 and dependent TASK-C-011 therefore remain partial. Do not claim process-death durability from compilation. The connected candidate run requires an explicitly authorized publication path and an available connected runner; physical/OEM recovery behavior remains outside this emulator check.
+
+
+### Host-runner correction after first candidate publication
+
+The first published candidate `fc737302e294f510d41dd107b2662d07269599e5` failed `test_connected_validation_runner.ConnectedValidationRunnerContractTest.test_runner_preserves_connected_test_failures`: the contract rejects literal `|| true` in the connected command tail. The API 35 connected job was skipped, so that run provides no process-death evidence. The process-query logic now captures a remote `pidof` exit marker and distinguishes the expected no-process result from a query/transport failure. The instrumentation helper uses raw output and validates per-test and session result codes. The focused runner contract suite then passed **12/12** (`PYTHONPATH=scripts python3 -m unittest test_connected_validation_runner`); `bash -n` and `git diff --check` passed. This correction awaits a new hosted candidate run. TASK-C-008 remains partial. See EVID-082.

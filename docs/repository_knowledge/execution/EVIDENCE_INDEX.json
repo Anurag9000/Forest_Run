@@ -1123,7 +1123,7 @@
         "REQ-003"
       ],
       "disposition": "Added a LargeTest prepare/verify/cleanup contract with a host-driven target-only force-stop boundary and a fresh instrumentation launch. The host captures raw `am instrument -w -r` output, rejects JUnit failure/error status codes, requires exactly one passing test status and a successful session terminator. Static shell syntax and diff whitespace checks passed. Debug AndroidTest APK compilation succeeded using the installed Android SDK via ANDROID_HOME/ANDROID_SDK_ROOT.",
-      "limitations": "Connected process-death flow was not executed; no local adb/device is available and this candidate has not been published to hosted CI. Compilation and static output parsing do not prove durable process-death restoration. TASK-C-008 and dependent TASK-C-011 remain partial."
+      "limitations": "The first published candidate fc737302e294f510d41dd107b2662d07269599e5 failed the host Python runner-contract test because its static rule rejected the literal `|| true` in the process query; API35 connected job was skipped. The query has since been changed to explicit pidof exit-marker parsing, and all 12 focused runner-contract tests now pass in the uncommitted follow-up. The corrected candidate still needs a new hosted run; no connected process-death result exists."
     },
     {
       "id": "EVID-081",
@@ -1136,6 +1136,55 @@
       ],
       "disposition": "JSON and JSONL parse, file inventory count and coverage arithmetic, unique file/task/evidence IDs, task evidence references, present-path validation, recorded stable-content hashes, changed-document relative links, shell syntax and git diff whitespace checks passed. Three absent generated/user workspace records remain explicitly excluded with reason and stable descriptors.",
       "limitations": "Static consistency checks do not execute the application, connected instrumentation, or process-death behavior. Does not establish hosted CI or physical-device evidence."
+    },
+    {
+      "id": "EVID-082",
+      "type": "first published process-death candidate host workflow failure and focused runner correction",
+      "path": "https://github.com/Anurag9000/Forest_Run/actions/runs/40477896210; scripts/test_connected_validation_runner.py; scripts/run_connected_validation.sh",
+      "revision": "fc737302e294f510d41dd107b2662d07269599e5, followed by uncommitted runner correction",
+      "supports": [
+        "TASK-C-008",
+        "TASK-C-011"
+      ],
+      "disposition": "Push-triggered Android validation host job failed in `test_connected_validation_runner.ConnectedValidationRunnerContractTest.test_runner_preserves_connected_test_failures`; the static contract rejects literal `|| true` in the command tail. The API35 connected job was skipped. The runner was corrected to parse a pidof exit marker without the forbidden string, capture raw instrumentation results, reject failure codes, and require a single successful test record. Focused `PYTHONPATH=scripts python3 -m unittest test_connected_validation_runner` then passed all 12 tests; bash syntax and diff checks passed. After the first failure, the corrected full host script-tooling command `python3 -m unittest discover -s scripts -p 'test_*.py'` passed 1,387 tests with exit code 0 (EVID-083).",
+      "limitations": "The corrected worktree revision has not yet been hosted. The failed run produced no connected test evidence and establishes no persistence defect."
+    },
+    {
+      "id": "EVID-083",
+      "type": "full host Python tooling suite after connected-runner correction",
+      "path": "scripts; scripts/run_connected_validation.sh; scripts/test_connected_validation_runner.py",
+      "revision": "fc737302e294f510d41dd107b2662d07269599e5 plus final corrected connected-runner worktree delta",
+      "supports": [
+        "TASK-C-008",
+        "TASK-C-011",
+        "TASK-C-009"
+      ],
+      "disposition": "Exact Android host workflow tooling command `python3 -m unittest discover -s scripts -p 'test_*.py'` passed 1,387 tests in 18.112 seconds, exit code 0. Expected diagnostics from negative-path tests were emitted; they were not test failures. The previously failing connected-runner contract is included and passes on the corrected script.",
+      "limitations": "This was a local Python tooling suite only. It is not the hosted run for the corrected commit, not Android instrumentation, and not process-death durability evidence."
+    },
+    {
+      "id": "EVID-084",
+      "type": "static ledger and documentation consistency check after connected-runner correction",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/EVIDENCE_INDEX.json; docs/repository_knowledge/execution/STATE_HISTORY.jsonl; docs/repository_knowledge/file_inventory.json; scripts/run_connected_validation.sh",
+      "revision": "fc737302e294f510d41dd107b2662d07269599e5 plus corrective uncommitted delta",
+      "supports": [
+        "TASK-C-008",
+        "TASK-C-011"
+      ],
+      "disposition": "All JSON/JSONL ledgers parse; file inventory has 1,007 unique records with coverage counts summing correctly; all 58 task IDs and 82 evidence IDs are unique; task evidence references resolve; current stable content hashes and Markdown links resolve; shell syntax and whitespace checks pass. Three original generated/workspace artifacts remain excluded with reason. Full script Python suite passed 1,387 tests (EVID-083).",
+      "limitations": "Static and host-tooling evidence only; no connected test was executed on this corrective worktree. The `.training_control/coverage_report.json` file generated by the local test suite is preserved as an untracked test artifact and excluded from this commit."
+    },
+    {
+      "id": "EVID-085",
+      "type": "final static consistency check after runner parser refinement",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/EVIDENCE_INDEX.json; docs/repository_knowledge/execution/STATE_HISTORY.jsonl; docs/repository_knowledge/file_inventory.json; scripts/run_connected_validation.sh",
+      "revision": "fc737302e294f510d41dd107b2662d07269599e5 plus final corrected connected-runner worktree delta",
+      "supports": [
+        "TASK-C-008",
+        "TASK-C-011"
+      ],
+      "disposition": "JSON/JSONL parse; 1,007 file inventory records and coverage totals reconcile; all task/evidence IDs and evidence references resolve; stable source/doc hashes and relative Markdown links pass; bash syntax and git diff whitespace checks pass. Final full scripts suite passed 1,387 tests in 18.112 seconds (EVID-083). The generated `.training_control/coverage_report.json` is retained as an untracked test artifact and excluded from this commit.",
+      "limitations": "Static consistency and Python host tooling do not establish Android connected or process-death behavior; the corrective hosted run remains pending."
     }
   ]
 }

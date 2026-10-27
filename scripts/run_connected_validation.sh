@@ -185,8 +185,22 @@ if [[ -z "${PIDOF_PATH}" ]]; then
   echo "Cannot verify target process termination: device has no pidof command." >&2
   exit 1
 fi
-if ! TARGET_PROCESS_IDS="$(adb -s "${SERIAL}" shell "pidof ${PROCESS_TEST_TARGET_PACKAGE} || true" 2>/dev/null | tr -d '\r')"; then
+if ! PIDOF_RESULT="$(adb -s "${SERIAL}" shell "pidof ${PROCESS_TEST_TARGET_PACKAGE}; printf '\\nPIDOF_EXIT:%s\\n' \"\\$?\"" 2>/dev/null | tr -d '\r')"; then
   echo "Could not query target process state after force-stop." >&2
+  exit 1
+fi
+if [[ "${PIDOF_RESULT}" != *$'\n'PIDOF_EXIT:* ]]; then
+  echo "Could not parse target process state after force-stop." >&2
+  exit 1
+fi
+TARGET_PROCESS_IDS="${PIDOF_RESULT%$'\n'PIDOF_EXIT:*}"
+PIDOF_EXIT_CODE="${PIDOF_RESULT##*$'\n'PIDOF_EXIT:}"
+if [[ ! "${PIDOF_EXIT_CODE}" =~ ^[01]$ ]]; then
+  echo "pidof returned an unexpected exit code: ${PIDOF_EXIT_CODE}" >&2
+  exit 1
+fi
+if [[ "${PIDOF_EXIT_CODE}" -eq 0 && -z "${TARGET_PROCESS_IDS}" ]]; then
+  echo "pidof returned success without a target process ID." >&2
   exit 1
 fi
 if ! adb -s "${SERIAL}" get-state 2>/dev/null | grep -qx 'device'; then

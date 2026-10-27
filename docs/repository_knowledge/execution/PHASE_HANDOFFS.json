@@ -62,7 +62,7 @@
         "TASK-C-012",
         "TASK-C-013"
       ],
-      "status": "TASK-C-009 and the automated/API35 scope of TASK-C-010 are complete (EVID-076/EVID-078); TASK-C-007 authored mechanics/property scope is complete (EVID-079); TASK-C-008 process-kill/restore durability remains partial; EVID-080 adds a compile-only candidate. TASK-C-011 awaits the TASK-C-008 durability residual and targeted integration reconciliation. TASK-C-012 is complete at authored scope (EVID-075); TASK-C-013 candidate-bound screenshot remains deferred.",
+      "status": "TASK-C-009 and the automated/API35 scope of TASK-C-010 are complete (EVID-076/EVID-078); TASK-C-007 authored mechanics/property scope is complete (EVID-079); TASK-C-008 process-kill/restore durability remains partial; EVID-080 adds the candidate; first hosted revision failed a shell-contract test, and corrected runner passed 1,387 local Python tests (EVID-082/EVID-083); corrected hosted rerun remains pending. TASK-C-011 awaits the TASK-C-008 durability residual and targeted integration reconciliation. TASK-C-012 is complete at authored scope (EVID-075); TASK-C-013 candidate-bound screenshot remains deferred.",
       "entry_conditions": [
         "Preserve exact candidate/base and the original dirty checkout",
         "Reuse EVID-072 and EVID-074–EVID-078; do not repeat passing suites without a source or requirement delta",
