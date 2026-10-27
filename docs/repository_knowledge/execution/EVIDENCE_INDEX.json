@@ -1153,13 +1153,13 @@
       "id": "EVID-083",
       "type": "full host Python tooling suite after connected-runner correction",
       "path": "scripts; scripts/run_connected_validation.sh; scripts/test_connected_validation_runner.py",
-      "revision": "fc737302e294f510d41dd107b2662d07269599e5 plus final corrected connected-runner worktree delta",
+      "revision": "d3ccbe517273238ad5de38ced6f85ed97bb6caa0 plus final uncommitted pidof-marker correction",
       "supports": [
         "TASK-C-008",
         "TASK-C-011",
         "TASK-C-009"
       ],
-      "disposition": "Exact Android host workflow tooling command `python3 -m unittest discover -s scripts -p 'test_*.py'` passed 1,387 tests in 18.112 seconds, exit code 0. Expected diagnostics from negative-path tests were emitted; they were not test failures. The previously failing connected-runner contract is included and passes on the corrected script.",
+      "disposition": "Exact workflow command `python3 -m unittest discover -s scripts -p 'test_*.py'` passed 1,387 tests in 17.953 seconds, exit code 0, after the latest remote-marker quoting fix. Expected diagnostics from negative-path tests were emitted; they were not test failures. The connected runner contract is included and passes on the corrected script.",
       "limitations": "This was a local Python tooling suite only. It is not the hosted run for the corrected commit, not Android instrumentation, and not process-death durability evidence."
     },
     {
@@ -1185,6 +1185,42 @@
       ],
       "disposition": "JSON/JSONL parse; 1,007 file inventory records and coverage totals reconcile; all task/evidence IDs and evidence references resolve; stable source/doc hashes and relative Markdown links pass; bash syntax and git diff whitespace checks pass. Final full scripts suite passed 1,387 tests in 18.112 seconds (EVID-083). The generated `.training_control/coverage_report.json` is retained as an untracked test artifact and excluded from this commit.",
       "limitations": "Static consistency and Python host tooling do not establish Android connected or process-death behavior; the corrective hosted run remains pending."
+    },
+    {
+      "id": "EVID-086",
+      "type": "corrected-runner API 35 workflow attempt failed before process-death result",
+      "path": "https://github.com/Anurag9000/Forest_Run/actions/runs/40478574339; docs/repository_knowledge/verification_delta_2026-10-27_exact-main.md",
+      "revision": "d3ccbe517273238ad5de38ced6f85ed97bb6caa0",
+      "supports": [
+        "TASK-C-008",
+        "TASK-C-011"
+      ],
+      "disposition": "Exact-SHA Android host, release, lint and packaging job succeeded. API 35 connected job failed in the `Run API 35 connected validation` step after ordinary test runner setup; connected artifacts uploaded. Public check annotations only reported shell exit code 1; detailed logs were not accessible through the unauthenticated API. Source review then found the host `$?` expansion bug in the remote pidof exit marker, which can make the no-process branch look like pidof success with empty IDs. This is a concrete script defect corrected in the follow-up.",
+      "limitations": "The connected job failed and does not establish process-death persistence. Exact failing shell line is inferred from source/status rather than confirmed from detailed job logs; retain that uncertainty."
+    },
+    {
+      "id": "EVID-087",
+      "type": "pidof remote-exit marker quoting correction and focused connected-runner contract tests",
+      "path": "scripts/run_connected_validation.sh; scripts/test_connected_validation_runner.py",
+      "revision": "d3ccbe517273238ad5de38ced6f85ed97bb6caa0 plus current uncommitted correction",
+      "supports": [
+        "TASK-C-008",
+        "TASK-C-011"
+      ],
+      "disposition": "Corrected shell escaping so `$?` is evaluated by the device shell after `pidof`, not expanded by the host shell. `bash -n scripts/run_connected_validation.sh` passed; `PYTHONPATH=scripts python3 -m unittest test_connected_validation_runner` passed all 12 tests.",
+      "limitations": "No connected device or hosted run for the corrected quoting is yet available; no persistence result is established."
+    },
+    {
+      "id": "EVID-088",
+      "type": "static ledger and documentation consistency after pidof marker correction",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/EVIDENCE_INDEX.json; docs/repository_knowledge/execution/STATE_HISTORY.jsonl; docs/repository_knowledge/file_inventory.json; scripts/run_connected_validation.sh",
+      "revision": "d3ccbe517273238ad5de38ced6f85ed97bb6caa0 plus current pidof-marker correction and docs delta",
+      "supports": [
+        "TASK-C-008",
+        "TASK-C-011"
+      ],
+      "disposition": "JSON/JSONL parse; file inventory and coverage counts reconcile; unique file/task/evidence IDs; evidence references resolve; present paths and stable hashes verify; local Markdown links resolve; no sensitive absolute paths in updated reports; bash syntax and whitespace checks pass. Full script suite passed 1,387 tests (EVID-083).",
+      "limitations": "Static checks and host scripts suite do not establish corrected API35 connected behavior or process-death persistence."
     }
   ]
 }

@@ -185,7 +185,7 @@ if [[ -z "${PIDOF_PATH}" ]]; then
   echo "Cannot verify target process termination: device has no pidof command." >&2
   exit 1
 fi
-if ! PIDOF_RESULT="$(adb -s "${SERIAL}" shell "pidof ${PROCESS_TEST_TARGET_PACKAGE}; printf '\\nPIDOF_EXIT:%s\\n' \"\\$?\"" 2>/dev/null | tr -d '\r')"; then
+if ! PIDOF_RESULT="$(adb -s "${SERIAL}" shell "pidof ${PROCESS_TEST_TARGET_PACKAGE}; printf '\\nPIDOF_EXIT:%s\\n' \"\$?\"" 2>/dev/null | tr -d '\r')"; then
   echo "Could not query target process state after force-stop." >&2
   exit 1
 fi

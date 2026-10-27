@@ -20000,8 +20000,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "a22592b535b53399c1b65eb3a0afc8e5f1bc0f85e24f5836c13f459e88e65afc",
-      "worktree_content_bytes": 41872,
+      "worktree_content_sha256": "749523936f890de651436514820a3663cb34227ff327bbc763852ad3c8ff5d70",
+      "worktree_content_bytes": 41950,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24124,8 +24124,8 @@
       "documentation_refs": [
         "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
       ],
-      "worktree_content_sha256": "52ddf213f396778da06c65c7fece1b33975a422726a33657fbd6c4a8c1534d50",
-      "worktree_content_bytes": 12529,
+      "worktree_content_sha256": "df4c5930f628b6d10c0aea26afa347cd7d2b3c2c30a3fabf00285716bd913905",
+      "worktree_content_bytes": 12620,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24196,8 +24196,8 @@
       ],
       "file_type": "json",
       "language_or_format": "JSON",
-      "worktree_content_sha256": "2222e29ae300026b16cc59d6fe03b2bc085456a2f331d0c9266d5e329c979187",
-      "worktree_content_bytes": 437524,
+      "worktree_content_sha256": "07c67b41df78ef95d3b6cff4cd47867a3624a881d9179dea56da315badc94e69",
+      "worktree_content_bytes": 437914,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24257,8 +24257,8 @@
       ],
       "file_type": "json",
       "language_or_format": "JSON",
-      "worktree_content_sha256": "1216562520ba03b3a24f0769f17184fca11f4cbc4f52c601901472c82725eec1",
-      "worktree_content_bytes": 78005,
+      "worktree_content_sha256": "00364c775916646d7c8a16a3fa4e709fb4a0ed9d9ca2f3c6180ae311a7aa716d",
+      "worktree_content_bytes": 81183,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24290,8 +24290,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "0718852fce49c1bed3f8948f9df9afe8c0cf40b2d321b3c263af4333a4b9814b",
-      "worktree_content_bytes": 4546,
+      "worktree_content_sha256": "167e17b4bde590f4fb640e8fd5b0796e30553b924b3a7c950df739663f222afc",
+      "worktree_content_bytes": 4541,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24323,8 +24323,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "a1f8e68f38e34d75f2b3f3d1cc4c03a77e0be3071372bd5585240187a5e56534",
-      "worktree_content_bytes": 2709,
+      "worktree_content_sha256": "ae61f37d21a4e13cbe9dd10168eb54f32ad3561ca8eae9f2b0d55614e79d2156",
+      "worktree_content_bytes": 2859,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24356,8 +24356,8 @@
       ],
       "file_type": "json",
       "language_or_format": "JSON",
-      "worktree_content_sha256": "17e830ae5f85fca42ce08a9bca9a2803fe9852413d153741174a47b9521de19b",
-      "worktree_content_bytes": 9861,
+      "worktree_content_sha256": "4bff57c2b681c9fededa05ae6d7fb15eaa506db5b7b2caacd5b2fd741f8cad78",
+      "worktree_content_bytes": 9936,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -24389,8 +24389,8 @@
       ],
       "file_type": "jsonl",
       "language_or_format": "Unknown or binary",
-      "worktree_content_sha256": "530745ecafca2301196e2258b4d751cd5b146c0c3904cc9c48eab2126507600e",
-      "worktree_content_bytes": 35308,
+      "worktree_content_sha256": "fdd718f5a69c72ec8f89c1c3a8919931f1ddae85ca3bc60d9fc1292528753094",
+      "worktree_content_bytes": 36289,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
@@ -32450,8 +32450,8 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "worktree_content_sha256": "2a3fdf669781a0b2e623a7a311e8b9a41910b9f994af9117f3f976c5818da26a",
-      "worktree_content_bytes": 12587,
+      "worktree_content_sha256": "8d55b20e35315f337438ea902c6bf2606a86dde89bdec6199be613f799cb80fb",
+      "worktree_content_bytes": 13522,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {

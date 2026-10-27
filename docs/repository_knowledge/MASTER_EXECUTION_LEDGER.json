@@ -6636,7 +6636,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Verify successful/failed repair gates both gameplay and Journal startup; domain stores preserve namespace and recovery boundaries; Journal projection remains read-only; interruption, malformed state, retry/restart and multi-domain pending cases follow documented contracts.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "At exact main, the four named local persistence/Journal JVM classes passed 16 tests (included in EVID-076); the exact-main hosted API 35 workflow also passed the lifecycle/Journal connected path (EVID-078). No new source defect was established. A two-stage LargeTest candidate for host-verified process death and fresh-launch restoration has been added; its AndroidTest APK compiles (EVID-080), but no connected execution evidence exists. First published test candidate failed its host runner-contract check; runner correction passes all 12 focused tests and the full 1,387 Python host tooling tests (EVID-082/EVID-083).",
+        "current_state": "At exact main, the four named local persistence/Journal JVM classes passed 16 tests (included in EVID-076); the exact-main hosted API 35 workflow also passed the lifecycle/Journal connected path (EVID-078). No new source defect was established. A two-stage LargeTest candidate for host-verified process death and fresh-launch restoration has been added; its AndroidTest APK compiles (EVID-080), but no connected execution evidence exists. First published test candidate failed its host runner-contract check; runner correction passes all 12 focused tests and the full 1,387 Python host tooling tests (EVID-082/EVID-083). The exact d3 hosted API35 connected job failed before durable-state evidence; code review identified a host-versus-device `$?` expansion flaw in the process-query marker and corrected it locally (EVID-086/EVID-087). The corrected worktree passes 12 focused runner tests and all 1,387 Python host tests (EVID-083).",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "app/src/test/java/com/anurag9000/forestrun/SaveIntegrityStartupGateTest.kt",
@@ -6703,10 +6703,12 @@
           "EVID-078",
           "EVID-080",
           "EVID-082",
-          "EVID-083"
+          "EVID-083",
+          "EVID-086",
+          "EVID-087"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
-        "remaining_work": "Run corrected committed candidate through host/API35 connected workflow and confirm process-death test stages pass; otherwise diagnose and retain an exact failure report. Preserve physical/OEM recovery as separate evidence.",
+        "remaining_work": "Publish the pidof-marker correction and execute the exact corrected candidate through the API35 connected workflow. Inspect the process-death prepare, force-stop/no-process check, fresh-launch verify, and cleanup results. Keep physical/OEM recovery separate.",
         "completion_evidence": [
           "EVID-072",
           "EVID-076: 16 named local JVM tests passed; EVID-078: exact-main hosted API 35 connected workflow passed, including ForestJournalLifecycleInstrumentedTest.",
@@ -6718,7 +6720,7 @@
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
         "last_reconciled_revision": "1d1a73451ad59e088d4117216d07162628913ff8 (focused local tests and exact-main hosted workflow)",
-        "next_action": "Publish the locally corrected candidate and inspect exact SHA host plus API35 connected workflow before claiming process-death persistence.",
+        "next_action": "Run corrected committed candidate through exact SHA Android validation; if connected stage passes, record emulator-only persistence evidence; if it fails, inspect the detailed available log/artifact before further changes.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
@@ -7880,16 +7882,14 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "fc737302e294f510d41dd107b2662d07269599e5",
-    "working_tree_delta": "uncommitted connected-runner correction and evidence/docs update after host contract failure",
+    "base_revision": "d3ccbe517273238ad5de38ced6f85ed97bb6caa0",
+    "working_tree_delta": "uncommitted pidof marker remote-shell quoting correction and documentation update after API35 job failure",
     "evidence_ids": [
-      "EVID-080",
-      "EVID-081",
-      "EVID-082",
       "EVID-083",
-      "EVID-084",
-      "EVID-085"
+      "EVID-086",
+      "EVID-087",
+      "EVID-088"
     ],
-    "status": "corrected runner passes all 1,387 local host tooling tests; final static checks pass; corrected hosted validation and connected process-death execution pending"
+    "status": "latest runner correction passes focused and full host Python suites; exact connected run pending"
   }
 }

@@ -4,7 +4,7 @@
 
 **Published source commit:** `df705c65c7f0a7ef03669a0c6767de5f381b418a` is verified on `origin/main`; two push-triggered workflow checks passed and Android validation remained in progress at the EVID-073 snapshot.
 
-**Latest source audit:** clean candidate `d1f31d473f5ca9303706164b6cc817703e0e7c7c` was re-audited across gameplay, scenarios, persistence, accessibility/audio/haptics, assets, release documentation and CI wiring; the exact-main follow-up found no source changes or new defect. See `source_completion_reconciliation_2026-10-27.md` / EVID-074 and `verification_delta_2026-10-27_exact-main.md` / EVID-076–EVID-083. Exact-main Android run `40471923390` completed successfully: host/release/lint/package and API 35 connected validation passed. This is hosted emulator evidence, not physical-device or human acceptance.
+**Latest source audit:** clean candidate `d1f31d473f5ca9303706164b6cc817703e0e7c7c` was re-audited across gameplay, scenarios, persistence, accessibility/audio/haptics, assets, release documentation and CI wiring; the exact-main follow-up found no source changes or new defect. See `source_completion_reconciliation_2026-10-27.md` / EVID-074 and `verification_delta_2026-10-27_exact-main.md` / EVID-076–EVID-087. Exact-main Android run `40471923390` completed successfully: host/release/lint/package and API 35 connected validation passed. This is hosted emulator evidence, not physical-device or human acceptance.
 
 **Current phase:** Evidence-backed source completion and authorized verification. The named OWL_DIVE store capture now receives a scheduled jump; visible screenshot state remains blocked pending a device.
 
@@ -25,7 +25,7 @@
 ## Next actions
 
 1. When an authorized device and `adb` are available, run `TASK-C-013` against the exact candidate and inspect the candidate-bound `07-owl.png`.
-2. Run the corrected candidate-bound process-death connected check on the hosted runner; if it passes, perform only the integration reconciliation required to close `TASK-C-011`.
+2. Run the latest pidof-marker correction through the hosted API35 connected check; if it passes, perform only the integration reconciliation required to close `TASK-C-011`.
 3. Complete performance and accountable external release tasks before `TASK-E-001` go/no-go.
 4. Preserve source identity, state history, and the distinction between the isolated tested candidate and the original dirty checkout.
 
