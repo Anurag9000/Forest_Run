@@ -1,14 +1,14 @@
 {
   "schema_version": "1.0.0",
   "repository": "Forest_Run",
-  "inventory_snapshot_date": "2026-10-27",
+  "inventory_snapshot_date": "2026-10-28",
   "baseline_commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
   "baseline_counts": {
     "tracked_files": 939,
     "preexisting_dirty_paths": 166,
     "initial_visible_paths_reported": 961
   },
-  "current_inventory_count": 1008,
+  "current_inventory_count": 1009,
   "scope": "Union of tracked paths and visible workspace paths, excluding .git internals and ignored build/.gradle trees. Tracked release paths hidden by ignore rules are retained. New docs are included.",
   "coverage_semantics": "INVENTORIED means path/classification only; PARTIALLY_INSPECTED means bounded changed regions or prior map consultation; FULLY_STATICALLY_INSPECTED is reserved for complete small-file reading; generated exclusions have reasons. No inventory state implies runtime verification.",
   "records": [
@@ -2141,17 +2141,17 @@
     },
     {
       "id": "FILE-B4410CACCC97",
-      "path": "app/src/main/assets/sprites/animals/wolf_4frames.png",
+      "path": "app/src/main/assets/sprites/animals/wolf_8frames.png",
       "classification": "packaged runtime asset",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "tracked_rename_plus_new_asset_on_uncommitted_overlay",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + working-tree overlay",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Visual contents inspected locally; per-file observations and uncertainty in asset_visual_inventory.md; no content editing/approval implied.",
+      "inspection_detail": "Eight 160x156 poses statically verified against importer mapping, AssetPaths, SpriteManager frame count, package output and focused source contracts; creative/provenance approval remains unverified.",
       "symbols_or_consumers": [],
       "relationships": [],
-      "evidence_ref": "EVID-043",
-      "next_action": "Reuse bounded static findings; no execution is implied.",
+      "evidence_ref": "EVID-103; EVID-105",
+      "next_action": "Retain human creative and provenance review as external; refresh only if source pixels or mapping change.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-006"
@@ -2169,7 +2169,8 @@
       "file_type": "png",
       "language_or_format": "Image asset",
       "assigned_task_id": "TASK-A-018",
-      "assigned_owner": "/root/kotlin_delta"
+      "assigned_owner": "/root/kotlin_delta",
+      "historical_path": "app/src/main/assets/sprites/animals/wolf_4frames.png"
     },
     {
       "id": "FILE-F04931D2C6BD",
@@ -24728,9 +24729,9 @@
       "id": "FILE-32CC9C286A1D",
       "path": "docs/repository_knowledge/runtime_sprite_frame_trace.md",
       "classification": "new knowledge-base artifact",
-      "worktree_status": "created_by_current_investigation",
+      "worktree_status": "updated_for_2026-10-28_delta",
       "coverage_status": "DOCUMENTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + documentation snapshot 2026-10-27",
+      "source_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + working-tree overlay",
       "prior_evidence": "TASK-A-022 static asset-to-frame trace",
       "inspection_detail": "Traces all 29 packaged runtime sprite PNGs through AssetPaths, SpriteManager, SpriteSheet frame crops and production callers; documents source/visual mismatches and limits.",
       "symbols_or_consumers": [
@@ -24744,8 +24745,8 @@
         "GardenScreen"
       ],
       "relationships": [],
-      "evidence_ref": "EVID-044",
-      "next_action": "Reuse static frame-selection map; re-review only if sprite source, dimensions, or selection code changes.",
+      "evidence_ref": "EVID-103",
+      "next_action": "Reuse this corrected frame/caller trace; review again only if source image, mapping or consuming code changes.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -32532,6 +32533,44 @@
       "worktree_content_sha256": "df584ec8fcef59f8e45873cc08015bba60eb8980196f12f360ce22035ca58518",
       "worktree_content_bytes": 7028,
       "worktree_hash_status": "HASHED_STABLE_CONTENT"
+    },
+    {
+      "id": "FILE-83EEF36217EE",
+      "path": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+      "classification": "current source-completion and verification delta",
+      "worktree_status": "created_and_updated_2026-10-28",
+      "coverage_status": "DOCUMENTED",
+      "source_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + working-tree overlay",
+      "prior_evidence": "TASK-C-014; EVID-103 through EVID-107",
+      "inspection_detail": "Revision-bounded account of the Wolf and lifecycle/source tooling delta, current host verification, connected-test termination, remote baseline CI and remaining acceptance limits.",
+      "symbols_or_consumers": [
+        "GameView",
+        "AssetPaths.Animals.WOLF",
+        "SpriteManager",
+        "import_final_assets",
+        "verify_release_source_assets"
+      ],
+      "relationships": [
+        "TASK-C-014"
+      ],
+      "evidence_ref": "EVID-103 through EVID-107",
+      "next_action": "Update after exact-candidate hosted API35 verification; do not describe current overlay as candidate-verified before then.",
+      "related_goal_ids": [
+        "GOAL-015"
+      ],
+      "related_capability_ids": [
+        "CAP-001",
+        "CAP-004",
+        "CAP-005",
+        "CAP-015"
+      ],
+      "documentation_refs": [
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
+        "docs/repository_knowledge/execution/EXECUTION_DASHBOARD.md",
+        "docs/repository_knowledge/execution/NEXT_ACTIONS.md"
+      ],
+      "file_type": "Markdown",
+      "language_or_format": "Markdown"
     }
   ],
   "coverage_counts": {
@@ -32541,8 +32580,8 @@
     "EXCLUDED_WITH_REASON": 3
   },
   "inspection_update": {
-    "date": "2026-10-27",
-    "delta": "Added the TASK-C-008 test candidate and updated connected validation driver coverage. New AndroidTest file is statically inspected and compiles; actual connected process-death behavior remains unverified. Other counts retain prior inspection coverage."
+    "date": "2026-10-28",
+    "delta": "Reconciled the Wolf rename/frame count and added the current source-completion delta. Baseline full-inspection counts remain revision-bounded; only the renamed asset and new current delta artifact were added/updated here. No 100% source/runtime coverage claim is made."
   },
   "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9",
   "working_tree_hash_policy": {

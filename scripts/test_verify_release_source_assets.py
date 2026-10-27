@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import os
+import ast
 import struct
 import tempfile
 import unittest
@@ -272,16 +273,32 @@ class ReleaseSourceAssetVerifierTest(unittest.TestCase):
         ))
 
     def test_required_audio_parser_rejects_overridden_or_augmented_assignments(self) -> None:
-        for source in (
+        invalid_sources = [
             'REQUIRED_AUDIO = ("sfx_jump",)\nREQUIRED_AUDIO = ("sfx_other",)\n',
             'REQUIRED_AUDIO = ("sfx_jump",)\nREQUIRED_AUDIO += ("sfx_other",)\n',
             'REQUIRED_AUDIO: tuple[str, ...] = ("sfx_jump",)\n',
             'REQUIRED_AUDIO = ("sfx_jump",)\nmatch candidate:\n    case REQUIRED_AUDIO:\n        pass\n',
-            'REQUIRED_AUDIO = ("sfx_jump",)\ntype REQUIRED_AUDIO = tuple[str, ...]\n',
-        ):
+        ]
+        if hasattr(ast, "TypeAlias"):
+            invalid_sources.append(
+                'REQUIRED_AUDIO = ("sfx_jump",)\ntype REQUIRED_AUDIO = tuple[str, ...]\n'
+            )
+        for source in invalid_sources:
             with self.subTest(source=source):
                 with self.assertRaisesRegex(SourceAssetVerificationError, "define REQUIRED_AUDIO once"):
                     parse_required_audio(source)
+
+    def test_required_audio_parser_supports_python_without_ast_type_alias(self) -> None:
+        missing = object()
+        type_alias = ast.__dict__.pop("TypeAlias", missing)
+        try:
+            self.assertEqual(
+                parse_required_audio('REQUIRED_AUDIO = ("sfx_jump",)\n'),
+                ("sfx_jump",),
+            )
+        finally:
+            if type_alias is not missing:
+                ast.TypeAlias = type_alias
 
     def test_font_offset_table_search_parameters_are_validated(self) -> None:
         font = bytearray(self.valid_font())
@@ -1247,18 +1264,27 @@ class ReleaseSourceAssetVerifierTest(unittest.TestCase):
         with self.assertRaisesRegex(SourceAssetVerificationError, "non-symlink"):
             _read_bounded_file(fifo, "runtime asset", 32)
 
-    def test_wolf_runtime_frame_count_matches_authored_four_frame_contract(self) -> None:
+    def test_wolf_runtime_frame_count_matches_eight_pose_import_contract(self) -> None:
         source = (
             ROOT
             / "app/src/main/java/com/anurag9000/forestrun/engine/SpriteManager.kt"
         ).read_text(encoding="utf-8")
         self.assertIn(
-            "wolfSprite = loadEntity(AssetPaths.Animals.WOLF, Color.rgb(100, 100, 120), 4)",
-            source,
-        )
-        self.assertNotIn(
             "wolfSprite = loadEntity(AssetPaths.Animals.WOLF, Color.rgb(100, 100, 120), 8)",
             source,
+        )
+        paths = (
+            ROOT
+            / "app/src/main/java/com/anurag9000/forestrun/engine/AssetPaths.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            'const val WOLF = "sprites/animals/wolf_8frames.png"',
+            paths,
+        )
+        importer = (ROOT / "scripts/import_final_assets.py").read_text(encoding="utf-8")
+        self.assertIn(
+            'Mapping("animals/wolves/wolves_4frames.png", "animals/wolf_8frames.png", 4, 2, 8,',
+            importer,
         )
 
 

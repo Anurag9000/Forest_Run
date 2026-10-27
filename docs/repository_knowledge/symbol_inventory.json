@@ -4730,7 +4730,7 @@
       "purpose": "Declares the Animals type; its state and members are individually indexed below.",
       "inputs": [],
       "outputs": null,
-      "state_or_effects": "const val CAT = \"sprites/animals/cat_4frames.png\" const val WOLF = \"sprites/animals/wolf_4frames.png\" const val FOX = \"sprites/animals/fox_4frames.png\"",
+      "state_or_effects": "const val CAT = \"sprites/animals/cat_4frames.png\" const val WOLF = \"sprites/animals/wolf_8frames.png\" const val FOX = \"sprites/animals/fox_4frames.png\"",
       "dependencies": [],
       "consumers": [],
       "goal_ids": [
@@ -4747,7 +4747,11 @@
       },
       "shard": "docs/repository_knowledge/symbol_shards/engine_a_m.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
-      "purpose_basis": "declaration and source context"
+      "purpose_basis": "declaration and source context",
+      "delta_evidence_ids": [
+        "EVID-103",
+        "EVID-105"
+      ]
     },
     {
       "id": "SYM-0201",
@@ -4784,7 +4788,7 @@
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/AssetPaths.kt",
       "lines": "44",
       "kind": "constant",
-      "signature": "const val WOLF = \"sprites/animals/wolf_4frames.png\"",
+      "signature": "const val WOLF = \"sprites/animals/wolf_8frames.png\"",
       "purpose": "Compile-time constant WOLF; value and use are visible in the declaration.",
       "inputs": [],
       "outputs": null,
@@ -4805,7 +4809,11 @@
       },
       "shard": "docs/repository_knowledge/symbol_shards/engine_a_m.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
-      "purpose_basis": "declaration"
+      "purpose_basis": "declaration",
+      "delta_evidence_ids": [
+        "EVID-103",
+        "EVID-105"
+      ]
     },
     {
       "id": "SYM-0203",

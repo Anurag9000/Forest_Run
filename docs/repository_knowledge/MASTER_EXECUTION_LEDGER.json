@@ -6,7 +6,7 @@
     "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
     "date": "2026-10-03"
   },
-  "snapshot_date": "2026-10-27",
+  "snapshot_date": "2026-10-28",
   "working_tree_at_start": {
     "dirty_path_count": 166,
     "ownership": "pre-existing user changes; preserved",
@@ -1198,7 +1198,13 @@
         "related_capability_ids": [
           "CAP-015"
         ],
-        "status": "Wolf four-frame count is intentional; duplicated bird pairs and perceived visual quality remain human creative/specification questions under TASK-D-002/TASK-D-003; no source change justified."
+        "status": "SUPERSEDED_BY_CURRENT_SOURCE_DELTA",
+        "superseded_by": "FIND-020",
+        "superseding_evidence_ids": [
+          "EVID-103",
+          "EVID-105"
+        ],
+        "limitations": " This is retained as the October 2027 historical interpretation; it is no longer the current asset/runtime truth after the 2026-10-28 eight-frame correction."
       },
       {
         "id": "FIND-013",
@@ -1375,6 +1381,23 @@
           "TASK-E-001"
         ],
         "limitations": "No claim about physical/OEM, human, licensing, security/privacy, signing, store, or accountable release acceptance."
+      },
+      {
+        "id": "FIND-020",
+        "kind": "current asset/importer/runtime contract correction",
+        "statement": "The authored Wolf atlas is a 4x2 sheet of eight poses. Importer output, packaged asset name wolf_8frames.png, AssetPaths, SpriteManager frame count and package contents now select eight 160x156 crops; the prior four-frame current-source conclusion is superseded.",
+        "status": "SOURCE_DELTA_IMPLEMENTED_AND_STATICALLY_RECONCILED; candidate integration verification pending TASK-C-014",
+        "evidence_ids": [
+          "EVID-103",
+          "EVID-105"
+        ],
+        "related_task_ids": [
+          "TASK-C-014"
+        ],
+        "supersedes": [
+          "FIND-012"
+        ],
+        "limitations": "Host package evidence includes the corrected asset. Candidate-bound API35 connected verification and human visual/creative/provenance review are still pending."
       }
     ],
     "gaps": [
@@ -1427,7 +1450,7 @@
           "TASK-A-032",
           "TASK-A-033"
         ],
-        "disposition": "RESOLVED at declaration-index coverage level by TASK-A-030\u2013A-033 and EVID-067. This resolves documentation coverage for inventoried declarations, not comprehensive call-graph semantics or runtime verification.",
+        "disposition": "RESOLVED at declaration-index coverage level by TASK-A-030–A-033 and EVID-067. This resolves documentation coverage for inventoried declarations, not comprehensive call-graph semantics or runtime verification.",
         "evidence_ids": [
           "EVID-069"
         ]
@@ -1439,7 +1462,7 @@
         "resolution_task_ids": [
           "TASK-A-034"
         ],
-        "disposition": "RESOLVED by docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md and applicability_matrix.json (EVID-068). Test execution is separately deferred in TASK-C-007\u2013TASK-C-011.",
+        "disposition": "RESOLVED by docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md and applicability_matrix.json (EVID-068). Test execution is separately deferred in TASK-C-007–TASK-C-011.",
         "evidence_ids": [
           "EVID-069"
         ]
@@ -1471,6 +1494,20 @@
           "EVID-091",
           "EVID-101"
         ]
+      },
+      {
+        "id": "GAP-009",
+        "kind": "Wolf source atlas, packaged filename and runtime frame count disagreed",
+        "statement": "Importer emitted eight poses while the packaged path/runtime declared four frames, and the creative description repeated the stale four-frame mapping.",
+        "resolution_task_ids": [
+          "TASK-C-014"
+        ],
+        "disposition": "SOURCE MAPPING AND DOCUMENTATION CORRECTED in the uncommitted 2026-10-28 overlay; static review and host package evidence agree. Final exact-candidate verification remains under TASK-C-014.",
+        "evidence_ids": [
+          "EVID-103",
+          "EVID-105"
+        ],
+        "status": "PARTIALLY_RESOLVED_PENDING_EXACT_CANDIDATE_VERIFICATION"
       }
     ],
     "tasks": [
@@ -4189,7 +4226,7 @@
           "Preserve the dirty worktree and report current baseline.",
           "Historical results remain revision-bounded."
         ],
-        "complexity": "High; 46\u201347 dated audit documents each, overlapping chronology requires deduplication.",
+        "complexity": "High; 46–47 dated audit documents each, overlapping chronology requires deduplication.",
         "priority": "High for recovering historical intent without replaying completed audits.",
         "execution_status": "COMPLETED",
         "owner": null,
@@ -4322,7 +4359,7 @@
           "Preserve the dirty worktree and report current baseline.",
           "Historical results remain revision-bounded."
         ],
-        "complexity": "High; 46\u201347 dated audit documents each, overlapping chronology requires deduplication.",
+        "complexity": "High; 46–47 dated audit documents each, overlapping chronology requires deduplication.",
         "priority": "High for recovering historical intent without replaying completed audits.",
         "execution_status": "COMPLETED",
         "owner": null,
@@ -4454,7 +4491,7 @@
           "Preserve the dirty worktree and report current baseline.",
           "Historical results remain revision-bounded."
         ],
-        "complexity": "High; 46\u201347 dated audit documents each, overlapping chronology requires deduplication.",
+        "complexity": "High; 46–47 dated audit documents each, overlapping chronology requires deduplication.",
         "priority": "High for recovering historical intent without replaying completed audits.",
         "execution_status": "COMPLETED",
         "owner": null,
@@ -4932,7 +4969,7 @@
         "category": "Static test-source contract documentation",
         "target_phase": "A - repository reconstruction and documentation",
         "objective": "Create one structured contract record for each of the 60 Python test files already read in TASK-A-017 and present in the file inventory but absent from test_contract_inventory.json.",
-        "motivation": "File-level coverage shows the files were read, but the reusable per-file contract ledger omits them; future verification agents should not have to rediscover each test source\u2019s asserted behavior.",
+        "motivation": "File-level coverage shows the files were read, but the reusable per-file contract ledger omits them; future verification agents should not have to rediscover each test source’s asserted behavior.",
         "current_state": "All 60 scoped Python test paths were fully statically inspected and their structured records have been merged; the complete test contract ledger has 389 paths.",
         "required_final_state": "Exactly one contract record exists per target path, describing the authored test behavior and subject symbols without claiming execution or pass/fail.",
         "scope": [
@@ -5324,7 +5361,7 @@
         ],
         "category": "Static asset-consumer integration tracing",
         "target_phase": "A - repository reconstruction and documentation",
-        "objective": "Trace the 29 packaged runtime sprite assets from path constants/registries through load and crop/frame-selection consumers, and compare visible sheet organization/duplicate aliases with the code\u2019s expected frame counts and selection paths.",
+        "objective": "Trace the 29 packaged runtime sprite assets from path constants/registries through load and crop/frame-selection consumers, and compare visible sheet organization/duplicate aliases with the code’s expected frame counts and selection paths.",
         "motivation": "A-021 found eight visible wolf drawings under a 4frames filename, labels embedded in some runtime plant strips, and five byte-identical bird base/flying aliases. Static source linkage is needed to explain actual frame consumption without presuming defects.",
         "current_state": "All 29 runtime sprite paths are traced through asset constants, loader declarations, crop math and production callers in docs/repository_knowledge/runtime_sprite_frame_trace.md. EVID-058 additionally reconciles the Wolf four-frame contract against creative direction and source history; only visual grouping, plant/alias details, rights and approval remain unresolved.",
         "required_final_state": "A source-referenced table links each relevant asset group to its loader/crop/frame count and callers, identifying whether visible discrepancies are explained, unused, or unresolved. No defect is classified without a written contract mismatch.",
@@ -5376,7 +5413,7 @@
           "EVID-058",
           "EVID-059"
         ],
-        "uncertainty": "Wolf runtime frame count is explicit and historically reconciled at four; the asset image\u2019s eight visible motifs may be paired/composited art, but no authoritative layout source establishes their internal intent. Plant numerals, duplicated bird pixels, dog shade, and visual approval remain unresolved as non-defect observations.",
+        "uncertainty": "Wolf runtime frame count is explicit and historically reconciled at four; the asset image’s eight visible motifs may be paired/composited art, but no authoritative layout source establishes their internal intent. Plant numerals, duplicated bird pixels, dog shade, and visual approval remain unresolved as non-defect observations.",
         "remaining_work": "No source work established. Preserve remaining art/layout, alias, and approval observations as unresolved until an authoritative asset/layout decision exists.",
         "completion_evidence": [
           {
@@ -6202,9 +6239,9 @@
         "implementation_or_investigation_status": "IMPLEMENTED / INVESTIGATED",
         "evidence_status": "CURRENT EVIDENCE CONFIRMED",
         "id": "TASK-A-030",
-        "title": "Kotlin production symbol inventory: engine A\u2013M",
+        "title": "Kotlin production symbol inventory: engine A–M",
         "objective": "Create a comprehensive meaningful-symbol inventory shard for 75 assigned production files in app/src/main/java/com/anurag9000/forestrun/engine/[A-M]*.kt.",
-        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 75 engine files whose basename starts A-M; reuses A-010\u2013A-012 and full changed-file reads.",
+        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 75 engine files whose basename starts A-M; reuses A-010–A-012 and full changed-file reads.",
         "current_state": "75 assigned production files are already covered at file/source-inspection level in prior passes, but not comprehensively represented in the symbol ledger.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun/engine/[A-M]*.kt",
@@ -6285,9 +6322,9 @@
         "implementation_or_investigation_status": "IMPLEMENTED / INVESTIGATED",
         "evidence_status": "CURRENT EVIDENCE CONFIRMED",
         "id": "TASK-A-031",
-        "title": "Kotlin production symbol inventory: engine N\u2013Z",
+        "title": "Kotlin production symbol inventory: engine N–Z",
         "objective": "Create a comprehensive meaningful-symbol inventory shard for 52 assigned production files in app/src/main/java/com/anurag9000/forestrun/engine/[N-Z]*.kt.",
-        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 52 engine files whose basename starts N-Z; reuses A-010\u2013A-012 and full changed-file reads.",
+        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 52 engine files whose basename starts N-Z; reuses A-010–A-012 and full changed-file reads.",
         "current_state": "52 assigned production files are already covered at file/source-inspection level in prior passes, but not comprehensively represented in the symbol ledger.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun/engine/[N-Z]*.kt",
@@ -6453,7 +6490,7 @@
         "id": "TASK-A-033",
         "title": "Kotlin production symbol inventory: non-engine packages",
         "objective": "Create a comprehensive meaningful-symbol inventory shard for 64 assigned production files in app/src/main/java/com/anurag9000/forestrun excluding engine/.",
-        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 64 production Kotlin files under entities, systems, ui, utils and root activities/facades; reuse A-010\u2013A-024 full reads.",
+        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 64 production Kotlin files under entities, systems, ui, utils and root activities/facades; reuse A-010–A-024 full reads.",
         "current_state": "64 assigned production files are already covered at file/source-inspection level in prior passes, but not comprehensively represented in the symbol ledger.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun excluding engine/",
@@ -6485,7 +6522,7 @@
         ],
         "category": "documentation / applicability reconciliation",
         "target_phase": "A - source requirements and applicability reconciliation",
-        "objective": "Map universal engineering, architecture, verification and testing requirements to Forest Run\u2019s actual goals, existing components, evidence and scope disposition.",
+        "objective": "Map universal engineering, architecture, verification and testing requirements to Forest Run’s actual goals, existing components, evidence and scope disposition.",
         "motivation": "The existing capability ledger describes project requirements but has no unified matrix explaining why generic requirements apply, where they belong, or which verification evidence would establish them.",
         "current_state": "Prior repository map and execution ledger are extensive; independent comparison found no unified applicability/testing matrix. Source snapshot remains at eeccc677107f69039dbf71053c18a9038d4b5ff6 with 162 non-documentation hashed worktree files matching inventory.",
         "required_final_state": "A linked human-readable and machine-readable matrix covers all current REQ records and relevant universal requirement families, explains architecture ownership and planned risk-based checks, and distinguishes current static evidence from unexecuted/externally blocked verification.",
@@ -6561,7 +6598,7 @@
           "EVID-069"
         ],
         "uncertainty": "Repository-specific evidence and task scope are known; future test execution requires separately permitted phase.",
-        "remaining_work": "No work remains for matrix creation. Future tests remain in TASK-C-007\u2013TASK-C-011, deferred under current scope; external and performance tasks remain in their existing phases.",
+        "remaining_work": "No work remains for matrix creation. Future tests remain in TASK-C-007–TASK-C-011, deferred under current scope; external and performance tasks remain in their existing phases.",
         "completion_evidence": [
           "EVID-068",
           "EVID-069"
@@ -6661,14 +6698,14 @@
           "EVID-079"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
-        "remaining_work": "No remaining work within this task\u2019s authored deterministic unit/property scope. Human/perceptual gameplay fairness remains under TASK-D-001/TASK-D-002; candidate runtime OWL_DIVE visual proof remains under TASK-C-013.",
+        "remaining_work": "No remaining work within this task’s authored deterministic unit/property scope. Human/perceptual gameplay fairness remains under TASK-D-001/TASK-D-002; candidate runtime OWL_DIVE visual proof remains under TASK-C-013.",
         "completion_evidence": [
           "EVID-072",
           "EVID-076: 27 tests passed across InputHandlerTest, CollisionOutcomeDispatcherTest, BloomEconomyTest and BloomTimerPartitionPropertyTest at exact main; exact-main API 35 workflow succeeded (EVID-078).",
           "EVID-079: 23 tests passed at exact main: FrameInputAdmissionTest 5, PlayerBoundaryTest 11, PlayerPhysicsTest 4, PlayerJumpVelocityTest 3; zero failures/errors/skips. Combined with EVID-076 gameplay selection, all scoped authored contract classes passed."
         ],
         "related_prior_work": [
-          "A-004\u2013A-009 source-only contract reviews",
+          "A-004–A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -6786,7 +6823,7 @@
           "EVID-101: exact candidate API35 ordinary suite and process-death prepare/force-stop/no-PID/fresh-process restore passed."
         ],
         "related_prior_work": [
-          "A-004\u2013A-009 source-only contract reviews",
+          "A-004–A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -6884,7 +6921,7 @@
           "EVID-076: scoped authored tests/build checks passed at exact main; EVID-078: exact-main hosted API 35 workflow passed."
         ],
         "related_prior_work": [
-          "A-004\u2013A-009 source-only contract reviews",
+          "A-004–A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -6982,7 +7019,7 @@
           "EVID-076: scoped authored tests/build checks passed at exact main; EVID-078: exact-main hosted API 35 workflow passed."
         ],
         "related_prior_work": [
-          "A-004\u2013A-009 source-only contract reviews",
+          "A-004–A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -7100,7 +7137,7 @@
           "EVID-102: targeted source-path delta and task-evidence reconciliation found no cross-task integration mismatch; exact candidate CI satisfies documented full regression scope."
         ],
         "related_prior_work": [
-          "A-004\u2013A-009 source-only contract reviews",
+          "A-004–A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -7202,7 +7239,7 @@
         ],
         "related_prior_work": [
           "TASK-A-019/A-020 passive test-contract inventory",
-          "TASK-C-007\u2013C-012 future verification contracts",
+          "TASK-C-007–C-012 future verification contracts",
           "EVID-070 source evidence and EVID-071 documentation consistency check"
         ],
         "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c (clean; tests run 2026-10-27)",
@@ -7394,7 +7431,7 @@
         "target_phase": "A - authorized source completion",
         "objective": "Ensure the exact candidate debug and AndroidTest APKs are installed, resolve the registered runner for the debug target, and invoke its process-death test with numeric user and correctly paired extras.",
         "motivation": "Exact API 35 CI logs show the process-death prepare stage fails before executing its test because am instrument reports Invalid userId -2.",
-        "current_state": "Numeric user, separate extras, and dynamic component filtering are implemented locally (EVID-090\u2013EVID-098). Exact facd8c06 API35 logs show the registered test runner is absent after Gradle cleanup (EVID-099). Current local code reinstalls exact app and AndroidTest APKs before lookup; focused contracts and full suite pass 1,388/1,388 (EVID-100). Exact pushed candidate b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b passed API35 workflow 40492450144: ordinary connected tests 28/28; both APK installs succeeded; direct prepare and restore each passed; host confirmed no target process between stages (EVID-101).",
+        "current_state": "Numeric user, separate extras, and dynamic component filtering are implemented locally (EVID-090–EVID-098). Exact facd8c06 API35 logs show the registered test runner is absent after Gradle cleanup (EVID-099). Current local code reinstalls exact app and AndroidTest APKs before lookup; focused contracts and full suite pass 1,388/1,388 (EVID-100). Exact pushed candidate b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b passed API35 workflow 40492450144: ordinary connected tests 28/28; both APK installs succeeded; direct prepare and restore each passed; host confirmed no target process between stages (EVID-101).",
         "required_final_state": "The runner resolves a numeric foreground user; reinstalls the exact candidate debug and AndroidTest APKs without clearing app data; discovers exactly one AndroidJUnitRunner registered for the debug target; passes -e arguments as separate name/value pairs; preserves test-result validation; and exact API35 process-death prepare/force-stop/verify succeeds.",
         "scope": [
           "scripts/run_connected_validation.sh::run_process_death_instrumentation",
@@ -7481,6 +7518,112 @@
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "INTEGRATED",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
+      },
+      {
+        "id": "TASK-C-014",
+        "title": "Verify the 2026-10-28 source overlay on a frozen hosted candidate",
+        "parent_ids": [
+          "GOAL-015"
+        ],
+        "requirement_ids": [
+          "REQ-002",
+          "REQ-005",
+          "REQ-006",
+          "REQ-018"
+        ],
+        "capability_ids": [
+          "CAP-001",
+          "CAP-004",
+          "CAP-005",
+          "CAP-015",
+          "CAP-016"
+        ],
+        "category": "revision-bound regression and integration verification",
+        "target_phase": "C - implementation fidelity and risk-based verification after source delta is frozen",
+        "objective": "Validate the merged main baseline plus the preserved 2026-10-28 source delta as one exact candidate, including host Python/JVM/lint/package and ordinary API35 connected checks; keep all outcomes revision-bound.",
+        "motivation": "The prior C-011 evidence covers b9a79b23 and its bounded source delta. The current baseline advanced to 946130c and includes a distinct Wolf asset/frame correction, GameView lifecycle/input changes, release-doc contracts, and Python compatibility changes.",
+        "current_state": "The 2026-10-28 overlay is statically reviewed (EVID-103), full scripts tests passed 1,395 (EVID-104), JVM/Robolectric passed 1,303 with no failures/errors/skips and host compile/lint/package outputs exist (EVID-105). Local connected attempts terminated with exit 143 before connected assertions and produced no JUnit XML (EVID-106). The overlay is not committed or frozen as a candidate.",
+        "required_final_state": "An exact candidate containing the reviewed source delta passes the applicable full host/release gates and ordinary API35 connected suite, with exact commit identity and source immutability recorded. Any failure remains visible and is corrected before completion.",
+        "scope": [
+          "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/AssetPaths.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/SpriteManager.kt",
+          "app/src/main/assets/sprites/animals/wolf_8frames.png",
+          "app/src/test/java/com/anurag9000/forestrun/engine/GameViewFrameInputTest.kt",
+          "scripts/import_final_assets.py",
+          "scripts/verify_release_source_assets.py",
+          "scripts/test_game_view_runtime_ownership_contract.py",
+          "scripts/test_prepare_main_release_contract.py",
+          "scripts/test_training_control_not_applicable.py",
+          "scripts/test_verify_release_source_assets.py",
+          "release/google-play/README.md"
+        ],
+        "required_actions": [
+          "Finalize documentation and current file/symbol inventory for this delta.",
+          "Review and commit only the intended source/tests/docs batch to canonical main, preserving unrelated generated/user data.",
+          "Run the canonical exact-candidate host and API35 connected workflow on the resulting exact commit.",
+          "Inspect exact workflow logs, test counts, outputs, source immutability and candidate SHA; record all results.",
+          "If hosted or local execution identifies a product failure, create a linked fix/regression task and rerun affected required gates."
+        ],
+        "inputs": [
+          "TASK-C-011",
+          "TASK-A-036",
+          "EVID-103",
+          "EVID-104",
+          "EVID-105",
+          "EVID-106"
+        ],
+        "deliverables": [
+          "Exact candidate identity and source diff record",
+          "Host and connected workflow results with counts and artifacts",
+          "Updated evidence index/task state and resolved residual findings"
+        ],
+        "acceptance_criteria": [
+          "The candidate SHA matches main and the workflow event SHA.",
+          "Full Python, JVM/Robolectric, Kotlin compilation, lint, APK/AAB packaging and ordinary API35 connected outcomes are captured from that candidate.",
+          "All tests have zero failures/errors/skips unless the established project policy explicitly allows a separately classified skip.",
+          "No result is inferred from a generated artifact, status summary, or a different revision.",
+          "Any source issue found during verification is repaired and rechecked, not waived."
+        ],
+        "verification_method": "GitHub Actions exact-event-SHA host and API35 connected jobs; inspect full run and source-immutability output. Reuse only prior evidence unaffected by this source delta.",
+        "dependency_ids": [
+          "TASK-C-011",
+          "TASK-A-036"
+        ],
+        "downstream_task_ids": [
+          "TASK-E-001"
+        ],
+        "conflicts": [
+          "Own the listed delta files until candidate verification and integration; do not stage .coverage, .training_control/, artifacts/, or unrelated user artifacts."
+        ],
+        "execution_constraints": "Source completion, testing, direct-to-main commits and push are authorized by the user prompt. Preserve history, avoid feature branches/PRs/force-push, and keep release/human/device claims separate.",
+        "complexity": "medium",
+        "priority": "P1 - exact source delta verification unlocks candidate-level closure",
+        "execution_status": "PARTIALLY_COMPLETED",
+        "owner": null,
+        "blockers": [
+          "Local SwiftShader AVD and connected Gradle processes terminated with exit 143 before producing test results; use a stable exact-candidate API35 workflow for final connected verification."
+        ],
+        "evidence_ids": [
+          "EVID-103",
+          "EVID-104",
+          "EVID-105",
+          "EVID-106",
+          "EVID-107"
+        ],
+        "uncertainty": "Host outcomes are confirmed on a checksum-matched working-tree copy. Runtime connected behavior is unverified for this overlay; remote hosted evidence currently applies only to baseline commit 946130c19878f99f1c9ee21506fb89e1ab940525.",
+        "remaining_work": "Freeze the intended change set on main and obtain exact-SHA API35 connected evidence; then reconcile resulting CI and source delta.",
+        "completion_evidence": [],
+        "related_prior_work": [
+          "TASK-C-011",
+          "TASK-A-036",
+          "2026-10-27 exact-main and process-death evidence EVID-101/EVID-102"
+        ],
+        "last_reconciled_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + preserved working-tree overlay (2026-10-28)",
+        "next_action": "Complete current ledger/documentation reconciliation, then commit the reviewed source batch and obtain exact-candidate hosted API35 verification.",
+        "investigation_coverage": "DOCUMENTED",
+        "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
+        "evidence_status": "INSUFFICIENT / CONTRADICTORY EVIDENCE"
       }
     ],
     "applicability_matrix": [
@@ -8072,6 +8215,29 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
+    "base_revision": "946130c19878f99f1c9ee21506fb89e1ab940525",
+    "working_tree_delta": "preserved uncommitted overlay; not a frozen candidate",
+    "evidence_ids": [
+      "EVID-107"
+    ],
+    "status": "Hosted workflow 40495156970 passed only on clean baseline 946130c. The current overlay has host evidence EVID-104/EVID-105, but local connected execution terminated before assertions (EVID-106); exact-candidate verification is outstanding under TASK-C-014."
+  },
+  "current_repository_state": {
+    "branch": "main",
+    "commit": "946130c19878f99f1c9ee21506fb89e1ab940525",
+    "origin_main_commit": "946130c19878f99f1c9ee21506fb89e1ab940525",
+    "working_tree": "preserved user/source overlay plus generated artifacts; not clean or frozen",
+    "current_delta_task": "TASK-C-014",
+    "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+    "evidence_ids": [
+      "EVID-103",
+      "EVID-104",
+      "EVID-105",
+      "EVID-106",
+      "EVID-107"
+    ]
+  },
+  "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
     "working_tree_delta": "none in tested candidate; local .training_control generated state is excluded and preserved",
     "evidence_ids": [

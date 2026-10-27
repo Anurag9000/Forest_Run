@@ -111,8 +111,10 @@ player for long periods.
 ### Animals
 
 Cat, Fox, Wolf, Hedgehog and Dog should have clearly distinguishable body language.
-The repository already contains a four-frame Wolf sprite; final work is a quality,
-readability and rights decision, not a missing-file task.
+The repository contains eight distinct Wolf poses in a 4-column by 2-row source
+sheet. The asset importer flattens all eight poses into the runtime strip, so the
+runtime must advance eight frames rather than merge adjacent poses. Final work is
+a quality, readability and rights decision, not a missing-file task.
 
 For every family, final approval should consider:
 

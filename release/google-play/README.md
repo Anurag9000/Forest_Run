@@ -28,7 +28,7 @@ These files are written to match the currently implemented product truth:
 Use the deterministic capture script once a device is visible to `adb`:
 
 ```bash
-JAVA_HOME=/opt/android-studio/jbr GRADLE_USER_HOME=/tmp/forest_run_gradle ./gradlew assembleDebug
+./gradlew assembleDebug
 scripts/capture_store_screenshots.sh
 ```
 

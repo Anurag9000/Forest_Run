@@ -3043,7 +3043,7 @@
           "purpose": "Declares the Animals type; its state and members are individually indexed below.",
           "inputs": [],
           "outputs": null,
-          "state_or_effects": "const val CAT = \"sprites/animals/cat_4frames.png\" const val WOLF = \"sprites/animals/wolf_4frames.png\" const val FOX = \"sprites/animals/fox_4frames.png\"",
+          "state_or_effects": "const val CAT = \"sprites/animals/cat_4frames.png\" const val WOLF = \"sprites/animals/wolf_8frames.png\" const val FOX = \"sprites/animals/fox_4frames.png\"",
           "dependencies": [],
           "consumers": [],
           "goal_ids": [
@@ -3055,7 +3055,11 @@
           "implementation_status": "type declaration present; integration assessed separately",
           "evidence_status": "static source only",
           "purpose_basis": "declaration and source context",
-          "relationship_basis": "file inventory association; no stronger per-symbol goal attribution inferred"
+          "relationship_basis": "file inventory association; no stronger per-symbol goal attribution inferred",
+          "delta_evidence_ids": [
+            "EVID-103",
+            "EVID-105"
+          ]
         },
         {
           "name": "com.anurag9000.forestrun.engine.AssetPaths.Animals.CAT",
@@ -3083,7 +3087,7 @@
           "name": "com.anurag9000.forestrun.engine.AssetPaths.Animals.WOLF",
           "kind": "constant",
           "lines": "44",
-          "signature": "const val WOLF = \"sprites/animals/wolf_4frames.png\"",
+          "signature": "const val WOLF = \"sprites/animals/wolf_8frames.png\"",
           "purpose": "Compile-time constant WOLF; value and use are visible in the declaration.",
           "inputs": [],
           "outputs": null,
@@ -3099,7 +3103,11 @@
           "implementation_status": "constant defined",
           "evidence_status": "static source only",
           "purpose_basis": "declaration",
-          "relationship_basis": "file inventory association; no stronger per-symbol goal attribution inferred"
+          "relationship_basis": "file inventory association; no stronger per-symbol goal attribution inferred",
+          "delta_evidence_ids": [
+            "EVID-103",
+            "EVID-105"
+          ]
         },
         {
           "name": "com.anurag9000.forestrun.engine.AssetPaths.Animals.FOX",
@@ -3173,7 +3181,8 @@
         "types": 6,
         "constants": 30
       },
-      "symbol_count": 36
+      "symbol_count": 36,
+      "source_delta_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + working-tree overlay (2026-10-28)"
     },
     {
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/Biome.kt",
@@ -47845,5 +47854,7 @@
       },
       "symbol_count": 11
     }
-  ]
+  ],
+  "current_delta_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + working-tree overlay (2026-10-28)",
+  "current_delta_note": "Only AssetPaths Wolf constant was reconciled in this declaration shard; the full current-source candidate verification is tracked by TASK-C-014."
 }

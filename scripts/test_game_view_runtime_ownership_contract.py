@@ -14,6 +14,17 @@ class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
         finish = self.source.index(end, begin)
         return self.source[begin:finish]
 
+    def matching_brace_end(self, source: str, open_index: int) -> int:
+        depth = 0
+        for index in range(open_index, len(source)):
+            if source[index] == "{":
+                depth += 1
+            elif source[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    return index
+        self.fail("unclosed block in inspected source region")
+
     def test_one_monitor_is_the_runtime_mutation_boundary(self) -> None:
         self.assertIn("private val runtimeStateLock = Any()", self.source)
 
@@ -122,9 +133,42 @@ class GameViewRuntimeOwnershipContractTest(unittest.TestCase):
     def test_lifecycle_join_never_holds_runtime_monitor(self) -> None:
         pause = self.region("    fun pause(): Boolean {", "    fun resume() {")
         stop = self.region("    private fun stopThread(): Boolean {", "    // -----------------------------------------------------------------------\n    // Input callback wiring")
-        self.assertNotIn("synchronized(runtimeStateLock)", pause)
+        lock_start = pause.index("synchronized(runtimeStateLock) {")
+        lock_open = pause.index("{", lock_start)
+        lock_end = self.matching_brace_end(pause, lock_open)
+        stop_call = pause.index("stopThread()")
+        self.assertLess(lock_end, stop_call)
+        self.assertIn("discardInterruptedInputLocked()", pause[lock_start:lock_end])
+        self.assertLess(pause.index("gameThreadRestartGate.cancel()"), stop_call)
         self.assertNotIn("synchronized(runtimeStateLock)", stop)
         self.assertIn("requestStopAndAwait()", stop)
+
+    def test_resume_revalidates_surface_before_opening_gameplay_input(self) -> None:
+        resume = self.region("    fun resume() {", "    /**\n     * Transfers render/update ownership")
+        lock_start = resume.index("synchronized(runtimeStateLock) {")
+        lock_open = resume.index("{", lock_start)
+        lock_end = self.matching_brace_end(resume, lock_open)
+        guarded = resume[lock_start:lock_end]
+        self.assertIn("surfaceInputAvailable = holder.surface?.isValid == true", guarded)
+        self.assertLess(
+            guarded.index("surfaceInputAvailable = holder.surface?.isValid == true"),
+            guarded.index("if (!surfaceInputAvailable) discardInterruptedInputLocked()"),
+        )
+        self.assertLess(lock_end, resume.index("initializeSurfaceWhenThreadStopped("))
+
+    def test_surface_loss_discards_gestures_and_blocks_gameplay_input(self) -> None:
+        surface_destroyed = self.region(
+            "    override fun surfaceDestroyed(", "    fun pause(): Boolean {"
+        )
+        admission = self.region(
+            "    private fun acceptsGameplayInput(): Boolean =",
+            "    private fun discardInterruptedInputLocked()",
+        )
+        self.assertIn("surfaceInputAvailable = false", surface_destroyed)
+        self.assertIn("synchronized(runtimeStateLock)", surface_destroyed)
+        self.assertIn("discardInterruptedInputLocked()", surface_destroyed)
+        self.assertIn("surfaceInputAvailable", admission)
+        self.assertIn("!lifecyclePaused", admission)
 
 if __name__ == "__main__":
     unittest.main()

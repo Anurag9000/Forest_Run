@@ -77,6 +77,8 @@ class GameView(
     private var audioBootstrapCompleted = false
     @Volatile
     private var lifecyclePaused = false
+    @Volatile
+    private var surfaceInputAvailable = false
 
     // -----------------------------------------------------------------------
     // Input
@@ -540,6 +542,7 @@ class GameView(
             wirePlayerToInput()
         }
 
+        surfaceInputAvailable = holder.surface?.isValid == true
         if (!lifecyclePaused) {
             resumeGameThreadWhenStopped(restartToken)
             pendingDebugLaunchIntent?.let {
@@ -612,11 +615,18 @@ class GameView(
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         gameThreadRestartGate.cancel()
+        synchronized(runtimeStateLock) {
+            surfaceInputAvailable = false
+            discardInterruptedInputLocked()
+        }
         stopThread()
     }
 
     fun pause(): Boolean {
-        lifecyclePaused = true
+        synchronized(runtimeStateLock) {
+            discardInterruptedInputLocked()
+            lifecyclePaused = true
+        }
         // Invalidate any deferred resume before asking the current owner to stop.
         // A frame callback may be temporarily uncooperative, so pause must also
         // prevent a queued handoff from creating a replacement behind it.
@@ -638,7 +648,15 @@ class GameView(
     }
 
     fun resume() {
-        lifecyclePaused = false
+        synchronized(runtimeStateLock) {
+            lifecyclePaused = false
+            // A previous true value may describe the Surface that existed
+            // before pause. Revalidate the current holder before admitting
+            // gameplay input; surfaceCreated will publish readiness again
+            // after a newly created Surface has been initialized.
+            surfaceInputAvailable = holder.surface?.isValid == true
+            if (!surfaceInputAvailable) discardInterruptedInputLocked()
+        }
         LeitmotifManager.resume()  // Phase 20
         val restartToken = gameThreadRestartGate.begin()
         if (holder.surface?.isValid == true) {
@@ -784,7 +802,25 @@ class GameView(
     private fun acceptsGameplayInput(): Boolean =
         appState == AppGameState.PLAYING &&
             runState == RunState.PLAYING &&
+            !lifecyclePaused &&
+            surfaceInputAvailable &&
             ::player.isInitialized
+
+    /**
+     * Lifecycle interruption ends ownership of the current pointer sequence.
+     * Serialize cancellation with both touch dispatch and GameThread updates so
+     * a held pointer cannot mature into a jump after pause or surface loss.
+     */
+    private fun discardInterruptedInputLocked() {
+        inputHandler.cancelActiveGesture(notifyDuckRelease = true)
+        accessibilityDuckReleaseGate.cancel()
+        // Accessibility duck is a semantic action and does not set
+        // InputHandler.isDucking, so release the actual Player stance directly
+        // if that action was active when the lifecycle interruption arrived.
+        if (::player.isInitialized && player.state == PlayerState.DUCKING) {
+            player.onDuckReleased()
+        }
+    }
 
     private fun applyRunSessionEvent(event: RunSessionEvent): Boolean {
         val result = runSessionTransitions.execute(

@@ -247,6 +247,21 @@
       "from": "TASK-A-036",
       "to": "TASK-C-008",
       "reason": "The process-death verification cannot complete until the direct instrumentation user-selection failure is corrected."
+    },
+    {
+      "from": "TASK-C-011",
+      "to": "TASK-C-014",
+      "reason": "Reuse previous full regression scope and rerun only the new source delta on a frozen candidate."
+    },
+    {
+      "from": "TASK-A-036",
+      "to": "TASK-C-014",
+      "reason": "The current exact-candidate verification includes the corrected process-death runner integration and must preserve exact candidate evidence."
+    },
+    {
+      "from": "TASK-C-014",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation requires current source-delta verification evidence."
     }
   ],
   "parallel_waves": [
@@ -414,7 +429,7 @@
       "eligible_after_phase_authorization": [
         "TASK-C-006"
       ],
-      "notes": "TASK-C-006 was canceled under the earlier scope. It is not reactivated; new test-planning tasks C-007\u2013C-011 are deferred under REQ-019 pending explicit authorization."
+      "notes": "TASK-C-006 was canceled under the earlier scope. It is not reactivated; new test-planning tasks C-007–C-011 are deferred under REQ-019 pending explicit authorization."
     },
     {
       "wave": "C-risk-based-verification",
@@ -425,7 +440,7 @@
         "TASK-C-010",
         "TASK-C-012"
       ],
-      "notes": "Five focused scopes C-007\u2013C-010 and C-012 can run concurrently after explicit verification authorization and revision freeze. Coordinate Android device ownership across C-010/C-012. C-011 is downstream integration/full-regression and waits for all five focused scopes; TASK-E-001 follows it."
+      "notes": "Five focused scopes C-007–C-010 and C-012 can run concurrently after explicit verification authorization and revision freeze. Coordinate Android device ownership across C-010/C-012. C-011 is downstream integration/full-regression and waits for all five focused scopes; TASK-E-001 follows it."
     }
   ],
   "cycle_check": "Acyclic; static DFS verified on 2026-10-27; 48 hard dependency edges over 58 task records.",

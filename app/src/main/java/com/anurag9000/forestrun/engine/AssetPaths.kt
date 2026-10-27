@@ -41,7 +41,7 @@ object AssetPaths {
 
     object Animals {
         const val CAT = "sprites/animals/cat_4frames.png"
-        const val WOLF = "sprites/animals/wolf_4frames.png"
+        const val WOLF = "sprites/animals/wolf_8frames.png"
         const val FOX = "sprites/animals/fox_4frames.png"
         const val HEDGEHOG = "sprites/animals/hedgehog_4frames.png"
         const val DOG = "sprites/animals/dog_4frames.png"

@@ -1,15 +1,15 @@
 {
   "schema_version": "1.0.0",
   "repository": "Forest_Run",
-  "source_revision": "Current exact tested candidate b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b; source evidence revision-bounded",
-  "snapshot_date": "2026-10-27",
+  "source_revision": "Historical verification candidate b9a79b23 plus separate uncommitted overlay on origin/main 946130c19878f99f1c9ee21506fb89e1ab940525; do not conflate revisions",
+  "snapshot_date": "2026-10-28",
   "authority": "This matrix maps current repository requirements and applicable universal mechanisms; MASTER_EXECUTION_LEDGER.json remains source of project goal/task state.",
   "current_scope_constraints": [
     "The user authorized source completion and repository verification. Connected emulator evidence is candidate-bound; physical-device and external release acceptance remain resource/owner dependent.",
-    "Python/JVM test contracts describe source assertions. Execution outcomes are recorded in EVID-072, exact-head EVID-074 and focused concurrency EVID-075.",
-    "The current exact-main source candidate is 1d1a73451ad59e088d4117216d07162628913ff8; changes from d1 are documentation-only. The original dirty checkout remains preserved.",
-    "Focused exact-main evidence: EVID-076 (113 Python, 129 JVM/UI); hosted exact-main API35 workflow: EVID-078. Visual review EVID-077 is human-review evidence, not source validation.",
-    "TASK-C-009 and automated/API35 scope of TASK-C-010 are complete. TASK-C-007 authored mechanics scope is complete (EVID-079); TASK-C-008 is complete at hosted API35 process-death scope (EVID-101), while physical/OEM durability remains separate."
+    "Python/JVM test contracts describe source assertions. Execution outcomes are revision-bound in EVID-072, EVID-074–EVID-079, EVID-101/EVID-102, and current overlay EVID-103–EVID-107.",
+    "The exact b9a79b23 hosted API35 process-death workflow passed (EVID-101); targeted integration reconciliation completed TASK-C-011 (EVID-102). Earlier runner failures EVID-090–EVID-100 are historical and superseded for that hosted runner scope.",
+    "Current main/origin is 946130c19878f99f1c9ee21506fb89e1ab940525 with a preserved uncommitted source overlay. Overlay Python/JVM/lint/package evidence is in EVID-104/EVID-105; local connected attempts terminated before assertions (EVID-106), and hosted run 40495156970 validates only the clean 946130c baseline (EVID-107). TASK-C-014 tracks exact-candidate verification.",
+    "Physical-device, human/creative, rights and external release acceptance remain separate. The original dirty-worktree artifacts are preserved."
   ],
   "requirement_rows": [
     {
@@ -21,7 +21,7 @@
       ],
       "universal_disposition": "REQUIRED_WITH_ADAPTATION",
       "repository_rationale": "Android activity, SurfaceView and fixed-landscape lifecycle are core product contracts. Preserve the existing Activity/GameView/GameThread ownership; do not introduce a generic service or runner.",
-      "architectural_owner": "MainActivity \u2192 GameView \u2192 GameThread, Android configuration/Manifest.",
+      "architectural_owner": "MainActivity → GameView → GameThread, Android configuration/Manifest.",
       "implementation_state": "SUBSTANTIALLY_COMPLETE; source and prior map evidence",
       "verification_criteria": "Static path/manifest inspection; focused lifecycle/configuration tests; Android compile/build and ordinary connected startup after authorization.",
       "future_task_ids": [
@@ -409,19 +409,25 @@
       "universal_disposition": "REQUIRED_WITH_ADAPTATION",
       "repository_rationale": "Repository knowledge reconstruction requires source-test contracts and coverage dispositions; current contract inventory is passive evidence, not executed tests.",
       "architectural_owner": "file, symbol, test contract and evidence ledgers.",
-      "implementation_state": "389 source-contract records are passive inventory; full Python/JVM suites, lint, packaging and exact-head API 35 connected validation passed (EVID-072/EVID-074); focused concurrency checks passed (EVID-075); physical/human acceptance remains open. Exact candidate hosted API35 ordinary and process-death connected checks passed (EVID-101).",
-      "verification_criteria": "EVID-072 records full local Python/JVM, lint and package results; EVID-074 records exact-head hosted host and connected suite success; EVID-075 records focused Python/JVM concurrency results. Residual device/human acceptance stays in C-007\u2013C-011/C-013 and external tasks. Exact-candidate API35 connected results are in EVID-101; targeted integration reconciliation remains under TASK-C-011.",
+      "implementation_state": "389 source-contract records are passive inventory; full Python/JVM suites, lint, packaging and exact-head API 35 connected validation passed (EVID-072/EVID-074); focused concurrency checks passed (EVID-075); physical/human acceptance remains open. Exact candidate hosted API35 ordinary and process-death connected checks passed (EVID-101). Current overlay: Python 1,395 and JVM 1,303 pass; debug/release lint and APK/AAB package outputs exist (EVID-104/EVID-105). Local connected attempt did not execute tests; exact candidate verification remains under TASK-C-014.",
+      "verification_criteria": "EVID-072 records full local Python/JVM, lint and package results; EVID-074 records exact-head hosted host and connected suite success; EVID-075 records focused Python/JVM concurrency results. Residual device/human acceptance stays in C-007–C-011/C-013 and external tasks. Exact-candidate API35 connected results are in EVID-101; targeted integration reconciliation is complete under TASK-C-011 (EVID-102). Current overlay connected verification is tracked separately under TASK-C-014.",
       "future_task_ids": [
         "TASK-C-011",
-        "TASK-C-012"
+        "TASK-C-012",
+        "TASK-C-014"
       ],
       "evidence_refs": [
         "EVID-072",
         "EVID-074",
         "EVID-075",
-        "EVID-101"
+        "EVID-101",
+        "EVID-102",
+        "EVID-104",
+        "EVID-105",
+        "EVID-106",
+        "EVID-107"
       ],
-      "current_execution_status": "TASK-C-011 complete for documented regression/integration scope after exact-candidate reconciliation (EVID-101/EVID-102); external acceptance remains separate.",
+      "current_execution_status": "TASK-C-011 complete for its b9 candidate regression/integration scope (EVID-101/EVID-102). New overlay host gates pass; exact-candidate connected verification remains partial under TASK-C-014. External acceptance remains separate.",
       "execution_constraint": "No device or external acceptance claim without candidate-bound evidence."
     },
     {
@@ -551,7 +557,7 @@
         "REQ-008",
         "REQ-009"
       ],
-      "verification": "Close through TASK-D-001\u2013TASK-D-007 and final TASK-E-001."
+      "verification": "Close through TASK-D-001–TASK-D-007 and final TASK-E-001."
     },
     {
       "id": "APL-M-009",
@@ -849,9 +855,9 @@
         "scripts/test_stable_file_reader.py"
       ],
       "expected_evidence": "Deterministically controlled race/order checks establish no stale owner effects, no duplicate drain/terminal effect, and preservation of concurrent newer output through rollback and cleanup; record tested platform/runtime.",
-      "current_status": "PASSED_AT_AUTHORED_SCOPE: 54 Python publication tests, 29 targeted JVM tests and exact-head API 35 connected lifecycle suite passed on d1 (EVID-075). Universal race freedom and other platforms remain unverified.",
+      "current_status": "Current overlay host evidence recorded in EVID-104/EVID-105; connected suite remains unverified because the local API36.1 process terminated before tests (EVID-106). Exact hosted baseline EVID-107 does not cover overlay; TASK-C-014.",
       "future_task_ids": [
-        "TASK-C-011"
+        "TASK-C-014"
       ],
       "doc": "docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md"
     }

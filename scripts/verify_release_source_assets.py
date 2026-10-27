@@ -134,6 +134,7 @@ def parse_required_audio(source: str) -> tuple[str, ...]:
 
     top_level_ids = {id(node) for node in module.body}
     writes: list[ast.AST] = []
+    type_alias_node = getattr(ast, "TypeAlias", None)
     for node in ast.walk(module):
         targets: list[ast.AST] = []
         if isinstance(node, (ast.Assign, ast.Delete)):
@@ -148,7 +149,7 @@ def parse_required_audio(source: str) -> tuple[str, ...]:
                 for item in node.items
                 if item.optional_vars is not None
             )
-        elif isinstance(node, ast.TypeAlias):
+        elif type_alias_node is not None and isinstance(node, type_alias_node):
             targets.append(node.name)
         elif isinstance(node, (ast.MatchAs, ast.MatchStar)):
             if node.name == "REQUIRED_AUDIO":

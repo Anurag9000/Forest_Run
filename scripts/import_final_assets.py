@@ -341,7 +341,7 @@ def main() -> None:
         Mapping("animals/dogs/dogs_4frames.png", "animals/dog_4frames.png", 4, 1, 4, component_floor_ratio=0.05),
         Mapping("animals/fox/fox_4frames.png", "animals/fox_4frames.png", 4, 1, 4, component_floor_ratio=0.05),
         Mapping("animals/hedgehogs/hedgehogs_4frames.png", "animals/hedgehog_4frames.png", 4, 1, 4, component_floor_ratio=0.05),
-        Mapping("animals/wolves/wolves_4frames.png", "animals/wolf_4frames.png", 4, 2, 8, component_floor_ratio=0.05),
+        Mapping("animals/wolves/wolves_4frames.png", "animals/wolf_8frames.png", 4, 2, 8, component_floor_ratio=0.05),
         Mapping("birds/ducks/ducks_4frames.png", "birds/duck_4frames.png", 4, 1, 4, component_floor_ratio=0.05),
         Mapping("birds/ducks/ducks_4frames.png", "birds/duck_flying.png", 4, 1, 4, remove_support_ratio=0.24, component_floor_ratio=0.05),
         Mapping("birds/tits/tits_4frames.png", "birds/tit_4frames.png", 4, 1, 4, component_floor_ratio=0.05),

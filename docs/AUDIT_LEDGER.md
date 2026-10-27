@@ -4,6 +4,13 @@ This file is the chronological remediation ledger. It preserves tranche-local fi
 
 The ledger remains intentionally conservative: a source change is not called validated merely because it was committed, and automated validation is not treated as physical-device or store acceptance.
 
+## Current reconciliation — 2026-10-28 source-completion delta
+
+- The previously recorded four-frame Wolf conclusion is superseded for current source: the authored atlas is a 4×2 grid of eight poses, the importer exports all eight, and the packaged asset path/runtime loader now use eight frames. See `docs/repository_knowledge/source_completion_delta_2026-10-28.md` and `docs/repository_knowledge/runtime_sprite_frame_trace.md`.
+- The release README now uses the wrapper and has a focused portability-contract test. Source-asset validation now handles Python runtimes without `ast.TypeAlias`.
+- Full Python/Gradle verification against the final Wolf correction is still pending. The most recent completed full run was on the immediately preceding `/var/tmp` test copy; connected-device, physical, human, provenance/licensing, signing/Play and final governance evidence remain open.
+- This is a working-tree delta, not a committed release or exact-head CI result. Preserve the pre-existing dirty state and do not describe the project as fully source-complete until remaining obligations and post-correction verification are resolved.
+
 ## Current reconciliation — 2026-10-02 collision, persistence, accessibility, and audit-scope continuation
 
 This checkpoint supersedes the 2026-09-28 status snapshot for *current repository status* while preserving every older ledger entry as historical provenance. The independently observed pre-change source-bearing commit `3fc2f253044b462f27d5fe9d13f8c4eec8203bce` contains **938 tracked files**: 190 production Kotlin files, 238 JVM/Robolectric Kotlin tests, eight Android connected Kotlin tests, 124 Python tests, 53 other Python scripts, 143 dated audit documents, three GitHub workflows, 29 runtime PNGs and 15 raw OGG files. Only `main` exists and there are no open pull requests.

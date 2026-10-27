@@ -626,6 +626,56 @@ class TrainingControlNotApplicableTest(unittest.TestCase):
                     launcher.main(["--output", str(output)])
             self.assertFalse(output.exists(), "stale PASS must not survive failed publication")
 
+    def test_atomic_publication_ignores_predictable_temporary_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "coverage.json"
+            outside = root / "preserve.json"
+            outside.write_text("preserve", encoding="utf-8")
+            output.with_suffix(".json.tmp").symlink_to(outside)
+            launcher._atomic_json(output, {"status": "pass"})
+            self.assertEqual("preserve", outside.read_text(encoding="utf-8"))
+            self.assertEqual("pass", json.loads(output.read_text(encoding="utf-8"))["status"])
+
+    def test_output_symlink_is_removed_without_touching_its_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "target.json"
+            target.write_text('{"status":"keep"}', encoding="utf-8")
+            output = root / "coverage.json"
+            output.symlink_to(target)
+            with mock.patch.object(launcher, "ROOT", root), \
+                 mock.patch.object(launcher, "build_certificate", return_value={"status": "pass"}), \
+                 redirect_stdout(io.StringIO()):
+                self.assertEqual(0, launcher.main(["--output", str(output)]))
+            self.assertFalse(output.is_symlink())
+            self.assertEqual("keep", json.loads(target.read_text(encoding="utf-8"))["status"])
+            self.assertEqual("pass", json.loads(output.read_text(encoding="utf-8"))["status"])
+
+    def test_output_path_keeps_lexical_location_when_leaf_is_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "target.json"
+            target.write_text("keep", encoding="utf-8")
+            output = root / "coverage.json"
+            output.symlink_to(target)
+            with mock.patch.object(launcher, "ROOT", root):
+                self.assertEqual(output, launcher._within_root(output))
+            self.assertEqual("keep", target.read_text(encoding="utf-8"))
+
+    def test_output_parent_symlink_is_rejected_without_touching_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            outside = root / "outside"
+            outside.mkdir()
+            target = outside / "coverage.json"
+            target.write_text('{"status":"keep"}', encoding="utf-8")
+            (root / "linked").symlink_to(outside, target_is_directory=True)
+            with mock.patch.object(launcher, "ROOT", root):
+                with self.assertRaisesRegex(ValueError, "symbolic link"):
+                    launcher._atomic_json(root / "linked" / "coverage.json", {"status": "pass"})
+            self.assertEqual("keep", json.loads(target.read_text(encoding="utf-8"))["status"])
+
     def test_root_command_emits_truthful_n_a_certificate(self) -> None:
         result = subprocess.run(
             [sys.executable, str(ROOT / "run_all_training.py"), "--training-control-audit"],

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import tempfile
 import unittest
@@ -138,13 +139,15 @@ class MainReleaseWrapperContractTest(unittest.TestCase):
             "python3 scripts/prepare_play_release.py",
             "python scripts/prepare_play_release.py",
         }
+        machine_local_path = re.compile(
+            r"(?i)(?:^|[\s`=])/(?:home|users|opt|tmp|var/tmp|root|mnt|media|private/var/folders)/[^\s`]+"
+        )
         for path in operator_docs:
             with self.subTest(path=path):
                 text = path.read_text(encoding="utf-8")
                 stripped_lines = {line.strip() for line in text.splitlines()}
                 self.assertTrue(forbidden_commands.isdisjoint(stripped_lines))
-                self.assertNotIn("/home/", text)
-                self.assertNotIn("/Users/", text)
+                self.assertNotRegex(text, machine_local_path)
 
         play_readme = (ROOT / "release/google-play/README.md").read_text(
             encoding="utf-8"
