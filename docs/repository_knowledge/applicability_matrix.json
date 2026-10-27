@@ -1,13 +1,13 @@
 {
   "schema_version": "1.0.0",
   "repository": "Forest_Run",
-  "source_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b plus reviewed delta (2026-10-27)",
+  "source_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c (source payload based on df705c65c7f0a7ef03669a0c6767de5f381b418a)",
   "snapshot_date": "2026-10-27",
   "authority": "This matrix maps current repository requirements and applicable universal mechanisms; MASTER_EXECUTION_LEDGER.json remains source of project goal/task state.",
   "current_scope_constraints": [
-    "Original checkout had pre-existing user changes and remains preserved; verification used an isolated candidate based on origin/main plus the reviewed delta.",
-    "The user authorized source completion and repository verification. Connected Android/device and external release acceptance remain subject to available resources and candidate-bound evidence.",
-    "Python/JVM test contracts describe source assertions; current execution outcomes are recorded only in EVID-072 and the linked verification report."
+    "Original checkout had pre-existing user changes and remains preserved; verification used clean detached d1 candidate matching origin/main.",
+    "The user authorized source completion and repository verification. Connected emulator evidence is candidate-bound; physical-device and external release acceptance remain resource/owner dependent.",
+    "Python/JVM test contracts describe source assertions. Execution outcomes are recorded in EVID-072, exact-head EVID-074 and focused concurrency EVID-075."
   ],
   "requirement_rows": [
     {
@@ -19,7 +19,7 @@
       ],
       "universal_disposition": "REQUIRED_WITH_ADAPTATION",
       "repository_rationale": "Android activity, SurfaceView and fixed-landscape lifecycle are core product contracts. Preserve the existing Activity/GameView/GameThread ownership; do not introduce a generic service or runner.",
-      "architectural_owner": "MainActivity \u2192 GameView \u2192 GameThread, Android configuration/Manifest.",
+      "architectural_owner": "MainActivity → GameView → GameThread, Android configuration/Manifest.",
       "implementation_state": "SUBSTANTIALLY_COMPLETE; source and prior map evidence",
       "verification_criteria": "Static path/manifest inspection; focused lifecycle/configuration tests; Android compile/build and ordinary connected startup after authorization.",
       "future_task_ids": [
@@ -407,14 +407,16 @@
       "universal_disposition": "REQUIRED_WITH_ADAPTATION",
       "repository_rationale": "Repository knowledge reconstruction requires source-test contracts and coverage dispositions; current contract inventory is passive evidence, not executed tests.",
       "architectural_owner": "file, symbol, test contract and evidence ledgers.",
-      "implementation_state": "389 source-contract records remain passive inventory; full Python/JVM suites, lint and APK assembly passed on the merged candidate (EVID-072); device checks remain open.",
-      "verification_criteria": "EVID-072 provides full Python/JVM, lint and APK assembly evidence on the merged candidate; run connected/device and concurrency-specific checks when resources are available.",
+      "implementation_state": "389 source-contract records are passive inventory; full Python/JVM suites, lint, packaging and exact-head API 35 connected validation passed (EVID-072/EVID-074); focused concurrency checks passed (EVID-075); physical/human acceptance remains open.",
+      "verification_criteria": "EVID-072 records full local Python/JVM, lint and package results; EVID-074 records exact-head hosted host and connected suite success; EVID-075 records focused Python/JVM concurrency results. Residual device/human acceptance stays in C-007–C-011/C-013 and external tasks.",
       "future_task_ids": [
         "TASK-C-011",
         "TASK-C-012"
       ],
       "evidence_refs": [
-        "User-provided repository investigation specification, Parts VIII/XX/XXXI and read-only/testing limits"
+        "EVID-072",
+        "EVID-074",
+        "EVID-075"
       ],
       "current_execution_status": "PARTIALLY_VERIFIED",
       "execution_constraint": "No device or external acceptance claim without candidate-bound evidence."
@@ -546,31 +548,31 @@
         "REQ-008",
         "REQ-009"
       ],
-      "verification": "Close through TASK-D-001\u2013TASK-D-007 and final TASK-E-001."
+      "verification": "Close through TASK-D-001–TASK-D-007 and final TASK-E-001."
     },
     {
       "id": "APL-M-009",
       "name": "Automated unit/component/integration/regression verification",
       "disposition": "REQUIRED_WITH_ADAPTATION",
-      "reason": "Game state, persistence, evidence-tooling security and interface contracts need risk-specific tests. Existing 389 contracts are source inspections only and test outcomes are not inferred.",
+      "reason": "Game state, persistence, evidence-tooling security and interface contracts need risk-specific tests. The 389 contract rows describe authored assertions; per-file results are separately mapped to exact local/hosted evidence and intentional @LargeTest/support-source exclusions.",
       "evidence": [
         "docs/repository_knowledge/test_contract_inventory.json",
         "README.md:209-217",
         "docs/RELEASE.md:34-55"
       ],
-      "verification": "Current phase prohibits execution; future contracts C-007\u2013C-012 list specific suite scope and acceptance evidence."
+      "verification": "Authorized risk-based Python/JVM suites and exact-head connected Android validation have passed at their recorded scopes (EVID-072, EVID-074, EVID-075); requirement-level and physical/human residuals remain in the linked tasks."
     },
     {
       "id": "APL-M-010",
       "name": "Full-suite, smoke and end-to-end verification",
-      "disposition": "DEFERRED",
-      "reason": "These checks are relevant before release but are prohibited in the current investigation scope; running them against a dirty, non-frozen worktree would also weaken candidate evidence.",
+      "disposition": "REQUIRED_BEFORE_RELEASE",
+      "reason": "These checks are required for this Android product and were authorized on a frozen clean candidate. Full local suites/package/lint and exact-head hosted connected Android jobs passed; physical-device and human end-to-end acceptance remain separate.",
       "evidence": [
         "README.md:209-219",
         "docs/RELEASE.md:34-55",
         "TASK-C-011"
       ],
-      "verification": "After frozen revision and explicit authorization, run documented unit/script/lint/build/connected suites and report each separately."
+      "verification": "See EVID-072/EVID-074 for full and hosted results; EVID-075 for focused concurrency. Preserve test class counts, candidate SHA, platform and exclusions. Complete physical/device/human tasks before release."
     },
     {
       "id": "APL-M-011",
@@ -671,7 +673,7 @@
         "publish/aggregate script contracts"
       ],
       "expected_evidence": "Real connected components with state and persistence inspected across boundaries.",
-      "current_status": "PARTIALLY VERIFIED: source-level suites passed; connected app/producer-consumer integrations remain.",
+      "current_status": "PARTIALLY VERIFIED: exact-head API 35 connected app suite passed (EVID-074); external producer/consumer and remaining per-requirement integration obligations are not fully dispositioned.",
       "future_task_ids": [
         "TASK-C-008",
         "TASK-C-009",
@@ -681,14 +683,14 @@
     {
       "id": "VER-004",
       "category": "Full suite",
-      "applicability": "REQUIRED_BEFORE_RELEASE; DEFERRED_NOW",
+      "applicability": "REQUIRED_BEFORE_RELEASE",
       "scope": "Python scripts unittest suite, Gradle JVM suite, lint/build tasks and ordinary connected suite as documented.",
       "existing_contracts": [
         "README.md:209-217",
         "docs/RELEASE.md:34-55"
       ],
       "expected_evidence": "Exact commands/revision/environment; suite-specific pass/fail/error/skip counts; no historical result reuse as current pass.",
-      "current_status": "PASSED for Python/JVM, lint and APK assembly on merged candidate; connected instrumentation unavailable (adb missing).",
+      "current_status": "PASSED at recorded scopes: 1,387 Python and 1,297 JVM tests; debug/release lint/package; exact-head d1 host/release/lint/package and API 35 connected validation (EVID-072/EVID-074). Physical-performance @LargeTest is intentionally excluded; residual task-specific and physical/human acceptance remains.",
       "future_task_ids": [
         "TASK-C-011",
         "TASK-C-013"
@@ -697,7 +699,7 @@
     {
       "id": "VER-005",
       "category": "Smoke and end-to-end workflow",
-      "applicability": "REQUIRED_WITH_ADAPTATION; DEFERRED_NOW",
+      "applicability": "REQUIRED_WITH_ADAPTATION",
       "scope": "Android launch-to-frame-loop, save-repair gate, Journal, representative gameplay and candidate evidence intake/publication.",
       "existing_contracts": [
         "MainActivityInstrumentedTest.kt",
@@ -705,10 +707,11 @@
         "README.md:209-219"
       ],
       "expected_evidence": "Representative connected workflow from supported entrypoint to visible output and persistent/evidence artifact.",
-      "current_status": "NOT VERIFIED: connected smoke/end-to-end app workflow unavailable (adb missing).",
+      "current_status": "PARTIALLY VERIFIED: exact-head API 35 connected test suite passed (EVID-074), but candidate-bound OWL_DIVE screenshot state and physical/human end-to-end acceptance are not established.",
       "future_task_ids": [
         "TASK-C-010",
-        "TASK-C-011"
+        "TASK-C-011",
+        "TASK-C-013"
       ]
     },
     {
@@ -757,7 +760,7 @@
         "docs/RELEASE.md:34-55"
       ],
       "expected_evidence": "Successful documented compile/package matrix and supported Android test environment, reported by variant/device.",
-      "current_status": "PARTIALLY VERIFIED by unit/component tests; actual device/process recovery remains.",
+      "current_status": "PARTIALLY VERIFIED: debug/release packaging and exact-head API 35 connected lifecycle suite passed (EVID-074); broader Android API/process-recovery and physical-device behavior remain.",
       "future_task_ids": [
         "TASK-C-010",
         "TASK-C-011"
@@ -843,9 +846,8 @@
         "scripts/test_stable_file_reader.py"
       ],
       "expected_evidence": "Deterministically controlled race/order checks establish no stale owner effects, no duplicate drain/terminal effect, and preservation of concurrent newer output through rollback and cleanup; record tested platform/runtime.",
-      "current_status": "NOT_EXECUTED; source contracts only; prohibited in current investigation scope.",
+      "current_status": "PASSED_AT_AUTHORED_SCOPE: 54 Python publication tests, 29 targeted JVM tests and exact-head API 35 connected lifecycle suite passed on d1 (EVID-075). Universal race freedom and other platforms remain unverified.",
       "future_task_ids": [
-        "TASK-C-012",
         "TASK-C-011"
       ],
       "doc": "docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md"

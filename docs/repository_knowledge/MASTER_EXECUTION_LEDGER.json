@@ -1173,7 +1173,7 @@
         "related_capability_ids": [
           "CAP-015"
         ],
-        "status": "resolved as documentation coverage mismatch: 389 test-related paths now have 389 distinct contract records; all remain NOT_EXECUTED."
+        "status": "Resolved as a documentation coverage mismatch: all 389 test-related paths have per-file contract records. At inventory creation they were NOT_EXECUTED; current execution disposition is recorded per path in test_contract_inventory.json and supplemental shards against EVID-072/EVID-074/EVID-075, with @LargeTest exclusions and support sources explicit."
       },
       {
         "id": "FIND-012",
@@ -1286,6 +1286,46 @@
           "CAP-006"
         ],
         "status": "SOURCE-LEVEL MISMATCH RESOLVED by TASK-A-035; actual screenshot state remains unverified under TASK-C-013."
+      },
+      {
+        "id": "FIND-017",
+        "kind": "targeted source-completion re-audit",
+        "statement": "A bounded re-audit of gameplay/input/collision/spawn, all scenario definitions, persistence/recovery, accessibility/audio/haptics, runtime assets, release documentation and CI wiring at d1f31d473f5ca9303706164b6cc817703e0e7c7c found no new confirmed requirement-backed source defect. This is a static, scope-bounded finding; it does not establish runtime, visual, auditory, device, rights or release acceptance.",
+        "evidence": [
+          "docs/repository_knowledge/source_completion_reconciliation_2026-10-27.md",
+          "EVID-074"
+        ],
+        "related_goal_ids": [
+          "GOAL-001",
+          "GOAL-002",
+          "GOAL-003",
+          "GOAL-004",
+          "GOAL-005",
+          "GOAL-006"
+        ],
+        "related_requirement_ids": [
+          "REQ-001",
+          "REQ-002",
+          "REQ-003",
+          "REQ-004",
+          "REQ-005",
+          "REQ-006",
+          "REQ-007",
+          "REQ-008",
+          "REQ-009",
+          "REQ-010",
+          "REQ-015",
+          "REQ-016"
+        ],
+        "related_capability_ids": [
+          "CAP-001",
+          "CAP-002",
+          "CAP-003",
+          "CAP-004",
+          "CAP-005",
+          "CAP-006"
+        ],
+        "status": "BOUNDED STATIC REVIEW COMPLETE; no source remediation task justified. Existing device, human, creative, rights and release tasks remain open."
       }
     ],
     "gaps": [
@@ -2674,22 +2714,23 @@
         "execution_status": "DEFERRED",
         "owner": null,
         "blockers": [
-          "All mandatory verification and external gate tasks.",
-          "Risk-based verification C-007–C-012 not yet executed; current phase prohibits it."
+          "Required C-007 through C-011 acceptance work and external release gate tasks remain.",
+          "TASK-C-013 candidate-bound screenshot/device evidence remains outstanding."
         ],
         "evidence_ids": [
           "EVID-006",
-          "EVID-072"
+          "EVID-072",
+          "EVID-074",
+          "EVID-075"
         ],
         "uncertainty": "Current outstanding scope may change after authorized external decisions.",
-        "remaining_work": "Complete after residual connected/device verification (including TASK-C-013), performance and external release gates are addressed; then obtain accountable candidate-bound go/no-go.",
+        "remaining_work": "Complete after residual requirement-level verification (including TASK-C-013), physical performance and external release gates are addressed; then obtain accountable candidate-bound go/no-go. TASK-C-012 is complete at its authored test scope.",
         "completion_evidence": [],
         "related_prior_work": [
           "docs/RELEASE_READINESS.md",
-          "docs/AUDIT_LEDGER.md",
-          "TASK-C-012 concurrency verification is required before final reconciliation."
+          "docs/AUDIT_LEDGER.md"
         ],
-        "last_reconciled_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; verification status refreshed 2026-10-27",
         "next_action": "Only execute after all dependencies and authorized candidate review are complete.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
@@ -6490,7 +6531,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Run the applicable existing unit/component contracts against the frozen revision; assess movement bounds, pointer ownership/cancel behavior, collision ordering/terminal uniqueness, Bloom thresholds/timing/partition invariance, and relevant boundary/negative inputs. Expected behavior comes from GAME_DESIGN.md, ARCHITECTURE.md, FRAME_INPUT_ADMISSION.md, and deterministic scenario specifications, not from current outputs alone.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Relevant implementation and test-contract source exists or is inventoried; all 389 current test-contract rows are passive source evidence marked NOT_EXECUTED. Tests/builds/application workflows remain prohibited by the embedded investigation scope in this task.",
+        "current_state": "Full 1,297-test JVM/Robolectric suite passed on source payload df705 and exact d1 hosted JVM/connected workflow passed. Core source re-audit found no new defect. Independent requirement-level boundary/state oracle disposition and human/device gameplay acceptance remain.",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "app/src/test/java/com/anurag9000/forestrun/engine/InputHandlerTest.kt",
@@ -6538,18 +6579,19 @@
           "Current dirty tests and source belong to user-owned worktree; preserve content and record exact baseline.",
           "Generated Gradle/Python test outputs are external artifacts; do not clean or delete existing outputs."
         ],
-        "execution_constraints": "DEFERRED. Current task specification prohibits executing tests, builds, scripts or application workflows. Requires explicit authorization for verification phase and applicable environment/device. No test code modification is authorized by this contract.",
+        "execution_constraints": "Verification was authorized. Reuse EVID-072 (full local suites/build), EVID-074 (exact-head hosted host/API35 connected pass) and EVID-075 (focused concurrency). Do not rerun unchanged passing suites; close only the task-specific independent acceptance criteria and report physical/human limits.",
         "complexity": "medium",
         "priority": "P1 risk-based; deferred",
         "execution_status": "PARTIALLY_COMPLETED",
         "owner": null,
         "blockers": [
-          "Current embedded repository-investigation scope prohibits tests/builds/workflows; await separate authorized verification phase.",
-          "For connected/device checks, required Android SDK/device may be unavailable."
+          "Task-specific acceptance evidence remains incomplete; any physical-device or human evidence requires the appropriate device/reviewer."
         ],
         "evidence_ids": [
           "EVID-068",
-          "EVID-072"
+          "EVID-072",
+          "EVID-074",
+          "EVID-075"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
         "remaining_work": "Complete the targeted acceptance criteria and connected/device evidence specified by this task; do not infer full closure from aggregate suite passes.",
@@ -6561,7 +6603,7 @@
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b + reviewed worktree delta (2026-10-27)",
+        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted checks passed",
         "next_action": "Resume from EVID-072 and this task contract when connected/device resources are available; preserve exact candidate identity.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
@@ -6583,7 +6625,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Verify successful/failed repair gates both gameplay and Journal startup; domain stores preserve namespace and recovery boundaries; Journal projection remains read-only; interruption, malformed state, retry/restart and multi-domain pending cases follow documented contracts.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Relevant implementation and test-contract source exists or is inventoried; all 389 current test-contract rows are passive source evidence marked NOT_EXECUTED. Tests/builds/application workflows remain prohibited by the embedded investigation scope in this task.",
+        "current_state": "Full JVM suite and exact d1 API 35 connected lifecycle/Journal paths passed; source re-audit found no new save-repair or recovery defect. Physical process-kill/restore and task-specific durability acceptance remain.",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "app/src/test/java/com/anurag9000/forestrun/SaveIntegrityStartupGateTest.kt",
@@ -6633,18 +6675,19 @@
           "Current dirty tests and source belong to user-owned worktree; preserve content and record exact baseline.",
           "Generated Gradle/Python test outputs are external artifacts; do not clean or delete existing outputs."
         ],
-        "execution_constraints": "DEFERRED. Current task specification prohibits executing tests, builds, scripts or application workflows. Requires explicit authorization for verification phase and applicable environment/device. No test code modification is authorized by this contract.",
+        "execution_constraints": "Verification was authorized. Reuse EVID-072 (full local suites/build), EVID-074 (exact-head hosted host/API35 connected pass) and EVID-075 (focused concurrency). Do not rerun unchanged passing suites; close only the task-specific independent acceptance criteria and report physical/human limits.",
         "complexity": "medium",
         "priority": "P1 risk-based; deferred",
         "execution_status": "PARTIALLY_COMPLETED",
         "owner": null,
         "blockers": [
-          "Current embedded repository-investigation scope prohibits tests/builds/workflows; await separate authorized verification phase.",
-          "For connected/device checks, required Android SDK/device may be unavailable."
+          "Task-specific acceptance evidence remains incomplete; any physical-device or human evidence requires the appropriate device/reviewer."
         ],
         "evidence_ids": [
           "EVID-068",
-          "EVID-072"
+          "EVID-072",
+          "EVID-074",
+          "EVID-075"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
         "remaining_work": "Complete the targeted acceptance criteria and connected/device evidence specified by this task; do not infer full closure from aggregate suite passes.",
@@ -6656,7 +6699,7 @@
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b + reviewed worktree delta (2026-10-27)",
+        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted checks passed",
         "next_action": "Resume from EVID-072 and this task contract when connected/device resources are available; preserve exact candidate identity.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
@@ -6679,7 +6722,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Verify bounded regular-file admission, symlink/no-follow and identity-change rejection, size/schema limits, candidate/hash binding, atomic publication and rollback/old-output preservation against independent temporary-directory fixtures and producer/consumer paths.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Relevant implementation and test-contract source exists or is inventoried; all 389 current test-contract rows are passive source evidence marked NOT_EXECUTED. Tests/builds/application workflows remain prohibited by the embedded investigation scope in this task.",
+        "current_state": "Full 1,387-test Python suite passed on source payload df705; exact d1 stable-file-reader focused suite passed 54 tests. Evidence-tooling producer/consumer and each requirement-level safety acceptance remain partially dispositioned.",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "scripts/test_stable_file_reader.py",
@@ -6729,18 +6772,19 @@
           "Current dirty tests and source belong to user-owned worktree; preserve content and record exact baseline.",
           "Generated Gradle/Python test outputs are external artifacts; do not clean or delete existing outputs."
         ],
-        "execution_constraints": "DEFERRED. Current task specification prohibits executing tests, builds, scripts or application workflows. Requires explicit authorization for verification phase and applicable environment/device. No test code modification is authorized by this contract.",
+        "execution_constraints": "Verification was authorized. Reuse EVID-072 (full local suites/build), EVID-074 (exact-head hosted host/API35 connected pass) and EVID-075 (focused concurrency). Do not rerun unchanged passing suites; close only the task-specific independent acceptance criteria and report physical/human limits.",
         "complexity": "medium",
         "priority": "P1 risk-based; deferred",
         "execution_status": "PARTIALLY_COMPLETED",
         "owner": null,
         "blockers": [
-          "Current embedded repository-investigation scope prohibits tests/builds/workflows; await separate authorized verification phase.",
-          "For connected/device checks, required Android SDK/device may be unavailable."
+          "Task-specific acceptance evidence remains incomplete; any physical-device or human evidence requires the appropriate device/reviewer."
         ],
         "evidence_ids": [
           "EVID-068",
-          "EVID-072"
+          "EVID-072",
+          "EVID-074",
+          "EVID-075"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
         "remaining_work": "Complete the targeted acceptance criteria and connected/device evidence specified by this task; do not infer full closure from aggregate suite passes.",
@@ -6752,7 +6796,7 @@
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b + reviewed worktree delta (2026-10-27)",
+        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted checks passed",
         "next_action": "Resume from EVID-072 and this task contract when connected/device resources are available; preserve exact candidate identity.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
@@ -6775,7 +6819,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "Verify launch/lifecycle, orientation/configuration and safe-layout behavior; virtual-node semantics and action routing; persisted reduced-motion/audio/haptic controls; no stale lifecycle owner; build variants and package resources. Keep human TalkBack acceptance distinct and delegated to the external device/reviewer tasks.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Relevant implementation and test-contract source exists or is inventoried; all 389 current test-contract rows are passive source evidence marked NOT_EXECUTED. Tests/builds/application workflows remain prohibited by the embedded investigation scope in this task.",
+        "current_state": "Full JVM suite, lint, debug/release packaging, and exact d1 API 35 connected instrumentation passed (hosted emulator). Physical-device diversity, manual TalkBack/Switch Access and real-candidate usability acceptance remain.",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "app/src/test/java/com/anurag9000/forestrun/ui/",
@@ -6825,18 +6869,19 @@
           "Current dirty tests and source belong to user-owned worktree; preserve content and record exact baseline.",
           "Generated Gradle/Python test outputs are external artifacts; do not clean or delete existing outputs."
         ],
-        "execution_constraints": "DEFERRED. Current task specification prohibits executing tests, builds, scripts or application workflows. Requires explicit authorization for verification phase and applicable environment/device. No test code modification is authorized by this contract.",
+        "execution_constraints": "Verification was authorized. Reuse EVID-072 (full local suites/build), EVID-074 (exact-head hosted host/API35 connected pass) and EVID-075 (focused concurrency). Do not rerun unchanged passing suites; close only the task-specific independent acceptance criteria and report physical/human limits.",
         "complexity": "medium",
         "priority": "P1 risk-based; deferred",
         "execution_status": "PARTIALLY_COMPLETED",
         "owner": null,
         "blockers": [
-          "Current embedded repository-investigation scope prohibits tests/builds/workflows; await separate authorized verification phase.",
-          "For connected/device checks, required Android SDK/device may be unavailable."
+          "Task-specific acceptance evidence remains incomplete; any physical-device or human evidence requires the appropriate device/reviewer."
         ],
         "evidence_ids": [
           "EVID-068",
-          "EVID-072"
+          "EVID-072",
+          "EVID-074",
+          "EVID-075"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
         "remaining_work": "Complete the targeted acceptance criteria and connected/device evidence specified by this task; do not infer full closure from aggregate suite passes.",
@@ -6848,7 +6893,7 @@
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b + reviewed worktree delta (2026-10-27)",
+        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted checks passed",
         "next_action": "Resume from EVID-072 and this task contract when connected/device resources are available; preserve exact candidate identity.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
@@ -6871,7 +6916,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "After focused task contracts are complete and a candidate/revision is frozen, run the applicable complete Python unit, Android JVM/Robolectric, lint/build, and ordinary connected instrumentation gates documented by the repository. Preserve per-suite results; do not merge historical and current evidence.",
         "motivation": "The repository-first verification prompt requires evidence proportional to product risk, and source-only contracts do not establish runtime correctness.",
-        "current_state": "Relevant implementation and test-contract source exists or is inventoried; all 389 current test-contract rows are passive source evidence marked NOT_EXECUTED. Tests/builds/application workflows remain prohibited by the embedded investigation scope in this task.",
+        "current_state": "Full Python/JVM suites, debug/release lint/package, and exact d1 hosted Android host plus API 35 connected workflow passed (EVID-072/EVID-074); C-012 focused concurrency also passed (EVID-075). Task remains partial until dependent C-007–C-010 acceptance criteria close.",
         "required_final_state": "The specified independent contracts are executed against a frozen source/candidate snapshot with exact commands, environment and outcomes; any uncovered requirement is recorded as a distinct gap, and no skip/failure is described as passing.",
         "scope": [
           "README.md:209-217",
@@ -6920,32 +6965,35 @@
           "Current dirty tests and source belong to user-owned worktree; preserve content and record exact baseline.",
           "Generated Gradle/Python test outputs are external artifacts; do not clean or delete existing outputs."
         ],
-        "execution_constraints": "DEFERRED. Current task specification prohibits executing tests, builds, scripts or application workflows. Requires explicit authorization for verification phase and applicable environment/device. No test code modification is authorized by this contract.",
+        "execution_constraints": "Verification was authorized and the full local/hosted regression gate passed at the recorded revisions. Keep PARTIALLY_COMPLETED while its focused C-007–C-010 prerequisites retain requirement-level residual acceptance work; do not rerun without source delta.",
         "complexity": "high",
         "priority": "P1 risk-based; deferred",
         "execution_status": "PARTIALLY_COMPLETED",
         "owner": null,
         "blockers": [
-          "Current embedded repository-investigation scope prohibits tests/builds/workflows; await separate authorized verification phase.",
-          "For connected/device checks, required Android SDK/device may be unavailable."
+          "Focused requirement-level tasks TASK-C-007 through TASK-C-010 remain partially evidenced; complete their stated acceptance criteria before this integration gate closes."
         ],
         "evidence_ids": [
           "EVID-068",
           "EVID-070",
-          "EVID-072"
+          "EVID-072",
+          "EVID-074",
+          "EVID-075"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
-        "remaining_work": "Complete the targeted acceptance criteria and connected/device evidence specified by this task; do not infer full closure from aggregate suite passes.",
+        "remaining_work": "The full Python/JVM, lint/package and exact-head connected regression gate passed. Close the dependent requirement-level obligations C-007 through C-010, then retain only any explicitly scoped residual integration check; do not repeat full suites absent a source delta.",
         "completion_evidence": [
-          "EVID-072"
+          "EVID-072: full Python (1,387) and JVM/Robolectric (1,297) suites passed, zero JVM failures/errors/skips, debug/release lint and APK assembly passed on source payload df705.",
+          "EVID-074: exact d1 hosted Android host/release/lint/package and API 35 connected validation jobs passed; source/test paths are unchanged from df705.",
+          "EVID-075: focused concurrency tests passed on d1."
         ],
         "related_prior_work": [
           "A-004–A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
-        "last_reconciled_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b + reviewed worktree delta (2026-10-27)",
-        "next_action": "Resume from EVID-072 and this task contract when connected/device resources are available; preserve exact candidate identity.",
+        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head hosted suite complete 2026-10-27",
+        "next_action": "Close C-007–C-010 targeted acceptance items; then perform only residual changed-code/integration reconciliation.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
@@ -6968,7 +7016,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after authorization",
         "objective": "On a frozen revision after explicit verification authorization, verify concurrent lifecycle ownership, asynchronous audio transitions and adversarial filesystem publication/rollback contracts using independent expected invariants.",
         "motivation": "The repository has thread/lifecycle replacement, synchronized audio managers, and descriptor-relative atomic publication with concurrent-writer preservation. Generic edge/failure coverage does not explicitly plan race/order testing for these mechanisms.",
-        "current_state": "Source-only contracts and implementations are documented: LifecycleSettingsInstrumentedTest covers pause/resume thread replacement/frame continuation; SfxManagerTest covers serialized sample lookup, bounded transient stream tracking and exactly-once drain; LeitmotifManager uses synchronized audio ownership with a fade thread; scripts/test_stable_file_reader.py contains injected concurrent replacement and rollback races. None was executed in this investigation.",
+        "current_state": "Current authored checks passed on clean d1: 54 stable_file_reader Python tests; 29 targeted SfxManager/Leitmotif/GameThread JVM tests; exact-head API 35 connected lifecycle suite passed. No failure/error/skip in scoped suites. Platform and physical acceptance limits remain.",
         "required_final_state": "Current-revision results establish the specified ordering, owner invalidation, no-stale-effect, no-duplicate-terminal-action, output identity/preservation, rollback and cleanup invariants for scoped concurrency cases; failures and platform limits are reported precisely.",
         "scope": [
           "app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt",
@@ -7019,35 +7067,36 @@
           "TASK-C-011"
         ],
         "conflicts": [
-          "Same future Phase C authorization and frozen revision as C-007–C-012; coordinate Android instrumentation device ownership with TASK-C-010.",
-          "Filesystem tests create temporary state only; do not clean pre-existing artifacts or test outputs.",
-          "Current source and tests are dirty user-owned files; preserve and reconcile scoped hashes first."
+          "The exact d1 hosted connected suite and local focused tests are complete; coordinate future device acceptance with TASK-C-010 only if a new platform/runtime requirement arises.",
+          "Filesystem tests use temporary state; do not clean pre-existing artifacts or test outputs."
         ],
-        "execution_constraints": "DEFERRED. Current prompt forbids test/build/script/application execution. Requires separate explicit verification authorization, frozen candidate and available Android/runtime environment. No test code modification is authorized by this contract.",
+        "execution_constraints": "Completed after the user authorized repository verification on the frozen d1 candidate. Results apply to the recorded Python 3.14, Java 21, and hosted API 35 emulator scopes; no universal race-freedom or audio-quality claim.",
         "complexity": "medium-high",
         "priority": "P1 risk-based; deferred; prerequisite to full regression gate",
-        "execution_status": "DEFERRED",
+        "execution_status": "COMPLETED",
         "owner": null,
-        "blockers": [
-          "Current repository-understanding scope prohibits runtime/test execution; await separately authorized Phase C.",
-          "Connected lifecycle coverage requires a suitable Android test device/emulator; platform-specific filesystem races need environment provenance."
-        ],
+        "blockers": [],
         "evidence_ids": [
           "EVID-070",
-          "EVID-071"
+          "EVID-071",
+          "EVID-075"
         ],
-        "uncertainty": "Source contracts show intended concurrency scenarios but do not establish race freedom, scheduler behavior, or filesystem semantics on any current runtime/platform.",
-        "remaining_work": "Do not execute in this phase. After authorization, reconcile source snapshot, define deterministic race controls against current interfaces, run scoped checks, and report residual coverage.",
-        "completion_evidence": [],
+        "uncertainty": "The authored race/order scenarios passed on Python 3.14 and Android API 35 x86_64 emulator / Java 21 host. Results do not establish race freedom on every OS/device/runtime, and do not establish audio perceptual quality.",
+        "remaining_work": "No remaining work within the authored TASK-C-012 checks. Reopen only if source changes or new race cases/target platforms are explicitly required.",
+        "completion_evidence": [
+          "EVID-075: scripts/test_stable_file_reader.py completed 54 tests successfully with unittest discovery on clean d1f31d47.",
+          "EVID-075: focused SfxManagerTest, LeitmotifManagerTest, GameThreadFailureTest, GameThreadPerformanceTest and GameThreadShutdownTest completed 29 tests successfully (0 failures/errors/skips) on clean d1f31d47.",
+          "EVID-075: exact-head Android workflow 40468712221 completed host and API 35 connected validation successfully; connected suite excludes @LargeTest physical-performance tests."
+        ],
         "related_prior_work": [
           "TASK-A-019/A-020 passive test-contract inventory",
           "TASK-C-007–C-012 future verification contracts",
           "EVID-070 source evidence and EVID-071 documentation consistency check"
         ],
-        "last_reconciled_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "next_action": "Remain deferred until explicit verification authorization and current-revision reconciliation.",
+        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c (clean; tests run 2026-10-27)",
+        "next_action": "No action within TASK-C-012; retain platform and physical-device limits and revisit only on source or requirement delta.",
         "investigation_coverage": "DOCUMENTED",
-        "implementation_or_investigation_status": "NOT_INVESTIGATED",
+        "implementation_or_investigation_status": "VERIFIED",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
       },
       {
@@ -7653,7 +7702,7 @@
         "id": "VER-001",
         "category": "Unit and mathematical/property correctness",
         "applicability": "REQUIRED",
-        "current_status": "NOT_EXECUTED; source contracts only",
+        "current_status": "PARTIALLY_VERIFIED: full 1,297-test JVM/Robolectric suite passed (EVID-072); per-requirement independent mathematical/state-oracle acceptance remains under TASK-C-007.",
         "future_task_ids": [
           "TASK-C-007"
         ],
@@ -7663,7 +7712,7 @@
         "id": "VER-002",
         "category": "Component tests",
         "applicability": "REQUIRED_WITH_ADAPTATION",
-        "current_status": "NOT_EXECUTED",
+        "current_status": "PARTIALLY_VERIFIED: Python/JVM full suites and focused stable-file-reader suite passed (EVID-072/EVID-075); domain-specific residual recovery and external component evidence remain.",
         "future_task_ids": [
           "TASK-C-008",
           "TASK-C-009"
@@ -7674,7 +7723,7 @@
         "id": "VER-003",
         "category": "Integration tests",
         "applicability": "REQUIRED",
-        "current_status": "NOT_EXECUTED",
+        "current_status": "PARTIALLY_VERIFIED: exact-head API 35 Android connected suite and full source-tool suites passed (EVID-072/EVID-074); remaining producer/consumer and task-specific integration evidence is not fully dispositioned.",
         "future_task_ids": [
           "TASK-C-008",
           "TASK-C-009",
@@ -7686,7 +7735,7 @@
         "id": "VER-004",
         "category": "Full suite",
         "applicability": "REQUIRED_BEFORE_RELEASE; DEFERRED_NOW",
-        "current_status": "PROHIBITED / NOT EXECUTED",
+        "current_status": "PASSED at recorded full-suite scope: 1,387 Python and 1,297 JVM tests; debug/release lint/package; exact-head d1 host and API 35 connected workflow all succeeded (EVID-072/EVID-074). Physical @LargeTest suites remain intentionally unexecuted.",
         "future_task_ids": [
           "TASK-C-011"
         ],
@@ -7696,10 +7745,11 @@
         "id": "VER-005",
         "category": "Smoke and end-to-end workflow",
         "applicability": "REQUIRED_WITH_ADAPTATION; DEFERRED_NOW",
-        "current_status": "PROHIBITED / NOT EXECUTED",
+        "current_status": "PARTIALLY VERIFIED: exact-head API 35 connected Activity/lifecycle workflow passed (EVID-074); no candidate-bound OWL_DIVE screenshot, physical-device or human end-to-end acceptance is established.",
         "future_task_ids": [
           "TASK-C-010",
-          "TASK-C-011"
+          "TASK-C-011",
+          "TASK-C-013"
         ],
         "doc": "docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md"
       },
@@ -7707,7 +7757,7 @@
         "id": "VER-006",
         "category": "Regression tests",
         "applicability": "REQUIRED_FOR_EACH_AUTHORIZED_SOURCE_CORRECTION",
-        "current_status": "NOT_EXECUTED",
+        "current_status": "PASSED for the recorded source corrections: full Python/JVM regressions and exact-head host/connected checks passed (EVID-072/EVID-074); future authorized changes require fresh focused regression evidence.",
         "future_task_ids": [
           "TASK-C-009",
           "TASK-C-011"
@@ -7718,7 +7768,7 @@
         "id": "VER-007",
         "category": "Edge, negative, failure, recovery and adversarial tests",
         "applicability": "REQUIRED_WITH_ADAPTATION",
-        "current_status": "NOT_EXECUTED",
+        "current_status": "PARTIALLY VERIFIED: full Python/JVM and focused adversarial publication tests passed (EVID-072/EVID-075); physical/device recovery and every independent requirement-specific edge are not fully assessed.",
         "future_task_ids": [
           "TASK-C-007",
           "TASK-C-008",
@@ -7730,7 +7780,7 @@
         "id": "VER-008",
         "category": "Compatibility and configuration tests",
         "applicability": "REQUIRED_WITH_ADAPTATION",
-        "current_status": "NOT_EXECUTED",
+        "current_status": "PARTIALLY VERIFIED: debug/release packaging, lint and exact-head API 35 connected suite passed (EVID-072/EVID-074); other supported Android versions and physical-device/process recovery remain unverified.",
         "future_task_ids": [
           "TASK-C-010",
           "TASK-C-011"
@@ -7785,9 +7835,8 @@
         "id": "VER-013",
         "category": "Concurrency, synchronization and race/recovery correctness",
         "applicability": "REQUIRED_WITH_ADAPTATION",
-        "current_status": "NOT_EXECUTED; source contracts only; prohibited in current investigation scope.",
+        "current_status": "PASSED_AT_AUTHORED_SCOPE: 54 Python publication tests, 29 targeted JVM tests and exact-head API 35 connected lifecycle suite passed on d1 (EVID-075). Universal race freedom and other platforms remain unverified.",
         "future_task_ids": [
-          "TASK-C-012",
           "TASK-C-011"
         ],
         "doc": "docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md"

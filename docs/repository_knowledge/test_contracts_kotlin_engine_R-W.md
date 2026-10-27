@@ -5,7 +5,7 @@
 - Repository: `Forest_Run`; inspected revision `eeccc677107f69039dbf71053c18a9038d4b5ff6` plus the current dirty worktree, 2026-10-27.
 - Scope: the 61 files in `TASK-A-007` of `docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json`, all under `app/src/test/java/com/anurag9000/forestrun/engine/` and basenames R–W.
 - Each listed body was read in full. The range is the complete one-based source line range at inspection. Files were inventoried-only in the prior coverage ledger; this document records static source inspection of their assertions and fixtures.
-- These are asserted contracts in test source, not execution evidence. No test, build, app, emulator, benchmark, or other application workflow was run. No production source or shared ledger was edited.
+- These are test-source contract descriptions. No test or application workflow ran during this inventory batch. The later full 1,297-test JVM/Robolectric suite passed on the unchanged source/test payload at `df705c65c7f0a7ef03669a0c6767de5f381b418a` (EVID-072); per-file status is recorded in `test_contract_inventory.json`. This result is bounded to that environment and the assertions actually exercised. No production source was edited for this inventory batch.
 - Production links below name the primary symbols imported or invoked in each test; they do not imply that every corresponding implementation was re-inspected in this batch. See the codebase and symbol maps for fuller implementation descriptions.
 
 ## Per-file contracts

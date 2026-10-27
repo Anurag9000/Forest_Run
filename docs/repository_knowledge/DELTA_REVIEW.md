@@ -106,7 +106,7 @@ The principal delta theme is race/symlink/TOCTOU resistance, strict evidence int
 The original delta review was read-only; that restriction is historical. The user later authorized source completion and applicable verification. `TASK-A-035` closed the statically identified OWL_DIVE input-path gap, and EVID-072 records Python/JVM suite, lint, and APK assembly evidence on the isolated merged candidate. The original dirty worktree remains preserved.
 
 - Use `execution/NEXT_ACTIONS.md` and the master ledger for current work, rather than replaying this historical read-only queue.
-- `TASK-C-007`–`TASK-C-011` have partial suite/build evidence; connected/device-specific criteria remain open. `TASK-C-012` concurrency-specific validation and `TASK-C-013` candidate-bound OWL_DIVE screenshot proof remain deferred/blocked.
+- Follow-up EVID-074/EVID-075 supersedes the earlier verification status in this delta: exact d1 hosted API 35 connected tests and scoped C-012 Python/JVM concurrency checks passed. `TASK-C-007`–`TASK-C-011` retain requirement-level residual evidence; `TASK-C-013` candidate-bound OWL_DIVE screenshot proof remains deferred pending a physical/authorized device.
 - Keep external release tasks separately owned and candidate-bound. Source automation does not substitute for human, legal, physical, signing, policy or store evidence.
 - Reuse completed `TASK-C-005` static contract reconciliation and `TASK-A-026` source correction unless a source or requirement delta invalidates their evidence.
 

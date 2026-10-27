@@ -8,7 +8,7 @@
     "preexisting_dirty_paths": 166,
     "initial_visible_paths_reported": 961
   },
-  "current_inventory_count": 1004,
+  "current_inventory_count": 1005,
   "scope": "Union of tracked paths and visible workspace paths, excluding .git internals and ignored build/.gradle trees. Tracked release paths hidden by ignore rules are retained. New docs are included.",
   "coverage_semantics": "INVENTORIED means path/classification only; PARTIALLY_INSPECTED means bounded changed regions or prior map consultation; FULLY_STATICALLY_INSPECTED is reserved for complete small-file reading; generated exclusions have reasons. No inventory state implies runtime verification.",
   "records": [
@@ -24775,7 +24775,7 @@
       "coverage_status": "DOCUMENTED",
       "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
       "prior_evidence": "none; generated from read-only source inspections",
-      "inspection_detail": "Authoritative merged inventory contains 389 per-file source contracts covering all test-related source/support paths; all runtime_status values are NOT_EXECUTED.",
+      "inspection_detail": "Authoritative merged inventory contains 389 per-file source contracts across Python, JVM unit and Android test/support paths. Current runtime status is separately mapped per path to EVID-072/EVID-074/EVID-075; three @LargeTest classes remain unexecuted and two support sources are not test classes.",
       "symbols_or_consumers": [
         "TASK-A-004",
         "TASK-A-005",
@@ -32320,38 +32320,79 @@
       "worktree_content_sha256": "15c028de21f8a7a592df115a0bbbc7f54730907b97c73a7dac7e79c434d4a449",
       "worktree_content_bytes": 6466,
       "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR_AFTER_PUBLICATION_UPDATE"
+    },
+    {
+      "id": "FILE-8657CF1DFAFE",
+      "path": "docs/repository_knowledge/source_completion_reconciliation_2026-10-27.md",
+      "classification": "Source completion and verification reconciliation",
+      "worktree_status": "added_by_followup_reconciliation",
+      "coverage_status": "DOCUMENTED",
+      "source_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; exact-head CI completed 2026-10-27",
+      "inspection_detail": "Evidence-bounded re-audit of six independent product and repository scopes plus focused concurrency verification. Records current implementation disposition, reused evidence, exact-head hosted workflow result, local targeted results and remaining human/device/external evidence.",
+      "symbols_or_consumers": [],
+      "relationships": [
+        "FIND-017",
+        "EVID-074",
+        "TASK-C-007",
+        "TASK-C-008",
+        "TASK-C-009",
+        "TASK-C-010",
+        "TASK-C-011",
+        "TASK-C-013"
+      ],
+      "evidence_ref": "EVID-074",
+      "next_action": "Reuse this audit; reopen only for a changed candidate, contrary evidence, or completion of explicitly open external/device tasks.",
+      "related_goal_ids": [
+        "GOAL-001",
+        "GOAL-002",
+        "GOAL-003",
+        "GOAL-004",
+        "GOAL-005",
+        "GOAL-006"
+      ],
+      "related_capability_ids": [
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CAP-004",
+        "CAP-005",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
+        "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json",
+        "docs/repository_knowledge/execution/EVIDENCE_INDEX.json"
+      ],
+      "file_type": "md",
+      "language_or_format": "Markdown",
+      "worktree_content_sha256": "e0ef6a0bc037f514572d71855920de460402ba6ee5f69238a81fd4c055df0240",
+      "worktree_content_bytes": 15431,
+      "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR_AFTER_PUBLICATION_UPDATE"
     }
   ],
   "coverage_counts": {
     "EXCLUDED_WITH_REASON": 3,
     "FULLY_STATICALLY_INSPECTED": 950,
     "PARTIALLY_INSPECTED": 17,
-    "DOCUMENTED": 34
+    "DOCUMENTED": 35
   },
   "inspection_update": {
     "date": "2026-10-27",
-    "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree",
+    "revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; clean candidate matched origin/main",
     "completed_batches": [
-      "TASK-A-016",
-      "TASK-A-017",
-      "TASK-A-018",
-      "TASK-A-019",
-      "TASK-A-020",
-      "TASK-A-021",
-      "TASK-A-022",
-      "TASK-A-029",
-      "TASK-A-028"
+      "source-completion re-audit: gameplay/scenarios/persistence/accessibility-audio/assets/docs-release; EVID-074",
+      "focused concurrency verification and per-file execution status reconciliation; EVID-075"
     ],
     "coverage_counts": {
       "EXCLUDED_WITH_REASON": 3,
       "FULLY_STATICALLY_INSPECTED": 950,
       "PARTIALLY_INSPECTED": 17,
-      "DOCUMENTED": 31
+      "DOCUMENTED": 35
     },
-    "note": "Refreshed hashes and statuses for the OWL_DIVE implementation and three source-contract files; added one verification report record. Inventory counts now include the report. The source snapshot is the merged origin/main candidate plus reviewed worktree delta.",
-    "inventory_count": 1001,
+    "note": "Added one source-completion reconciliation record after six bounded parallel workstreams and exact-head CI completion. Reconciled all 389 test-contract rows to full Python/JVM or API 35 results, explicit @LargeTest exclusions, or support-source N/A. Prior dirty checkout and its hashed source snapshot remain preserved; no source gap was found.",
+    "inventory_count": 1005,
     "in_progress_batches": [],
-    "evidence_id": "EVID-072"
+    "evidence_id": "EVID-074"
   },
   "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9",
   "working_tree_hash_policy": {

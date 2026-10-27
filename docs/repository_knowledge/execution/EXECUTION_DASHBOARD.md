@@ -4,18 +4,22 @@
 
 **Published source commit:** `df705c65c7f0a7ef03669a0c6767de5f381b418a` is verified on `origin/main`; two push-triggered workflow checks passed and Android validation remained in progress at the EVID-073 snapshot.
 
+**Latest source audit:** clean candidate `d1f31d473f5ca9303706164b6cc817703e0e7c7c` was re-audited across gameplay, scenarios, persistence, accessibility/audio/haptics, assets, release documentation and CI wiring. No new source-addressable gap was established; see `source_completion_reconciliation_2026-10-27.md` / EVID-074. Exact-head Android run `40468712221` completed successfully: host/release/lint/package and API 35 connected validation both passed. This is hosted emulator evidence, not physical-device or human acceptance.
+
 **Current phase:** Evidence-backed source completion and authorized verification. The named OWL_DIVE store capture now receives a scheduled jump; visible screenshot state remains blocked pending a device.
 
 ## Project state
 
 - Goals: 15; requirements: 19; capabilities: 16.
 - Algorithm/method families: 4; principal execution paths: 3.
-- Inventory: 1,004 records (950 fully statically inspected, 17 partially inspected, 34 documented, 3 excluded); 6,137 declaration records across 256 production paths.
-- Findings: 16; established gaps: 7 (the OWL_DIVE source gap is resolved, while screenshot appearance remains pending).
-- Tasks: 58 total; 36 completed, 5 partially completed, 12 deferred, 5 canceled/superseded.
+- Inventory: 1,005 records (950 fully statically inspected, 17 partially inspected, 35 documented, 3 excluded); 6,137 declaration records across 256 production paths.
+- Findings: 17; established gaps: 7 (the OWL_DIVE source gap is resolved, while screenshot appearance remains pending).
+- Tasks: 58 total; 37 completed, 5 partially completed, 11 deferred, 5 canceled/superseded.
 - Python suite: 1,387 passed. JVM/Robolectric suite: 1,297 passed, 0 failures/errors/skips. Debug/release lint and APK assembly passed on the merged candidate; see `verification_delta_2026-10-27.md` / `EVID-072`.
-- Connected instrumentation and `OWL_DIVE` image-state verification are blocked because `adb` is unavailable. Physical-device, human, security/privacy/licensing, signing, Play delivery, and accountable release gates remain external or unverified.
-- No training/inference applies to this Android game. No hosted workflow, screenshot capture, store upload, or external approval was performed.
+- Focused C-012 checks on exact d1: 54 Python stable-file-reader tests and 29 targeted JVM audio/thread tests passed with 0 failures/errors/skips; hosted API 35 connected lifecycle tests passed (`EVID-075`).
+- Hosted API 35 connected instrumentation passed on exact d1 (EVID-074). Local `adb` and a physical device are unavailable, so `OWL_DIVE` image-state and physical-device acceptance remain open. Human, security/privacy/licensing, signing, Play delivery, and accountable release gates remain external or unverified.
+- No training/inference applies to this Android game. The exact-head hosted Android workflow is recorded above; no screenshot capture, store upload, or external approval was performed.
+- The current bounded source audits did not run tests or application workflows. Their conclusions are static; the exact-head hosted connected job and all device/human/external gates remain separate.
 
 ## Next actions
 

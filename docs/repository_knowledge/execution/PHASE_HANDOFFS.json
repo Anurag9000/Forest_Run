@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "current_phase": "Authorized source completion and verification reconciliation",
-  "current_phase_status": "TASK-A-035 completed the OWL_DIVE capture input path. EVID-072 records 1,387 passing Python tests, 1,297 passing JVM tests, passing debug/release lint and APK assembly on the merged candidate. TASK-C-007–C-011 remain partially completed; TASK-C-013 is blocked pending adb/device screenshot verification. The original dirty checkout remains untouched.",
+  "current_phase_status": "Authorized source completion and verification reconciliation: no new source gap found in bounded re-audit (EVID-074); full local suites/build and exact-head hosted Android host/API 35 connected jobs passed; TASK-C-012 focused concurrency checks passed (EVID-075). TASK-C-007–C-011 remain partial on requirement-level residuals; TASK-C-013 and physical/human/external acceptance remain open.",
   "phases": [
     {
       "id": "A",
@@ -14,11 +14,11 @@
         "TASK-A-034",
         "TASK-A-035"
       ],
-      "status": "Prior source delta review reused; TASK-A-035 closes one newly established OWL_DIVE screenshot input gap and is complete at source/test level.",
+      "status": "Prior source delta review reused; TASK-A-035 closes the OWL_DIVE capture input gap. Fresh bounded source review found no additional required source change (EVID-074).",
       "entry_conditions": [
         "Preserve dirty-tree ownership and baseline evidence",
         "Reuse prior maps and inspect only changed or specifically unresolved evidence",
-        "Source implementation only for an established gap and explicit authorization; no tests or workflows in this assignment"
+        "Source edits only for evidence-backed gaps; applicable testing was authorized and completed at the recorded scope."
       ],
       "exit_conditions": [
         "Requirement-backed source correction is documented and integrated",
@@ -62,11 +62,11 @@
         "TASK-C-012",
         "TASK-C-013"
       ],
-      "status": "TASK-C-007–C-011 partially completed by EVID-072; connected/device verification remains blocked by unavailable adb. TASK-C-012 concurrency-specific validation and TASK-C-013 OWL_DIVE screenshot-state evidence remain deferred.",
+      "status": "TASK-C-012 focused Python/JVM and exact-head API 35 connected lifecycle checks completed (EVID-075); full local suites/build and exact-head hosted host/connected validation passed (EVID-072/EVID-074). TASK-C-007–C-010 retain requirement-specific residual acceptance work; TASK-C-011 waits on those; TASK-C-013 device screenshot proof remains deferred.",
       "entry_conditions": [
         "Preserve exact candidate/base and the original dirty checkout",
-        "Use current test/build evidence from EVID-072; do not repeat passing suites without a source delta",
-        "Run connected/device checks only when adb and an authorized device are available"
+        "Reuse EVID-072/EVID-074/EVID-075; do not repeat passing suites without a source delta",
+        "Use hosted API 35 CI evidence when applicable; physical-device checks require adb and an authorized attached device"
       ],
       "exit_conditions": [
         "Remaining focused verification criteria have evidence",
@@ -116,8 +116,8 @@
   ],
   "handoff": {
     "project": "Forest Run is a native Kotlin Android landscape endless runner using SurfaceView/Canvas with persistent world state plus candidate-bound evidence/release tooling.",
-    "what_exists": "The master map, structured goal/capability/task/evidence ledgers, 1001-path inventory, 389 source-only test contracts, 58-image visual inventory, and 29-sprite frame/caller trace are present. No application behavior was executed. A merged candidate based on origin/main plus the reviewed delta passes the full Python/JVM suites, lint and debug/release APK assembly (EVID-072); OWL_DIVE now schedules a TAP_JUMP before capture.",
-    "what_remains": "TASK-A-003 found no accessible explicit activation requirement for the dormant multiplier; inaccessible conversation history remains uncertain. Nineteen inventory records remain partial (two maps reused at bounded depth and 17 binaries metadata-only). Runtime behavior, performance, external release acceptance and asset/rights decisions remain unverified or externally owned. No test tasks are queued under the current prompt. TASK-C-013 requires a candidate-bound OWL_DIVE screenshot; adb is unavailable. TASK-C-007–C-011 have suite-level partial evidence (EVID-072), and TASK-C-012 concurrency verification remains deferred.",
+    "what_exists": "The master map and structured goal/capability/task/evidence ledgers are current through EVID-075; the 1,005-path inventory records 950 fully statically inspected, 17 partial, 35 documented and 3 excluded; 6,137 declarations span 256 production paths; 389 source test contracts are inventoried. The source payload at df705 passed 1,387 Python and 1,297 JVM tests plus lint/APK assembly; exact d1 hosted host and API 35 connected jobs passed; focused concurrency checks passed (EVID-072–EVID-075). No new source gap was found by the bounded d1 audit.",
+    "what_remains": "TASK-C-007–C-010 have requirement-specific residual acceptance criteria; TASK-C-011 awaits these. TASK-C-013 needs a candidate-bound OWL_DIVE screenshot on an authorized device. Physical device diversity/performance, TalkBack/Switch Access and human gameplay/readability acceptance, final art/audio/haptic review, asset provenance/licensing, signing, privacy/security/policy, Play delivery and accountable release approval remain open. No ML/training goal applies. Binary rendering/listening and wider platform/race generalization remain unknown.",
     "do_not_repeat": "Reuse docs/REPO_CODEBASE_MAP.md, docs/REPO_MEMORY_MAP.md, docs/AUDIT_LEDGER.md and dated audits at their recorded snapshot. Refresh only changed/affected files and evidence; no ML training goal is applicable.",
     "coordination": "One owner updates MASTER_EXECUTION_LEDGER.json and its history. Assign bounded future tasks with disjoint paths; coordinate stable_file_reader.py consumers and candidate/evidence directories. Keep source implementation, integration, runtime verification and external acceptance separate. Report exact revision, files read, evidence and limitations.",
     "resume": "Check current HEAD/worktree and compare relevant hashes with file_inventory.json snapshot WT-D17D3FBCF2CB3B267FE9. Read MASTER_EXECUTION_LEDGER task records; reuse A-023 through A-026 handoffs and evidence. The lead alone updates shared ledgers. Do not run tests/scripts/builds/workflows under the present task constraint.",

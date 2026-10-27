@@ -33,6 +33,12 @@ Static scenario review found that the Play capture manifest maps `07-owl.png` to
 
 The full Python and JVM suites, lint, and APK assembly provide fresh evidence for source-level regression coverage. They do not prove every acceptance gate complete. `TASK-C-007` through `TASK-C-011` are recorded as partially completed at this evidence level; `TASK-C-012` remains deferred because no deterministic concurrency-specific run was separately performed. `TASK-C-013` tracks visible OWL_DIVE capture verification and is blocked by unavailable `adb`/device access. Phase D external release gates remain open. `TASK-E-001` remains deferred pending connected/device evidence and accountable external release evidence.
 
+## Follow-up authorization and verification addendum — 2026-10-27
+
+The user subsequently authorized source completion and applicable verification. The bounded six-scope source re-audit and exact-head status are recorded in `source_completion_reconciliation_2026-10-27.md` / EVID-074. Android hosted run `40468712221` completed successfully on exact `d1f31d473f5ca9303706164b6cc817703e0e7c7c`: host/release/lint/package and API 35 connected validation passed. The source/test payload at d1 is byte-identical to the tested `df705c65c7f0a7ef03669a0c6767de5f381b418a`; only documentation paths differ.
+
+`TASK-C-012` was then executed on the clean d1 candidate (EVID-075): `python3 -m unittest discover -s scripts -p 'test_stable_file_reader.py'` passed 54 tests; focused `SfxManagerTest`, `LeitmotifManagerTest`, `GameThreadFailureTest`, `GameThreadPerformanceTest`, and `GameThreadShutdownTest` passed 29 tests with zero failures/errors/skips; the API 35 connected suite included lifecycle instrumentation and excluded only `@LargeTest` physical-performance evidence. C-012 is now completed at the authored scope. C-007–C-011 retain task-specific residual acceptance evidence; C-013 and physical/human/external release gates remain open. The earlier status above is preserved as the snapshot at its original observation time and is superseded by this addendum and EVID-074/EVID-075.
+
 
 ## Publication and hosted CI status
 
