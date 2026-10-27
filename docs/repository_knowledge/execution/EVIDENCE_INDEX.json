@@ -1531,6 +1531,55 @@
       ],
       "result": "Both hosted jobs passed on commit 946130c19878f99f1c9ee21506fb89e1ab940525.",
       "limitations": "Does not include or validate the uncommitted working-tree overlay."
+    },
+    {
+      "id": "EVID-108",
+      "type": "exact-SHA hosted Android host/release/lint/package validation",
+      "path": "https://github.com/Anurag9000/Forest_Run/actions/runs/40602123824/job/122532575053; artifact android-validation-8c335aef232ee8f164847631a74d1abb7409dd86 (artifact id 12778759135)",
+      "revision": "8c335aef232ee8f164847631a74d1abb7409dd86",
+      "date": "2026-10-28",
+      "supports": [
+        "TASK-C-014"
+      ],
+      "observation": "The hosted host validation job checked out the exact candidate and all steps completed successfully: source contracts, Python tooling tests, source immutability, Android SDK/Gradle validation, dependency evidence, compilation, JVM tests, lint, APK/AAB packaging, native page-size alignment, R8, and final source immutability.",
+      "commands": [
+        "GitHub Actions run 40602123824, host job 122532575053; read-only run/job/artifact metadata inspection"
+      ],
+      "result": "Job conclusion success for exact candidate SHA 8c335aef232ee8f164847631a74d1abb7409dd86. The uploaded artifact is present (17,810,799 bytes).",
+      "limitations": "Anonymous artifact download returned HTTP 401, so the uploaded detailed logs were not independently extracted in this session. Run/job metadata and successful step conclusions are directly observable."
+    },
+    {
+      "id": "EVID-109",
+      "type": "exact-SHA hosted API 35 connected validation",
+      "path": "https://github.com/Anurag9000/Forest_Run/actions/runs/40602123824/job/122534456541; artifact connected-validation-8c335aef232ee8f164847631a74d1abb7409dd86 (artifact id 12779308471)",
+      "revision": "8c335aef232ee8f164847631a74d1abb7409dd86",
+      "date": "2026-10-28",
+      "supports": [
+        "TASK-C-014"
+      ],
+      "observation": "The API 35 connected job checked out the exact candidate, installed the API 35 emulator package, and completed the full connected-validation step successfully. The repository runner includes ordinary connected instrumentation and its separately verified process-death prepare/force-stop/no-PID/restore sequence; the success conclusion covers the script exit.",
+      "commands": [
+        "GitHub Actions run 40602123824, API 35 connected job 122534456541; read-only run/job/artifact metadata inspection"
+      ],
+      "result": "Job conclusion success for exact candidate SHA 8c335aef232ee8f164847631a74d1abb7409dd86. Connected artifact is present (713,891 bytes).",
+      "limitations": "Anonymous artifact download returned HTTP 401, so detailed JUnit counts and process-stage transcript could not be extracted in this session. The job and step conclusions are directly observable. This is emulator evidence, not physical-device or human acceptance."
+    },
+    {
+      "id": "EVID-110",
+      "type": "exact-SHA no-trainable-surface and certificate workflow results",
+      "path": "https://github.com/Anurag9000/Forest_Run/actions/runs/40602123869/job/122532575528; https://github.com/Anurag9000/Forest_Run/actions/runs/40602123856/job/122532575203",
+      "revision": "8c335aef232ee8f164847631a74d1abb7409dd86",
+      "date": "2026-10-28",
+      "supports": [
+        "TASK-C-014",
+        "GOAL-007"
+      ],
+      "observation": "The no-trainable-surface applicability audit and estate local training-control certificate workflows both completed successfully on the exact candidate SHA.",
+      "commands": [
+        "GitHub Actions run metadata and job status inspection for runs 40602123869 and 40602123856"
+      ],
+      "result": "Both exact-SHA workflow runs completed with success.",
+      "limitations": "These establish the repository-specific N/A guard and certificate workflows only; they do not imply any ML/training feature or game runtime acceptance."
     }
   ]
 }

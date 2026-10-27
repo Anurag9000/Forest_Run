@@ -1386,10 +1386,12 @@
         "id": "FIND-020",
         "kind": "current asset/importer/runtime contract correction",
         "statement": "The authored Wolf atlas is a 4x2 sheet of eight poses. Importer output, packaged asset name wolf_8frames.png, AssetPaths, SpriteManager frame count and package contents now select eight 160x156 crops; the prior four-frame current-source conclusion is superseded.",
-        "status": "SOURCE_DELTA_IMPLEMENTED_AND_STATICALLY_RECONCILED; candidate integration verification pending TASK-C-014",
+        "status": "SOURCE_DELTA_IMPLEMENTED_AND_EXACT_CANDIDATE_VERIFIED",
         "evidence_ids": [
           "EVID-103",
-          "EVID-105"
+          "EVID-105",
+          "EVID-108",
+          "EVID-109"
         ],
         "related_task_ids": [
           "TASK-C-014"
@@ -1397,7 +1399,7 @@
         "supersedes": [
           "FIND-012"
         ],
-        "limitations": "Host package evidence includes the corrected asset. Candidate-bound API35 connected verification and human visual/creative/provenance review are still pending."
+        "limitations": "Exact candidate host and API35 connected workflows pass. Human visual/creative/provenance review remains separate."
       }
     ],
     "gaps": [
@@ -1502,12 +1504,14 @@
         "resolution_task_ids": [
           "TASK-C-014"
         ],
-        "disposition": "SOURCE MAPPING AND DOCUMENTATION CORRECTED in the uncommitted 2026-10-28 overlay; static review and host package evidence agree. Final exact-candidate verification remains under TASK-C-014.",
+        "disposition": "SOURCE MAPPING AND DOCUMENTATION CORRECTED; exact candidate 8c335aef passed host/package and API35 connected verification.",
         "evidence_ids": [
           "EVID-103",
-          "EVID-105"
+          "EVID-105",
+          "EVID-108",
+          "EVID-109"
         ],
-        "status": "PARTIALLY_RESOLVED_PENDING_EXACT_CANDIDATE_VERIFICATION"
+        "status": "RESOLVED_SOURCE_AND_AUTOMATED_VERIFICATION; HUMAN_CREATIVE_REVIEW_SEPARATE"
       }
     ],
     "tasks": [
@@ -7542,7 +7546,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after source delta is frozen",
         "objective": "Validate the merged main baseline plus the preserved 2026-10-28 source delta as one exact candidate, including host Python/JVM/lint/package and ordinary API35 connected checks; keep all outcomes revision-bound.",
         "motivation": "The prior C-011 evidence covers b9a79b23 and its bounded source delta. The current baseline advanced to 946130c and includes a distinct Wolf asset/frame correction, GameView lifecycle/input changes, release-doc contracts, and Python compatibility changes.",
-        "current_state": "The 2026-10-28 overlay is statically reviewed (EVID-103), full scripts tests passed 1,395 (EVID-104), JVM/Robolectric passed 1,303 with no failures/errors/skips and host compile/lint/package outputs exist (EVID-105). Local connected attempts terminated with exit 143 before connected assertions and produced no JUnit XML (EVID-106). The overlay is not committed or frozen as a candidate.",
+        "current_state": "The source overlay was committed and pushed as exact main/origin/main candidate 8c335aef232ee8f164847631a74d1abb7409dd86. Exact-SHA hosted host/release/lint/package, API 35 connected validation, no-trainable-surface audit, and certificate workflows all completed successfully (EVID-108–EVID-110).",
         "required_final_state": "An exact candidate containing the reviewed source delta passes the applicable full host/release gates and ordinary API35 connected suite, with exact commit identity and source immutability recorded. Any failure remains visible and is corrected before completion.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
@@ -7599,31 +7603,36 @@
         "execution_constraints": "Source completion, testing, direct-to-main commits and push are authorized by the user prompt. Preserve history, avoid feature branches/PRs/force-push, and keep release/human/device claims separate.",
         "complexity": "medium",
         "priority": "P1 - exact source delta verification unlocks candidate-level closure",
-        "execution_status": "PARTIALLY_COMPLETED",
+        "execution_status": "COMPLETED",
         "owner": null,
-        "blockers": [
-          "Local SwiftShader AVD and connected Gradle processes terminated with exit 143 before producing test results; use a stable exact-candidate API35 workflow for final connected verification."
-        ],
+        "blockers": [],
         "evidence_ids": [
           "EVID-103",
           "EVID-104",
           "EVID-105",
           "EVID-106",
-          "EVID-107"
+          "EVID-107",
+          "EVID-108",
+          "EVID-109",
+          "EVID-110"
         ],
-        "uncertainty": "Host outcomes are confirmed on a checksum-matched working-tree copy. Runtime connected behavior is unverified for this overlay; remote hosted evidence currently applies only to baseline commit 946130c19878f99f1c9ee21506fb89e1ab940525.",
-        "remaining_work": "Freeze the intended change set on main and obtain exact-SHA API35 connected evidence; then reconcile resulting CI and source delta.",
-        "completion_evidence": [],
+        "uncertainty": "Exact candidate host and API 35 connected workflow job conclusions are directly confirmed. Detailed connected JUnit counts and transcript are present only in uploaded artifacts that could not be downloaded anonymously (HTTP 401); no count is inferred. Physical/device/human acceptance is not established by emulator CI.",
+        "remaining_work": "None within this exact-source-delta verification task. Candidate-bound Owl screenshot/visual inspection and physical/human/external release gates remain separately tracked.",
+        "completion_evidence": [
+          "EVID-108: exact-SHA host/release/lint/package job 122532575053 passed, including full Python tooling tests, Kotlin/JVM tests, compilation, lint, APK/AAB packaging, native alignment, R8, and source immutability.",
+          "EVID-109: exact-SHA API 35 connected job 122534456541 passed; connected-validation artifact uploaded. Detailed test counts were not independently retrieved because unauthenticated artifact download returned HTTP 401.",
+          "EVID-110: exact-SHA no-trainable-surface audit and certificate workflow runs 40602123869/40602123856 both passed."
+        ],
         "related_prior_work": [
           "TASK-C-011",
           "TASK-A-036",
           "2026-10-27 exact-main and process-death evidence EVID-101/EVID-102"
         ],
-        "last_reconciled_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + preserved working-tree overlay (2026-10-28)",
-        "next_action": "Complete current ledger/documentation reconciliation, then commit the reviewed source batch and obtain exact-candidate hosted API35 verification.",
+        "last_reconciled_revision": "8c335aef232ee8f164847631a74d1abb7409dd86",
+        "next_action": "No task-local action. Continue with TASK-C-013 when an authorized Android capture device is available; retain physical, human, provenance, governance, signing and Play gates under their existing tasks.",
         "investigation_coverage": "DOCUMENTED",
-        "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
-        "evidence_status": "INSUFFICIENT / CONTRADICTORY EVIDENCE"
+        "implementation_or_investigation_status": "VERIFIED",
+        "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
       }
     ],
     "applicability_matrix": [
@@ -8215,18 +8224,20 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "946130c19878f99f1c9ee21506fb89e1ab940525",
-    "working_tree_delta": "preserved uncommitted overlay; not a frozen candidate",
+    "base_revision": "8c335aef232ee8f164847631a74d1abb7409dd86",
+    "working_tree_delta": "committed and pushed to canonical main; tracked worktree clean; unrelated untracked state preserved and excluded",
     "evidence_ids": [
-      "EVID-107"
+      "EVID-108",
+      "EVID-109",
+      "EVID-110"
     ],
-    "status": "Hosted workflow 40495156970 passed only on clean baseline 946130c. The current overlay has host evidence EVID-104/EVID-105, but local connected execution terminated before assertions (EVID-106); exact-candidate verification is outstanding under TASK-C-014."
+    "status": "Exact-SHA run 40602123824 passed host/release/lint/package and API 35 connected jobs; no-trainable-surface run 40602123869 and certificate run 40602123856 also passed. This closes TASK-C-014 for the source delta. External/device/human release acceptance remains separately open."
   },
   "current_repository_state": {
     "branch": "main",
-    "commit": "946130c19878f99f1c9ee21506fb89e1ab940525",
-    "origin_main_commit": "946130c19878f99f1c9ee21506fb89e1ab940525",
-    "working_tree": "preserved user/source overlay plus generated artifacts; not clean or frozen",
+    "verified_source_candidate_sha": "8c335aef232ee8f164847631a74d1abb7409dd86",
+    "candidate_remote_confirmation": "origin/main matched the candidate when it was pushed and the exact-SHA workflow was dispatched",
+    "working_tree": "source candidate is committed and verified; this ledger records exact candidate evidence; unrelated untracked user/generated state remains preserved",
     "current_delta_task": "TASK-C-014",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
     "evidence_ids": [
@@ -8234,7 +8245,10 @@
       "EVID-104",
       "EVID-105",
       "EVID-106",
-      "EVID-107"
+      "EVID-107",
+      "EVID-108",
+      "EVID-109",
+      "EVID-110"
     ]
   },
   "previous_verified_candidate": {

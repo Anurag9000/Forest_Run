@@ -1,15 +1,15 @@
 {
   "schema_version": "1.0.0",
   "repository": "Forest_Run",
-  "source_revision": "Historical verification candidate b9a79b23 plus separate uncommitted overlay on origin/main 946130c19878f99f1c9ee21506fb89e1ab940525; do not conflate revisions",
+  "source_revision": "Historical verification candidate b9a79b23 plus exact source candidate 8c335aef232ee8f164847631a74d1abb7409dd86; historical and candidate evidence remain revision-scoped",
   "snapshot_date": "2026-10-28",
   "authority": "This matrix maps current repository requirements and applicable universal mechanisms; MASTER_EXECUTION_LEDGER.json remains source of project goal/task state.",
   "current_scope_constraints": [
-    "The user authorized source completion and repository verification. Connected emulator evidence is candidate-bound; physical-device and external release acceptance remain resource/owner dependent.",
-    "Python/JVM test contracts describe source assertions. Execution outcomes are revision-bound in EVID-072, EVID-074–EVID-079, EVID-101/EVID-102, and current overlay EVID-103–EVID-107.",
+    "The user authorized source completion and repository verification. Exact candidate 8c335aef passed hosted host/release/lint/package and API35 connected jobs (EVID-108/EVID-109). Physical-device and external release acceptance remain resource/owner dependent.",
+    "Python/JVM test contracts describe source assertions. Execution outcomes are revision-bound in EVID-072, EVID-074–EVID-079, EVID-101/EVID-102, and exact candidate EVID-103–EVID-110.",
     "The exact b9a79b23 hosted API35 process-death workflow passed (EVID-101); targeted integration reconciliation completed TASK-C-011 (EVID-102). Earlier runner failures EVID-090–EVID-100 are historical and superseded for that hosted runner scope.",
-    "Current main/origin is 946130c19878f99f1c9ee21506fb89e1ab940525 with a preserved uncommitted source overlay. Overlay Python/JVM/lint/package evidence is in EVID-104/EVID-105; local connected attempts terminated before assertions (EVID-106), and hosted run 40495156970 validates only the clean 946130c baseline (EVID-107). TASK-C-014 tracks exact-candidate verification.",
-    "Physical-device, human/creative, rights and external release acceptance remain separate. The original dirty-worktree artifacts are preserved."
+    "Current main/origin is exact candidate 8c335aef232ee8f164847631a74d1abb7409dd86. Exact-SHA hosted host/API35 connected workflow 40602123824 and training applicability/certificate workflows 40602123869/40602123856 passed. Candidate-delta verification TASK-C-014 is complete.",
+    "Physical-device, human/creative, rights and external release acceptance remain separate. Historical untracked artifacts remain preserved; they are not part of the pushed candidate."
   ],
   "requirement_rows": [
     {
@@ -32,7 +32,7 @@
         "docs/ARCHITECTURE.md"
       ],
       "current_execution_status": "PASSED_AUTOMATED_API35_SCOPE (EVID-076/EVID-078); human/device acceptance separate",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-002",
@@ -59,7 +59,7 @@
         "docs/DETERMINISTIC_SCENARIO_EVIDENCE.md"
       ],
       "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-003",
@@ -82,7 +82,7 @@
         "app/src/main/java/com/anurag9000/forestrun/ForestJournalActivity.kt:59-83"
       ],
       "current_execution_status": "TASK-C-008 complete at hosted API35 scope (EVID-101); no generalization beyond tested emulator.",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-004",
@@ -107,7 +107,7 @@
         "docs/GHOST_PERSISTENCE_RECOVERY.md"
       ],
       "current_execution_status": "PARTIAL; process-kill/restore durability remains (EVID-076/EVID-078)",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-005",
@@ -131,7 +131,7 @@
         "app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt"
       ],
       "current_execution_status": "PASSED_AUTOMATED_API35_SCOPE (EVID-076/EVID-078); human/device acceptance separate",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-006",
@@ -156,7 +156,7 @@
         "scripts/strict_json.py"
       ],
       "current_execution_status": "PASSED_AT_AUTHORED_SCOPE (EVID-076); platform limits retained",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-007",
@@ -180,7 +180,7 @@
         "docs/RELEASE_READINESS.md"
       ],
       "current_execution_status": "NOT_EXECUTED",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Repository-controlled preparation and validation are authorized. Physical/human/legal/privacy/store/signing decisions require genuine candidate-bound evidence from accountable external owners; do not fabricate acceptance."
     },
     {
       "id": "APL-008",
@@ -204,7 +204,7 @@
         "docs/CREATIVE_ASSET_PROVENANCE.md"
       ],
       "current_execution_status": "NOT_EXECUTED",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Repository-controlled preparation and validation are authorized. Physical/human/legal/privacy/store/signing decisions require genuine candidate-bound evidence from accountable external owners; do not fabricate acceptance."
     },
     {
       "id": "APL-009",
@@ -229,7 +229,7 @@
         "PRIVACY.md"
       ],
       "current_execution_status": "NOT_EXECUTED",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Repository-controlled preparation and validation are authorized. Physical/human/legal/privacy/store/signing decisions require genuine candidate-bound evidence from accountable external owners; do not fabricate acceptance."
     },
     {
       "id": "APL-010",
@@ -250,7 +250,7 @@
         "scripts/audit_no_trainable_surface.py"
       ],
       "current_execution_status": "NOT_EXECUTED",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "No ML/training work is applicable. Preserve the fail-closed no-trainable-surface guard; do not create synthetic training functionality."
     },
     {
       "id": "APL-011",
@@ -272,7 +272,7 @@
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:48-58"
       ],
       "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-012",
@@ -294,7 +294,7 @@
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:60-62"
       ],
       "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-013",
@@ -316,7 +316,7 @@
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:64-76"
       ],
       "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-014",
@@ -338,7 +338,7 @@
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:78-92"
       ],
       "current_execution_status": "PARTIAL; process-kill/restore durability remains (EVID-076/EVID-078)",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-015",
@@ -359,7 +359,7 @@
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:94-107"
       ],
       "current_execution_status": "PASSED_AT_AUTHORED_UNIT_PROPERTY_SCOPE (EVID-076/EVID-079); human/device acceptance separate",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-016",
@@ -380,7 +380,7 @@
         "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:109-122"
       ],
       "current_execution_status": "PARTIAL; process-kill/restore durability remains (EVID-076/EVID-078)",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-017",
@@ -397,7 +397,7 @@
         "docs/audits/2026-08-06_documentation_reconciliation_audit.md:364-366"
       ],
       "current_execution_status": "NOT_EXECUTED",
-      "execution_constraint": "No tests/builds/application workflows in this phase."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-018",
@@ -428,7 +428,7 @@
         "EVID-107"
       ],
       "current_execution_status": "TASK-C-011 complete for its b9 candidate regression/integration scope (EVID-101/EVID-102). New overlay host gates pass; exact-candidate connected verification remains partial under TASK-C-014. External acceptance remains separate.",
-      "execution_constraint": "No device or external acceptance claim without candidate-bound evidence."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     },
     {
       "id": "APL-019",
@@ -450,7 +450,7 @@
         "EVID-068"
       ],
       "current_execution_status": "DOCUMENTED",
-      "execution_constraint": "Static documentation and consistency checks remain distinct from application verification."
+      "execution_constraint": "Source changes, tests, builds, and applicable repository-controlled verification are authorized by the current source-completion instruction. Keep physical, human, legal, store, and production-release claims separate."
     }
   ],
   "universal_mechanism_rows": [
@@ -626,12 +626,14 @@
     {
       "id": "APL-M-014",
       "name": "Commit, publish, deploy or contact external services",
-      "disposition": "EXPLICITLY_EXCLUDED",
-      "reason": "The embedded investigation scope prohibits commit/push/deploy/publish or external actions. An outer generic prompt\"s publication instruction does not override the task-specific read-only restriction; no commit will be made.",
+      "disposition": "USER_AUTHORIZED_WITH_REVIEW",
+      "reason": "The user explicitly authorized source changes, ordinary commits directly to main, and push after review and verification; no force-push, branch, pull request, deployment, store publication, or unapproved external approval is authorized.",
       "evidence": [
-        "pasted-text-1.txt, Parallel Evidence-Based Repository Knowledge Reconstruction, Scope and authority"
+        "User-provided Forest Run source-completion prompt, development policy and commit policy",
+        "EVID-108",
+        "EVID-109"
       ],
-      "verification": "Not applicable in current phase; only user can separately authorize."
+      "verification": "Candidate 8c335aef232ee8f164847631a74d1abb7409dd86 was pushed to origin/main; exact-SHA host/release/lint/package and API35 connected checks passed. Further external release actions remain gated by their respective evidence/owners."
     }
   ],
   "verification_suite_rows": [
