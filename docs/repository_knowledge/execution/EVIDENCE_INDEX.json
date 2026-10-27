@@ -1317,6 +1317,36 @@
       ],
       "result": "Focused host suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors in 18.387 seconds. Focused suite includes bash -n.",
       "limitations": "Host-only static/contract evidence. The exact numeric-user lookup and instrumentation have not yet run on hosted API35; process-death durability remains unknown."
+    },
+    {
+      "id": "EVID-095",
+      "type": "authenticated exact-candidate API35 log identifies malformed direct instrumentation extra arguments",
+      "path": "GitHub Actions run 40486741810, API 35 job 122132268230",
+      "revision": "eb326dd0a2c0535c7773a78f07e1487f23426475",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-A-036",
+        "TASK-C-008",
+        "TASK-C-011",
+        "FIND-018",
+        "GAP-008"
+      ],
+      "observation": "Host/release/lint/package job succeeded. API35 ordinary connectedDebugAndroidTest passed 28 tests with zero failures/ignored. The process-death command no longer failed on user ID; it reported `No instrumentation found for: forestRunProcessDeathStage=prepare`, and cleanup reported the corresponding cleanup selector. The test body, force-stop and restoration were not reached. The invocation supplied `-e class=<value>` and `-e forestRunProcessDeathStage=<value>` as single arguments even though am requires distinct name and value arguments.",
+      "limitations": "This confirms the numeric user lookup progressed beyond the previous failure but does not execute any process-death test. Hosted API35 emulator only."
+    },
+    {
+      "id": "EVID-096",
+      "type": "local runner argument-pair regression and full host tooling suite",
+      "path": "scripts/run_connected_validation.sh; scripts/test_connected_validation_runner.py",
+      "revision": "eb326dd0a2c0535c7773a78f07e1487f23426475 plus local -e name/value correction",
+      "date": "2026-10-27",
+      "commands": [
+        "bash -n scripts/run_connected_validation.sh",
+        "PYTHONPATH=scripts python3 -m unittest test_connected_validation_runner",
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "Focused host suite: 13 tests passed. Full scripts suite: 1,388 tests passed, 0 failures/errors in 18.276 seconds. Focused suite includes bash -n.",
+      "limitations": "Host-only regression evidence. The corrected direct instrumentation command has not run on API35; process-death persistence is unverified."
     }
   ]
 }

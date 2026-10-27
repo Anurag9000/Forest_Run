@@ -130,6 +130,9 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
         self.assertIn('shell am get-current-user', self.script)
         self.assertIn('[[ ! "${android_user_id}" =~ ^[0-9]+$ ]]', self.script)
         self.assertIn('shell am instrument --user "${android_user_id}" -w -r', self.script)
+        self.assertIn('-e class "${PROCESS_TEST_CLASS}"', self.script)
+        self.assertIn('-e forestRunProcessDeathStage "${stage}"', self.script)
+        self.assertNotIn('-e class="${PROCESS_TEST_CLASS}"', self.script)
         self.assertNotIn('--user current', self.script)
 
     def test_serial_presence_probe_uses_exact_awk_field_match(self) -> None:

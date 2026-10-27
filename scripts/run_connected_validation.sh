@@ -120,8 +120,8 @@ run_process_death_instrumentation() {
   fi
 
   if ! output="$(timeout "${timeout_seconds}s" adb -s "${SERIAL}" shell am instrument --user "${android_user_id}" -w -r \
-    -e class="${PROCESS_TEST_CLASS}" \
-    -e forestRunProcessDeathStage="${stage}" \
+    -e class "${PROCESS_TEST_CLASS}" \
+    -e forestRunProcessDeathStage "${stage}" \
     "${PROCESS_TEST_RUNNER_COMPONENT}" 2>&1)"; then
     printf '%s\n' "${output}" >&2
     echo "Instrumentation command failed during '${stage}' stage." >&2
