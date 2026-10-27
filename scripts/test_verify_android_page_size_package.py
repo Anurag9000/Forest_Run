@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 from pathlib import Path
 
 import verify_android_page_size_package as verifier
@@ -75,6 +76,31 @@ class AndroidPageSizePackageTest(unittest.TestCase):
             self.assertFalse(result["compatibleByPackageInspection"])
             self.assertEqual(
                 ["lib/arm64-v8a/libexample.so"],
+                result["nativeLibraries"],
+            )
+            with self.assertRaisesRegex(
+                verifier.PageSizeInspectionError,
+                "native libraries require ELF",
+            ):
+                verifier.inspect_artifact(
+                    artifact,
+                    CANDIDATE,
+                    require_no_native_code=True,
+                )
+
+    def test_elf_content_is_detected_even_without_so_filename(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / "misnamed-native.apk"
+            self._write_zip(
+                artifact,
+                {"assets/plugins/runtime.bin": b"\x7fELF" + b"\x00" * 128},
+            )
+
+            result = verifier.inspect_artifact(artifact, CANDIDATE)
+
+            self.assertEqual("native-verification-required", result["assessment"])
+            self.assertEqual(
+                ["assets/plugins/runtime.bin"],
                 result["nativeLibraries"],
             )
             with self.assertRaisesRegex(
@@ -168,6 +194,42 @@ class AndroidPageSizePackageTest(unittest.TestCase):
             ):
                 verifier.inspect_artifact(unsafe, CANDIDATE)
 
+    def test_rejects_corrupt_member_payload_crc(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / "corrupt.apk"
+            with zipfile.ZipFile(artifact, "w", compression=zipfile.ZIP_STORED) as archive:
+                archive.writestr("classes.dex", b"payload")
+            raw = bytearray(artifact.read_bytes())
+            offset = raw.index(b"payload")
+            raw[offset] ^= 1
+            artifact.write_bytes(raw)
+
+            with self.assertRaisesRegex(
+                verifier.PageSizeInspectionError,
+                "entry is corrupt or unsupported",
+            ):
+                verifier.inspect_artifact(artifact, CANDIDATE)
+
+    @unittest.skipUnless(hasattr(zipfile, "ZIP_LZMA"), "ZIP LZMA support required")
+    def test_normalizes_lzma_decompressor_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / "corrupt-lzma.apk"
+            with zipfile.ZipFile(artifact, "w", compression=zipfile.ZIP_LZMA) as archive:
+                archive.writestr("classes.dex", b"A" * 1000)
+            raw = bytearray(artifact.read_bytes())
+            local_header = raw.index(b"PK\x03\x04")
+            name_length = int.from_bytes(raw[local_header + 26 : local_header + 28], "little")
+            extra_length = int.from_bytes(raw[local_header + 28 : local_header + 30], "little")
+            payload_offset = local_header + 30 + name_length + extra_length
+            raw[payload_offset + 2] ^= 1
+            artifact.write_bytes(raw)
+
+            with self.assertRaisesRegex(
+                verifier.PageSizeInspectionError,
+                "entry is corrupt or unsupported",
+            ):
+                verifier.inspect_artifact(artifact, CANDIDATE)
+
     def test_rejects_noncanonical_candidate_sha(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             artifact = Path(directory) / "app.apk"
@@ -230,3 +292,123 @@ class AndroidPageSizePackageTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class AndroidPageSizePackageBoundaryTest(AndroidPageSizePackageTest):
+    def test_artifact_open_is_nonblocking_and_rejects_fifo_and_invalid_sizes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fifo = root / "artifact.fifo"
+            os.mkfifo(fifo)
+            with self.assertRaisesRegex(verifier.PageSizeInspectionError, "regular file"):
+                verifier._open_regular_file(fifo)
+
+            empty = root / "empty.apk"
+            empty.touch()
+            with self.assertRaisesRegex(verifier.PageSizeInspectionError, "size"):
+                verifier._open_regular_file(empty)
+            oversized = root / "large.apk"
+            oversized.write_bytes(b"0123456789")
+            with patch.object(verifier, "MAX_ARTIFACT_BYTES", 5):
+                with self.assertRaisesRegex(verifier.PageSizeInspectionError, "size"):
+                    verifier._open_regular_file(oversized)
+
+    def test_bad_zip_entry_count_and_uncompressed_limits_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = root / "entries.apk"
+            self._write_zip(artifact, {"one": b"1", "two": b"2"})
+            with patch.object(verifier, "MAX_ENTRY_COUNT", 1):
+                with self.assertRaisesRegex(verifier.PageSizeInspectionError, "too many entries"):
+                    verifier.inspect_artifact(artifact, CANDIDATE)
+            with patch.object(verifier, "MAX_ENTRY_BYTES", 0):
+                with self.assertRaisesRegex(verifier.PageSizeInspectionError, "entry exceeds size bound"):
+                    verifier.inspect_artifact(artifact, CANDIDATE)
+            corrupt = root / "corrupt.apk"
+            corrupt.write_bytes(b"not a zip")
+            with self.assertRaisesRegex(verifier.PageSizeInspectionError, "valid ZIP"):
+                verifier.inspect_artifact(corrupt, CANDIDATE)
+
+    def test_safe_archive_name_and_descriptor_flags(self) -> None:
+        for name in ("", "../escape", "a\\b", "a\x00b", "/absolute"):
+            with self.subTest(name=name), self.assertRaises(verifier.PageSizeInspectionError):
+                verifier._safe_archive_name(name)
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / "safe.apk"
+            self._write_zip(artifact, {"classes.dex": b"dex"})
+            observed_flags = []
+            real_open = os.open
+            def record_open(path, flags, *args, **kwargs):
+                observed_flags.append(flags)
+                return real_open(path, flags, *args, **kwargs)
+            with patch.object(verifier.os, "open", side_effect=record_open):
+                stream, _ = verifier._open_regular_file(artifact)
+                stream.close()
+            if hasattr(os, "O_CLOEXEC"):
+                self.assertTrue(observed_flags[0] & os.O_CLOEXEC)
+            if hasattr(os, "O_NOFOLLOW"):
+                self.assertTrue(observed_flags[0] & os.O_NOFOLLOW)
+            if hasattr(os, "O_NONBLOCK"):
+                self.assertTrue(observed_flags[0] & os.O_NONBLOCK)
+
+    def test_cli_positional_path_and_explicit_candidate_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = root / "app.apk"
+            output = root / "result.json"
+            self._write_zip(artifact, {"classes.dex": b"dex"})
+            result = self._run_cli(str(artifact), "--candidate-sha", CANDIDATE, "--output", str(output))
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertEqual("valid", json.loads(result.stdout)["status"])
+            self.assertEqual("no-native-code", json.loads(output.read_text())["assessment"])
+
+    def test_direct_api_normalizes_invalid_candidate_types_and_missing_artifacts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for candidate in (None, 123, "A" * 40):
+                with self.subTest(candidate=candidate), self.assertRaisesRegex(
+                    verifier.PageSizeInspectionError, "candidate SHA"
+                ):
+                    verifier.inspect_artifact(root / "missing.apk", candidate)
+            with self.assertRaisesRegex(verifier.PageSizeInspectionError, "unable to open artifact"):
+                verifier.inspect_artifact(root / "missing.apk", CANDIDATE)
+
+    def test_same_size_artifact_mutation_during_snapshot_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / "app.apk"
+            self._write_zip(artifact, {"classes.dex": b"dex"})
+            original_open = verifier._open_regular_file
+            changed = False
+
+            class MutatingStream:
+                def __init__(self, stream):
+                    self.stream = stream
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *args):
+                    self.stream.close()
+
+                def fileno(self):
+                    return self.stream.fileno()
+
+                def read(self, size=-1):
+                    nonlocal changed
+                    chunk = self.stream.read(size)
+                    if chunk and not changed:
+                        changed = True
+                        content = artifact.read_bytes()
+                        artifact.write_bytes(b"X" + content[1:])
+                    return chunk
+
+            def open_and_wrap(path):
+                stream, size = original_open(path)
+                return MutatingStream(stream), size
+
+            with patch.object(verifier, "_open_regular_file", side_effect=open_and_wrap):
+                with self.assertRaisesRegex(
+                    verifier.PageSizeInspectionError,
+                    "changed while being inspected",
+                ):
+                    verifier.inspect_artifact(artifact, CANDIDATE)
+            self.assertTrue(changed)

@@ -8,13 +8,18 @@ import os
 import re
 import stat
 import sys
-import tempfile
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
 import strict_json
+from stable_file_reader import (
+    StableFileError,
+    atomic_write_bytes,
+    consume_regular_file,
+    ensure_directory_exists,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_METADATA_DIR = ROOT / "release/google-play/metadata/en-US"
@@ -60,8 +65,35 @@ def _absolute_lexical(path: Path) -> Path:
     return Path(os.path.abspath(os.fspath(path.expanduser())))
 
 
+def _check_directory_components(path: Path, *, allow_missing_suffix: bool = False) -> None:
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError as exc:
+            if allow_missing_suffix:
+                return
+            raise StoreMetadataError(
+                f"Store metadata path component is missing: {current}"
+            ) from exc
+        except OSError as exc:
+            raise StoreMetadataError(
+                f"Could not inspect store metadata path component {current}: {exc}"
+            ) from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise StoreMetadataError(
+                f"Store metadata path must not traverse a symbolic link: {current}"
+            )
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise StoreMetadataError(
+                f"Store metadata path component is not a directory: {current}"
+            )
+
+
 def _admit_metadata_directory(path: Path) -> Path:
     lexical = _absolute_lexical(path)
+    _check_directory_components(lexical)
     try:
         metadata = lexical.lstat()
     except FileNotFoundError as exc:
@@ -77,34 +109,15 @@ def _admit_metadata_directory(path: Path) -> Path:
 
 def _read_regular_bytes(path: Path, *, maximum_bytes: int, label: str) -> bytes:
     try:
-        before = path.lstat()
-    except FileNotFoundError as exc:
-        raise StoreMetadataError(f"Missing {label}: {path}") from exc
-    except OSError as exc:
-        raise StoreMetadataError(f"Could not inspect {label} {path}: {exc}") from exc
-    if stat.S_ISLNK(before.st_mode):
-        raise StoreMetadataError(f"{label} must not be a symbolic link: {path}")
-    if not stat.S_ISREG(before.st_mode):
-        raise StoreMetadataError(f"{label} must be a regular file: {path}")
-    if before.st_size <= 0 or before.st_size > maximum_bytes:
-        raise StoreMetadataError(f"{label} has invalid byte length: {path}")
-    try:
-        raw = path.read_bytes()
-        after = path.stat()
-    except OSError as exc:
-        raise StoreMetadataError(f"Could not read {label} {path}: {exc}") from exc
-    if (
-        len(raw) != before.st_size
-        or after.st_size != before.st_size
-        or after.st_mtime_ns != before.st_mtime_ns
-        or (before.st_ino and after.st_ino != before.st_ino)
-    ):
-        raise StoreMetadataError(f"{label} changed while being read: {path}")
-    return raw
-
-
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+        content, _, _ = consume_regular_file(
+            path, label, maximum_bytes, retain_bytes=True
+        )
+    except StableFileError as exc:
+        if "is missing or changed:" in str(exc):
+            raise StoreMetadataError(f"Missing {label} or it changed while being read: {path}") from exc
+        raise StoreMetadataError(str(exc)) from exc
+    assert content is not None
+    return content
 
 
 def validate_metadata_file(path: Path, minimum: int, maximum: int, multiline: bool) -> MetadataFacts:
@@ -189,35 +202,24 @@ def validate_metadata_directory(metadata_dir: Path) -> list[MetadataFacts]:
 
 
 def _atomic_write(path: Path, payload: dict[str, object]) -> None:
-    temporary: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as stream:
-            temporary = Path(stream.name)
-            json.dump(payload, stream, indent=2, sort_keys=True, allow_nan=False)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        content = (
+            json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        ).encode("utf-8")
+        atomic_write_bytes(path, content, "store metadata manifest")
+    except StableFileError as exc:
+        raise StoreMetadataError(str(exc)) from exc
 
 
 def finalize_metadata(metadata_dir: Path, candidate_sha: str) -> Path:
-    candidate_sha = candidate_sha.lower()
     if HEX_40.fullmatch(candidate_sha) is None:
-        raise StoreMetadataError("candidate SHA must be 40 hexadecimal characters")
+        raise StoreMetadataError("candidate SHA must be 40 lowercase hexadecimal characters")
     metadata_dir = _absolute_lexical(metadata_dir)
-    if not metadata_dir.exists():
-        metadata_dir.mkdir(parents=True, exist_ok=True)
+    _check_directory_components(metadata_dir, allow_missing_suffix=True)
+    try:
+        ensure_directory_exists(metadata_dir, "store metadata directory")
+    except StableFileError as exc:
+        raise StoreMetadataError(str(exc)) from exc
     metadata_dir = _admit_metadata_directory(metadata_dir)
     manifest = metadata_dir / "metadata_manifest.json"
     try:
@@ -231,7 +233,6 @@ def finalize_metadata(metadata_dir: Path, candidate_sha: str) -> Path:
             raise StoreMetadataError(f"Metadata manifest must not be a symbolic link: {manifest}")
         if not stat.S_ISREG(stale.st_mode):
             raise StoreMetadataError(f"Metadata manifest must be a regular file: {manifest}")
-        manifest.unlink()
     facts = validate_metadata_directory(metadata_dir)
     _atomic_write(
         manifest,
@@ -246,9 +247,8 @@ def finalize_metadata(metadata_dir: Path, candidate_sha: str) -> Path:
 
 
 def verify_metadata(metadata_dir: Path, candidate_sha: str) -> list[MetadataFacts]:
-    candidate_sha = candidate_sha.lower()
     if HEX_40.fullmatch(candidate_sha) is None:
-        raise StoreMetadataError("candidate SHA must be 40 hexadecimal characters")
+        raise StoreMetadataError("candidate SHA must be 40 lowercase hexadecimal characters")
     metadata_dir = _admit_metadata_directory(metadata_dir)
     facts = validate_metadata_directory(metadata_dir)
     manifest_path = metadata_dir / "metadata_manifest.json"
@@ -287,6 +287,8 @@ def verify_metadata(metadata_dir: Path, candidate_sha: str) -> list[MetadataFact
         filename = entry["file"]
         if filename in by_name:
             raise StoreMetadataError(f"Duplicate metadata manifest entry: {filename}")
+        if any(type(entry.get(key)) is not int for key in ("characters", "bytes", "lines")):
+            raise StoreMetadataError("Metadata manifest contains invalid file evidence types")
         by_name[filename] = entry
     if set(by_name) != set(FILES):
         raise StoreMetadataError("Metadata manifest file set is incomplete or contains extras")

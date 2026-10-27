@@ -5,8 +5,10 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import build_release_evidence_index as indexer
+import stable_file_reader
 
 
 class ReleaseEvidenceIndexOutputSafetyTest(unittest.TestCase):
@@ -58,6 +60,16 @@ class ReleaseEvidenceIndexOutputSafetyTest(unittest.TestCase):
         with self.assertRaisesRegex(indexer.EvidenceIndexError, "symbolic link"):
             self.build(output)
 
+    def test_publication_rejects_a_symlinked_evidence_root(self) -> None:
+        payload = self.build(self.root / "index.json")
+        alias = self.root.parent / (self.root.name + "-alias")
+        alias.symlink_to(self.root, target_is_directory=True)
+        try:
+            with self.assertRaisesRegex(indexer.EvidenceIndexError, "symbolic link"):
+                indexer.publish_index(alias / "index.json", payload, root=alias)
+        finally:
+            alias.unlink()
+
     def test_lexical_output_escape_is_rejected(self) -> None:
         output = self.root / ".." / "escaped-index.json"
         with self.assertRaisesRegex(
@@ -87,6 +99,41 @@ class ReleaseEvidenceIndexOutputSafetyTest(unittest.TestCase):
             self.skipTest(f"symlinks unavailable: {exc}")
         with self.assertRaisesRegex(indexer.EvidenceIndexError, "symbolic link"):
             indexer.publish_index(output, payload, root=self.root)
+
+    def test_parent_swap_during_temporary_creation_cannot_redirect_publication(self) -> None:
+        output = self.root / "published/index.json"
+        payload = self.build(output)
+        output.parent.mkdir()
+        moved_parent = self.root / "published-moved"
+        redirected = self.root / "redirected"
+        redirected.mkdir()
+        real_open = os.open
+        swapped = False
+
+        def swap_before_temp_open(path, flags, *args, **kwargs):
+            nonlocal swapped
+            if (
+                not swapped
+                and kwargs.get("dir_fd") is not None
+                and isinstance(path, str)
+                and path.startswith(".index.json.")
+            ):
+                swapped = True
+                output.parent.rename(moved_parent)
+                output.parent.symlink_to(redirected, target_is_directory=True)
+            return real_open(path, flags, *args, **kwargs)
+
+        with patch.object(stable_file_reader.os, "open", side_effect=swap_before_temp_open):
+            with self.assertRaisesRegex(
+                indexer.EvidenceIndexError,
+                "parent directory changed|symbolic link or non-directory",
+            ):
+                indexer.publish_index(output, payload, root=self.root)
+
+        self.assertTrue(swapped)
+        self.assertFalse((redirected / "index.json").exists())
+        self.assertFalse((moved_parent / "index.json").exists())
+        self.assertEqual([], list(moved_parent.glob(".index.json.*.tmp")))
 
 
 if __name__ == "__main__":

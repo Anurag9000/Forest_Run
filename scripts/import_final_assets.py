@@ -3,15 +3,23 @@ from __future__ import annotations
 
 from collections import Counter, deque
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 from typing import Iterable
 
 from PIL import Image
 
+from stable_file_reader import StableFileError, atomic_write_bytes, ensure_directory_exists
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "Final_Assets (2)"
 DST = ROOT / "app" / "src" / "main" / "assets" / "sprites"
+
+
+def _rgba_pixels(image: Image.Image) -> list[tuple[int, int, int, int]]:
+    raw = image.tobytes()
+    return [tuple(raw[offset:offset + 4]) for offset in range(0, len(raw), 4)]
 
 
 @dataclass(frozen=True)
@@ -72,7 +80,7 @@ def flood_fill_background(frame: Image.Image, tolerance: int = 1) -> Image.Image
     frame = frame.convert("RGBA")
     palette = background_palette(frame)
     w, h = frame.size
-    pixels = list(frame.getdata())
+    pixels = _rgba_pixels(frame)
     visited = [False] * (w * h)
     q: deque[int] = deque()
 
@@ -111,7 +119,7 @@ def flood_fill_background(frame: Image.Image, tolerance: int = 1) -> Image.Image
 def connected_components(image: Image.Image) -> list[tuple[list[int], tuple[int, int, int, int]]]:
     image = image.convert("RGBA")
     w, h = image.size
-    pixels = list(image.getdata())
+    pixels = _rgba_pixels(image)
     visited = [False] * (w * h)
     components: list[tuple[list[int], tuple[int, int, int, int]]] = []
 
@@ -183,7 +191,7 @@ def keep_subject_components(image: Image.Image, component_floor_ratio: float = 0
                 changed = True
 
     pixels = [(0, 0, 0, 0)] * (image.width * image.height)
-    original = list(image.getdata())
+    original = _rgba_pixels(image)
     for component, _bbox in keep:
         for idx in component:
             pixels[idx] = original[idx]
@@ -198,7 +206,7 @@ def clear_bottom_band(image: Image.Image, ratio: float) -> Image.Image:
         return image
     image = image.convert("RGBA")
     cutoff = int(image.height * (1.0 - ratio))
-    pixels = list(image.getdata())
+    pixels = _rgba_pixels(image)
     for y in range(cutoff, image.height):
         row_start = y * image.width
         for x in range(image.width):
@@ -238,16 +246,47 @@ def process_frame(frame: Image.Image, *, strategy: str, remove_support_ratio: fl
 
 
 def slice_grid(mapping: Mapping) -> list[Image.Image]:
-    src = Image.open(SRC / mapping.src_rel).convert("RGBA")
-    frame_w = src.width // mapping.cols
-    frame_h = src.height // mapping.rows
-    frame_indices = mapping.explicit_indices or tuple(range(mapping.count))
+    if mapping.cols <= 0 or mapping.rows <= 0 or mapping.count <= 0:
+        raise ValueError("Sprite grid rows, columns, and frame count must be positive")
+    if mapping.strategy not in {"default", "char"}:
+        raise ValueError(f"Unsupported sprite cleanup strategy: {mapping.strategy}")
+    if not 0.0 <= mapping.remove_support_ratio < 1.0:
+        raise ValueError("remove_support_ratio must be in [0, 1)")
+    if not 0.0 <= mapping.component_floor_ratio <= 1.0:
+        raise ValueError("component_floor_ratio must be in [0, 1]")
+
+    with Image.open(SRC / mapping.src_rel) as source:
+        src = source.convert("RGBA")
+    if src.width <= 0 or src.height <= 0:
+        raise ValueError(f"Sprite sheet must be non-empty: {mapping.src_rel}")
+    if mapping.cols > src.width or mapping.rows > src.height:
+        raise ValueError(
+            f"Sprite grid {mapping.cols}x{mapping.rows} exceeds sheet dimensions "
+            f"{src.width}x{src.height}: {mapping.src_rel}"
+        )
+    frame_indices = (
+        tuple(range(mapping.count))
+        if mapping.explicit_indices is None
+        else mapping.explicit_indices
+    )
+    if len(frame_indices) != mapping.count:
+        raise ValueError(
+            f"Expected {mapping.count} frame indices, found {len(frame_indices)}"
+        )
+    if len(set(frame_indices)) != len(frame_indices):
+        raise ValueError("Sprite frame indices must be unique")
+    if any(index < 0 or index >= mapping.cols * mapping.rows for index in frame_indices):
+        raise ValueError("Sprite frame index is outside the source grid")
 
     frames: list[Image.Image] = []
     for index in frame_indices:
-        x = (index % mapping.cols) * frame_w
-        y = (index // mapping.cols) * frame_h
-        frame = src.crop((x, y, x + frame_w, y + frame_h))
+        column = index % mapping.cols
+        row = index // mapping.cols
+        left = column * src.width // mapping.cols
+        right = (column + 1) * src.width // mapping.cols
+        top = row * src.height // mapping.rows
+        bottom = (row + 1) * src.height // mapping.rows
+        frame = src.crop((left, top, right, bottom))
         frames.append(
             process_frame(
                 frame,
@@ -268,8 +307,13 @@ def pack_strip(frames: Iterable[Image.Image], out_path: Path) -> None:
         x = index * max_w + (max_w - frame.width) // 2
         y = max_h - frame.height
         strip.alpha_composite(frame, (x, y))
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    strip.save(out_path)
+    buffer = BytesIO()
+    strip.save(buffer, format="PNG")
+    try:
+        ensure_directory_exists(out_path.parent, "sprite asset parent directory")
+        atomic_write_bytes(out_path, buffer.getvalue(), reject_symlink_leaf=True)
+    except StableFileError as exc:
+        raise SystemExit(f"could not publish sprite asset {out_path}: {exc}") from exc
 
 
 def import_one(mapping: Mapping) -> None:

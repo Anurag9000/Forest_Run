@@ -372,6 +372,60 @@ class GameStateManagerTest {
     }
 
     @Test
+    fun `bonus multiplier boost affects later points and expires after its duration`() {
+        val state = GameStateManager(context)
+
+        state.addBonus(points = 100, multiplierBoost = 2f, durationSec = 0.1f)
+        assertEquals(100, state.score)
+        assertEquals(2f, state.scoreMultiplier, 0f)
+
+        state.addBonus(points = 50)
+        assertEquals(200, state.score)
+
+        state.update(0.1f)
+        assertEquals(1f, state.scoreMultiplier, 0f)
+        state.addBonus(points = 50)
+        assertEquals(250, state.score)
+    }
+
+    @Test
+    fun `zero duration keeps multiplier through run and reset clears it`() {
+        val state = GameStateManager(context)
+
+        state.addBonus(multiplierBoost = 3f)
+        state.update(10f)
+        assertEquals(3f, state.scoreMultiplier, 0f)
+
+        state.resetRun()
+        assertEquals(1f, state.scoreMultiplier, 0f)
+    }
+
+    @Test
+    fun `timed multiplier applies to distance score through its final frame`() {
+        val boosted = GameStateManager(context)
+        val baseline = GameStateManager(context)
+        boosted.addBonus(multiplierBoost = 2f, durationSec = 5f)
+
+        boosted.update(5f)
+        baseline.update(5f)
+
+        assertTrue(boosted.score > baseline.score)
+        assertEquals(1f, boosted.scoreMultiplier, 0f)
+    }
+
+    @Test
+    fun `invalid multiplier duration leaves ordinary rewards intact without installing boost`() {
+        val state = GameStateManager(context)
+
+        state.addBonus(points = 10, multiplierBoost = 4f, durationSec = -1f)
+        state.addBonus(points = 10, multiplierBoost = 4f, durationSec = Float.NaN)
+        state.addBonus(points = 10, multiplierBoost = 4f, durationSec = Float.POSITIVE_INFINITY)
+
+        assertEquals(30, state.score)
+        assertEquals(1f, state.scoreMultiplier, 0f)
+    }
+
+    @Test
     fun `invalid speed debuffs are ignored and boosts are capped`() {
         val state = GameStateManager(context)
 

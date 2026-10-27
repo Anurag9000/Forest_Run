@@ -5,9 +5,13 @@ import argparse
 import hashlib
 import json
 import re
+import os
+import stat
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import NoReturn
+
+from stable_file_reader import StableFileError, atomic_write_bytes, ensure_directory_exists
 
 from audit_runtime_asset_references import verify_repository as verify_asset_ownership
 from verify_release_source_assets import (
@@ -51,15 +55,54 @@ def _canonical_bytes(value: object) -> bytes:
     ).encode("utf-8")
 
 
-def _sha256(path: Path) -> str:
+def _reject_symlink_components(path: Path) -> None:
+    current = Path(path.anchor)
+    for component in path.parts[1:]:
+        current = current / component
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError:
+            break
+        except OSError as error:
+            _fail(f"Could not inspect creative inventory output path {current}: {error}")
+        if stat.S_ISLNK(metadata.st_mode):
+            _fail(f"Creative asset inventory output must not traverse a symbolic link: {current}")
+
+
+def _hash_regular_file(path: Path) -> tuple[str, int]:
     digest = hashlib.sha256()
+    identity_fields = ("st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns")
     try:
-        with path.open("rb") as stream:
+        before = path.lstat()
+        if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+            _fail(f"Creative runtime input is not a regular non-symlink file: {path}")
+        flags = os.O_RDONLY
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        if hasattr(os, "O_NONBLOCK"):
+            flags |= os.O_NONBLOCK
+        descriptor = os.open(path, flags)
+        with os.fdopen(descriptor, "rb") as stream:
+            opened = os.fstat(stream.fileno())
+            if any(getattr(before, key) != getattr(opened, key) for key in identity_fields):
+                _fail(f"Creative asset changed while being opened: {path}")
+            size = 0
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(chunk)
+                size += len(chunk)
+            after = os.fstat(stream.fileno())
+            after_path = path.lstat()
+            if any(
+                getattr(before, key) != getattr(current, key)
+                for current in (after, after_path)
+                for key in identity_fields
+            ) or size != before.st_size:
+                _fail(f"Creative asset changed while being hashed: {path}")
     except OSError as error:
         _fail(f"Could not hash creative asset {path}: {error}")
-    return digest.hexdigest()
+    return digest.hexdigest(), size
 
 
 def _category(relative_path: str) -> str:
@@ -80,7 +123,11 @@ def collect_creative_asset_entries(root: Path) -> tuple[CreativeAssetEntry, ...]
     entries: list[CreativeAssetEntry] = []
 
     for creative_root in roots:
-        if not creative_root.is_dir():
+        try:
+            root_info = creative_root.lstat()
+        except OSError as error:
+            _fail(f"Missing creative runtime directory: {creative_root}: {error}")
+        if stat.S_ISLNK(root_info.st_mode) or not stat.S_ISDIR(root_info.st_mode):
             _fail(f"Missing creative runtime directory: {creative_root}")
         try:
             candidates = sorted(creative_root.rglob("*"))
@@ -93,10 +140,7 @@ def collect_creative_asset_entries(root: Path) -> tuple[CreativeAssetEntry, ...]
                 continue
             if not path.is_file():
                 _fail(f"Creative runtime input is not a regular file: {path}")
-            try:
-                size = path.stat().st_size
-            except OSError as error:
-                _fail(f"Could not stat creative asset {path}: {error}")
+            sha256, size = _hash_regular_file(path)
             if size <= 0:
                 _fail(f"Creative runtime asset is empty: {path}")
             relative = path.relative_to(resolved).as_posix()
@@ -105,7 +149,7 @@ def collect_creative_asset_entries(root: Path) -> tuple[CreativeAssetEntry, ...]
                     path=relative,
                     category=_category(relative),
                     bytes=size,
-                    sha256=_sha256(path),
+                    sha256=sha256,
                 )
             )
 
@@ -122,9 +166,9 @@ def build_inventory(
     *,
     validate_runtime_inputs: bool = True,
 ) -> dict[str, object]:
-    normalized_sha = candidate_sha.strip().lower()
+    normalized_sha = candidate_sha.strip()
     if not SHA_PATTERN.fullmatch(normalized_sha):
-        _fail("candidate SHA must be exactly 40 hexadecimal characters")
+        _fail("candidate SHA must be exactly 40 lowercase hexadecimal characters")
 
     resolved = root.expanduser().resolve()
     if validate_runtime_inputs:
@@ -164,19 +208,22 @@ def build_inventory(
 
 
 def write_inventory(path: Path, inventory: dict[str, object]) -> None:
-    resolved = path.expanduser().resolve()
-    resolved.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(inventory, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-    temporary = resolved.with_name(resolved.name + ".tmp")
+    output = Path(os.path.abspath(os.fspath(path.expanduser())))
+    _reject_symlink_components(output)
+    payload = (json.dumps(inventory, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
     try:
-        temporary.write_text(payload, encoding="utf-8")
-        temporary.replace(resolved)
+        ensure_directory_exists(output.parent, "creative asset inventory parent directory")
+        _reject_symlink_components(output)
+        atomic_write_bytes(
+            output,
+            payload,
+            "creative asset inventory",
+            reject_symlink_leaf=True,
+        )
+    except StableFileError as error:
+        _fail(f"Could not safely publish creative asset inventory {output}: {error}")
     except OSError as error:
-        try:
-            temporary.unlink(missing_ok=True)
-        except OSError:
-            pass
-        _fail(f"Could not write creative asset inventory {resolved}: {error}")
+        _fail(f"Could not write creative asset inventory {output}: {error}")
 
 
 def _parse_args() -> argparse.Namespace:

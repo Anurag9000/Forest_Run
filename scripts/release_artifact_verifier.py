@@ -10,6 +10,7 @@ import stat
 import subprocess
 import zipfile
 from collections import Counter
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
@@ -68,11 +69,16 @@ def _platform_tool_names(name: str) -> tuple[str, ...]:
 def resolve_tool(
     name: str,
     environment: Mapping[str, str] | None = None,
-    which: Callable[[str], str | None] = shutil.which,
+    which: Callable[[str], str | None] | None = None,
 ) -> str:
-    environment = environment or os.environ
+    which_tool = shutil.which if which is None else which
+    environment = os.environ if environment is None else environment
+    search_path = None if environment is os.environ else environment.get("PATH", "")
     for candidate_name in _platform_tool_names(name):
-        resolved = which(candidate_name)
+        if which is None:
+            resolved = which_tool(candidate_name, path=search_path)
+        else:
+            resolved = which_tool(candidate_name)
         if resolved:
             return resolved
 
@@ -96,15 +102,20 @@ def resolve_tool(
             )
             cmdline_root = root / "cmdline-tools"
             if cmdline_root.is_dir():
-                candidates.extend(
-                    sorted(
-                        cmdline_root.glob(f"*/bin/{candidate_name}"),
-                        reverse=True,
-                    )
-                )
+                tools = list(cmdline_root.glob(f"*/bin/{candidate_name}"))
+                numeric: list[tuple[tuple[int, ...], Path]] = []
+                other: list[Path] = []
+                for tool in tools:
+                    version = tool.parent.parent.name
+                    if re.fullmatch(r"\d+(?:\.\d+)*", version):
+                        numeric.append((tuple(int(part) for part in version.split(".")), tool))
+                    elif version.casefold() != "latest":
+                        other.append(tool)
+                candidates.extend(tool for _, tool in sorted(numeric, reverse=True))
+                candidates.extend(sorted(other, key=lambda path: path.as_posix(), reverse=True))
 
     for candidate in candidates:
-        if candidate.is_file():
+        if candidate.is_file() and (os.name == "nt" or os.access(candidate, os.X_OK)):
             return str(candidate)
     raise ArtifactVerificationError(
         f"Required tool '{name}' was not found on PATH, JAVA_HOME, ANDROID_HOME, or ANDROID_SDK_ROOT"
@@ -161,54 +172,130 @@ def _is_symbolic_link(info: zipfile.ZipInfo) -> bool:
     return stat.S_ISLNK(unix_mode)
 
 
-def verify_bundle_structure(bundle: Path) -> dict[str, object]:
-    if not bundle.is_file() or bundle.stat().st_size <= 0:
-        raise ArtifactVerificationError(f"Release bundle is missing or empty: {bundle}")
+@contextmanager
+def _open_regular_bundle(bundle: Path):
     try:
-        with zipfile.ZipFile(bundle) as archive:
-            infos = archive.infolist()
-            if len(infos) > MAX_BUNDLE_ENTRIES:
-                raise ArtifactVerificationError(
-                    f"Release bundle contains too many entries: {len(infos)}"
+        before = bundle.lstat()
+    except OSError as exc:
+        raise ArtifactVerificationError(f"Release bundle is missing or unreadable: {bundle}: {exc}") from exc
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+        raise ArtifactVerificationError(f"Release bundle must be a regular non-symlink file: {bundle}")
+    if before.st_size <= 0:
+        raise ArtifactVerificationError(f"Release bundle is missing or empty: {bundle}")
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    try:
+        descriptor = os.open(bundle, flags)
+    except OSError as exc:
+        raise ArtifactVerificationError(f"Unable to safely open release bundle: {exc}") from exc
+
+    identity_fields = (
+        "st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns"
+    )
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or any(
+            getattr(before, field) != getattr(opened, field)
+            for field in identity_fields
+        ):
+            raise ArtifactVerificationError("Release bundle changed while being opened")
+        stream = os.fdopen(descriptor, "rb")
+    except Exception:
+        os.close(descriptor)
+        raise
+
+    try:
+        yield stream
+        after = os.fstat(stream.fileno())
+        after_path = bundle.lstat()
+        if any(
+            getattr(before, field) != getattr(after, field)
+            or getattr(before, field) != getattr(after_path, field)
+            for field in identity_fields
+        ):
+            raise ArtifactVerificationError("Release bundle changed while being inspected")
+    except OSError as exc:
+        raise ArtifactVerificationError(f"Release bundle changed while being inspected: {exc}") from exc
+    finally:
+        stream.close()
+
+
+def verify_bundle_structure(bundle: Path) -> dict[str, object]:
+    try:
+        with _open_regular_bundle(bundle) as stream:
+            with zipfile.ZipFile(stream) as archive:
+                infos = archive.infolist()
+                if len(infos) > MAX_BUNDLE_ENTRIES:
+                    raise ArtifactVerificationError(
+                        f"Release bundle contains too many entries: {len(infos)}"
+                    )
+
+                names = [info.filename for info in infos]
+                duplicate_counts = Counter(names)
+                duplicates = sorted(
+                    name for name, count in duplicate_counts.items() if count > 1
                 )
+                if duplicates:
+                    raise ArtifactVerificationError(
+                        "Release bundle contains duplicate ZIP entries: "
+                        + ", ".join(duplicates[:10])
+                    )
 
-            names = [info.filename for info in infos]
-            duplicate_counts = Counter(names)
-            duplicates = sorted(
-                name for name, count in duplicate_counts.items() if count > 1
-            )
-            if duplicates:
-                raise ArtifactVerificationError(
-                    "Release bundle contains duplicate ZIP entries: "
-                    + ", ".join(duplicates[:10])
-                )
+                total_uncompressed_bytes = 0
+                info_by_name: dict[str, zipfile.ZipInfo] = {}
+                namespace_paths: set[str] = set()
+                file_paths: set[str] = set()
+                parent_paths: set[str] = set()
+                for info in infos:
+                    _validate_zip_entry_name(info.filename)
+                    canonical_name = info.filename[:-1] if info.filename.endswith("/") else info.filename
+                    if canonical_name in namespace_paths:
+                        raise ArtifactVerificationError(
+                            f"Release bundle contains conflicting file/directory paths: {canonical_name}"
+                        )
+                    parts = canonical_name.split("/")
+                    parents = ["/".join(parts[:index]) for index in range(1, len(parts))]
+                    conflicting_parent = next((parent for parent in parents if parent in file_paths), None)
+                    if conflicting_parent is not None:
+                        raise ArtifactVerificationError(
+                            f"Release bundle entry is nested beneath a file: {conflicting_parent}"
+                        )
+                    if not info.is_dir() and canonical_name in parent_paths:
+                        raise ArtifactVerificationError(
+                            f"Release bundle file shadows an existing directory path: {canonical_name}"
+                        )
+                    namespace_paths.add(canonical_name)
+                    if not info.is_dir():
+                        file_paths.add(canonical_name)
+                    parent_paths.update(parents)
+                    if _is_symbolic_link(info):
+                        raise ArtifactVerificationError(
+                            f"Release bundle contains a symbolic-link ZIP entry: {info.filename}"
+                        )
+                    if info.flag_bits & 0x1:
+                        raise ArtifactVerificationError(
+                            f"Release bundle contains an encrypted ZIP entry: {info.filename}"
+                        )
+                    if info.file_size < 0 or info.file_size > MAX_ENTRY_UNCOMPRESSED_BYTES:
+                        raise ArtifactVerificationError(
+                            "Release bundle entry has an invalid or excessive expanded size: "
+                            f"{info.filename} ({info.file_size} bytes)"
+                        )
+                    total_uncompressed_bytes += info.file_size
+                    if total_uncompressed_bytes > MAX_TOTAL_UNCOMPRESSED_BYTES:
+                        raise ArtifactVerificationError(
+                            "Release bundle exceeds the expanded-size safety limit: "
+                            f"{total_uncompressed_bytes} bytes"
+                        )
+                    info_by_name[info.filename] = info
 
-            total_uncompressed_bytes = 0
-            info_by_name: dict[str, zipfile.ZipInfo] = {}
-            for info in infos:
-                _validate_zip_entry_name(info.filename)
-                if _is_symbolic_link(info):
-                    raise ArtifactVerificationError(
-                        f"Release bundle contains a symbolic-link ZIP entry: {info.filename}"
-                    )
-                if info.flag_bits & 0x1:
-                    raise ArtifactVerificationError(
-                        f"Release bundle contains an encrypted ZIP entry: {info.filename}"
-                    )
-                if info.file_size < 0 or info.file_size > MAX_ENTRY_UNCOMPRESSED_BYTES:
-                    raise ArtifactVerificationError(
-                        "Release bundle entry has an invalid or excessive expanded size: "
-                        f"{info.filename} ({info.file_size} bytes)"
-                    )
-                total_uncompressed_bytes += info.file_size
-                if total_uncompressed_bytes > MAX_TOTAL_UNCOMPRESSED_BYTES:
-                    raise ArtifactVerificationError(
-                        "Release bundle exceeds the expanded-size safety limit: "
-                        f"{total_uncompressed_bytes} bytes"
-                    )
-                info_by_name[info.filename] = info
-
-            bad_entry = archive.testzip()
+                bad_entry = archive.testzip()
     except ArtifactVerificationError:
         raise
     except (OSError, zipfile.BadZipFile, RuntimeError) as exc:
@@ -345,7 +432,7 @@ def verify_bundle_signature(
     if store_password is None:
         raise ArtifactVerificationError("Release keystore password is missing")
 
-    active_environment = dict(environment or os.environ)
+    active_environment = dict(os.environ if environment is None else environment)
     password_variable = "FOREST_RUN_RELEASE_VERIFY_STORE_PASSWORD"
     active_environment[password_variable] = store_password
     jarsigner_path = jarsigner or resolve_tool("jarsigner", active_environment)

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+import shlex
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = Path(__file__).with_name("prepare_main_release.sh")
@@ -48,9 +50,56 @@ class MainReleaseWrapperContractTest(unittest.TestCase):
         verifier_index = self.source.index("verify_release_summary.py")
         self.assertLess(trap_index, preparer_index)
         self.assertGreater(verifier_index, preparer_index)
-        self.assertIn('rm -f "${MACHINE_SUMMARY}" "${HUMAN_SUMMARY}"', self.source)
+        self.assertIn('local destination="${RELEASE_ROOT}/${filename}"', self.source)
+        self.assertIn('rm -f "${destination}"', self.source)
         self.assertIn('mv "${summary_backup_dir}/${filename}"', self.source)
         self.assertIn('rm -rf "${summary_backup_dir}"', self.source)
+
+    def test_failed_summary_restore_preserves_and_reports_backup_directory(self) -> None:
+        restore = self.source[
+            self.source.index("restore_release_summaries() {"):
+            self.source.index("trap restore_release_summaries EXIT")
+        ]
+        self.assertIn("local restore_failed=0", restore)
+        self.assertIn("if [[ ${restore_failed} -eq 0 ]]", restore)
+        self.assertIn('Release summary backups retained at ${summary_backup_dir}', restore)
+        self.assertIn("if ! mv", restore)
+
+    def test_restore_failure_keeps_quarantined_summary_for_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            release = root / "release"
+            backup = root / "backup"
+            release.mkdir()
+            backup.mkdir()
+            prior = backup / "build_summary.json"
+            prior.write_text("prior summary", encoding="utf-8")
+            (release / "build_summary.json").write_text("failed summary", encoding="utf-8")
+            restore = self.source[
+                self.source.index("restore_release_summaries() {"):
+                self.source.index("trap restore_release_summaries EXIT")
+            ]
+            script = "\n".join(
+                (
+                    "set -euo pipefail",
+                    f"RELEASE_ROOT={shlex.quote(str(release))}",
+                    f"summary_backup_dir={shlex.quote(str(backup))}",
+                    "mv() { return 1; }",
+                    restore,
+                    "trap restore_release_summaries EXIT",
+                    "false",
+                )
+            )
+            result = subprocess.run(
+                ["bash", "-c", script],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn(str(backup), result.stderr)
+            self.assertEqual("prior summary", prior.read_text(encoding="utf-8"))
+            self.assertFalse((release / "build_summary.json").exists())
 
     def test_new_summary_is_verified_before_final_candidate_checks(self) -> None:
         summary_index = self.source.index("verify_release_summary.py")

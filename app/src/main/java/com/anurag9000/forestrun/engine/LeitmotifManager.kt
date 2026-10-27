@@ -114,8 +114,13 @@ object LeitmotifManager {
     )
 
     fun init(context: Context) {
-        val enabled = FeedbackSettings.audioEnabled
+        val enabled: Boolean
         synchronized(audioLock) {
+            // Read the preference while publishing manager state. If init reads
+            // before acquiring this lock, it can capture an old value, then
+            // overwrite a newer setAudioEnabled() transition after that call
+            // has already updated this manager.
+            enabled = FeedbackSettings.audioEnabled
             ctx = context.applicationContext
             audioEnabled = enabled
         }

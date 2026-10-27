@@ -49,8 +49,9 @@ class AggregationTraceCoreContractTest(unittest.TestCase):
         )
 
         self.assertIn("def _stable_manifest_read", source)
-        self.assertIn("before.st_mtime_ns", source)
-        self.assertIn("before.st_ino", source)
+        self.assertIn("metadata.st_mtime_ns", source)
+        self.assertIn("metadata.st_ino", source)
+        self.assertIn("consume_regular_file(", source)
         self.assertIn("confirmed_raw != raw", source)
         self.assertIn("changed while trace contracts were validated", source)
         self.assertIn("def _aggregate_with_sources", source)

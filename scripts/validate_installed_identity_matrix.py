@@ -10,13 +10,18 @@ import os
 import re
 import stat
 import sys
-import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
 
 import strict_json
+from stable_file_reader import (
+    StableFileError,
+    atomic_write_json,
+    checked_directory_path,
+    consume_regular_file,
+)
 import validate_device_acceptance as device_acceptance
 import validate_installed_candidate_identity as installed_identity
 
@@ -82,6 +87,13 @@ def _string(value: Any, label: str, *, maximum: int = 4096) -> str:
     return result
 
 
+def _canonical_hash(value: Any, label: str, pattern: re.Pattern[str], description: str) -> str:
+    """Validate a digest's exact spelling without display-text trimming."""
+    if not isinstance(value, str) or not pattern.fullmatch(value):
+        raise InstalledIdentityMatrixError(f"{label} must be {description}")
+    return value
+
+
 def _integer(value: Any, label: str, *, minimum: int = 0) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise InstalledIdentityMatrixError(f"{label} must be an integer")
@@ -113,16 +125,34 @@ def _parse_utc(value: Any, label: str) -> datetime:
 
 def _safe_relative(value: Any, label: str) -> str:
     text = _string(value, label, maximum=512)
-    if "\\" in text or text.startswith("~") or "\x00" in text:
+    if value != text:
+        raise InstalledIdentityMatrixError(
+            f"{label} must not have surrounding whitespace"
+        )
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise InstalledIdentityMatrixError(
+            f"{label} must contain valid Unicode text"
+        ) from exc
+    if "\\" in text or ":" in text or text.startswith("~") or "\x00" in text:
         raise InstalledIdentityMatrixError(f"{label} must be a normalized POSIX relative path")
     path = PurePosixPath(text)
     if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
         raise InstalledIdentityMatrixError(f"{label} must be a safe relative path")
+    if path.as_posix() != text:
+        raise InstalledIdentityMatrixError(f"{label} must be a normalized POSIX relative path")
     return path.as_posix()
 
 
 def _resolve_inside(base: Path, relative: str, label: str) -> Path:
-    canonical = base.resolve()
+    try:
+        canonical = checked_directory_path(base, f"{label} evidence root")
+    except StableFileError as exc:
+        raise InstalledIdentityMatrixError(str(exc)) from exc
+    relative_path = PurePosixPath(relative)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise InstalledIdentityMatrixError(f"{label} resolves outside the evidence root")
     lexical = canonical / relative
     try:
         parts = lexical.relative_to(canonical).parts
@@ -139,60 +169,59 @@ def _resolve_inside(base: Path, relative: str, label: str) -> Path:
             raise InstalledIdentityMatrixError(f"could not inspect {label}: {current}: {exc}") from exc
         if stat.S_ISLNK(metadata.st_mode):
             raise InstalledIdentityMatrixError(f"{label} must not traverse a symbolic link: {current}")
-    resolved = lexical.resolve()
-    try:
-        resolved.relative_to(canonical)
-    except ValueError as exc:
-        raise InstalledIdentityMatrixError(f"{label} resolves outside the evidence root") from exc
-    return resolved
+    return lexical
 
 
 def _hash_regular(path: Path, label: str, maximum: int) -> tuple[str, os.stat_result]:
     try:
-        before = path.lstat()
-    except FileNotFoundError as exc:
-        raise InstalledIdentityMatrixError(f"{label} is missing: {path}") from exc
-    except OSError as exc:
-        raise InstalledIdentityMatrixError(f"could not inspect {label}: {path}: {exc}") from exc
-    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
-        raise InstalledIdentityMatrixError(f"{label} must be a regular non-symlink file")
-    if before.st_size <= 0 or before.st_size > maximum:
-        raise InstalledIdentityMatrixError(f"{label} has an invalid size")
-    digest = hashlib.sha256()
+        _, digest, metadata = consume_regular_file(
+            path, label, maximum, retain_bytes=False
+        )
+    except StableFileError as exc:
+        raise InstalledIdentityMatrixError(str(exc)) from exc
+    return digest, metadata
+
+
+def _read_regular_bytes(path: Path, label: str, maximum: int) -> tuple[bytes, os.stat_result]:
     try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        after = path.lstat()
-    except OSError as exc:
-        raise InstalledIdentityMatrixError(f"could not read {label}: {exc}") from exc
-    if (
-        before.st_size != after.st_size
-        or before.st_mtime_ns != after.st_mtime_ns
-        or (before.st_ino and before.st_ino != after.st_ino)
-    ):
-        raise InstalledIdentityMatrixError(f"{label} changed while being hashed")
-    return digest.hexdigest(), after
+        raw, _, metadata = consume_regular_file(
+            path, label, maximum, retain_bytes=True
+        )
+    except StableFileError as exc:
+        raise InstalledIdentityMatrixError(str(exc)) from exc
+    assert raw is not None
+    return raw, metadata
 
 
 def _load_device_manifest(reference: Mapping[str, Any], base: Path) -> tuple[dict[str, Any], device_acceptance.ValidationSummary, str]:
     _require_exact_keys(reference, {"path", "sha256"}, "device_acceptance")
     relative = _safe_relative(reference["path"], "device_acceptance.path")
-    expected = _string(reference["sha256"], "device_acceptance.sha256", maximum=64).lower()
-    if not SHA256_RE.fullmatch(expected):
-        raise InstalledIdentityMatrixError("device_acceptance.sha256 must be lowercase 64-hex")
+    expected = _canonical_hash(
+        reference["sha256"], "device_acceptance.sha256", SHA256_RE, "lowercase 64-hex"
+    )
     path = _resolve_inside(base, relative, "device_acceptance.path")
-    actual, _ = _hash_regular(path, "device acceptance manifest", device_acceptance.MAX_MANIFEST_BYTES)
+    raw, _ = _read_regular_bytes(
+        path, "device acceptance manifest", device_acceptance.MAX_MANIFEST_BYTES
+    )
+    actual = hashlib.sha256(raw).hexdigest()
     if actual != expected:
         raise InstalledIdentityMatrixError("device acceptance manifest digest mismatch")
     try:
-        summary = device_acceptance.load_and_validate(path)
-        data = strict_json.load_file(
-            path,
+        data = strict_json.loads(
+            raw,
+            label=str(path),
             maximum_bytes=device_acceptance.MAX_MANIFEST_BYTES,
             require_object=True,
         )
     except (device_acceptance.EvidenceError, strict_json.StrictJsonError) as exc:
+        raise InstalledIdentityMatrixError(f"referenced device acceptance is invalid: {exc}") from exc
+    try:
+        summary = device_acceptance.validate_bundle(
+            data,
+            source_bytes=raw,
+            evidence_base=base,
+        )
+    except device_acceptance.EvidenceError as exc:
         raise InstalledIdentityMatrixError(f"referenced device acceptance is invalid: {exc}") from exc
     return dict(data), summary, actual
 
@@ -200,6 +229,15 @@ def _load_device_manifest(reference: Mapping[str, Any], base: Path) -> tuple[dic
 def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> InstalledIdentityMatrixSummary:
     if not source_bytes or len(source_bytes) > MAX_MANIFEST_BYTES:
         raise InstalledIdentityMatrixError("installed identity matrix has an invalid size")
+    try:
+        strict_json.loads_matching_object(
+            source_bytes,
+            data,
+            label="installed identity matrix source bytes",
+            maximum_bytes=MAX_MANIFEST_BYTES,
+        )
+    except strict_json.StrictJsonError as exc:
+        raise InstalledIdentityMatrixError(str(exc)) from exc
     root = _mapping(data, "root")
     _require_exact_keys(
         root,
@@ -263,11 +301,14 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> I
         if relative in seen_paths:
             raise InstalledIdentityMatrixError(f"installed identity path is reused: {relative}")
         seen_paths.add(relative)
-        expected_digest = _string(record["sha256"], f"{label}.sha256", maximum=64).lower()
-        if not SHA256_RE.fullmatch(expected_digest):
-            raise InstalledIdentityMatrixError(f"{label}.sha256 must be lowercase 64-hex")
+        expected_digest = _canonical_hash(
+            record["sha256"], f"{label}.sha256", SHA256_RE, "lowercase 64-hex"
+        )
         path = _resolve_inside(evidence_base, relative, f"{label}.path")
-        actual_digest, metadata = _hash_regular(path, "installed identity record", installed_identity.MAX_MANIFEST_BYTES)
+        raw_record, metadata = _read_regular_bytes(
+            path, "installed identity record", installed_identity.MAX_MANIFEST_BYTES
+        )
+        actual_digest = hashlib.sha256(raw_record).hexdigest()
         if actual_digest != expected_digest:
             raise InstalledIdentityMatrixError(f"installed identity digest mismatch: {relative}")
         if metadata.st_ino:
@@ -276,11 +317,16 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> I
                 raise InstalledIdentityMatrixError(f"installed identity file is reused through a hard link: {relative}")
             seen_inodes.add(inode)
         try:
-            summary = installed_identity.load_and_validate(path)
-            record_data = strict_json.load_file(
-                path,
+            record_data = strict_json.loads(
+                raw_record,
+                label=str(path),
                 maximum_bytes=installed_identity.MAX_MANIFEST_BYTES,
                 require_object=True,
+            )
+            summary = installed_identity.validate_bundle(
+                record_data,
+                source_bytes=raw_record,
+                evidence_base=path.parent,
             )
         except (installed_identity.InstalledIdentityError, strict_json.StrictJsonError) as exc:
             raise InstalledIdentityMatrixError(f"invalid installed identity for {session_id}: {exc}") from exc
@@ -299,7 +345,12 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> I
                 raise InstalledIdentityMatrixError(
                     f"installed identity {session_id} device.{key} does not match physical session"
                 )
-        serial_digest = _string(observed_device.get("serial_sha256"), f"installed identity {session_id}.device.serial_sha256", maximum=64).lower()
+        serial_digest = _canonical_hash(
+            observed_device.get("serial_sha256"),
+            f"installed identity {session_id}.device.serial_sha256",
+            SHA256_RE,
+            "lowercase 64-hex",
+        )
         if serial_digest in serial_digests:
             raise InstalledIdentityMatrixError("physical sessions reuse the same installed-device serial identity")
         serial_digests.add(serial_digest)
@@ -333,20 +384,9 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> I
 
 def load_and_validate(path: Path) -> InstalledIdentityMatrixSummary:
     path = path.expanduser()
-    try:
-        before = path.lstat()
-        raw = path.read_bytes()
-        after = path.lstat()
-    except OSError as exc:
-        raise InstalledIdentityMatrixError(f"could not read installed identity matrix: {exc}") from exc
-    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
-        raise InstalledIdentityMatrixError("installed identity matrix must be a regular non-symlink file")
-    if (
-        len(raw) != before.st_size or before.st_size <= 0 or before.st_size > MAX_MANIFEST_BYTES
-        or after.st_size != before.st_size or after.st_mtime_ns != before.st_mtime_ns
-        or (before.st_ino and after.st_ino != before.st_ino)
-    ):
-        raise InstalledIdentityMatrixError("installed identity matrix is invalid or changed while being read")
+    raw, _ = _read_regular_bytes(
+        path, "installed identity matrix", MAX_MANIFEST_BYTES
+    )
     try:
         data = strict_json.loads(raw, label=str(path), maximum_bytes=MAX_MANIFEST_BYTES, require_object=True)
     except strict_json.StrictJsonError as exc:
@@ -355,20 +395,10 @@ def load_and_validate(path: Path) -> InstalledIdentityMatrixSummary:
 
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as handle:
-            temporary = Path(handle.name)
-            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        atomic_write_json(path, payload, "installed-identity-matrix summary")
+    except StableFileError as exc:
+        raise InstalledIdentityMatrixError(str(exc)) from exc
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -383,7 +413,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     payload = summary.to_json()
     if args.summary_output is not None:
-        _write_json(args.summary_output, payload)
+        try:
+            _write_json(args.summary_output, payload)
+        except (OSError, InstalledIdentityMatrixError) as exc:
+            print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+            return 1
     print(json.dumps(payload, sort_keys=True))
     return 0
 

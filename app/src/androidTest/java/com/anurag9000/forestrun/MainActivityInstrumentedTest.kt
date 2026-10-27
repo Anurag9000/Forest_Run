@@ -1,5 +1,9 @@
 package com.anurag9000.forestrun
 
+import android.content.ComponentName
+import android.content.pm.ActivityInfo
+import android.content.pm.ApplicationInfo
+import android.os.Build
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.ViewGroup
@@ -15,6 +19,7 @@ import com.anurag9000.forestrun.engine.GameConstants
 import com.anurag9000.forestrun.engine.EntityManager
 import com.anurag9000.forestrun.engine.GameView
 import com.anurag9000.forestrun.engine.SafeContentTransform
+import com.anurag9000.forestrun.entities.EntityFactory
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.PlayerState
 import com.anurag9000.forestrun.entities.EntityType
@@ -51,6 +56,25 @@ class MainActivityInstrumentedTest {
                 assertTrue(activity.packageName.startsWith("com.anurag9000.forestrun"))
                 assertNotNull(activity.findViewById(android.R.id.content))
             }
+        }
+    }
+
+    @Test
+    fun manifestKeepsGameOrientationAndAndroid16CompatibilityProperty() {
+        assertEquals(ApplicationInfo.CATEGORY_GAME, targetContext.applicationInfo.category)
+        val activity = targetContext.packageManager.getActivityInfo(
+            ComponentName(targetContext, MainActivity::class.java),
+            0
+        )
+        assertEquals(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, activity.screenOrientation)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val property = targetContext.packageManager.getProperty(
+                "android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY",
+                targetContext.packageName
+            )
+            assertTrue(property.isBoolean)
+            assertTrue(property.getBoolean())
         }
     }
 
@@ -271,13 +295,18 @@ class MainActivityInstrumentedTest {
                 val entityManager = getPrivateField(gameView, "entityManager") as EntityManager
                 val gameState = getPrivateField(gameView, "gameState") as com.anurag9000.forestrun.engine.GameStateManager
                 val player = getPrivateField(gameView, "player") as Player
-                val expectedTypes = EntityType.values().toSet()
+                val bambooCanFit = EntityFactory.canStageBamboo(gameView.height.toFloat())
+                val expectedTypes = EntityType.values()
+                    .filter { bambooCanFit || it != EntityType.BAMBOO }
+                    .toSet()
 
                 entityManager.reset()
-                // Keep every type in a valid common pre-entry lane. In
+                // Keep every supported type in a valid common pre-entry lane. In
                 // particular, Eagle intentionally despawns beyond
                 // screenWidth + 150f, so an index-growing X offset would test
                 // out-of-contract geometry rather than spawn/update viability.
+                // Bamboo is excluded only when the actual game surface is too
+                // short to support its full reachable passage geometry.
                 val stagingX = gameView.width + 100f
                 EntityType.values().forEach { type ->
                     entityManager.debugSpawnAt(type, stagingX)
@@ -388,11 +417,20 @@ class MainActivityInstrumentedTest {
     }
 
     private fun mutateStopped(gameView: GameView, mutation: () -> Unit) {
+        val stoppedBeforeDeadline = SystemClock.uptimeMillis() + 10_000L
+        var producerStopped = false
+        while (!producerStopped && SystemClock.uptimeMillis() < stoppedBeforeDeadline) {
+            instrumentation.runOnMainSync {
+                producerStopped = gameView.pause()
+            }
+            if (!producerStopped) SystemClock.sleep(50L)
+        }
+        assertTrue(
+            "runtime producer must stop before instrumentation mutates live owners",
+            producerStopped
+        )
+
         instrumentation.runOnMainSync {
-            assertTrue(
-                "runtime producer must stop before instrumentation mutates live owners",
-                gameView.pause()
-            )
             try {
                 mutation()
             } finally {

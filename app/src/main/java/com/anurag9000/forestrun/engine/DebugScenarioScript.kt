@@ -162,6 +162,11 @@ internal class DebugScenarioScript {
                 DebugScenarioStep(4.30f, DebugScenarioAction.HOLD_JUMP_START),
                 DebugScenarioStep(4.62f, DebugScenarioAction.HOLD_JUMP_END)
             )
+            // The store capture settles for 2.1 seconds. Trigger the visible
+            // first owl shortly before capture so its alert/dive is observable.
+            EncounterScenario.OWL_DIVE -> listOf(
+                DebugScenarioStep(1.80f, DebugScenarioAction.TAP_JUMP)
+            )
             else -> emptyList()
         }
     }

@@ -1,0 +1,201 @@
+{
+  "schema_version": "1.0.0",
+  "repository_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
+  "snapshot_date": "2026-10-27",
+  "authority": "Static source contracts only. All test and application execution is NOT_EXECUTED.",
+  "task_id": "TASK-A-020",
+  "records": [
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/BambooEncounterInstrumentedTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-76", "line_count": 76, "test_annotation_count_static": 1,
+      "test_symbols": ["bambooRendersAndKeepsItsPassageAndStalkCollisionGeometry"],
+      "contract_summary": "Real Bamboo sprite construction/rendering, four authored passage gaps with a widest central gap, no collision in that gap, and HIT on a stalk core.",
+      "subjects": ["Bamboo", "SpriteManager", "Player", "GameStateManager"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/entities/trees/Bamboo.kt", "app/src/main/java/com/anurag9000/forestrun/engine/SpriteManager.kt"]
+    },
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/BitmapHelperInstrumentedTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-38", "line_count": 38, "test_annotation_count_static": 1,
+      "test_symbols": ["placeholderStripPaintsEachFrameAndPulsesBrightness"],
+      "contract_summary": "Generated placeholder strip dimensions and sampled per-frame colors: first/third match base, while alternating frames differ to establish brightness pulse variation.",
+      "subjects": ["BitmapHelper.buildPlaceholderStrip"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/utils/BitmapHelper.kt"]
+    },
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/ForestJournalLifecycleInstrumentedTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-121", "line_count": 121, "test_annotation_count_static": 3,
+      "test_symbols": ["directJournalLaunchRepairsMalformedTypedPersistenceBeforeProjection", "returnActionUsesLocalizedLabelAndAccessibleDescription", "selectedSectionSurvivesActivityRecreationWithoutWritingGameProgress"],
+      "contract_summary": "Direct Journal launch repairs malformed typed values before projection; return button uses localized label and description; selected section survives recreation without changing game progression preferences except schema migration.",
+      "subjects": ["ForestJournalActivity", "SaveIntegrityManager", "journal return strings", "Journal section selection"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/ForestJournalActivity.kt", "app/src/main/java/com/anurag9000/forestrun/engine/SaveIntegrityManager.kt", "app/src/main/res/values/strings.xml"]
+    },
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-290", "line_count": 290, "test_annotation_count_static": 4,
+      "test_symbols": ["captureOpeningReadabilityHardwarePass", "captureBloomShowcaseHardwarePass", "captureGhostReadabilityHardwarePass", "captureRestLoopHardwarePass"],
+      "contract_summary": "Large device/emulator capture harness launches deterministic screenshot scenarios, waits for live rendered frames, uses PixelCopy, rejects blank captures, and publishes PNGs through a pending MediaStore transaction. Rest-loop case captures live, dying, game-over, and Garden-return stages. Setup deletes prior captures in its managed MediaStore path; this harness was not run.",
+      "subjects": ["GameView deterministic launch", "EncounterScenario", "PixelCopy", "PendingCaptureMediaPublisher", "MediaStore"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt", "app/src/androidTest/java/com/anurag9000/forestrun/PendingCaptureMediaPublisher.kt"]
+    },
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/HardwareInputLatencyProfileTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-239", "line_count": 239, "test_annotation_count_static": 1,
+      "test_symbols": ["profileJumpAndDuckAppLatencyOnHardware"],
+      "contract_summary": "Large profiling harness injects repeated tap and duck gestures into live GameView, waits for app touch-to-posted-frame samples, checks sample count and percentile ordering, and writes device metadata. It excludes OS dispatch, sensor acquisition, display scanout, and panel response; it is not touch-to-photon evidence. Not run.",
+      "subjects": ["GameView", "InputHandler", "InputLatencyTelemetryRegistry", "InputLatencyReport"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt", "app/src/main/java/com/anurag9000/forestrun/engine/InputHandler.kt", "app/src/main/java/com/anurag9000/forestrun/engine/InputLatencyReport.kt", "app/src/main/java/com/anurag9000/forestrun/engine/InputLatencyTelemetry.kt"]
+    },
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-267", "line_count": 267, "test_annotation_count_static": 4,
+      "test_symbols": ["pauseResumeReplacesStoppedRenderThreadAndContinuesFrames", "repeatedSingleTaskIntentsReuseActivityAndSwitchDeterministicScenario", "menuFeedbackControlsApplyImmediatelyAndPersistAcrossRecreation", "startupRepairsWrongTypedSaveAndFeedbackValuesBeforeFirstFrame"],
+      "contract_summary": "Exercises pause/resume thread replacement and frame continuation; singleTask intent scenario replacement without finishing/destroying the Activity; immediate feedback toggle changes and persistence across recreation; and repair of malformed save/feedback values before first rendered frame.",
+      "subjects": ["MainActivity", "GameView", "GameThread", "FeedbackSettings", "SaveIntegrityManager", "EncounterDirector"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/MainActivity.kt", "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt", "app/src/main/java/com/anurag9000/forestrun/engine/FeedbackSettings.kt", "app/src/main/java/com/anurag9000/forestrun/engine/SaveIntegrityManager.kt"]
+    },
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/MainActivityInstrumentedTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-482", "line_count": 482, "test_annotation_count_static": 11,
+      "test_symbols": ["launchesMainActivity", "manifestKeepsGameOrientationAndAndroid16CompatibilityProperty", "menuFlowTransitionsIntoPlayingOnDevice", "gameplayProgressesAndPlayerCanJumpOnDevice", "gardenFlowUnlocksPlantPersistsAndReturnsToMenu", "bloomActivationSyncsIntoPlayerState", "collisionLeadsToGameOverAndRestart", "bloomPreventsImmediateCollisionDeath", "biomeCycleTransitionsAcrossLongRunOnDevice", "allEntityTypesSpawnAndUpdateOnDevice", "bestRunPersistsGhostAndReloadsOnNextLaunch"],
+      "contract_summary": "Connected workflow coverage for Activity/package/manifest identity; menu-to-play and live frame/entity/jump behavior; Garden purchase/currency persistence and return; Bloom activation/conversion; collision/game-over/restart; biome transitions; supported EntityType staging/update; and best-run Ghost persistence/reload. Helpers pause the runtime producer before reflective owner mutations. Source presence is not execution evidence.",
+      "subjects": ["MainActivity", "GameView", "EntityManager", "GameStateManager", "GardenScreen", "SaveManager", "GhostPersistenceManager", "GhostPlayer"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/MainActivity.kt", "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt", "app/src/main/java/com/anurag9000/forestrun/engine/EntityManager.kt", "app/src/main/java/com/anurag9000/forestrun/engine/GameStateManager.kt", "app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt", "app/src/main/java/com/anurag9000/forestrun/systems/GhostPersistenceManager.kt", "app/src/main/java/com/anurag9000/forestrun/systems/GhostPlayer.kt"]
+    },
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/PendingCaptureMediaPublisher.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-96", "line_count": 96, "test_annotation_count_static": 0,
+      "test_symbols": [],
+      "contract_summary": "Support adapter inserts a pending PNG MediaStore row, compresses/writes Bitmap, publishes by clearing IS_PENDING, and deletes the inserted row on failure. Bitmap recycling always occurs; cleanup errors are suppressed onto an operation error or thrown if cleanup alone fails. ContentResolverCaptureMediaStore implements the storage port.",
+      "subjects": ["PendingCaptureMediaStore", "PendingCaptureMediaPublisher.publish", "ContentResolverCaptureMediaStore"], "evidence_type": "support source inspection only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt"]
+    },
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/PendingCaptureMediaPublisherTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-154", "line_count": 154, "test_annotation_count_static": 6,
+      "test_symbols": ["successfulPublicationWritesAndReleasesBitmap", "missingOutputStreamDeletesPendingRowAndReleasesBitmap", "failedPendingToVisibleUpdateDeletesRowAndReleasesBitmap", "failedInsertReleasesBitmapWithoutDeletingUnknownRow", "cleanupFailureIsSuppressedAndBitmapIsStillReleased", "cleanupThatDeletesNoRowsIsReportedAsSuppressed"],
+      "contract_summary": "Fake-store assertions cover successful write/publish/recycle; missing stream and failed publish delete pending rows; failed insert does not delete an unknown row; cleanup failure is suppressed; and zero-row cleanup is reported.",
+      "subjects": ["PendingCaptureMediaPublisher", "PendingCaptureMediaStore"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/androidTest/java/com/anurag9000/forestrun/PendingCaptureMediaPublisher.kt"]
+    },
+    {
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/RuntimeAssetValidatorInstrumentedTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-28", "line_count": 28, "test_annotation_count_static": 1,
+      "test_symbols": ["packagedReleaseAssetsPassTheNonDebuggableStartupGuard"],
+      "contract_summary": "Wraps target context with copied ApplicationInfo lacking FLAG_DEBUGGABLE and calls release asset validation; absence of exception is the source assertion for packaged required assets meeting the guard.",
+      "subjects": ["RuntimeAssetValidator.validateRelease"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/engine/RuntimeAssetValidator.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/RecoveryEvidenceDialogCoordinatorTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-170", "line_count": 170, "test_annotation_count_static": 4,
+      "test_symbols": ["safe retry action is dispatched once and dialog closes after recovery", "discard action requires a second dialog confirmation before storage mutation", "dialog omits raw evidence details and dismiss resets active ownership", "clean evidence does not open a dialog"],
+      "contract_summary": "Robolectric assertions cover retry once then close; distinct second confirmation before corrupt-data discard; privacy-safe issue text omitting raw evidence detail; dismissal clearing dialog ownership; and no dialog for clean evidence.",
+      "subjects": ["RecoveryEvidenceDialogCoordinator", "RecoveryEvidenceUserController", "RecoveryEvidenceReport"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/RecoveryEvidenceDialogCoordinator.kt", "app/src/main/java/com/anurag9000/forestrun/engine/RecoveryEvidenceUserController.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/SaveIntegrityStartupGateTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-56", "line_count": 56, "test_annotation_count_static": 2,
+      "test_symbols": ["writeFailureBlocksStartupAndRendersAnAccessibleExplanation", "currentMigratedAndFutureCompatibleSavesMayContinue"],
+      "contract_summary": "WRITE_FAILED blocks continuation and renders localized failure text with matching content description; CURRENT, MIGRATED, and FUTURE_VERSION reports permit continuation.",
+      "subjects": ["Activity.continueAfterSaveRepair", "SaveIntegrityReport", "SaveIntegrityStatus"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/SaveIntegrityStartupGate.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/ApplicationIdentityTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-106", "line_count": 106, "test_annotation_count_static": 3,
+      "test_symbols": ["each build variant uses its intended Forest Run application id", "manifest identifies the game and keeps its launcher landscape", "backup policies exclude app data from cloud transfer and legacy backup"],
+      "contract_summary": "Robolectric checks debug/release package IDs, game category, backup-disabled flag, landscape launcher, and exact nine-domain exclusions in cloud backup, device transfer, and legacy backup XML.",
+      "subjects": ["Android application identity", "AndroidManifest", "data_extraction_rules.xml", "backup_rules.xml"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/AndroidManifest.xml", "app/src/main/res/xml/data_extraction_rules.xml", "app/src/main/res/xml/backup_rules.xml", "app/build.gradle.kts"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/ForestGardenHistoryTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-115", "line_count": 115, "test_annotation_count_static": 5,
+      "test_symbols": ["initial journal projection shows first plant grown and second as next", "next plant affordability changes exactly at its canonical seed cost", "complete catalogue has no next plant and marks every entry grown", "out of range stored progress and negative seeds are bounded for presentation", "garden plant projection rejects impossible affordability"],
+      "contract_summary": "Projection assertions cover initial grown/next/locked states, affordability boundary at canonical price, complete catalogue, clamped malformed progress/seeds, and rejection of an impossible GROWN-but-affordable memory record.",
+      "subjects": ["ForestGardenHistoryComposer", "ForestGardenPlantMemory", "GardenEconomy", "SaveManager"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/engine/ForestGardenHistory.kt", "app/src/main/java/com/anurag9000/forestrun/engine/GardenEconomy.kt", "app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/GameStateManagerTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-580", "line_count": 580, "test_annotation_count_static": 33,
+      "test_symbols": ["terminal Rest preview cannot mislabel stale lower run as new high", "nonpersistent debug summary keeps its own isolated local record", "unsaved genuine new best remains labeled new in terminal preview", "stale equal score is a tie rather than a new durable record", "prior record ownership cannot leak into a later tie owned by another run", "same run repeated save preserves its legitimate new high ownership", "stale manager save cannot lower another run high score", "save publishes best distance even when no Ghost promotion exists", "stale run save cannot lower a newer best distance", "nonpersistent run cannot publish best distance", "collecting seeds activates bloom and persists lifetime seeds", "bulk seed bonus crosses the meter once and ignores surplus during active bloom", "extreme bulk seed bonus saturates without iterative work or wraparound", "bulk seeds earned during bloom do not refill or restart its clock", "world speed and recorded distance share one frame value through acceleration", "debuff begins and expires without a one frame world distance mismatch", "invalid frame deltas cannot corrupt or rewind run state", "score additions saturate instead of wrapping negative", "lifetime seed currency saturates instead of wrapping negative", "non finite score multiplier normalizes before rewards", "bonus multiplier boost affects later points and expires after its duration", "zero duration keeps multiplier through run and reset clears it", "timed multiplier applies to distance score through its final frame", "invalid multiplier duration leaves ordinary rewards intact without installing boost", "invalid speed debuffs are ignored and boosts are capped", "reset run clears transient state and milestone carryover", "reset run clears opening guidance state", "pacifist rewards flow through game state in FIFO order", "mercy system data flows through game state", "bloom conversion grants reward during active bloom", "debug bloom helpers allow deterministic showcase setup", "bloom fractions reflect both meter build and active window", "run summary captures current run state"],
+      "contract_summary": "Covers durable high-score/best-distance ownership under stale and tied managers; debug non-persistence; seed/Bloom meter, reward, timer and saturation; speed-distance frame consistency and debuff edges; malformed delta/multiplier/debuff input; reset/opening state; pacifist/mercy state flow; and run-summary projection.",
+      "subjects": ["GameStateManager", "RunSummary", "SaveManager", "Bloom", "OpeningReadabilityGuide", "PacifistRouteTier", "ForestMood"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/engine/GameStateManager.kt", "app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt", "app/src/main/java/com/anurag9000/forestrun/engine/OpeningReadabilityGuide.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/HapticManagerTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-119", "line_count": 119, "test_annotation_count_static": 5,
+      "test_symbols": ["init acquires service and release clears ownership", "cancel retains service for later reenable", "cue admission and lifecycle cancellation share one ordering monitor", "all patterns are no ops when haptics are disabled or released", "release and cancel are idempotent before initialization"],
+      "contract_summary": "Checks service acquisition/release and cancel retention; all cue methods no-op when disabled/released; cancel/release idempotency; and worker calls block on the same lifecycle monitor during synchronized cue/cancel boundaries.",
+      "subjects": ["HapticManager", "FeedbackSettings"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/engine/HapticManager.kt", "app/src/main/java/com/anurag9000/forestrun/engine/FeedbackSettings.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/InputHandlerTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-483", "line_count": 483, "test_annotation_count_static": 15,
+      "test_symbols": ["quick tap starts and releases one jump", "swipe down is classified before any jump starts", "hold starts after arbitration window and releases normally", "hold duration saturates at gameplay maximum", "hold duration label follows the active locale", "invalid tick deltas cannot poison a pending tap", "malformed initial coordinates are rejected without creating gesture state", "cancel before gesture decision does not create a jump", "silent reset clears a started jump without synthesizing release", "silent reset can release an active duck when explicitly requested", "swipe threshold is strict and stable across the arbitration boundary", "seeded predecision gesture traces always resolve to exactly one action family", "once hold decision starts later downward motion cannot double classify", "secondary pointer movement cannot steal the primary gesture", "releasing primary pointer ends gesture once while secondary remains"],
+      "contract_summary": "Gesture assertions cover tap/hold arbitration, 0.6s hold cap, locale-sensitive label formatting, strict 80px downward swipe classification, invalid coordinates/deltas, cancellation/reset ownership, 1,024 seeded predecision traces resolving exactly one action family, no post-hold reclassification, and secondary-pointer ordering preserving primary ownership.",
+      "subjects": ["InputHandler", "MotionEvent pointer lifecycle"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/engine/InputHandler.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/SaveIntegrityManagerTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-311", "line_count": 311, "test_annotation_count_static": 8,
+      "test_symbols": ["legacy corrupt values are repaired without deleting unknown keys", "malformed run distance is repaired before best distance reads", "known string sets are bounded while unknown sets remain untouched", "repair is idempotent once current schema is clean", "future schema is preserved without destructive downgrade", "partial last run summary is discarded instead of fabricated", "valid current data and unknown dynamic suffixes survive repair", "persistent write APIs clamp invalid values and counters saturate"],
+      "contract_summary": "Covers malformed legacy values and typed-key repair, bounded known string sets while preserving unknown data, idempotent migration, future-version namespace isolation without destructive overwrite, rejection of incomplete summary fabrication, preservation of valid/dynamic data, and sanitization/saturation of persistent writes.",
+      "subjects": ["SaveIntegrityManager", "SaveManager", "Ghost compatibility namespace"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/engine/SaveIntegrityManager.kt", "app/src/main/java/com/anurag9000/forestrun/engine/SaveManager.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/SfxManagerTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-137", "line_count": 137, "test_annotation_count_static": 10,
+      "test_symbols": ["sample ID lookup is serialized with pool replacement", "transient stream ledger is bounded ignores invalid ids and drains exactly once", "stream ledger rejects nonpositive capacity", "bloom ready profile is bright and anticipatory", "bloom convert profile scales upward with burst size", "bloom fade profile lands softer than convert profile", "ready optional sample is preferred over fallback", "failed optional sample falls back to ready mandatory sample", "nonpositive or stale sample identifiers never become playable", "no ready sample resolves to silent no-op identifier"],
+      "contract_summary": "Checks synchronized sample-ID methods; bounded positive stream ledger and exactly-once drain; Bloom cue relative volume/rate profiles; optional-sample preference/fallback; stale/nonpositive IDs and no-ready-sample silent behavior.",
+      "subjects": ["SfxManager", "SoundStreamLedger", "buildBloomSfxProfile", "chooseReadySample"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/entities/animals/CatTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-89", "line_count": 89, "test_annotation_count_static": 2,
+      "test_symbols": ["cat repeat-friend history strengthens aura flag and familiar pass reward", "spared cat leaves after passing its authored wave distance"],
+      "contract_summary": "Prior Cat encounters/spares/passes enable repeat-friend history and stronger aura/pass rewards versus baseline; a spared nonpersistent Cat remains active after departure resolution and retires after its authored wave distance.",
+      "subjects": ["Cat", "PersistentMemoryManager", "GameStateManager"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/entities/animals/Cat.kt", "app/src/main/java/com/anurag9000/forestrun/engine/PersistentMemoryManager.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/ui/FeedbackSettingsPanelLayoutTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-147", "line_count": 147, "test_annotation_count_static": 7,
+      "test_symbols": ["settings chips remain inside and non-overlapping across supported landscapes", "each chip maps to exactly one setting", "journal chip leaves clear space for comfort heading", "non finite and non positive surfaces are rejected", "surfaces too small for three controls are rejected before drawing", "non finite taps fail closed", "malformed or externally mutated rectangles cannot toggle settings"],
+      "contract_summary": "Checks control bounds/no overlap at four landscape sizes, exact center hit mapping, Journal clearance, malformed/nonpositive surfaces, minimum accepted geometry, nonfinite taps, malformed RectFs, and post-construction rectangle mutation failing closed.",
+      "subjects": ["FeedbackSettingsPanelLayout", "FeedbackSettingsLayout", "FeedbackToggle"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/ui/FeedbackSettingsPanelLayout.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/ui/HudTimeBoundaryTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-184", "line_count": 184, "test_annotation_count_static": 6,
+      "test_symbols": ["invalid deltas leave HUD animation state unchanged", "large lifecycle delta is capped to one render-frame budget", "valid update repairs poisoned animation fields", "inactive presentation pulses reset deterministically", "compact HUD keeps mercy hearts below the seed label", "every opening guidance line wraps within the compact HUD panel"],
+      "contract_summary": "Checks invalid delta no-op, long-delta cap, recovery from NaN animation fields, inactive pulse reset, pixel-sampled heart/seed-label non-overlap at compact size, and wrapping/fitting of eight distinct authored opening guidance lines.",
+      "subjects": ["HUD", "GameStateManager", "BloomPresentation", "OpeningReadabilityGuide"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/ui/HUD.kt", "app/src/main/java/com/anurag9000/forestrun/engine/OpeningReadabilityGuide.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/ui/MainMenuScreenTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-117", "line_count": 117, "test_annotation_count_static": 5,
+      "test_symbols": ["garden hotspot triggers callback from idle screen", "starting a run requires stand then ready tap", "run request survives update until consumed", "menu draw supports standing and ready launch staging", "menu title narrative and arrival badge occupy separate rows"],
+      "contract_summary": "Checks Garden hotspot callback without changing idle phase; stand-then-ready two-tap launch; start-request persistence until consumed; drawing during launch phases; and vertical separation of title, narrative, and arrival badge.",
+      "subjects": ["MainMenuScreen", "SpriteManager"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/ui/MainMenuScreen.kt"]
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/utils/MathUtilsTest.kt",
+      "language": "Kotlin", "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree", "inspected_line_range": "1-78", "line_count": 78, "test_annotation_count_static": 7,
+      "test_symbols": ["lerp preserves endpoints and allows extrapolation", "clamp and clamp01 include both boundaries", "normalise handles boundaries reversed ranges and a zero range", "normalise avoids overflow for finite ranges spanning float extremes", "map clamps input and supports reversed output ranges", "smooth step clamps its factor and reaches midpoint smoothly", "degree trigonometry dp conversion and sign cover representative values"],
+      "contract_summary": "Pure math assertions for interpolation/extrapolation, clamp boundaries, normalisation with reversed/zero/extreme finite ranges, clamped mapping/reversed output, smooth-step endpoints/midpoint, degree trig, dp conversion, and sign.",
+      "subjects": ["MathUtils.lerp", "MathUtils.clamp", "MathUtils.normalise", "MathUtils.map", "MathUtils.smoothStep", "MathUtils.sinDeg", "MathUtils.cosDeg", "MathUtils.dpToPx", "MathUtils.sign"], "evidence_type": "test source assertions and fixtures only", "runtime_status": "NOT_EXECUTED",
+      "production_links": ["app/src/main/java/com/anurag9000/forestrun/utils/MathUtils.kt"]
+    }
+  ]
+}

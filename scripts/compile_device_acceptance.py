@@ -15,14 +15,13 @@ import argparse
 import copy
 import json
 import os
-import shutil
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import strict_json
+from stable_file_reader import StableFileError, absolute_lexical_path, atomic_publish_files
 import validate_device_acceptance as acceptance
 
 
@@ -32,21 +31,11 @@ class CompilationError(ValueError):
 
 def _read_object(path: Path) -> dict[str, Any]:
     try:
-        size = path.stat().st_size
-    except FileNotFoundError as exc:
-        raise CompilationError(f"could not read {path}: file is missing") from exc
-    except OSError as exc:
-        raise CompilationError(f"could not inspect {path}: {exc}") from exc
-    if size <= 0 or size > acceptance.MAX_MANIFEST_BYTES:
-        raise CompilationError(
-            f"draft must be between 1 and {acceptance.MAX_MANIFEST_BYTES} bytes"
+        raw, _ = acceptance._read_bounded_file(
+            path, "acceptance draft", acceptance.MAX_MANIFEST_BYTES
         )
-    try:
-        raw = path.read_bytes()
-    except OSError as exc:
-        raise CompilationError(f"could not read {path}: {exc}") from exc
-    if len(raw) != size:
-        raise CompilationError(f"draft changed while being read: {path}")
+    except acceptance.EvidenceError as exc:
+        raise CompilationError(str(exc)) from exc
     try:
         value = strict_json.loads(
             raw,
@@ -76,9 +65,8 @@ def _resolve_relative(base: Path, value: Any, label: str) -> tuple[str, Path]:
         relative = acceptance._safe_evidence_path(value, label)
     except acceptance.EvidenceError as exc:
         raise CompilationError(str(exc)) from exc
-    canonical_base = base.resolve()
     try:
-        resolved = acceptance._resolve_evidence_file(canonical_base, relative, label)
+        resolved = acceptance._resolve_evidence_file(base, relative, label)
     except acceptance.EvidenceError as exc:
         raise CompilationError(str(exc)) from exc
     return relative, resolved
@@ -116,7 +104,12 @@ def compile_bundle(
 ) -> tuple[dict[str, Any], acceptance.ValidationSummary]:
     """Return a fully hashed, identity-preserving, already validated manifest."""
 
-    compiled = copy.deepcopy(dict(draft))
+    if not isinstance(draft, Mapping):
+        raise CompilationError("draft must be an object")
+    try:
+        compiled = copy.deepcopy(dict(draft))
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise CompilationError(f"draft cannot be copied safely: {exc}") from exc
     compiled["schema_version"] = acceptance.SCHEMA_VERSION
     compiled["generated_at_utc"] = _generated_timestamp(
         generated_at_utc
@@ -194,9 +187,14 @@ def compile_bundle(
                 )
             result["evidence_files"] = hashed_files
 
-    canonical_bytes = (
-        json.dumps(compiled, indent=2, sort_keys=True) + "\n"
-    ).encode("utf-8")
+    try:
+        canonical_bytes = (
+            json.dumps(compiled, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        ).encode("utf-8")
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise CompilationError(
+            f"draft contains values that are not valid JSON: {exc}"
+        ) from exc
     try:
         summary = acceptance.validate_bundle(
             compiled,
@@ -212,77 +210,13 @@ def _json_bytes(value: Mapping[str, Any]) -> bytes:
     return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
-def _write_staged_json(path: Path, value: Mapping[str, Any]) -> None:
-    try:
-        with path.open("xb") as handle:
-            handle.write(_json_bytes(value))
-            handle.flush()
-            os.fsync(handle.fileno())
-    except OSError as exc:
-        raise CompilationError(f"could not stage {path.name}: {exc}") from exc
-
-
-def _replace_path(source: Path, destination: Path) -> None:
-    os.replace(source, destination)
-
-
 def _publish_json_transaction(
     outputs: Sequence[tuple[Path, Mapping[str, Any]]],
 ) -> None:
-    if not outputs:
-        raise CompilationError("at least one output is required")
-    destinations = [path.resolve() for path, _ in outputs]
-    if len(destinations) != len(set(destinations)):
-        raise CompilationError("transaction output paths must be distinct")
-    parent = destinations[0].parent
-    if any(path.parent != parent for path in destinations):
-        raise CompilationError("transaction outputs must share one directory")
-    parent.mkdir(parents=True, exist_ok=True)
-
-    transaction_dir = Path(
-        tempfile.mkdtemp(prefix=".device-acceptance-", dir=parent)
-    )
-    staged: list[Path] = []
-    backups: list[tuple[Path, Path]] = []
-    published: list[Path] = []
     try:
-        for index, (_, value) in enumerate(outputs):
-            staged_path = transaction_dir / f"staged-{index}.json"
-            _write_staged_json(staged_path, value)
-            staged.append(staged_path)
-
-        for index, destination in enumerate(destinations):
-            if destination.exists():
-                backup = transaction_dir / f"backup-{index}.json"
-                _replace_path(destination, backup)
-                backups.append((destination, backup))
-
-        for staged_path, destination in zip(staged, destinations):
-            _replace_path(staged_path, destination)
-            published.append(destination)
-    except (OSError, CompilationError) as exc:
-        rollback_errors: list[str] = []
-        for destination in reversed(published):
-            try:
-                destination.unlink(missing_ok=True)
-            except OSError as rollback_exc:
-                rollback_errors.append(
-                    f"could not remove partial {destination.name}: {rollback_exc}"
-                )
-        for destination, backup in reversed(backups):
-            try:
-                if backup.exists():
-                    _replace_path(backup, destination)
-            except OSError as rollback_exc:
-                rollback_errors.append(
-                    f"could not restore {destination.name}: {rollback_exc}"
-                )
-        detail = f"could not publish acceptance outputs: {exc}"
-        if rollback_errors:
-            detail += "; rollback errors: " + "; ".join(rollback_errors)
-        raise CompilationError(detail) from exc
-    finally:
-        shutil.rmtree(transaction_dir, ignore_errors=True)
+        atomic_publish_files([(path, _json_bytes(value)) for path, value in outputs], "device acceptance outputs")
+    except StableFileError as exc:
+        raise CompilationError(f"could not publish acceptance outputs: {exc}") from exc
 
 
 def compile_file(
@@ -292,8 +226,10 @@ def compile_file(
     summary_path: Path | None = None,
     generated_at_utc: str | None = None,
 ) -> acceptance.ValidationSummary:
-    draft_resolved = draft_path.resolve()
-    output_resolved = output_path.resolve()
+    if output_path.is_symlink() or (summary_path is not None and summary_path.is_symlink()):
+        raise CompilationError("output paths must not be symlinks")
+    draft_resolved = absolute_lexical_path(draft_path)
+    output_resolved = absolute_lexical_path(output_path)
     draft_parent = draft_resolved.parent
     if output_resolved.parent != draft_parent:
         raise CompilationError(
@@ -304,7 +240,7 @@ def compile_file(
 
     summary_resolved: Path | None = None
     if summary_path is not None:
-        summary_resolved = summary_path.resolve()
+        summary_resolved = absolute_lexical_path(summary_path)
         if summary_resolved.parent != draft_parent:
             raise CompilationError("summary output must share the draft directory")
         if summary_resolved in {draft_resolved, output_resolved}:

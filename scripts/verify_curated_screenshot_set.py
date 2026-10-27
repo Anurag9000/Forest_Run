@@ -7,7 +7,9 @@ import argparse
 import datetime as dt
 import hashlib
 import math
+import os
 import re
+import stat
 import struct
 import subprocess
 import sys
@@ -16,7 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
-from strict_json import StrictJsonError, load_file
+from stable_file_reader import StableFileError, consume_regular_file
+from strict_json import StrictJsonError, loads
 
 from screenshot_capture_evidence import (
     EXPECTED_ACTIVITY_NAME,
@@ -24,6 +27,7 @@ from screenshot_capture_evidence import (
     CaptureEvidence,
     CaptureEvidenceError,
     load_capture_evidence,
+    parse_capture_evidence,
     require_same_capture_identity,
 )
 
@@ -75,6 +79,46 @@ class CaptureSession:
     screenshot_count: int
 
 
+def _admit_directory(path: Path, label: str) -> Path:
+    lexical = Path(os.path.abspath(os.fspath(path.expanduser())))
+    current = Path(lexical.anchor)
+    for part in lexical.parts[1:]:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except OSError as exc:
+            raise CuratedScreenshotError(
+                f"Could not inspect {label} path component {current}: {exc}"
+            ) from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise CuratedScreenshotError(
+                f"{label} path must not traverse a symbolic link: {current}"
+            )
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise CuratedScreenshotError(
+                f"{label} path component is not a directory: {current}"
+            )
+    return lexical
+
+
+def _read_regular_bytes(path: Path, *, maximum_bytes: int, label: str) -> bytes:
+    try:
+        content, _, _ = consume_regular_file(
+            path,
+            label,
+            maximum_bytes,
+            retain_bytes=True,
+        )
+    except StableFileError as exc:
+        if "is missing or changed:" in str(exc):
+            raise CuratedScreenshotError(
+                f"Missing {label} or it changed while being read: {path}"
+            ) from exc
+        raise CuratedScreenshotError(str(exc)) from exc
+    assert content is not None
+    return content
+
+
 def _parse_utc(value: Any, label: str) -> dt.datetime:
     if not isinstance(value, str) or not value.strip():
         raise CuratedScreenshotError(f"{label} must be a non-blank UTC timestamp")
@@ -92,19 +136,15 @@ def _load_capture_session(
     expected_candidate_sha: str,
     expected_count: int,
 ) -> CaptureSession:
+    raw_bytes = _read_regular_bytes(
+        path,
+        maximum_bytes=MAX_SESSION_BYTES,
+        label="capture session evidence",
+    )
     try:
-        size = path.stat().st_size
-    except FileNotFoundError as exc:
-        raise CuratedScreenshotError(f"Missing capture session evidence: {path}") from exc
-    except OSError as exc:
-        raise CuratedScreenshotError(f"Could not inspect capture session {path}: {exc}") from exc
-    if size <= 0 or size > MAX_SESSION_BYTES:
-        raise CuratedScreenshotError(
-            f"Capture session has invalid file size: {path} is {size} bytes"
-        )
-    try:
-        raw = load_file(
-            path,
+        raw = loads(
+            raw_bytes,
+            label=f"capture session {path}",
             maximum_bytes=MAX_SESSION_BYTES,
             require_object=True,
         )
@@ -121,9 +161,9 @@ def _load_capture_session(
             raise CuratedScreenshotError(f"{path}: {key} must be a non-blank string")
         return value.strip()
 
-    candidate_sha = required_string("candidateSha").lower()
-    origin_main_sha = required_string("originMainSha").lower()
-    apk_sha256 = required_string("apkSha256").lower()
+    candidate_sha = required_string("candidateSha")
+    origin_main_sha = required_string("originMainSha")
+    apk_sha256 = required_string("apkSha256")
     device_serial = required_string("deviceSerial")
     package_name = required_string("packageName")
     activity_name = required_string("activityName")
@@ -165,8 +205,13 @@ def _load_capture_session(
 
 def _load_manifest(path: Path) -> list[dict[str, Any]]:
     try:
-        parsed = load_file(
-            path,
+        parsed = loads(
+            _read_regular_bytes(
+                path,
+                maximum_bytes=MAX_MANIFEST_BYTES,
+                label="curation manifest",
+            ),
+            label=f"curation manifest {path}",
             maximum_bytes=MAX_MANIFEST_BYTES,
             require_object=True,
         )
@@ -266,26 +311,11 @@ def _load_manifest(path: Path) -> list[dict[str, Any]]:
 
 
 def _read_png_content(path: Path) -> bytes:
-    try:
-        size = path.stat().st_size
-    except FileNotFoundError as exc:
-        raise CuratedScreenshotError(
-            f"Missing curated screenshot: {path}"
-        ) from exc
-    except OSError as exc:
-        raise CuratedScreenshotError(
-            f"Could not inspect curated screenshot {path}: {exc}"
-        ) from exc
-    if size <= 0 or size > MAX_SCREENSHOT_BYTES:
-        raise CuratedScreenshotError(
-            f"Curated screenshot has invalid file size: {path} is {size} bytes"
-        )
-    try:
-        return path.read_bytes()
-    except OSError as exc:
-        raise CuratedScreenshotError(
-            f"Could not read curated screenshot {path}: {exc}"
-        ) from exc
+    return _read_regular_bytes(
+        path,
+        maximum_bytes=MAX_SCREENSHOT_BYTES,
+        label="curated screenshot",
+    )
 
 
 def _inspect_png(path: Path) -> tuple[int, int, str]:
@@ -303,6 +333,8 @@ def _inspect_png(path: Path) -> tuple[int, int, str]:
     interlace = -1
     saw_ihdr = False
     saw_plte = False
+    palette_entries = 0
+    saw_trns = False
     saw_idat = False
     idat_closed = False
     saw_iend = False
@@ -321,6 +353,10 @@ def _inspect_png(path: Path) -> tuple[int, int, str]:
         ):
             raise CuratedScreenshotError(
                 f"Curated screenshot has an invalid PNG chunk type: {path}"
+            )
+        if 97 <= chunk_type[2] <= 122:
+            raise CuratedScreenshotError(
+                f"Curated screenshot has a lowercase reserved PNG chunk type bit: {path}"
             )
         chunk_end = offset + 12 + length
         if chunk_end > len(content):
@@ -371,11 +407,39 @@ def _inspect_png(path: Path) -> tuple[int, int, str]:
                 )
             saw_ihdr = True
         elif chunk_type == b"PLTE":
-            if saw_idat or saw_plte or color_type in {0, 4} or length == 0 or length > 768 or length % 3 != 0:
+            if (
+                saw_idat
+                or saw_plte
+                or saw_trns
+                or color_type in {0, 4}
+                or length == 0
+                or length > 768
+                or length % 3 != 0
+                or (color_type == 3 and length // 3 > (1 << bit_depth))
+            ):
                 raise CuratedScreenshotError(
                     f"Curated screenshot has an invalid PNG palette: {path}"
                 )
             saw_plte = True
+            palette_entries = length // 3
+        elif chunk_type == b"tRNS":
+            if saw_trns or saw_idat:
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has a duplicate or out-of-order PNG tRNS chunk: {path}"
+                )
+            if color_type == 0:
+                valid_transparency = length == 2
+            elif color_type == 2:
+                valid_transparency = length == 6
+            elif color_type == 3:
+                valid_transparency = saw_plte and 0 < length <= palette_entries
+            else:
+                valid_transparency = False
+            if not valid_transparency:
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has an invalid PNG tRNS chunk: {path}"
+                )
+            saw_trns = True
         elif chunk_type == b"IDAT":
             if not saw_ihdr or saw_iend or idat_closed:
                 raise CuratedScreenshotError(
@@ -440,14 +504,100 @@ def _inspect_png(path: Path) -> tuple[int, int, str]:
         raise CuratedScreenshotError(
             f"Curated screenshot has empty PNG image data: {path}"
         )
+    channels = CHANNELS_BY_COLOR_TYPE[color_type]
     if interlace == 0:
-        channels = CHANNELS_BY_COLOR_TYPE[color_type]
-        row_bytes = math.ceil(width * channels * bit_depth / 8)
-        expected_decoded_bytes = height * (row_bytes + 1)
-        if len(decoded) != expected_decoded_bytes:
+        passes = ((0, 0, 1, 1, width, height),)
+    else:
+        # Adam7 pass start x/y and step x/y, in specification order.
+        passes = (
+            (0, 0, 8, 8),
+            (4, 0, 8, 8),
+            (0, 4, 4, 8),
+            (2, 0, 4, 4),
+            (0, 2, 2, 4),
+            (1, 0, 2, 2),
+            (0, 1, 1, 2),
+        )
+
+    scanline_offset = 0
+    expected_decoded_bytes = 0
+    scanline_layout: list[tuple[int, int, int, int]] = []
+    for pass_spec in passes:
+        if interlace == 0:
+            start_x, start_y, step_x, step_y, pass_width, pass_height = pass_spec
+        else:
+            start_x, start_y, step_x, step_y = pass_spec
+            pass_width = max(0, (width - start_x + step_x - 1) // step_x)
+            pass_height = max(0, (height - start_y + step_y - 1) // step_y)
+        if pass_width == 0 or pass_height == 0:
+            continue
+        row_bytes = math.ceil(pass_width * channels * bit_depth / 8)
+        row_size = row_bytes + 1
+        pass_decoded_bytes = pass_height * row_size
+        expected_decoded_bytes += pass_decoded_bytes
+        if expected_decoded_bytes > MAX_DECODED_SCREENSHOT_BYTES:
             raise CuratedScreenshotError(
-                f"Curated screenshot PNG scanline size mismatch: {path}"
+                f"Curated screenshot scanlines exceed the PNG safety limit: {path}"
             )
+        scanline_layout.append((pass_height, row_size, row_bytes, pass_width))
+    if len(decoded) != expected_decoded_bytes:
+        raise CuratedScreenshotError(
+            f"Curated screenshot PNG scanline size mismatch: {path}"
+        )
+    for pass_height, row_size, row_bytes, pass_width in scanline_layout:
+        previous_row = bytearray(row_bytes)
+        for _ in range(pass_height):
+            filter_type = decoded[scanline_offset]
+            if filter_type > 4:
+                raise CuratedScreenshotError(
+                    f"Curated screenshot has an invalid PNG scanline filter: {path}"
+                )
+            if color_type == 3:
+                filtered_row = decoded[scanline_offset + 1 : scanline_offset + row_size]
+                reconstructed_row = bytearray(row_bytes)
+                filter_bpp = max(1, (channels * bit_depth + 7) // 8)
+                for index, filtered_byte in enumerate(filtered_row):
+                    left = (
+                        reconstructed_row[index - filter_bpp]
+                        if index >= filter_bpp
+                        else 0
+                    )
+                    above = previous_row[index]
+                    upper_left = (
+                        previous_row[index - filter_bpp]
+                        if index >= filter_bpp
+                        else 0
+                    )
+                    if filter_type == 0:
+                        predictor = 0
+                    elif filter_type == 1:
+                        predictor = left
+                    elif filter_type == 2:
+                        predictor = above
+                    elif filter_type == 3:
+                        predictor = (left + above) // 2
+                    else:
+                        paeth_base = left + above - upper_left
+                        distances = (
+                            abs(paeth_base - left),
+                            abs(paeth_base - above),
+                            abs(paeth_base - upper_left),
+                        )
+                        predictor = (left, above, upper_left)[distances.index(min(distances))]
+                    reconstructed_row[index] = (filtered_byte + predictor) & 0xFF
+
+                palette_index_mask = (1 << bit_depth) - 1
+                for pixel_index in range(pass_width):
+                    bit_offset = pixel_index * bit_depth
+                    byte_value = reconstructed_row[bit_offset // 8]
+                    shift = 8 - bit_depth - (bit_offset % 8)
+                    palette_index = (byte_value >> shift) & palette_index_mask
+                    if palette_index >= palette_entries:
+                        raise CuratedScreenshotError(
+                            f"Curated indexed PNG refers to a missing palette entry: {path}"
+                        )
+                previous_row = reconstructed_row
+            scanline_offset += row_size
 
     if width <= height or width < 800 or height < 480:
         raise CuratedScreenshotError(
@@ -482,17 +632,18 @@ def verify_curated_set(
     screenshot_root: Path,
     expected_candidate_sha: str,
 ) -> VerifiedCuratedSet:
-    expected_candidate_sha = expected_candidate_sha.lower()
     if HEX_40.fullmatch(expected_candidate_sha) is None:
         raise CuratedScreenshotError(
             "expected candidate SHA must be 40 hexadecimal characters"
         )
 
-    final_dir = screenshot_root / "final"
+    screenshot_root = _admit_directory(screenshot_root, "Screenshot root")
+    final_dir = _admit_directory(screenshot_root / "final", "Final screenshot directory")
+    raw_dir = _admit_directory(screenshot_root / "raw", "Raw screenshot evidence directory")
     manifest_path = screenshot_root / "curation_manifest.json"
     items = _load_manifest(manifest_path)
     session = _load_capture_session(
-        screenshot_root / "raw" / "capture-session.json",
+        raw_dir / "capture-session.json",
         expected_candidate_sha,
         len(items),
     )
@@ -501,16 +652,8 @@ def verify_curated_set(
         Path(item["final_file"]).with_suffix(".capture.json").name
         for item in items
     }
-    actual_png_names = (
-        {path.name for path in final_dir.glob("*.png")}
-        if final_dir.is_dir()
-        else set()
-    )
-    actual_sidecar_names = (
-        {path.name for path in final_dir.glob("*.capture.json")}
-        if final_dir.is_dir()
-        else set()
-    )
+    actual_png_names = {path.name for path in final_dir.glob("*.png")}
+    actual_sidecar_names = {path.name for path in final_dir.glob("*.capture.json")}
     missing = sorted(expected_png_names - actual_png_names)
     extras = sorted(actual_png_names - expected_png_names)
     missing_sidecars = sorted(expected_sidecar_names - actual_sidecar_names)
@@ -540,7 +683,19 @@ def verify_curated_set(
         width, height, image_sha256 = _inspect_png(png_path)
         sidecar = png_path.with_suffix(".capture.json")
         try:
-            evidence = load_capture_evidence(
+            sidecar_bytes = _read_regular_bytes(
+                sidecar,
+                maximum_bytes=64 * 1024,
+                label="capture evidence sidecar",
+            )
+            sidecar_payload = loads(
+                sidecar_bytes,
+                label=f"capture evidence sidecar {sidecar}",
+                maximum_bytes=64 * 1024,
+                require_object=True,
+            )
+            evidence = parse_capture_evidence(
+                sidecar_payload,
                 sidecar,
                 expected_raw_file=item["raw_file"],
                 expected_scenario=item["scenario"],
@@ -552,7 +707,7 @@ def verify_curated_set(
                 baseline = evidence
             else:
                 require_same_capture_identity(baseline, evidence, sidecar)
-        except CaptureEvidenceError as exc:
+        except (CaptureEvidenceError, StrictJsonError) as exc:
             raise CuratedScreenshotError(str(exc)) from exc
         if evidence.candidate_sha != expected_candidate_sha:
             raise CuratedScreenshotError(

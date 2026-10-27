@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any, Sequence
 
 import strict_json
 import validate_device_acceptance as acceptance
 import validate_scenario_trace as trace
+from stable_file_reader import StableFileError, consume_regular_file
 
 TRACE_PREFIX = "scenario-trace-"
 TRACE_SUFFIX = ".json"
@@ -31,9 +33,15 @@ def validate_manifest_traces(
     repository_root: Path,
     require_at_least_one: bool = False,
 ) -> dict[str, Any]:
-    resolved_manifest = manifest_path.expanduser().resolve()
+    resolved_manifest = Path(os.path.abspath(os.fspath(manifest_path.expanduser())))
     try:
-        raw = resolved_manifest.read_bytes()
+        raw, _, _ = consume_regular_file(
+            resolved_manifest,
+            "acceptance manifest",
+            acceptance.MAX_MANIFEST_BYTES,
+            retain_bytes=True,
+        )
+        assert raw is not None
         data = strict_json.loads(
             raw,
             label=str(resolved_manifest),
@@ -46,7 +54,7 @@ def validate_manifest_traces(
             source_bytes=raw,
             evidence_base=resolved_manifest.parent,
         )
-    except (OSError, strict_json.StrictJsonError, acceptance.EvidenceError) as exc:
+    except (StableFileError, strict_json.StrictJsonError, acceptance.EvidenceError) as exc:
         raise ManifestTraceError(f"invalid acceptance manifest: {exc}") from exc
 
     candidate = data["candidate"]
@@ -62,7 +70,7 @@ def validate_manifest_traces(
                         relative_path,
                         "scenario trace evidence path",
                     )
-                    trace_path = (resolved_manifest.parent / safe_relative).resolve()
+                    trace_path = resolved_manifest.parent / safe_relative
                     trace_path.relative_to(resolved_manifest.parent.resolve())
                     summary = trace.load_and_validate(
                         trace_path,
@@ -113,7 +121,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         summary = validate_manifest_traces(
             args.manifest,
-            repository_root=args.root.expanduser().resolve(),
+            repository_root=args.root.expanduser(),
             require_at_least_one=args.require_at_least_one,
         )
     except (OSError, ManifestTraceError) as exc:

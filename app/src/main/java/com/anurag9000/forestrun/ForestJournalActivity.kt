@@ -56,13 +56,15 @@ class ForestJournalActivity : Activity() {
     }
 
     private var selectedSection = JournalSection.ALL
+    private var saveIntegrityReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Android may restore the Journal as the top Activity without first
         // recreating MainActivity. Repair typed persistence before any Journal
         // projection reads SharedPreferences.
-        SaveIntegrityManager.repair(this)
+        saveIntegrityReady = continueAfterSaveRepair(SaveIntegrityManager.repair(this))
+        if (!saveIntegrityReady) return
         selectedSection = savedInstanceState
             ?.getString(STATE_JOURNAL_SECTION)
             ?.let { savedName -> JournalSection.entries.firstOrNull { it.name == savedName } }
@@ -78,7 +80,7 @@ class ForestJournalActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        renderJournal()
+        if (saveIntegrityReady) renderJournal()
     }
 
     private fun renderJournal() {
@@ -125,11 +127,11 @@ class ForestJournalActivity : Activity() {
         }
 
         val close = Button(this).apply {
-            text = "Return to Forest"
+            text = getString(R.string.journal_return_to_forest)
             isAllCaps = false
             textSize = 16f
             setOnClickListener { finish() }
-            contentDescription = "Return to Forest Run"
+            contentDescription = getString(R.string.journal_return_to_forest_description)
         }
         content.addView(spacer(18))
         content.addView(

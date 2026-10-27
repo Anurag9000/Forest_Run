@@ -11,12 +11,15 @@ metadata before candidate finalization.
 from __future__ import annotations
 
 import argparse
+import os
+import stat
 import sys
 import unicodedata
 from pathlib import Path
 from typing import Mapping, Sequence
 
 from verify_store_metadata import StoreMetadataError, validate_metadata_directory
+from stable_file_reader import StableFileError, consume_regular_file
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_LISTING_SOURCE = ROOT / "docs" / "STORE_LISTING.md"
@@ -36,13 +39,12 @@ class StoreListingParityError(ValueError):
 
 def _read_listing(path: Path) -> str:
     try:
-        raw = path.read_bytes()
-    except FileNotFoundError as exc:
-        raise StoreListingParityError(f"Canonical store listing is missing: {path}") from exc
-    except OSError as exc:
-        raise StoreListingParityError(f"Could not read canonical store listing {path}: {exc}") from exc
-    if not raw or len(raw) > MAX_LISTING_BYTES:
-        raise StoreListingParityError("Canonical store listing has an invalid byte length")
+        raw, _, _ = consume_regular_file(
+            path, "canonical store listing", MAX_LISTING_BYTES, retain_bytes=True
+        )
+    except StableFileError as exc:
+        raise StoreListingParityError(str(exc)) from exc
+    assert raw is not None
     if raw.startswith(b"\xef\xbb\xbf"):
         raise StoreListingParityError("Canonical store listing must not contain a UTF-8 BOM")
     try:
@@ -110,8 +112,12 @@ def verify_listing_parity(listing_source: Path, metadata_dir: Path) -> Mapping[s
     for filename, expected in canonical.items():
         path = metadata_dir / filename
         try:
-            actual = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeError) as exc:
+            raw, _, _ = consume_regular_file(
+                path, f"Play metadata {filename}", 64 * 1024, retain_bytes=True
+            )
+            assert raw is not None
+            actual = raw.decode("utf-8")
+        except (StableFileError, UnicodeError) as exc:
             raise StoreListingParityError(f"Could not read Play metadata {path}: {exc}") from exc
         if actual != expected:
             raise StoreListingParityError(

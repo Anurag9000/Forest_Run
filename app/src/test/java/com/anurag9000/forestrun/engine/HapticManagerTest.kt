@@ -9,6 +9,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 class HapticManagerTest {
@@ -51,6 +53,14 @@ class HapticManagerTest {
     }
 
     @Test
+    fun `cue admission and lifecycle cancellation share one ordering monitor`() {
+        HapticManager.init(context)
+
+        assertWaitsForLifecycleMonitor { HapticManager.shortPulse() }
+        assertWaitsForLifecycleMonitor { HapticManager.cancel() }
+    }
+
+    @Test
     fun `all patterns are no ops when haptics are disabled or released`() {
         FeedbackSettings.setHapticsEnabled(context, false)
         HapticManager.shortPulse()
@@ -78,5 +88,32 @@ class HapticManagerTest {
         }
 
         assertFalse(HapticManager.hasServiceForTest())
+    }
+
+    private fun assertWaitsForLifecycleMonitor(action: () -> Unit) {
+        val attempted = CountDownLatch(1)
+        val completed = CountDownLatch(1)
+        val worker = Thread {
+            attempted.countDown()
+            action()
+            completed.countDown()
+        }
+
+        synchronized(HapticManager) {
+            worker.start()
+            assertTrue(attempted.await(2, TimeUnit.SECONDS))
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+            while (worker.state != Thread.State.BLOCKED &&
+                completed.count != 0L && System.nanoTime() < deadline
+            ) {
+                Thread.yield()
+            }
+            assertTrue("operation must block on the lifecycle monitor", completed.count != 0L)
+            assertTrue("worker must reach the lifecycle monitor", worker.state == Thread.State.BLOCKED)
+        }
+
+        assertTrue("operation must resume after lifecycle monitor release", completed.await(2, TimeUnit.SECONDS))
+        worker.join(TimeUnit.SECONDS.toMillis(2))
+        assertFalse("worker must terminate", worker.isAlive)
     }
 }

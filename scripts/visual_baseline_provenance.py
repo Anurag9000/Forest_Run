@@ -14,7 +14,6 @@ import json
 import os
 import re
 import stat
-import tempfile
 from pathlib import Path
 from typing import Sequence
 
@@ -22,6 +21,7 @@ from PIL import Image, UnidentifiedImageError
 
 import strict_json
 from verify_curated_screenshot_set import CuratedScreenshotError, _load_manifest
+from stable_file_reader import StableFileError, atomic_write_bytes, ensure_directory_exists
 
 SCHEMA_VERSION = 1
 KIND = "visual_baseline_identity"
@@ -268,22 +268,20 @@ def publish(path: Path, payload: dict[str, object]) -> None:
     output = _absolute(path)
     if output.is_symlink():
         raise VisualBaselineProvenanceError("output must not be a symbolic link")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{output.name}.", suffix=".tmp", dir=output.parent
-    )
-    temporary = Path(temporary_name)
     try:
-        with os.fdopen(descriptor, "wb") as handle:
-            handle.write(_canonical_bytes(payload))
-            handle.flush()
-            os.fsync(handle.fileno())
         if output.is_symlink():
             raise VisualBaselineProvenanceError("output became a symbolic link")
-        os.replace(temporary, output)
-    except Exception:
-        temporary.unlink(missing_ok=True)
-        raise
+        ensure_directory_exists(output.parent, "visual baseline provenance parent directory")
+        atomic_write_bytes(
+            output,
+            _canonical_bytes(payload),
+            "visual baseline provenance",
+            reject_symlink_leaf=True,
+        )
+    except StableFileError as exc:
+        if "symbolic link" in str(exc):
+            raise VisualBaselineProvenanceError("output became a symbolic link") from exc
+        raise VisualBaselineProvenanceError(f"could not safely publish output: {exc}") from exc
 
 
 def parser() -> argparse.ArgumentParser:

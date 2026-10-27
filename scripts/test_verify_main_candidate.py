@@ -5,7 +5,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 MODULE_PATH = Path(__file__).with_name("verify_main_candidate.py")
 SPEC = importlib.util.spec_from_file_location("verify_main_candidate", MODULE_PATH)
@@ -54,6 +57,31 @@ class MainCandidateVerifierTest(unittest.TestCase):
         self.assertEqual("main", candidate.branch)
         self.assertEqual(str(self.root.resolve()), candidate.root)
 
+    def test_nonexistent_root_is_rejected_before_git_invocation(self) -> None:
+        with patch.object(MODULE, "_run_git") as run_git:
+            with self.assertRaisesRegex(CandidateVerificationError, "does not exist"):
+                verify_main_candidate(self.root / "missing")
+        run_git.assert_not_called()
+
+    def test_invalid_git_sha_is_rejected(self) -> None:
+        outputs = iter([
+            str(self.root),
+            "",
+            "main",
+            "not-a-sha",
+            self.head,
+        ])
+        with patch.object(MODULE, "_run_git", side_effect=lambda *_: next(outputs)):
+            with self.assertRaisesRegex(CandidateVerificationError, "invalid candidate SHA"):
+                verify_main_candidate(self.root)
+
+    def test_head_must_equal_main_ref_even_when_both_shas_are_valid(self) -> None:
+        other_sha = "1" * 40 if self.head != "1" * 40 else "2" * 40
+        outputs = iter([str(self.root), "", "main", self.head, other_sha])
+        with patch.object(MODULE, "_run_git", side_effect=lambda *_: next(outputs)):
+            with self.assertRaisesRegex(CandidateVerificationError, "exact local main tip"):
+                verify_main_candidate(self.root)
+
     def test_dirty_tracked_file_is_rejected(self) -> None:
         (self.root / "README.md").write_text("modified\n", encoding="utf-8")
 
@@ -86,12 +114,33 @@ class MainCandidateVerifierTest(unittest.TestCase):
         with self.assertRaisesRegex(CandidateVerificationError, "full 40-character"):
             verify_main_candidate(self.root, expected_sha=self.head[:12])
 
+    def test_uppercase_expected_sha_is_rejected_without_normalization(self) -> None:
+        with self.assertRaisesRegex(CandidateVerificationError, "full 40-character"):
+            verify_main_candidate(self.root, expected_sha=self.head.upper())
+
     def test_subdirectory_is_not_accepted_as_repository_root(self) -> None:
         child = self.root / "nested"
         child.mkdir()
 
         with self.assertRaisesRegex(CandidateVerificationError, "repository root"):
             verify_main_candidate(child)
+
+    def test_cli_json_output_contains_verified_candidate(self) -> None:
+        candidate = MODULE.MainCandidate(self.head, "main", str(self.root.resolve()))
+        output = StringIO()
+        with patch.object(sys, "argv", ["verify_main_candidate.py", "--root", str(self.root), "--expected-sha", self.head, "--json"]), \
+             patch.object(MODULE, "verify_main_candidate", return_value=candidate), \
+             redirect_stdout(output):
+            self.assertEqual(0, MODULE.main())
+        self.assertEqual(
+            {"sha": self.head, "branch": "main", "root": str(self.root.resolve())},
+            __import__("json").loads(output.getvalue()),
+        )
+
+    def test_cli_reports_candidate_errors_without_traceback(self) -> None:
+        with patch.object(sys, "argv", ["verify_main_candidate.py", "--root", str(self.root / "missing")]):
+            with self.assertRaisesRegex(SystemExit, "Candidate root does not exist"):
+                MODULE.main()
 
 
 class MainReleaseWrapperContractTest(unittest.TestCase):

@@ -9,11 +9,42 @@ from unittest.mock import patch
 
 import aggregate_device_acceptance as aggregate
 import publish_device_acceptance_aggregate as publisher
+import stable_file_reader
 from acceptance_test_support import materialize_traced_bundle
 from test_validate_device_acceptance import valid_bundle
 
 
 class PublishDeviceAcceptanceAggregateTest(unittest.TestCase):
+    def test_manifest_snapshot_rejects_parent_swap_to_external_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "manifest.json"
+            manifest.write_text("{}", encoding="utf-8")
+            saved_root = root.with_name(root.name + ".saved")
+            external = root.with_name(root.name + ".external")
+            external.mkdir()
+            (external / "manifest.json").write_text("{}", encoding="utf-8")
+            original_open = os.open
+            swapped = False
+
+            def swap_then_open(value, flags, *args, **kwargs):
+                nonlocal swapped
+                if value == root.name and kwargs.get("dir_fd") is not None and not swapped:
+                    root.rename(saved_root)
+                    root.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return original_open(value, flags, *args, **kwargs)
+
+            with patch.object(publisher.os, "open", side_effect=swap_then_open):
+                with self.assertRaises(publisher.PublicationError):
+                    publisher._stable_manifest_bytes(manifest)
+            self.assertTrue(swapped)
+            self.assertTrue(root.is_symlink())
+            root.unlink()
+            saved_root.rename(root)
+            (external / "manifest.json").unlink()
+            external.rmdir()
+
     @staticmethod
     def materialize(root: Path, *, commit: str | None = None) -> tuple[Path, dict]:
         bundle = valid_bundle()
@@ -72,6 +103,47 @@ class PublishDeviceAcceptanceAggregateTest(unittest.TestCase):
 
             self.assertTrue(staged.is_file())
             self.assertFalse(output.exists())
+
+    def test_output_parent_swap_before_final_replace_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "candidate"
+            root.mkdir()
+            manifest, _ = self.materialize(root)
+            staged = self.stage(root, manifest)
+            output = root / "aggregate.json"
+            moved = root.with_name(root.name + ".moved")
+            external = root.with_name(root.name + ".external")
+            external.mkdir()
+            real_stat = os.stat
+            swapped = False
+
+            def swap_before_staged_stat(path, *args, **kwargs):
+                nonlocal swapped
+                if (
+                    not swapped
+                    and path == staged.name
+                    and kwargs.get("dir_fd") is not None
+                ):
+                    swapped = True
+                    root.rename(moved)
+                    root.symlink_to(external, target_is_directory=True)
+                return real_stat(path, *args, **kwargs)
+
+            with patch.object(
+                stable_file_reader.os,
+                "stat",
+                side_effect=swap_before_staged_stat,
+            ):
+                with self.assertRaisesRegex(
+                    publisher.PublicationError,
+                    "symbolic link or non-directory",
+                ):
+                    publisher.publish(manifest, staged, output)
+
+            self.assertTrue(swapped)
+            self.assertTrue((moved / staged.name).is_file())
+            self.assertFalse((moved / output.name).exists())
+            self.assertFalse((external / output.name).exists())
 
     def test_rehashes_non_trace_evidence_after_trace_validation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -276,6 +348,11 @@ class PublishDeviceAcceptanceAggregateTest(unittest.TestCase):
             root = Path(directory)
             manifest, _ = self.materialize(root)
             staged = self.stage(root, manifest)
+            manifest_alias = root / "manifest-link.json"
+            manifest_alias.symlink_to(manifest)
+            with self.assertRaisesRegex(publisher.PublicationError, "non-symlink"):
+                publisher.publish(manifest_alias, staged, root / "alias-output.json")
+
             symlink = root / "aggregate-link.json"
             symlink.symlink_to(root / "real-output.json")
             with self.assertRaisesRegex(publisher.PublicationError, "symbolic link"):

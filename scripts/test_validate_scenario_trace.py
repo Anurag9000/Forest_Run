@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import scenario_source_contract as source_contract
 import validate_scenario_trace as trace
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT = "1" * 40
-ARTIFACT = "2" * 64
+COMMIT = "ab" * 20
+ARTIFACT = "cd" * 32
 AUTHORED = source_contract.load_trace_contract(ROOT, "CACTUS_READ")
 
 
@@ -49,6 +51,34 @@ class ValidateScenarioTraceTest(unittest.TestCase):
         with self.assertRaisesRegex(trace.ScenarioTraceError, fragment):
             self.validate(payload)
 
+    def test_trace_reader_rejects_parent_swap_to_external_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            parent = root / "trace"
+            parent.mkdir()
+            path = parent / "payload.json"
+            path.write_text("{}", encoding="utf-8")
+            saved = root / "trace.saved"
+            external = root / "external"
+            external.mkdir()
+            (external / "payload.json").write_text("{}", encoding="utf-8")
+            original_open = os.open
+            swapped = False
+
+            def swap_then_open(value, flags, *args, **kwargs):
+                nonlocal swapped
+                if value == "trace" and kwargs.get("dir_fd") is not None and not swapped:
+                    parent.rename(saved)
+                    parent.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return original_open(value, flags, *args, **kwargs)
+
+            with patch.object(trace.os, "open", side_effect=swap_then_open):
+                with self.assertRaises(trace.ScenarioTraceError):
+                    trace._stable_read(path)
+            self.assertTrue(swapped)
+            self.assertTrue(parent.is_symlink())
+
     def test_valid_trace_is_candidate_contract_bound_and_summarized(self) -> None:
         payload = valid_trace()
         raw = (json.dumps(payload, sort_keys=True) + "\n").encode()
@@ -74,6 +104,15 @@ class ValidateScenarioTraceTest(unittest.TestCase):
             summary["trace_contract_sha256"],
         )
         self.assertEqual(hashlib.sha256(raw).hexdigest(), summary["payload_sha256"])
+
+    def test_repository_root_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            alias = Path(temporary) / "source-alias"
+            alias.symlink_to(ROOT, target_is_directory=True)
+            payload = valid_trace()
+            raw = (json.dumps(payload, sort_keys=True) + "\n").encode()
+            with self.assertRaisesRegex(trace.ScenarioTraceError, "symbolic link"):
+                trace.validate_trace(payload, raw=raw, repository_root=alias)
 
     def test_root_and_event_keys_are_exact(self) -> None:
         missing = valid_trace()
@@ -105,6 +144,14 @@ class ValidateScenarioTraceTest(unittest.TestCase):
                 repository_root=ROOT,
                 expected_artifact_sha256="4" * 64,
             )
+        for key, value in (("expected_commit_sha", COMMIT.upper()), ("expected_artifact_sha256", ARTIFACT.upper())):
+            with self.subTest(key=key), self.assertRaisesRegex(trace.ScenarioTraceError, "does not match"):
+                trace.validate_trace(
+                    payload,
+                    raw=raw,
+                    repository_root=ROOT,
+                    **{key: value},
+                )
         payload["scenario"] = "INVENTED_SCENARIO"
         self.invalid(payload, "not reconstructable")
 

@@ -8,6 +8,8 @@ SCRIPT = Path(__file__).with_name("capture_store_screenshots.sh")
 WRITER = Path(__file__).with_name("write_screenshot_capture_evidence.py")
 FINALIZER = Path(__file__).with_name("finalize_screenshot_capture_session.py")
 CURATED_VERIFIER = Path(__file__).with_name("verify_curated_screenshot_set.py")
+PUBLISHER = Path(__file__).with_name("publish_screenshot_capture_set.py")
+SCENARIO_SCRIPT = Path(__file__).parents[1] / "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt"
 
 
 class StoreScreenshotCaptureContractTest(unittest.TestCase):
@@ -17,6 +19,8 @@ class StoreScreenshotCaptureContractTest(unittest.TestCase):
         cls.writer = WRITER.read_text(encoding="utf-8")
         cls.finalizer = FINALIZER.read_text(encoding="utf-8")
         cls.curated_verifier = CURATED_VERIFIER.read_text(encoding="utf-8")
+        cls.publisher = PUBLISHER.read_text(encoding="utf-8")
+        cls.scenario_script = SCENARIO_SCRIPT.read_text(encoding="utf-8")
 
     def test_script_has_valid_bash_syntax(self) -> None:
         result = subprocess.run(
@@ -92,6 +96,14 @@ class StoreScreenshotCaptureContractTest(unittest.TestCase):
         self.assertIn('"screenshotCount": len(png_paths)', self.finalizer)
         self.assertIn("len(png_paths) != expected_count", self.finalizer)
 
+    def test_owl_capture_is_bound_to_a_scenario_with_a_visible_jump(self) -> None:
+        self.assertIn('capture "07-owl" "OWL_DIVE" 2.1', self.source)
+        self.assertIn(
+            "EncounterScenario.OWL_DIVE -> listOf(\n"
+            "                DebugScenarioStep(1.80f, DebugScenarioAction.TAP_JUMP)",
+            self.scenario_script,
+        )
+
     def test_capture_sidecars_validate_landscape_and_record_session_identity(self) -> None:
         self.assertIn("write_screenshot_capture_evidence.py", self.source)
         self.assertIn("finalize_screenshot_capture_session.py", self.source)
@@ -111,6 +123,36 @@ class StoreScreenshotCaptureContractTest(unittest.TestCase):
         self.assertNotIn("git -C \"$ROOT_DIR\" diff --quiet", self.source)
         self.assertNotIn("git -C \"$ROOT_DIR\" diff --cached --quiet", self.source)
         self.assertNotIn("Run ./gradlew assembleDebug first", self.source)
+
+    def test_capture_is_staged_and_old_evidence_is_not_deleted_before_success(self) -> None:
+        self.assertIn('STAGING_DIR="$(mktemp -d', self.source)
+        self.assertIn('local destination="${STAGING_DIR}/${name}.png"', self.source)
+        self.assertIn('find "${STAGING_DIR}" -maxdepth 1', self.source)
+        self.assertNotIn('find "${OUTPUT_DIR}"', self.source)
+        self.assertIn('trap cleanup_staging_directory EXIT', self.source)
+        device_inventory_index = self.source.index('mapfile -t devices')
+        staging_index = self.source.index('STAGING_DIR="$(mktemp -d')
+        self.assertLess(device_inventory_index, staging_index)
+        finalize_index = self.source.index("scripts/finalize_screenshot_capture_session.py")
+        raw_verify_index = self.source.index("scripts/verify_raw_screenshot_set.py")
+        final_candidate_check_index = self.source.rindex("FINAL_ORIGIN_SHA")
+        publish_index = self.source.rindex("scripts/publish_screenshot_capture_set.py")
+        self.assertLess(finalize_index, raw_verify_index)
+        self.assertLess(raw_verify_index, final_candidate_check_index)
+        self.assertLess(final_candidate_check_index, publish_index)
+        self.assertIn("os.rename(staging_dir.name, output_dir.name", self.publisher)
+        self.assertIn("os.rename(backup_name, output_dir.name", self.publisher)
+        self.assertIn("src_dir_fd=parent_fd", self.publisher)
+
+    def test_managed_symlink_paths_are_removed_from_stage_before_capture(self) -> None:
+        cleanup_index = self.source.index('find "${STAGING_DIR}" -maxdepth 1')
+        first_capture_index = self.source.index('capture "01-opening"')
+        self.assertLess(cleanup_index, first_capture_index)
+        self.assertIn("-exec rm -rf -- {} +", self.source)
+        self.assertIn('if [[ -L "${OUTPUT_DIR}" ]]', self.source)
+        preflight_index = self.source.index("--check-only")
+        staging_index = self.source.index('STAGING_DIR="$(mktemp -d')
+        self.assertLess(preflight_index, staging_index)
 
 
 if __name__ == "__main__":

@@ -3,13 +3,15 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import re
+import stat
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
-from strict_json import StrictJsonError, load_file
+from strict_json import StrictJsonError, loads
 
 from screenshot_capture_evidence import (
     CaptureEvidence,
@@ -48,8 +50,60 @@ def _fail(message: str) -> NoReturn:
 
 def _read_object(path: Path) -> dict[str, Any]:
     try:
-        parsed = load_file(
-            path,
+        before = path.lstat()
+    except OSError as error:
+        _fail(f"Could not inspect raw screenshot session evidence {path}: {error}")
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+        _fail(f"Raw screenshot session evidence must be a regular non-symlink file: {path}")
+    if before.st_size <= 0 or before.st_size > MAX_SESSION_BYTES:
+        _fail(f"Raw screenshot session evidence has invalid size: {path}")
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        _fail(f"Could not safely open raw screenshot session evidence {path}: {error}")
+    fields = ("st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns")
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or any(
+            getattr(before, field) != getattr(opened, field) for field in fields
+        ):
+            _fail(f"Raw screenshot session evidence changed while being opened: {path}")
+        remaining = before.st_size
+        chunks: list[bytes] = []
+        while remaining:
+            chunk = os.read(descriptor, min(16 * 1024, remaining))
+            if not chunk:
+                _fail(f"Raw screenshot session evidence changed while being read: {path}")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            _fail(f"Raw screenshot session evidence changed while being read: {path}")
+        after = os.fstat(descriptor)
+    except OSError as error:
+        _fail(f"Could not safely read raw screenshot session evidence {path}: {error}")
+    finally:
+        os.close(descriptor)
+    try:
+        after_path = path.lstat()
+    except OSError as error:
+        _fail(f"Raw screenshot session evidence changed while being read: {path}: {error}")
+    if any(
+        getattr(before, field) != getattr(current, field)
+        for current in (after, after_path)
+        for field in fields
+    ):
+        _fail(f"Raw screenshot session evidence changed while being read: {path}")
+    try:
+        parsed = loads(
+            b"".join(chunks),
+            label=str(path),
             maximum_bytes=MAX_SESSION_BYTES,
             require_object=True,
         )
@@ -64,7 +118,9 @@ def _required_string(source: dict[str, Any], key: str, path: Path) -> str:
     value = source.get(key)
     if not isinstance(value, str) or not value.strip():
         _fail(f"{path}: {key} must be a non-blank string")
-    return value.strip()
+    if value != value.strip():
+        _fail(f"{path}: {key} must not have surrounding whitespace")
+    return value
 
 
 def _parse_utc(value: str, path: Path, field: str) -> dt.datetime:
@@ -82,10 +138,16 @@ def verify_raw_screenshot_set(
     manifest_path: Path,
     expected_candidate_sha: str,
 ) -> VerifiedRawScreenshotSet:
-    expected_candidate_sha = expected_candidate_sha.strip().lower()
-    if HEX_40.fullmatch(expected_candidate_sha) is None:
-        _fail("expected candidate SHA must be 40 hexadecimal characters")
-    if not raw_dir.is_dir():
+    if (
+        not isinstance(expected_candidate_sha, str)
+        or HEX_40.fullmatch(expected_candidate_sha) is None
+    ):
+        _fail("expected candidate SHA must be exactly 40 lowercase hexadecimal characters")
+    try:
+        raw_directory = raw_dir.lstat()
+    except OSError:
+        raw_directory = None
+    if raw_directory is None or stat.S_ISLNK(raw_directory.st_mode) or not stat.S_ISDIR(raw_directory.st_mode):
         _fail(f"Raw screenshot directory does not exist: {raw_dir}")
 
     try:
@@ -158,11 +220,11 @@ def verify_raw_screenshot_set(
         _fail(f"{session_path}: schemaVersion must equal 1")
     session_candidate = _required_string(
         session, "candidateSha", session_path
-    ).lower()
+    )
     origin_main_sha = _required_string(
         session, "originMainSha", session_path
-    ).lower()
-    apk_sha256 = _required_string(session, "apkSha256", session_path).lower()
+    )
+    apk_sha256 = _required_string(session, "apkSha256", session_path)
     if HEX_40.fullmatch(session_candidate) is None:
         _fail(f"{session_path}: candidateSha must be a 40-character Git SHA")
     if HEX_40.fullmatch(origin_main_sha) is None:

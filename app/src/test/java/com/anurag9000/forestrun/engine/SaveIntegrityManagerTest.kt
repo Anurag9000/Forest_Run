@@ -84,6 +84,20 @@ class SaveIntegrityManagerTest {
     }
 
     @Test
+    fun `malformed run distance is repaired before best distance reads`() {
+        prefs.edit()
+            .putFloat("best_distance", 12f)
+            .putString("best_run_distance", "broken")
+            .commit()
+
+        val report = SaveIntegrityManager.repair(context)
+
+        assertEquals(SaveIntegrityStatus.MIGRATED, report.status)
+        assertEquals(0f, prefs.getFloat("best_run_distance", -1f), 0f)
+        assertEquals(12f, SaveManager.loadBestDistance(context), 0f)
+    }
+
+    @Test
     fun `known string sets are bounded while unknown sets remain untouched`() {
         val memoryPages = (0 until 600).mapTo(mutableSetOf()) { index ->
             "page_${index.toString().padStart(3, '0')}"

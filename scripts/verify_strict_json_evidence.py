@@ -20,7 +20,10 @@ class EvidenceJsonPreflightError(ValueError):
 def expand_paths(arguments: Sequence[Path]) -> list[Path]:
     expanded: list[Path] = []
     for argument in arguments:
-        resolved = argument.expanduser().resolve()
+        # Keep the supplied path's symlink components visible to load_file().
+        # Resolving here would turn a symlink into its target before the
+        # descriptor-based no-follow reader can enforce the evidence boundary.
+        resolved = argument.expanduser().absolute()
         if resolved.is_file():
             if resolved.suffix.casefold() != ".json":
                 raise EvidenceJsonPreflightError(
@@ -28,11 +31,14 @@ def expand_paths(arguments: Sequence[Path]) -> list[Path]:
                 )
             expanded.append(resolved)
         elif resolved.is_dir():
-            expanded.extend(
-                path.resolve()
-                for path in resolved.rglob("*.json")
-                if path.is_file()
-            )
+            for path in resolved.rglob("*.json"):
+                if not path.is_file():
+                    continue
+                expanded.append(path.absolute())
+                if len(expanded) > MAX_FILES:
+                    raise EvidenceJsonPreflightError(
+                        f"evidence JSON preflight exceeds the {MAX_FILES}-file safety limit"
+                    )
         else:
             raise EvidenceJsonPreflightError(
                 f"evidence JSON path does not exist: {resolved}"

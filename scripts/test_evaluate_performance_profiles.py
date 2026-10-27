@@ -12,6 +12,8 @@ from evaluate_performance_profiles import (
     load_thresholds,
     select_profile,
 )
+import evaluate_performance_profiles as evaluate_module
+
 
 
 class PerformanceProfileEvaluatorTest(unittest.TestCase):
@@ -274,3 +276,198 @@ class PerformanceProfileEvaluatorTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class PerformanceProfileBoundaryTest(PerformanceProfileEvaluatorTest):
+    def test_unrepresentable_finite_numbers_raise_configuration_error(self):
+        enormous = 10 ** 1000
+        with self.assertRaisesRegex(ConfigurationError, "must be finite"):
+            evaluate_report(Path("huge-refresh.json"), dict(self.report, refreshRateHz=enormous), (self.profile(),))
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "thresholds.json"
+            manifest = {
+                "schemaVersion": 1,
+                "profiles": [{
+                    "name": "huge-refresh", "manufacturer": "*", "model": "*", "scenario": "*",
+                    "minRefreshRateHz": enormous,
+                    "minSampledFrames": 0, "maxP95ProcessingNs": 1, "maxP99ProcessingNs": 1,
+                    "maxSlowFrameRatio": 1, "maxUsedHeapBytes": 0,
+                }],
+            }
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(ConfigurationError, "invalid JSON.*digit safety limit"):
+                load_thresholds(path)
+        with self.assertRaisesRegex(ConfigurationError, "must be finite"):
+            evaluate_module._finite_number({"value": enormous}, "value", "profile")
+
+    def test_threshold_profiles_reject_reversed_bounds_ratios_and_percentile_limits(self):
+        base = {
+            "schemaVersion": 1,
+            "profiles": [{
+                "name": "bounded", "manufacturer": "*", "model": "*", "scenario": "*",
+                "minSampledFrames": 0, "maxP95ProcessingNs": 3, "maxP99ProcessingNs": 4,
+                "maxSlowFrameRatio": 0.5, "maxUsedHeapBytes": 10,
+            }],
+        }
+        mutations = (
+            ({"minRefreshRateHz": 61, "maxRefreshRateHz": 60}, "reversed"),
+            ({"maxSlowFrameRatio": 1.01}, "between 0 and 1"),
+            ({"maxP95ProcessingNs": 5}, "cannot exceed p99"),
+            ({"minGhostWritesCompleted": -1}, "non-negative integer"),
+            ({"maxGhostWriteDurationNs": -0.1}, "non-negative"),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "thresholds.json"
+            for changes, message in mutations:
+                profile = dict(base["profiles"][0], **changes)
+                path.write_text(json.dumps({"schemaVersion": 1, "profiles": [profile]}), encoding="utf-8")
+                with self.subTest(changes=changes), self.assertRaisesRegex(ConfigurationError, message):
+                    load_thresholds(path)
+
+    def test_threshold_manifest_rejects_empty_profiles_and_duplicate_names(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "thresholds.json"
+            for profiles, message in (([], "non-empty"), ([self.profile(), self.profile()], "unique")):
+                if profiles and isinstance(profiles[0], ThresholdProfile):
+                    profile_values = [{
+                        "name": item.name, "manufacturer": item.manufacturer, "model": item.model,
+                        "scenario": item.scenario, "minSampledFrames": item.min_sampled_frames,
+                        "maxP95ProcessingNs": item.max_p95_processing_ns,
+                        "maxP99ProcessingNs": item.max_p99_processing_ns,
+                        "maxSlowFrameRatio": item.max_slow_frame_ratio,
+                        "maxUsedHeapBytes": item.max_used_heap_bytes,
+                    } for item in profiles]
+                else:
+                    profile_values = profiles
+                path.write_text(json.dumps({"schemaVersion": 1, "profiles": profile_values}), encoding="utf-8")
+                with self.assertRaisesRegex(ConfigurationError, message):
+                    load_thresholds(path)
+
+    def test_profile_selection_inclusive_refresh_and_case_insensitive_fields(self):
+        selected = self.profile(manufacturer="EXAMPLE", model="MIDRANGE ONE", scenario="opening_readability")
+        self.assertEqual("midrange-opening", select_profile(self.report, (selected,)).name)
+        below = dict(self.report, refreshRateHz=58.99)
+        with self.assertRaisesRegex(ConfigurationError, "no threshold profile"):
+            select_profile(below, (self.profile(),))
+        above = dict(self.report, refreshRateHz=61.01)
+        with self.assertRaisesRegex(ConfigurationError, "no threshold profile"):
+            select_profile(above, (self.profile(),))
+
+    def test_report_evidence_rejects_nonfinite_consistency_errors(self):
+        cases = (
+            (dict(self.report, slowFrameRatio=float("nan")), "must be finite"),
+            (dict(self.report, sampledFrames=0, totalFrames=10, slowFrames=11), "slowFrames cannot exceed"),
+            (dict(self.report, meanProcessingNs=23_000_000), "meanProcessingNs cannot exceed"),
+            (dict(self.report, meanRenderNs=23_000_000), "update/render means cannot exceed"),
+            (dict(self.report, ghostWritesStarted=3, ghostWritesCompleted=2, ghostWritesFailed=3), "ghostWritesFailed cannot exceed"),
+            (dict(self.report, latestGhostWriteDurationNs=2, maximumGhostWriteDurationNs=1), "latestGhostWriteDurationNs cannot exceed"),
+        )
+        for report, message in cases:
+            with self.subTest(message=message), self.assertRaisesRegex(ConfigurationError, message):
+                evaluate_report(Path("invalid.json"), report, (self.profile(),))
+
+    def test_report_discovery_deduplicates_files_and_run_reports_all_outcomes(self):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            reports = root / "reports"
+            reports.mkdir()
+            good = reports / "good.json"
+            bad = reports / "bad.json"
+            good.write_text(json.dumps(self.report), encoding="utf-8")
+            bad_report = dict(self.report, p95ProcessingNs=14_000_000)
+            bad.write_text(json.dumps(bad_report), encoding="utf-8")
+            self.assertEqual([bad.resolve(), good.resolve()], evaluate_module._expand_report_paths([reports, good]))
+            thresholds = root / "thresholds.json"
+            thresholds.write_text(json.dumps({"schemaVersion": 1, "profiles": [{
+                "name": "test", "manufacturer": "*", "model": "*", "scenario": "*",
+                "minSampledFrames": 0, "maxP95ProcessingNs": 13_000_000,
+                "maxP99ProcessingNs": 16_000_000, "maxSlowFrameRatio": 1,
+                "maxUsedHeapBytes": 100_000_000,
+            }]}), encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(1, evaluate_module.run(thresholds, [reports]))
+            self.assertIn("PASS", output.getvalue())
+            self.assertIn("FAIL", output.getvalue())
+            self.assertIn("Evaluated 2 report(s): 1 passed, 1 failed", output.getvalue())
+
+    def test_report_discovery_rejects_missing_and_empty_inputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with self.assertRaisesRegex(ConfigurationError, "does not exist"):
+                evaluate_module._expand_report_paths([root / "missing"])
+            with self.assertRaisesRegex(ConfigurationError, "no JSON performance reports"):
+                evaluate_module._expand_report_paths([root])
+
+    def test_profile_primitives_and_malformed_profile_objects(self):
+        with self.assertRaisesRegex(ConfigurationError, "non-blank"):
+            evaluate_module._required_string({"name": " "}, "name", "profile")
+        with self.assertRaisesRegex(ConfigurationError, "must be numeric"):
+            evaluate_module._finite_number({"value": True}, "value", "profile")
+        with self.assertRaisesRegex(ConfigurationError, "non-negative integer"):
+            evaluate_module._non_negative_int({"value": -1}, "value", "profile")
+        with self.assertRaisesRegex(ConfigurationError, "positive integer"):
+            evaluate_module._positive_int({"value": 0}, "value", "profile")
+        self.assertIsNone(evaluate_module._optional_non_negative_int({}, "x", "p"))
+        self.assertIsNone(evaluate_module._optional_non_negative_number({"x": None}, "x", "p"))
+        with self.assertRaisesRegex(ConfigurationError, "non-negative"):
+            evaluate_module._optional_non_negative_number({"x": -0.5}, "x", "p")
+        with self.assertRaisesRegex(ConfigurationError, "must be an object"):
+            evaluate_module._parse_profile([], 0)
+        with self.assertRaisesRegex(ConfigurationError, "minSampledFrames is required"):
+            evaluate_module._parse_profile({}, 0)
+
+    def test_profile_manifest_and_report_json_file_failures(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            missing = root / "missing.json"
+            with self.assertRaisesRegex(ConfigurationError, "invalid JSON"):
+                _read_json(missing)
+            path = root / "thresholds.json"
+            for payload, message in (
+                ("[]", "invalid JSON"),
+                (json.dumps({"schemaVersion": 1, "profiles": []}), "non-empty array"),
+                (json.dumps({"schemaVersion": 1, "profiles": [None]}), "must be an object"),
+                (json.dumps({"schemaVersion": 1, "profiles": [{"minSampledFrames": 1,
+                    "maxP95ProcessingNs": 1, "maxP99ProcessingNs": 1,
+                    "maxSlowFrameRatio": 1, "maxUsedHeapBytes": 1}]}), "name must be a non-blank"),
+            ):
+                path.write_text(payload, encoding="utf-8")
+                with self.subTest(message=message), self.assertRaisesRegex(ConfigurationError, message):
+                    load_thresholds(path)
+
+    def test_main_returns_configuration_status_and_script_entrypoint(self):
+        import contextlib
+        import io
+        import subprocess
+        import sys
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            thresholds = root / "thresholds.json"
+            thresholds.write_text(json.dumps({"schemaVersion": 1, "profiles": [{
+                "name": "fallback", "manufacturer": "*", "model": "*", "scenario": "*",
+                "minSampledFrames": 0, "maxP95ProcessingNs": 13_000_000,
+                "maxP99ProcessingNs": 16_000_000, "maxSlowFrameRatio": 1,
+                "maxUsedHeapBytes": 100_000_000,
+            }]}), encoding="utf-8")
+            report = root / "report.json"
+            report.write_text(json.dumps(self.report), encoding="utf-8")
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(0, evaluate_module.main(["--thresholds", str(thresholds), str(report)]))
+            self.assertIn("PASS", stdout.getvalue())
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertEqual(2, evaluate_module.main(["--thresholds", str(root / "bad.json"), str(report)]))
+            self.assertIn("ERROR:", stderr.getvalue())
+            result = subprocess.run([sys.executable, str(Path(evaluate_module.__file__)), "--help"],
+                capture_output=True, text=True, check=False)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn("--thresholds", result.stdout)
+
+    def test_profile_selector_rejects_nonpositive_refresh_and_ratio_out_of_range(self):
+        with self.assertRaisesRegex(ConfigurationError, "refreshRateHz must be positive"):
+            select_profile(dict(self.report, refreshRateHz=0), (self.profile(),))
+        with self.assertRaisesRegex(ConfigurationError, "slowFrameRatio must be between"):
+            evaluate_report(Path("invalid-ratio.json"), dict(self.report, slowFrameRatio=1.1), (self.profile(),))

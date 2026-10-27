@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import os
 import tempfile
 import unittest
@@ -20,7 +21,7 @@ class DeviceAcceptanceHardeningTest(unittest.TestCase):
     def validate(self, bundle, root: Path | None = None):
         return acceptance.validate_bundle(
             bundle,
-            source_bytes=b"{}",
+            source_bytes=json.dumps(bundle).encode(),
             evidence_base=root,
         )
 
@@ -152,6 +153,25 @@ class DeviceAcceptanceHardeningTest(unittest.TestCase):
         original = copy.deepcopy(bundle)
         self.validate(bundle)
         self.assertEqual(original, bundle)
+
+    def test_symlinked_evidence_root_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = valid_bundle()
+            materialize_files(root, bundle)
+            alias = root.parent / f"{root.name}-alias"
+            try:
+                alias.symlink_to(root, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            try:
+                with self.assertRaisesRegex(
+                    acceptance.EvidenceError,
+                    "evidence root.*symbolic link",
+                ):
+                    self.validate(bundle, alias)
+            finally:
+                alias.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

@@ -48,16 +48,36 @@ mkdir -p "${RELEASE_ROOT}"
 summary_backup_dir="$(mktemp -d "${TMPDIR:-/tmp}/forest-run-release-summary.XXXXXX")"
 restore_release_summaries() {
   local status=$?
+  local restore_failed=0
   trap - EXIT
   if [[ ${status} -ne 0 ]]; then
-    rm -f "${MACHINE_SUMMARY}" "${HUMAN_SUMMARY}"
     for filename in build_summary.json BUILD_SUMMARY.md; do
+      local destination="${RELEASE_ROOT}/${filename}"
+      if ! rm -f "${destination}"; then
+        echo "Could not remove failed release summary ${destination}." >&2
+        restore_failed=1
+        continue
+      fi
       if [[ -f "${summary_backup_dir}/${filename}" ]]; then
-        mv "${summary_backup_dir}/${filename}" "${RELEASE_ROOT}/${filename}"
+        if ! mv "${summary_backup_dir}/${filename}" "${destination}"; then
+          echo "Could not restore prior release summary ${filename}." >&2
+          restore_failed=1
+        fi
       fi
     done
   fi
-  rm -rf "${summary_backup_dir}"
+  if [[ ${restore_failed} -eq 0 ]]; then
+    if ! rm -rf "${summary_backup_dir}"; then
+      echo "Could not remove release summary transaction directory: ${summary_backup_dir}" >&2
+      restore_failed=1
+    fi
+  fi
+  if [[ ${restore_failed} -ne 0 ]]; then
+    echo "Release summary backups retained at ${summary_backup_dir}." >&2
+    if [[ ${status} -eq 0 ]]; then
+      status=1
+    fi
+  fi
   exit "${status}"
 }
 trap restore_release_summaries EXIT

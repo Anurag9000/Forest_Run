@@ -4,7 +4,9 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+import audit_runtime_asset_references as asset_audit
 from audit_runtime_asset_references import (
     RuntimeAssetReferenceError,
     audit_runtime_asset_references,
@@ -111,6 +113,48 @@ class RuntimeAssetReferenceAuditTest(unittest.TestCase):
 
             with self.assertRaisesRegex(RuntimeAssetReferenceError, "must not contain symlinks"):
                 audit_runtime_asset_references(source, assets)
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks unavailable")
+    def test_symlinked_assets_root_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "target"
+            target.mkdir()
+            (target / "sprite.png").write_bytes(b"asset")
+            alias = root / "assets"
+            alias.symlink_to(target, target_is_directory=True)
+            source = self.write_source(root, ("sprite.png",))
+
+            with self.assertRaisesRegex(RuntimeAssetReferenceError, "symlink"):
+                audit_runtime_asset_references(source, alias)
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks unavailable")
+    def test_asset_replaced_by_symlink_after_discovery_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            assets = root / "assets"
+            assets.mkdir()
+            relative = "sprite.png"
+            asset = assets / relative
+            asset.write_bytes(b"original asset")
+            outside = root / "outside.png"
+            outside.write_bytes(b"external replacement")
+            source = self.write_source(root, (relative,))
+            original_discovery = asset_audit._discover_assets
+
+            def discover_then_swap(assets_root: Path) -> tuple[str, ...]:
+                discovered = original_discovery(assets_root)
+                asset.unlink()
+                asset.symlink_to(outside)
+                return discovered
+
+            with mock.patch.object(
+                asset_audit,
+                "_discover_assets",
+                side_effect=discover_then_swap,
+            ):
+                with self.assertRaisesRegex(RuntimeAssetReferenceError, "non-symlink"):
+                    audit_runtime_asset_references(source, assets)
 
     class fixture:
         def __init__(

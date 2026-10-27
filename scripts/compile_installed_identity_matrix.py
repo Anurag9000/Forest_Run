@@ -5,16 +5,20 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import os
-import shutil
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import strict_json
+from stable_file_reader import (
+    StableFileError,
+    absolute_lexical_path,
+    atomic_publish_files,
+)
 import validate_device_acceptance as device_acceptance
 import validate_installed_identity_matrix as matrix
 
@@ -66,7 +70,14 @@ def compile_bundle(
     base_dir: Path,
     generated_at_utc: str | None = None,
 ) -> tuple[dict[str, Any], matrix.InstalledIdentityMatrixSummary]:
-    compiled = copy.deepcopy(dict(draft))
+    if not isinstance(draft, Mapping):
+        raise InstalledIdentityMatrixCompilationError("draft must be an object")
+    try:
+        compiled = copy.deepcopy(dict(draft))
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise InstalledIdentityMatrixCompilationError(
+            f"draft cannot be copied safely: {exc}"
+        ) from exc
     compiled["schema_version"] = matrix.SCHEMA_VERSION
     compiled["generated_at_utc"] = _generated_at(
         generated_at_utc if generated_at_utc is not None else compiled.get("generated_at_utc")
@@ -74,22 +85,28 @@ def compile_bundle(
 
     raw_device = compiled.get("device_acceptance")
     device_relative, device_path = _resolve(base_dir, raw_device, "device_acceptance")
-    device_digest = _hash(
-        device_path,
-        "device acceptance manifest",
-        device_acceptance.MAX_MANIFEST_BYTES,
-    )
     try:
-        device_summary = device_acceptance.load_and_validate(device_path)
-        device_data = strict_json.load_file(
+        device_bytes, _ = device_acceptance._read_bounded_file(
             device_path,
+            "acceptance manifest",
+            device_acceptance.MAX_MANIFEST_BYTES,
+        )
+        device_data = strict_json.loads(
+            device_bytes,
+            label=str(device_path),
             maximum_bytes=device_acceptance.MAX_MANIFEST_BYTES,
             require_object=True,
+        )
+        device_summary = device_acceptance.validate_bundle(
+            device_data,
+            source_bytes=device_bytes,
+            evidence_base=device_path.parent,
         )
     except (device_acceptance.EvidenceError, strict_json.StrictJsonError) as exc:
         raise InstalledIdentityMatrixCompilationError(
             f"referenced device acceptance is invalid: {exc}"
         ) from exc
+    device_digest = hashlib.sha256(device_bytes).hexdigest()
     candidate = device_data["candidate"]
     compiled["candidate"] = {
         "repository": candidate["repository"],
@@ -134,7 +151,14 @@ def compile_bundle(
         )
     compiled["records"] = hashed_records
 
-    raw = (json.dumps(compiled, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+    try:
+        raw = (
+            json.dumps(compiled, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        ).encode("utf-8")
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise InstalledIdentityMatrixCompilationError(
+            f"draft contains values that are not valid JSON: {exc}"
+        ) from exc
     try:
         summary = matrix.validate_bundle(compiled, source_bytes=raw, evidence_base=base_dir)
     except matrix.InstalledIdentityMatrixError as exc:
@@ -147,44 +171,10 @@ def _json_bytes(payload: Mapping[str, Any]) -> bytes:
 
 
 def _publish(outputs: Sequence[tuple[Path, Mapping[str, Any]]]) -> None:
-    if not outputs:
-        raise InstalledIdentityMatrixCompilationError("at least one output is required")
-    destinations = [path.resolve() for path, _ in outputs]
-    if len(destinations) != len(set(destinations)):
-        raise InstalledIdentityMatrixCompilationError("output paths must be distinct")
-    parent = destinations[0].parent
-    if any(path.parent != parent for path in destinations):
-        raise InstalledIdentityMatrixCompilationError("outputs must share one directory")
-    parent.mkdir(parents=True, exist_ok=True)
-    transaction = Path(tempfile.mkdtemp(prefix=".installed-identity-matrix-", dir=parent))
-    backups: list[tuple[Path, Path]] = []
-    published: list[Path] = []
     try:
-        staged: list[Path] = []
-        for index, (_, payload) in enumerate(outputs):
-            stage = transaction / f"stage-{index}.json"
-            with stage.open("xb") as handle:
-                handle.write(_json_bytes(payload))
-                handle.flush()
-                os.fsync(handle.fileno())
-            staged.append(stage)
-        for index, destination in enumerate(destinations):
-            if destination.exists():
-                backup = transaction / f"backup-{index}.json"
-                os.replace(destination, backup)
-                backups.append((destination, backup))
-        for stage, destination in zip(staged, destinations):
-            os.replace(stage, destination)
-            published.append(destination)
-    except OSError as exc:
-        for destination in reversed(published):
-            destination.unlink(missing_ok=True)
-        for destination, backup in reversed(backups):
-            if backup.exists():
-                os.replace(backup, destination)
+        atomic_publish_files([(path, _json_bytes(payload)) for path, payload in outputs], "installed identity matrix outputs")
+    except StableFileError as exc:
         raise InstalledIdentityMatrixCompilationError(f"could not publish matrix outputs: {exc}") from exc
-    finally:
-        shutil.rmtree(transaction, ignore_errors=True)
 
 
 def compile_file(
@@ -194,15 +184,17 @@ def compile_file(
     summary_path: Path | None = None,
     generated_at_utc: str | None = None,
 ) -> matrix.InstalledIdentityMatrixSummary:
-    draft = draft_path.resolve()
-    output = output_path.resolve()
+    if output_path.is_symlink() or (summary_path is not None and summary_path.is_symlink()):
+        raise InstalledIdentityMatrixCompilationError("output paths must not be symlinks")
+    draft = absolute_lexical_path(draft_path)
+    output = absolute_lexical_path(output_path)
     if output.parent != draft.parent or output == draft:
         raise InstalledIdentityMatrixCompilationError(
             "output must share the draft directory and must not overwrite the draft"
         )
     summary: Path | None = None
     if summary_path is not None:
-        summary = summary_path.resolve()
+        summary = absolute_lexical_path(summary_path)
         if summary.parent != draft.parent or summary in {draft, output}:
             raise InstalledIdentityMatrixCompilationError(
                 "summary must share the draft directory and be distinct from draft/output"

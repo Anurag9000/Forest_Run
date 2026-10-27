@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import struct
 import tempfile
 import unittest
@@ -164,6 +165,52 @@ class RawScreenshotSetVerifierTest(unittest.TestCase):
         self.assertEqual(self.candidate_sha, result.origin_main_sha)
         self.assertEqual(self.apk_sha256, result.apk_sha256)
         self.assertEqual("device-1", result.device_serial)
+
+    def test_candidate_hash_fields_require_lowercase_hex(self) -> None:
+        for field, value in (
+            ("candidateSha", self.candidate_sha),
+            ("originMainSha", self.candidate_sha),
+            ("apkSha256", self.apk_sha256),
+        ):
+            with tempfile.TemporaryDirectory() as temporary:
+                self.create_valid_set()
+                self.write_session(**{field: value.upper()})
+                with self.subTest(field=field), self.assertRaisesRegex(
+                    RawScreenshotSetError, "candidateSha|originMainSha|apkSha256"
+                ):
+                    verify_raw_screenshot_set(self.raw_dir, self.manifest_path, self.candidate_sha)
+
+        with self.assertRaisesRegex(RawScreenshotSetError, "expected candidate SHA"):
+            verify_raw_screenshot_set(self.raw_dir, self.manifest_path, self.candidate_sha.upper())
+
+    def test_raw_directory_and_session_reject_symlinks(self) -> None:
+        self.create_valid_set()
+        alias = self.root / "raw-alias"
+        alias.symlink_to(self.raw_dir, target_is_directory=True)
+        with self.assertRaisesRegex(RawScreenshotSetError, "Raw screenshot directory"):
+            verify_raw_screenshot_set(alias, self.manifest_path, self.candidate_sha)
+
+        session = self.raw_dir / "capture-session.json"
+        target = self.root / "session-target.json"
+        target.write_bytes(session.read_bytes())
+        session.unlink()
+        session.symlink_to(target)
+        with self.assertRaisesRegex(RawScreenshotSetError, "non-symlink"):
+            verify_raw_screenshot_set(self.raw_dir, self.manifest_path, self.candidate_sha)
+
+    def test_capture_session_reader_rejects_fifo_and_oversized_input(self) -> None:
+        self.create_valid_set()
+        session = self.raw_dir / "capture-session.json"
+        session.unlink()
+        os.mkfifo(session)
+        with self.assertRaisesRegex(RawScreenshotSetError, "non-symlink"):
+            verify_raw_screenshot_set(self.raw_dir, self.manifest_path, self.candidate_sha)
+
+        session.unlink()
+        with session.open("wb") as stream:
+            stream.truncate(64 * 1024 + 1)
+        with self.assertRaisesRegex(RawScreenshotSetError, "invalid size"):
+            verify_raw_screenshot_set(self.raw_dir, self.manifest_path, self.candidate_sha)
 
     def test_missing_and_extra_files_are_rejected(self) -> None:
         self.create_valid_set()

@@ -1,0 +1,428 @@
+{
+  "schema_version": "1.0.0",
+  "source_of_truth": "MASTER_EXECUTION_LEDGER.json task records",
+  "dependency_type": "hard prerequisite; conflicts are separate resource constraints",
+  "edges": [
+    {
+      "from": "TASK-A-001",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation must reuse current delta inspection."
+    },
+    {
+      "from": "TASK-D-001",
+      "to": "TASK-B-001",
+      "reason": "Physical matrix/candidate readiness is needed for the representative baseline."
+    },
+    {
+      "from": "TASK-B-001",
+      "to": "TASK-B-002",
+      "reason": "Optimization analysis requires measured profile evidence."
+    },
+    {
+      "from": "TASK-D-001",
+      "to": "TASK-D-003",
+      "reason": "Creative review is performed against packaged candidate assets."
+    },
+    {
+      "from": "TASK-D-002",
+      "to": "TASK-D-003",
+      "reason": "Presentation approval incorporates human review."
+    },
+    {
+      "from": "TASK-D-001",
+      "to": "TASK-D-002",
+      "reason": "Human review uses the candidate/device baseline selected for acceptance."
+    },
+    {
+      "from": "TASK-D-001",
+      "to": "TASK-D-007",
+      "reason": "Device acceptance is a governance evidence domain."
+    },
+    {
+      "from": "TASK-D-002",
+      "to": "TASK-D-007",
+      "reason": "Human acceptance is a governance evidence domain."
+    },
+    {
+      "from": "TASK-D-003",
+      "to": "TASK-D-007",
+      "reason": "Creative/rights approvals are governance evidence domains."
+    },
+    {
+      "from": "TASK-D-004",
+      "to": "TASK-D-007",
+      "reason": "Supply-chain/security review is a governance evidence domain."
+    },
+    {
+      "from": "TASK-D-005",
+      "to": "TASK-D-007",
+      "reason": "Privacy/Play declarations are governance evidence domains."
+    },
+    {
+      "from": "TASK-D-006",
+      "to": "TASK-D-007",
+      "reason": "Signing/Play delivery is a governance evidence domain."
+    },
+    {
+      "from": "TASK-D-007",
+      "to": "TASK-E-001",
+      "reason": "Final accountable decision requires reconciled governance evidence."
+    },
+    {
+      "from": "TASK-A-002",
+      "to": "TASK-C-005",
+      "reason": "Changed script delta review identified the canonicality mismatch later reconciled by TASK-C-005."
+    },
+    {
+      "from": "TASK-A-021",
+      "to": "TASK-A-022",
+      "reason": "Visual sheet and alias observations define the source-to-frame questions for static consumer tracing."
+    },
+    {
+      "from": "TASK-C-005",
+      "to": "TASK-A-026",
+      "reason": "Static canonicality reconciliation established the repository contract that the targeted source completion applies."
+    },
+    {
+      "from": "TASK-D-005",
+      "to": "TASK-D-006",
+      "reason": "Signing and delivery declarations depend on the selected privacy/Play policy disposition."
+    },
+    {
+      "from": "TASK-A-023",
+      "to": "TASK-A-027",
+      "reason": "Reuse completed deep inspection shards and classify only unmatched source candidates."
+    },
+    {
+      "from": "TASK-A-024",
+      "to": "TASK-A-027",
+      "reason": "Reuse completed deep inspection shards and classify only unmatched source candidates."
+    },
+    {
+      "from": "TASK-A-028",
+      "to": "TASK-E-001",
+      "reason": "Complete the current partial central codebase map before final residual reconciliation."
+    },
+    {
+      "from": "TASK-A-029",
+      "to": "TASK-E-001",
+      "reason": "Complete the current partial memory map before final residual reconciliation."
+    },
+    {
+      "from": "TASK-A-030",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation depends on full meaningful-symbol inventory and bidirectional traceability."
+    },
+    {
+      "from": "TASK-A-031",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation depends on full meaningful-symbol inventory and bidirectional traceability."
+    },
+    {
+      "from": "TASK-A-032",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation depends on full meaningful-symbol inventory and bidirectional traceability."
+    },
+    {
+      "from": "TASK-A-033",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation depends on full meaningful-symbol inventory and bidirectional traceability."
+    },
+    {
+      "from": "TASK-A-034",
+      "to": "TASK-C-007",
+      "reason": "Verification contract and applicability constraints must be available before any future authorized testing."
+    },
+    {
+      "from": "TASK-A-034",
+      "to": "TASK-C-008",
+      "reason": "Verification contract and applicability constraints must be available before any future authorized testing."
+    },
+    {
+      "from": "TASK-A-034",
+      "to": "TASK-C-009",
+      "reason": "Verification contract and applicability constraints must be available before any future authorized testing."
+    },
+    {
+      "from": "TASK-A-034",
+      "to": "TASK-C-010",
+      "reason": "Verification contract and applicability constraints must be available before any future authorized testing."
+    },
+    {
+      "from": "TASK-C-007",
+      "to": "TASK-C-011",
+      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
+    },
+    {
+      "from": "TASK-C-008",
+      "to": "TASK-C-011",
+      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
+    },
+    {
+      "from": "TASK-C-009",
+      "to": "TASK-C-011",
+      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
+    },
+    {
+      "from": "TASK-C-010",
+      "to": "TASK-C-011",
+      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
+    },
+    {
+      "from": "TASK-C-011",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation must consider current authorized focused and full verification evidence."
+    },
+    {
+      "from": "TASK-A-034",
+      "to": "TASK-E-001",
+      "reason": "Final repository/closure reconciliation must include the requirement-by-requirement applicability matrix."
+    },
+    {
+      "from": "TASK-A-034",
+      "to": "TASK-C-012",
+      "reason": "Applicability and authorization constraints must be known before future concurrency verification."
+    },
+    {
+      "from": "TASK-C-012",
+      "to": "TASK-C-011",
+      "reason": "Concurrency/lifecycle/audio/filesystem race evidence and residual gaps must be reconciled before full regression."
+    },
+    {
+      "from": "TASK-A-001",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-002",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-028",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-029",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-030",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-031",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-032",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-033",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-034",
+      "to": "TASK-C-011",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-035",
+      "to": "TASK-C-013",
+      "reason": "Runtime screenshot-state verification requires the deterministic OWL_DIVE input path to be present."
+    },
+    {
+      "from": "TASK-C-013",
+      "to": "TASK-E-001",
+      "reason": "Final release reconciliation must account for whether the named Owl screenshot demonstrates the intended interaction."
+    }
+  ],
+  "parallel_waves": [
+    {
+      "wave": "A",
+      "eligible_after_phase_authorization": [
+        "TASK-A-001",
+        "TASK-A-002",
+        "TASK-A-003",
+        "TASK-A-028",
+        "TASK-A-029",
+        "TASK-A-030",
+        "TASK-A-031",
+        "TASK-A-032",
+        "TASK-A-033"
+      ],
+      "notes": "At the investigation snapshot these delta-inspection tasks have completed; source-reconciliation tasks remain deferred unless a separately evidenced requirement and authorization exists. TASK-A-026 is completed at static source level in the current worktree; no source implementation work is currently queued. TASK-A-028/A-029 completed independent full-text reviews of both legacy maps; stale status/index statements are reconciled in FIND-008 and the current master map. Symbol coverage is now a confirmed documentation gap (FIND-014/GAP-005); four disjoint production-source inventory tasks are active.",
+      "status": "COMPLETED; merged to symbol_inventory.json (EVID-067)"
+    },
+    {
+      "wave": "C-foundation",
+      "eligible_after_A": [],
+      "notes": "Excluded by current governing prompt: no test/runtime verification work or testing backlog. The source-only TASK-C-005 contract reconciliation is complete."
+    },
+    {
+      "wave": "C-integration",
+      "eligible_after_foundation": [],
+      "notes": "Excluded by current governing prompt: no test/runtime verification work or testing backlog. The source-only TASK-C-005 contract reconciliation is complete."
+    },
+    {
+      "wave": "C-evidence-chain",
+      "eligible_after_integration": [],
+      "notes": "Excluded by current governing prompt: no test/runtime verification work or testing backlog. The source-only TASK-C-005 contract reconciliation is complete."
+    },
+    {
+      "wave": "D-review",
+      "eligible_after_C": [
+        "TASK-D-001",
+        "TASK-D-004"
+      ],
+      "notes": "Physical matrix and supply-chain/security review may be parallel; device resources and dependency graph are separate."
+    },
+    {
+      "wave": "D-human-and-creative",
+      "eligible_after_device": [
+        "TASK-D-002"
+      ],
+      "parallel_after_human": [
+        "TASK-D-003"
+      ],
+      "notes": "Creative review depends on physical/candidate assets and human acceptance; external reviewers remain unassigned."
+    },
+    {
+      "wave": "D-ops",
+      "eligible_after_candidate_chain": [
+        "TASK-D-005",
+        "TASK-D-006"
+      ],
+      "notes": "Privacy/store declarations and signing/delivery share candidate identity; coordinate on one release owner."
+    },
+    {
+      "wave": "D-governance",
+      "eligible_after_all_D": [
+        "TASK-D-007"
+      ],
+      "notes": "Requires independent accountable reviewer."
+    },
+    {
+      "wave": "E-close",
+      "eligible_after_governance": [
+        "TASK-E-001"
+      ],
+      "notes": "Targeted residual check, not a repeat of completed audits."
+    },
+    {
+      "wave": "A-clean-test-contracts",
+      "eligible_after_phase_authorization": [
+        "TASK-A-004",
+        "TASK-A-005",
+        "TASK-A-006",
+        "TASK-A-007",
+        "TASK-A-008",
+        "TASK-A-009"
+      ],
+      "notes": "Completed assigned source-reading partitions; all 389 test-related paths now have structured source-only contracts after A-019/A-020. No test executed."
+    },
+    {
+      "wave": "A-production-kotlin",
+      "eligible_after_phase_authorization": [
+        "TASK-A-010",
+        "TASK-A-011",
+        "TASK-A-012"
+      ],
+      "notes": "Completed: 168 baseline production Kotlin paths covered by one fresh read batch plus two exact prior-map/HEAD reconciliations; reuse unless source changes."
+    },
+    {
+      "wave": "A-historical-audits",
+      "eligible_after_phase_authorization": [
+        "TASK-A-013",
+        "TASK-A-014",
+        "TASK-A-015"
+      ],
+      "notes": "Completed: three disjoint batches cover all 140 inventoried historical audit files; source-history claims remain revision-bounded and no historical workflow was rerun."
+    },
+    {
+      "wave": "A-other-repository-artifacts",
+      "eligible_after_phase_authorization": [
+        "TASK-A-016",
+        "TASK-A-017",
+        "TASK-A-018"
+      ],
+      "notes": "A-016/A-017/A-018 complete. Remaining documentation-only follow-ups A-019/A-020/A-021 are listed in separate waves below."
+    },
+    {
+      "wave": "A-python-test-contracts",
+      "eligible_after_phase_authorization": [
+        "TASK-A-019"
+      ],
+      "notes": "60 Python sources are disjoint from Kotlin contract batch; lead alone integrates into test_contract_inventory.json."
+    },
+    {
+      "wave": "A-kotlin-test-contracts",
+      "eligible_after_phase_authorization": [
+        "TASK-A-020"
+      ],
+      "notes": "24 Kotlin test/support paths; lead alone integrates into test_contract_inventory.json."
+    },
+    {
+      "wave": "A-visual-asset-review",
+      "eligible_after_phase_authorization": [
+        "TASK-A-021"
+      ],
+      "notes": "58 PNGs are read-only visual-inspection scope; distinct from contract work; no rights/approval conclusions."
+    },
+    {
+      "wave": "A-sprite-consumer-trace",
+      "eligible_after_phase_authorization": [
+        "TASK-A-022"
+      ],
+      "notes": "Completed under TASK-A-022: all 29 runtime sprite paths traced statically; intent and visual-validation questions are separately recorded."
+    },
+    {
+      "wave": "A-full-text-partial-coverage",
+      "eligible_after_phase_authorization": [
+        "TASK-A-023"
+      ],
+      "notes": "Independent file ownership; each worker writes a separate shard. Lead integrates shared coverage after all results."
+    },
+    {
+      "wave": "A-full-text-partial-coverage",
+      "eligible_after_phase_authorization": [
+        "TASK-A-024"
+      ],
+      "notes": "Independent file ownership; each worker writes a separate shard. Lead integrates shared coverage after all results."
+    },
+    {
+      "wave": "A-full-text-partial-coverage",
+      "eligible_after_phase_authorization": [
+        "TASK-A-025"
+      ],
+      "notes": "Independent file ownership; each worker writes a separate shard. Lead integrates shared coverage after all results."
+    },
+    {
+      "wave": "C-numeric-contract-verification",
+      "eligible_after_phase_authorization": [
+        "TASK-C-006"
+      ],
+      "notes": "TASK-C-006 was canceled under the earlier scope. It is not reactivated; new test-planning tasks C-007\u2013C-011 are deferred under REQ-019 pending explicit authorization."
+    },
+    {
+      "wave": "C-risk-based-verification",
+      "eligible_after_phase_authorization": [
+        "TASK-C-007",
+        "TASK-C-008",
+        "TASK-C-009",
+        "TASK-C-010",
+        "TASK-C-012"
+      ],
+      "notes": "Five focused scopes C-007\u2013C-010 and C-012 can run concurrently after explicit verification authorization and revision freeze. Coordinate Android device ownership across C-010/C-012. C-011 is downstream integration/full-regression and waits for all five focused scopes; TASK-E-001 follows it."
+    }
+  ],
+  "cycle_check": "Acyclic; static DFS verified on 2026-10-27; 48 hard dependency edges over 58 task records.",
+  "ready_rule": "Only tasks belonging to the explicitly authorized active phase may become READY; all hard prerequisites must be completed with evidence and no ownership/resource conflict may remain."
+}

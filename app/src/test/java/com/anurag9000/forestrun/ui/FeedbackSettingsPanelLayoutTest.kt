@@ -50,6 +50,17 @@ class FeedbackSettingsPanelLayoutTest {
     }
 
     @Test
+    fun `journal chip leaves clear space for comfort heading`() {
+        for ((width, height) in listOf(1280f to 720f, 1920f to 1080f, 2560f to 1440f, 2400f to 1080f)) {
+            val layout = FeedbackSettingsPanelLayout.build(width, height)
+            val journal = FeedbackSettingsPanelLayout.journalBounds(width, height)
+
+            assertTrue("journal chip must end above COMFORT", journal.bottom < layout.reducedMotion.top - 20f)
+            assertFalse(layout.all.any { overlaps(journal, it) })
+        }
+    }
+
+    @Test
     fun `non finite and non positive surfaces are rejected`() {
         val malformed = listOf(
             Float.NaN,

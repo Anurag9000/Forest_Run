@@ -13,8 +13,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import stat
 from pathlib import Path
 
+from scripts.stable_file_reader import (
+    absolute_lexical_path,
+    atomic_write_bytes,
+    ensure_directory_exists,
+    open_directory_descriptor,
+)
 from training_control.dataset_cohort_not_applicable_v1 import certificate as dataset_certificate
 from training_control.forest_no_trainable_authority import require_no_trainable_surface
 
@@ -46,23 +53,43 @@ NOT_APPLICABLE_CONTROLS = (
 
 
 def _within_root(path: Path) -> Path:
-    resolved = path.expanduser()
-    if not resolved.is_absolute():
-        resolved = ROOT / resolved
-    resolved = resolved.resolve()
-    if resolved != ROOT and ROOT not in resolved.parents:
-        raise ValueError(f"certificate output must stay inside the repository: {resolved}")
-    return resolved
+    candidate = path.expanduser()
+    if not candidate.is_absolute():
+        candidate = ROOT / candidate
+    lexical = absolute_lexical_path(candidate)
+    root = absolute_lexical_path(ROOT)
+    if lexical != root and root not in lexical.parents:
+        raise ValueError(f"certificate output must stay inside the repository: {lexical}")
+    return lexical
 
 
 def _atomic_json(path: Path, payload: dict[str, object]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    ensure_directory_exists(path.parent, "certificate output parent directory")
+    atomic_write_bytes(
+        path,
+        (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8"),
+        "certificate output",
+        reject_symlink_leaf=True,
     )
-    os.replace(temporary, path)
+
+
+def _invalidate_previous_output(path: Path) -> None:
+    """Remove stale evidence by leaf name through a held no-follow directory."""
+    ensure_directory_exists(path.parent, "certificate output parent directory")
+    directory_fd = open_directory_descriptor(
+        path.parent, "certificate output parent directory"
+    )
+    try:
+        try:
+            current = os.stat(path.name, dir_fd=directory_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return
+        if stat.S_ISDIR(current.st_mode):
+            raise ValueError("certificate output must be a file inside the repository")
+        os.unlink(path.name, dir_fd=directory_fd)
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
 
 
 def build_certificate() -> dict[str, object]:
@@ -107,12 +134,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     output = _within_root(args.output)
-    if output == ROOT or output.is_dir():
+    if output == absolute_lexical_path(ROOT):
         raise ValueError("certificate output must be a file inside the repository")
     # An earlier PASS is not valid evidence for a later failed source audit.
     # Clear it before reading the current source, so even an unexpected audit
     # or publication error cannot leave an old success at this path.
-    output.unlink(missing_ok=True)
+    _invalidate_previous_output(output)
     try:
         payload = build_certificate()
     except Exception as exc:

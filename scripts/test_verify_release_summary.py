@@ -3,10 +3,12 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from verify_release_summary import (
     EXPECTED_AUDIO_NAMES,
     ReleaseSummaryError,
+    _safe_fact_path,
     verify_release_summary,
 )
 from verify_release_source_assets import parse_required_audio
@@ -62,6 +64,30 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temp.cleanup()
+
+    def test_file_fact_paths_must_be_safe_and_canonical_after_separator_mapping(self) -> None:
+        (self.root / "evidence").mkdir()
+        (self.root / "evidence/item.txt").write_text("proof", encoding="utf-8")
+        self.assertEqual(
+            "evidence/item.txt",
+            _safe_fact_path(self.root, {"path": "evidence/item.txt"}, "evidence")[0],
+        )
+        self.assertEqual(
+            "evidence/item.txt",
+            _safe_fact_path(self.root, {"path": r"evidence\item.txt"}, "evidence")[0],
+        )
+        for path in (
+            " evidence/item.txt",
+            "evidence/item.txt ",
+            "evidence//item.txt",
+            "./evidence/item.txt",
+            "evidence/line\x01break.txt",
+            "evidence/item:alternate.txt",
+            "evidence/\ud800.txt",
+        ):
+            with self.subTest(path=path):
+                with self.assertRaises(ReleaseSummaryError):
+                    _safe_fact_path(self.root, {"path": path}, "evidence")
 
     @staticmethod
     def digest(path: Path) -> str:
@@ -150,6 +176,38 @@ class ReleaseSummaryVerifierTest(unittest.TestCase):
             self.candidate,
             verify_release_summary(self.root, self.release, self.candidate)["candidate"]["sha"],
         )
+
+    def test_release_source_and_summary_roots_reject_symlink_aliases(self) -> None:
+        self.write(self.payload())
+        source_alias = self.root.parent / (self.root.name + "-source-alias")
+        release_alias = self.root.parent / (self.root.name + "-release-alias")
+        source_alias.symlink_to(self.root, target_is_directory=True)
+        release_alias.symlink_to(self.release, target_is_directory=True)
+        try:
+            with self.assertRaisesRegex(ReleaseSummaryError, "symbolic link"):
+                verify_release_summary(source_alias, self.release, self.candidate)
+            with self.assertRaisesRegex(ReleaseSummaryError, "symbolic link"):
+                verify_release_summary(self.root, release_alias, self.candidate)
+        finally:
+            source_alias.unlink()
+            release_alias.unlink()
+
+    def test_expected_and_recorded_candidate_sha_require_lowercase(self) -> None:
+        payload = self.payload()
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "expected candidate SHA"):
+            verify_release_summary(self.root, self.release, self.candidate.upper())
+
+        payload["candidate"]["sha"] = self.candidate.upper()
+        self.write(payload)
+        with self.assertRaisesRegex(ReleaseSummaryError, "not the expected main commit"):
+            verify_release_summary(self.root, self.release, self.candidate)
+
+    def test_summary_and_metadata_are_parsed_from_bounded_read_bytes(self) -> None:
+        self.write(self.payload())
+        with patch.object(Path, "read_text", side_effect=AssertionError("reopened text file")):
+            result = verify_release_summary(self.root, self.release, self.candidate)
+        self.assertEqual(self.candidate, result["candidate"]["sha"])
 
     def test_explicit_unsigned_and_skip_build_dry_runs_are_distinct(self) -> None:
         unsigned = self.payload(allow_unsigned=True, signature=False)

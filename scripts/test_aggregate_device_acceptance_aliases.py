@@ -4,8 +4,10 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import aggregate_device_acceptance as aggregate
+import stable_file_reader
 from acceptance_test_support import materialize_traced_bundle
 from test_validate_device_acceptance import valid_bundle
 
@@ -103,6 +105,52 @@ class AggregateDeviceAcceptanceAliasTest(unittest.TestCase):
                 aggregate.main([str(manifest), "--output", str(output)]),
             )
             self.assertTrue(output.is_file())
+
+    def test_output_symlink_to_external_file_is_rejected_without_replacing_target(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest, _ = self.write_bundle(root)
+            target = root / "outside.json"
+            target.write_text("preserve this\n", encoding="utf-8")
+            output = root / "aggregate.json"
+            output.symlink_to(target)
+
+            self.assertEqual(1, aggregate.main([str(manifest), "--output", str(output)]))
+            self.assertEqual("preserve this\n", target.read_text(encoding="utf-8"))
+            self.assertTrue(output.is_symlink())
+
+    def test_parent_swap_during_publication_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "reports/aggregate.json"
+            output.parent.mkdir()
+            moved = root / "reports-moved"
+            external = root / "external"
+            external.mkdir()
+            real_open = os.open
+            swapped = False
+
+            def swap_before_temp_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                if (
+                    not swapped
+                    and kwargs.get("dir_fd") is not None
+                    and isinstance(path, str)
+                    and path.startswith(".aggregate.json.")
+                ):
+                    swapped = True
+                    output.parent.rename(moved)
+                    output.parent.symlink_to(external, target_is_directory=True)
+                return real_open(path, flags, *args, **kwargs)
+
+            with patch.object(stable_file_reader.os, "open", side_effect=swap_before_temp_open):
+                with self.assertRaises(aggregate.AggregationError):
+                    aggregate._write_json_atomic(output, {"status": "valid"})
+
+            self.assertTrue(swapped)
+            self.assertFalse((external / output.name).exists())
+            self.assertFalse((moved / output.name).exists())
+            self.assertEqual([], list(moved.glob(".aggregate.json.*.tmp")))
 
 
 if __name__ == "__main__":

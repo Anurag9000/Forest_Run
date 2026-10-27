@@ -7,13 +7,18 @@ readonly DEVICE_SERIAL_REQUEST="${DEVICE_SERIAL:-}"
 readonly PACKAGE_NAME="com.anurag9000.forestrun.debug"
 readonly ACTIVITY_NAME="com.anurag9000.forestrun.MainActivity"
 readonly APK_PATH="${ROOT_DIR}/app/build/outputs/apk/debug/app-debug.apk"
-readonly OUTPUT_DIR="${OUTPUT_DIR:-${ROOT_DIR}/release/google-play/screenshots/raw}"
+OUTPUT_DIR="${OUTPUT_DIR:-${ROOT_DIR}/release/google-play/screenshots/raw}"
 readonly STARTUP_TIMEOUT_S="${STARTUP_TIMEOUT_S:-15}"
 readonly READY_PREFIX="FOREST_RUN_SCENARIO_READY"
 readonly RUN_MODE="SCREENSHOT_CAPTURE"
 readonly CAPTURE_COUNT=8
 
 cd "${ROOT_DIR}"
+
+if [[ "${OUTPUT_DIR}" != /* ]]; then
+  OUTPUT_DIR="${ROOT_DIR}/${OUTPUT_DIR}"
+fi
+readonly OUTPUT_DIR
 
 if [[ ! "${STARTUP_TIMEOUT_S}" =~ ^[1-9][0-9]*$ ]]; then
   echo "STARTUP_TIMEOUT_S must be a positive integer." >&2
@@ -93,10 +98,34 @@ fi
 readonly DEVICE_SERIAL_RESOLVED
 readonly -a ADB=("${ADB_BIN_RESOLVED}" -s "${DEVICE_SERIAL_RESOLVED}")
 
-mkdir -p "${OUTPUT_DIR}"
-find "${OUTPUT_DIR}" -maxdepth 1 -type f \
+if [[ -L "${OUTPUT_DIR}" ]]; then
+  echo "Screenshot output directory must not be a symbolic link: ${OUTPUT_DIR}" >&2
+  exit 1
+fi
+if [[ -e "${OUTPUT_DIR}" && ! -d "${OUTPUT_DIR}" ]]; then
+  echo "Screenshot output path exists and is not a directory: ${OUTPUT_DIR}" >&2
+  exit 1
+fi
+readonly OUTPUT_PARENT="$(dirname "${OUTPUT_DIR}")"
+readonly OUTPUT_BASENAME="$(basename "${OUTPUT_DIR}")"
+mkdir -p "${OUTPUT_PARENT}"
+"${PYTHON_BIN}" scripts/publish_screenshot_capture_set.py \
+  --output-dir "${OUTPUT_DIR}" \
+  --check-only >/dev/null
+STAGING_DIR="$(mktemp -d "${OUTPUT_PARENT}/.${OUTPUT_BASENAME}.capture.XXXXXX")"
+cleanup_staging_directory() {
+  local exit_status=$?
+  trap - EXIT
+  if [[ -n "${STAGING_DIR:-}" && -d "${STAGING_DIR}" ]]; then
+    rm -rf -- "${STAGING_DIR}"
+  fi
+  exit "${exit_status}"
+}
+trap cleanup_staging_directory EXIT
+
+find "${STAGING_DIR}" -maxdepth 1 \
   \( -name '*.png' -o -name '*.capture.json' -o -name 'capture-session.json' \) \
-  -delete
+  -exec rm -rf -- {} +
 
 printf 'Installing exact-main APK %s on %s\n' "${APK_PATH}" "${DEVICE_SERIAL_RESOLVED}"
 "${ADB[@]}" install -r -d "${APK_PATH}" >/dev/null
@@ -172,7 +201,7 @@ capture() {
   local name="$1"
   local scenario="$2"
   local settle_seconds="$3"
-  local destination="${OUTPUT_DIR}/${name}.png"
+  local destination="${STAGING_DIR}/${name}.png"
 
   printf 'Capturing %-18s scenario=%s\n' "${name}" "${scenario}"
   "${ADB[@]}" shell am force-stop "${PACKAGE_NAME}"
@@ -212,7 +241,7 @@ capture "07-owl" "OWL_DIVE" 2.1
 capture "08-jacaranda" "JACARANDA_PETALS" 2.0
 
 "${PYTHON_BIN}" scripts/finalize_screenshot_capture_session.py \
-  --output-dir "${OUTPUT_DIR}" \
+  --output-dir "${STAGING_DIR}" \
   --candidate-sha "${CANDIDATE_SHA}" \
   --origin-main-sha "${ORIGIN_SHA}" \
   --apk-sha256 "${APK_SHA256}" \
@@ -220,6 +249,11 @@ capture "08-jacaranda" "JACARANDA_PETALS" 2.0
   --package-name "${PACKAGE_NAME}" \
   --activity-name "${ACTIVITY_NAME}" \
   --expected-count "${CAPTURE_COUNT}" >/dev/null
+
+"${PYTHON_BIN}" scripts/verify_raw_screenshot_set.py \
+  --raw-dir "${STAGING_DIR}" \
+  --manifest "${ROOT_DIR}/release/google-play/screenshots/curation_manifest.json" \
+  --candidate-sha "${CANDIDATE_SHA}"
 
 readonly FINAL_LOCAL_JSON="$(${PYTHON_BIN} scripts/verify_main_candidate.py --root "${ROOT_DIR}" --expected-sha "${CANDIDATE_SHA}" --json)"
 readonly FINAL_LOCAL_SHA="$(${PYTHON_BIN} -c 'import json,sys; print(json.load(sys.stdin)["sha"])' <<<"${FINAL_LOCAL_JSON}")"
@@ -231,6 +265,10 @@ if [[ "${FINAL_LOCAL_SHA}" != "${CANDIDATE_SHA}" || "${FINAL_ORIGIN_SHA}" != "${
   echo "origin/main=${FINAL_ORIGIN_SHA}" >&2
   exit 1
 fi
+
+"${PYTHON_BIN}" scripts/publish_screenshot_capture_set.py \
+  --staging-dir "${STAGING_DIR}" \
+  --output-dir "${OUTPUT_DIR}" >/dev/null
 
 printf 'Raw screenshots and capture evidence for %s written to %s\n' \
   "${CANDIDATE_SHA}" \

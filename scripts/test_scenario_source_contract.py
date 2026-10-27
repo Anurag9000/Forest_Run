@@ -15,6 +15,22 @@ CACTUS_STEP = "EncounterStep(0.20f, EntityType.CACTUS, 420f)"
 
 
 class ScenarioSourceContractTest(unittest.TestCase):
+    def test_repository_root_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            alias = Path(temporary) / "source-alias"
+            alias.symlink_to(ROOT, target_is_directory=True)
+            with self.assertRaisesRegex(contract.ScenarioSourceContractError, "symbolic link"):
+                contract.load_trace_contract(alias, "CACTUS_READ")
+
+    def test_source_file_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "source.kt"
+            target.write_text("object Source {}", encoding="utf-8")
+            alias = Path(temporary) / "source-alias.kt"
+            alias.symlink_to(target)
+            with self.assertRaisesRegex(contract.ScenarioSourceContractError, "symbolic link"):
+                contract._stable_text(alias)
+
     def test_cactus_contract_matches_cross_language_fixed_hashes(self) -> None:
         result = contract.load_trace_contract(ROOT, "CACTUS_READ")
 
@@ -39,11 +55,16 @@ class ScenarioSourceContractTest(unittest.TestCase):
         bloom = contract.load_trace_contract(ROOT, "BLOOM_SHOWCASE")
         ghost = contract.load_trace_contract(ROOT, "GHOST_READABILITY")
         dog = contract.load_trace_contract(ROOT, "DOG_HAZARD")
+        owl = contract.load_trace_contract(ROOT, "OWL_DIVE")
 
         self.assertTrue(bloom.scenario.starts_with_bloom)
         self.assertTrue(ghost.scenario.allow_ghost_playback)
         self.assertEqual((), ghost.input_steps)
         self.assertEqual("DOG_HAZARD", dog.scenario.steps[0].variant)
+        self.assertEqual(1, len(owl.input_steps))
+        self.assertEqual(1_800_000, owl.input_steps[0].at_micros)
+        self.assertEqual("TAP_JUMP", owl.input_steps[0].action)
+        self.assertEqual(64, len(owl.trace_contract_sha256))
 
     def test_signed_exponent_offsets_match_kotlin_float_and_rounding_semantics(self) -> None:
         source = self.encounter_source(ROOT).read_text(encoding="utf-8")

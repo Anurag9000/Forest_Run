@@ -8,11 +8,13 @@ import hashlib
 import json
 import os
 import re
-import tempfile
+import stat
 import urllib.parse
 import uuid
 from pathlib import Path
 from typing import Iterable, Sequence
+
+from stable_file_reader import StableFileError, atomic_write_bytes, ensure_directory_exists
 
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 COORDINATE = re.compile(
@@ -38,17 +40,79 @@ def canonical_bytes(value: object) -> bytes:
 def regular_file(path: Path, label: str) -> bytes:
     path = Path(os.path.abspath(os.fspath(path.expanduser())))
     try:
-        metadata = path.lstat()
+        before = path.lstat()
     except FileNotFoundError as exc:
         raise ResolvedDependencySbomError(f"{label} is missing: {path}") from exc
-    if path.is_symlink() or not path.is_file():
+    if not stat.S_ISREG(before.st_mode):
         raise ResolvedDependencySbomError(
             f"{label} must be a regular non-symlink file: {path}"
         )
-    raw = path.read_bytes()
-    if not raw or len(raw) != metadata.st_size:
+    if before.st_size <= 0:
         raise ResolvedDependencySbomError(f"{label} is empty or unstable: {path}")
-    return raw
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ResolvedDependencySbomError(
+            f"{label} could not be safely opened: {path}: {exc}"
+        ) from exc
+
+    identity_fields = (
+        "st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns"
+    )
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or any(
+            getattr(before, field) != getattr(opened, field)
+            for field in identity_fields
+        ):
+            raise ResolvedDependencySbomError(
+                f"{label} changed while being opened: {path}"
+            )
+        remaining = before.st_size
+        chunks: list[bytes] = []
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise ResolvedDependencySbomError(
+                    f"{label} changed while being read: {path}"
+                )
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise ResolvedDependencySbomError(
+                f"{label} changed while being read: {path}"
+            )
+        after = os.fstat(descriptor)
+    except OSError as exc:
+        raise ResolvedDependencySbomError(
+            f"{label} could not be safely read: {path}: {exc}"
+        ) from exc
+    finally:
+        os.close(descriptor)
+
+    try:
+        after_path = path.lstat()
+    except OSError as exc:
+        raise ResolvedDependencySbomError(
+            f"{label} changed while being read: {path}: {exc}"
+        ) from exc
+    if any(
+        getattr(before, field) != getattr(after, field)
+        or getattr(before, field) != getattr(after_path, field)
+        for field in identity_fields
+    ):
+        raise ResolvedDependencySbomError(
+            f"{label} changed while being read: {path}"
+        )
+    return b"".join(chunks)
 
 
 def resolved_coordinates(report_text: str) -> list[tuple[str, str, str]]:
@@ -58,6 +122,10 @@ def resolved_coordinates(report_text: str) -> list[tuple[str, str, str]]:
         line = raw_line.strip()
         if not line or line.startswith("No dependencies"):
             continue
+        if re.search(r"(?:^|\s)FAILED(?:\s|$)", line):
+            raise ResolvedDependencySbomError(
+                f"resolved report contains a failed dependency: {line}"
+            )
         match = COORDINATE.search(line)
         if match is None:
             continue
@@ -207,22 +275,20 @@ def publish(output: Path, payload: dict[str, object]) -> None:
     output = Path(os.path.abspath(os.fspath(output.expanduser())))
     if output.is_symlink():
         raise ResolvedDependencySbomError("output must not be a symbolic link")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{output.name}.", suffix=".tmp", dir=output.parent
-    )
-    temporary = Path(temporary_name)
     try:
-        with os.fdopen(descriptor, "wb") as handle:
-            handle.write(canonical_bytes(payload))
-            handle.flush()
-            os.fsync(handle.fileno())
+        ensure_directory_exists(output.parent, "resolved dependency SBOM parent directory")
         if output.is_symlink():
             raise ResolvedDependencySbomError("output became a symbolic link")
-        os.replace(temporary, output)
-    except Exception:
-        temporary.unlink(missing_ok=True)
-        raise
+        atomic_write_bytes(
+            output,
+            canonical_bytes(payload),
+            "resolved dependency SBOM",
+            reject_symlink_leaf=True,
+        )
+    except StableFileError as exc:
+        if "symbolic link" in str(exc):
+            raise ResolvedDependencySbomError("output became a symbolic link") from exc
+        raise ResolvedDependencySbomError(f"could not safely publish output: {exc}") from exc
 
 
 def report_argument(raw: str) -> tuple[str, Path]:

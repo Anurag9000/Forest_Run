@@ -2,21 +2,33 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import os
 import re
-import shutil
+import stat
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from strict_json import StrictJsonError, load_file
+from strict_json import StrictJsonError, load_file, loads
 
 from screenshot_capture_evidence import (
     CaptureEvidence,
     CaptureEvidenceError,
+    MAX_CAPTURE_EVIDENCE_BYTES,
     load_capture_evidence,
+    parse_capture_evidence,
     require_same_capture_identity,
+)
+from stable_file_reader import (
+    StableFileError,
+    atomic_publish_directory,
+    atomic_write_bytes,
+    ensure_directory_exists,
+    open_directory_descriptor,
+    remove_directory_at,
 )
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -161,7 +173,7 @@ def validate_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
 def difference_hash(image) -> int:
     Image, _, _ = _load_pillow()
     reduced = image.convert("L").resize((9, 8), Image.Resampling.LANCZOS)
-    pixels = list(reduced.getdata())
+    pixels = reduced.tobytes()
     value = 0
     for row in range(8):
         row_start = row * 9
@@ -192,23 +204,105 @@ def band_is_uniform_dark(image, top: bool) -> bool:
     return max(means) < 18 and max(channel_ranges) < 8
 
 
-def inspect_image(path: Path, allow_dark_bars: bool) -> ImageFacts:
-    Image, ImageStat, UnidentifiedImageError = _load_pillow()
-    if not path.is_file():
-        raise SystemExit(f"Missing raw screenshot: {path}")
-    file_size = path.stat().st_size
-    if file_size <= 0:
-        raise SystemExit(f"Raw screenshot is empty: {path}")
-    if file_size > MAX_FILE_BYTES:
+def _read_regular_bytes(path: Path, *, maximum_bytes: int, label: str) -> bytes:
+    lexical = Path(os.path.abspath(os.fspath(path.expanduser())))
+    current = Path(lexical.anchor)
+    for part in lexical.parts[1:-1]:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except OSError as exc:
+            raise SystemExit(f"Could not inspect {label} directory {current}: {exc}") from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise SystemExit(f"{label} path must not traverse a symbolic link: {current}")
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise SystemExit(f"{label} path component is not a directory: {current}")
+
+    try:
+        before = lexical.lstat()
+    except FileNotFoundError as exc:
+        raise SystemExit(f"Missing {label}: {lexical}") from exc
+    except OSError as exc:
+        raise SystemExit(f"Could not inspect {label} {lexical}: {exc}") from exc
+    if stat.S_ISLNK(before.st_mode):
+        raise SystemExit(f"{label} must not be a symbolic link: {lexical}")
+    if not stat.S_ISREG(before.st_mode):
+        raise SystemExit(f"{label} must be a regular file: {lexical}")
+    if before.st_size <= 0:
+        raise SystemExit(f"{label} is empty: {lexical}")
+    if before.st_size > maximum_bytes:
         raise SystemExit(
-            f"Raw screenshot exceeds {MAX_FILE_BYTES} bytes: {path} is {file_size} bytes"
+            f"{label} exceeds {maximum_bytes} bytes: "
+            f"{lexical} is {before.st_size} bytes"
         )
 
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
     try:
-        with Image.open(path) as source:
+        descriptor = os.open(lexical, flags)
+    except OSError as exc:
+        raise SystemExit(f"Could not safely open {label} {lexical}: {exc}") from exc
+
+    identity_fields = (
+        "st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns"
+    )
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or any(
+            getattr(before, field) != getattr(opened, field)
+            for field in identity_fields
+        ):
+            raise SystemExit(f"{label} changed while being opened: {lexical}")
+        remaining = before.st_size
+        chunks: list[bytes] = []
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise SystemExit(f"{label} changed while being read: {lexical}")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise SystemExit(f"{label} changed while being read: {lexical}")
+        after = os.fstat(descriptor)
+    except OSError as exc:
+        raise SystemExit(f"Could not safely read {label} {lexical}: {exc}") from exc
+    finally:
+        os.close(descriptor)
+
+    try:
+        after_path = lexical.lstat()
+    except OSError as exc:
+        raise SystemExit(f"{label} changed while being read: {lexical}: {exc}") from exc
+    if any(
+        getattr(before, field) != getattr(after, field)
+        or getattr(before, field) != getattr(after_path, field)
+        for field in identity_fields
+    ):
+        raise SystemExit(f"{label} changed while being read: {lexical}")
+    return b"".join(chunks)
+
+
+def _read_screenshot_bytes(path: Path) -> bytes:
+    return _read_regular_bytes(
+        path,
+        maximum_bytes=MAX_FILE_BYTES,
+        label="raw screenshot",
+    )
+
+
+def inspect_image(path: Path, allow_dark_bars: bool) -> ImageFacts:
+    Image, ImageStat, UnidentifiedImageError = _load_pillow()
+    content = _read_screenshot_bytes(path)
+    digest = hashlib.sha256(content).hexdigest()
+    try:
+        with Image.open(io.BytesIO(content)) as source:
             source.verify()
-        with Image.open(path) as source:
+        with Image.open(io.BytesIO(content)) as source:
             image = source.convert("RGB")
             width, height = image.size
             if width < MIN_WIDTH or height < MIN_HEIGHT:
@@ -251,34 +345,46 @@ def inspect_image(path: Path, allow_dark_bars: bool) -> ImageFacts:
         raise SystemExit(f"Unreadable or corrupt PNG: {path}: {exc}") from exc
 
 
-def _remove_path(path: Path) -> None:
-    if path.is_dir():
-        shutil.rmtree(path)
-    elif path.exists():
-        path.unlink()
-
-
 def _publish_staged_directory() -> None:
-    _remove_path(BACKUP_DIR)
-    if FINAL_DIR.exists():
-        FINAL_DIR.replace(BACKUP_DIR)
     try:
-        STAGING_DIR.replace(FINAL_DIR)
-    except BaseException:
-        if not FINAL_DIR.exists() and BACKUP_DIR.exists():
-            BACKUP_DIR.replace(FINAL_DIR)
-        raise
-    _remove_path(BACKUP_DIR)
+        atomic_publish_directory(
+            STAGING_DIR,
+            FINAL_DIR,
+            BACKUP_DIR,
+            "curated screenshot directory",
+        )
+    except StableFileError as exc:
+        raise SystemExit(str(exc)) from exc
+
+
+def _write_staged_file(directory_fd: int, name: str, content: bytes) -> None:
+    descriptor = os.open(
+        name,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+        0o600,
+        dir_fd=directory_fd,
+    )
+    with os.fdopen(descriptor, "wb") as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
 
 
 def curate(items: list[dict[str, Any]]) -> list[tuple[dict[str, Any], ImageFacts, CaptureEvidence]]:
-    validated: list[tuple[dict[str, Any], ImageFacts, CaptureEvidence, Path, Path]] = []
+    validated: list[
+        tuple[
+            dict[str, Any], ImageFacts, CaptureEvidence, Path, Path, bytes, bytes
+        ]
+    ] = []
     expected_dimensions: tuple[int, int] | None = None
     baseline_evidence: CaptureEvidence | None = None
 
     for item in items:
         raw_path = RAW_DIR / item["raw_file"]
         facts = inspect_image(raw_path, allow_dark_bars=item["allow_dark_bars"])
+        raw_bytes = _read_screenshot_bytes(raw_path)
+        if hashlib.sha256(raw_bytes).hexdigest() != facts.sha256:
+            raise SystemExit(f"Raw screenshot changed after inspection: {raw_path}")
         evidence_path = raw_path.with_suffix(".capture.json")
         try:
             evidence = load_capture_evidence(
@@ -289,11 +395,35 @@ def curate(items: list[dict[str, Any]]) -> list[tuple[dict[str, Any], ImageFacts
                 expected_width=facts.width,
                 expected_height=facts.height,
             )
+            evidence_bytes = _read_regular_bytes(
+                evidence_path,
+                maximum_bytes=MAX_CAPTURE_EVIDENCE_BYTES,
+                label="Capture evidence",
+            )
+            evidence_object = loads(
+                evidence_bytes,
+                label=f"capture evidence {evidence_path}",
+                maximum_bytes=MAX_CAPTURE_EVIDENCE_BYTES,
+                require_object=True,
+            )
+            staged_evidence = parse_capture_evidence(
+                evidence_object,
+                evidence_path,
+                expected_raw_file=item["raw_file"],
+                expected_scenario=item["scenario"],
+                expected_image_sha256=facts.sha256,
+                expected_width=facts.width,
+                expected_height=facts.height,
+            )
+            if staged_evidence != evidence:
+                raise CaptureEvidenceError(
+                    f"{evidence_path}: capture evidence changed while being validated"
+                )
             if baseline_evidence is None:
                 baseline_evidence = evidence
             else:
                 require_same_capture_identity(baseline_evidence, evidence, evidence_path)
-        except CaptureEvidenceError as exc:
+        except (CaptureEvidenceError, StrictJsonError) as exc:
             raise SystemExit(str(exc)) from exc
 
         if expected_dimensions is None:
@@ -305,7 +435,7 @@ def curate(items: list[dict[str, Any]]) -> list[tuple[dict[str, Any], ImageFacts
                 f"{expected_dimensions[0]}x{expected_dimensions[1]}"
             )
 
-        for previous_item, previous_facts, _, _, _ in validated:
+        for previous_item, previous_facts, *_ in validated:
             if facts.sha256 == previous_facts.sha256:
                 raise SystemExit(
                     f"Exact duplicate screenshots: {item['raw_file']} and "
@@ -327,25 +457,67 @@ def curate(items: list[dict[str, Any]]) -> list[tuple[dict[str, Any], ImageFacts
                 f"SHA-256 mismatch for {raw_path}: expected {expected_hash}, got {facts.sha256}"
             )
 
-        validated.append((item, facts, evidence, raw_path, evidence_path))
+        validated.append(
+            (item, facts, evidence, raw_path, evidence_path, raw_bytes, evidence_bytes)
+        )
 
     if not validated:
         raise SystemExit("No screenshots were curated")
 
-    _remove_path(STAGING_DIR)
-    STAGING_DIR.mkdir(parents=True, exist_ok=False)
+    ensure_directory_exists(STAGING_DIR.parent, "screenshot staging parent")
+    parent_fd = open_directory_descriptor(STAGING_DIR.parent, "screenshot staging parent")
+    staging_fd: int | None = None
+    staging_identity: tuple[int, int] | None = None
     try:
-        for item, _, _, raw_path, evidence_path in validated:
-            target_path = STAGING_DIR / item["final_file"]
+        try:
+            existing_staging = os.stat(
+                STAGING_DIR.name, dir_fd=parent_fd, follow_symlinks=False
+            )
+        except FileNotFoundError:
+            existing_staging = None
+        if existing_staging is not None:
+            if not stat.S_ISDIR(existing_staging.st_mode):
+                raise SystemExit(f"Screenshot staging path is not a plain directory: {STAGING_DIR}")
+            remove_directory_at(parent_fd, STAGING_DIR.name)
+        os.mkdir(STAGING_DIR.name, mode=0o700, dir_fd=parent_fd)
+        staging_fd = os.open(
+            STAGING_DIR.name,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            dir_fd=parent_fd,
+        )
+        metadata = os.fstat(staging_fd)
+        staging_identity = (metadata.st_dev, metadata.st_ino)
+        for item, _, _, _raw_path, _evidence_path, raw_bytes, evidence_bytes in validated:
+            target_path = Path(item["final_file"])
             target_evidence_path = target_path.with_suffix(".capture.json")
-            shutil.copy2(raw_path, target_path)
-            shutil.copy2(evidence_path, target_evidence_path)
+            _write_staged_file(staging_fd, target_path.name, raw_bytes)
+            _write_staged_file(staging_fd, target_evidence_path.name, evidence_bytes)
+        os.fsync(staging_fd)
+        os.close(staging_fd)
+        staging_fd = None
         _publish_staged_directory()
     except BaseException:
-        _remove_path(STAGING_DIR)
+        if staging_fd is not None:
+            os.close(staging_fd)
+            staging_fd = None
+        try:
+            current = os.stat(
+                STAGING_DIR.name, dir_fd=parent_fd, follow_symlinks=False
+            )
+        except FileNotFoundError:
+            current = None
+        if current is not None and stat.S_ISDIR(current.st_mode) and staging_identity == (
+            current.st_dev,
+            current.st_ino,
+        ):
+            remove_directory_at(parent_fd, STAGING_DIR.name)
         raise
+    finally:
+        if staging_fd is not None:
+            os.close(staging_fd)
+        os.close(parent_fd)
 
-    return [(item, facts, evidence) for item, facts, evidence, _, _ in validated]
+    return [(item, facts, evidence) for item, facts, evidence, *_ in validated]
 
 
 def write_summary(copied: list[tuple[dict[str, Any], ImageFacts, CaptureEvidence]]) -> None:
@@ -393,7 +565,15 @@ def write_summary(copied: list[tuple[dict[str, Any], ImageFacts, CaptureEvidence
             ]
         )
 
-    SUMMARY_PATH.write_text("\n".join(lines), encoding="utf-8")
+    try:
+        atomic_write_bytes(
+            SUMMARY_PATH,
+            "\n".join(lines).encode("utf-8"),
+            "curated screenshot summary",
+            reject_symlink_leaf=True,
+        )
+    except StableFileError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def main() -> int:

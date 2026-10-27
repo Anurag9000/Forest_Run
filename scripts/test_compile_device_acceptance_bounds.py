@@ -17,7 +17,7 @@ class CompileDeviceAcceptanceBoundsTest(unittest.TestCase):
             with path.open("wb") as stream:
                 stream.truncate(acceptance.MAX_MANIFEST_BYTES + 1)
 
-            with self.assertRaisesRegex(compiler.CompilationError, "draft must be between"):
+            with self.assertRaisesRegex(compiler.CompilationError, r"draft.*between"):
                 compiler._read_object(path)
 
     def test_oversized_artifact_is_rejected_before_streaming_hash(self) -> None:

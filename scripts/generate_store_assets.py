@@ -6,11 +6,19 @@ import hashlib
 import json
 import os
 import re
-import shutil
+import stat
 import subprocess
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+
+from stable_file_reader import (
+    StableFileError,
+    atomic_publish_directory,
+    atomic_write_bytes,
+    ensure_directory_exists,
+    open_directory_descriptor,
+    remove_directory_at,
+)
 
 try:
     from PIL import Image, ImageDraw, ImageFilter, ImageFont, UnidentifiedImageError
@@ -336,60 +344,71 @@ def source_evidence() -> list[dict[str, object]]:
 
 
 def atomic_write_json(path: Path, payload: dict[str, object]) -> None:
-    temporary: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as stream:
-            temporary = Path(stream.name)
-            json.dump(payload, stream, indent=2, sort_keys=True)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
-
-
-def remove_path(path: Path) -> None:
-    if path.is_dir():
-        shutil.rmtree(path)
-    elif path.exists():
-        path.unlink()
+    content = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    atomic_write_bytes(path, content, "graphics manifest", reject_symlink_leaf=True)
 
 
 def publish_directory(staging: Path, destination: Path, backup: Path) -> None:
-    remove_path(backup)
-    if destination.exists():
-        destination.replace(backup)
+    if staging.is_symlink() or destination.is_symlink() or backup.is_symlink():
+        raise ValueError("graphics publication paths must not be symlinks")
+    if any(path.exists() and not path.is_dir() for path in (staging, destination, backup)):
+        raise ValueError("graphics publication paths must be directories")
     try:
-        staging.replace(destination)
-    except BaseException:
-        if not destination.exists() and backup.exists():
-            backup.replace(destination)
-        raise
-    remove_path(backup)
+        atomic_publish_directory(staging, destination, backup, "graphics directory")
+    except StableFileError as exc:
+        if "backup already exists beside output" in str(exc):
+            raise ValueError(str(exc)) from exc
+        raise RuntimeError(str(exc)) from exc
 
 
 def generate_store_assets(output_dir: Path, candidate_sha: str) -> dict[str, object]:
     validate_inputs()
-    if HEX_40.fullmatch(candidate_sha.lower()) is None:
+    if HEX_40.fullmatch(candidate_sha) is None:
         raise ValueError("candidate_sha must be a 40-character Git SHA")
-    output_dir = output_dir.expanduser().resolve()
-    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    if output_dir.is_symlink():
+        raise ValueError("graphics output directory must not be a symlink")
+    output_dir = Path(os.path.abspath(os.fspath(output_dir.expanduser())))
+    ensure_directory_exists(output_dir.parent, "graphics output parent")
     staging = output_dir.parent / f".{output_dir.name}.staging"
     backup = output_dir.parent / f".{output_dir.name}.backup"
-    remove_path(staging)
-    staging.mkdir(parents=False, exist_ok=False)
+    parent_fd = open_directory_descriptor(output_dir.parent, "graphics output parent")
+    staging_fd: int | None = None
     try:
-        generated = [draw_feature_graphic(staging), draw_promo_square(staging)]
+        for label, path in (("staging", staging), ("backup", backup)):
+            try:
+                metadata = os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            if not stat.S_ISDIR(metadata.st_mode):
+                raise ValueError(f"graphics {label} path must be a plain directory: {path}")
+        try:
+            backup_exists = os.stat(
+                backup.name, dir_fd=parent_fd, follow_symlinks=False
+            )
+        except FileNotFoundError:
+            backup_exists = None
+        try:
+            destination_exists = os.stat(
+                output_dir.name, dir_fd=parent_fd, follow_symlinks=False
+            )
+        except FileNotFoundError:
+            destination_exists = None
+        if backup_exists is not None and destination_exists is not None:
+            raise ValueError(f"graphics publication backup already exists beside output: {backup}")
+        try:
+            existing_stage = os.stat(staging.name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            existing_stage = None
+        if existing_stage is not None:
+            remove_directory_at(parent_fd, staging.name)
+        os.mkdir(staging.name, mode=0o700, dir_fd=parent_fd)
+        staging_fd = os.open(
+            staging.name,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            dir_fd=parent_fd,
+        )
+        draw_root = Path(f"/proc/self/fd/{staging_fd}")
+        generated = [draw_feature_graphic(draw_root), draw_promo_square(draw_root)]
         facts = [
             inspect_output(path, EXPECTED_OUTPUTS[path.name])
             for path in generated
@@ -399,16 +418,48 @@ def generate_store_assets(output_dir: Path, candidate_sha: str) -> dict[str, obj
         manifest = {
             "schemaVersion": SCHEMA_VERSION,
             "generatedBy": str(Path(__file__).resolve().relative_to(ROOT)),
-            "candidateSha": candidate_sha.lower(),
+            "candidateSha": candidate_sha,
             "sourceAssets": source_evidence(),
             "outputs": facts,
         }
-        atomic_write_json(staging / "graphics_manifest.json", manifest)
+        manifest_bytes = (
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+        ).encode("utf-8")
+        manifest_fd = os.open(
+            "graphics_manifest.json",
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            0o600,
+            dir_fd=staging_fd,
+        )
+        try:
+            with os.fdopen(manifest_fd, "wb") as stream:
+                manifest_fd = -1
+                stream.write(manifest_bytes)
+                stream.flush()
+                os.fsync(stream.fileno())
+        finally:
+            if manifest_fd >= 0:
+                os.close(manifest_fd)
+        os.fsync(staging_fd)
+        os.close(staging_fd)
+        staging_fd = None
         publish_directory(staging, output_dir, backup)
         return manifest
     except BaseException:
-        remove_path(staging)
+        try:
+            os.stat(staging.name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            if staging_fd is not None:
+                os.close(staging_fd)
+                staging_fd = None
+            remove_directory_at(parent_fd, staging.name)
         raise
+    finally:
+        if staging_fd is not None:
+            os.close(staging_fd)
+        os.close(parent_fd)
 
 
 def main() -> None:
@@ -417,7 +468,7 @@ def main() -> None:
     parser.add_argument("--candidate-sha")
     args = parser.parse_args()
 
-    candidate_sha = (args.candidate_sha or current_candidate_sha()).lower()
+    candidate_sha = args.candidate_sha or current_candidate_sha()
     manifest = generate_store_assets(args.output_dir, candidate_sha)
     print(
         f"Wrote {len(manifest['outputs'])} candidate-bound store graphics "

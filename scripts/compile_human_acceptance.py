@@ -18,14 +18,17 @@ import copy
 import hashlib
 import json
 import os
-import shutil
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import strict_json
+from stable_file_reader import (
+    StableFileError,
+    absolute_lexical_path,
+    atomic_publish_files,
+)
 import validate_human_acceptance as human
 
 
@@ -92,7 +95,12 @@ def compile_bundle(
     base_dir: Path,
     generated_at_utc: str | None = None,
 ) -> tuple[dict[str, Any], human.HumanAcceptanceSummary]:
-    compiled = copy.deepcopy(dict(draft))
+    if not isinstance(draft, Mapping):
+        raise HumanCompilationError("draft must be an object")
+    try:
+        compiled = copy.deepcopy(dict(draft))
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise HumanCompilationError(f"draft cannot be copied safely: {exc}") from exc
     compiled["schema_version"] = human.SCHEMA_VERSION
     compiled["generated_at_utc"] = _timestamp(
         generated_at_utc if generated_at_utc is not None else compiled.get("generated_at_utc")
@@ -150,9 +158,12 @@ def compile_bundle(
             )
         review["evidence_files"] = hashed
 
-    raw = (json.dumps(compiled, indent=2, sort_keys=True, allow_nan=False) + "\n").encode(
-        "utf-8"
-    )
+    try:
+        raw = (
+            json.dumps(compiled, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        ).encode("utf-8")
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise HumanCompilationError(f"draft contains values that are not valid JSON: {exc}") from exc
     try:
         summary = human.validate_bundle(
             compiled,
@@ -170,62 +181,11 @@ def _json_bytes(value: Mapping[str, Any]) -> bytes:
     )
 
 
-def _stage(path: Path, value: Mapping[str, Any]) -> None:
-    try:
-        with path.open("xb") as handle:
-            handle.write(_json_bytes(value))
-            handle.flush()
-            os.fsync(handle.fileno())
-    except OSError as exc:
-        raise HumanCompilationError(f"could not stage {path.name}: {exc}") from exc
-
-
 def _publish_transaction(outputs: Sequence[tuple[Path, Mapping[str, Any]]]) -> None:
-    if not outputs:
-        raise HumanCompilationError("at least one output is required")
-    destinations = [path.resolve() for path, _ in outputs]
-    if len(destinations) != len(set(destinations)):
-        raise HumanCompilationError("output paths must be distinct")
-    parent = destinations[0].parent
-    if any(path.parent != parent for path in destinations):
-        raise HumanCompilationError("transaction outputs must share one directory")
-    parent.mkdir(parents=True, exist_ok=True)
-    transaction = Path(tempfile.mkdtemp(prefix=".human-acceptance-", dir=parent))
-    staged: list[Path] = []
-    backups: list[tuple[Path, Path]] = []
-    published: list[Path] = []
     try:
-        for index, (_, value) in enumerate(outputs):
-            path = transaction / f"staged-{index}.json"
-            _stage(path, value)
-            staged.append(path)
-        for index, destination in enumerate(destinations):
-            if destination.exists():
-                backup = transaction / f"backup-{index}.json"
-                os.replace(destination, backup)
-                backups.append((destination, backup))
-        for source, destination in zip(staged, destinations):
-            os.replace(source, destination)
-            published.append(destination)
-    except (OSError, HumanCompilationError) as exc:
-        rollback: list[str] = []
-        for destination in reversed(published):
-            try:
-                destination.unlink(missing_ok=True)
-            except OSError as rollback_exc:
-                rollback.append(str(rollback_exc))
-        for destination, backup in reversed(backups):
-            try:
-                if backup.exists():
-                    os.replace(backup, destination)
-            except OSError as rollback_exc:
-                rollback.append(str(rollback_exc))
-        detail = f"could not publish human acceptance outputs: {exc}"
-        if rollback:
-            detail += "; rollback errors: " + "; ".join(rollback)
-        raise HumanCompilationError(detail) from exc
-    finally:
-        shutil.rmtree(transaction, ignore_errors=True)
+        atomic_publish_files([(path, _json_bytes(value)) for path, value in outputs], "human acceptance outputs")
+    except StableFileError as exc:
+        raise HumanCompilationError(f"could not publish human acceptance outputs: {exc}") from exc
 
 
 def compile_file(
@@ -235,8 +195,10 @@ def compile_file(
     summary_path: Path | None = None,
     generated_at_utc: str | None = None,
 ) -> human.HumanAcceptanceSummary:
-    draft = draft_path.resolve()
-    output = output_path.resolve()
+    if output_path.is_symlink() or (summary_path is not None and summary_path.is_symlink()):
+        raise HumanCompilationError("output paths must not be symlinks")
+    draft = absolute_lexical_path(draft_path)
+    output = absolute_lexical_path(output_path)
     base = draft.parent
     if output.parent != base or output == draft:
         raise HumanCompilationError(
@@ -244,7 +206,7 @@ def compile_file(
         )
     summary: Path | None = None
     if summary_path is not None:
-        summary = summary_path.resolve()
+        summary = absolute_lexical_path(summary_path)
         if summary.parent != base or summary in {draft, output}:
             raise HumanCompilationError(
                 "summary must share the draft directory and be distinct from draft/output"

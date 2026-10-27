@@ -15,7 +15,6 @@ import math
 import os
 import stat
 import sys
-import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Sequence
@@ -23,6 +22,7 @@ from typing import Sequence
 from PIL import Image, UnidentifiedImageError
 
 from verify_curated_screenshot_set import CuratedScreenshotError, _load_manifest
+from stable_file_reader import StableFileError, atomic_write_bytes, ensure_directory_exists
 
 MAX_IMAGE_BYTES = 64 * 1024 * 1024
 MAX_IMAGE_PIXELS = 12_000_000
@@ -233,8 +233,12 @@ def compare_image(
     channel_delta_sum = 0
     changed_pixels = 0
     pixel_maxima: list[int] = []
+    baseline_bytes = baseline.tobytes()
+    candidate_bytes = candidate.tobytes()
+    baseline_pixels = zip(*(iter(baseline_bytes),) * 3)
+    candidate_pixels = zip(*(iter(candidate_bytes),) * 3)
     for baseline_pixel, candidate_pixel in zip(
-        baseline.getdata(), candidate.getdata(), strict=True
+        baseline_pixels, candidate_pixels, strict=True
     ):
         deltas = (
             abs(baseline_pixel[0] - candidate_pixel[0]),
@@ -332,27 +336,12 @@ def compare_manifest_set(
 
 
 def _write_json_atomic(path: Path, payload: dict[str, object]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
+    encoded = (json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temporary = Path(handle.name)
-            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        ensure_directory_exists(path.parent, "visual regression report parent directory")
+        atomic_write_bytes(path, encoded, "visual regression report")
+    except StableFileError as exc:
+        raise VisualRegressionError(f"could not safely publish report: {exc}") from exc
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -389,13 +378,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     except VisualRegressionError as exc:
         payload: dict[str, object] = {"status": "invalid", "error": str(exc)}
         if args.output is not None:
-            _write_json_atomic(args.output, payload)
+            try:
+                _write_json_atomic(args.output, payload)
+            except (OSError, VisualRegressionError) as publish_error:
+                payload = {"status": "invalid", "error": str(publish_error)}
+                print(json.dumps(payload, sort_keys=True))
+                return 2
         print(json.dumps(payload, sort_keys=True))
         return 2
 
     payload = summary.to_json()
     if args.output is not None:
-        _write_json_atomic(args.output, payload)
+        try:
+            _write_json_atomic(args.output, payload)
+        except (OSError, VisualRegressionError) as exc:
+            print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+            return 2
     print(json.dumps(payload, sort_keys=True))
     return 0 if summary.status == "valid" else 1
 

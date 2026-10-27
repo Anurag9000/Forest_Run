@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import java.util.Locale
 import com.anurag9000.forestrun.engine.AssetPaths
 import com.anurag9000.forestrun.engine.BloomHudPresentation
 import com.anurag9000.forestrun.engine.BloomPresentationMode
@@ -68,6 +69,9 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     private val bloomPanelRect = RectF()
     private val onboardingPanelRect = RectF()
     private val onboardingChipRect = RectF()
+    private var cachedOpeningLine: String? = null
+    private var cachedOpeningLineWidth = Float.NaN
+    private var cachedOpeningLines: List<String> = emptyList()
 
     // ── Animated fill ─────────────────────────────────────────────────────
     /** Smoothly-lerped fill level (0..SEG_COUNT). Drives segment rendering. */
@@ -183,7 +187,7 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     }
     private val onboardingLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(225, 226, 240, 224)
-        textSize = SMALL_SIZE
+        textSize = (screenWidth * 0.025f).coerceIn(14f, SMALL_SIZE)
         typeface = pixelFont
         textAlign = Paint.Align.LEFT
     }
@@ -260,7 +264,10 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     private fun drawSeedAndHearts(canvas: Canvas, state: GameStateManager) {
         val x   = PAD
         val cy1 = 40f
-        val cy2 = 88f
+        // Keep the heart glyphs below the seed label. At the old 88px baseline,
+        // their upper curves overlapped the label on the default compact game
+        // surface, obscuring both counters.
+        val cy2 = 104f
 
         // ── Seed icon ─────────────────────────────────────────────────────
         canvas.drawOval(x, cy1 - 16f, x + 30f, cy1 + 16f, seedIconPaint)
@@ -445,10 +452,12 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
     }
 
     private fun drawOpeningGuidance(canvas: Canvas, cue: OpeningGuidanceCue) {
-        val panelWidth = screenWidth * 0.56f
+        val panelWidth = (screenWidth * 0.76f)
+            .coerceAtLeast(440f)
+            .coerceAtMost((screenWidth - 32f).coerceAtLeast(1f))
         val panelLeft = (screenWidth - panelWidth) * 0.5f
-        val panelTop = screenHeight - 170f
-        onboardingPanelRect.set(panelLeft, panelTop, panelLeft + panelWidth, panelTop + 112f)
+        val panelTop = screenHeight - 168f
+        onboardingPanelRect.set(panelLeft, panelTop, panelLeft + panelWidth, panelTop + 136f)
         onboardingPanelBorderPaint.color = cue.accentColor
 
         canvas.drawRoundRect(onboardingPanelRect, 18f, 18f, onboardingPanelPaint)
@@ -457,9 +466,11 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
         onboardingTitlePaint.color = cue.accentColor
         canvas.drawText(cue.title, panelLeft + 18f, panelTop + 28f, onboardingTitlePaint)
         onboardingLinePaint.color = Color.argb(228, 226, 240, 224)
-        canvas.drawText(cue.line, panelLeft + 18f, panelTop + 56f, onboardingLinePaint)
+        openingGuidanceLines(cue.line, panelWidth - 36f).forEachIndexed { index, line ->
+            canvas.drawText(line, panelLeft + 18f, panelTop + 56f + index * 22f, onboardingLinePaint)
+        }
 
-        val chipTop = panelTop + 72f
+        val chipTop = panelTop + 98f
         val chipWidth = 88f
         val chipGap = 12f
         val startX = panelLeft + 18f
@@ -484,11 +495,46 @@ class HUD(context: Context, private val screenWidth: Int, private val screenHeig
 
     private fun formatDistance(m: Float) = when {
         m < 1_000f -> "${m.toInt()} m"
-        else -> String.format("%.2f km", m / 1_000f)
+        else -> String.format(Locale.getDefault(), "%.2f km", m / 1_000f)
     }
 
     private fun formatScore(s: Int) = when {
         s < 1_000  -> s.toString()
-        else       -> String.format("%,d", s)
+        else       -> String.format(Locale.getDefault(), "%,d", s)
     }
+
+    private fun openingGuidanceLines(text: String, maxWidth: Float): List<String> {
+        if (cachedOpeningLine == text && cachedOpeningLineWidth == maxWidth) {
+            return cachedOpeningLines
+        }
+        val lines = mutableListOf<String>()
+        var current = ""
+        text.trim().split(Regex("\\s+")).filter(String::isNotEmpty).forEach { word ->
+            val candidate = if (current.isEmpty()) word else "$current $word"
+            if (current.isNotEmpty() && onboardingLinePaint.measureText(candidate) > maxWidth) {
+                lines += current
+                current = word
+            } else {
+                current = candidate
+            }
+        }
+        if (current.isNotEmpty()) lines += current
+        cachedOpeningLine = text
+        cachedOpeningLineWidth = maxWidth
+        cachedOpeningLines = lines
+        return cachedOpeningLines
+    }
+
+    internal fun openingGuidanceLinesForTest(text: String, maxWidth: Float): List<String> =
+        openingGuidanceLines(text, maxWidth).toList()
+
+    internal fun openingGuidanceTextWidthForTest(): Float {
+        val panelWidth = (screenWidth * 0.76f)
+            .coerceAtLeast(440f)
+            .coerceAtMost((screenWidth - 32f).coerceAtLeast(1f))
+        return panelWidth - 36f
+    }
+
+    internal fun openingGuidanceLineFitsForTest(text: String, maxWidth: Float): Boolean =
+        openingGuidanceLines(text, maxWidth).all { onboardingLinePaint.measureText(it) <= maxWidth }
 }

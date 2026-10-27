@@ -1,0 +1,854 @@
+{
+  "schema_version": "1.0.0",
+  "repository": "Forest_Run",
+  "source_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b plus reviewed delta (2026-10-27)",
+  "snapshot_date": "2026-10-27",
+  "authority": "This matrix maps current repository requirements and applicable universal mechanisms; MASTER_EXECUTION_LEDGER.json remains source of project goal/task state.",
+  "current_scope_constraints": [
+    "Original checkout had pre-existing user changes and remains preserved; verification used an isolated candidate based on origin/main plus the reviewed delta.",
+    "The user authorized source completion and repository verification. Connected Android/device and external release acceptance remain subject to available resources and candidate-bound evidence.",
+    "Python/JVM test contracts describe source assertions; current execution outcomes are recorded only in EVID-072 and the linked verification report."
+  ],
+  "requirement_rows": [
+    {
+      "id": "APL-001",
+      "requirement_id": "REQ-001",
+      "goal_id": "GOAL-001",
+      "capability_ids": [
+        "CAP-001"
+      ],
+      "universal_disposition": "REQUIRED_WITH_ADAPTATION",
+      "repository_rationale": "Android activity, SurfaceView and fixed-landscape lifecycle are core product contracts. Preserve the existing Activity/GameView/GameThread ownership; do not introduce a generic service or runner.",
+      "architectural_owner": "MainActivity \u2192 GameView \u2192 GameThread, Android configuration/Manifest.",
+      "implementation_state": "SUBSTANTIALLY_COMPLETE; source and prior map evidence",
+      "verification_criteria": "Static path/manifest inspection; focused lifecycle/configuration tests; Android compile/build and ordinary connected startup after authorization.",
+      "future_task_ids": [
+        "TASK-C-010"
+      ],
+      "evidence_refs": [
+        "README.md",
+        "docs/ARCHITECTURE.md"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-002",
+      "requirement_id": "REQ-002",
+      "goal_id": "GOAL-002",
+      "capability_ids": [
+        "CAP-002",
+        "CAP-009",
+        "CAP-010",
+        "CAP-011",
+        "CAP-013"
+      ],
+      "universal_disposition": "REQUIRED",
+      "repository_rationale": "Correct state ownership, deterministic transitions and encounter fairness define the game behavior. Preserve the existing state machine, input owner and typed collision/session coordinators.",
+      "architectural_owner": "GameStateManager, InputHandler, CollisionOutcomeDispatcher, RunSessionTransitionPlanner/Coordinator, Seed/Bloom owners.",
+      "implementation_state": "SUBSTANTIALLY_COMPLETE at source level; current runtime not verified",
+      "verification_criteria": "Independent transition/order/boundary invariants, deterministic input and collision tests; end-to-end scenario traces after authorization.",
+      "future_task_ids": [
+        "TASK-C-007"
+      ],
+      "evidence_refs": [
+        "docs/ARCHITECTURE.md",
+        "docs/AUDIT_LEDGER.md",
+        "docs/DETERMINISTIC_SCENARIO_EVIDENCE.md"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-003",
+      "requirement_id": "REQ-003",
+      "goal_id": "GOAL-003",
+      "capability_ids": [
+        "CAP-003"
+      ],
+      "universal_disposition": "REQUIRED",
+      "repository_rationale": "A failed durable repair must not expose stale or unsafe persisted state to gameplay or Journal projection. Keep the gate at each Android entry path, backed by SaveIntegrityManager.",
+      "architectural_owner": "SaveIntegrityManager, SaveIntegrityStartupGate, MainActivity and ForestJournalActivity.",
+      "implementation_state": "Statically integrated; runtime unverified",
+      "verification_criteria": "Success/failure/partial write, lifecycle launch, restart/retry and Journal gate tests; durable state inspection after restart.",
+      "future_task_ids": [
+        "TASK-C-008"
+      ],
+      "evidence_refs": [
+        "app/src/main/java/com/anurag9000/forestrun/SaveIntegrityStartupGate.kt:12-34",
+        "app/src/main/java/com/anurag9000/forestrun/MainActivity.kt:60-70,118-121",
+        "app/src/main/java/com/anurag9000/forestrun/ForestJournalActivity.kt:59-83"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-004",
+      "requirement_id": "REQ-004",
+      "goal_id": "GOAL-003",
+      "capability_ids": [
+        "CAP-003",
+        "CAP-012"
+      ],
+      "universal_disposition": "REQUIRED_WITH_ADAPTATION",
+      "repository_rationale": "Persistence domains have different durability and recovery contracts; global atomicity would be false. Journal is intentionally a read-only projection.",
+      "architectural_owner": "ApplicationPersistenceFacade and domain stores; Journal composer/activity; ghost and run-outcome recovery.",
+      "implementation_state": "Prior static map reusable with delta review; current runtime unverified",
+      "verification_criteria": "Domain boundary, read-only projection, recovery, malformed state and interrupted write tests; no global transaction assumption.",
+      "future_task_ids": [
+        "TASK-C-008"
+      ],
+      "evidence_refs": [
+        "docs/ARCHITECTURE.md",
+        "docs/FOREST_JOURNAL.md",
+        "docs/RUN_OUTCOME_RECOVERY.md",
+        "docs/GHOST_PERSISTENCE_RECOVERY.md"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-005",
+      "requirement_id": "REQ-005",
+      "goal_id": "GOAL-004",
+      "capability_ids": [
+        "CAP-004"
+      ],
+      "universal_disposition": "REQUIRED_WITH_ADAPTATION",
+      "repository_rationale": "A touch-driven game must remain usable with Android accessibility and comfort settings; source mechanics can be automated but perceptual success requires human review.",
+      "architectural_owner": "GameAccessibilityNodeProvider/Semantics/Actions, feedback managers, UI panels and lifecycle owners.",
+      "implementation_state": "Substantially implemented statically; human acceptance remains separate",
+      "verification_criteria": "Virtual node/action and settings persistence contracts; TalkBack focus/order/speech and real-device comfort review on frozen candidate.",
+      "future_task_ids": [
+        "TASK-C-010"
+      ],
+      "evidence_refs": [
+        "docs/ACCESSIBILITY.md",
+        "docs/REPO_CODEBASE_MAP.md",
+        "app/src/main/java/com/anurag9000/forestrun/engine/HapticManager.kt",
+        "app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-006",
+      "requirement_id": "REQ-006",
+      "goal_id": "GOAL-005",
+      "capability_ids": [
+        "CAP-005",
+        "CAP-006"
+      ],
+      "universal_disposition": "REQUIRED_WITH_ADAPTATION",
+      "repository_rationale": "Release/evidence tooling accepts potentially untrusted filesystem and manifest inputs and publishes candidate-bound records; bounded reads, no-follow, validation and atomic writes are appropriate.",
+      "architectural_owner": "stable_file_reader, strict_json, evidence producers/validators and release index.",
+      "implementation_state": "Source mechanisms statically present; execution and race/platform semantics unverified",
+      "verification_criteria": "Unit, adversarial path/schema, interrupted publication and producer-consumer integration checks with independent temporary fixtures.",
+      "future_task_ids": [
+        "TASK-C-009"
+      ],
+      "evidence_refs": [
+        "docs/RELEASE_EVIDENCE_INDEX.md",
+        "docs/RELEASE_READINESS.md",
+        "scripts/stable_file_reader.py",
+        "scripts/strict_json.py"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-007",
+      "requirement_id": "REQ-007",
+      "goal_id": "GOAL-006",
+      "capability_ids": [
+        "CAP-006",
+        "CAP-007"
+      ],
+      "universal_disposition": "EXTERNALLY_BLOCKED",
+      "repository_rationale": "Human and physical evidence cannot be produced by source code or repository tests; must be performed by accountable reviewers on the frozen candidate.",
+      "architectural_owner": "External device matrix, acceptance records and release evidence bundle.",
+      "implementation_state": "Not established; external gate outstanding",
+      "verification_criteria": "Device-class scenarios and manual acceptance on target hardware; retain model/OS/session/reviewer and artifact digests.",
+      "future_task_ids": [
+        "TASK-D-001"
+      ],
+      "evidence_refs": [
+        "docs/DEVICE_ACCEPTANCE.md",
+        "docs/HUMAN_ACCEPTANCE.md",
+        "docs/RELEASE_READINESS.md"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-008",
+      "requirement_id": "REQ-008",
+      "goal_id": "GOAL-006",
+      "capability_ids": [
+        "CAP-006",
+        "CAP-007"
+      ],
+      "universal_disposition": "EXTERNALLY_BLOCKED",
+      "repository_rationale": "Rights, licenses, privacy and governance involve provenance and accountable decisions beyond static hashes or validators.",
+      "architectural_owner": "Creative/source asset provenance, dependency notices, security/privacy policy and governance owners.",
+      "implementation_state": "Evidence/decisions outstanding",
+      "verification_criteria": "Candidate-bound human/legal/security review; validator checks support but cannot substitute for approvals.",
+      "future_task_ids": [
+        "TASK-D-002"
+      ],
+      "evidence_refs": [
+        "docs/RELEASE_GOVERNANCE_EVIDENCE.md",
+        "docs/SECURITY_AND_LICENSING_GOVERNANCE.md",
+        "docs/CREATIVE_ASSET_PROVENANCE.md"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-009",
+      "requirement_id": "REQ-009",
+      "goal_id": "GOAL-006",
+      "capability_ids": [
+        "CAP-006",
+        "CAP-007"
+      ],
+      "universal_disposition": "EXTERNALLY_BLOCKED",
+      "repository_rationale": "Production signing, Play policy/delivery and hosted privacy confirmation require external accounts, candidate artifacts and accountable operators.",
+      "architectural_owner": "Candidate identity collector, release prep, store/Play evidence and hosted policy.",
+      "implementation_state": "External candidate-bound evidence not established",
+      "verification_criteria": "Verify frozen signed artifact identity, delivery/policy declarations and hosted privacy state; accountable approval.",
+      "future_task_ids": [
+        "TASK-D-003"
+      ],
+      "evidence_refs": [
+        "docs/INSTALLED_CANDIDATE_IDENTITY.md",
+        "docs/RELEASE_READINESS.md",
+        "docs/STORE_EVIDENCE.md",
+        "PRIVACY.md"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-010",
+      "requirement_id": "REQ-010",
+      "goal_id": "GOAL-007",
+      "capability_ids": [
+        "CAP-008"
+      ],
+      "universal_disposition": "NOT_APPLICABLE",
+      "repository_rationale": "The product is an authored Android game, not a learned model system. No datasets, ML architectures, training loops, optimizer state, GPU kernels or research experiments should be added. The no-trainable-surface certificate is an applicable scope guard.",
+      "architectural_owner": "training_control certificate and audit tools are the only relevant owner; do not add training capability.",
+      "implementation_state": "No-trainable-surface asserted in source/docs; audit not rerun",
+      "verification_criteria": "Static certificate/source consistency only; do not train or introduce datasets/GPU infrastructure absent a new user requirement.",
+      "future_task_ids": [],
+      "evidence_refs": [
+        "training_control/forest_no_trainable_authority.py",
+        "training_control/dataset_cohort_not_applicable_v1.py",
+        "scripts/audit_no_trainable_surface.py"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-011",
+      "requirement_id": "REQ-011",
+      "goal_id": "GOAL-008",
+      "capability_ids": [
+        "CAP-009"
+      ],
+      "universal_disposition": "ALREADY_IMPLEMENTED",
+      "repository_rationale": "Typed collision dispatch and ordered terminal semantics were an approved historical architecture contract and later source-closed. Preserve dispatch ownership.",
+      "architectural_owner": "CollisionOutcomeDispatcher and GameView encounter coordinator.",
+      "implementation_state": "Prior source-completion evidence; revision-bounded; current delta static only",
+      "verification_criteria": "Focused exhaustive outcome, callback order, idempotency and terminal transition checks; C-007.",
+      "future_task_ids": [
+        "TASK-C-007"
+      ],
+      "evidence_refs": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md:326-336",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:48-58"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-012",
+      "requirement_id": "REQ-012",
+      "goal_id": "GOAL-009",
+      "capability_ids": [
+        "CAP-010"
+      ],
+      "universal_disposition": "ALREADY_IMPLEMENTED",
+      "repository_rationale": "Shared effect adapters reduce duplicated live effects while collision ordering remains with domain coordinators.",
+      "architectural_owner": "LiveCollisionEffects and GameView call sites.",
+      "implementation_state": "Prior source-completion evidence; current runtime not refreshed",
+      "verification_criteria": "Unit and integration checks for shared effect routing and ordering; C-007.",
+      "future_task_ids": [
+        "TASK-C-007"
+      ],
+      "evidence_refs": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md:338-342",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:60-62"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-013",
+      "requirement_id": "REQ-013",
+      "goal_id": "GOAL-010",
+      "capability_ids": [
+        "CAP-011"
+      ],
+      "universal_disposition": "ALREADY_IMPLEMENTED",
+      "repository_rationale": "A pure transition planner plus ordered coordinator preserves a single publication boundary while keeping product transitions deterministic.",
+      "architectural_owner": "RunSessionTransitionPlanner/Coordinator and GameView.",
+      "implementation_state": "Prior source-completion evidence; runtime not refreshed",
+      "verification_criteria": "Planner invariants, ordered effects, publication exactly once, lifecycle scenarios; C-007/C-010.",
+      "future_task_ids": [
+        "TASK-C-007"
+      ],
+      "evidence_refs": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md:344-356",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:64-76"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-014",
+      "requirement_id": "REQ-014",
+      "goal_id": "GOAL-011",
+      "capability_ids": [
+        "CAP-012"
+      ],
+      "universal_disposition": "ALREADY_IMPLEMENTED",
+      "repository_rationale": "A facade provides coherent access while separate stores retain honest durability semantics; do not replace with a fictional global transaction.",
+      "architectural_owner": "ApplicationPersistenceFacade plus domain-specific storage/recovery components.",
+      "implementation_state": "Prior source-completion evidence; current delta runtime unverified",
+      "verification_criteria": "Contract tests per domain, partial failure/recovery and Journal read-only integration; C-008.",
+      "future_task_ids": [
+        "TASK-C-008"
+      ],
+      "evidence_refs": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md:358-362",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:78-92"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-015",
+      "requirement_id": "REQ-015",
+      "goal_id": "GOAL-012",
+      "capability_ids": [
+        "CAP-013"
+      ],
+      "universal_disposition": "ALREADY_IMPLEMENTED",
+      "repository_rationale": "A structural catalogue enables one canonical list of 19 encounter families and derived coverage; dynamic entity behavior remains with entities and SpriteManager.",
+      "architectural_owner": "EncounterFamilyCatalogue and derived consumers.",
+      "implementation_state": "Historical source closure; current runtime unverified",
+      "verification_criteria": "Catalogue completeness/uniqueness and consumer consistency checks; C-007.",
+      "future_task_ids": [
+        "TASK-C-007"
+      ],
+      "evidence_refs": [
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:94-107"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-016",
+      "requirement_id": "REQ-016",
+      "goal_id": "GOAL-013",
+      "capability_ids": [
+        "CAP-014"
+      ],
+      "universal_disposition": "ALREADY_IMPLEMENTED",
+      "repository_rationale": "Recovery UI must revalidate eligibility and explicitly confirm destructive actions to avoid stale or accidental loss.",
+      "architectural_owner": "RecoveryEvidenceUserController, dialog coordinator, MainActivity.",
+      "implementation_state": "Prior static closure; current runtime unverified",
+      "verification_criteria": "Eligibility race, cancel/confirm, stale item, failure result and refresh integration tests; C-008/C-010.",
+      "future_task_ids": [
+        "TASK-C-008"
+      ],
+      "evidence_refs": [
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:109-122"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-017",
+      "requirement_id": "REQ-017",
+      "goal_id": "GOAL-014",
+      "capability_ids": [],
+      "universal_disposition": "OPTIONAL_BENEFICIAL",
+      "repository_rationale": "Local data-oriented encounter authoring was an optional historical proposal and was explicitly not selected; no requirement justifies changing the structural catalogue or introducing schema/loader complexity.",
+      "architectural_owner": "No owner selected. Existing static EncounterFamilyCatalogue remains authoritative.",
+      "implementation_state": "Not implemented by design; no mandatory gap",
+      "verification_criteria": "No verification unless product owner explicitly selects and specifies this proposal.",
+      "future_task_ids": [],
+      "evidence_refs": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md:364-366"
+      ],
+      "current_execution_status": "NOT_EXECUTED",
+      "execution_constraint": "No tests/builds/application workflows in this phase."
+    },
+    {
+      "id": "APL-018",
+      "requirement_id": "REQ-018",
+      "goal_id": "GOAL-015",
+      "capability_ids": [
+        "CAP-015"
+      ],
+      "universal_disposition": "REQUIRED_WITH_ADAPTATION",
+      "repository_rationale": "Repository knowledge reconstruction requires source-test contracts and coverage dispositions; current contract inventory is passive evidence, not executed tests.",
+      "architectural_owner": "file, symbol, test contract and evidence ledgers.",
+      "implementation_state": "389 source-contract records remain passive inventory; full Python/JVM suites, lint and APK assembly passed on the merged candidate (EVID-072); device checks remain open.",
+      "verification_criteria": "EVID-072 provides full Python/JVM, lint and APK assembly evidence on the merged candidate; run connected/device and concurrency-specific checks when resources are available.",
+      "future_task_ids": [
+        "TASK-C-011",
+        "TASK-C-012"
+      ],
+      "evidence_refs": [
+        "User-provided repository investigation specification, Parts VIII/XX/XXXI and read-only/testing limits"
+      ],
+      "current_execution_status": "PARTIALLY_VERIFIED",
+      "execution_constraint": "No device or external acceptance claim without candidate-bound evidence."
+    },
+    {
+      "id": "APL-019",
+      "requirement_id": "REQ-019",
+      "goal_id": "GOAL-015",
+      "capability_ids": [
+        "CAP-016"
+      ],
+      "universal_disposition": "REQUIRED",
+      "repository_rationale": "The new repository-first prompt explicitly requires applying universal mechanisms to actual repository goals and explaining architecture location, evidence and verification criteria.",
+      "architectural_owner": "Applicability matrix plus GOAL/REQ/CAP/task ledgers; shared ownership remains with the lead.",
+      "implementation_state": "TASK-A-034 completed as documentation (EVID-068)",
+      "verification_criteria": "Matrix cross-reference, JSON validity, stable IDs, linked citations and no overclaim; EVID-072 separately records authorized suite/build outcomes.",
+      "future_task_ids": [
+        "TASK-A-034"
+      ],
+      "evidence_refs": [
+        "[local external attachment path omitted] 1-11",
+        "EVID-068"
+      ],
+      "current_execution_status": "DOCUMENTED",
+      "execution_constraint": "Static documentation and consistency checks remain distinct from application verification."
+    }
+  ],
+  "universal_mechanism_rows": [
+    {
+      "id": "APL-M-001",
+      "name": "Central job scheduler, worker pool and durable training orchestration",
+      "disposition": "NOT_APPLICABLE",
+      "reason": "Forest Run is an on-device Android game plus operator-invoked evidence tools; no job queue, distributed workers or long-running training system is an intended product capability. Keep game-thread ownership and bounded script execution.",
+      "evidence": [
+        "README.md:3-13",
+        "docs/ARCHITECTURE.md:62-144",
+        "REQ-010"
+      ],
+      "verification": "No scheduler infrastructure to add; audit no-trainable-surface control only if source contract changes."
+    },
+    {
+      "id": "APL-M-002",
+      "name": "ML models, datasets, training, optimizer/checkpoint state and GPU acceleration",
+      "disposition": "NOT_APPLICABLE",
+      "reason": "No learned model or scientific training goal exists; training_control records this exclusion. Do not introduce dataset pipelines, model registries, distributed training or GPU backends from the generic checklist.",
+      "evidence": [
+        "training_control/forest_no_trainable_authority.py",
+        "training_control/dataset_cohort_not_applicable_v1.py",
+        "docs/repository_knowledge/historical_audit_batch_A015.md:21-23",
+        "REQ-010"
+      ],
+      "verification": "No model tests/benchmarks; preserve source-only no-trainable certificate."
+    },
+    {
+      "id": "APL-M-003",
+      "name": "Domain-specific state/input/encounter ownership",
+      "disposition": "REQUIRED_WITH_ADAPTATION",
+      "reason": "Deterministic interactive gameplay requires one owner per mutable state and explicit ordering; generic central controllers would obscure lifecycle and outcome semantics.",
+      "evidence": [
+        "docs/ARCHITECTURE.md:62-144",
+        "docs/ARCHITECTURE.md:203-326",
+        "REQ-001",
+        "REQ-002"
+      ],
+      "verification": "State-transition and integration contracts under TASK-C-007/C-010."
+    },
+    {
+      "id": "APL-M-004",
+      "name": "Persistence, recovery, serialization and durable state",
+      "disposition": "REQUIRED_WITH_ADAPTATION",
+      "reason": "Garden, relationships, run outcomes, ghosts, settings and Journal depend on persistent domain state with distinct recovery boundaries; do not assert a global atomic transaction.",
+      "evidence": [
+        "docs/ARCHITECTURE.md:203-326",
+        "docs/FOREST_JOURNAL.md",
+        "docs/GHOST_PERSISTENCE_RECOVERY.md",
+        "docs/RUN_OUTCOME_RECOVERY.md",
+        "REQ-003",
+        "REQ-004"
+      ],
+      "verification": "Failure/restart/recovery and read-only projection contracts under TASK-C-008."
+    },
+    {
+      "id": "APL-M-005",
+      "name": "Input validation, bounded filesystem reads, schema and atomic publication",
+      "disposition": "REQUIRED_WITH_ADAPTATION",
+      "reason": "Evidence scripts ingest local candidate/device/human/source artifacts and must fail closed on malformed, changing or out-of-bound files while preserving prior published reports.",
+      "evidence": [
+        "scripts/stable_file_reader.py",
+        "scripts/strict_json.py",
+        "REQ-006"
+      ],
+      "verification": "Focused malformed/path-race/atomic-failure plus producer-consumer checks under TASK-C-009."
+    },
+    {
+      "id": "APL-M-006",
+      "name": "UI, accessibility, comfort settings and platform lifecycle",
+      "disposition": "REQUIRED",
+      "reason": "User-facing touch and Canvas interfaces, Android accessibility semantics and lifecycle-sensitive audio/haptics are core product behavior; source checks cannot establish human usability.",
+      "evidence": [
+        "docs/ACCESSIBILITY.md:49-87",
+        "docs/ARCHITECTURE.md:62-144",
+        "REQ-001",
+        "REQ-005"
+      ],
+      "verification": "Automated virtual-node/lifecycle contracts plus manual TalkBack acceptance on frozen candidate; TASK-C-010 and TASK-D-002."
+    },
+    {
+      "id": "APL-M-007",
+      "name": "Physical-device performance profiling and optimization",
+      "disposition": "DEFERRED",
+      "reason": "Performance matters for a frame-driven game, but source inspection cannot establish a bottleneck or speedup. The repository requires representative physical baseline before optimization proposals.",
+      "evidence": [
+        "docs/DEVICE_ACCEPTANCE.md:24-50",
+        "docs/DEVICE_ACCEPTANCE.md:77-117",
+        "TASK-B-001",
+        "TASK-B-002"
+      ],
+      "verification": "Measure frame pacing, input latency, thermal/memory behavior across the manifest device matrix, then optimize only evidenced bottlenecks."
+    },
+    {
+      "id": "APL-M-008",
+      "name": "Release evidence, candidate identity and accountable external approvals",
+      "disposition": "EXTERNALLY_BLOCKED",
+      "reason": "Physical/human acceptance, creative rights, dependency/security decisions, privacy hosting, production signing, Play delivery/policy and accountable go/no-go require external owners and candidate-bound evidence. Validators cannot create these facts.",
+      "evidence": [
+        "docs/RELEASE_READINESS.md:5-32,122-141",
+        "docs/RELEASE_GOVERNANCE_EVIDENCE.md:35-66",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009"
+      ],
+      "verification": "Close through TASK-D-001\u2013TASK-D-007 and final TASK-E-001."
+    },
+    {
+      "id": "APL-M-009",
+      "name": "Automated unit/component/integration/regression verification",
+      "disposition": "REQUIRED_WITH_ADAPTATION",
+      "reason": "Game state, persistence, evidence-tooling security and interface contracts need risk-specific tests. Existing 389 contracts are source inspections only and test outcomes are not inferred.",
+      "evidence": [
+        "docs/repository_knowledge/test_contract_inventory.json",
+        "README.md:209-217",
+        "docs/RELEASE.md:34-55"
+      ],
+      "verification": "Current phase prohibits execution; future contracts C-007\u2013C-012 list specific suite scope and acceptance evidence."
+    },
+    {
+      "id": "APL-M-010",
+      "name": "Full-suite, smoke and end-to-end verification",
+      "disposition": "DEFERRED",
+      "reason": "These checks are relevant before release but are prohibited in the current investigation scope; running them against a dirty, non-frozen worktree would also weaken candidate evidence.",
+      "evidence": [
+        "README.md:209-219",
+        "docs/RELEASE.md:34-55",
+        "TASK-C-011"
+      ],
+      "verification": "After frozen revision and explicit authorization, run documented unit/script/lint/build/connected suites and report each separately."
+    },
+    {
+      "id": "APL-M-011",
+      "name": "Security, privacy, supply-chain and adversarial input handling",
+      "disposition": "REQUIRED_WITH_ADAPTATION",
+      "reason": "Evidence paths and release inputs require no-follow, bounded, strict validation and dependency/provenance review; external privacy/legal decisions remain accountable gates.",
+      "evidence": [
+        "scripts/stable_file_reader.py",
+        "scripts/strict_json.py",
+        "docs/SECURITY_AND_LICENSING_GOVERNANCE.md",
+        "REQ-006",
+        "REQ-008",
+        "REQ-009"
+      ],
+      "verification": "Adversarial path/schema tests for tooling; external security/privacy/licensing review remains TASK-D scoped."
+    },
+    {
+      "id": "APL-M-012",
+      "name": "Scientific hypothesis, statistical experiment suite and model benchmark",
+      "disposition": "NOT_APPLICABLE",
+      "reason": "No scientific model or statistical research benchmark is established. Gameplay scenario traces and product acceptance are engineering verification, not model experiments.",
+      "evidence": [
+        "README.md:3-13",
+        "REQ-010",
+        "docs/repository_knowledge/historical_audit_batch_A015.md:21-23"
+      ],
+      "verification": "Do not invent experiment suites or report research metrics."
+    },
+    {
+      "id": "APL-M-013",
+      "name": "Build, package, platform and configuration compatibility",
+      "disposition": "REQUIRED_WITH_ADAPTATION",
+      "reason": "Android API level, landscape orientation, Java/Kotlin bytecode and release package identity are product/runtime contracts. Static configuration is not proof of packaging or device compatibility.",
+      "evidence": [
+        "README.md:198-219",
+        "app/build.gradle.kts",
+        "AndroidManifest.xml",
+        "TASK-C-010"
+      ],
+      "verification": "Compile/lint/package and supported connected checks under TASK-C-010/C-011 after authorization."
+    },
+    {
+      "id": "APL-M-014",
+      "name": "Commit, publish, deploy or contact external services",
+      "disposition": "EXPLICITLY_EXCLUDED",
+      "reason": "The embedded investigation scope prohibits commit/push/deploy/publish or external actions. An outer generic prompt\"s publication instruction does not override the task-specific read-only restriction; no commit will be made.",
+      "evidence": [
+        "pasted-text-1.txt, Parallel Evidence-Based Repository Knowledge Reconstruction, Scope and authority"
+      ],
+      "verification": "Not applicable in current phase; only user can separately authorize."
+    }
+  ],
+  "verification_suite_rows": [
+    {
+      "id": "VER-001",
+      "category": "Unit and mathematical/property correctness",
+      "applicability": "REQUIRED",
+      "scope": "Input arbitration, bounded movement, collision dispatch/order, Seed/Bloom thresholds and timer partition behavior.",
+      "existing_contracts": [
+        "InputHandlerTest.kt",
+        "CollisionOutcomeDispatcherTest.kt",
+        "BloomEconomyTest.kt",
+        "BloomTimerPartitionPropertyTest.kt"
+      ],
+      "expected_evidence": "Focused JVM result plus independent transition/state invariant oracle.",
+      "current_status": "PARTIALLY VERIFIED: full JVM suite passed (1,297 tests); no device-level or per-requirement oracle evidence.",
+      "future_task_ids": [
+        "TASK-C-007"
+      ]
+    },
+    {
+      "id": "VER-002",
+      "category": "Component tests",
+      "applicability": "REQUIRED_WITH_ADAPTATION",
+      "scope": "Game managers and evidence-file validators in isolated temporary state.",
+      "existing_contracts": [
+        "SaveIntegrityManagerTest.kt",
+        "SaveIntegrityNamespaceAdversarialTest.kt",
+        "stable_file_reader tests",
+        "strict_json tests"
+      ],
+      "expected_evidence": "Component behavior, boundary rejection and resource/state cleanup.",
+      "current_status": "PARTIALLY VERIFIED: Python and JVM suites passed; external/device component paths remain.",
+      "future_task_ids": [
+        "TASK-C-008",
+        "TASK-C-009"
+      ]
+    },
+    {
+      "id": "VER-003",
+      "category": "Integration tests",
+      "applicability": "REQUIRED",
+      "scope": "GameView/Activity/persistence owner paths; evidence producers through validators and publishers.",
+      "existing_contracts": [
+        "RecoveryEvidenceMaintenanceIntegrationTest.kt",
+        "RunOutcomePersistenceIntegrationTest.kt",
+        "ForestJournalLifecycleInstrumentedTest.kt",
+        "publish/aggregate script contracts"
+      ],
+      "expected_evidence": "Real connected components with state and persistence inspected across boundaries.",
+      "current_status": "PARTIALLY VERIFIED: source-level suites passed; connected app/producer-consumer integrations remain.",
+      "future_task_ids": [
+        "TASK-C-008",
+        "TASK-C-009",
+        "TASK-C-010"
+      ]
+    },
+    {
+      "id": "VER-004",
+      "category": "Full suite",
+      "applicability": "REQUIRED_BEFORE_RELEASE; DEFERRED_NOW",
+      "scope": "Python scripts unittest suite, Gradle JVM suite, lint/build tasks and ordinary connected suite as documented.",
+      "existing_contracts": [
+        "README.md:209-217",
+        "docs/RELEASE.md:34-55"
+      ],
+      "expected_evidence": "Exact commands/revision/environment; suite-specific pass/fail/error/skip counts; no historical result reuse as current pass.",
+      "current_status": "PASSED for Python/JVM, lint and APK assembly on merged candidate; connected instrumentation unavailable (adb missing).",
+      "future_task_ids": [
+        "TASK-C-011",
+        "TASK-C-013"
+      ]
+    },
+    {
+      "id": "VER-005",
+      "category": "Smoke and end-to-end workflow",
+      "applicability": "REQUIRED_WITH_ADAPTATION; DEFERRED_NOW",
+      "scope": "Android launch-to-frame-loop, save-repair gate, Journal, representative gameplay and candidate evidence intake/publication.",
+      "existing_contracts": [
+        "MainActivityInstrumentedTest.kt",
+        "ForestJournalLifecycleInstrumentedTest.kt",
+        "README.md:209-219"
+      ],
+      "expected_evidence": "Representative connected workflow from supported entrypoint to visible output and persistent/evidence artifact.",
+      "current_status": "NOT VERIFIED: connected smoke/end-to-end app workflow unavailable (adb missing).",
+      "future_task_ids": [
+        "TASK-C-010",
+        "TASK-C-011"
+      ]
+    },
+    {
+      "id": "VER-006",
+      "category": "Regression tests",
+      "applicability": "REQUIRED_FOR_EACH_AUTHORIZED_SOURCE_CORRECTION",
+      "scope": "Include test contract for previously corrected raw screenshot canonicality and any future confirmed source gap.",
+      "existing_contracts": [
+        "scripts/test_verify_raw_screenshot_set.py",
+        "TASK-A-026",
+        "EVID-050"
+      ],
+      "expected_evidence": "Focused regression plus affected integration; no test pass claimed here.",
+      "current_status": "PASSED for full Python/JVM source regression suites on merged candidate; not physical/device regression.",
+      "future_task_ids": [
+        "TASK-C-009",
+        "TASK-C-011"
+      ]
+    },
+    {
+      "id": "VER-007",
+      "category": "Edge, negative, failure, recovery and adversarial tests",
+      "applicability": "REQUIRED_WITH_ADAPTATION",
+      "scope": "Malformed and boundary state, save write failure, namespace races, unsupported accessibility actions, symlinks/oversize/changing files, interrupted publication and rollback.",
+      "existing_contracts": [
+        "SaveIntegrityNamespaceAdversarialTest.kt",
+        "SaveIntegrityStartupGateTest.kt",
+        "test_stable_file_reader.py",
+        "test_strict_json.py"
+      ],
+      "expected_evidence": "Input rejection or recovery is safe and prior state/output remains intact; exact error and cleanup evidence.",
+      "current_status": "PARTIALLY VERIFIED by full suites; each independent edge-case criterion is not separately dispositioned.",
+      "future_task_ids": [
+        "TASK-C-007",
+        "TASK-C-008",
+        "TASK-C-009"
+      ]
+    },
+    {
+      "id": "VER-008",
+      "category": "Compatibility and configuration tests",
+      "applicability": "REQUIRED_WITH_ADAPTATION",
+      "scope": "Minimum/target API, Java/Kotlin toolchain, manifest/orientation, Android variants and connected runner filters.",
+      "existing_contracts": [
+        "README.md:198-217",
+        "docs/RELEASE.md:34-55"
+      ],
+      "expected_evidence": "Successful documented compile/package matrix and supported Android test environment, reported by variant/device.",
+      "current_status": "PARTIALLY VERIFIED by unit/component tests; actual device/process recovery remains.",
+      "future_task_ids": [
+        "TASK-C-010",
+        "TASK-C-011"
+      ]
+    },
+    {
+      "id": "VER-009",
+      "category": "Performance and resource profiling",
+      "applicability": "REQUIRED_FOR_DEVICE_ACCEPTANCE; DEFERRED",
+      "scope": "Frame pacing/input latency, memory, thermal, storage and lifecycle pressure on representative physical devices.",
+      "existing_contracts": [
+        "docs/DEVICE_ACCEPTANCE.md:24-50,77-117",
+        "TASK-B-001",
+        "TASK-B-002"
+      ],
+      "expected_evidence": "Candidate-bound device profiles and controlled before/after measurements; static opportunity is not a bottleneck.",
+      "current_status": "DEFERRED; no current baseline or measured bottleneck",
+      "future_task_ids": [
+        "TASK-B-001",
+        "TASK-B-002"
+      ]
+    },
+    {
+      "id": "VER-010",
+      "category": "Human usability/accessibility and creative review",
+      "applicability": "REQUIRED_BEFORE_RELEASE; EXTERNALLY_BLOCKED",
+      "scope": "TalkBack, focus order, labels/actions, speech/audio coexistence, reduced-motion/comfort and visual/creative acceptance on real candidate.",
+      "existing_contracts": [
+        "docs/ACCESSIBILITY.md:49-87",
+        "docs/DEVICE_ACCEPTANCE.md",
+        "TASK-D-001",
+        "TASK-D-002"
+      ],
+      "expected_evidence": "Candidate-bound reviewer/device metadata and evidence digest; automated accessibility tree does not prove usability.",
+      "current_status": "EXTERNAL REVIEW NOT ESTABLISHED",
+      "future_task_ids": [
+        "TASK-D-001",
+        "TASK-D-002"
+      ]
+    },
+    {
+      "id": "VER-011",
+      "category": "Scientific statistical validity, training fidelity and dataset leakage",
+      "applicability": "NOT_APPLICABLE",
+      "scope": "No model/data experiment exists in this product scope.",
+      "existing_contracts": [
+        "REQ-010",
+        "training_control certificates"
+      ],
+      "expected_evidence": "None unless a new explicit research goal is authorized.",
+      "current_status": "NOT_APPLICABLE",
+      "future_task_ids": []
+    },
+    {
+      "id": "VER-012",
+      "category": "External security/privacy/license/store release review",
+      "applicability": "REQUIRED_BEFORE_RELEASE; EXTERNALLY_BLOCKED",
+      "scope": "Dependency vulnerability decision, privacy hosting/policy, asset rights/licensing, production signing and Play delivery/governance.",
+      "existing_contracts": [
+        "docs/RELEASE_GOVERNANCE_EVIDENCE.md",
+        "docs/SECURITY_AND_LICENSING_GOVERNANCE.md",
+        "TASK-D-003..TASK-D-007"
+      ],
+      "expected_evidence": "Accountable candidate-bound human/external records; tooling validates but cannot fabricate approvals.",
+      "current_status": "OUTSTANDING",
+      "future_task_ids": [
+        "TASK-D-003",
+        "TASK-D-004",
+        "TASK-D-005",
+        "TASK-D-006",
+        "TASK-D-007"
+      ]
+    },
+    {
+      "id": "VER-013",
+      "category": "Concurrency, synchronization and race/recovery correctness",
+      "applicability": "REQUIRED_WITH_ADAPTATION",
+      "scope": "Lifecycle owner replacement and frame continuation; asynchronous audio manager synchronization and stale callback handling; descriptor-relative atomic file publication and rollback under concurrent replacement.",
+      "existing_contracts": [
+        "app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt",
+        "app/src/test/java/com/anurag9000/forestrun/engine/SfxManagerTest.kt",
+        "app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt",
+        "scripts/test_stable_file_reader.py"
+      ],
+      "expected_evidence": "Deterministically controlled race/order checks establish no stale owner effects, no duplicate drain/terminal effect, and preservation of concurrent newer output through rollback and cleanup; record tested platform/runtime.",
+      "current_status": "NOT_EXECUTED; source contracts only; prohibited in current investigation scope.",
+      "future_task_ids": [
+        "TASK-C-012",
+        "TASK-C-011"
+      ],
+      "doc": "docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md"
+    }
+  ]
+}

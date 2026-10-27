@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
 
+from stable_file_reader import StableFileError, checked_directory_path
+
 import strict_json
 
 SCHEMA_VERSION = 1
@@ -146,14 +148,30 @@ def _generated_at(value: object) -> str:
 
 def _safe_relative_path(value: object, *, label: str) -> str:
     raw = _require_string(value, label=label)
-    if not raw or "\\" in raw or "\x00" in raw:
+    if (
+        not raw
+        or "\\" in raw
+        or "\x00" in raw
+        or ":" in raw
+        or any(ord(character) < 32 or ord(character) == 127 for character in raw)
+    ):
         raise EvidenceIndexVerificationError(
             f"{label} must be a non-empty POSIX relative path"
         )
+    try:
+        raw.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise EvidenceIndexVerificationError(
+            f"{label} must contain valid Unicode text"
+        ) from exc
     path = PurePosixPath(raw)
     if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
         raise EvidenceIndexVerificationError(f"{label} is unsafe: {raw!r}")
     normalized = path.as_posix()
+    if normalized != raw:
+        raise EvidenceIndexVerificationError(
+            f"{label} must already use its canonical POSIX spelling: {raw!r}"
+        )
     if Path(normalized).suffix.lower() not in SUPPORTED_SUFFIXES:
         raise EvidenceIndexVerificationError(
             f"{label} has an unsupported file type: {normalized}"
@@ -169,10 +187,18 @@ def _candidate_bindings(
     bindings: set[str] = set()
     if isinstance(value, Mapping):
         for key, item in value.items():
-            if key in EXPLICIT_CANDIDATE_KEYS and isinstance(item, str):
-                bindings.add(item.strip())
-            elif candidate_context and key in COMMIT_KEYS and isinstance(item, str):
-                bindings.add(item.strip())
+            if key in EXPLICIT_CANDIDATE_KEYS:
+                if not isinstance(item, str):
+                    raise EvidenceIndexVerificationError(
+                        f"candidate identity field {key} must be a string"
+                    )
+                bindings.add(item)
+            elif candidate_context and key in COMMIT_KEYS:
+                if not isinstance(item, str):
+                    raise EvidenceIndexVerificationError(
+                        f"candidate commit field {key} must be a string"
+                    )
+                bindings.add(item)
             bindings.update(
                 _candidate_bindings(
                     item,
@@ -190,44 +216,63 @@ def _candidate_bindings(
 def _read_stable_file(
     path: Path,
     *,
+    root: Path,
     maximum_bytes: int,
     label: str,
 ) -> tuple[bytes, tuple[int, int]]:
+    """Read one regular file through no-follow directory descriptors.
+
+    Walking from the checked lexical evidence root with ``dir_fd`` prevents a
+    parent directory from being replaced by a symlink after the lexical checks
+    and redirecting the later leaf open outside that root.
+    """
     try:
-        before = path.lstat()
-    except FileNotFoundError as exc:
-        raise EvidenceIndexVerificationError(f"{label} is missing: {path}") from exc
-    except OSError as exc:
-        raise EvidenceIndexVerificationError(
-            f"could not inspect {label} {path}: {exc}"
-        ) from exc
-    if stat.S_ISLNK(before.st_mode):
-        raise EvidenceIndexVerificationError(f"{label} must not be a symbolic link")
-    if not stat.S_ISREG(before.st_mode):
+        relative = path.relative_to(root)
+    except ValueError as exc:
+        raise EvidenceIndexVerificationError(f"{label} escapes the evidence root") from exc
+    if not relative.parts:
         raise EvidenceIndexVerificationError(f"{label} must be a regular file")
-    if before.st_size <= 0 or before.st_size > maximum_bytes:
+
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
         raise EvidenceIndexVerificationError(
-            f"{label} must be between 1 and {maximum_bytes} bytes"
+            "safe evidence reads require O_NOFOLLOW and O_DIRECTORY support"
         )
-
-    flags = os.O_RDONLY
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     if hasattr(os, "O_CLOEXEC"):
-        flags |= os.O_CLOEXEC
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
+        directory_flags |= os.O_CLOEXEC
+    file_flags = os.O_RDONLY | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        file_flags |= os.O_CLOEXEC
     if hasattr(os, "O_NONBLOCK"):
-        # If the path is swapped to a FIFO after lstat(), opening it must not
-        # hang before fstat() can reject the non-regular descriptor.
-        flags |= os.O_NONBLOCK
+        file_flags |= os.O_NONBLOCK
 
+    directory_descriptors: list[int] = []
+    descriptor: int | None = None
     try:
-        descriptor = os.open(path, flags)
-    except OSError as exc:
-        raise EvidenceIndexVerificationError(
-            f"could not open {label} {path} safely: {exc}"
-        ) from exc
+        # Open every component from the filesystem root without following a
+        # symlink; the final descriptor is the stable evidence-root anchor.
+        current = os.open(root.anchor, directory_flags)
+        directory_descriptors.append(current)
+        for component in root.parts[1:]:
+            current = os.open(component, directory_flags, dir_fd=current)
+            directory_descriptors.append(current)
+        for component in relative.parts[:-1]:
+            current = os.open(component, directory_flags, dir_fd=current)
+            directory_descriptors.append(current)
 
-    try:
+        leaf = relative.parts[-1]
+        parent_descriptor = current
+        before = os.stat(leaf, dir_fd=parent_descriptor, follow_symlinks=False)
+        if stat.S_ISLNK(before.st_mode):
+            raise EvidenceIndexVerificationError(f"{label} must not be a symbolic link")
+        if not stat.S_ISREG(before.st_mode):
+            raise EvidenceIndexVerificationError(f"{label} must be a regular file")
+        if before.st_size <= 0 or before.st_size > maximum_bytes:
+            raise EvidenceIndexVerificationError(
+                f"{label} must be between 1 and {maximum_bytes} bytes"
+            )
+
+        descriptor = os.open(leaf, file_flags, dir_fd=parent_descriptor)
         opened = os.fstat(descriptor)
         if not stat.S_ISREG(opened.st_mode):
             raise EvidenceIndexVerificationError(f"{label} must be a regular file")
@@ -244,27 +289,27 @@ def _read_stable_file(
         while remaining:
             chunk = os.read(descriptor, min(1024 * 1024, remaining))
             if not chunk:
-                raise EvidenceIndexVerificationError(
-                    f"{label} ended while being read"
-                )
+                raise EvidenceIndexVerificationError(f"{label} ended while being read")
             chunks.append(chunk)
             remaining -= len(chunk)
         if os.read(descriptor, 1):
             raise EvidenceIndexVerificationError(f"{label} changed while being read")
         after = os.fstat(descriptor)
+        after_path = os.stat(leaf, dir_fd=parent_descriptor, follow_symlinks=False)
+    except EvidenceIndexVerificationError:
+        raise
+    except FileNotFoundError as exc:
+        raise EvidenceIndexVerificationError(f"{label} is missing or changed: {path}") from exc
     except OSError as exc:
         raise EvidenceIndexVerificationError(
-            f"could not read {label} {path}: {exc}"
+            f"could not safely open or read {label} {path}: {exc}"
         ) from exc
     finally:
-        os.close(descriptor)
+        if descriptor is not None:
+            os.close(descriptor)
+        for directory_descriptor in reversed(directory_descriptors):
+            os.close(directory_descriptor)
 
-    try:
-        after_path = path.lstat()
-    except OSError as exc:
-        raise EvidenceIndexVerificationError(
-            f"{label} changed while being read: {path}: {exc}"
-        ) from exc
     if any(
         getattr(before, field) != getattr(after, field)
         or getattr(before, field) != getattr(after_path, field)
@@ -275,6 +320,29 @@ def _read_stable_file(
     if len(raw) != before.st_size:
         raise EvidenceIndexVerificationError(f"{label} changed while being read")
     return raw, (opened.st_dev, opened.st_ino)
+
+
+def _assert_no_symlink_components(root: Path, path: Path, *, label: str) -> None:
+    """Reject path aliases through symlinked directories as well as symlink leaves."""
+    try:
+        relative = path.relative_to(root)
+    except ValueError as exc:
+        raise EvidenceIndexVerificationError(f"{label} escapes the evidence root") from exc
+    current = root
+    for component in relative.parts:
+        current = current / component
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError:
+            break
+        except OSError as exc:
+            raise EvidenceIndexVerificationError(
+                f"could not inspect {label} path {current}: {exc}"
+            ) from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise EvidenceIndexVerificationError(
+                f"{label} must not traverse a symbolic link: {current}"
+            )
 
 
 def _load_evidence_bindings(path: Path, raw: bytes) -> tuple[str, ...]:
@@ -379,7 +447,10 @@ def verify_index(
     expected_candidate_sha: str | None = None,
     require_bound_kinds: Iterable[str] = (),
 ) -> dict[str, object]:
-    root = root.expanduser().resolve()
+    try:
+        root = checked_directory_path(root, "evidence root")
+    except StableFileError as exc:
+        raise EvidenceIndexVerificationError(str(exc)) from exc
     index_lexical = Path(os.path.abspath(os.fspath(index_path.expanduser())))
     try:
         index_lexical.relative_to(root)
@@ -387,6 +458,7 @@ def verify_index(
         raise EvidenceIndexVerificationError(
             "release evidence index must remain inside the evidence root"
         ) from exc
+    _assert_no_symlink_components(root, index_lexical, label="release evidence index")
     index_resolved = index_lexical.resolve(strict=False)
     try:
         index_resolved.relative_to(root)
@@ -397,6 +469,7 @@ def verify_index(
 
     raw_index, index_identity = _read_stable_file(
         index_lexical,
+        root=root,
         maximum_bytes=MAX_INDEX_BYTES,
         label="release evidence index",
     )
@@ -476,11 +549,23 @@ def verify_index(
             "evidenceSetSha256 does not match the canonical entries"
         )
 
-    required = set(require_bound_kinds)
-    if any(not KIND.fullmatch(kind) for kind in required):
+    if isinstance(require_bound_kinds, str):
+        required_values = (require_bound_kinds,)
+    else:
+        try:
+            required_values = tuple(require_bound_kinds)
+        except TypeError as exc:
+            raise EvidenceIndexVerificationError(
+                "required candidate-bound kinds must be an iterable of strings"
+            ) from exc
+    if any(
+        not isinstance(kind, str) or not KIND.fullmatch(kind)
+        for kind in required_values
+    ):
         raise EvidenceIndexVerificationError(
             "required candidate-bound kinds must be lowercase identifiers"
         )
+    required = set(required_values)
     by_kind = {entry["kind"]: entry for entry in entries}
     missing = required - set(by_kind)
     if missing:
@@ -501,6 +586,7 @@ def verify_index(
     for entry in entries:
         relative = str(entry["path"])
         path = root / relative
+        _assert_no_symlink_components(root, path, label=f"indexed evidence {relative}")
         resolved = path.resolve(strict=False)
         try:
             resolved.relative_to(root)
@@ -510,6 +596,7 @@ def verify_index(
             ) from exc
         file_raw, identity = _read_stable_file(
             path,
+            root=root,
             maximum_bytes=MAX_EVIDENCE_FILE_BYTES,
             label=f"indexed evidence {relative}",
         )
@@ -544,6 +631,7 @@ def verify_index(
 
     confirmed_index, confirmed_identity = _read_stable_file(
         index_lexical,
+        root=root,
         maximum_bytes=MAX_INDEX_BYTES,
         label="release evidence index",
     )

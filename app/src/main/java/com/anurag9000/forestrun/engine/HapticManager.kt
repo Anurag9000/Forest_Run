@@ -74,6 +74,7 @@ object HapticManager {
     fun longPulse() = terminalImpact()
     fun doubleTap() = mercyAcknowledgement()
 
+    @Synchronized
     private fun pulse(durationMs: Long) {
         if (durationMs <= 0L) return
         withAvailableVibrator { vib ->
@@ -91,6 +92,7 @@ object HapticManager {
         }
     }
 
+    @Synchronized
     private fun waveform(
         timings: LongArray,
         amplitudes: IntArray,
@@ -116,6 +118,7 @@ object HapticManager {
     }
 
     /** Cancel current feedback while retaining the service for later re-enable. */
+    @Synchronized
     fun cancel() {
         vibrator?.let { vib -> runCatching { vib.cancel() } }
     }

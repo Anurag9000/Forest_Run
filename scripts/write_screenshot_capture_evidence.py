@@ -9,17 +9,21 @@ import json
 import math
 import os
 import re
-import tempfile
 from pathlib import Path
 from typing import Sequence
 
+from stable_file_reader import StableFileError, atomic_write_bytes
 from screenshot_capture_evidence import (
     EXPECTED_ACTIVITY_NAME,
     EXPECTED_PACKAGE_NAME,
     EXPECTED_RUN_MODE,
     READY_PREFIX,
 )
-from verify_curated_screenshot_set import CuratedScreenshotError, _inspect_png
+from verify_curated_screenshot_set import (
+    CuratedScreenshotError,
+    _admit_directory,
+    _inspect_png,
+)
 
 HEX_40 = re.compile(r"[0-9a-f]{40}")
 HEX_64 = re.compile(r"[0-9a-f]{64}")
@@ -31,36 +35,23 @@ class CaptureEvidenceWriteError(ValueError):
 
 
 def _required_text(value: str, label: str) -> str:
-    normalized = value.strip()
-    if not normalized:
+    if not isinstance(value, str):
+        raise CaptureEvidenceWriteError(f"{label} must be text")
+    if not value:
         raise CaptureEvidenceWriteError(f"{label} must be non-blank")
-    if any(ord(character) < 32 or ord(character) == 127 for character in normalized):
+    if value != value.strip():
+        raise CaptureEvidenceWriteError(f"{label} must not have surrounding whitespace")
+    if any(ord(character) < 32 or ord(character) == 127 for character in value):
         raise CaptureEvidenceWriteError(f"{label} contains control characters")
-    return normalized
+    return value
 
 
 def _atomic_write_json(path: Path, payload: dict[str, object]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as stream:
-            temporary_path = Path(stream.name)
-            json.dump(payload, stream, indent=2, sort_keys=True)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary_path, path)
-        temporary_path = None
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
+        content = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        atomic_write_bytes(path, content, "capture evidence sidecar")
+    except StableFileError as exc:
+        raise CaptureEvidenceWriteError(str(exc)) from exc
 
 
 def write_capture_evidence(
@@ -77,11 +68,15 @@ def write_capture_evidence(
     run_mode: str,
     captured_at_utc: dt.datetime | None = None,
 ) -> Path:
-    image_path = image_path.expanduser().resolve()
+    image_path = Path(os.path.abspath(os.fspath(image_path.expanduser())))
+    try:
+        _admit_directory(image_path.parent, "Capture image parent")
+    except CuratedScreenshotError as exc:
+        raise CaptureEvidenceWriteError(str(exc)) from exc
     scenario = _required_text(scenario, "scenario")
     readiness_marker = _required_text(readiness_marker, "readiness_marker")
-    candidate_sha = _required_text(candidate_sha, "candidate_sha").lower()
-    apk_sha256 = _required_text(apk_sha256, "apk_sha256").lower()
+    candidate_sha = _required_text(candidate_sha, "candidate_sha")
+    apk_sha256 = _required_text(apk_sha256, "apk_sha256")
     device_serial = _required_text(device_serial, "device_serial")
     package_name = _required_text(package_name, "package_name")
     activity_name = _required_text(activity_name, "activity_name")
@@ -90,10 +85,19 @@ def write_capture_evidence(
     if SCENARIO_TOKEN.fullmatch(scenario) is None:
         raise CaptureEvidenceWriteError("scenario must be an uppercase scenario token")
     if HEX_40.fullmatch(candidate_sha) is None:
-        raise CaptureEvidenceWriteError("candidate_sha must be a 40-character Git SHA")
+        raise CaptureEvidenceWriteError(
+            "candidate_sha must be exactly 40 lowercase hexadecimal characters"
+        )
     if HEX_64.fullmatch(apk_sha256) is None:
-        raise CaptureEvidenceWriteError("apk_sha256 must be a SHA-256 hex digest")
-    if not math.isfinite(settle_seconds) or not 0.0 <= settle_seconds <= 60.0:
+        raise CaptureEvidenceWriteError(
+            "apk_sha256 must be exactly 64 lowercase hexadecimal characters"
+        )
+    if (
+        isinstance(settle_seconds, bool)
+        or not isinstance(settle_seconds, (int, float))
+        or not math.isfinite(settle_seconds)
+        or not 0.0 <= settle_seconds <= 60.0
+    ):
         raise CaptureEvidenceWriteError("settle_seconds must be finite and between 0 and 60")
     if package_name != EXPECTED_PACKAGE_NAME:
         raise CaptureEvidenceWriteError(
@@ -120,6 +124,8 @@ def write_capture_evidence(
     except CuratedScreenshotError as exc:
         raise CaptureEvidenceWriteError(str(exc)) from exc
 
+    if captured_at_utc is not None and not isinstance(captured_at_utc, dt.datetime):
+        raise CaptureEvidenceWriteError("captured_at_utc must be a datetime")
     captured_at = captured_at_utc or dt.datetime.now(dt.timezone.utc)
     if captured_at.tzinfo is None or captured_at.utcoffset() != dt.timedelta(0):
         raise CaptureEvidenceWriteError("captured_at_utc must be timezone-aware UTC")

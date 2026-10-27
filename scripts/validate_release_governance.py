@@ -11,12 +11,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import ipaddress
 import json
 import os
 import re
 import stat
 import sys
-import tempfile
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -25,6 +25,12 @@ from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import urlsplit
 
 import strict_json
+from stable_file_reader import (
+    StableFileError,
+    atomic_write_json,
+    checked_directory_path,
+    consume_regular_file,
+)
 import validate_device_acceptance as device_acceptance
 import validate_human_acceptance as human_acceptance
 import validate_installed_identity_matrix as installed_matrix
@@ -33,6 +39,7 @@ import validate_play_delivery_evidence as play_delivery
 SCHEMA_VERSION = 2
 MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 MAX_EVIDENCE_FILE_BYTES = 2 * 1024 * 1024 * 1024
+MAX_RELEASE_NOTES_BYTES = 1024 * 1024
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -180,11 +187,19 @@ def _parse_utc(value: Any, label: str) -> datetime:
 
 def _safe_relative_path(value: Any, label: str) -> str:
     text = _string(value, label, maximum=512)
-    if "\\" in text or text.startswith("~"):
+    if value != text:
+        raise GovernanceError(f"{label} must not have surrounding whitespace")
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise GovernanceError(f"{label} must contain valid Unicode text") from exc
+    if "\\" in text or ":" in text or text.startswith("~"):
         raise GovernanceError(f"{label} must be a normalized POSIX relative path")
     path = PurePosixPath(text)
     if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
         raise GovernanceError(f"{label} must be a safe relative path")
+    if path.as_posix() != text:
+        raise GovernanceError(f"{label} must be a normalized POSIX relative path")
     return path.as_posix()
 
 
@@ -204,7 +219,13 @@ def _normalized_name(value: str) -> str:
 
 
 def _resolve_inside(base: Path, relative: str, label: str) -> Path:
-    canonical = base.resolve()
+    try:
+        canonical = checked_directory_path(base, f"{label} evidence root")
+    except StableFileError as exc:
+        raise GovernanceError(str(exc)) from exc
+    relative_path = PurePosixPath(relative)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise GovernanceError(f"{label} resolves outside the governance evidence root")
     lexical = canonical / relative
     try:
         path_parts = lexical.relative_to(canonical).parts
@@ -225,42 +246,28 @@ def _resolve_inside(base: Path, relative: str, label: str) -> Path:
                 f"{label} must not traverse a symbolic link: {current}"
             )
 
-    resolved = lexical.resolve()
-    try:
-        resolved.relative_to(canonical)
-    except ValueError as exc:
-        raise GovernanceError(f"{label} resolves outside the governance evidence root") from exc
-    return resolved
+    return lexical
 
 
 def _hash_regular_file(path: Path, label: str, maximum_bytes: int) -> tuple[str, os.stat_result]:
     try:
-        before = path.lstat()
-    except FileNotFoundError as exc:
-        raise GovernanceError(f"{label} is missing: {path}") from exc
-    except OSError as exc:
-        raise GovernanceError(f"could not inspect {label}: {path}: {exc}") from exc
-    if path.is_symlink() or not path.is_file():
-        raise GovernanceError(f"{label} must be a regular non-symlink file: {path}")
-    if before.st_size <= 0 or before.st_size > maximum_bytes:
-        raise GovernanceError(
-            f"{label} must be between 1 and {maximum_bytes} bytes: {path}"
+        _, digest, metadata = consume_regular_file(
+            path, label, maximum_bytes, retain_bytes=False
         )
-    digest = hashlib.sha256()
+    except StableFileError as exc:
+        raise GovernanceError(str(exc)) from exc
+    return digest, metadata
+
+
+def _read_regular_bytes(path: Path, label: str, maximum_bytes: int) -> tuple[bytes, os.stat_result]:
     try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        after = path.lstat()
-    except OSError as exc:
-        raise GovernanceError(f"could not read {label}: {path}: {exc}") from exc
-    if (
-        before.st_size != after.st_size
-        or before.st_mtime_ns != after.st_mtime_ns
-        or (before.st_ino and before.st_ino != after.st_ino)
-    ):
-        raise GovernanceError(f"{label} changed while being hashed: {path}")
-    return digest.hexdigest(), after
+        raw, _, metadata = consume_regular_file(
+            path, label, maximum_bytes, retain_bytes=True
+        )
+    except StableFileError as exc:
+        raise GovernanceError(str(exc)) from exc
+    assert raw is not None
+    return raw, metadata
 
 
 def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, str, int, str]:
@@ -285,25 +292,26 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, st
         raise GovernanceError("candidate.branch must be main")
     if _string(candidate["application_id"], "candidate.application_id") != device_acceptance.CANONICAL_APPLICATION_ID:
         raise GovernanceError("candidate.application_id is not canonical")
-    sha = _string(candidate["commit_sha"], "candidate.commit_sha", maximum=40).lower()
-    artifact = _string(candidate["artifact_sha256"], "candidate.artifact_sha256", maximum=64).lower()
-    upload_certificate = _string(
-        candidate["upload_certificate_sha256"], "candidate.upload_certificate_sha256", maximum=64
-    ).lower()
-    app_signing_certificate = _string(
-        candidate["app_signing_certificate_sha256"], "candidate.app_signing_certificate_sha256", maximum=64
-    ).lower()
+    sha = _canonical_digest(candidate["commit_sha"], "candidate.commit_sha", SHA40_RE, 40)
+    artifact = _canonical_digest(candidate["artifact_sha256"], "candidate.artifact_sha256", SHA256_RE, 64)
+    upload_certificate = _canonical_digest(
+        candidate["upload_certificate_sha256"], "candidate.upload_certificate_sha256", SHA256_RE, 64
+    )
+    app_signing_certificate = _canonical_digest(
+        candidate["app_signing_certificate_sha256"], "candidate.app_signing_certificate_sha256", SHA256_RE, 64
+    )
     version_code = _integer(candidate["version_code"], "candidate.version_code", minimum=1)
     version_name = _string(candidate["version_name"], "candidate.version_name", maximum=120)
-    if not SHA40_RE.fullmatch(sha):
-        raise GovernanceError("candidate.commit_sha must be lowercase 40-hex")
-    if not SHA256_RE.fullmatch(artifact):
-        raise GovernanceError("candidate.artifact_sha256 must be lowercase 64-hex")
-    if not SHA256_RE.fullmatch(upload_certificate):
-        raise GovernanceError("candidate.upload_certificate_sha256 must be lowercase 64-hex")
-    if not SHA256_RE.fullmatch(app_signing_certificate):
-        raise GovernanceError("candidate.app_signing_certificate_sha256 must be lowercase 64-hex")
     return sha, artifact, upload_certificate, app_signing_certificate, version_code, version_name
+
+
+def _canonical_digest(raw: Any, label: str, pattern: re.Pattern[str], length: int) -> str:
+    if not isinstance(raw, str) or raw != raw.strip():
+        raise GovernanceError(f"{label} must be canonical lowercase {length}-hex")
+    value = _string(raw, label, maximum=length)
+    if not pattern.fullmatch(value):
+        raise GovernanceError(f"{label} must be lowercase {length}-hex")
+    return value
 
 
 def _validate_file_reference(
@@ -316,9 +324,7 @@ def _validate_file_reference(
     reference = _mapping(raw, label)
     _require_exact_keys(reference, {"path", "sha256"}, label)
     relative = _safe_relative_path(reference["path"], f"{label}.path")
-    expected = _string(reference["sha256"], f"{label}.sha256", maximum=64).lower()
-    if not SHA256_RE.fullmatch(expected):
-        raise GovernanceError(f"{label}.sha256 must be lowercase 64-hex")
+    expected = _canonical_digest(reference["sha256"], f"{label}.sha256", SHA256_RE, 64)
     if relative in seen_paths:
         raise GovernanceError(f"governance evidence path is reused: {relative}")
     path = _resolve_inside(base, relative, f"{label}.path")
@@ -345,15 +351,15 @@ def _load_device_reference(
     reference = _mapping(raw, "device_acceptance")
     _require_exact_keys(reference, {"path", "sha256"}, "device_acceptance")
     relative = _safe_relative_path(reference["path"], "device_acceptance.path")
-    expected = _string(reference["sha256"], "device_acceptance.sha256", maximum=64).lower()
-    if not SHA256_RE.fullmatch(expected):
-        raise GovernanceError("device_acceptance.sha256 must be lowercase 64-hex")
+    expected = _canonical_digest(reference["sha256"], "device_acceptance.sha256", SHA256_RE, 64)
     path = _resolve_inside(base, relative, "device_acceptance.path")
-    actual, _ = _hash_regular_file(path, "device acceptance manifest", MAX_MANIFEST_BYTES)
+    raw_bytes, _ = _read_regular_bytes(
+        path, "device acceptance manifest", device_acceptance.MAX_MANIFEST_BYTES
+    )
+    actual = hashlib.sha256(raw_bytes).hexdigest()
     if actual != expected:
         raise GovernanceError("device acceptance manifest digest mismatch")
     try:
-        raw_bytes = path.read_bytes()
         data = strict_json.loads(raw_bytes, label=str(path), maximum_bytes=MAX_MANIFEST_BYTES, require_object=True)
         summary = device_acceptance.validate_bundle(data, source_bytes=raw_bytes, evidence_base=path.parent)
     except (OSError, strict_json.StrictJsonError, device_acceptance.EvidenceError) as exc:
@@ -384,22 +390,32 @@ def _load_human_reference(
     reference = _mapping(raw, "human_acceptance")
     _require_exact_keys(reference, {"path", "sha256"}, "human_acceptance")
     relative = _safe_relative_path(reference["path"], "human_acceptance.path")
-    expected = _string(reference["sha256"], "human_acceptance.sha256", maximum=64).lower()
-    if not SHA256_RE.fullmatch(expected):
-        raise GovernanceError("human_acceptance.sha256 must be lowercase 64-hex")
+    expected = _canonical_digest(reference["sha256"], "human_acceptance.sha256", SHA256_RE, 64)
     path = _resolve_inside(base, relative, "human_acceptance.path")
-    actual, _ = _hash_regular_file(path, "human acceptance manifest", MAX_MANIFEST_BYTES)
+    raw_bytes, _ = _read_regular_bytes(
+        path, "human acceptance manifest", human_acceptance.MAX_MANIFEST_BYTES
+    )
+    actual = hashlib.sha256(raw_bytes).hexdigest()
     if actual != expected:
         raise GovernanceError("human acceptance manifest digest mismatch")
     try:
-        summary = human_acceptance.load_and_validate(path)
-    except human_acceptance.HumanAcceptanceError as exc:
+        data = strict_json.loads(
+            raw_bytes,
+            label=str(path),
+            maximum_bytes=human_acceptance.MAX_MANIFEST_BYTES,
+            require_object=True,
+        )
+        summary = human_acceptance.validate_bundle(
+            data,
+            source_bytes=raw_bytes,
+            evidence_base=path.parent,
+        )
+    except (human_acceptance.HumanAcceptanceError, strict_json.StrictJsonError) as exc:
         raise GovernanceError(f"referenced human acceptance is invalid: {exc}") from exc
     if summary.candidate_sha != candidate_sha or summary.artifact_sha256 != artifact_sha:
         raise GovernanceError("human acceptance candidate does not match governance candidate")
     if summary.device_acceptance_sha256 != device_digest:
         raise GovernanceError("human acceptance references a different device acceptance manifest")
-    data = strict_json.load_file(path, maximum_bytes=MAX_MANIFEST_BYTES, require_object=True)
     human_candidate = _mapping(data.get("candidate"), "human candidate")
     if summary.upload_certificate_sha256 != upload_certificate_sha:
         raise GovernanceError("human acceptance upload certificate does not match governance candidate")
@@ -412,11 +428,40 @@ def _load_human_reference(
 
 def _validate_https_url(value: Any, label: str) -> str:
     text = _string(value, label, maximum=2048)
-    parts = urlsplit(text)
-    if parts.scheme.lower() != "https" or not parts.hostname or parts.username or parts.password:
+    try:
+        parts = urlsplit(text)
+        host = parts.hostname
+        _ = parts.port  # Accessing this property validates numeric/range syntax.
+    except ValueError as exc:
+        raise GovernanceError(f"{label} must be a valid HTTPS URL") from exc
+    if parts.scheme.lower() != "https" or not host or parts.username or parts.password:
         raise GovernanceError(f"{label} must be a public HTTPS URL without embedded credentials")
     if parts.fragment:
         raise GovernanceError(f"{label} must not contain a URL fragment")
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        try:
+            normalized_host = host.rstrip(".").encode("idna").decode("ascii").lower()
+        except UnicodeError as exc:
+            raise GovernanceError(f"{label} must use a valid public DNS hostname") from exc
+        labels = normalized_host.split(".")
+        if (
+            len(labels) < 2
+            or len(normalized_host) > 253
+            or any(
+                not label
+                or len(label) > 63
+                or re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label) is None
+                for label in labels
+            )
+            or normalized_host == "localhost"
+            or normalized_host.endswith((".localhost", ".local", ".internal"))
+        ):
+            raise GovernanceError(f"{label} must use a public DNS hostname")
+    else:
+        if not address.is_global:
+            raise GovernanceError(f"{label} must not target a private or reserved IP address")
     return text
 
 
@@ -430,6 +475,15 @@ def validate_bundle(
         raise GovernanceError(
             f"governance manifest must be between 1 and {MAX_MANIFEST_BYTES} bytes"
         )
+    try:
+        strict_json.loads_matching_object(
+            source_bytes,
+            data,
+            label="governance manifest source bytes",
+            maximum_bytes=MAX_MANIFEST_BYTES,
+        )
+    except strict_json.StrictJsonError as exc:
+        raise GovernanceError(str(exc)) from exc
     root = _mapping(data, "root")
     _require_exact_keys(
         root,
@@ -497,8 +551,25 @@ def validate_bundle(
 
     _, installed_matrix_digest, installed_matrix_path = evidence_results["installed_identity_matrix"]
     try:
-        installed_matrix_summary = installed_matrix.load_and_validate(installed_matrix_path)
-    except installed_matrix.InstalledIdentityMatrixError as exc:
+        matrix_bytes, _ = _read_regular_bytes(
+            installed_matrix_path,
+            "installed identity matrix",
+            installed_matrix.MAX_MANIFEST_BYTES,
+        )
+        if hashlib.sha256(matrix_bytes).hexdigest() != installed_matrix_digest:
+            raise GovernanceError("installed identity matrix changed after evidence hashing")
+        matrix_data = strict_json.loads(
+            matrix_bytes,
+            label=str(installed_matrix_path),
+            maximum_bytes=installed_matrix.MAX_MANIFEST_BYTES,
+            require_object=True,
+        )
+        installed_matrix_summary = installed_matrix.validate_bundle(
+            matrix_data,
+            source_bytes=matrix_bytes,
+            evidence_base=installed_matrix_path.parent,
+        )
+    except (installed_matrix.InstalledIdentityMatrixError, strict_json.StrictJsonError) as exc:
         raise GovernanceError(f"installed identity matrix is invalid: {exc}") from exc
     if installed_matrix_summary.candidate_sha != candidate_sha:
         raise GovernanceError("installed identity matrix candidate does not match governance candidate")
@@ -513,8 +584,25 @@ def validate_bundle(
 
     _, play_delivery_digest, play_delivery_path = evidence_results["play_delivery_record"]
     try:
-        play_delivery_summary = play_delivery.load_and_validate(play_delivery_path)
-    except play_delivery.PlayDeliveryError as exc:
+        play_bytes, _ = _read_regular_bytes(
+            play_delivery_path,
+            "Play delivery evidence",
+            play_delivery.MAX_MANIFEST_BYTES,
+        )
+        if hashlib.sha256(play_bytes).hexdigest() != play_delivery_digest:
+            raise GovernanceError("Play delivery evidence changed after evidence hashing")
+        play_data = strict_json.loads(
+            play_bytes,
+            label=str(play_delivery_path),
+            maximum_bytes=play_delivery.MAX_MANIFEST_BYTES,
+            require_object=True,
+        )
+        play_delivery_summary = play_delivery.validate_bundle(
+            play_data,
+            source_bytes=play_bytes,
+            evidence_base=play_delivery_path.parent,
+        )
+    except (play_delivery.PlayDeliveryError, strict_json.StrictJsonError) as exc:
         raise GovernanceError(f"Play delivery evidence is invalid: {exc}") from exc
     if play_delivery_summary.candidate_sha != candidate_sha:
         raise GovernanceError("Play delivery candidate does not match governance candidate")
@@ -556,8 +644,14 @@ def validate_bundle(
         "evidence.release_notes.path",
     )
     try:
-        release_notes_text = release_notes_path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
+        release_notes_bytes, _ = _read_regular_bytes(
+            release_notes_path, "release notes", MAX_RELEASE_NOTES_BYTES
+        )
+        expected_notes_digest = evidence_results["release_notes"][1]
+        if hashlib.sha256(release_notes_bytes).hexdigest() != expected_notes_digest:
+            raise GovernanceError("release notes changed after evidence hashing")
+        release_notes_text = release_notes_bytes.decode("utf-8")
+    except (GovernanceError, UnicodeDecodeError) as exc:
         raise GovernanceError(f"release notes must be readable UTF-8 text: {exc}") from exc
     for required_literal, label in (
         (candidate_sha, "candidate commit SHA"),
@@ -614,9 +708,9 @@ def validate_bundle(
 
 
 def load_and_validate(path: Path) -> GovernanceSummary:
-    path = path.expanduser().resolve()
+    path = path.expanduser()
     try:
-        raw = path.read_bytes()
+        raw, _ = _read_regular_bytes(path, "governance manifest", MAX_MANIFEST_BYTES)
         data = strict_json.loads(
             raw,
             label=str(path),
@@ -629,27 +723,10 @@ def load_and_validate(path: Path) -> GovernanceSummary:
 
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temporary = Path(handle.name)
-            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        atomic_write_json(path, payload, "release-governance summary")
+    except StableFileError as exc:
+        raise GovernanceError(str(exc)) from exc
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -664,7 +741,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     payload = summary.to_json()
     if args.summary_output is not None:
-        _write_json(args.summary_output, payload)
+        try:
+            _write_json(args.summary_output, payload)
+        except (OSError, GovernanceError) as exc:
+            print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+            return 1
     print(json.dumps(payload, sort_keys=True))
     return 0
 

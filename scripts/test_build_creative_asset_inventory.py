@@ -4,6 +4,8 @@ import hashlib
 import json
 import tempfile
 import unittest
+import os
+from unittest.mock import patch
 from pathlib import Path
 
 from build_creative_asset_inventory import (
@@ -11,6 +13,7 @@ from build_creative_asset_inventory import (
     INVENTORY_KIND,
     build_inventory,
     collect_creative_asset_entries,
+    write_inventory,
 )
 
 
@@ -65,9 +68,58 @@ class CreativeAssetInventoryTest(unittest.TestCase):
         self.assertNotEqual(first["inventorySha256"], second["inventorySha256"])
 
     def test_malformed_candidate_sha_is_rejected(self) -> None:
-        for malformed in ("", "abc", "g" * 40, "a" * 39, "a" * 41):
+        for malformed in ("", "abc", "g" * 40, "a" * 39, "a" * 41, "A" * 40):
             with self.assertRaisesRegex(CreativeAssetInventoryError, "candidate SHA"):
                 build_inventory(Path("."), malformed, validate_runtime_inputs=False)
+
+    def test_inventory_publication_rejects_symlink_without_modifying_target(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target.json"
+            target.write_text("preserve this\\n", encoding="utf-8")
+            output = root / "inventory.json"
+            try:
+                output.symlink_to(target)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks unavailable")
+
+            with self.assertRaisesRegex(CreativeAssetInventoryError, "symbolic link"):
+                write_inventory(output, {"status": "valid"})
+
+            self.assertEqual("preserve this\\n", target.read_text(encoding="utf-8"))
+            self.assertTrue(output.is_symlink())
+
+    def test_inventory_publication_is_atomic_and_canonical(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "inventory.json"
+            payload = {"z": 2, "a": 1}
+
+            write_inventory(output, payload)
+
+            raw = output.read_bytes()
+            self.assertEqual(payload, json.loads(raw.decode("utf-8")))
+            self.assertEqual(
+                (json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(),
+                raw,
+            )
+            self.assertFalse(list(output.parent.glob(".inventory.json.*.tmp")))
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlink support required")
+    def test_inventory_publication_rejects_symlinked_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "real"
+            target.mkdir()
+            alias = root / "alias"
+            try:
+                alias.symlink_to(target, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks unavailable")
+
+            with self.assertRaisesRegex(CreativeAssetInventoryError, "traverse a symbolic link"):
+                write_inventory(alias / "inventory.json", {"status": "valid"})
+
+            self.assertFalse((target / "inventory.json").exists())
 
     def test_file_content_change_changes_entry_digest(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -104,6 +156,32 @@ class CreativeAssetInventoryTest(unittest.TestCase):
 
             with self.assertRaisesRegex(CreativeAssetInventoryError, "rejects symlinks"):
                 collect_creative_asset_entries(root)
+
+    def test_asset_replacement_between_stat_and_open_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            assets = root / "app/src/main/assets"
+            raw = root / "app/src/main/res/raw"
+            assets.mkdir(parents=True)
+            raw.mkdir(parents=True)
+            asset = assets / "image.png"
+            asset.write_bytes(b"original")
+            (raw / "sfx_test.ogg").write_bytes(b"audio")
+            real_open = os.open
+            replaced = False
+
+            def replace_before_open(path, flags, *args, **kwargs):
+                nonlocal replaced
+                if Path(path) == asset and not replaced:
+                    replacement = assets / "replacement"
+                    replacement.write_bytes(b"changed!")
+                    replacement.replace(asset)
+                    replaced = True
+                return real_open(path, flags, *args, **kwargs)
+
+            with patch("build_creative_asset_inventory.os.open", side_effect=replace_before_open):
+                with self.assertRaisesRegex(CreativeAssetInventoryError, "changed while being opened"):
+                    collect_creative_asset_entries(root)
 
 
 if __name__ == "__main__":

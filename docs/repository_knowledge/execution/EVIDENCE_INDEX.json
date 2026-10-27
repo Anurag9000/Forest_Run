@@ -1,0 +1,991 @@
+{
+  "schema_version": "1.0.0",
+  "repository_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+  "snapshot_date": "2026-10-27",
+  "evidence_authority_rule": "Source and current specifications establish static contracts; historical audits establish revision-bounded evidence only; no application execution occurred in this phase.",
+  "records": [
+    {
+      "id": "EVID-001",
+      "type": "repository baseline",
+      "path": "git metadata",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "supports": [
+        "working tree baseline",
+        "TASK-A-001"
+      ],
+      "limitations": "Current working tree is dirty and source changes are uncommitted."
+    },
+    {
+      "id": "EVID-002",
+      "type": "prior source map",
+      "path": "docs/REPO_CODEBASE_MAP.md",
+      "revision": "map began 2026-10-03",
+      "supports": [
+        "subsystem architecture",
+        "prior file/symbol findings",
+        "GOAL-001",
+        "GOAL-002",
+        "GAP-001"
+      ],
+      "disposition": "reusable with delta review",
+      "limitations": "The map expressly says inventory is not proof every line was read; later changes are out of scope."
+    },
+    {
+      "id": "EVID-003",
+      "type": "current changed script source",
+      "path": "scripts/stable_file_reader.py; scripts/strict_json.py; named consumers in DELTA_REVIEW.md",
+      "revision": "working tree relative to eeccc677",
+      "supports": [
+        "CAP-005",
+        "FIND-003",
+        "TASK-C-001",
+        "TASK-C-002"
+      ],
+      "disposition": "static changed-source inspection",
+      "limitations": "No tests/workflows executed; broader script surface remains partially inspected."
+    },
+    {
+      "id": "EVID-004",
+      "type": "current release/evidence specification",
+      "path": "docs/RELEASE_EVIDENCE_INDEX.md; docs/RELEASE_READINESS.md; docs/RELEASE_GOVERNANCE_EVIDENCE.md",
+      "revision": "current working tree where modified; existing snapshot otherwise",
+      "supports": [
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "CAP-006",
+        "TASK-C-003"
+      ],
+      "limitations": "Validators cannot create external evidence; no release workflow run."
+    },
+    {
+      "id": "EVID-005",
+      "type": "current source observation",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/GameStateManager.kt",
+      "revision": "working tree relative to eeccc677",
+      "supports": [
+        "SYM-005",
+        "FIND-002",
+        "TASK-A-003"
+      ],
+      "limitations": "No explicit feature requirement or production invocation discovered; local history may be incomplete."
+    },
+    {
+      "id": "EVID-006",
+      "type": "release readiness contract",
+      "path": "docs/RELEASE_READINESS.md; docs/RELEASE_GOVERNANCE_EVIDENCE.md",
+      "supports": [
+        "GOAL-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "TASK-D-007",
+        "TASK-E-001"
+      ],
+      "limitations": "The exact required external parties/candidate are not established in this investigation."
+    },
+    {
+      "id": "EVID-007",
+      "type": "historical test and issue record",
+      "path": "ISSUE_NOTES.md",
+      "supports": [
+        "FIND-004",
+        "TASK-C-004"
+      ],
+      "disposition": "read as historical record",
+      "limitations": "It contains execution claims from prior dates and revisions; none is current 2026-10-27 evidence."
+    },
+    {
+      "id": "EVID-008",
+      "type": "performance protocol",
+      "path": "docs/PERFORMANCE.md; docs/INPUT_LATENCY_EXPERIMENT.md",
+      "supports": [
+        "TASK-B-001",
+        "TASK-B-002"
+      ],
+      "limitations": "No profile or benchmark was executed in this phase."
+    },
+    {
+      "id": "EVID-009",
+      "type": "physical-device acceptance protocol",
+      "path": "docs/DEVICE_ACCEPTANCE.md; docs/DEVICE_ACCEPTANCE_COMPILATION.md; docs/DEVICE_ACCEPTANCE_AGGREGATION.md",
+      "supports": [
+        "TASK-D-001"
+      ],
+      "limitations": "No physical-device evidence collected."
+    },
+    {
+      "id": "EVID-010",
+      "type": "human acceptance protocol",
+      "path": "docs/HUMAN_ACCEPTANCE.md; docs/ACCESSIBILITY.md",
+      "supports": [
+        "TASK-D-002"
+      ],
+      "limitations": "No human or accessibility review performed."
+    },
+    {
+      "id": "EVID-011",
+      "type": "creative/provenance specs",
+      "path": "docs/CREATIVE_DIRECTION.md; docs/CREATIVE_ASSET_PROVENANCE.md; docs/SECURITY_AND_LICENSING_GOVERNANCE.md",
+      "supports": [
+        "TASK-D-003"
+      ],
+      "limitations": "No rights or final creative approval established."
+    },
+    {
+      "id": "EVID-012",
+      "type": "supply-chain/security specs",
+      "path": "docs/SUPPLY_CHAIN_AND_SBOM.md; docs/DEPENDENCY_PROVENANCE.md; SECURITY.md",
+      "supports": [
+        "TASK-D-004"
+      ],
+      "limitations": "No current dependency/vulnerability review or external security setting verified."
+    },
+    {
+      "id": "EVID-013",
+      "type": "privacy/store specs",
+      "path": "PRIVACY.md; docs/STORE_EVIDENCE.md; docs/RELEASE_GOVERNANCE_EVIDENCE.md",
+      "supports": [
+        "TASK-D-005"
+      ],
+      "limitations": "No hosted policy or Play declaration checked."
+    },
+    {
+      "id": "EVID-014",
+      "type": "signing and installed identity specs",
+      "path": "docs/INSTALLED_CANDIDATE_IDENTITY.md; docs/STORE_EVIDENCE.md",
+      "supports": [
+        "TASK-D-006"
+      ],
+      "limitations": "No signing, installation, upload or Play delivery performed."
+    },
+    {
+      "id": "EVID-015",
+      "type": "current Android/Kotlin changed test and resource source",
+      "path": "app/src/test/; app/src/androidTest/; app/src/main/; app/src/main/res/",
+      "revision": "working tree relative to eeccc677",
+      "supports": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "TASK-A-001",
+        "TASK-C-004"
+      ],
+      "disposition": "Changed regions statically reviewed; new/small files read in full where marked in file_inventory.json",
+      "limitations": "15 modified test files were reviewed by changed hunks; newly added test files were read as source. No test was executed."
+    },
+    {
+      "id": "EVID-016",
+      "type": "current changed Python test-source contracts",
+      "path": "scripts/test_*.py (60 changed/new files)",
+      "revision": "working tree relative to eeccc677",
+      "supports": [
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "TASK-A-002",
+        "TASK-C-001",
+        "TASK-C-002",
+        "TASK-C-003"
+      ],
+      "disposition": "All 60 current changed/new test files read in full across two read-only workstreams",
+      "limitations": "938 test method definitions were inventoried from source; none were executed. Synthetic fixtures and source-text assertions are not product/runtime evidence."
+    },
+    {
+      "id": "EVID-017",
+      "type": "current changed evidence/release implementation source",
+      "path": "scripts/*.py; scripts/*.sh; run_all_training.py",
+      "revision": "working tree relative to eeccc677",
+      "supports": [
+        "CAP-005",
+        "CAP-006",
+        "TASK-A-002",
+        "TASK-C-001",
+        "TASK-C-002"
+      ],
+      "disposition": "All 54 changed/new production Python and shell paths had changed-hunk review with caller/contract context. The initial split review note was superseded by follow-up coverage; all 60 changed/new Python test files were also read fully (EVID-018).",
+      "limitations": "This remains delta-scoped; no full reread of every unchanged baseline file and no production script or test was executed."
+    },
+    {
+      "id": "EVID-018",
+      "type": "current changed script-test source inspection",
+      "path": "scripts/test_*.py",
+      "revision": "working tree relative to eeccc677",
+      "supports": [
+        "TASK-A-002",
+        "TASK-C-001",
+        "TASK-C-002",
+        "TASK-C-005"
+      ],
+      "disposition": "All 60 changed/new Python test files read in full; 938 test method definitions identified as source contracts.",
+      "limitations": "None of these test methods was executed; source assertions do not establish passing behavior."
+    },
+    {
+      "id": "EVID-019",
+      "type": "historical architecture open/optional state",
+      "path": "docs/audits/2026-08-06_documentation_reconciliation_audit.md:326-370",
+      "revision": "audit source baseline cc24e86784bd0d6c53114c55e37ff447e1b55bc5",
+      "supports": [
+        "GOAL-008",
+        "GOAL-009",
+        "GOAL-010",
+        "GOAL-011",
+        "GOAL-012",
+        "GOAL-013",
+        "GOAL-014",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014",
+        "REQ-015",
+        "REQ-016",
+        "REQ-017"
+      ],
+      "disposition": "Establishes original open/optional proposals; later records supersede status.",
+      "limitations": "Historical snapshot only."
+    },
+    {
+      "id": "EVID-020",
+      "type": "later architecture closure and whole-software reconciliation",
+      "path": "docs/audits/2026-08-09_source_completion_and_remaining_gates.md:48-122; docs/audits/2026-09-20_whole_software_closure.md:233-270; docs/audits/2026-09-27_whole_software_reconciliation.md:5-24; docs/audits/2026-10-02_garden_accessibility_presentation_parity.md:5-13",
+      "revision": "Aug 9 414bf30b36ce051f0d5ef75f6143ed6bf8fa5884; Sep 20 7757b40b7e87b3d33412f9a070c068e92f62ccf2; Sep 27 505d3679dc8d55b2ccb8413b6a8e3d1bde5886e1",
+      "supports": [
+        "GOAL-008",
+        "GOAL-009",
+        "GOAL-010",
+        "GOAL-011",
+        "GOAL-012",
+        "GOAL-013",
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014",
+        "REQ-015",
+        "REQ-016"
+      ],
+      "disposition": "Later docs close six bounded source/product items and maintain distinction from external release gates.",
+      "limitations": "Historical test/runtime claims are revision-bound."
+    },
+    {
+      "id": "EVID-021",
+      "type": "current source structural reconciliation",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/CollisionOutcomeDispatcher.kt:28-70; app/src/main/java/com/anurag9000/forestrun/engine/LiveCollisionEffects.kt:3-61; app/src/main/java/com/anurag9000/forestrun/engine/RunSessionTransitionPlanner.kt:3-69; app/src/main/java/com/anurag9000/forestrun/engine/RunSessionTransitionCoordinator.kt:30-70; app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt:789-801,1338-1407; app/src/main/java/com/anurag9000/forestrun/engine/ApplicationPersistenceFacade.kt:75-187; app/src/main/java/com/anurag9000/forestrun/engine/EncounterFamilyCatalogue.kt:82-209; app/src/main/java/com/anurag9000/forestrun/engine/RecoveryEvidenceUserController.kt:25-90; app/src/main/java/com/anurag9000/forestrun/RecoveryEvidenceDialogCoordinator.kt:20-63; app/src/main/java/com/anurag9000/forestrun/MainActivity.kt:68-76; app/src/main/java/com/anurag9000/forestrun/engine/GameStateManager.kt:151-212,453-479; app/src/main/java/com/anurag9000/forestrun/engine/InputHandler.kt:41-81,106-183",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty source, inspected 2026-10-27",
+      "supports": [
+        "SYM-022",
+        "SYM-023",
+        "SYM-024",
+        "SYM-025",
+        "SYM-026",
+        "SYM-027",
+        "SYM-028",
+        "SYM-029",
+        "SYM-030",
+        "SYM-031",
+        "SYM-032",
+        "SYM-033",
+        "SYM-034",
+        "CAP-009",
+        "CAP-010",
+        "CAP-011",
+        "CAP-012",
+        "CAP-013",
+        "CAP-014"
+      ],
+      "disposition": "Targeted current-source reading corroborates selected historical architecture closures and algorithm mechanisms.",
+      "limitations": "Static evidence only; no tests/build/runtime or user acceptance refreshed."
+    },
+    {
+      "id": "EVID-022",
+      "type": "source test contract inspection",
+      "path": "docs/repository_knowledge/test_contract_inventory.json",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
+      "supports": [
+        "TASK-A-005",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "full source-body inspection; tests not executed",
+      "scope_file_count": 28,
+      "inspected_lines": 2989,
+      "limitations": "Read all 28 inventoried-only Kotlin engine test files I-P in full; 110 @Test methods reported from source. Distinct behavioral contracts are stored per file in test_contract_inventory.json. No tests/build/app workflows ran."
+    },
+    {
+      "id": "EVID-023",
+      "type": "source test contract inspection",
+      "path": "docs/repository_knowledge/test_contract_inventory.json",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
+      "supports": [
+        "TASK-A-006",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "full source-body inspection; tests not executed",
+      "scope_file_count": 74,
+      "inspected_lines": null,
+      "limitations": "Read all 74 inventoried-only scripts/test_*.py bodies and fixtures, including a large test in bounded ranges. Contract groups and per-file source records are stored in test_contract_inventory.json. No Python tests, scripts, build, app workflow, or shell checks ran."
+    },
+    {
+      "id": "EVID-024",
+      "type": "Android instrumentation source contract inspection",
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/AccessibilityVirtualNodeInstrumentedTest.kt:22-150; app/src/androidTest/java/com/anurag9000/forestrun/HardwarePerformanceProfileTest.kt:31-238; app/src/androidTest/java/com/anurag9000/forestrun/InstrumentationStateReset.kt:9-40",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
+      "supports": [
+        "TASK-A-009",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "two files read fully; one earlier full source reading reused; source-only",
+      "scope_file_count": 3,
+      "limitations": "No instrumentation was executed; device profile is a harness and has no performance result; reset-file inspection was reused, not repeated."
+    },
+    {
+      "id": "EVID-025",
+      "type": "Kotlin engine test source contract inspection",
+      "path": "docs/repository_knowledge/test_contracts_kotlin_engine_A-G.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
+      "supports": [
+        "TASK-A-004",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "all 71 assigned source bodies read; three excluded because prior inspection was partial/full; no runtime execution",
+      "scope_file_count": 71,
+      "limitations": "Assertions/fixtures define authored contracts only. No test/build/app workflow was executed."
+    },
+    {
+      "id": "EVID-026",
+      "type": "Kotlin JVM test source contract inspection outside engine package",
+      "path": "docs/repository_knowledge/test_contract_inventory.json",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
+      "supports": [
+        "TASK-A-008",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "all 68 task-scoped test bodies read; no runtime execution",
+      "scope_file_count": 68,
+      "inspected_lines": 9710,
+      "test_methods_reported": 327,
+      "limitations": "Source assertions and fixtures only; no test, build or application workflow was run. One aggregate terminal output was truncated, followed by targeted reads of persistence paths; note does not represent test pass evidence."
+    },
+    {
+      "id": "EVID-027",
+      "type": "Kotlin engine test source contract inspection",
+      "path": "docs/repository_knowledge/test_contracts_kotlin_engine_R-W.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
+      "supports": [
+        "TASK-A-007",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "all 61 assigned source files read fully; line counts and scope statically reconciled; no runtime execution",
+      "scope_file_count": 61,
+      "limitations": "Assertions and fixtures only. No tests, builds, app workflows, emulator or benchmark was run."
+    },
+    {
+      "id": "EVID-028",
+      "type": "production Kotlin full source inspection",
+      "path": "docs/repository_knowledge/production_kotlin_A010.md; docs/REPO_CODEBASE_MAP.md:35-83",
+      "revision": "Map snapshot began 2026-10-03; current HEAD eeccc677107f69039dbf71053c18a9038d4b5ff6; dirty worktree checked 2026-10-27",
+      "supports": [
+        "TASK-A-010",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "all scoped current Kotlin source bodies read; symbols and integrations summarized",
+      "scope_file_count": 56,
+      "inspected_lines": 7423,
+      "limitations": "Static only; no tests/build/workflows. Scoped files were clean relative to HEAD; a focused caller cross-check corrected one false no-caller observation."
+    },
+    {
+      "id": "EVID-029",
+      "type": "production Kotlin prior full-read reuse with delta confirmation",
+      "path": "docs/REPO_CODEBASE_MAP.md:35-83; task scope in docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json",
+      "revision": "Map snapshot began 2026-10-03; current HEAD eeccc677107f69039dbf71053c18a9038d4b5ff6; dirty worktree checked 2026-10-27",
+      "supports": [
+        "TASK-A-011",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "all scoped files matched the explicit full-read ledger in REPO_CODEBASE_MAP.md; scoped paths clean relative to HEAD",
+      "scope_file_count": 56,
+      "inspected_lines": null,
+      "limitations": "Reused prior detailed source readings at matching snapshot; not 56 fresh reads in this batch. No runtime validation."
+    },
+    {
+      "id": "EVID-030",
+      "type": "production Kotlin prior full-read reuse with delta confirmation",
+      "path": "docs/REPO_CODEBASE_MAP.md:35-83; task scope in docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json",
+      "revision": "Map snapshot began 2026-10-03; current HEAD eeccc677107f69039dbf71053c18a9038d4b5ff6; dirty worktree checked 2026-10-27",
+      "supports": [
+        "TASK-A-012",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "56/56 assigned paths explicitly covered by checked complete-read entries in REPO_CODEBASE_MAP.md; zero unmapped; scoped paths clean relative to HEAD",
+      "scope_file_count": 56,
+      "inspected_lines": null,
+      "limitations": "Agent read 12 sources before the pause and reused map evidence for the full scope. No runtime validation."
+    },
+    {
+      "id": "EVID-031",
+      "type": "current source integration search",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/CollisionRuntimeEffectAdapters.kt:1-61; app/src/main/java/com/anurag9000/forestrun/engine/EvaluationThrottle.kt:7-42; app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt:100-101,206-207,238,276,332-333",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree 2026-10-27",
+      "supports": [
+        "FIND-007",
+        "TASK-A-010"
+      ],
+      "disposition": "static definition/caller search with targeted cross-check",
+      "limitations": "No production consumer of collision adapters was found under app/src/main; KDoc describes future integration. EvaluationThrottle is consumed by LeitmotifManager, so it is integrated. No behavior executed."
+    },
+    {
+      "id": "EVID-032",
+      "type": "historical audit tranche 2026-09-26 to 2026-09-28",
+      "path": "docs/repository_knowledge/historical_audit_batch_A014.md",
+      "revision": "Individual historical audit dates/revisions are recorded in the shard; many source SHAs are unavailable. Current repository HEAD eeccc677107f69039dbf71053c18a9038d4b5ff6.",
+      "supports": [
+        "TASK-A-014",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "All 47 assigned historical documents read in full and reconciled against reusable maps; no reruns.",
+      "scope_file_count": 47,
+      "limitations": "Historical run/source hashes are revision-bounded; most audit records lack exact source SHA; none establish current HEAD runtime status."
+    },
+    {
+      "id": "EVID-033",
+      "type": "historical audit tranche 2026-09-28 to 2026-10-03",
+      "path": "docs/repository_knowledge/historical_audit_batch_A015.md",
+      "revision": "Individual historical audit dates/revisions are recorded in the shard; many source SHAs are unavailable. Current repository HEAD eeccc677107f69039dbf71053c18a9038d4b5ff6.",
+      "supports": [
+        "TASK-A-015",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "All 46 assigned historical documents read in full and reconciled against reusable maps; no reruns.",
+      "scope_file_count": 46,
+      "limitations": "Dated records and local checks are historical; missing SHAs are left unknown; no current-head runtime validation."
+    },
+    {
+      "id": "EVID-034",
+      "type": "historical audit tranche 2026-08-01 to 2026-09-26",
+      "path": "docs/repository_knowledge/historical_audit_batch_A013.md",
+      "revision": "Per-file historical snapshots/revisions vary; current HEAD eeccc677107f69039dbf71053c18a9038d4b5ff6.",
+      "supports": [
+        "TASK-A-013",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "disposition": "All 47 assigned documents read fully; duplicated items reused from maps with focused reconciliation; no test/workflow reruns.",
+      "scope_file_count": 47,
+      "inspected_lines": 6476,
+      "limitations": "Audit claims are historical and many omit exact source SHA; none establishes current dirty-worktree runtime status."
+    },
+    {
+      "id": "EVID-036",
+      "type": "bounded operational/build inspection",
+      "path": "docs/repository_knowledge/inspection_TASK-A-017.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-017",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "limitations": "Static reading at baseline plus dirty-tree date; wrapper JAR metadata-only; no workflows, scripts, builds, tests, network or device actions."
+    },
+    {
+      "id": "EVID-037",
+      "type": "bounded resource and asset metadata inspection",
+      "path": "docs/repository_knowledge/inspection_TASK-A-018.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-018",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "limitations": "Eight XML files read; binary payloads not visually or audibly inspected; metadata and hashes do not establish rights, content suitability or approval."
+    },
+    {
+      "id": "EVID-038",
+      "type": "product and release documentation inspection",
+      "path": "docs/repository_knowledge/inspection_TASK-A-016.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-016",
+        "GOAL-015",
+        "REQ-018",
+        "CAP-015"
+      ],
+      "limitations": "Static document review only. Two store graphics assessed through metadata and hashes, not visual review. No release/device/human/external evidence generated."
+    },
+    {
+      "id": "EVID-039",
+      "type": "static test-source contract coverage reconciliation",
+      "path": "docs/repository_knowledge/test_contract_inventory.json; docs/repository_knowledge/test_contracts_python_delta.json; docs/repository_knowledge/test_contracts_kotlin_delta.json",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-019",
+        "TASK-A-020",
+        "FIND-011"
+      ],
+      "limitations": "All 389 test-related paths now have static contract rows. No tests were run; records describe authored assertions/fixtures only."
+    },
+    {
+      "id": "EVID-040",
+      "type": "visual asset inventory baseline",
+      "path": "docs/repository_knowledge/inspection_TASK-A-018.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-021"
+      ],
+      "limitations": "Binary images had metadata/hash review only before TASK-A-021; no visual content claims yet."
+    },
+    {
+      "id": "EVID-042",
+      "type": "Kotlin test-source full-read contract extraction",
+      "path": "docs/repository_knowledge/test_contract_inventory.json; docs/repository_knowledge/test_contracts_kotlin_delta.json",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-020"
+      ],
+      "limitations": "Static source assertions only; 148 @Test annotations in 23 test files; support helper is not itself a test; nothing was executed."
+    },
+    {
+      "id": "EVID-043",
+      "type": "visual image asset inspection",
+      "path": "docs/repository_knowledge/asset_visual_inventory.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-021"
+      ],
+      "limitations": "Visible pixels do not establish authorship, source lineage, rights, approval, intended frame semantics or release suitability. Audio/font and wrapper binaries remain metadata-only."
+    },
+    {
+      "id": "EVID-044",
+      "type": "runtime sprite frame and caller trace",
+      "path": "docs/repository_knowledge/runtime_sprite_frame_trace.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-022",
+        "FIND-012"
+      ],
+      "limitations": "Static asset dimension/frame math and caller tracing only; no runtime rendering, product-intent, creative approval, rights, or visual-quality conclusion."
+    },
+    {
+      "id": "EVID-045",
+      "type": "full historical document review and prior-map hash reconciliation",
+      "path": "docs/repository_knowledge/deep_inspection_TASK-A-025_prior_docs.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-025",
+        "GOAL-015"
+      ],
+      "limitations": "Five historical audits were read in full; two unchanged large prior maps were reused by hash and selected sections, not reread end-to-end. Historical run claims remain exact-checkpoint-bound."
+    },
+    {
+      "id": "EVID-046",
+      "type": "full current-worktree Kotlin source inspection",
+      "path": "docs/repository_knowledge/deep_inspection_TASK-A-024_kotlin.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-024",
+        "GOAL-015"
+      ],
+      "limitations": "Static full-text inspection of 22 Kotlin files only. No build/test/app/runtime validation; broader unlisted call-graph details are not claimed."
+    },
+    {
+      "id": "EVID-047",
+      "type": "full current-worktree Python and Shell source inspection",
+      "path": "docs/repository_knowledge/deep_inspection_TASK-A-023_python_shell.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "TASK-A-023",
+        "GOAL-015"
+      ],
+      "limitations": "Static source inspection of 54 paths. No script, test, build, app, device or external workflow was executed."
+    },
+    {
+      "id": "EVID-048",
+      "type": "final static knowledge-base consistency audit",
+      "path": "docs/repository_knowledge/file_inventory.json; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/test_contract_inventory.json; docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "GOAL-015",
+        "TASK-A-023",
+        "TASK-A-024",
+        "TASK-A-025"
+      ],
+      "limitations": "Static documentation/ledger checks only: JSON/JSONL syntax, inventory paths/hashes/counts, test contract paths and line counts, stable IDs/references, dependency DAG, local Markdown links and credential-literal scan. No application behavior or tests were executed."
+    },
+    {
+      "id": "EVID-049",
+      "type": "master map status-label reconciliation",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/deep_inspection_TASK-A-024_kotlin.md; docs/repository_knowledge/deep_inspection_TASK-A-025_prior_docs.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "GOAL-015",
+        "TASK-A-024",
+        "TASK-A-025"
+      ],
+      "limitations": "Static documentation reconciliation only. Current task records establish TASK-A-024 and TASK-A-025 as COMPLETED; stale master-map labels were corrected and a duplicated artifact-batch paragraph was removed. No application behavior or tests were executed."
+    },
+    {
+      "id": "EVID-050",
+      "type": "static screenshot canonicality contract reconciliation and source completion",
+      "path": "scripts/verify_raw_screenshot_set.py; scripts/screenshot_capture_evidence.py; scripts/finalize_screenshot_capture_session.py; scripts/write_screenshot_capture_evidence.py; docs/REPO_CODEBASE_MAP.md:968-982",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "REQ-006",
+        "CAP-006",
+        "FIND-005",
+        "TASK-C-005",
+        "TASK-A-026"
+      ],
+      "disposition": "Static contract comparison; source mismatch corrected in the current worktree; source syntax parsed and scoped diff whitespace check passed.",
+      "limitations": "No tests, scripts, builds, app workflows or runtime behavior were executed. Related source files are dirty; evidence refers to this worktree, not the committed HEAD."
+    },
+    {
+      "id": "EVID-051",
+      "type": "post-change static knowledge-base consistency audit",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/file_inventory.json; docs/repository_knowledge/symbol_inventory.json; docs/repository_knowledge/execution/",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "GOAL-015",
+        "TASK-C-005",
+        "TASK-A-026"
+      ],
+      "disposition": "Validated JSON and JSONL syntax, unique ledger IDs, goal/requirement/capability/task/evidence references, phase queue consistency, task acceptance-contract fields, dependency DAG, local Markdown links, complete inventory paths, hash-pinned dirty-file contents, working-tree snapshot identifier, and status/count agreement.",
+      "limitations": "Static documentation and source metadata checks only. No tests, scripts, builds, app workflows, runtime behavior or external gates were executed."
+    },
+    {
+      "id": "EVID-052",
+      "type": "accessible historical intent search for optional score multiplier",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/GameStateManager.kt:225-255; docs/REPO_CODEBASE_MAP.md:295,299; ISSUE_NOTES.md:11; docs/audits/2026-09-26_atomic_seed_awards.md:9,11; local Git history 8398397c and a1baa9e7; connected GitHub PR/issue search",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "FIND-002",
+        "TASK-A-003"
+      ],
+      "disposition": "Accessible evidence search completed. The API exists; production callers do not pass optional multiplier/duration arguments; no current or accessible historical source explicitly requires activation as gameplay.",
+      "limitations": "Earlier conversations outside this session and available memory/history sources were not accessible. The result is bounded: do not implement a production caller absent stronger explicit intent."
+    },
+    {
+      "id": "EVID-053",
+      "type": "governing scope exclusion for tests and runtime verification",
+      "path": "[local external attachment path omitted] sections 1.2-1.3 and 31",
+      "revision": "attachment SHA-256 20a02ccf12358b69afe7a213c93e262f323323b59b151e4a92b065f4cdbeae4e; read in full 2026-10-27",
+      "supports": [
+        "GOAL-015",
+        "TASK-C-001",
+        "TASK-C-002",
+        "TASK-C-003",
+        "TASK-C-004",
+        "TASK-C-006"
+      ],
+      "disposition": "The controlling implementation prompt explicitly excludes testing, test authoring/modification, test discovery, runtime validation, and test backlog/coverage analysis. Existing test-source artifacts are retained as prior passive evidence only; no test tasks remain executable.",
+      "limitations": "A later distinct user instruction could change authorization. Do not infer that from the companion planning text; current scope remains static implementation assessment only."
+    },
+    {
+      "id": "EVID-054",
+      "type": "current scope and ledger consistency reconciliation",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/PHASE_HANDOFFS.json; docs/repository_knowledge/execution/TASK_DEPENDENCIES.json; docs/repository_knowledge/execution/STATE_HISTORY.jsonl",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "GOAL-015",
+        "TASK-A-003",
+        "TASK-C-001",
+        "TASK-C-002",
+        "TASK-C-003",
+        "TASK-C-004",
+        "TASK-C-006"
+      ],
+      "disposition": "Reconciled stale test work queue with controlling no-testing instruction, recorded prior-only test-source analysis, closed bounded TASK-A-003 source search, and validated deferred queues against task statuses.",
+      "limitations": "Static records only; no behavioral/runtime verification."
+    },
+    {
+      "id": "EVID-055",
+      "type": "final in-scope static source and knowledge-base reconciliation",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/; scripts/verify_raw_screenshot_set.py",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree 2026-10-27",
+      "supports": [
+        "GOAL-015",
+        "TASK-A-003",
+        "TASK-A-026"
+      ],
+      "disposition": "After focused independent source-gap reviews, synchronized the current phase queue with the controlling no-testing scope, completed the accessible-history disposition for the dormant multiplier, and statically checked IDs, task/reference/dependency consistency, phase queues, local links, source hashes and current snapshot.",
+      "limitations": "Static repository/source evidence only. Historical conversations beyond accessible records are unknown. Tests, builds, scripts, app workflows, training, inference, benchmarks and runtime validation were not performed."
+    },
+    {
+      "id": "EVID-057",
+      "type": "knowledge-base static consistency check",
+      "path": "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/*.json; docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/execution/NEXT_ACTIONS.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "TASK-A-027 completion reconciliation",
+        "unique task and evidence IDs",
+        "dependency references",
+        "updated task counts",
+        "valid JSON records"
+      ],
+      "disposition": "All checked JSON ledgers parse; task and evidence identifiers are unique; task dependency references resolve; TASK-A-027 is completed with EVID-056; counts reconcile to 43 tasks (28 completed, 10 deferred, 5 canceled/superseded); git diff --check passes.",
+      "limitations": "Static documentation consistency only. This does not validate application behavior, runtime contracts, or tests."
+    },
+    {
+      "id": "EVID-056",
+      "type": "targeted production placeholder source review",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/ParallaxBackground.kt; scripts production Python/shell; prior static source reports",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "TASK-A-027",
+        "no additional established production source gap"
+      ],
+      "disposition": "Both disjoint production-source reviews completed. Remaining parallax placeholder wording is stale Phase 24 asset-plan commentary; current code-map documents procedural generated layers, and no accessible authoritative requirement establishes asset replacement as mandatory.",
+      "limitations": "Static source/document review only. Search does not prove absence of all conceivable gaps; no tests, scripts, builds, or runtime workflows were executed."
+    },
+    {
+      "id": "EVID-058",
+      "type": "Wolf sprite frame-contract reconciliation",
+      "path": "docs/CREATIVE_DIRECTION.md:113-115; app/src/main/java/com/anurag9000/forestrun/engine/SpriteManager.kt:226; git commit a3253f7cf1f4ca27be46ed53d44c740815c5648e; docs/repository_knowledge/runtime_sprite_frame_trace.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree snapshot WT-D17D3FBCF2CB3B267FE9; historical commit a3253f7cf1f4ca27be46ed53d44c740815c5648e",
+      "supports": [
+        "FIND-012",
+        "TASK-A-022",
+        "four-frame Wolf source contract"
+      ],
+      "disposition": "Creative direction explicitly describes a four-frame Wolf sprite. Historical commit changed the SpriteManager declaration from eight frames to four under a four-frame contract. The apparent eight-drawing visual arrangement does not establish a missing eight-frame implementation; its internal art grouping remains unresolved.",
+      "limitations": "Static documentation, source and Git-history review only. No rendering, application workflow, tests or runtime validation."
+    },
+    {
+      "id": "EVID-059",
+      "type": "post-reconciliation knowledge-base consistency check",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/runtime_sprite_frame_trace.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/EVIDENCE_INDEX.json",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + working-tree snapshot WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "TASK-A-022",
+        "FIND-012",
+        "updated evidence references and local documentation links",
+        "162 current non-documentation worktree hashes match the inventory"
+      ],
+      "disposition": "After the Wolf frame-contract reconciliation, JSON ledgers parse, task/evidence IDs are unique, task dependencies and task evidence references resolve, master-map counts agree, local Markdown links in updated knowledge documents resolve, and git diff --check passes. Working-tree status remains 168 paths; all 162 non-documentation files with recorded SHA-256 values in the current inventory match, so this turn introduced no source-file changes.",
+      "limitations": "Static documentation and source-reference consistency only. No tests, builds, scripts or application workflows were executed."
+    },
+    {
+      "id": "EVID-060",
+      "type": "MathUtils production-caller input trace",
+      "path": "app/src/main/java/com/anurag9000/forestrun/utils/MathUtils.kt:28-51; app/src/main/java/com/anurag9000/forestrun/ui/FlavorTextManager.kt:48-64; app/src/main/java/com/anurag9000/forestrun/ui/DialogueBubbleManager.kt:45-53; app/src/main/java/com/anurag9000/forestrun/engine/BiomeManager.kt:55-72; app/src/main/java/com/anurag9000/forestrun/entities/Player.kt:297-307",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty worktree snapshot WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "FIND-013",
+        "bounded MathUtils production callsite contract"
+      ],
+      "disposition": "All current source callsites use finite constant endpoints. Flavor/dialogue progress is guarded/clamped, BiomeManager validates source values and valid biome lengths before deriving progress, and Player filters finite scroll speed before clamping and mapping. No repository requirement was found for direct nonfinite input behavior to MathUtils.",
+      "limitations": "Static source and caller analysis only; direct arbitrary inputs and runtime behavior were not executed or empirically verified."
+    },
+    {
+      "id": "EVID-061",
+      "type": "MathUtils finding reconciliation and static ledger validation",
+      "path": "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/EVIDENCE_INDEX.json; docs/repository_knowledge/execution/EXECUTION_DASHBOARD.md; docs/repository_knowledge/execution/NEXT_ACTIONS.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + current working-tree snapshot",
+      "supports": [
+        "FIND-013",
+        "TASK-A-024",
+        "resolved production caller scope for MathUtils"
+      ],
+      "disposition": "FIND-013 now records finite-input admission and finite range bounds at all current normalise/map callsites. Knowledge-base summary/dashboard/next-actions wording is aligned. Post-edit validation confirms JSON parsing, unique IDs, task dependency/evidence references, and diff whitespace consistency.",
+      "limitations": "Static source and documentation verification only; no runtime execution or test activity."
+    },
+    {
+      "id": "EVID-062",
+      "type": "full memory-map review and stale navigation entry",
+      "path": "docs/REPO_MEMORY_MAP.md:1-335; docs/REPO_MEMORY_MAP.md:131; ISSUE_NOTES.md:1-15",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty snapshot WT-D17D3FBCF2CB3B267FE9; map dated 2026-10-03",
+      "supports": [
+        "TASK-A-029",
+        "FIND-008",
+        "no new product/source requirement from the memory map"
+      ],
+      "disposition": "Full 335-line read found the map to be historical navigation, not normative specification; product, architecture, ML-not-applicable and external gates align with current ledger. Its outline at line 131 still describes the old ISSUE_NOTES section headings/findings, while current ISSUE_NOTES.md:1-15 says these reports concern another checkout and no current defect is established. This is a stale index entry only; the untracked user-owned memory map was not edited.",
+      "limitations": "The map is dated and historical; its wider authored-document/audit index is superseded by the current master map. No source audit was repeated; no tests/builds/runtime workflows were executed."
+    },
+    {
+      "id": "EVID-063",
+      "type": "full codebase-map historical status reconciliation",
+      "path": "docs/REPO_CODEBASE_MAP.md:1-1181; docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; current task and capability ledgers",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty snapshot WT-D17D3FBCF2CB3B267FE9; map latest entry 2026-10-09",
+      "supports": [
+        "TASK-A-028",
+        "FIND-008",
+        "full codebase-map content coverage",
+        "no new requirement-backed source gap"
+      ],
+      "disposition": "Full 1,181-line read found no intended capability missing from the current goal/requirement/capability ledger and no material source contradiction. The map describes itself as in progress with a 2026-10-03 start and latest dated entry 2026-10-09; these are historical status claims superseded by the 2026-10-27 knowledge ledger. Its opening explicitly says its historical test-status wording is superseded by the current execution ledger. Historical code maps remain reusable where still consistent.",
+      "limitations": "Documentation and source-reference reconciliation only; no source implementation was re-audited except cited claims needed for discrepancy disposition; no tests/builds/scripts/runtime workflows."
+    },
+    {
+      "id": "EVID-064",
+      "type": "post-map-review coverage and ledger consistency audit",
+      "path": "docs/repository_knowledge/file_inventory.json; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/TASK_DEPENDENCIES.json; docs/repository_knowledge/execution/PHASE_HANDOFFS.json; docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + working-tree snapshot WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "TASK-A-028",
+        "TASK-A-029",
+        "FILE-36328969B72B",
+        "FILE-C2A667FF6BA7",
+        "coverage counts and phase readiness"
+      ],
+      "disposition": "After both full reads were reconciled, all checked JSON parses, task/evidence IDs are unique, dependencies resolve, local links resolve, and inventory categories sum to 1,001 paths: 950 full, 17 partial, 31 documentation artifacts, 3 excluded. Task counts reconcile to 45 (30 completed, 10 deferred, 5 canceled/superseded). The 162 recorded non-documentation SHA-256 values match current files; git diff --check passes.",
+      "limitations": "Static documentation/source-hash validation only. Binary payloads remain metadata/hash-only; no tests, builds, scripts, or application workflows."
+    },
+    {
+      "id": "EVID-065",
+      "type": "accessible prior conversation history boundary",
+      "path": "[local absolute path omitted] [local absolute path omitted] [local memory path omitted]",
+      "revision": "session archive observed 2026-10-27",
+      "supports": [
+        "historical intent evidence boundary",
+        "GOAL-015",
+        "REQ-018"
+      ],
+      "disposition": "Repository-specific session metadata search found 22 exact-cwd logs: 20 belong to the present multi-turn goal; the two older Oct-08 files each contain only session_meta and thread_settings_applied records, with no prior user request/assistant findings to recover. MEMORY.md and its linked rollout summary provide a bounded 2026-10-03 record. Current repository docs, Git history and dated audits remain the substantive historical sources.",
+      "limitations": "This does not establish that no cross-repository conversation ever mentioned Forest Run. Other-cwd sessions were not treated as project requirements without a specific linkage; unavailable message content remains unknown and is not invented."
+    },
+    {
+      "id": "EVID-066",
+      "type": "selected symbol inventory coverage gap identification",
+      "path": "docs/repository_knowledge/symbol_inventory.json:scope_note; docs/repository_knowledge/file_inventory.json; static AST/regex declaration census",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty snapshot WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "FIND-014",
+        "GAP-005",
+        "TASK-A-030",
+        "TASK-A-031",
+        "TASK-A-032",
+        "TASK-A-033"
+      ],
+      "disposition": "The current symbol inventory explicitly says it is selected, with 91 records across 84 paths. The file inventory has 191 Android production Kotlin files and 65 production Python/shell tools. Static source census found 696 Python function declarations and 86 Python classes; a rough Kotlin declaration scan found at least 1,610 function lines and 492 type declaration lines (plus fields/properties). This supports a meaningful symbol coverage gap and four disjoint inventory tasks.",
+      "limitations": "Kotlin counts are heuristic line counts rather than parser-complete declarations; they are scope indicators, not final coverage counts. No project code was imported or executed and no source changes were made."
+    },
+    {
+      "id": "EVID-067",
+      "type": "merged production declaration inventory and static consistency audit",
+      "path": "docs/repository_knowledge/symbol_inventory.json; docs/repository_knowledge/symbol_shards/engine_a_m.json; docs/repository_knowledge/symbol_shards/engine_n_z.json; docs/repository_knowledge/symbol_shards/kotlin_non_engine.json; docs/repository_knowledge/symbol_shards/python_shell.json; docs/repository_knowledge/file_inventory.json",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + working-tree snapshot WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "TASK-A-030",
+        "TASK-A-031",
+        "TASK-A-032",
+        "TASK-A-033",
+        "FIND-014",
+        "GAP-005",
+        "REQ-018"
+      ],
+      "disposition": "Four non-overlapping static declaration shards dispositioned 256 production paths and contain 6,050 rows before merge with 91 prior records. The final symbol inventory has 6,137 unique path/name/start-line records; four exact-location overlaps preserve the earlier detailed record, while distinct same-name overloads remain separate. Every merged path exists and every parseable source line/range is in bounds; IDs and declaration-location keys are unique. The A–M shard records counts/reasons for excluded local declarations. This is declaration-level indexing, not a comprehensive caller graph or runtime validation.",
+      "limitations": "Static source and JSON checks only. Some brief purpose descriptions are context/signature-derived and cross-file consumers are incomplete unless established by prior detailed records. Kotlin non-engine member properties are restricted to top-level/direct type-scope declarations. No tests/builds/scripts/app workflows were executed."
+    },
+    {
+      "id": "EVID-068",
+      "type": "repository-specific applicability and verification matrix",
+      "path": "docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md; docs/repository_knowledge/applicability_matrix.json; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + worktree snapshot WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "REQ-019",
+        "CAP-016",
+        "TASK-A-034",
+        "FIND-015",
+        "GAP-006",
+        "TASK-C-007",
+        "TASK-C-008",
+        "TASK-C-009",
+        "TASK-C-010",
+        "TASK-C-011",
+        "TASK-E-001"
+      ],
+      "disposition": "The matrix maps all 19 requirements, 14 universal mechanism families and 12 verification categories to Forest Run-specific rationale, owners/evidence, current status and future task contracts. Five newly identified focused/full verification tasks C-007–C-011 are DEFERRED because the embedded repository investigation scope prohibits tests/builds/workflows; existing 389 test-contract rows remain NOT_EXECUTED. Existing physical performance and external release work remains in Phase B/D. Independent source-gap audit found no new requirement-backed source change; 162 non-documentation content hashes match the recorded snapshot.",
+      "limitations": "Documentation and source-hash checks only. No tests, builds, scripts or application workflows executed. Human/device/external acceptance remains unproven; older C tasks remain canceled and are not revived."
+    },
+    {
+      "id": "EVID-069",
+      "type": "post-matrix documentation and ledger consistency audit",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md; docs/repository_knowledge/applicability_matrix.json; docs/repository_knowledge/file_inventory.json; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/TASK_DEPENDENCIES.json; docs/repository_knowledge/execution/PHASE_HANDOFFS.json",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + current working tree; inventory snapshot WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "TASK-A-034",
+        "FIND-014",
+        "FIND-015",
+        "GAP-005",
+        "GAP-006",
+        "REQ-019",
+        "CAP-016"
+      ],
+      "disposition": "Static checks parsed 15 repository JSON documents; verified 19/19 requirement rows, 14 mechanism rows, 12 verification rows, 55 unique tasks (35 completed/15 deferred/5 canceled), 15 unique findings, six gap records, 6,137 unique located symbol records, and 1,003 file records (950 fully static/17 partial/33 documented/3 excluded). All task evidence/dependency/requirement/capability references resolve, 35 dependency edges are acyclic, 63 local links resolve, new matrix files are in file_inventory, and 162 non-documentation source content hashes match. New C-007–C-011 tasks are deferred; no test/build/script/application workflow executed.",
+      "limitations": "Static consistency and source hash comparison only; no runtime or test correctness is established. External release, human/device acceptance and performance gates remain deferred."
+    },
+    {
+      "id": "EVID-070",
+      "type": "concurrency verification planning delta / source evidence",
+      "path": "app/src/androidTest/java/com/anurag9000/forestrun/LifecycleSettingsInstrumentedTest.kt:39-60; GameThread.kt; GameView.kt; app/src/test/java/com/anurag9000/forestrun/engine/SfxManagerTest.kt:8-38; app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt:91-105,167-200; app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt:382-419; scripts/test_stable_file_reader.py:65-90,179-204,476-505,516-545; scripts/stable_file_reader.py",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + current dirty worktree; 2026-10-27",
+      "supports": [
+        "TASK-C-012",
+        "VER-013",
+        "REQ-018",
+        "REQ-019",
+        "CAP-015",
+        "CAP-016"
+      ],
+      "disposition": "Static source/test-contract inspection confirms repository-specific concurrency verification scope: lifecycle pause/resume thread replacement and frame continuation; SfxManager serialized lookup and exactly-once transient stream drain; LeitmotifManager synchronized audio state with a fade thread; stable_file_reader fault-injected concurrent output replacement and rollback preservation. These are source contracts only and do not establish runtime race freedom.",
+      "limitations": "No tests, scripts, builds or application workflows were executed. Race guarantees remain unverified on all runtimes and filesystems."
+    },
+    {
+      "id": "EVID-071",
+      "type": "post-concurrency-contract documentation consistency audit",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md; docs/repository_knowledge/applicability_matrix.json; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/TASK_DEPENDENCIES.json; docs/repository_knowledge/execution/PHASE_HANDOFFS.json; docs/repository_knowledge/execution/NEXT_ACTIONS.md; docs/repository_knowledge/execution/EXECUTION_DASHBOARD.md; docs/repository_knowledge/FUTURE_EXECUTION_HANDOFF.md",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + current documentation working tree; 2026-10-27",
+      "supports": [
+        "TASK-C-012",
+        "TASK-A-034",
+        "REQ-018",
+        "VER-013"
+      ],
+      "disposition": "Post-update static checks verify 56 unique tasks (35 completed/16 deferred/5 canceled), 19 requirements, 14 applicability mechanisms, 13 verification suites, 1,003 inventory paths (950 full/17 partial/33 documented/3 excluded), and 6,137 symbol records. All task dependency_ids are represented in the 46-edge graph, dependency/downstream references are symmetric, all evidence/task references resolve, and the graph is acyclic. Application source and runtime were not modified or executed.",
+      "limitations": "Documentation-only validation; does not validate tests, runtime race behavior, platform semantics, or actual filesystem guarantees."
+    },
+    {
+      "id": "EVID-072",
+      "type": "authorized merged-candidate verification and OWL_DIVE source correction",
+      "path": "docs/repository_knowledge/verification_delta_2026-10-27.md; app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt; app/src/test/java/com/anurag9000/forestrun/engine/DebugScenarioScriptTest.kt; scripts/test_scenario_source_contract.py; scripts/test_capture_store_screenshots_contract.py",
+      "revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b + 137 tracked delta paths + 24 authored source/test/resource additions + OWL_DIVE patch; 2026-10-27",
+      "supports": [
+        "FIND-016",
+        "GAP-007",
+        "TASK-A-035",
+        "TASK-C-007",
+        "TASK-C-008",
+        "TASK-C-009",
+        "TASK-C-010",
+        "TASK-C-011",
+        "TASK-C-013"
+      ],
+      "disposition": "Full Python suite: 1,387 passed; Gradle JVM suite: 1,297 passed, 0 failures/errors/skips; lintDebug/lintRelease/assembleDebug/assembleRelease passed. Source correction schedules OWL_DIVE TAP_JUMP at 1.80s. A separate local Java 21 attempt crashed in C2; disabling C2 and increasing code cache allowed success. Android connected instrumentation not run (adb unavailable).",
+      "limitations": "Tests/build ran on an isolated detached worktree overlay based on origin/main; the upstream no-training authority/test were retained and the dirty local replacement test was not overlaid. No physical screenshot, connected instrumentation, external acceptance, release signing, or Play workflow was run. Local original worktree was preserved."
+    }
+  ]
+}

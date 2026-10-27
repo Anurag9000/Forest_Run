@@ -7,6 +7,7 @@ import com.anurag9000.forestrun.engine.PersistentMemoryManager
 import com.anurag9000.forestrun.engine.SpriteManager
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -58,6 +59,26 @@ class CatTest {
         assertTrue(booleanField(familiarCat, "repeatFriendHistory"))
         assertTrue(familiarState.seedsThisRun > baselineState.seedsThisRun)
         assertTrue(familiarState.score > baselineState.score)
+    }
+
+    @Test
+    fun `spared cat leaves after passing its authored wave distance`() {
+        val cat = Cat(
+            context = context,
+            startX = 520f,
+            groundY = 885.6f,
+            sprite = spriteManager.catSprite.copy()
+        ).apply { shouldRecordPersistence = false }
+        val state = GameStateManager(context)
+        repeat(5) { state.addMercyHeart() }
+        val player = Player(1920, 1080, spriteManager)
+
+        assertTrue(cat.resolveSpecialSafeDeparture(player, state))
+        assertTrue(cat.isActive)
+
+        cat.update(deltaTime = 2f, scrollSpeed = 270f)
+
+        assertFalse(cat.isActive)
     }
 
     private fun booleanField(cat: Cat, name: String): Boolean {

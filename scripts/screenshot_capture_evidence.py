@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import datetime as dt
+import os
 import re
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from strict_json import StrictJsonError, load_file
+from strict_json import StrictJsonError, loads
 
 SCHEMA_VERSION = 1
 EXPECTED_RUN_MODE = "SCREENSHOT_CAPTURE"
@@ -54,9 +56,67 @@ class CaptureEvidence:
 
 
 def _load_object(path: Path) -> dict[str, Any]:
+    path = path.expanduser()
     try:
-        parsed = load_file(
-            path,
+        before = path.lstat()
+    except OSError as exc:
+        raise CaptureEvidenceError(f"Could not inspect capture evidence {path}: {exc}") from exc
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+        raise CaptureEvidenceError(f"Capture evidence must be a regular non-symlink file: {path}")
+    if before.st_size <= 0 or before.st_size > MAX_CAPTURE_EVIDENCE_BYTES:
+        raise CaptureEvidenceError(
+            f"Capture evidence must be between 1 and {MAX_CAPTURE_EVIDENCE_BYTES} bytes: {path}"
+        )
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise CaptureEvidenceError(f"Could not safely open capture evidence {path}: {exc}") from exc
+    identity_fields = ("st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns")
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or any(
+            getattr(before, field) != getattr(opened, field) for field in identity_fields
+        ):
+            raise CaptureEvidenceError(f"Capture evidence changed while being opened: {path}")
+        remaining = before.st_size
+        chunks: list[bytes] = []
+        while remaining:
+            chunk = os.read(descriptor, min(16 * 1024, remaining))
+            if not chunk:
+                raise CaptureEvidenceError(f"Capture evidence changed while being read: {path}")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise CaptureEvidenceError(f"Capture evidence changed while being read: {path}")
+        after = os.fstat(descriptor)
+    except OSError as exc:
+        raise CaptureEvidenceError(f"Could not safely read capture evidence {path}: {exc}") from exc
+    finally:
+        os.close(descriptor)
+    try:
+        after_path = path.lstat()
+    except OSError as exc:
+        raise CaptureEvidenceError(f"Capture evidence changed while being read: {path}: {exc}") from exc
+    if any(
+        getattr(before, field) != getattr(current, field)
+        for current in (after, after_path)
+        for field in identity_fields
+    ):
+        raise CaptureEvidenceError(f"Capture evidence changed while being read: {path}")
+    raw_bytes = b"".join(chunks)
+    if len(raw_bytes) != before.st_size:
+        raise CaptureEvidenceError(f"Capture evidence changed while being read: {path}")
+    try:
+        parsed = loads(
+            raw_bytes,
+            label=str(path),
             maximum_bytes=MAX_CAPTURE_EVIDENCE_BYTES,
             require_object=True,
         )
@@ -77,7 +137,18 @@ def _string(source: dict[str, Any], key: str, path: Path) -> str:
         raise CaptureEvidenceError(
             f"{path}: {key} must be a non-blank string"
         )
-    return value.strip()
+    if value != value.strip():
+        raise CaptureEvidenceError(
+            f"{path}: {key} must not have surrounding whitespace"
+        )
+    return value
+
+
+def _canonical_hex(source: dict[str, Any], key: str, path: Path, pattern: re.Pattern[str], detail: str) -> str:
+    value = source.get(key)
+    if not isinstance(value, str) or pattern.fullmatch(value) is None:
+        raise CaptureEvidenceError(f"{path}: {key} must be {detail}")
+    return value
 
 
 def _integer(source: dict[str, Any], key: str, path: Path) -> int:
@@ -93,7 +164,10 @@ def _number(source: dict[str, Any], key: str, path: Path) -> float:
     value = source.get(key)
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise CaptureEvidenceError(f"{path}: {key} must be numeric")
-    number = float(value)
+    try:
+        number = float(value)
+    except OverflowError as exc:
+        raise CaptureEvidenceError(f"{path}: {key} must be finite") from exc
     if not 0.0 <= number <= 60.0:
         raise CaptureEvidenceError(
             f"{path}: {key} must be between 0 and 60 seconds"
@@ -128,6 +202,28 @@ def load_capture_evidence(
     expected_height: int,
 ) -> CaptureEvidence:
     raw = _load_object(path)
+    return parse_capture_evidence(
+        raw,
+        path,
+        expected_raw_file=expected_raw_file,
+        expected_scenario=expected_scenario,
+        expected_image_sha256=expected_image_sha256,
+        expected_width=expected_width,
+        expected_height=expected_height,
+    )
+
+
+def parse_capture_evidence(
+    raw: dict[str, Any],
+    path: Path,
+    *,
+    expected_raw_file: str,
+    expected_scenario: str,
+    expected_image_sha256: str,
+    expected_width: int,
+    expected_height: int,
+) -> CaptureEvidence:
+    """Validate an already parsed sidecar object against one captured image."""
     if type(raw.get("schemaVersion")) is not int or raw["schemaVersion"] != SCHEMA_VERSION:
         raise CaptureEvidenceError(
             f"{path}: schemaVersion must equal {SCHEMA_VERSION}"
@@ -138,37 +234,24 @@ def load_capture_evidence(
         scenario=_string(raw, "scenario", path),
         run_mode=_string(raw, "runMode", path),
         readiness_marker=_string(raw, "readinessMarker", path),
-        candidate_sha=_string(raw, "candidateSha", path).lower(),
-        apk_sha256=_string(raw, "apkSha256", path).lower(),
+        candidate_sha=_canonical_hex(raw, "candidateSha", path, HEX_40, "a 40-character Git SHA"),
+        apk_sha256=_canonical_hex(raw, "apkSha256", path, HEX_64, "a SHA-256 hex digest"),
         device_serial=_string(raw, "deviceSerial", path),
         package_name=_string(raw, "packageName", path),
         activity_name=_string(raw, "activityName", path),
         settle_seconds=_number(raw, "settleSeconds", path),
         captured_at_utc=_string(raw, "capturedAtUtc", path),
-        image_sha256=_string(raw, "imageSha256", path).lower(),
+        image_sha256=_canonical_hex(raw, "imageSha256", path, HEX_64, "a SHA-256 hex digest"),
         width=_integer(raw, "width", path),
         height=_integer(raw, "height", path),
     )
     _parse_utc(evidence.captured_at_utc, path)
 
-    expected_image_digest = expected_image_sha256.lower()
+    expected_image_digest = expected_image_sha256
     if HEX_64.fullmatch(expected_image_digest) is None:
         raise CaptureEvidenceError(
             "expected_image_sha256 must be a SHA-256 hex digest"
         )
-    if HEX_40.fullmatch(evidence.candidate_sha) is None:
-        raise CaptureEvidenceError(
-            f"{path}: candidateSha must be a 40-character Git SHA"
-        )
-    if HEX_64.fullmatch(evidence.apk_sha256) is None:
-        raise CaptureEvidenceError(
-            f"{path}: apkSha256 must be a SHA-256 hex digest"
-        )
-    if HEX_64.fullmatch(evidence.image_sha256) is None:
-        raise CaptureEvidenceError(
-            f"{path}: imageSha256 must be a SHA-256 hex digest"
-        )
-
     expected_marker = (
         f"{READY_PREFIX} scenario={expected_scenario} mode={EXPECTED_RUN_MODE}"
     )

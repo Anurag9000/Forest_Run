@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -163,6 +164,127 @@ def materialize(root: Path, draft: dict, *, omit_first: bool = False) -> None:
 
 
 class CompileDeviceAcceptanceTest(unittest.TestCase):
+    def test_compile_bundle_normalizes_non_object_and_non_json_python_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(compiler.CompilationError, "draft must be an object"):
+                compiler.compile_bundle(None, base_dir=root)  # type: ignore[arg-type]
+
+            draft = draft_bundle()
+            materialize(root, draft)
+            draft["unexpected_python_value"] = float("nan")
+            with self.assertRaisesRegex(
+                compiler.CompilationError,
+                "draft contains values that are not valid JSON",
+            ):
+                compiler.compile_bundle(draft, base_dir=root)
+
+    def test_draft_reader_rejects_parent_swap_to_external_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "drafts"
+            root.mkdir()
+            draft = root / "draft.json"
+            draft.write_text("{}", encoding="utf-8")
+            saved_root = workspace / "drafts.saved"
+            external = workspace / "external"
+            external.mkdir()
+            (external / "draft.json").write_text("{}", encoding="utf-8")
+            original_open = os.open
+            swapped = False
+
+            def swap_then_open(value, flags, *args, **kwargs):
+                nonlocal swapped
+                if value == root.name and kwargs.get("dir_fd") is not None and not swapped:
+                    root.rename(saved_root)
+                    root.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return original_open(value, flags, *args, **kwargs)
+
+            with mock.patch.object(compiler.os, "open", side_effect=swap_then_open):
+                with self.assertRaises(compiler.CompilationError):
+                    compiler._read_object(draft)
+            self.assertTrue(swapped)
+            self.assertTrue(root.is_symlink())
+
+    def test_compiler_rejects_symlinked_evidence_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "evidence-root"
+            root.mkdir()
+            draft = draft_bundle()
+            materialize(root, draft)
+            alias = workspace / "evidence-alias"
+            try:
+                alias.symlink_to(root, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+
+            with self.assertRaisesRegex(compiler.CompilationError, "evidence root.*symbolic link"):
+                compiler.compile_bundle(
+                    draft,
+                    base_dir=alias,
+                    generated_at_utc="2026-08-01T12:00:00Z",
+                )
+
+    def test_compile_file_rejects_output_symlink_without_modifying_target(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            draft = draft_bundle()
+            materialize(root, draft)
+            draft_path = root / "draft.json"
+            draft_path.write_text(json.dumps(draft), encoding="utf-8")
+            target = root / "unrelated.json"
+            target.write_text("preserve me", encoding="utf-8")
+            output = root / "device-acceptance.json"
+            output.symlink_to(target)
+
+            with self.assertRaisesRegex(
+                compiler.CompilationError,
+                "output paths must not be symlinks",
+            ):
+                compiler.compile_file(draft_path, output)
+
+            self.assertEqual("preserve me", target.read_text())
+            self.assertTrue(output.is_symlink())
+
+    def test_compile_file_rejects_symlinked_draft(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            draft = draft_bundle()
+            materialize(root, draft)
+            draft_path = root / "draft.json"
+            draft_path.write_text(json.dumps(draft), encoding="utf-8")
+            alias = root / "draft-alias.json"
+            alias.symlink_to(draft_path)
+            output = root / "output.json"
+            with self.assertRaisesRegex(compiler.CompilationError, "non-symlink"):
+                compiler.compile_file(alias, output)
+            self.assertFalse(output.exists())
+
+    def test_compile_file_rejects_symlinked_output_and_summary_parents(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            draft = draft_bundle()
+            materialize(root, draft)
+            draft_path = root / "draft.json"
+            draft_path.write_text(json.dumps(draft), encoding="utf-8")
+            alias = root.parent / (root.name + "-output-alias")
+            alias.symlink_to(root, target_is_directory=True)
+            try:
+                with self.assertRaisesRegex(compiler.CompilationError, "share the draft directory"):
+                    compiler.compile_file(draft_path, alias / "manifest.json")
+                with self.assertRaisesRegex(compiler.CompilationError, "share the draft directory"):
+                    compiler.compile_file(
+                        draft_path,
+                        root / "manifest.json",
+                        summary_path=alias / "summary.json",
+                    )
+                self.assertFalse((root / "manifest.json").exists())
+                self.assertFalse((root / "summary.json").exists())
+            finally:
+                alias.unlink()
+
     def test_compile_hashes_files_without_rewriting_captured_identity(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -271,17 +393,10 @@ class CompileDeviceAcceptanceTest(unittest.TestCase):
             draft_path.write_text(json.dumps(draft), encoding="utf-8")
             output_path.write_text("old manifest\n", encoding="utf-8")
             summary_path.write_text("old summary\n", encoding="utf-8")
-            original_replace = compiler._replace_path
-
-            def fail_second_publish(source: Path, destination: Path) -> None:
-                if source.name == "staged-1.json":
-                    raise OSError("simulated interrupted publish")
-                original_replace(source, destination)
-
             with mock.patch.object(
                 compiler,
-                "_replace_path",
-                side_effect=fail_second_publish,
+                "atomic_publish_files",
+                side_effect=compiler.StableFileError("simulated interrupted publish"),
             ):
                 with self.assertRaisesRegex(compiler.CompilationError, "could not publish"):
                     compiler.compile_file(
@@ -293,6 +408,28 @@ class CompileDeviceAcceptanceTest(unittest.TestCase):
             self.assertEqual("old manifest\n", output_path.read_text())
             self.assertEqual("old summary\n", summary_path.read_text())
             self.assertFalse(any(root.glob(".device-acceptance-*")))
+
+    def test_failed_rollback_retains_device_acceptance_backups(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / "manifest.json"
+            second = root / "summary.json"
+            first.write_text("old manifest", encoding="utf-8")
+            second.write_text("old summary", encoding="utf-8")
+            with mock.patch.object(
+                compiler,
+                "atomic_publish_files",
+                side_effect=compiler.StableFileError("injected publication failure"),
+            ):
+                with self.assertRaises(compiler.CompilationError) as raised:
+                    compiler._publish_json_transaction(
+                        [(first, {"new": 1}), (second, {"new": 2})]
+                    )
+
+            self.assertEqual("old manifest", first.read_text())
+            self.assertEqual("old summary", second.read_text())
+            message = str(raised.exception)
+            self.assertIn("injected publication failure", message)
 
     def test_outputs_are_distinct_and_share_draft_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

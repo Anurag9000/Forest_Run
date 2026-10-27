@@ -2,13 +2,19 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
+import stat
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, NoReturn
 
-from verify_release_source_assets import ASSET_PATHS_SOURCE, ASSETS_ROOT, parse_asset_paths
+from stable_file_reader import StableFileError, consume_regular_file
+from verify_release_source_assets import (
+    ASSET_PATHS_SOURCE,
+    ASSETS_ROOT,
+    MAX_RUNTIME_ASSET_BYTES,
+    parse_asset_paths,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -46,18 +52,26 @@ def _fail(message: str) -> NoReturn:
 
 
 def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
     try:
-        with path.open("rb") as stream:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as error:
+        _, digest, _ = consume_regular_file(
+            path,
+            "runtime asset",
+            MAX_RUNTIME_ASSET_BYTES,
+            retain_bytes=False,
+        )
+    except StableFileError as error:
         _fail(f"Could not hash runtime asset {path}: {error}")
-    return digest.hexdigest()
+    return digest
 
 
 def _discover_assets(assets_root: Path) -> tuple[str, ...]:
-    if not assets_root.is_dir():
+    try:
+        root_metadata = assets_root.lstat()
+    except OSError as error:
+        _fail(f"Could not inspect runtime assets directory {assets_root}: {error}")
+    if stat.S_ISLNK(root_metadata.st_mode):
+        _fail(f"Runtime assets directory must not be a symlink: {assets_root}")
+    if not stat.S_ISDIR(root_metadata.st_mode):
         _fail(f"Missing runtime assets directory: {assets_root}")
 
     discovered: list[str] = []

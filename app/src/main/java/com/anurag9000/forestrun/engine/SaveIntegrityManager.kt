@@ -84,6 +84,7 @@ object SaveIntegrityManager {
         repair.nonNegativeInt("high_score")
         repair.nonNegativeInt("lifetime_seeds")
         repair.finiteNonNegativeFloat("best_distance")
+        repair.finiteNonNegativeFloat("best_run_distance")
         repair.nullableEnum("last_killer", EntityType.entries.mapTo(mutableSetOf()) { it.name })
         repair.boundedInt(
             "garden_unlocked",

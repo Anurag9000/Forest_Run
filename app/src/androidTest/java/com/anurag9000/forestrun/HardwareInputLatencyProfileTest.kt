@@ -16,6 +16,7 @@ import com.anurag9000.forestrun.engine.InputLatencyReport
 import com.anurag9000.forestrun.engine.InputLatencyTelemetryRegistry
 import com.anurag9000.forestrun.engine.RunMode
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -24,10 +25,11 @@ import org.junit.runner.RunWith
 /**
  * Physical-device app/render input-latency profiling harness.
  *
- * Motion events are instrumentation-injected. The resulting report measures
- * receipt inside Forest Run through the first posted response frame; it does not
- * measure touchscreen sensor acquisition, display scanout, or panel response and
- * therefore must never be represented as touch-to-photon evidence.
+ * Motion events are dispatched to the app's GameView on the UI thread. The
+ * report measures the app path from its touch listener through the first posted
+ * response frame; it excludes Android window/input dispatch, touchscreen sensor
+ * acquisition, display scanout, and panel response, so it is not touch-to-photon
+ * evidence.
  */
 @LargeTest
 @RunWith(AndroidJUnit4::class)
@@ -44,7 +46,10 @@ class HardwareInputLatencyProfileTest {
     @Test
     fun profileJumpAndDuckAppLatencyOnHardware() {
         val launchIntent = Intent(targetContext, MainActivity::class.java).apply {
-            putExtra(MainActivity.EXTRA_DEBUG_SCENARIO, EncounterScenario.OPENING_READABILITY.name)
+            // The one-step buddy scenario leaves gameplay live throughout the
+            // measurement window; the opening-readability scenario can end
+            // before a long series of injected gestures has been sampled.
+            putExtra(MainActivity.EXTRA_DEBUG_SCENARIO, EncounterScenario.DOG_BUDDY.name)
             putExtra(MainActivity.EXTRA_RUN_MODE, RunMode.PERFORMANCE_PROFILE.name)
             putExtra(MainActivity.EXTRA_DEBUG_AUTOSTART, true)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -59,33 +64,47 @@ class HardwareInputLatencyProfileTest {
             scenario.onActivity { activity ->
                 @Suppress("DEPRECATION")
                 refreshRateHz = activity.windowManager.defaultDisplay.refreshRate
-                val location = IntArray(2)
-                gameView.getLocationOnScreen(location)
-                touchX = location[0] + gameView.width * 0.42f
-                touchY = location[1] + gameView.height * 0.42f
+                touchX = gameView.width * 0.42f
+                touchY = gameView.height * 0.42f
             }
             waitForCondition("render thread warmup") {
                 gameView.debugFrameCounter >= MIN_WARMUP_FRAMES
             }
+            assertEquals("latency scenario must reach live gameplay", "PLAYING", privateField(gameView, "appState").toString())
+            assertEquals("latency scenario run must be active", "PLAYING", privateField(gameView, "runState").toString())
             SystemClock.sleep(WARMUP_MS)
             InputLatencyTelemetryRegistry.reset()
 
             repeat(ACTION_PAIRS) {
-                injectTap(touchX, touchY)
+                injectTap(gameView, touchX, touchY)
                 SystemClock.sleep(ACTION_SETTLE_MS)
-                injectDuck(touchX, touchY)
+                injectDuck(gameView, touchX, touchY)
                 SystemClock.sleep(ACTION_SETTLE_MS)
             }
-            waitForCondition("all injected actions reach a posted frame") {
-                InputLatencyTelemetryRegistry.snapshot().sampledActions >= ACTION_PAIRS * 2
-            }
-
             val snapshot = InputLatencyTelemetryRegistry.snapshot()
-            assertTrue("latency profile retained actions", snapshot.sampledActions >= ACTION_PAIRS * 2)
-            assertTrue("touch-to-render p95 was measured", snapshot.p95TouchToRenderNs > 0L)
+            val sampleDeadline = SystemClock.uptimeMillis() + ACTION_SAMPLE_TIMEOUT_MS
+            var completedSnapshot = snapshot
+            while (
+                completedSnapshot.sampledActions < ACTION_PAIRS * 2 &&
+                SystemClock.uptimeMillis() < sampleDeadline
+            ) {
+                SystemClock.sleep(25L)
+                completedSnapshot = InputLatencyTelemetryRegistry.snapshot()
+            }
+            assertTrue(
+                "latency profile retained all actions: sampled=${completedSnapshot.sampledActions}, " +
+                    "dropped=${completedSnapshot.droppedActions}, frames=${gameView.debugFrameCounter}, " +
+                    "view=${gameView.width}x${gameView.height}, " +
+                    "appState=${privateField(gameView, "appState")}, " +
+                    "runState=${privateField(gameView, "runState")}, " +
+                    "gesture=${(privateField(gameView, "inputHandler") as? com.anurag9000.forestrun.engine.InputHandler)?.lastGestureLabel}",
+                completedSnapshot.sampledActions >= ACTION_PAIRS * 2
+            )
+            val finalSnapshot = completedSnapshot
+            assertTrue("touch-to-render p95 was measured", finalSnapshot.p95TouchToRenderNs > 0L)
             assertTrue(
                 "touch-to-render percentiles are ordered",
-                snapshot.p99TouchToRenderNs >= snapshot.p95TouchToRenderNs
+                finalSnapshot.p99TouchToRenderNs >= finalSnapshot.p95TouchToRenderNs
             )
             val report = InputLatencyReport(
                 scenario = REPORT_SCENARIO,
@@ -95,25 +114,26 @@ class HardwareInputLatencyProfileTest {
                 apiLevel = Build.VERSION.SDK_INT,
                 refreshRateHz = refreshRateHz,
                 injectedActions = ACTION_PAIRS * 2,
-                snapshot = snapshot
+                snapshot = finalSnapshot
             )
             val output = writeReport(report)
             instrumentation.sendStatus(
                 0,
                 Bundle().apply {
                     putString("forest_run_input_latency_profile", output.absolutePath)
-                    putInt("forest_run_input_latency_samples", snapshot.sampledActions)
-                    putLong("forest_run_input_latency_p95_ns", snapshot.p95TouchToRenderNs)
+                    putInt("forest_run_input_latency_samples", finalSnapshot.sampledActions)
+                    putLong("forest_run_input_latency_p95_ns", finalSnapshot.p95TouchToRenderNs)
                 }
             )
         }
     }
 
-    private fun injectTap(x: Float, y: Float) {
+    private fun injectTap(gameView: GameView, x: Float, y: Float) {
         val downTime = SystemClock.uptimeMillis()
-        send(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0))
+        sendToGameView(gameView, MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0))
         SystemClock.sleep(TAP_HOLD_MS)
-        send(
+        sendToGameView(
+            gameView,
             MotionEvent.obtain(
                 downTime,
                 SystemClock.uptimeMillis(),
@@ -125,11 +145,12 @@ class HardwareInputLatencyProfileTest {
         )
     }
 
-    private fun injectDuck(x: Float, y: Float) {
+    private fun injectDuck(gameView: GameView, x: Float, y: Float) {
         val downTime = SystemClock.uptimeMillis()
-        send(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0))
+        sendToGameView(gameView, MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0))
         SystemClock.sleep(SWIPE_STEP_MS)
-        send(
+        sendToGameView(
+            gameView,
             MotionEvent.obtain(
                 downTime,
                 SystemClock.uptimeMillis(),
@@ -140,7 +161,8 @@ class HardwareInputLatencyProfileTest {
             )
         )
         SystemClock.sleep(SWIPE_STEP_MS)
-        send(
+        sendToGameView(
+            gameView,
             MotionEvent.obtain(
                 downTime,
                 SystemClock.uptimeMillis(),
@@ -152,9 +174,11 @@ class HardwareInputLatencyProfileTest {
         )
     }
 
-    private fun send(event: MotionEvent) {
+    private fun sendToGameView(gameView: GameView, event: MotionEvent) {
         try {
-            instrumentation.sendPointerSync(event)
+            instrumentation.runOnMainSync {
+                gameView.dispatchTouchEvent(event)
+            }
         } finally {
             event.recycle()
         }
@@ -182,6 +206,12 @@ class HardwareInputLatencyProfileTest {
         return gameView
     }
 
+    private fun privateField(target: Any, name: String): Any? =
+        target.javaClass.getDeclaredField(name).run {
+            isAccessible = true
+            get(target)
+        }
+
     private fun waitForCondition(
         label: String,
         timeoutMs: Long = 15_000L,
@@ -204,5 +234,6 @@ class HardwareInputLatencyProfileTest {
         private const val TAP_HOLD_MS = 20L
         private const val SWIPE_STEP_MS = 12L
         private const val DUCK_SWIPE_PX = 140f
+        private const val ACTION_SAMPLE_TIMEOUT_MS = 15_000L
     }
 }

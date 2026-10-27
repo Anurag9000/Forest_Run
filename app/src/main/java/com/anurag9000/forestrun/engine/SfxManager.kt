@@ -178,24 +178,44 @@ object SfxManager {
         }
     }
 
+    // Resolve the mutable sample ID while holding the same lock as init/destroy.
+    // Synchronizing only play() is too late: Kotlin evaluates idJump (etc.) before
+    // entering play(), so a lifecycle replacement could otherwise pair an old
+    // pool-local ID with a newly initialized SoundPool.
+    @Synchronized
     fun playJump() = play(idJump, 0.7f)
+
+    @Synchronized
     fun playLand() = play(idLand, 0.8f)
+
+    @Synchronized
     fun playSeedPing() = play(idSeedPing, 0.9f)
+
+    @Synchronized
     fun playBark() = play(idBark, 1.0f)
+
+    @Synchronized
     fun playScreech() = play(idScreech, 1.0f)
+
+    @Synchronized
     fun playHowl() = play(idHowl, 1.0f)
+
+    @Synchronized
     fun playBloomActivate() = play(idBloomActivate, 1.0f)
 
+    @Synchronized
     fun playBloomReady() {
         val profile = buildBloomSfxProfile(BloomSfxEvent.READY, 0)
         play(readySampleOrFallback(idBloomReady, idSeedPing), profile.volume, profile.rate)
     }
 
+    @Synchronized
     fun playBloomConvert(conversionsInBurst: Int) {
         val profile = buildBloomSfxProfile(BloomSfxEvent.CONVERT, conversionsInBurst)
         play(readySampleOrFallback(idBloomConvert, idSeedPing), profile.volume, profile.rate)
     }
 
+    @Synchronized
     fun playBloomFade(conversionsInBurst: Int) {
         val profile = buildBloomSfxProfile(BloomSfxEvent.FADE, conversionsInBurst)
         play(
@@ -205,7 +225,10 @@ object SfxManager {
         )
     }
 
+    @Synchronized
     fun playMercyMiss() = play(idMercyMiss, 0.6f)
+
+    @Synchronized
     fun playHit() = play(idHit, 1.0f)
 
     private fun readySampleOrFallback(primaryId: Int, fallbackId: Int): Int =

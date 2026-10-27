@@ -6,9 +6,11 @@ from __future__ import annotations
 import json
 import math
 import os
-import stat
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+
+from stable_file_reader import StableFileError, consume_regular_file
 
 DEFAULT_MAX_BYTES = 16 * 1024 * 1024
 DEFAULT_MAX_DEPTH = 64
@@ -92,6 +94,19 @@ def _validate_tree(value: Any, *, depth: int, maximum_depth: int) -> None:
         raise StrictJsonError(f"unsupported JSON value type: {type(value).__name__}")
 
 
+def _json_values_match(left: Any, right: Any) -> bool:
+    """Compare JSON values without Python's bool/int equality ambiguity."""
+    if isinstance(left, Mapping) and isinstance(right, Mapping):
+        return left.keys() == right.keys() and all(
+            _json_values_match(left[key], right[key]) for key in left
+        )
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(
+            _json_values_match(first, second) for first, second in zip(left, right)
+        )
+    return type(left) is type(right) and left == right
+
+
 def loads(
     raw: bytes | str,
     *,
@@ -119,7 +134,10 @@ def loads(
         except UnicodeDecodeError as exc:
             raise StrictJsonError(f"{label} is not valid UTF-8: {exc}") from exc
     elif isinstance(raw, str):
-        encoded = raw.encode("utf-8")
+        try:
+            encoded = raw.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise StrictJsonError(f"{label} is not valid UTF-8 text: {exc}") from exc
         if not encoded or len(encoded) > maximum_bytes:
             raise StrictJsonError(
                 f"{label} must be between 1 and {maximum_bytes} bytes"
@@ -157,77 +175,45 @@ def load_file(
     maximum_integer_digits: int = DEFAULT_MAX_INTEGER_DIGITS,
     require_object: bool = False,
 ) -> Any:
-    # Preserve the public explicit-path behavior while keeping the subsequent
-    # read on the exact checked inode, rather than reopening through read_bytes().
-    path = path.expanduser().resolve()
+    path = path.expanduser()
     try:
-        before = path.stat()
-    except FileNotFoundError as exc:
-        raise StrictJsonError(f"JSON file is missing: {path}") from exc
-    except OSError as exc:
-        raise StrictJsonError(f"could not inspect JSON file {path}: {exc}") from exc
-    if not stat.S_ISREG(before.st_mode):
-        raise StrictJsonError(f"JSON path is not a regular file: {path}")
-    if before.st_size <= 0 or before.st_size > maximum_bytes:
-        raise StrictJsonError(
-            f"{path} must be between 1 and {maximum_bytes} bytes"
+        raw, _, _ = consume_regular_file(
+            path, "JSON file", maximum_bytes, retain_bytes=True
         )
-
-    flags = os.O_RDONLY
-    if hasattr(os, "O_CLOEXEC"):
-        flags |= os.O_CLOEXEC
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    if hasattr(os, "O_NONBLOCK"):
-        flags |= os.O_NONBLOCK
-    try:
-        descriptor = os.open(path, flags)
-    except OSError as exc:
-        raise StrictJsonError(f"could not safely open JSON file {path}: {exc}") from exc
-
-    identity_fields = (
-        "st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns"
-    )
-    try:
-        opened = os.fstat(descriptor)
-        if not stat.S_ISREG(opened.st_mode):
-            raise StrictJsonError(f"JSON path is not a regular file: {path}")
-        if any(
-            getattr(before, field) != getattr(opened, field)
-            for field in identity_fields
-        ):
-            raise StrictJsonError(f"JSON file changed while being read: {path}")
-        remaining = before.st_size
-        chunks: list[bytes] = []
-        while remaining:
-            chunk = os.read(descriptor, min(1024 * 1024, remaining))
-            if not chunk:
-                raise StrictJsonError(f"JSON file changed while being read: {path}")
-            chunks.append(chunk)
-            remaining -= len(chunk)
-        if os.read(descriptor, 1):
-            raise StrictJsonError(f"JSON file changed while being read: {path}")
-        after = os.fstat(descriptor)
-    except OSError as exc:
-        raise StrictJsonError(f"could not read JSON file {path}: {exc}") from exc
-    finally:
-        os.close(descriptor)
-
-    try:
-        after_path = path.stat()
-    except OSError as exc:
-        raise StrictJsonError(f"JSON file changed while being read: {path}: {exc}") from exc
-    if any(
-        getattr(before, field) != getattr(after, field)
-        or getattr(before, field) != getattr(after_path, field)
-        for field in identity_fields
-    ):
-        raise StrictJsonError(f"JSON file changed while being read: {path}")
+    except StableFileError as exc:
+        raise StrictJsonError(str(exc)) from exc
+    assert raw is not None
     return loads(
-        b"".join(chunks),
+        raw,
         label=str(path),
         maximum_bytes=maximum_bytes,
         maximum_depth=maximum_depth,
         maximum_integer_digits=maximum_integer_digits,
         require_object=require_object,
     )
+
+
+def loads_matching_object(
+    raw: bytes,
+    expected: object,
+    *,
+    label: str,
+    maximum_bytes: int = DEFAULT_MAX_BYTES,
+    maximum_depth: int = DEFAULT_MAX_DEPTH,
+    maximum_integer_digits: int = DEFAULT_MAX_INTEGER_DIGITS,
+) -> dict[str, Any]:
+    """Parse bounded object bytes and require them to match the supplied value."""
+    if not isinstance(raw, bytes):
+        raise StrictJsonError(f"{label} source bytes must be bytes")
+    value = loads(
+        raw,
+        label=label,
+        maximum_bytes=maximum_bytes,
+        maximum_depth=maximum_depth,
+        maximum_integer_digits=maximum_integer_digits,
+        require_object=True,
+    )
+    if not _json_values_match(value, expected):
+        raise StrictJsonError(f"{label} source bytes do not encode the supplied object")
+    assert isinstance(value, dict)
+    return value

@@ -1,14 +1,20 @@
+import os
 import stat
 import tempfile
 import unittest
 import warnings
 import zipfile
+from unittest.mock import patch
 from pathlib import Path
 
 from release_artifact_verifier import (
     ArtifactVerificationError,
     CommandResult,
+    _extract_sha256_fingerprint,
+    _last_non_blank_line,
+    _run_checked,
     inspect_bundle_identity,
+    resolve_tool,
     verify_bundle_signature,
     verify_bundle_structure,
 )
@@ -29,6 +35,73 @@ class FakeRunner:
 
 
 class ReleaseArtifactVerifierTest(unittest.TestCase):
+    def test_resolve_tool_prefers_latest_then_highest_numeric_sdk_version(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            sdk = Path(temporary_directory)
+            for version in ("9.0", "10.0", "latest"):
+                tool = sdk / "cmdline-tools" / version / "bin" / "apkanalyzer"
+                tool.parent.mkdir(parents=True, exist_ok=True)
+                tool.write_text("tool")
+                tool.chmod(0o755)
+
+            selected = resolve_tool("apkanalyzer", {"ANDROID_HOME": str(sdk)}, which=lambda _: None)
+
+            self.assertEqual(str(sdk / "cmdline-tools/latest/bin/apkanalyzer"), selected)
+
+    def test_resolve_tool_uses_numeric_version_order_and_skips_non_executable(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            sdk = Path(temporary_directory)
+            for version, mode in (("9.0", 0o755), ("10.0", 0o644)):
+                tool = sdk / "cmdline-tools" / version / "bin" / "apkanalyzer"
+                tool.parent.mkdir(parents=True, exist_ok=True)
+                tool.write_text("tool")
+                tool.chmod(mode)
+
+            selected = resolve_tool("apkanalyzer", {"ANDROID_HOME": str(sdk)}, which=lambda _: None)
+
+            self.assertEqual(str(sdk / "cmdline-tools/9.0/bin/apkanalyzer"), selected)
+
+    def test_resolve_tool_respects_explicit_empty_environment(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            sdk = Path(temporary_directory)
+            tool = sdk / "bin" / "apkanalyzer"
+            tool.parent.mkdir()
+            tool.write_text("tool")
+            tool.chmod(0o755)
+
+            with patch.dict(os.environ, {"ANDROID_HOME": str(sdk)}):
+                with self.assertRaisesRegex(ArtifactVerificationError, "not found"):
+                    resolve_tool("apkanalyzer", {}, which=lambda _: None)
+
+    def test_resolve_tool_uses_the_supplied_path(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            tool_dir = Path(temporary_directory)
+            tool = tool_dir / "apkanalyzer"
+            tool.write_text("tool")
+            tool.chmod(0o755)
+            with patch("release_artifact_verifier.shutil.which", wraps=__import__("shutil").which) as which:
+                selected = resolve_tool("apkanalyzer", {"PATH": str(tool_dir)})
+            self.assertEqual(str(tool), selected)
+            self.assertEqual(str(tool_dir), which.call_args.kwargs["path"])
+
+    def test_command_output_helpers_reject_missing_or_failed_values(self):
+        with self.assertRaisesRegex(ArtifactVerificationError, "no output"):
+            _run_checked(["tool"], lambda *_: CommandResult(1, "", ""), label="probe")
+        self.assertEqual("value", _run_checked(
+            ["tool"], lambda *_: CommandResult(0, "", " value \n"), label="probe"
+        ))
+        with self.assertRaisesRegex(ArtifactVerificationError, "produced no value"):
+            _last_non_blank_line(" \n", "probe")
+        self.assertEqual("last", _last_non_blank_line("first\n last \n", "probe"))
+
+    def test_fingerprint_parser_accepts_supported_formats_and_rejects_invalid(self):
+        expected = "".join(f"{value:02X}" for value in range(32))
+        self.assertEqual(expected, _extract_sha256_fingerprint(
+            "SHA-256: " + ":".join(f"{value:02x}" for value in range(32)), "probe"
+        ))
+        with self.assertRaisesRegex(ArtifactVerificationError, "Could not find"):
+            _extract_sha256_fingerprint("SHA256: AA:BB", "probe")
+
     @staticmethod
     def write_required_entries(archive: zipfile.ZipFile, include_dex: bool = True) -> None:
         archive.writestr("BundleConfig.pb", b"config")
@@ -334,3 +407,74 @@ class ReleaseArtifactVerifierTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class ReleaseArtifactVerifierNamespaceTest(ReleaseArtifactVerifierTest):
+    def test_bundle_structure_rejects_file_directory_namespace_collisions(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cases = (
+                ("same-name.aab", [("base/assets/", b""), ("base/assets", b"file")]),
+                ("file-parent.aab", [("base/assets", b"file"), ("base/assets/item", b"child")]),
+                ("late-file-parent.aab", [("base/assets/item", b"child"), ("base/assets", b"file")]),
+            )
+            for filename, extra in cases:
+                bundle = root / filename
+                with zipfile.ZipFile(bundle, "w") as archive:
+                    self.write_required_entries(archive)
+                    for name, payload in extra:
+                        archive.writestr(name, payload)
+                with self.subTest(filename=filename), self.assertRaisesRegex(
+                    ArtifactVerificationError, "conflicting|nested beneath a file|shadows an existing directory"
+                ):
+                    verify_bundle_structure(bundle)
+
+    def test_bundle_structure_enforces_entry_count_and_expanded_size_limits(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = self.create_bundle(root)
+            with patch("release_artifact_verifier.MAX_BUNDLE_ENTRIES", 2):
+                with self.assertRaisesRegex(ArtifactVerificationError, "too many entries"):
+                    verify_bundle_structure(bundle)
+            with patch("release_artifact_verifier.MAX_ENTRY_UNCOMPRESSED_BYTES", 2):
+                with self.assertRaisesRegex(ArtifactVerificationError, "excessive expanded size"):
+                    verify_bundle_structure(bundle)
+
+    def test_bundle_structure_rejects_corrupt_zip_payload(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle = self.create_bundle(Path(temporary))
+            content = bytearray(bundle.read_bytes())
+            marker = content.find(b"manifest")
+            self.assertGreaterEqual(marker, 0)
+            content[marker] ^= 1
+            bundle.write_bytes(content)
+            with self.assertRaisesRegex(ArtifactVerificationError, "corrupt entry|valid ZIP"):
+                verify_bundle_structure(bundle)
+
+    def test_bundle_reader_rejects_symlinks_and_fifos_without_blocking(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = self.create_bundle(root)
+            alias = root / "alias.aab"
+            alias.symlink_to(bundle)
+            with self.assertRaisesRegex(ArtifactVerificationError, "regular non-symlink"):
+                verify_bundle_structure(alias)
+            fifo = root / "bundle.fifo"
+            os.mkfifo(fifo)
+            with self.assertRaisesRegex(ArtifactVerificationError, "regular non-symlink"):
+                verify_bundle_structure(fifo)
+
+    def test_bundle_reader_uses_nonblocking_nofollow_descriptor(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle = self.create_bundle(Path(temporary))
+            flags_seen = []
+            real_open = os.open
+            def capture_open(path, flags, *args, **kwargs):
+                flags_seen.append(flags)
+                return real_open(path, flags, *args, **kwargs)
+            with patch("release_artifact_verifier.os.open", side_effect=capture_open):
+                verify_bundle_structure(bundle)
+            if hasattr(os, "O_NOFOLLOW"):
+                self.assertTrue(flags_seen[0] & os.O_NOFOLLOW)
+            if hasattr(os, "O_NONBLOCK"):
+                self.assertTrue(flags_seen[0] & os.O_NONBLOCK)

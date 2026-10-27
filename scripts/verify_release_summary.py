@@ -10,12 +10,18 @@ import sys
 from pathlib import Path, PurePosixPath
 from typing import Any, Sequence
 
-from strict_json import StrictJsonError, load_file
+from strict_json import StrictJsonError, loads
+from stable_file_reader import (
+    StableFileError,
+    checked_directory_path,
+    consume_regular_file,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 HEX_40 = re.compile(r"[0-9a-f]{40}")
 HEX_64 = re.compile(r"[0-9a-f]{64}")
 MAX_SUMMARY_BYTES = 2 * 1024 * 1024
+MAX_FACT_BYTES = 512 * 1024 * 1024
 EXPECTED_APPLICATION_ID = "com.anurag9000.forestrun"
 EXPECTED_GRAPHICS_PATHS = {
     "release/google-play/graphics/feature-graphic.png",
@@ -42,11 +48,19 @@ class ReleaseSummaryError(ValueError):
 
 
 def digest(path: Path) -> str:
-    hasher = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            hasher.update(chunk)
-    return hasher.hexdigest()
+    raw, _ = _read_regular_bytes(path, "release evidence", MAX_FACT_BYTES)
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _read_regular_bytes(path: Path, label: str, maximum_bytes: int) -> tuple[bytes, os.stat_result]:
+    try:
+        raw, _, metadata = consume_regular_file(
+            path, label, maximum_bytes, retain_bytes=True
+        )
+    except StableFileError as exc:
+        raise ReleaseSummaryError(str(exc)) from exc
+    assert raw is not None
+    return raw, metadata
 
 
 def required_dict(source: dict[str, Any], key: str) -> dict[str, Any]:
@@ -64,17 +78,29 @@ def required_text(source: dict[str, Any], key: str, label: str) -> str:
 
 
 def _safe_fact_path(root: Path, facts: dict[str, Any], label: str) -> tuple[str, Path]:
+    raw_relative = facts.get("path")
     relative = required_text(facts, "path", label)
+    if raw_relative != relative:
+        raise ReleaseSummaryError(f"{label}.path must not have surrounding whitespace")
+    try:
+        relative.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ReleaseSummaryError(f"{label}.path must contain valid Unicode text") from exc
     if any(ord(character) < 32 or ord(character) == 127 for character in relative):
         raise ReleaseSummaryError(f"{label}.path is unsafe")
     normalized = relative.replace("\\", "/")
-    if normalized.startswith("/") or re.match(r"^[A-Za-z]:", normalized):
+    if normalized.startswith("/") or ":" in normalized:
         raise ReleaseSummaryError(f"{label}.path is unsafe")
     pure = PurePosixPath(normalized)
-    if not pure.parts or any(part in {"", ".", ".."} for part in pure.parts):
+    if pure.is_absolute() or not pure.parts or any(part in {"", ".", ".."} for part in pure.parts):
         raise ReleaseSummaryError(f"{label}.path is unsafe")
+    if pure.as_posix() != normalized:
+        raise ReleaseSummaryError(f"{label}.path must use canonical POSIX spelling")
 
-    root = root.expanduser().resolve()
+    try:
+        root = checked_directory_path(root, f"{label} evidence root")
+    except StableFileError as exc:
+        raise ReleaseSummaryError(str(exc)) from exc
     lexical = root.joinpath(*pure.parts)
     current = root
     for part in pure.parts:
@@ -88,18 +114,13 @@ def _safe_fact_path(root: Path, facts: dict[str, Any], label: str) -> tuple[str,
         if stat.S_ISLNK(metadata.st_mode):
             raise ReleaseSummaryError(f"{label} must not traverse a symbolic link: {relative}")
 
-    resolved = lexical.resolve()
     try:
-        resolved.relative_to(root)
-    except ValueError as exc:
-        raise ReleaseSummaryError(f"{label}.path escapes the release root") from exc
-    try:
-        metadata = resolved.stat()
+        metadata = lexical.lstat()
     except OSError as exc:
         raise ReleaseSummaryError(f"could not stat {label}: {relative}: {exc}") from exc
     if not stat.S_ISREG(metadata.st_mode):
         raise ReleaseSummaryError(f"{label} must be a regular file: {relative}")
-    return pure.as_posix(), resolved
+    return pure.as_posix(), lexical
 
 
 def _recorded_sha256(facts: dict[str, Any], label: str) -> str:
@@ -111,21 +132,22 @@ def _recorded_sha256(facts: dict[str, Any], label: str) -> str:
 
 def verify_file_fact(root: Path, facts: dict[str, Any], label: str) -> Path:
     _, absolute = _safe_fact_path(root, facts, label)
-    size = absolute.stat().st_size
-    if type(facts.get("bytes")) is not int or facts["bytes"] != size:
+    raw, _ = _read_regular_bytes(absolute, label, MAX_FACT_BYTES)
+    if type(facts.get("bytes")) is not int or facts["bytes"] != len(raw):
         raise ReleaseSummaryError(f"{label} byte count is stale")
-    if digest(absolute) != _recorded_sha256(facts, label):
+    if hashlib.sha256(raw).hexdigest() != _recorded_sha256(facts, label):
         raise ReleaseSummaryError(f"{label} SHA-256 is stale")
     return absolute
 
 
 def verify_metadata_fact(root: Path, facts: dict[str, Any], label: str) -> Path:
     _, absolute = _safe_fact_path(root, facts, label)
-    if digest(absolute) != _recorded_sha256(facts, label):
+    raw, _ = _read_regular_bytes(absolute, label, MAX_FACT_BYTES)
+    if hashlib.sha256(raw).hexdigest() != _recorded_sha256(facts, label):
         raise ReleaseSummaryError(f"{label} SHA-256 is stale")
     try:
-        text = absolute.read_text(encoding="utf-8")
-    except (OSError, UnicodeError) as exc:
+        text = raw.decode("utf-8")
+    except UnicodeError as exc:
         raise ReleaseSummaryError(f"{label} is not readable UTF-8: {exc}") from exc
     if type(facts.get("characters")) is not int or facts["characters"] != len(text):
         raise ReleaseSummaryError(f"{label} character count is stale")
@@ -194,11 +216,13 @@ def verify_release_summary(
     release_root: Path,
     expected_candidate_sha: str,
 ) -> dict[str, Any]:
-    root = root.resolve()
-    release_root = release_root.resolve()
-    expected_candidate_sha = expected_candidate_sha.lower()
+    try:
+        root = checked_directory_path(root, "release source root")
+        release_root = checked_directory_path(release_root, "release summary root")
+    except StableFileError as exc:
+        raise ReleaseSummaryError(str(exc)) from exc
     if HEX_40.fullmatch(expected_candidate_sha) is None:
-        raise ReleaseSummaryError("expected candidate SHA must be 40 hexadecimal characters")
+        raise ReleaseSummaryError("expected candidate SHA must be 40 lowercase hexadecimal characters")
     machine_path = release_root / "build_summary.json"
     human_path = release_root / "BUILD_SUMMARY.md"
     for path in (machine_path, human_path):
@@ -213,18 +237,20 @@ def verify_release_summary(
         if metadata.st_size <= 0 or metadata.st_size > MAX_SUMMARY_BYTES:
             raise ReleaseSummaryError(f"Release summary has invalid size: {path}")
     try:
-        payload = load_file(
-            machine_path,
+        machine_bytes, _ = _read_regular_bytes(machine_path, "machine release summary", MAX_SUMMARY_BYTES)
+        payload = loads(
+            machine_bytes,
+            label="machine release summary",
             maximum_bytes=MAX_SUMMARY_BYTES,
             require_object=True,
         )
-    except StrictJsonError as exc:
+    except (ReleaseSummaryError, StrictJsonError) as exc:
         raise ReleaseSummaryError(f"Invalid machine release summary: {exc}") from exc
     if not isinstance(payload, dict):
         raise ReleaseSummaryError("Machine release summary must be a JSON object")
 
     candidate = required_dict(payload, "candidate")
-    candidate_sha = required_text(candidate, "sha", "candidate").lower()
+    candidate_sha = required_text(candidate, "sha", "candidate")
     if candidate_sha != expected_candidate_sha or candidate.get("branch") != "main":
         raise ReleaseSummaryError("Release summary candidate is not the expected main commit")
     identity = required_dict(payload, "identity")
@@ -314,8 +340,9 @@ def verify_release_summary(
             raise ReleaseSummaryError("R8 class counts are inconsistent")
 
     try:
-        human = human_path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError) as exc:
+        human_bytes, _ = _read_regular_bytes(human_path, "human release summary", MAX_SUMMARY_BYTES)
+        human = human_bytes.decode("utf-8")
+    except (ReleaseSummaryError, UnicodeError) as exc:
         raise ReleaseSummaryError(f"Could not read human release summary: {exc}") from exc
     if expected_candidate_sha not in human or EXPECTED_APPLICATION_ID not in human:
         raise ReleaseSummaryError("Human summary does not identify the candidate and application")

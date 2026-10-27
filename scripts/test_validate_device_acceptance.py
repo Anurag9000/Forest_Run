@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import hashlib
+import copy
+import contextlib
 import importlib.util
+import io
 import json
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+import stable_file_reader
 
 SCRIPT = Path(__file__).with_name("validate_device_acceptance.py")
 SPEC = importlib.util.spec_from_file_location("device_acceptance", SCRIPT)
@@ -189,6 +196,66 @@ class DeviceAcceptanceTest(unittest.TestCase):
             ),
         )
 
+    def test_source_bytes_must_match_acceptance_object(self) -> None:
+        bundle = valid_bundle()
+        with self.assertRaisesRegex(MODULE.EvidenceError, "source bytes do not encode"):
+            MODULE.validate_bundle(bundle, source_bytes=b"{}")
+
+    def test_unknown_keys_are_rejected_at_each_manifest_schema_boundary(self) -> None:
+        mutations = (
+            ("root", lambda bundle: bundle),
+            ("policy", lambda bundle: bundle["policy"]),
+            ("policy.thresholds", lambda bundle: bundle["policy"]["thresholds"]),
+            ("sessions[0]", lambda bundle: bundle["sessions"][0]),
+            ("sessions[0].device", lambda bundle: bundle["sessions"][0]["device"]),
+            ("sessions[0].scenarios", lambda bundle: bundle["sessions"][0]["scenarios"]),
+            (
+                "sessions[0].scenarios.ordinary_play_15m",
+                lambda bundle: bundle["sessions"][0]["scenarios"]["ordinary_play_15m"],
+            ),
+            (
+                "sessions[0].scenarios.ordinary_play_15m.evidence_files[0]",
+                lambda bundle: bundle["sessions"][0]["scenarios"]["ordinary_play_15m"]["evidence_files"][0],
+            ),
+            ("sessions[0].performance", lambda bundle: bundle["sessions"][0]["performance"]),
+        )
+        for label, select in mutations:
+            with self.subTest(label=label):
+                bundle = copy.deepcopy(valid_bundle())
+                select(bundle)["unrecognized_probe"] = "ignored before fix"
+                self.invalid(bundle, f"{label} contains unrecognized keys")
+
+    def test_artifact_parent_swap_to_external_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = valid_bundle()
+            materialize_files(root, bundle)
+            artifact_parent = root / "artifact"
+            saved_parent = root / "artifact.saved"
+            external = root / "external"
+            external.mkdir()
+            (external / "app-release.aab").write_bytes(ARTIFACT_BYTES)
+            real_open = os.open
+            swapped = False
+
+            def swap_then_open(value, flags, *args, **kwargs):
+                nonlocal swapped
+                if value == "artifact" and kwargs.get("dir_fd") is not None and not swapped:
+                    artifact_parent.rename(saved_parent)
+                    artifact_parent.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return real_open(value, flags, *args, **kwargs)
+
+            with patch.object(MODULE.os, "open", side_effect=swap_then_open):
+                with self.assertRaises(MODULE.EvidenceError):
+                    MODULE.validate_bundle(
+                        bundle,
+                        source_bytes=json.dumps(bundle, sort_keys=True).encode(),
+                        evidence_base=root,
+                    )
+            self.assertTrue(swapped)
+            self.assertTrue(artifact_parent.is_symlink())
+
     def test_candidate_and_store_identity_fail_closed(self) -> None:
         cases = (
             ("repository", "fork/repo", "candidate.repository"),
@@ -270,6 +337,62 @@ class DeviceAcceptanceTest(unittest.TestCase):
             self.assertEqual("valid", json.loads(summary.read_text())["status"])
             self.assertFalse(summary.with_name(summary.name + ".tmp").exists())
 
+    def test_summary_parent_swap_cannot_redirect_atomic_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output_dir = root / "out"
+            external = root / "external"
+            external.mkdir()
+            saved_output_dir = root / "out.saved"
+            summary = output_dir / "summary.json"
+            original_open = os.open
+            swapped = False
+
+            def swap_before_temp_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                if (
+                    isinstance(path, str)
+                    and path.startswith(".summary.json.")
+                    and kwargs.get("dir_fd") is not None
+                    and not swapped
+                ):
+                    output_dir.rename(saved_output_dir)
+                    output_dir.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return original_open(path, flags, *args, **kwargs)
+
+            with patch.object(
+                stable_file_reader.os, "open", side_effect=swap_before_temp_open
+            ):
+                with self.assertRaisesRegex(MODULE.EvidenceError, "symbolic link"):
+                    MODULE._write_json(summary, {"status": "valid"})
+
+            self.assertTrue(swapped)
+            self.assertFalse((external / "summary.json").exists())
+            self.assertFalse((saved_output_dir / "summary.json").exists())
+
+    def test_cli_reports_summary_publication_failure_as_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = valid_bundle()
+            self.materialize(root, bundle)
+            manifest = root / "manifest.json"
+            manifest.write_text(json.dumps(bundle), encoding="utf-8")
+            external = root / "external.json"
+            external.write_text("preserve", encoding="utf-8")
+            output = root / "summary.json"
+            output.symlink_to(external)
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                result = MODULE.main(
+                    [str(manifest), "--summary-output", str(output)]
+                )
+            self.assertEqual(1, result)
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual("invalid", payload["status"])
+            self.assertRegex(payload["error"], r"symbolic link|symlink")
+            self.assertEqual("preserve", external.read_text(encoding="utf-8"))
+
     def test_invalid_json(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             manifest = Path(directory) / "manifest.json"
@@ -300,7 +423,7 @@ class DeviceAcceptanceTest(unittest.TestCase):
                 self.skipTest(f"symbolic links unavailable: {exc}")
             with self.assertRaises(MODULE.EvidenceError) as raised:
                 MODULE.load_and_validate(alias)
-            self.assertIn("must not be a symbolic link", str(raised.exception))
+            self.assertRegex(str(raised.exception), r"symbolic link|non-symlink")
 
     def test_artifact_symlink_component_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -360,6 +483,12 @@ class DeviceAcceptanceTest(unittest.TestCase):
             with self.assertRaises(MODULE.EvidenceError) as raised:
                 MODULE.validate_bundle(bundle, source_bytes=json.dumps(bundle).encode(), evidence_base=root)
             self.assertIn("does not match store delivery", str(raised.exception))
+
+    def test_candidate_hashes_reject_uppercase_hex_encodings(self) -> None:
+        candidate = dict(valid_bundle()["candidate"])
+        candidate["artifact_sha256"] = candidate["artifact_sha256"].upper()
+        with self.assertRaisesRegex(MODULE.EvidenceError, "lowercase 64-hex"):
+            MODULE._validate_candidate(candidate)
 
     def test_legacy_ambiguous_certificate_fields_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

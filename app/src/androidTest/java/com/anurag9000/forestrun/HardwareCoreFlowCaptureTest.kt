@@ -4,11 +4,12 @@ import android.content.Intent
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.graphics.Bitmap
-import android.content.ContentValues
+import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.view.ViewGroup
 import android.os.Environment
+import android.content.ContentUris
 import android.provider.MediaStore
 import android.view.PixelCopy
 import androidx.test.core.app.ActivityScenario
@@ -30,6 +31,12 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+private const val COPY_PENDING = 0
+private const val COPY_COMPLETED = 1
+private const val COPY_TIMED_OUT = 2
+private const val COPY_RECYCLED = 3
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
@@ -42,12 +49,7 @@ class HardwareCoreFlowCaptureTest {
     @Before
     fun setUp() {
         InstrumentationStateReset.clear(targetContext)
-        targetContext.contentResolver.delete(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            "${MediaStore.Images.Media.RELATIVE_PATH}=?",
-            arrayOf("$captureRelativeDir/")
-        )
-        runShell("rm -rf /sdcard/Pictures/forest_run_hardware/core_flow && mkdir -p /sdcard/Pictures/forest_run_hardware/core_flow")
+        clearPriorCaptures()
     }
 
     @Test
@@ -156,49 +158,60 @@ class HardwareCoreFlowCaptureTest {
     }
 
     private fun saveScreenshot(gameView: GameView, name: String) {
+        val firstEligibleFrame = gameView.debugFrameCounter + 2L
+        waitForCondition("two rendered game updates before $name", timeoutMs = 3_000L) {
+            gameView.holder.surface?.isValid == true &&
+                gameView.debugFrameCounter >= firstEligibleFrame
+        }
         instrumentation.waitForIdleSync()
-        lateinit var bitmap: Bitmap
-        val copyLatch = CountDownLatch(1)
-        var copyResult = PixelCopy.ERROR_UNKNOWN
-        instrumentation.runOnMainSync {
-            val activity = gameView.context as MainActivity
-            val decorView = activity.window.decorView
-            bitmap = Bitmap.createBitmap(decorView.width, decorView.height, Bitmap.Config.ARGB_8888)
-            PixelCopy.request(
-                activity.window,
-                bitmap,
-                { result ->
-                    copyResult = result
-                    copyLatch.countDown()
-                },
-                Handler(Looper.getMainLooper())
-            )
-        }
-        check(copyLatch.await(3, TimeUnit.SECONDS)) {
-            "Timed out waiting for PixelCopy for $name"
-        }
-        check(copyResult == PixelCopy.SUCCESS) {
-            "PixelCopy failed for $name with result $copyResult"
-        }
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "$name.png")
-            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            put(MediaStore.Images.Media.RELATIVE_PATH, captureRelativeDir)
-            put(MediaStore.Images.Media.IS_PENDING, 1)
-        }
-        val resolver = targetContext.contentResolver
-        val uri = requireNotNull(
-            resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        ) { "Failed to create MediaStore item for $name" }
-        resolver.openOutputStream(uri)?.use { out ->
-            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
-                "Failed to write bitmap for $name"
+        var bitmap: Bitmap? = null
+        try {
+            val copyLatch = CountDownLatch(1)
+            val copyState = AtomicInteger(COPY_PENDING)
+            var copyResult = PixelCopy.ERROR_UNKNOWN
+            instrumentation.runOnMainSync {
+                val capturedBitmap = Bitmap.createBitmap(
+                    gameView.width,
+                    gameView.height,
+                    Bitmap.Config.ARGB_8888
+                )
+                bitmap = capturedBitmap
+                PixelCopy.request(
+                    gameView,
+                    capturedBitmap,
+                    { result ->
+                        copyResult = result
+                        if (copyState.compareAndSet(COPY_TIMED_OUT, COPY_RECYCLED)) {
+                            if (!capturedBitmap.isRecycled) capturedBitmap.recycle()
+                        } else {
+                            copyState.compareAndSet(COPY_PENDING, COPY_COMPLETED)
+                        }
+                        copyLatch.countDown()
+                    },
+                    Handler(Looper.getMainLooper())
+                )
             }
-        } ?: error("Failed to open output stream for $name")
-        contentValues.clear()
-        contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
-        resolver.update(uri, contentValues, null, null)
-        bitmap.recycle()
+            if (!copyLatch.await(3, TimeUnit.SECONDS)) {
+                if (copyState.compareAndSet(COPY_PENDING, COPY_TIMED_OUT)) {
+                    bitmap = null // The callback owns recycling after a late completion.
+                }
+                error("Timed out waiting for PixelCopy for $name")
+            }
+            check(copyResult == PixelCopy.SUCCESS) {
+                "PixelCopy failed for $name with result $copyResult"
+            }
+            check(hasRenderedContent(requireNotNull(bitmap))) {
+                "PixelCopy returned a blank game surface for $name"
+            }
+            PendingCaptureMediaPublisher.publish(
+                bitmap = requireNotNull(bitmap),
+                displayName = "$name.png",
+                relativePath = captureRelativeDir,
+                mediaStore = ContentResolverCaptureMediaStore(targetContext.contentResolver)
+            )
+        } finally {
+            bitmap?.let { if (!it.isRecycled) it.recycle() }
+        }
     }
 
     private fun requireGameView(scenario: ActivityScenario<MainActivity>): GameView {
@@ -238,8 +251,40 @@ class HardwareCoreFlowCaptureTest {
         return field.get(target)
     }
 
-    private fun runShell(command: String) {
-        val escaped = command.replace("'", "'\\''")
-        instrumentation.uiAutomation.executeShellCommand("sh -c '$escaped'").close()
+    private fun clearPriorCaptures() {
+        val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val ids: List<Long> = targetContext.contentResolver.query(
+            collection,
+            arrayOf(MediaStore.Images.Media._ID),
+            "${MediaStore.Images.Media.RELATIVE_PATH}=?",
+            arrayOf("$captureRelativeDir/"),
+            null
+        )?.use { cursor ->
+            buildList<Long> {
+                while (cursor.moveToNext()) add(cursor.getLong(0))
+            }
+        } ?: error("Could not query existing capture rows")
+
+        ids.forEach { id ->
+            val row = ContentUris.withAppendedId(collection, id)
+            check(targetContext.contentResolver.delete(row, null, null) == 1) {
+                "Could not remove prior capture row $id from $captureRelativeDir"
+            }
+        }
+    }
+
+    private fun hasRenderedContent(bitmap: Bitmap): Boolean {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        val distinctSamples = HashSet<Int>()
+        var nonBlackSamples = 0
+        for (index in pixels.indices step 64) {
+            val color = pixels[index]
+            distinctSamples += color
+            if (Color.red(color) > 8 || Color.green(color) > 8 || Color.blue(color) > 8) {
+                nonBlackSamples++
+            }
+        }
+        return distinctSamples.size >= 8 && nonBlackSamples >= 8
     }
 }

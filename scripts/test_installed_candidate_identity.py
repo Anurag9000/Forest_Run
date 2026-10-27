@@ -7,6 +7,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import collect_installed_candidate_identity as collector
 import validate_installed_candidate_identity as validator
@@ -99,6 +100,13 @@ class InstalledCandidateIdentityTest(unittest.TestCase):
             source_bytes=(json.dumps(bundle, sort_keys=True) + "\n").encode(),
             evidence_base=root,
         )
+
+    def test_source_bytes_must_match_identity_object(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = materialize(root)
+            with self.assertRaisesRegex(validator.InstalledIdentityError, "source bytes do not encode"):
+                validator.validate_bundle(bundle, source_bytes=b"{}", evidence_base=root)
 
     def test_valid_record_binds_package_version_installer_and_all_apk_signers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -244,3 +252,172 @@ class InstalledCandidateIdentityTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class InstalledCandidateIdentityReaderHardeningTest(unittest.TestCase):
+    def test_parent_swap_to_symlink_during_evidence_open_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = materialize(root)
+            evidence_parent = root / "raw"
+            moved_parent = root / "raw.saved"
+            outside = root / "outside"
+            outside.mkdir()
+            original_open = os.open
+            swapped = False
+
+            def swap_parent_then_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                if path == "raw" and kwargs.get("dir_fd") is not None and not swapped:
+                    evidence_parent.rename(moved_parent)
+                    evidence_parent.symlink_to(outside, target_is_directory=True)
+                    swapped = True
+                return original_open(path, flags, *args, **kwargs)
+
+            with patch.object(validator.os, "open", side_effect=swap_parent_then_open):
+                with self.assertRaises(validator.InstalledIdentityError):
+                    InstalledCandidateIdentityTest().validate(root, bundle)
+            self.assertTrue(swapped)
+            self.assertTrue(evidence_parent.is_symlink())
+
+    def test_hash_fields_reject_uppercase_hex_instead_of_normalizing_it(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = materialize(root)
+            bundle["candidate"]["commit_sha"] = ("ab" * 20).upper()
+            with self.assertRaisesRegex(validator.InstalledIdentityError, "lowercase 40-hex"):
+                InstalledCandidateIdentityTest().validate(root, bundle)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = materialize(root)
+            bundle["candidate"]["app_signing_certificate_sha256"] = ("ab" * 32).upper()
+            with self.assertRaisesRegex(validator.InstalledIdentityError, "lowercase 64-hex"):
+                InstalledCandidateIdentityTest().validate(root, bundle)
+
+    def test_hash_fields_reject_surrounding_whitespace(self):
+        mutators = {
+            "candidate.commit_sha": lambda item: item["candidate"].__setitem__(
+                "commit_sha", item["candidate"]["commit_sha"] + " "
+            ),
+            "candidate.certificate": lambda item: item["candidate"].__setitem__(
+                "app_signing_certificate_sha256",
+                item["candidate"]["app_signing_certificate_sha256"] + " ",
+            ),
+            "device.serial": lambda item: item["device"].__setitem__(
+                "serial_sha256", item["device"]["serial_sha256"] + " "
+            ),
+            "installed certificate": lambda item: item["installed_package"].__setitem__(
+                "app_signing_certificate_sha256",
+                item["installed_package"]["app_signing_certificate_sha256"] + " ",
+            ),
+            "base APK digest": lambda item: item["installed_package"].__setitem__(
+                "base_apk_sha256", item["installed_package"]["base_apk_sha256"] + " "
+            ),
+            "split APK digest": lambda item: item["installed_package"]["apk_set"][1].__setitem__(
+                "sha256", item["installed_package"]["apk_set"][1]["sha256"] + " "
+            ),
+            "APK certificate": lambda item: item["installed_package"]["apk_set"][0].__setitem__(
+                "signing_certificate_sha256",
+                item["installed_package"]["apk_set"][0]["signing_certificate_sha256"] + " ",
+            ),
+            "evidence digest": lambda item: item["evidence_files"][0].__setitem__(
+                "sha256", item["evidence_files"][0]["sha256"] + " "
+            ),
+        }
+        for label, mutate in mutators.items():
+            with self.subTest(field=label), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                bundle = materialize(root)
+                mutate(bundle)
+                with self.assertRaisesRegex(validator.InstalledIdentityError, "lowercase .*hex"):
+                    InstalledCandidateIdentityTest().validate(root, bundle)
+
+    def test_manifest_reader_rejects_fifo_symlink_and_oversize_before_read(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            oversized = root / "oversized.json"
+            with oversized.open("wb") as handle:
+                handle.truncate(validator.MAX_MANIFEST_BYTES + 1)
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("unbounded read attempted")):
+                with self.assertRaisesRegex(validator.InstalledIdentityError, "between 1 and"):
+                    validator.load_and_validate(oversized)
+
+            target = root / "target.json"
+            target.write_text("{}")
+            alias = root / "alias.json"
+            alias.symlink_to(target)
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("symlink target read")):
+                with self.assertRaisesRegex(validator.InstalledIdentityError, "regular non-symlink"):
+                    validator.load_and_validate(alias)
+
+            fifo = root / "identity.fifo"
+            os.mkfifo(fifo)
+            with self.assertRaisesRegex(validator.InstalledIdentityError, "regular non-symlink"):
+                validator.load_and_validate(fifo)
+
+    def test_manifest_reader_detects_replacement_during_read(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = materialize(root)
+            manifest = root / "identity.json"
+            manifest.write_text(json.dumps(bundle), encoding="utf-8")
+            real_read = os.read
+            replaced = False
+            def replace_after_read(descriptor, amount):
+                nonlocal replaced
+                result = real_read(descriptor, amount)
+                if result and not replaced:
+                    replaced = True
+                    replacement = root / "replacement.json"
+                    replacement.write_text("{}", encoding="utf-8")
+                    os.replace(replacement, manifest)
+                return result
+            with patch.object(validator.os, "read", side_effect=replace_after_read):
+                with self.assertRaisesRegex(validator.InstalledIdentityError, "changed while being read"):
+                    validator.load_and_validate(manifest)
+
+    def test_evidence_paths_require_canonical_normalized_posix_form(self):
+        for path in ("raw//file.txt", "raw/./file.txt", "./raw/file.txt", "raw/file.txt/"):
+            with self.subTest(path=path), self.assertRaisesRegex(validator.InstalledIdentityError, "normalized POSIX"):
+                validator._safe_relative_path(path, "evidence.path")
+        self.assertEqual("raw/file.txt", validator._safe_relative_path("raw/file.txt", "evidence.path"))
+
+    def test_evidence_hasher_uses_nonblocking_nofollow_descriptor(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "payload.bin"
+            path.write_bytes(b"payload")
+            flags_seen = []
+            real_open = os.open
+            def record_open(value, flags, *args, **kwargs):
+                flags_seen.append(flags)
+                return real_open(value, flags, *args, **kwargs)
+            with patch.object(validator.os, "open", side_effect=record_open):
+                digest, _ = validator._hash_regular_file(path, "payload", 100)
+            self.assertEqual(sha_bytes(b"payload"), digest)
+            self.assertGreaterEqual(len(flags_seen), 2)
+            file_flags = flags_seen[-1]
+            if hasattr(os, "O_NOFOLLOW"):
+                self.assertTrue(file_flags & os.O_NOFOLLOW)
+            if hasattr(os, "O_NONBLOCK"):
+                self.assertTrue(file_flags & os.O_NONBLOCK)
+
+    def test_evidence_hasher_rejects_fifo_swap_without_blocking(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "payload.bin"
+            path.write_bytes(b"payload")
+            real_open = os.open
+            changed = False
+            def swap_to_fifo(value, flags, *args, **kwargs):
+                nonlocal changed
+                if value == path.name and kwargs.get("dir_fd") is not None and not changed:
+                    changed = True
+                    path.unlink()
+                    os.mkfifo(path)
+                return real_open(value, flags, *args, **kwargs)
+            with patch.object(validator.os, "open", side_effect=swap_to_fifo):
+                with self.assertRaisesRegex(validator.InstalledIdentityError, "changed while being opened"):
+                    validator._hash_regular_file(path, "payload", 100)

@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Forest Run</string>
+    <string name="journal_return_to_forest">Return to Forest</string>
+    <string name="journal_return_to_forest_description">Return to Forest Run</string>
+    <string name="save_integrity_repair_failed">Forest Run could not safely verify or repair your saved data. The game stopped before loading it. Check that device storage is available, then close and reopen the app.</string>
 </resources>

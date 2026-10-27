@@ -1,11 +1,16 @@
 import hashlib
 import json
+import os
+import shutil
 import struct
 import tempfile
 import unittest
 import zlib
 from pathlib import Path
+from unittest import mock
+from PIL import Image
 
+import verify_curated_screenshot_set as verifier
 from verify_curated_screenshot_set import (
     CuratedScreenshotError,
     verify_curated_set,
@@ -27,15 +32,107 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
             + struct.pack(">I", checksum)
         )
 
-    def create_png(self, path: Path, width=1920, height=1080, marker=b"one"):
+    def create_png(
+        self,
+        path: Path,
+        width=1920,
+        height=1080,
+        marker=b"one",
+        *,
+        filter_type=0,
+        interlace=0,
+    ):
         colour = hashlib.sha256(marker).digest()[:3] + b"\xff"
-        scanline = b"\x00" + colour * width
-        image_data = zlib.compress(scanline * height, level=9)
-        ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+        if interlace == 0:
+            decoded = bytes((filter_type,)) + colour * width
+            decoded *= height
+        else:
+            decoded_parts = []
+            for start_x, start_y, step_x, step_y in (
+                (0, 0, 8, 8),
+                (4, 0, 8, 8),
+                (0, 4, 4, 8),
+                (2, 0, 4, 4),
+                (0, 2, 2, 4),
+                (1, 0, 2, 2),
+                (0, 1, 1, 2),
+            ):
+                pass_width = max(0, (width - start_x + step_x - 1) // step_x)
+                pass_height = max(0, (height - start_y + step_y - 1) // step_y)
+                if pass_width and pass_height:
+                    row = bytes((filter_type,)) + colour * pass_width
+                    decoded_parts.append(row * pass_height)
+            decoded = b"".join(decoded_parts)
+        image_data = zlib.compress(decoded, level=9)
+        ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, interlace)
         content = (
             b"\x89PNG\r\n\x1a\n"
             + self.png_chunk(b"IHDR", ihdr)
             + self.png_chunk(b"IDAT", image_data)
+            + self.png_chunk(b"IEND", b"")
+        )
+        path.write_bytes(content)
+        return hashlib.sha256(content).hexdigest()
+
+    def create_indexed_png(
+        self,
+        path: Path,
+        *,
+        width=800,
+        height=480,
+        bit_depth=1,
+        palette_entries=3,
+        first_sample=0,
+    ):
+        row_bytes = (width * bit_depth + 7) // 8
+        first_row = bytearray(row_bytes)
+        first_row[0] = first_sample << (8 - bit_depth)
+        decoded = (b"\x00" + bytes(first_row)) * height
+        ihdr = struct.pack(">IIBBBBB", width, height, bit_depth, 3, 0, 0, 0)
+        content = (
+            b"\x89PNG\r\n\x1a\n"
+            + self.png_chunk(b"IHDR", ihdr)
+            + self.png_chunk(b"PLTE", bytes(range(palette_entries * 3)))
+            + self.png_chunk(b"IDAT", zlib.compress(decoded))
+            + self.png_chunk(b"IEND", b"")
+        )
+        path.write_bytes(content)
+        return hashlib.sha256(content).hexdigest()
+
+    def create_filtered_indexed_png(self, path: Path, filter_type: int):
+        width, height, bit_depth = 800, 480, 1
+        row_bytes = width // 8
+        decoded_rows = []
+        previous_row = bytes(row_bytes)
+        for row_index in range(height):
+            original_row = bytes((0xAA if row_index % 2 == 0 else 0x55,)) * row_bytes
+            filtered_row = bytearray(row_bytes)
+            for index, original_byte in enumerate(original_row):
+                left = original_row[index - 1] if index else 0
+                above = previous_row[index]
+                upper_left = previous_row[index - 1] if index else 0
+                if filter_type == 0:
+                    predictor = 0
+                elif filter_type == 1:
+                    predictor = left
+                elif filter_type == 2:
+                    predictor = above
+                elif filter_type == 3:
+                    predictor = (left + above) // 2
+                else:
+                    base = left + above - upper_left
+                    distances = (abs(base - left), abs(base - above), abs(base - upper_left))
+                    predictor = (left, above, upper_left)[distances.index(min(distances))]
+                filtered_row[index] = (original_byte - predictor) & 0xFF
+            decoded_rows.append(bytes((filter_type,)) + bytes(filtered_row))
+            previous_row = original_row
+
+        ihdr = struct.pack(">IIBBBBB", width, height, bit_depth, 3, 0, 0, 0)
+        content = (
+            b"\x89PNG\r\n\x1a\n"
+            + self.png_chunk(b"IHDR", ihdr)
+            + self.png_chunk(b"PLTE", b"\x00\x00\x00\xff\xff\xff")
+            + self.png_chunk(b"IDAT", zlib.compress(b"".join(decoded_rows)))
             + self.png_chunk(b"IEND", b"")
         )
         path.write_bytes(content)
@@ -151,6 +248,26 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
                     with self.assertRaisesRegex(CuratedScreenshotError, "schemaVersion"):
                         verify_curated_set(root, self.candidate_sha)
 
+    def test_capture_session_hash_fields_require_lowercase_hex(self):
+        for field, value, pattern in (
+            ("candidateSha", self.candidate_sha, "candidate/origin SHA"),
+            ("originMainSha", self.candidate_sha, "candidate/origin SHA"),
+            ("apkSha256", self.apk_sha256, "apkSha256"),
+        ):
+            with tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.create_set(root)
+                self.write_session(root, **{field: value.upper()})
+                with self.subTest(field=field), self.assertRaisesRegex(CuratedScreenshotError, pattern):
+                    verify_curated_set(root, self.candidate_sha)
+
+    def test_expected_candidate_sha_requires_lowercase_hex(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.create_set(root)
+            with self.assertRaisesRegex(CuratedScreenshotError, "expected candidate SHA"):
+                verify_curated_set(root, self.candidate_sha.upper())
+
     def test_valid_curated_set_is_bound_to_candidate(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -179,6 +296,53 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
 
             with self.assertRaisesRegex(CuratedScreenshotError, "extra"):
                 verify_curated_set(root, self.candidate_sha)
+
+    def test_symlinked_curated_png_is_rejected_even_when_bytes_match(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            target = root / "outside-capture.png"
+            target.write_bytes(png_path.read_bytes())
+            png_path.unlink()
+            try:
+                png_path.symlink_to(target)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "symbolic link"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_final_directory_parent_swap_to_symlink_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            final_dir = root / "final"
+            external = root.parent / f"{root.name}-external-final"
+            first_png = final_dir / items[0]["final_file"]
+            original_open = os.open
+            swapped = False
+
+            def swap_then_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                is_path_open = isinstance(path, (str, Path)) and Path(path) == first_png
+                is_component_open = (
+                    path == "final" and kwargs.get("dir_fd") is not None
+                )
+                if not swapped and (is_path_open or is_component_open):
+                    final_dir.rename(external)
+                    final_dir.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(
+                verifier.os, "open", side_effect=swap_then_open
+            ):
+                with self.assertRaisesRegex(CuratedScreenshotError, "symbolic link"):
+                    verify_curated_set(root, self.candidate_sha)
+
+            self.assertTrue(swapped)
+            shutil.rmtree(external)
 
     def test_missing_and_extra_sidecars_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -308,6 +472,120 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
             with self.assertRaisesRegex(CuratedScreenshotError, "CRC mismatch"):
                 verify_curated_set(root, self.candidate_sha)
 
+    def test_indexed_png_palette_must_fit_declared_bit_depth(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            image_hash = self.create_indexed_png(png_path, bit_depth=1, palette_entries=3)
+            sidecar = png_path.with_suffix(".capture.json")
+            evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+            evidence["imageSha256"] = image_hash
+            evidence["width"] = 800
+            evidence["height"] = 480
+            sidecar.write_text(json.dumps(evidence), encoding="utf-8")
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "palette"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_indexed_png_pixels_must_reference_existing_palette_entries(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            image_hash = self.create_indexed_png(
+                png_path,
+                bit_depth=1,
+                palette_entries=1,
+                first_sample=1,
+            )
+            sidecar = png_path.with_suffix(".capture.json")
+            evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+            evidence["imageSha256"] = image_hash
+            evidence["width"] = 800
+            evidence["height"] = 480
+            sidecar.write_text(json.dumps(evidence), encoding="utf-8")
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "missing palette entry"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_indexed_png_filter_reconstruction_accepts_all_five_filter_types(self):
+        for filter_type in range(5):
+            with self.subTest(filter_type=filter_type), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                items = self.create_set(root)
+                png_path = root / "final" / items[0]["final_file"]
+                image_hash = self.create_filtered_indexed_png(png_path, filter_type)
+                with Image.open(png_path) as image:
+                    image.load()
+                    self.assertEqual((800, 480), image.size)
+                    self.assertEqual("P", image.mode)
+
+                sidecar = png_path.with_suffix(".capture.json")
+                evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+                evidence["imageSha256"] = image_hash
+                evidence["width"] = 800
+                evidence["height"] = 480
+                sidecar.write_text(json.dumps(evidence), encoding="utf-8")
+
+                verified = verify_curated_set(root, self.candidate_sha)
+
+                self.assertEqual(len(items), verified.count)
+
+    def test_png_chunk_reserved_type_bit_must_be_uppercase(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            width, height = 800, 480
+            pixel = hashlib.sha256(b"reserved-bit").digest()[:3] + b"\xff"
+            decoded = (b"\x00" + pixel * width) * height
+            ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+            content = (
+                b"\x89PNG\r\n\x1a\n"
+                + self.png_chunk(b"IHDR", ihdr)
+                + self.png_chunk(b"abca", b"")
+                + self.png_chunk(b"IDAT", zlib.compress(decoded))
+                + self.png_chunk(b"IEND", b"")
+            )
+            png_path.write_bytes(content)
+            sidecar = png_path.with_suffix(".capture.json")
+            evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+            evidence["imageSha256"] = hashlib.sha256(content).hexdigest()
+            evidence["width"] = width
+            evidence["height"] = height
+            sidecar.write_text(json.dumps(evidence), encoding="utf-8")
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "reserved PNG chunk type"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_truecolor_alpha_png_must_not_contain_trns_chunk(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            width, height = 800, 480
+            pixel = hashlib.sha256(b"transparency").digest()[:3] + b"\xff"
+            decoded = (b"\x00" + pixel * width) * height
+            ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+            content = (
+                b"\x89PNG\r\n\x1a\n"
+                + self.png_chunk(b"IHDR", ihdr)
+                + self.png_chunk(b"tRNS", b"\x00" * 6)
+                + self.png_chunk(b"IDAT", zlib.compress(decoded))
+                + self.png_chunk(b"IEND", b"")
+            )
+            png_path.write_bytes(content)
+            sidecar = png_path.with_suffix(".capture.json")
+            evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+            evidence["imageSha256"] = hashlib.sha256(content).hexdigest()
+            evidence["width"] = width
+            evidence["height"] = height
+            sidecar.write_text(json.dumps(evidence), encoding="utf-8")
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "tRNS"):
+                verify_curated_set(root, self.candidate_sha)
+
     def test_truncated_png_and_trailing_payload_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -330,6 +608,50 @@ class CuratedScreenshotSetVerifierTest(unittest.TestCase):
             with self.assertRaisesRegex(CuratedScreenshotError, "trailing bytes"):
                 verify_curated_set(root, self.candidate_sha)
 
+    def test_png_scanline_filter_values_are_validated(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            image_hash = self.create_png(
+                png_path,
+                width=800,
+                height=480,
+                marker=b"invalid-filter",
+                filter_type=5,
+            )
+            sidecar = png_path.with_suffix(".capture.json")
+            evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+            evidence["imageSha256"] = image_hash
+            evidence["width"] = 800
+            evidence["height"] = 480
+            sidecar.write_text(json.dumps(evidence), encoding="utf-8")
+
+            with self.assertRaisesRegex(CuratedScreenshotError, "scanline filter"):
+                verify_curated_set(root, self.candidate_sha)
+
+    def test_valid_adam7_interlaced_png_passes_scanline_validation(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            items = self.create_set(root)
+            png_path = root / "final" / items[0]["final_file"]
+            image_hash = self.create_png(
+                png_path,
+                width=800,
+                height=480,
+                marker=b"valid-adam7",
+                interlace=1,
+            )
+            sidecar = png_path.with_suffix(".capture.json")
+            evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+            evidence["imageSha256"] = image_hash
+            evidence["width"] = 800
+            evidence["height"] = 480
+            sidecar.write_text(json.dumps(evidence), encoding="utf-8")
+
+            verified = verify_curated_set(root, self.candidate_sha)
+
+            self.assertEqual(len(items), verified.count)
 
     def test_ambiguous_curation_manifest_and_capture_session_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

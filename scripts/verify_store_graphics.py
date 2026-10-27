@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import strict_json
+from stable_file_reader import StableFileError, checked_directory_path
 
 try:
     from PIL import Image, UnidentifiedImageError
@@ -47,8 +48,29 @@ def _absolute_lexical(path: Path) -> Path:
     return Path(os.path.abspath(os.fspath(path.expanduser())))
 
 
+def _check_directory_components(path: Path) -> None:
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except OSError as exc:
+            raise StoreGraphicsError(
+                f"Could not inspect store graphics path component {current}: {exc}"
+            ) from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            raise StoreGraphicsError(
+                f"Store graphics path must not traverse a symbolic link: {current}"
+            )
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise StoreGraphicsError(
+                f"Store graphics path component is not a directory: {current}"
+            )
+
+
 def _admit_graphics_directory(path: Path) -> Path:
     lexical = _absolute_lexical(path)
+    _check_directory_components(lexical)
     try:
         metadata = lexical.lstat()
     except FileNotFoundError as exc:
@@ -69,25 +91,59 @@ def _read_regular_bytes(path: Path, *, maximum_bytes: int, label: str) -> bytes:
         raise StoreGraphicsError(f"Missing {label}: {path}") from exc
     except OSError as exc:
         raise StoreGraphicsError(f"Could not inspect {label} {path}: {exc}") from exc
-    if stat.S_ISLNK(before.st_mode):
-        raise StoreGraphicsError(f"{label} must not be a symbolic link: {path}")
     if not stat.S_ISREG(before.st_mode):
-        raise StoreGraphicsError(f"{label} must be a regular file: {path}")
+        raise StoreGraphicsError(f"{label} must be a regular non-symlink file: {path}")
     if before.st_size <= 0 or before.st_size > maximum_bytes:
         raise StoreGraphicsError(f"{label} has invalid byte length: {path}")
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
     try:
-        raw = path.read_bytes()
-        after = path.stat()
+        descriptor = os.open(path, flags)
     except OSError as exc:
-        raise StoreGraphicsError(f"Could not read {label} {path}: {exc}") from exc
-    if (
-        len(raw) != before.st_size
-        or after.st_size != before.st_size
-        or after.st_mtime_ns != before.st_mtime_ns
-        or (before.st_ino and after.st_ino != before.st_ino)
+        raise StoreGraphicsError(f"Could not safely open {label} {path}: {exc}") from exc
+
+    identity_fields = (
+        "st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns"
+    )
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or any(
+            getattr(before, field) != getattr(opened, field)
+            for field in identity_fields
+        ):
+            raise StoreGraphicsError(f"{label} changed while being opened: {path}")
+        remaining = before.st_size
+        chunks: list[bytes] = []
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise StoreGraphicsError(f"{label} changed while being read: {path}")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise StoreGraphicsError(f"{label} changed while being read: {path}")
+        after = os.fstat(descriptor)
+    except OSError as exc:
+        raise StoreGraphicsError(f"Could not safely read {label} {path}: {exc}") from exc
+    finally:
+        os.close(descriptor)
+    try:
+        after_path = path.lstat()
+    except OSError as exc:
+        raise StoreGraphicsError(f"{label} changed while being read: {path}: {exc}") from exc
+    if any(
+        getattr(before, field) != getattr(after, field)
+        or getattr(before, field) != getattr(after_path, field)
+        for field in identity_fields
     ):
         raise StoreGraphicsError(f"{label} changed while being read: {path}")
-    return raw
+    return b"".join(chunks)
 
 
 def _sha256(raw: bytes) -> str:
@@ -118,11 +174,13 @@ def _inspect_png(path: Path, expected_size: tuple[int, int]) -> dict[str, Any]:
 
 
 def verify_store_graphics(root: Path, graphics_dir: Path, candidate_sha: str) -> dict[str, Any]:
-    root = root.resolve()
+    try:
+        root = checked_directory_path(root, "store-graphics source root")
+    except StableFileError as exc:
+        raise StoreGraphicsError(str(exc)) from exc
     graphics_dir = _admit_graphics_directory(graphics_dir)
-    candidate_sha = candidate_sha.lower()
     if HEX_40.fullmatch(candidate_sha) is None:
-        raise StoreGraphicsError("candidate SHA must be 40 hexadecimal characters")
+        raise StoreGraphicsError("candidate SHA must be 40 lowercase hexadecimal characters")
 
     manifest_path = graphics_dir / "graphics_manifest.json"
     manifest_bytes = _read_regular_bytes(
@@ -177,6 +235,8 @@ def verify_store_graphics(root: Path, graphics_dir: Path, candidate_sha: str) ->
         path = item["path"]
         if path in actual_sources:
             raise StoreGraphicsError(f"duplicate source asset entry: {path}")
+        if type(item.get("bytes")) is not int:
+            raise StoreGraphicsError("sourceAssets contains invalid source evidence types")
         actual_sources[path] = item
     if set(actual_sources) != set(expected_sources):
         raise StoreGraphicsError("graphics source asset set does not match generator contract")
@@ -201,6 +261,8 @@ def verify_store_graphics(root: Path, graphics_dir: Path, candidate_sha: str) ->
         filename = item["file"]
         if Path(filename).name != filename or filename in outputs:
             raise StoreGraphicsError(f"invalid or duplicate output entry: {filename}")
+        if any(type(item.get(key)) is not int for key in ("width", "height", "bytes")):
+            raise StoreGraphicsError("outputs contains invalid output evidence types")
         outputs[filename] = item
     if set(outputs) != set(EXPECTED_OUTPUTS):
         raise StoreGraphicsError("graphics output manifest set is incomplete or contains extras")

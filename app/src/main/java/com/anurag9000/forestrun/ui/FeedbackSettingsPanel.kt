@@ -56,7 +56,8 @@ internal object FeedbackSettingsPanelLayout {
     fun journalBounds(width: Float, height: Float): RectF {
         val layout = build(width, height)
         val gap = (height * 0.012f).coerceIn(7f, 13f)
-        val bottom = layout.reducedMotion.top - gap
+        val comfortHeadingClearance = 16f
+        val bottom = layout.reducedMotion.top - gap - comfortHeadingClearance
         val top = bottom - layout.reducedMotion.height()
         return RectF(layout.reducedMotion.left, top, layout.reducedMotion.right, bottom).also { rect ->
             require(isValidContainedRect(rect, width, height)) {

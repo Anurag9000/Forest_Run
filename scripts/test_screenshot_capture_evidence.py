@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +8,7 @@ from pathlib import Path
 from screenshot_capture_evidence import (
     CaptureEvidenceError,
     load_capture_evidence,
+    parse_capture_evidence,
     require_same_capture_identity,
 )
 
@@ -159,6 +161,24 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
             with self.assertRaisesRegex(CaptureEvidenceError, "expected_image_sha256"):
                 self.load(valid, expected_image_sha256="not-a-digest")
 
+    def test_identity_and_digest_fields_reject_surrounding_whitespace(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            for field, value in (
+                ("rawFile", " 01-opening.png"),
+                ("scenario", "OPENING_READABILITY "),
+                ("candidateSha", "a" * 40 + " "),
+                ("apkSha256", "b" * 64 + " "),
+                ("imageSha256", hashlib.sha256(b"image").hexdigest() + " "),
+            ):
+                with self.subTest(field=field):
+                    path = self.write(root, self.evidence(**{field: value}))
+                    with self.assertRaisesRegex(
+                        CaptureEvidenceError,
+                        "surrounding whitespace|40-character|SHA-256",
+                    ):
+                        self.load(path)
+
     def test_mixed_capture_identity_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -199,6 +219,51 @@ class ScreenshotCaptureEvidenceTest(unittest.TestCase):
                     path.write_text(poisoned, encoding="utf-8")
                     with self.assertRaisesRegex(CaptureEvidenceError, error):
                         self.load(path)
+            with self.assertRaisesRegex(CaptureEvidenceError, "must be finite"):
+                parse_capture_evidence(
+                    self.evidence(settleSeconds=10 ** 1000),
+                    path,
+                    expected_raw_file="01-opening.png",
+                    expected_scenario="OPENING_READABILITY",
+                    expected_image_sha256=hashlib.sha256(b"image").hexdigest(),
+                    expected_width=1920,
+                    expected_height=1080,
+                )
+
+    def test_capture_hashes_require_lowercase_hex(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            for key, value, message in (
+                ("candidateSha", "a" * 40, "candidateSha"),
+                ("apkSha256", "b" * 64, "apkSha256"),
+                ("imageSha256", hashlib.sha256(b"image").hexdigest(), "imageSha256"),
+            ):
+                path = self.write(root, self.evidence(**{key: value.upper()}), f"{key}.json")
+                with self.subTest(key=key), self.assertRaisesRegex(CaptureEvidenceError, message):
+                    self.load(path)
+            valid = self.write(root, self.evidence(), "valid.json")
+            with self.assertRaisesRegex(CaptureEvidenceError, "expected_image_sha256"):
+                self.load(valid, expected_image_sha256=hashlib.sha256(b"image").hexdigest().upper())
+
+    def test_capture_sidecar_loader_rejects_symlink_fifo_and_oversize_before_open(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            target = self.write(root, self.evidence(), "target.json")
+            alias = root / "alias.json"
+            alias.symlink_to(target)
+            with self.assertRaisesRegex(CaptureEvidenceError, "non-symlink"):
+                self.load(alias)
+
+            fifo = root / "capture.fifo"
+            os.mkfifo(fifo)
+            with self.assertRaisesRegex(CaptureEvidenceError, "non-symlink"):
+                self.load(fifo)
+
+            oversized = root / "oversized.json"
+            with oversized.open("wb") as stream:
+                stream.truncate(64 * 1024 + 1)
+            with self.assertRaisesRegex(CaptureEvidenceError, "between 1 and"):
+                self.load(oversized)
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,6 +3,7 @@ package com.anurag9000.forestrun.engine
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
+import java.util.Locale
 
 /**
  * Translates touch events into jump and duck callbacks.
@@ -238,7 +239,7 @@ class InputHandler : View.OnTouchListener {
                 lastGestureLabel = if (finalHold < 0.12f) {
                     "JUMP:TAP"
                 } else {
-                    "JUMP:HOLD(${String.format("%.2f", finalHold)}s)"
+                    "JUMP:HOLD(${String.format(Locale.getDefault(), "%.2f", finalHold)}s)"
                 }
                 onJumpReleased?.invoke(finalHold)
             }

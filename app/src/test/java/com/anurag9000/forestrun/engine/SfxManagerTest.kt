@@ -3,8 +3,22 @@ package com.anurag9000.forestrun.engine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.lang.reflect.Modifier
 
 class SfxManagerTest {
+
+    @Test
+    fun `sample ID lookup is serialized with pool replacement`() {
+        val methods = listOf(
+            "playJump", "playLand", "playSeedPing", "playBark", "playScreech",
+            "playHowl", "playBloomActivate", "playBloomReady", "playBloomConvert",
+            "playBloomFade", "playMercyMiss", "playHit"
+        )
+        methods.forEach { name ->
+            val method = SfxManager::class.java.methods.single { it.name == name }
+            assertTrue("$name must resolve its sample ID under the lifecycle lock", Modifier.isSynchronized(method.modifiers))
+        }
+    }
 
 
     @Test

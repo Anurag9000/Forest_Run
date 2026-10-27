@@ -1,9 +1,11 @@
 package com.anurag9000.forestrun.engine
 
 import android.content.Context
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import androidx.test.core.app.ApplicationProvider
+import java.util.Locale
 import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -103,6 +105,21 @@ class InputHandlerTest {
         assertEquals(0.6f, held, 0f)
         assertEquals(0.6f, released, 0f)
         assertTrue(handler.lastGestureLabel.startsWith("JUMP:HOLD"))
+    }
+
+    @Test
+    fun `hold duration label follows the active locale`() {
+        val previousLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.GERMANY)
+            dispatch(MotionEvent.ACTION_DOWN, 100f, 100f)
+            handler.tick(Float.MAX_VALUE)
+            dispatch(MotionEvent.ACTION_UP, 100f, 100f)
+
+            assertEquals("JUMP:HOLD(0,60s)", handler.lastGestureLabel)
+        } finally {
+            Locale.setDefault(previousLocale)
+        }
     }
 
     @Test
@@ -290,6 +307,113 @@ class InputHandlerTest {
         }
     }
 
+    @Test
+    fun `secondary pointer movement cannot steal the primary gesture`() {
+        var jumpPresses = 0
+        var duckPresses = 0
+        var duckReleases = 0
+        handler.onJumpPressed = { jumpPresses++ }
+        handler.onDuckPressed = { duckPresses++ }
+        handler.onDuckReleased = { duckReleases++ }
+
+        dispatchPointers(
+            MotionEvent.ACTION_DOWN,
+            0,
+            Pointer(id = 4, x = 120f, y = 100f)
+        )
+        dispatchPointers(
+            MotionEvent.ACTION_POINTER_DOWN,
+            1,
+            Pointer(id = 4, x = 120f, y = 100f),
+            Pointer(id = 9, x = 300f, y = 100f)
+        )
+        dispatchPointers(
+            MotionEvent.ACTION_MOVE,
+            0,
+            Pointer(id = 4, x = 120f, y = 105f),
+            Pointer(id = 9, x = 300f, y = 500f)
+        )
+
+        assertTrue(handler.isChargingJump)
+        assertFalse(handler.isDucking)
+        assertEquals(0, jumpPresses)
+        assertEquals(0, duckPresses)
+
+        dispatchPointers(
+            MotionEvent.ACTION_POINTER_UP,
+            1,
+            Pointer(id = 4, x = 120f, y = 105f),
+            Pointer(id = 9, x = 300f, y = 500f)
+        )
+        dispatchPointers(
+            MotionEvent.ACTION_MOVE,
+            0,
+            Pointer(id = 4, x = 120f, y = 205f)
+        )
+        dispatchPointers(
+            MotionEvent.ACTION_UP,
+            0,
+            Pointer(id = 4, x = 120f, y = 205f)
+        )
+
+        assertEquals(0, jumpPresses)
+        assertEquals(1, duckPresses)
+        assertEquals(1, duckReleases)
+        assertFalse(handler.isChargingJump)
+        assertFalse(handler.isDucking)
+    }
+
+    @Test
+    fun `releasing primary pointer ends gesture once while secondary remains`() {
+        var jumpPresses = 0
+        var jumpReleases = 0
+        var releasedHold = -1f
+        handler.onJumpPressed = { jumpPresses++ }
+        handler.onJumpReleased = {
+            jumpReleases++
+            releasedHold = it
+        }
+
+        dispatchPointers(
+            MotionEvent.ACTION_DOWN,
+            0,
+            Pointer(id = 2, x = 100f, y = 100f)
+        )
+        handler.tick(0.08f)
+        dispatchPointers(
+            MotionEvent.ACTION_POINTER_DOWN,
+            1,
+            Pointer(id = 2, x = 100f, y = 100f),
+            Pointer(id = 7, x = 300f, y = 100f)
+        )
+        dispatchPointers(
+            MotionEvent.ACTION_POINTER_UP,
+            0,
+            Pointer(id = 2, x = 100f, y = 100f),
+            Pointer(id = 7, x = 300f, y = 100f)
+        )
+
+        assertEquals(1, jumpPresses)
+        assertEquals(1, jumpReleases)
+        assertEquals(0.08f, releasedHold, 0.0001f)
+        assertFalse(handler.isChargingJump)
+
+        dispatchPointers(
+            MotionEvent.ACTION_MOVE,
+            0,
+            Pointer(id = 7, x = 300f, y = 500f)
+        )
+        dispatchPointers(
+            MotionEvent.ACTION_UP,
+            0,
+            Pointer(id = 7, x = 300f, y = 500f)
+        )
+
+        assertEquals(1, jumpPresses)
+        assertEquals(1, jumpReleases)
+        assertFalse(handler.isDucking)
+    }
+
     private fun dispatch(action: Int, x: Float, y: Float): Boolean {
         val event = MotionEvent.obtain(
             0L,
@@ -297,6 +421,57 @@ class InputHandlerTest {
             action,
             x,
             y,
+            0
+        )
+        return try {
+            handler.onTouch(view, event)
+        } finally {
+            event.recycle()
+        }
+    }
+
+    private data class Pointer(val id: Int, val x: Float, val y: Float)
+
+    private fun dispatchPointers(
+        actionMasked: Int,
+        actionIndex: Int,
+        vararg pointers: Pointer
+    ): Boolean {
+        val properties = Array(pointers.size) { index ->
+            MotionEvent.PointerProperties().apply {
+                id = pointers[index].id
+                toolType = MotionEvent.TOOL_TYPE_FINGER
+            }
+        }
+        val coordinates = Array(pointers.size) { index ->
+            MotionEvent.PointerCoords().apply {
+                x = pointers[index].x
+                y = pointers[index].y
+                pressure = 1f
+                size = 1f
+            }
+        }
+        val action = if (actionMasked == MotionEvent.ACTION_POINTER_DOWN ||
+            actionMasked == MotionEvent.ACTION_POINTER_UP
+        ) {
+            actionMasked or (actionIndex shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)
+        } else {
+            actionMasked
+        }
+        val event = MotionEvent.obtain(
+            0L,
+            16L,
+            action,
+            pointers.size,
+            properties,
+            coordinates,
+            0,
+            0,
+            1f,
+            1f,
+            0,
+            0,
+            InputDevice.SOURCE_TOUCHSCREEN,
             0
         )
         return try {

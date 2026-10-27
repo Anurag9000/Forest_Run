@@ -15,6 +15,7 @@ import strict_json
 import validate_device_acceptance as acceptance
 import validate_device_acceptance_aggregate as aggregate_validator
 import validate_manifest_scenario_traces as manifest_traces
+from stable_file_reader import StableFileError, atomic_replace_file, consume_regular_file
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
@@ -23,41 +24,23 @@ class PublicationError(ValueError):
     """Raised when a staged aggregate cannot be published safely."""
 
 
-def _stable_manifest_bytes(path: Path) -> tuple[bytes, tuple[int, int, int, int]]:
-    resolved = path.expanduser().resolve()
+def _stable_manifest_bytes(path: Path) -> tuple[bytes, tuple[int, int, int, int, int]]:
+    absolute = Path(os.path.abspath(os.fspath(path.expanduser())))
     try:
-        before = resolved.stat()
-    except FileNotFoundError as exc:
-        raise PublicationError(f"acceptance manifest is missing: {resolved}") from exc
-    except OSError as exc:
-        raise PublicationError(f"could not inspect acceptance manifest {resolved}: {exc}") from exc
-    if not resolved.is_file():
-        raise PublicationError(f"acceptance manifest is not a regular file: {resolved}")
-    if before.st_size <= 0 or before.st_size > acceptance.MAX_MANIFEST_BYTES:
-        raise PublicationError(
-            f"acceptance manifest must be between 1 and {acceptance.MAX_MANIFEST_BYTES} bytes"
+        raw, _, metadata = consume_regular_file(
+            absolute, "acceptance manifest", acceptance.MAX_MANIFEST_BYTES,
+            retain_bytes=True,
         )
-    try:
-        raw = resolved.read_bytes()
-        after = resolved.stat()
-    except OSError as exc:
-        raise PublicationError(f"could not read acceptance manifest {resolved}: {exc}") from exc
-    before_identity = (
-        before.st_dev,
-        before.st_ino,
-        before.st_size,
-        before.st_mtime_ns,
+    except StableFileError as exc:
+        raise PublicationError(str(exc)) from exc
+    assert raw is not None
+    return raw, (
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_size,
+        metadata.st_mtime_ns,
+        metadata.st_ctime_ns,
     )
-    after_identity = (
-        after.st_dev,
-        after.st_ino,
-        after.st_size,
-        after.st_mtime_ns,
-    )
-    if len(raw) != before.st_size or after_identity != before_identity:
-        raise PublicationError(f"acceptance manifest changed while being read: {resolved}")
-    return raw, before_identity
-
 
 def _validate_manifest(
     path: Path,
@@ -65,9 +48,9 @@ def _validate_manifest(
     dict[str, Any],
     acceptance.ValidationSummary,
     Mapping[str, Any],
-    tuple[tuple[Path, tuple[int, int, int, int]], ...],
+    tuple[tuple[Path, tuple[int, int, int, int, int]], ...],
 ]:
-    resolved = path.expanduser().resolve()
+    resolved = Path(os.path.abspath(os.fspath(path.expanduser())))
     raw, identity = _stable_manifest_bytes(resolved)
     try:
         data = strict_json.loads(
@@ -135,13 +118,13 @@ def _same_file_or_path(first: Path, second: Path) -> bool:
 
 
 def _protected_paths(manifest: Path, data: Mapping[str, Any]) -> tuple[Path, ...]:
-    resolved = manifest.expanduser().resolve()
+    resolved = Path(os.path.abspath(os.fspath(manifest.expanduser())))
     protected = [resolved]
-    protected.append((resolved.parent / data["candidate"]["artifact_path"]).resolve())
+    protected.append(resolved.parent / data["candidate"]["artifact_path"])
     for session in data["sessions"]:
         for scenario in session["scenarios"].values():
             for evidence in scenario["evidence_files"]:
-                protected.append((resolved.parent / evidence["path"]).resolve())
+                protected.append(resolved.parent / evidence["path"])
     return tuple(protected)
 
 
@@ -153,37 +136,27 @@ def _assert_separate(path: Path, protected_paths: Sequence[Path], label: str) ->
 
 def _load_aggregate(
     path: Path,
-) -> tuple[dict[str, Any], dict[str, Any], bytes, tuple[int, int, int, int]]:
-    resolved = path.expanduser().resolve()
+) -> tuple[dict[str, Any], dict[str, Any], bytes, tuple[int, int, int, int, int]]:
+    absolute = Path(os.path.abspath(os.fspath(path.expanduser())))
     try:
-        before = resolved.stat()
-    except FileNotFoundError as exc:
-        raise PublicationError(f"staged aggregate is missing: {resolved}") from exc
-    except OSError as exc:
-        raise PublicationError(f"could not inspect staged aggregate {resolved}: {exc}") from exc
-    if not resolved.is_file():
-        raise PublicationError(f"staged aggregate is not a regular file: {resolved}")
-    if (
-        before.st_size <= 0
-        or before.st_size > aggregate_validator.MAX_AGGREGATE_BYTES
-    ):
-        raise PublicationError(
-            "staged aggregate must be between 1 and "
-            f"{aggregate_validator.MAX_AGGREGATE_BYTES} bytes"
+        raw, _, metadata = consume_regular_file(
+            absolute, "staged aggregate", aggregate_validator.MAX_AGGREGATE_BYTES,
+            retain_bytes=True,
         )
-    try:
-        raw = resolved.read_bytes()
-        after = resolved.stat()
-    except OSError as exc:
-        raise PublicationError(f"could not read staged aggregate {resolved}: {exc}") from exc
-    identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
-    after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
-    if len(raw) != before.st_size or after_identity != identity:
-        raise PublicationError(f"staged aggregate changed while being read: {resolved}")
+    except StableFileError as exc:
+        raise PublicationError(str(exc)) from exc
+    assert raw is not None
+    identity = (
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_size,
+        metadata.st_mtime_ns,
+        metadata.st_ctime_ns,
+    )
     try:
         payload = strict_json.loads(
             raw,
-            label=str(resolved),
+            label=str(absolute),
             maximum_bytes=aggregate_validator.MAX_AGGREGATE_BYTES,
             maximum_depth=64,
             require_object=True,
@@ -196,55 +169,40 @@ def _load_aggregate(
         raise PublicationError(f"invalid staged aggregate {path}: {exc}") from exc
     return payload, summary, raw, identity
 
-
 def _hash_expected_source(
     path: Path,
     *,
     label: str,
     expected_sha256: str,
     maximum_bytes: int,
-) -> tuple[Path, tuple[int, int, int, int]]:
-    resolved = path.expanduser().resolve()
+) -> tuple[Path, tuple[int, int, int, int, int]]:
+    absolute = Path(os.path.abspath(os.fspath(path.expanduser())))
     try:
-        before = resolved.stat()
-    except FileNotFoundError as exc:
-        raise PublicationError(f"{label} is missing: {resolved}") from exc
-    except OSError as exc:
-        raise PublicationError(f"could not inspect {label} {resolved}: {exc}") from exc
-    if not resolved.is_file():
-        raise PublicationError(f"{label} is not a regular file: {resolved}")
-    if before.st_size <= 0 or before.st_size > maximum_bytes:
-        raise PublicationError(
-            f"{label} must be between 1 and {maximum_bytes} bytes: {resolved}"
+        _, digest, metadata = consume_regular_file(
+            absolute, label, maximum_bytes, retain_bytes=False
         )
-
-    digest = hashlib.sha256()
-    try:
-        with resolved.open("rb") as stream:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(chunk)
-        after = resolved.stat()
-    except OSError as exc:
-        raise PublicationError(f"could not hash {label} {resolved}: {exc}") from exc
-
-    identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
-    after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
-    if after_identity != identity:
-        raise PublicationError(f"{label} changed during final digest verification: {resolved}")
-    if digest.hexdigest() != expected_sha256.lower():
-        raise PublicationError(f"{label} digest changed before publication: {resolved}")
-    return resolved, identity
-
+    except StableFileError as exc:
+        raise PublicationError(str(exc)) from exc
+    identity = (
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_size,
+        metadata.st_mtime_ns,
+        metadata.st_ctime_ns,
+    )
+    if digest != expected_sha256:
+        raise PublicationError(f"{label} digest changed before publication: {absolute}")
+    return absolute, identity
 
 def _verified_source_snapshots(
     manifest_path: Path,
-    manifest_identity: tuple[int, int, int, int],
+    manifest_identity: tuple[int, int, int, int, int],
     data: Mapping[str, Any],
-) -> tuple[tuple[Path, tuple[int, int, int, int]], ...]:
-    snapshots: list[tuple[Path, tuple[int, int, int, int]]] = [
-        (manifest_path.expanduser().resolve(), manifest_identity)
+) -> tuple[tuple[Path, tuple[int, int, int, int, int]], ...]:
+    snapshots: list[tuple[Path, tuple[int, int, int, int, int]]] = [
+        (Path(os.path.abspath(os.fspath(manifest_path.expanduser()))), manifest_identity)
     ]
-    base = manifest_path.expanduser().resolve().parent
+    base = Path(os.path.abspath(os.fspath(manifest_path.expanduser()))).parent
     candidate = data["candidate"]
     snapshots.append(
         _hash_expected_source(
@@ -272,12 +230,17 @@ def _verified_source_snapshots(
 
 
 def _assert_source_snapshot(
-    snapshots: Sequence[tuple[Path, tuple[int, int, int, int]]],
+    snapshots: Sequence[tuple[Path, tuple[int, int, int, int, int]]],
 ) -> None:
     for path, expected in snapshots:
         try:
-            current = path.stat()
-        except OSError as exc:
+            _, _, current = consume_regular_file(
+                path,
+                "protected source",
+                acceptance.MAX_ARTIFACT_BYTES,
+                retain_bytes=False,
+            )
+        except StableFileError as exc:
             raise PublicationError(
                 f"protected source changed before publication: {path}: {exc}"
             ) from exc
@@ -286,8 +249,9 @@ def _assert_source_snapshot(
             current.st_ino,
             current.st_size,
             current.st_mtime_ns,
+            current.st_ctime_ns,
         )
-        if not path.is_file() or identity != expected:
+        if identity != expected:
             raise PublicationError(
                 f"protected source changed before publication: {path}"
             )
@@ -344,17 +308,6 @@ def _reconstruct_expected_payload(
         ) from exc
 
 
-def _fsync_directory(path: Path) -> None:
-    flags = os.O_RDONLY
-    if hasattr(os, "O_DIRECTORY"):
-        flags |= os.O_DIRECTORY
-    descriptor = os.open(path, flags)
-    try:
-        os.fsync(descriptor)
-    finally:
-        os.close(descriptor)
-
-
 def publish(
     candidate_path: Path,
     staged_path: Path,
@@ -362,30 +315,27 @@ def publish(
     *,
     baseline_path: Path | None = None,
 ) -> dict[str, Any]:
-    candidate_resolved = candidate_path.expanduser().resolve()
-    staged_original = staged_path.expanduser()
-    output_original = output_path.expanduser()
+    candidate_resolved = Path(os.path.abspath(os.fspath(candidate_path.expanduser())))
+    staged_original = Path(os.path.abspath(os.fspath(staged_path.expanduser())))
+    output_original = Path(os.path.abspath(os.fspath(output_path.expanduser())))
 
     if staged_original.is_symlink():
         raise PublicationError("staged aggregate must not be a symbolic link")
     if output_original.is_symlink():
         raise PublicationError("aggregate output must not be a symbolic link")
 
-    staged = staged_original.resolve()
-    output = output_original.resolve()
+    staged = staged_original
+    output = output_original
     if staged == output or _same_file_or_path(staged, output):
         raise PublicationError("staged aggregate and output must be distinct files")
     if staged.parent != output.parent:
         raise PublicationError(
             "staged aggregate must be in the output directory for atomic publication"
         )
-    if not staged.is_file():
-        raise PublicationError(f"staged aggregate is missing: {staged}")
-
     baseline_resolved = None
     manifest_paths = [candidate_resolved]
     if baseline_path is not None:
-        baseline_resolved = baseline_path.expanduser().resolve()
+        baseline_resolved = Path(os.path.abspath(os.fspath(baseline_path.expanduser())))
         if _same_file_or_path(candidate_resolved, baseline_resolved):
             raise PublicationError("candidate and baseline manifests must be distinct files")
         manifest_paths.append(baseline_resolved)
@@ -445,9 +395,13 @@ def publish(
     _assert_separate(staged, protected, "staged aggregate")
     _assert_separate(output, protected, "aggregate output")
     try:
-        os.replace(staged, output)
-        _fsync_directory(output.parent)
-    except OSError as exc:
+        atomic_replace_file(
+            staged,
+            output,
+            "validated acceptance aggregate",
+            expected_source_identity=staged_identity,
+        )
+    except StableFileError as exc:
         raise PublicationError(f"could not publish aggregate {output}: {exc}") from exc
     return summary
 

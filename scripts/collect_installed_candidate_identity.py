@@ -18,6 +18,8 @@ import hashlib
 import json
 import os
 import re
+import secrets
+import stat
 import shutil
 import subprocess
 import sys
@@ -28,13 +30,21 @@ from typing import Iterable, Sequence
 
 import validate_installed_candidate_identity as identity
 import verify_main_candidate
+from stable_file_reader import (
+    StableFileError,
+    atomic_publish_directory,
+    atomic_write_bytes,
+    ensure_directory_exists,
+    open_directory_descriptor,
+    remove_directory_at,
+)
 
 CANONICAL_ORIGIN = "github.com/Anurag9000/Forest_Run"
 CERT_LINE_RE = re.compile(
     r"^Signer #1 certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)\s*$",
     re.MULTILINE,
 )
-INSTALLER_RE = re.compile(r"(?:^|\s)installer=([^\s]+)")
+INSTALLER_RE = re.compile(r"(?:^|\s)installer=([^\s]*)")
 
 
 class CollectionError(RuntimeError):
@@ -140,7 +150,9 @@ def _resolve_apkanalyzer() -> str:
         candidates: list[Path] = []
         command_line = root / "cmdline-tools"
         if command_line.is_dir():
-            for child in command_line.iterdir():
+            versions = list(command_line.iterdir())
+            versions.sort(key=_command_line_version_key, reverse=True)
+            for child in versions:
                 for executable in _executable_variants("apkanalyzer"):
                     candidates.append(child / "bin" / executable)
         for executable in _executable_variants("apkanalyzer"):
@@ -149,6 +161,13 @@ def _resolve_apkanalyzer() -> str:
             if candidate.is_file():
                 return str(candidate)
     raise CollectionError("apkanalyzer was not found in the Android SDK")
+
+
+def _command_line_version_key(path: Path) -> tuple[int, tuple[int, ...]]:
+    if path.name.lower() == "latest":
+        return (1, ())
+    numbers = re.findall(r"\d+", path.name)
+    return (0, tuple(int(number) for number in numbers) or (0,))
 
 
 def _version_key(path: Path) -> tuple[int, ...]:
@@ -228,10 +247,11 @@ def parse_apkanalyzer_summary(output: str) -> tuple[str, int, str]:
 
 
 def parse_installer_package(output: str, application_id: str) -> str:
+    package_row = f"package:{application_id}"
     matching = [
         line.strip()
         for line in output.splitlines()
-        if line.strip().startswith(f"package:{application_id}")
+        if line.strip().split(maxsplit=1)[0:1] == [package_row]
     ]
     if len(matching) != 1:
         raise CollectionError(
@@ -269,6 +289,18 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _evidence_file_records(output_dir: Path, evidence_paths: Sequence[Path]) -> list[dict[str, str]]:
+    records: list[dict[str, str]] = []
+    seen_relative: set[str] = set()
+    for path in sorted(evidence_paths, key=lambda item: item.relative_to(output_dir).as_posix()):
+        relative = path.relative_to(output_dir).as_posix()
+        if relative in seen_relative:
+            raise CollectionError(f"duplicate evidence path: {relative}")
+        seen_relative.add(relative)
+        records.append({"path": relative, "sha256": _sha256(path)})
+    return records
+
+
 def _device_shell(adb: str, serial: str, *arguments: str) -> str:
     return _run([adb, "-s", serial, "shell", *arguments]).stdout.replace("\r\n", "\n")
 
@@ -281,29 +313,115 @@ def _getprop(adb: str, serial: str, name: str) -> str:
 
 
 def _atomic_json(path: Path, payload: dict[str, object]) -> None:
-    temporary: Path | None = None
+    content = (
+        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    ).encode("utf-8")
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temporary = Path(handle.name)
-            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        atomic_write_bytes(
+            path,
+            content,
+            "installed candidate identity manifest",
+            reject_symlink_leaf=True,
+        )
+    except StableFileError as exc:
+        raise CollectionError(str(exc)) from exc
 
 
-def collect(
+def _copy_validated_tree(source_fd: int, destination_fd: int, label: str = "collection") -> None:
+    """Copy a validated regular-file tree between held directory descriptors."""
+    for name in os.listdir(source_fd):
+        metadata = os.stat(name, dir_fd=source_fd, follow_symlinks=False)
+        if stat.S_ISDIR(metadata.st_mode):
+            os.mkdir(name, mode=0o700, dir_fd=destination_fd)
+            source_child = os.open(
+                name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=source_fd
+            )
+            destination_child = os.open(
+                name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=destination_fd
+            )
+            try:
+                opened = os.fstat(source_child)
+                if (opened.st_dev, opened.st_ino) != (metadata.st_dev, metadata.st_ino):
+                    raise CollectionError(f"{label} directory changed while being copied: {name}")
+                _copy_validated_tree(source_child, destination_child, f"{label}/{name}")
+                os.fchmod(destination_child, stat.S_IMODE(metadata.st_mode))
+                os.utime(destination_child, ns=(metadata.st_atime_ns, metadata.st_mtime_ns))
+                os.fsync(destination_child)
+            finally:
+                os.close(source_child)
+                os.close(destination_child)
+        elif stat.S_ISREG(metadata.st_mode):
+            source_file = os.open(
+                name,
+                os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0),
+                dir_fd=source_fd,
+            )
+            destination_file: int | None = None
+            try:
+                before = os.fstat(source_file)
+                identity_before = (
+                    before.st_dev,
+                    before.st_ino,
+                    before.st_size,
+                    before.st_mtime_ns,
+                    before.st_ctime_ns,
+                )
+                expected = (
+                    metadata.st_dev,
+                    metadata.st_ino,
+                    metadata.st_size,
+                    metadata.st_mtime_ns,
+                    metadata.st_ctime_ns,
+                )
+                if identity_before != expected:
+                    raise CollectionError(f"{label} file changed while being copied: {name}")
+                destination_file = os.open(
+                    name,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                    stat.S_IMODE(before.st_mode),
+                    dir_fd=destination_fd,
+                )
+                while True:
+                    block = os.read(source_file, 1024 * 1024)
+                    if not block:
+                        break
+                    view = memoryview(block)
+                    while view:
+                        written = os.write(destination_file, view)
+                        if written <= 0:
+                            raise OSError("short write while copying validated collection")
+                        view = view[written:]
+                after = os.fstat(source_file)
+                identity_after = (
+                    after.st_dev,
+                    after.st_ino,
+                    after.st_size,
+                    after.st_mtime_ns,
+                    after.st_ctime_ns,
+                )
+                if identity_after != expected:
+                    raise CollectionError(f"{label} file changed while being copied: {name}")
+                os.fchmod(destination_file, stat.S_IMODE(before.st_mode))
+                os.utime(destination_file, ns=(before.st_atime_ns, before.st_mtime_ns))
+                os.fsync(destination_file)
+            except BaseException:
+                if destination_file is not None:
+                    os.close(destination_file)
+                    destination_file = None
+                try:
+                    os.unlink(name, dir_fd=destination_fd)
+                except FileNotFoundError:
+                    pass
+                raise
+            finally:
+                os.close(source_file)
+                if destination_file is not None:
+                    os.close(destination_file)
+        else:
+            raise CollectionError(f"{label} contains an unsupported entry: {name}")
+
+
+def _collect_in_directory(
     *,
     root: Path,
     output_dir: Path,
@@ -315,7 +433,7 @@ def collect(
     expected_installer_package: str = identity.PLAY_STORE_INSTALLER,
 ) -> identity.InstalledIdentitySummary:
     root = root.expanduser().resolve()
-    expected_candidate_sha = expected_candidate_sha.strip().lower()
+    expected_candidate_sha = expected_candidate_sha.strip()
     expected_cert = expected_app_signing_certificate_sha256.strip().replace(":", "").lower()
     if not identity.SHA40_RE.fullmatch(expected_candidate_sha):
         raise CollectionError("expected candidate SHA must be lowercase 40-hex")
@@ -452,14 +570,7 @@ def collect(
     evidence_paths.append(raw_dir / "device.properties")
 
     base_entry = next(item for item in apk_entries if item["name"] == "base.apk")
-    unique_evidence: list[dict[str, str]] = []
-    seen_relative: set[str] = set()
-    for path in sorted(evidence_paths, key=lambda item: item.relative_to(output_dir).as_posix()):
-        relative = path.relative_to(output_dir).as_posix()
-        if relative in seen_relative:
-            raise CollectionError(f"duplicate evidence path: {relative}")
-        seen_relative.add(relative)
-        unique_evidence.append({"path": relative, "sha256": _sha256(path)})
+    unique_evidence = _evidence_file_records(output_dir, evidence_paths)
 
     payload: dict[str, object] = {
         "schema_version": identity.SCHEMA_VERSION,
@@ -508,6 +619,169 @@ def collect(
         manifest.unlink(missing_ok=True)
         raise CollectionError(f"collected record failed independent validation: {exc}") from exc
     return summary
+
+
+def collect(
+    *,
+    root: Path,
+    output_dir: Path,
+    expected_candidate_sha: str,
+    expected_version_code: int,
+    expected_app_signing_certificate_sha256: str,
+    serial: str | None = None,
+    package_name: str = identity.CANONICAL_APPLICATION_ID,
+    expected_installer_package: str = identity.PLAY_STORE_INSTALLER,
+) -> identity.InstalledIdentitySummary:
+    """Collect into a private sibling directory and publish only a valid bundle.
+
+    Device and SDK failures are common during evidence collection. Keeping all
+    intermediate pulls and command output outside the requested destination
+    means a failed attempt can be retried without manually cleaning partial
+    evidence, while the final directory appears in one rename after validation.
+    """
+    requested_destination = Path(
+        os.path.abspath(os.fspath(output_dir.expanduser()))
+    )
+    if requested_destination.is_symlink():
+        raise CollectionError(
+            f"output directory must not be a symbolic link: {requested_destination}"
+        )
+    destination = requested_destination
+    ensure_directory_exists(destination.parent, "installed identity output parent")
+    try:
+        parent_fd = open_directory_descriptor(
+            destination.parent, "installed identity output parent"
+        )
+    except StableFileError as exc:
+        raise CollectionError(str(exc)) from exc
+    parent_metadata = os.fstat(parent_fd)
+    staging_name: str | None = None
+    staging_identity: tuple[int, int] | None = None
+    staging_fd: int | None = None
+
+    def check_parent_binding() -> None:
+        try:
+            current_fd = open_directory_descriptor(
+                destination.parent, "installed identity output parent"
+            )
+        except StableFileError as exc:
+            raise CollectionError("output parent changed during collection") from exc
+        try:
+            current = os.fstat(current_fd)
+            if (current.st_dev, current.st_ino) != (
+                parent_metadata.st_dev,
+                parent_metadata.st_ino,
+            ):
+                raise CollectionError("output parent changed during collection")
+        finally:
+            os.close(current_fd)
+
+    try:
+        try:
+            initial_destination = os.stat(
+                destination.name, dir_fd=parent_fd, follow_symlinks=False
+            )
+        except FileNotFoundError:
+            initial_destination = None
+        if initial_destination is not None:
+            if stat.S_ISLNK(initial_destination.st_mode):
+                raise CollectionError(
+                    f"output directory must not be a symbolic link: {destination}"
+                )
+            if not stat.S_ISDIR(initial_destination.st_mode):
+                raise CollectionError(f"output directory is not a directory: {destination}")
+            existing_fd = os.open(
+                destination.name,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                dir_fd=parent_fd,
+            )
+            try:
+                opened = os.fstat(existing_fd)
+                if (opened.st_dev, opened.st_ino) != (
+                    initial_destination.st_dev,
+                    initial_destination.st_ino,
+                ):
+                    raise CollectionError("output directory changed during admission")
+                if os.listdir(existing_fd):
+                    raise CollectionError(
+                        f"output directory must be absent or empty: {destination}"
+                    )
+            finally:
+                os.close(existing_fd)
+
+        with tempfile.TemporaryDirectory(prefix=f".{destination.name}.collection-") as scratch:
+            scratch_dir = Path(scratch)
+            summary = _collect_in_directory(
+                root=root,
+                output_dir=scratch_dir,
+                expected_candidate_sha=expected_candidate_sha,
+                expected_version_code=expected_version_code,
+                expected_app_signing_certificate_sha256=expected_app_signing_certificate_sha256,
+                serial=serial,
+                package_name=package_name,
+                expected_installer_package=expected_installer_package,
+            )
+
+            check_parent_binding()
+            for _ in range(100):
+                candidate = f".{destination.name}.{secrets.token_hex(12)}.staging"
+                try:
+                    os.mkdir(candidate, mode=0o700, dir_fd=parent_fd)
+                    staging_name = candidate
+                    break
+                except FileExistsError:
+                    continue
+            if staging_name is None:
+                raise CollectionError("could not allocate a private collection staging directory")
+            staging_fd = os.open(
+                staging_name,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                dir_fd=parent_fd,
+            )
+            staging_metadata = os.fstat(staging_fd)
+            staging_identity = (staging_metadata.st_dev, staging_metadata.st_ino)
+            source_fd = open_directory_descriptor(scratch_dir, "validated collection scratch")
+            try:
+                _copy_validated_tree(source_fd, staging_fd)
+                os.fsync(staging_fd)
+            finally:
+                os.close(source_fd)
+            os.close(staging_fd)
+            staging_fd = None
+            check_parent_binding()
+            staging = destination.parent / staging_name
+            backup = destination.parent / f".{destination.name}.{secrets.token_hex(12)}.backup"
+            try:
+                atomic_publish_directory(
+                    staging,
+                    destination,
+                    backup,
+                    "installed identity output",
+                    destination_must_be_empty=True,
+                )
+            except StableFileError as exc:
+                if "output directory must be absent or empty" in str(exc):
+                    raise CollectionError(
+                        f"output directory changed during collection: {destination}"
+                    ) from exc
+                raise CollectionError(str(exc)) from exc
+            return summary
+    finally:
+        if staging_fd is not None:
+            os.close(staging_fd)
+        if staging_name is not None and staging_identity is not None:
+            try:
+                current = os.stat(
+                    staging_name, dir_fd=parent_fd, follow_symlinks=False
+                )
+            except FileNotFoundError:
+                current = None
+            if current is not None and stat.S_ISDIR(current.st_mode) and (
+                current.st_dev,
+                current.st_ino,
+            ) == staging_identity:
+                remove_directory_at(parent_fd, staging_name)
+        os.close(parent_fd)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

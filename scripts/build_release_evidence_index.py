@@ -10,13 +10,18 @@ import json
 import os
 import re
 import stat
-import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Iterable, Mapping, Sequence
 
 import strict_json
+from stable_file_reader import (
+    StableFileError,
+    atomic_write_bytes,
+    checked_directory_path,
+    ensure_directory_exists,
+)
 
 SCHEMA_VERSION = 1
 MAX_ENTRIES = 128
@@ -74,12 +79,11 @@ def _canonical_bytes(value: object) -> bytes:
 
 
 def _validate_candidate_sha(candidate_sha: str) -> str:
-    normalized = candidate_sha.strip()
-    if normalized != normalized.lower() or not SHA40.fullmatch(normalized):
+    if candidate_sha != candidate_sha.lower() or not SHA40.fullmatch(candidate_sha):
         raise EvidenceIndexError(
             "candidate SHA must be exactly 40 lowercase hexadecimal characters"
         )
-    return normalized
+    return candidate_sha
 
 
 def _validate_generated_at(value: str) -> str:
@@ -95,12 +99,26 @@ def _validate_generated_at(value: str) -> str:
 
 
 def _safe_relative_path(value: str) -> str:
-    if not value or "\\" in value or "\x00" in value:
+    if (
+        not value
+        or "\\" in value
+        or "\x00" in value
+        or ":" in value
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
         raise EvidenceIndexError("evidence paths must be non-empty POSIX relative paths")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise EvidenceIndexError("evidence paths must contain valid Unicode text") from exc
     path = PurePosixPath(value)
     if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
         raise EvidenceIndexError(f"unsafe evidence path: {value!r}")
     normalized = path.as_posix()
+    if normalized != value:
+        raise EvidenceIndexError(
+            f"evidence path must use canonical POSIX spelling: {value!r}"
+        )
     if Path(normalized).suffix.lower() not in SUPPORTED_SUFFIXES:
         raise EvidenceIndexError(f"unsupported evidence file type: {normalized}")
     return normalized
@@ -124,10 +142,18 @@ def _candidate_bindings(
     bindings: set[str] = set()
     if isinstance(value, Mapping):
         for key, item in value.items():
-            if key in EXPLICIT_CANDIDATE_KEYS and isinstance(item, str):
-                bindings.add(item.strip())
-            elif candidate_context and key in COMMIT_KEYS and isinstance(item, str):
-                bindings.add(item.strip())
+            if key in EXPLICIT_CANDIDATE_KEYS:
+                if not isinstance(item, str):
+                    raise EvidenceIndexError(
+                        f"candidate identity field {key} must be a string"
+                    )
+                bindings.add(item)
+            elif candidate_context and key in COMMIT_KEYS:
+                if not isinstance(item, str):
+                    raise EvidenceIndexError(
+                        f"candidate commit field {key} must be a string"
+                    )
+                bindings.add(item)
             child_context = key in CANDIDATE_OBJECT_KEYS
             bindings.update(
                 _candidate_bindings(item, candidate_context=child_context)
@@ -316,12 +342,27 @@ def collect_entries(
     output: Path | None = None,
 ) -> tuple[EvidenceEntry, ...]:
     candidate_sha = _validate_candidate_sha(candidate_sha)
-    root = root.resolve()
-    required = set(require_bound_kinds)
-    if any(not KIND.fullmatch(kind) for kind in required):
+    try:
+        root = checked_directory_path(root, "evidence root")
+    except StableFileError as exc:
+        raise EvidenceIndexError(str(exc)) from exc
+    if isinstance(require_bound_kinds, str):
+        required_values = (require_bound_kinds,)
+    else:
+        try:
+            required_values = tuple(require_bound_kinds)
+        except TypeError as exc:
+            raise EvidenceIndexError(
+                "required candidate-bound kinds must be an iterable of strings"
+            ) from exc
+    if any(
+        not isinstance(kind, str) or not KIND.fullmatch(kind)
+        for kind in required_values
+    ):
         raise EvidenceIndexError(
             "required candidate-bound kinds must be lowercase identifiers"
         )
+    required = set(required_values)
     if not specs:
         raise EvidenceIndexError("at least one release evidence entry is required")
     if len(specs) > MAX_ENTRIES:
@@ -456,11 +497,13 @@ def publish_index(
     *,
     root: Path | None = None,
 ) -> None:
-    publication_root = (
-        root.expanduser().resolve()
-        if root is not None
-        else output.expanduser().resolve(strict=False).parent
-    )
+    if root is not None:
+        try:
+            publication_root = checked_directory_path(root, "evidence root")
+        except StableFileError as exc:
+            raise EvidenceIndexError(str(exc)) from exc
+    else:
+        publication_root = output.expanduser().resolve(strict=False).parent
     output_resolved = _validate_output_path(publication_root, output)
     protected_identities = (
         _payload_evidence_identities(publication_root, payload)
@@ -473,23 +516,12 @@ def publish_index(
             "the output index cannot reuse indexed evidence through a hard link"
         )
 
-    output_resolved.parent.mkdir(parents=True, exist_ok=True)
+    ensure_directory_exists(output_resolved.parent, "evidence index parent directory")
     # Recheck after directory creation so a symlinked parent cannot be introduced
     # through a pre-existing path component and silently redirect publication.
     output_resolved = _validate_output_path(publication_root, output)
     encoded = _canonical_bytes(payload)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{output_resolved.name}.",
-        suffix=".tmp",
-        dir=output_resolved.parent,
-    )
-    temporary = Path(temporary_name)
     try:
-        with os.fdopen(descriptor, "wb") as handle:
-            handle.write(encoded)
-            handle.flush()
-            os.fsync(handle.fileno())
-
         output_resolved = _validate_output_path(publication_root, output)
         output_identity = _existing_regular_identity(
             output_resolved,
@@ -499,14 +531,8 @@ def publish_index(
             raise EvidenceIndexError(
                 "the output index became a hard-link alias of indexed evidence"
             )
-        os.replace(temporary, output_resolved)
-        directory_fd = os.open(output_resolved.parent, os.O_RDONLY)
-        try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
-    except (OSError, EvidenceIndexError) as exc:
-        temporary.unlink(missing_ok=True)
+        atomic_write_bytes(output_resolved, encoded, "release evidence index")
+    except (OSError, StableFileError, EvidenceIndexError) as exc:
         if isinstance(exc, EvidenceIndexError):
             raise
         raise EvidenceIndexError(f"could not publish evidence index: {exc}") from exc
@@ -525,7 +551,7 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    root = args.root.resolve()
+    root = args.root.expanduser()
     output = args.output if args.output.is_absolute() else root / args.output
     try:
         payload = build_index(

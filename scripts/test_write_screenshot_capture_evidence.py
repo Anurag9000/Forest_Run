@@ -1,13 +1,16 @@
 import datetime as dt
 import hashlib
 import json
+import os
 import struct
 import tempfile
 import unittest
 import zlib
 from pathlib import Path
+from unittest import mock
 
 from screenshot_capture_evidence import load_capture_evidence
+import write_screenshot_capture_evidence as writer
 from write_screenshot_capture_evidence import (
     CaptureEvidenceWriteError,
     write_capture_evidence,
@@ -119,13 +122,22 @@ class ScreenshotCaptureEvidenceWriterTest(unittest.TestCase):
     def test_identity_and_readiness_fields_fail_closed(self) -> None:
         invalid_cases = (
             ({"candidate_sha": "short"}, "candidate_sha"),
+            ({"candidate_sha": "A" * 40}, "lowercase hexadecimal"),
             ({"apk_sha256": "bad"}, "apk_sha256"),
+            ({"apk_sha256": "B" * 64}, "lowercase hexadecimal"),
+            ({"candidate_sha": " " + self.candidate_sha}, "surrounding whitespace"),
+            ({"apk_sha256": self.apk_sha256 + " "}, "surrounding whitespace"),
             ({"scenario": "opening"}, "uppercase scenario"),
+            ({"scenario": self.scenario + " "}, "surrounding whitespace"),
             ({"readiness_marker": "stale"}, "readiness_marker mismatch"),
             ({"package_name": "com.example.wrong"}, "package_name"),
             ({"activity_name": "WrongActivity"}, "activity_name"),
             ({"run_mode": "NORMAL"}, "run_mode"),
             ({"settle_seconds": float("nan")}, "settle_seconds"),
+            ({"settle_seconds": True}, "settle_seconds"),
+            ({"candidate_sha": None}, "candidate_sha must be text"),
+            ({"device_serial": 7}, "device_serial must be text"),
+            ({"captured_at_utc": "2026-07-30T12:00:00Z"}, "captured_at_utc must be a datetime"),
         )
         for overrides, expected_message in invalid_cases:
             with self.subTest(overrides=overrides):
@@ -137,6 +149,71 @@ class ScreenshotCaptureEvidenceWriterTest(unittest.TestCase):
                         expected_message,
                     ):
                         self.write(image, **overrides)
+
+    def test_writer_rejects_symlinked_image_and_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            real_image = root / "real.png"
+            self.write_png(real_image)
+            linked_image = root / "linked.png"
+            try:
+                linked_image.symlink_to(real_image)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks unavailable")
+
+            with self.assertRaisesRegex(CaptureEvidenceWriteError, "symbolic link"):
+                self.write(linked_image)
+            self.assertFalse(real_image.with_suffix(".capture.json").exists())
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            real_directory = root / "real"
+            real_directory.mkdir()
+            image = real_directory / "image.png"
+            self.write_png(image)
+            alias = root / "alias"
+            try:
+                alias.symlink_to(real_directory, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks unavailable")
+
+            with self.assertRaisesRegex(CaptureEvidenceWriteError, "symbolic link"):
+                self.write(alias / image.name)
+            self.assertFalse(image.with_suffix(".capture.json").exists())
+
+    def test_writer_parent_swap_cannot_redirect_sidecar_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            output = root / "capture"
+            output.mkdir()
+            external = root / "external"
+            external.mkdir()
+            saved_output = root / "capture.saved"
+            image = output / "opening.png"
+            self.write_png(image)
+            original_open = os.open
+            swapped = False
+
+            def swap_before_temp_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                if (
+                    isinstance(path, str)
+                    and path.startswith(".opening.capture.json.")
+                    and kwargs.get("dir_fd") is not None
+                    and not swapped
+                ):
+                    output.rename(saved_output)
+                    output.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(writer.os, "open", side_effect=swap_before_temp_open):
+                with self.assertRaisesRegex(CaptureEvidenceWriteError, "symbolic link"):
+                    self.write(image)
+
+            self.assertTrue(swapped)
+            self.assertFalse((external / "opening.capture.json").exists())
+            self.assertFalse((saved_output / "opening.capture.json").exists())
 
 
 if __name__ == "__main__":

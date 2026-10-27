@@ -21,6 +21,20 @@ FIELDS = {
 
 
 class AssetProvenanceValidationTest(unittest.TestCase):
+    def test_source_root_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            parent = Path(temporary)
+            root = parent / "checkout"
+            root.mkdir()
+            self.write_asset(root, "app/src/main/assets/sprites/tree.png")
+            registry = self.write_registry(
+                root, [self.rule("app/src/main/assets/sprites/**")]
+            )
+            alias = parent / "checkout-alias"
+            alias.symlink_to(root, target_is_directory=True)
+            with self.assertRaisesRegex(AssetProvenanceError, "symbolic link"):
+                validate(alias, registry)
+
     def test_provenance_schema_version_must_be_integer(self) -> None:
         from validate_asset_provenance import validated_rules
 

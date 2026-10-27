@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Sequence
 
 from strict_json import StrictJsonError, load_file
+from stable_file_reader import StableFileError, checked_directory_path
 
 ASSET_ROOTS = (
     Path("app/src/main/assets"),
@@ -67,7 +68,10 @@ def regular_json(path: Path) -> dict[str, object]:
 
 
 def source_assets(root: Path) -> list[str]:
-    root = root.expanduser().resolve()
+    try:
+        root = checked_directory_path(root, "asset source root")
+    except StableFileError as exc:
+        raise AssetProvenanceError(str(exc)) from exc
     candidates: list[Path] = []
     for relative in ASSET_ROOTS:
         candidate = root / relative
@@ -245,7 +249,7 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parser().parse_args(argv)
-    root = args.root.expanduser().resolve()
+    root = args.root.expanduser()
     registry = args.registry
     if not registry.is_absolute():
         registry = root / registry

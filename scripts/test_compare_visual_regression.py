@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 from PIL import Image
 
@@ -292,6 +296,37 @@ class VisualRegressionComparatorTest(unittest.TestCase):
             ),
         )
         self.assertEqual("invalid", json.loads(output.read_text(encoding="utf-8"))["status"])
+
+    def test_cli_reports_report_publication_failure_as_json(self) -> None:
+        stdout = io.StringIO()
+        with (
+            mock.patch.object(
+                visual,
+                "compare_manifest_set",
+                return_value=SimpleNamespace(
+                    status="valid", to_json=lambda: {"status": "valid"}
+                ),
+            ),
+            mock.patch.object(
+                visual,
+                "_write_json_atomic",
+                side_effect=visual.VisualRegressionError("report publish failed"),
+            ),
+            contextlib.redirect_stdout(stdout),
+        ):
+            result = visual.main(
+                [
+                    "--manifest", str(self.manifest),
+                    "--baseline-dir", str(self.baseline),
+                    "--candidate-dir", str(self.candidate),
+                    "--output", str(self.root / "report.json"),
+                ]
+            )
+        self.assertEqual(2, result)
+        self.assertEqual(
+            {"status": "invalid", "error": "report publish failed"},
+            json.loads(stdout.getvalue()),
+        )
 
 
 if __name__ == "__main__":

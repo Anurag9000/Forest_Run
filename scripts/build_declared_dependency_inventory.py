@@ -8,11 +8,19 @@ import hashlib
 import json
 import os
 import re
-import tempfile
 from pathlib import Path
 from typing import Sequence
 
+from stable_file_reader import (
+    StableFileError,
+    atomic_write_bytes,
+    checked_directory_path,
+    consume_regular_file,
+    ensure_directory_exists,
+)
+
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
+EXPECTED_PLUGINS = {"com.android.application", "org.jetbrains.kotlin.android"}
 PLUGIN = re.compile(
     r'id\("(?P<name>[^"\s]+)"\)\s+version\s+"(?P<version>[^"\s]+)"'
 )
@@ -28,6 +36,7 @@ SOURCE_PATHS = (
     Path("gradle/wrapper/gradle-wrapper.properties"),
     Path("scripts/requirements-ci.txt"),
 )
+MAX_SOURCE_BYTES = 8 * 1024 * 1024
 
 
 class DeclaredDependencyInventoryError(ValueError):
@@ -41,34 +50,123 @@ def _canonical_bytes(value: object) -> bytes:
     ).encode("utf-8")
 
 
+def _strip_kotlin_comments(text: str) -> str:
+    """Blank Kotlin comments while retaining offsets, newlines, and string contents."""
+    characters = list(text)
+    index = 0
+    length = len(text)
+    while index < length:
+        if text.startswith("//", index):
+            end = text.find("\n", index)
+            if end < 0:
+                end = length
+            for position in range(index, end):
+                characters[position] = " "
+            index = end
+            continue
+
+        if text.startswith("/*", index):
+            depth = 1
+            characters[index] = characters[index + 1] = " "
+            index += 2
+            while index < length and depth:
+                if text.startswith("/*", index):
+                    depth += 1
+                    characters[index] = characters[index + 1] = " "
+                    index += 2
+                elif text.startswith("*/", index):
+                    depth -= 1
+                    characters[index] = characters[index + 1] = " "
+                    index += 2
+                else:
+                    if text[index] != "\n":
+                        characters[index] = " "
+                    index += 1
+            continue
+
+        if text.startswith('"""', index):
+            index += 3
+            while index < length and not text.startswith('"""', index):
+                index += 1
+            index = min(length, index + 3)
+            continue
+
+        if text[index] in {'"', "'"}:
+            quote = text[index]
+            index += 1
+            while index < length:
+                if text[index] == "\\":
+                    index += 2
+                elif text[index] == quote:
+                    index += 1
+                    break
+                else:
+                    index += 1
+            continue
+
+        index += 1
+    return "".join(characters)
+
+
+def _kotlin_code_positions(text: str) -> list[bool]:
+    """Mark source positions outside Kotlin string and character literals."""
+    code = [True] * len(text)
+    index = 0
+    length = len(text)
+    while index < length:
+        if text.startswith('"""', index):
+            start = index
+            index += 3
+            while index < length and not text.startswith('"""', index):
+                index += 1
+            index = min(length, index + 3)
+            code[start:index] = [False] * (index - start)
+            continue
+        if text[index] in {'"', "'"}:
+            start = index
+            quote = text[index]
+            index += 1
+            while index < length:
+                if text[index] == "\\":
+                    index += 2
+                elif text[index] == quote:
+                    index += 1
+                    break
+                else:
+                    index += 1
+            index = min(index, length)
+            code[start:index] = [False] * (index - start)
+            continue
+        index += 1
+    return code
+
+
 def _read(root: Path, relative: Path) -> tuple[str, str]:
     path = root / relative
     try:
-        metadata = path.lstat()
-    except FileNotFoundError as exc:
-        raise DeclaredDependencyInventoryError(
-            f"required dependency source is missing: {relative.as_posix()}"
-        ) from exc
-    if path.is_symlink() or not path.is_file():
-        raise DeclaredDependencyInventoryError(
-            f"dependency source must be a regular non-symlink file: {relative.as_posix()}"
+        raw, digest, _ = consume_regular_file(
+            path,
+            f"dependency source {relative.as_posix()}",
+            MAX_SOURCE_BYTES,
+            retain_bytes=True,
         )
-    raw = path.read_bytes()
-    if not raw or len(raw) != metadata.st_size:
-        raise DeclaredDependencyInventoryError(
-            f"dependency source is empty or unstable: {relative.as_posix()}"
-        )
+    except StableFileError as exc:
+        raise DeclaredDependencyInventoryError(str(exc)) from exc
+    assert raw is not None
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise DeclaredDependencyInventoryError(
             f"dependency source is not UTF-8: {relative.as_posix()}"
         ) from exc
-    return text, hashlib.sha256(raw).hexdigest()
+    return text, digest
 
 
 def build_inventory(root: Path, candidate_sha: str) -> dict[str, object]:
-    root = root.expanduser().resolve()
+    try:
+        root = checked_directory_path(root, "dependency source root")
+    except StableFileError as exc:
+        raise DeclaredDependencyInventoryError(str(exc)) from exc
     if not SHA40.fullmatch(candidate_sha):
         raise DeclaredDependencyInventoryError(
             "candidate SHA must be exactly 40 lowercase hexadecimal characters"
@@ -77,15 +175,18 @@ def build_inventory(root: Path, candidate_sha: str) -> dict[str, object]:
     sources: dict[str, tuple[str, str]] = {
         relative.as_posix(): _read(root, relative) for relative in SOURCE_PATHS
     }
-    root_build = sources["build.gradle.kts"][0]
-    app_build = sources["app/build.gradle.kts"][0]
+    root_build = _strip_kotlin_comments(sources["build.gradle.kts"][0])
+    app_build = _strip_kotlin_comments(sources["app/build.gradle.kts"][0])
     wrapper = sources["gradle/wrapper/gradle-wrapper.properties"][0]
     requirements = sources["scripts/requirements-ci.txt"][0]
 
+    root_code = _kotlin_code_positions(root_build)
+    app_code = _kotlin_code_positions(app_build)
     plugins = sorted(
         {
             (match.group("name"), match.group("version"))
             for match in PLUGIN.finditer(root_build)
+            if root_code[match.start()]
         }
     )
     modules = sorted(
@@ -97,6 +198,7 @@ def build_inventory(root: Path, candidate_sha: str) -> dict[str, object]:
                 match.group("version"),
             )
             for match in MODULE.finditer(app_build)
+            if app_code[match.start()]
         }
     )
     gradle_match = GRADLE.search(wrapper)
@@ -108,9 +210,9 @@ def build_inventory(root: Path, candidate_sha: str) -> dict[str, object]:
         if match is not None
     )
 
-    if len(plugins) != 2:
+    if {name for name, _ in plugins} != EXPECTED_PLUGINS:
         raise DeclaredDependencyInventoryError(
-            "expected exactly the Android and Kotlin build plugins"
+            "expected the Android application and Kotlin Android build plugins"
         )
     if not modules:
         raise DeclaredDependencyInventoryError("no direct Gradle modules were found")
@@ -183,22 +285,18 @@ def publish(output: Path, payload: dict[str, object]) -> None:
     output = Path(os.path.abspath(os.fspath(output.expanduser())))
     if output.is_symlink():
         raise DeclaredDependencyInventoryError("output must not be a symbolic link")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{output.name}.", suffix=".tmp", dir=output.parent
-    )
-    temporary = Path(temporary_name)
     try:
-        with os.fdopen(descriptor, "wb") as handle:
-            handle.write(_canonical_bytes(payload))
-            handle.flush()
-            os.fsync(handle.fileno())
-        if output.is_symlink():
-            raise DeclaredDependencyInventoryError("output became a symbolic link")
-        os.replace(temporary, output)
-    except Exception:
-        temporary.unlink(missing_ok=True)
-        raise
+        ensure_directory_exists(output.parent, "declared dependency inventory parent directory")
+        atomic_write_bytes(
+            output,
+            _canonical_bytes(payload),
+            "declared dependency inventory",
+            reject_symlink_leaf=True,
+        )
+    except StableFileError as exc:
+        if "symbolic link" in str(exc):
+            raise DeclaredDependencyInventoryError("output became a symbolic link") from exc
+        raise DeclaredDependencyInventoryError(f"could not safely publish output: {exc}") from exc
 
 
 def _parser() -> argparse.ArgumentParser:

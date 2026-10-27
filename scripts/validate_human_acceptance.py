@@ -17,7 +17,6 @@ import os
 import re
 import stat
 import sys
-import tempfile
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -25,6 +24,12 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
 
 import strict_json
+from stable_file_reader import (
+    StableFileError,
+    atomic_write_json,
+    checked_directory_path,
+    consume_regular_file,
+)
 import validate_device_acceptance as device_acceptance
 
 SCHEMA_VERSION = 2
@@ -155,6 +160,13 @@ def _string(value: Any, label: str, *, maximum: int = 4096) -> str:
     return result
 
 
+def _canonical_hash(value: Any, label: str, pattern: re.Pattern[str], description: str) -> str:
+    """Validate the exact hash spelling without applying display-text trimming."""
+    if not isinstance(value, str) or not pattern.fullmatch(value):
+        raise HumanAcceptanceError(f"{label} must be {description}")
+    return value
+
+
 def _integer(value: Any, label: str, *, minimum: int = 0) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise HumanAcceptanceError(f"{label} must be an integer")
@@ -176,11 +188,19 @@ def _parse_utc(value: Any, label: str) -> datetime:
 
 def _safe_relative_path(value: Any, label: str) -> str:
     text = _string(value, label, maximum=512)
-    if "\\" in text or text.startswith("~"):
+    if value != text:
+        raise HumanAcceptanceError(f"{label} must not have surrounding whitespace")
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise HumanAcceptanceError(f"{label} must contain valid Unicode text") from exc
+    if "\\" in text or ":" in text or text.startswith("~"):
         raise HumanAcceptanceError(f"{label} must be a normalized POSIX relative path")
     path = PurePosixPath(text)
     if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
         raise HumanAcceptanceError(f"{label} must be a safe relative path")
+    if path.as_posix() != text:
+        raise HumanAcceptanceError(f"{label} must be a normalized POSIX relative path")
     return path.as_posix()
 
 
@@ -197,36 +217,33 @@ def _require_exact_keys(value: Mapping[str, Any], keys: Iterable[str], label: st
 
 def _hash_regular_file(path: Path, label: str, maximum_bytes: int) -> tuple[str, os.stat_result]:
     try:
-        before = path.lstat()
-    except FileNotFoundError as exc:
-        raise HumanAcceptanceError(f"{label} is missing: {path}") from exc
-    except OSError as exc:
-        raise HumanAcceptanceError(f"could not inspect {label}: {path}: {exc}") from exc
-    if path.is_symlink() or not path.is_file():
-        raise HumanAcceptanceError(f"{label} must be a regular non-symlink file: {path}")
-    if before.st_size <= 0 or before.st_size > maximum_bytes:
-        raise HumanAcceptanceError(
-            f"{label} must be between 1 and {maximum_bytes} bytes: {path}"
+        _, digest, metadata = consume_regular_file(
+            path, label, maximum_bytes, retain_bytes=False
         )
-    digest = hashlib.sha256()
+    except StableFileError as exc:
+        raise HumanAcceptanceError(str(exc)) from exc
+    return digest, metadata
+
+
+def _read_regular_bytes(path: Path, label: str, maximum_bytes: int) -> tuple[bytes, os.stat_result]:
     try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        after = path.lstat()
-    except OSError as exc:
-        raise HumanAcceptanceError(f"could not read {label}: {path}: {exc}") from exc
-    if (
-        before.st_size != after.st_size
-        or before.st_mtime_ns != after.st_mtime_ns
-        or (before.st_ino and before.st_ino != after.st_ino)
-    ):
-        raise HumanAcceptanceError(f"{label} changed while being hashed: {path}")
-    return digest.hexdigest(), after
+        raw, _, metadata = consume_regular_file(
+            path, label, maximum_bytes, retain_bytes=True
+        )
+    except StableFileError as exc:
+        raise HumanAcceptanceError(str(exc)) from exc
+    assert raw is not None
+    return raw, metadata
 
 
 def _resolve_inside(base: Path, relative: str, label: str) -> Path:
-    base = base.resolve()
+    try:
+        base = checked_directory_path(base, f"{label} evidence root")
+    except StableFileError as exc:
+        raise HumanAcceptanceError(str(exc)) from exc
+    relative_path = PurePosixPath(relative)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise HumanAcceptanceError(f"{label} resolves outside the evidence root")
     lexical = base / relative
     try:
         path_parts = lexical.relative_to(base).parts
@@ -247,12 +264,7 @@ def _resolve_inside(base: Path, relative: str, label: str) -> Path:
                 f"{label} must not traverse a symbolic link: {current}"
             )
 
-    resolved = lexical.resolve()
-    try:
-        resolved.relative_to(base)
-    except ValueError as exc:
-        raise HumanAcceptanceError(f"{label} resolves outside the evidence root") from exc
-    return resolved
+    return lexical
 
 
 def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, str, int]:
@@ -276,23 +288,28 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, st
         raise HumanAcceptanceError("candidate.branch must be main")
     if _string(candidate["application_id"], "candidate.application_id") != device_acceptance.CANONICAL_APPLICATION_ID:
         raise HumanAcceptanceError("candidate.application_id is not canonical")
-    sha = _string(candidate["commit_sha"], "candidate.commit_sha", maximum=40).lower()
-    artifact = _string(candidate["artifact_sha256"], "candidate.artifact_sha256", maximum=64).lower()
-    upload_certificate = _string(
-        candidate["upload_certificate_sha256"], "candidate.upload_certificate_sha256", maximum=64
-    ).lower()
-    app_signing_certificate = _string(
-        candidate["app_signing_certificate_sha256"], "candidate.app_signing_certificate_sha256", maximum=64
-    ).lower()
+    sha = _canonical_hash(
+        candidate["commit_sha"], "candidate.commit_sha", SHA40_RE, "lowercase 40-hex"
+    )
+    artifact = _canonical_hash(
+        candidate["artifact_sha256"],
+        "candidate.artifact_sha256",
+        SHA256_RE,
+        "lowercase 64-hex",
+    )
+    upload_certificate = _canonical_hash(
+        candidate["upload_certificate_sha256"],
+        "candidate.upload_certificate_sha256",
+        SHA256_RE,
+        "lowercase 64-hex",
+    )
+    app_signing_certificate = _canonical_hash(
+        candidate["app_signing_certificate_sha256"],
+        "candidate.app_signing_certificate_sha256",
+        SHA256_RE,
+        "lowercase 64-hex",
+    )
     version_code = _integer(candidate["version_code"], "candidate.version_code", minimum=1)
-    if not SHA40_RE.fullmatch(sha):
-        raise HumanAcceptanceError("candidate.commit_sha must be lowercase 40-hex")
-    if not SHA256_RE.fullmatch(artifact):
-        raise HumanAcceptanceError("candidate.artifact_sha256 must be lowercase 64-hex")
-    if not SHA256_RE.fullmatch(upload_certificate):
-        raise HumanAcceptanceError("candidate.upload_certificate_sha256 must be lowercase 64-hex")
-    if not SHA256_RE.fullmatch(app_signing_certificate):
-        raise HumanAcceptanceError("candidate.app_signing_certificate_sha256 must be lowercase 64-hex")
     return sha, artifact, upload_certificate, app_signing_certificate, version_code
 
 
@@ -333,15 +350,15 @@ def _load_bound_device_acceptance(
 ) -> tuple[str, dict[str, str]]:
     _require_exact_keys(reference, {"path", "sha256"}, "device_acceptance")
     relative = _safe_relative_path(reference["path"], "device_acceptance.path")
-    expected = _string(reference["sha256"], "device_acceptance.sha256", maximum=64).lower()
-    if not SHA256_RE.fullmatch(expected):
-        raise HumanAcceptanceError("device_acceptance.sha256 must be lowercase 64-hex")
+    expected = _canonical_hash(
+        reference["sha256"], "device_acceptance.sha256", SHA256_RE, "lowercase 64-hex"
+    )
     path = _resolve_inside(base, relative, "device_acceptance.path")
-    actual, _ = _hash_regular_file(path, "device acceptance manifest", MAX_MANIFEST_BYTES)
+    raw, _ = _read_regular_bytes(path, "device acceptance manifest", MAX_MANIFEST_BYTES)
+    actual = hashlib.sha256(raw).hexdigest()
     if actual != expected:
         raise HumanAcceptanceError("device acceptance manifest digest mismatch")
     try:
-        raw = path.read_bytes()
         data = strict_json.loads(raw, label=str(path), maximum_bytes=MAX_MANIFEST_BYTES, require_object=True)
         summary = device_acceptance.validate_bundle(
             data,
@@ -378,6 +395,15 @@ def validate_bundle(
         raise HumanAcceptanceError(
             f"human acceptance manifest must be between 1 and {MAX_MANIFEST_BYTES} bytes"
         )
+    try:
+        strict_json.loads_matching_object(
+            source_bytes,
+            data,
+            label="human acceptance manifest source bytes",
+            maximum_bytes=MAX_MANIFEST_BYTES,
+        )
+    except strict_json.StrictJsonError as exc:
+        raise HumanAcceptanceError(str(exc)) from exc
     root = _mapping(data, "root")
     _require_exact_keys(
         root,
@@ -417,8 +443,6 @@ def validate_bundle(
     reviewers: dict[str, str] = {}
     covered_classes: set[str] = set()
     evidence_paths: dict[str, tuple[str, tuple[int, int] | None]] = {}
-    canonical_base = evidence_base.resolve()
-
     for index, raw_review in enumerate(reviews):
         label = f"reviews[{index}]"
         review = _mapping(raw_review, label)
@@ -500,12 +524,15 @@ def validate_bundle(
             entry = _mapping(raw_entry, entry_label)
             _require_exact_keys(entry, {"path", "sha256"}, entry_label)
             relative = _safe_relative_path(entry["path"], f"{entry_label}.path")
-            expected = _string(entry["sha256"], f"{entry_label}.sha256", maximum=64).lower()
-            if not SHA256_RE.fullmatch(expected):
-                raise HumanAcceptanceError(f"{entry_label}.sha256 must be lowercase 64-hex")
+            expected = _canonical_hash(
+                entry["sha256"],
+                f"{entry_label}.sha256",
+                SHA256_RE,
+                "lowercase 64-hex",
+            )
             if relative in evidence_paths:
                 raise HumanAcceptanceError(f"human evidence path is reused: {relative}")
-            path = _resolve_inside(canonical_base, relative, f"{entry_label}.path")
+            path = _resolve_inside(evidence_base, relative, f"{entry_label}.path")
             actual, stat_result = _hash_regular_file(
                 path,
                 "human acceptance evidence",
@@ -563,9 +590,9 @@ def validate_bundle(
 
 
 def load_and_validate(path: Path) -> HumanAcceptanceSummary:
-    path = path.expanduser().resolve()
+    path = path.expanduser()
     try:
-        raw = path.read_bytes()
+        raw, _ = _read_regular_bytes(path, "human acceptance manifest", MAX_MANIFEST_BYTES)
         data = strict_json.loads(
             raw,
             label=str(path),
@@ -578,27 +605,10 @@ def load_and_validate(path: Path) -> HumanAcceptanceSummary:
 
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temporary = Path(handle.name)
-            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        atomic_write_json(path, payload, "human-acceptance summary")
+    except StableFileError as exc:
+        raise HumanAcceptanceError(str(exc)) from exc
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -613,7 +623,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     payload = summary.to_json()
     if args.summary_output is not None:
-        _write_json(args.summary_output, payload)
+        try:
+            _write_json(args.summary_output, payload)
+        except (OSError, HumanAcceptanceError) as exc:
+            print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+            return 1
     print(json.dumps(payload, sort_keys=True))
     return 0
 

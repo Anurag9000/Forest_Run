@@ -1,8 +1,16 @@
 package com.anurag9000.forestrun.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.engine.GameStateManager
+import com.anurag9000.forestrun.engine.BloomPresentation
+import com.anurag9000.forestrun.engine.GameConstants
+import com.anurag9000.forestrun.engine.OpeningInputState
+import com.anurag9000.forestrun.engine.OpeningReadabilityGuide
+import com.anurag9000.forestrun.engine.PacifistRouteTier
 import com.anurag9000.forestrun.engine.SaveManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -83,6 +91,83 @@ class HudTimeBoundaryTest {
 
         assertEquals(0f, field(hud, "bloomPulse"), 0f)
         assertEquals(0f, field(hud, "newBadge"), 0f)
+    }
+
+    @Test
+    fun `compact HUD keeps mercy hearts below the seed label`() {
+        val state = GameStateManager(context)
+        val hud = HUD(context, 720, 540)
+        val bitmap = Bitmap.createBitmap(720, 540, Bitmap.Config.ARGB_8888)
+        try {
+            hud.draw(
+                Canvas(bitmap),
+                state,
+                BloomPresentation.hudPresentation(
+                    bloomMeter = state.bloomMeter,
+                    seedTarget = GameConstants.BLOOM_SEED_COUNT,
+                    isActive = state.isBloomActive,
+                    secondsRemaining = state.bloomSecondsRemaining,
+                    totalConversions = state.bloomConversionsThisRun,
+                    burstConversions = 0,
+                    recentAfterglow = 0f
+                )
+            )
+
+            var redHeartPixelsInSeedLabel = 0
+            for (y in 54 until 78) {
+                for (x in 60 until 180) {
+                    val color = bitmap.getPixel(x, y)
+                    if (
+                        Color.red(color) > 60 &&
+                        Color.red(color) > Color.green(color) * 1.35f &&
+                        Color.red(color) > Color.blue(color) * 1.2f
+                    ) {
+                        redHeartPixelsInSeedLabel++
+                    }
+                }
+            }
+            assertEquals("heart glyphs must not paint over the seed label", 0, redHeartPixelsInSeedLabel)
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    @Test
+    fun `every opening guidance line wraps within the compact HUD panel`() {
+        val cues = listOf(
+            OpeningReadabilityGuide.cueFor(0f, OpeningInputState(), PacifistRouteTier.NONE, 0, 0),
+            OpeningReadabilityGuide.cueFor(
+                1f, OpeningInputState(duckSeen = true), PacifistRouteTier.NONE, 0, 0
+            ),
+            OpeningReadabilityGuide.cueFor(
+                4f, OpeningInputState(duckSeen = true), PacifistRouteTier.NONE, 0, 0
+            ),
+            OpeningReadabilityGuide.cueFor(
+                5f, OpeningInputState(jumpSeen = true, duckSeen = true), PacifistRouteTier.NONE, 0, 0
+            ),
+            OpeningReadabilityGuide.cueFor(
+                11f, OpeningInputState(jumpSeen = true, holdSeen = true), PacifistRouteTier.NONE, 0, 0
+            ),
+            OpeningReadabilityGuide.cueFor(
+                12f, OpeningInputState(true, true, true), PacifistRouteTier.PEACEFUL, 0, 0
+            ),
+            OpeningReadabilityGuide.cueFor(
+                12f, OpeningInputState(true, true, true), PacifistRouteTier.NONE, 1, 0
+            ),
+            OpeningReadabilityGuide.cueFor(
+                12f, OpeningInputState(true, true, true), PacifistRouteTier.NONE, 0, 0
+            )
+        ).map { requireNotNull(it) }.distinctBy { it.line }
+
+        val hud = HUD(context, 720, 540)
+        val textWidth = hud.openingGuidanceTextWidthForTest()
+        cues.forEach { cue ->
+            val lines = hud.openingGuidanceLinesForTest(cue.line, textWidth)
+            assertTrue("line wraps to at most two rows: ${cue.line}", lines.size in 1..2)
+            assertEquals(cue.line.trim().split(Regex("\\s+")).joinToString(" "), lines.joinToString(" "))
+            assertTrue("line fits panel: ${cue.line}", hud.openingGuidanceLineFitsForTest(cue.line, textWidth))
+        }
+        assertEquals("all authored lines are covered", 8, cues.size)
     }
 
     private fun field(hud: HUD, name: String): Float {

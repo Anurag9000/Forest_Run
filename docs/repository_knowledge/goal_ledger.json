@@ -1,0 +1,374 @@
+{
+  "schema_version": "1.0",
+  "repository": "Forest_Run",
+  "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+  "snapshot_date": "2026-10-27",
+  "records": [
+    {
+      "id": "GOAL-001",
+      "parent_id": null,
+      "kind": "product",
+      "title": "Deliver the Forest Run native Android endless-runner experience",
+      "objective": "Provide the authored landscape Android game and the forest journey from willow through five biomes, Seeds/Bloom/encounters, Rest and a persistent Garden.",
+      "classification": "explicit_current",
+      "sources": [
+        "README.md",
+        "docs/GAME_DESIGN.md",
+        "docs/ARCHITECTURE.md"
+      ],
+      "capability_ids": [
+        "CAP-001",
+        "CAP-002",
+        "CAP-003"
+      ],
+      "status": "implemented_static_evidence_prior_and_delta",
+      "completion_conditions": "Current intended game loop and its owners are documented; source/runtime verification is candidate- and phase-specific.",
+      "requirement_ids": [
+        "REQ-001"
+      ],
+      "child_goal_ids": [
+        "GOAL-002",
+        "GOAL-003",
+        "GOAL-004",
+        "GOAL-010"
+      ]
+    },
+    {
+      "id": "GOAL-002",
+      "parent_id": "GOAL-001",
+      "kind": "correctness",
+      "title": "Preserve fair, deterministic and state-owned gameplay mechanics",
+      "objective": "Ensure movement, encounter arbitration, encounter outcomes, score/Seed/Bloom and progression obey their documented contracts.",
+      "classification": "explicit_current_and_historically_reconciled",
+      "sources": [
+        "docs/ARCHITECTURE.md",
+        "docs/AUDIT_LEDGER.md",
+        "docs/DETERMINISTIC_SCENARIO_EVIDENCE.md",
+        "docs/REPO_CODEBASE_MAP.md"
+      ],
+      "capability_ids": [
+        "CAP-002"
+      ],
+      "status": "substantial_static_evidence; current_delta_not_fully_verified",
+      "completion_conditions": "Each requirement has source ownership and appropriate independent behavioral evidence on the intended candidate.",
+      "requirement_ids": [
+        "REQ-002"
+      ],
+      "child_goal_ids": [
+        "GOAL-008",
+        "GOAL-009",
+        "GOAL-012",
+        "GOAL-014"
+      ]
+    },
+    {
+      "id": "GOAL-003",
+      "parent_id": "GOAL-001",
+      "kind": "persistence_and_narrative",
+      "title": "Carry meaningful forest history across runs and sessions",
+      "objective": "Persist Garden, relationships, wardrobe, history, ghosts, return moments and memory projections with domain-specific recovery and read-only Journal presentation.",
+      "classification": "explicit_current",
+      "sources": [
+        "README.md",
+        "docs/ARCHITECTURE.md",
+        "docs/FOREST_JOURNAL.md",
+        "docs/GHOST_PERSISTENCE_NAMESPACES.md",
+        "docs/RUN_OUTCOME_PERSISTENCE.md"
+      ],
+      "capability_ids": [
+        "CAP-003"
+      ],
+      "status": "implemented_static_evidence_prior_map; delta review applies",
+      "completion_conditions": "Documented persistence authorities and recovery behavior are reconciled to source and candidate checks where authorized.",
+      "requirement_ids": [
+        "REQ-003",
+        "REQ-004"
+      ],
+      "child_goal_ids": [
+        "GOAL-011",
+        "GOAL-013"
+      ]
+    },
+    {
+      "id": "GOAL-004",
+      "parent_id": "GOAL-001",
+      "kind": "accessibility_and_feedback",
+      "title": "Provide accessible interaction and comfort-aware presentation",
+      "objective": "Expose truthful accessibility semantics and actions, readable UI and lifecycle-correct transient audio/haptic/visual feedback.",
+      "classification": "explicit_current",
+      "sources": [
+        "docs/ACCESSIBILITY.md",
+        "docs/RECOVERY_USER_EXPERIENCE.md",
+        "docs/REPO_CODEBASE_MAP.md",
+        "README.md"
+      ],
+      "capability_ids": [
+        "CAP-004"
+      ],
+      "status": "implemented_static_evidence; current UI/feedback delta inspected in changed regions",
+      "completion_conditions": "Source contracts, focused regressions and physical/human acceptance evidence are separately satisfied.",
+      "requirement_ids": [
+        "REQ-005"
+      ],
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-005",
+      "parent_id": null,
+      "kind": "evidence_engineering",
+      "title": "Construct trustworthy candidate-bound engineering and release evidence",
+      "objective": "Capture, validate, aggregate and bind deterministic, source, device, human, asset, dependency, package, store and governance evidence to the exact candidate.",
+      "classification": "explicit_current",
+      "sources": [
+        "docs/DETERMINISTIC_SCENARIO_EVIDENCE.md",
+        "docs/RELEASE_EVIDENCE_INDEX.md",
+        "docs/RELEASE_READINESS.md",
+        "docs/RELEASE_GOVERNANCE_EVIDENCE.md"
+      ],
+      "capability_ids": [
+        "CAP-005",
+        "CAP-006"
+      ],
+      "status": "extensive source/docs; modified script delta partially inspected and unverified at runtime",
+      "completion_conditions": "Evidence tools preserve their contracts and all required candidate-bound evidence is real, current and independently reviewable.",
+      "requirement_ids": [
+        "REQ-006"
+      ],
+      "child_goal_ids": [
+        "GOAL-006"
+      ]
+    },
+    {
+      "id": "GOAL-006",
+      "parent_id": "GOAL-005",
+      "kind": "release_acceptance",
+      "title": "Reach an accountable production release decision",
+      "objective": "Resolve physical/human acceptance, creative and rights decisions, security/privacy and policy, signing, Play delivery and accountable approval for one frozen candidate.",
+      "classification": "explicit_current_downstream",
+      "sources": [
+        "README.md",
+        "docs/RELEASE_READINESS.md",
+        "docs/RELEASE_GOVERNANCE_EVIDENCE.md",
+        "docs/AUDIT_LEDGER.md"
+      ],
+      "capability_ids": [
+        "CAP-007"
+      ],
+      "status": "not established; external evidence/owners required",
+      "completion_conditions": "All applicable gates pass for the same frozen candidate and an accountable release decision is recorded.",
+      "requirement_ids": [
+        "REQ-007",
+        "REQ-008",
+        "REQ-009"
+      ],
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-007",
+      "parent_id": null,
+      "kind": "scope_boundary",
+      "title": "Establish that model training is not an applicable project capability",
+      "objective": "Fail closed when no trainable surface exists and prevent generic training orchestration from being interpreted as authorized application behavior.",
+      "classification": "explicit_scope_control",
+      "sources": [
+        "training_control/forest_no_trainable_authority.py",
+        "training_control/dataset_cohort_not_applicable_v1.py",
+        "scripts/audit_no_trainable_surface.py",
+        "docs/REPO_MEMORY_MAP.md"
+      ],
+      "capability_ids": [
+        "CAP-008"
+      ],
+      "status": "not_applicable_to_product_training; source/documentary evidence exists",
+      "completion_conditions": "No ML training, dataset or GPU objective is inferred without a new explicit requirement.",
+      "requirement_ids": [
+        "REQ-010"
+      ],
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-008",
+      "parent_id": "GOAL-002",
+      "kind": "historical_architecture",
+      "title": "Centralize collision outcome dispatch",
+      "objective": "Move exhaustive HIT/STUMBLE/MERCY_MISS/NONE routing from GameView into a typed dispatcher while preserving capture order and terminal transition semantics.",
+      "classification": "historically_approved_and_closed",
+      "sources": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md"
+      ],
+      "capability_ids": [
+        "CAP-009"
+      ],
+      "requirement_ids": [
+        "REQ-011"
+      ],
+      "status": "implemented and statically integrated in current source; runtime not revalidated",
+      "completion_conditions": "Use the later closure evidence and current source state; runtime/release acceptance remains separately evidenced.",
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-009",
+      "parent_id": "GOAL-002",
+      "kind": "historical_architecture",
+      "title": "Separate live collision effects from outcome ordering",
+      "objective": "Keep collision ordering in coordinators while adapting live effects through a shared effect boundary.",
+      "classification": "historically_approved_and_closed",
+      "sources": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md"
+      ],
+      "capability_ids": [
+        "CAP-010"
+      ],
+      "requirement_ids": [
+        "REQ-012"
+      ],
+      "status": "implemented and statically integrated in current source",
+      "completion_conditions": "Use the later closure evidence and current source state; runtime/release acceptance remains separately evidenced.",
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-010",
+      "parent_id": "GOAL-001",
+      "kind": "historical_architecture",
+      "title": "Centralize top-level run-session transitions",
+      "objective": "Represent session state transitions with a pure planner, ordered effect coordinator and one state publication boundary.",
+      "classification": "historically_approved_and_closed",
+      "sources": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md"
+      ],
+      "capability_ids": [
+        "CAP-011"
+      ],
+      "requirement_ids": [
+        "REQ-013"
+      ],
+      "status": "implemented and statically integrated in current source",
+      "completion_conditions": "Use the later closure evidence and current source state; runtime/release acceptance remains separately evidenced.",
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-011",
+      "parent_id": "GOAL-003",
+      "kind": "historical_architecture",
+      "title": "Introduce an application persistence facade",
+      "objective": "Centralize application mutations while retaining separate durability domains and recovery semantics.",
+      "classification": "historically_approved_and_closed",
+      "sources": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md"
+      ],
+      "capability_ids": [
+        "CAP-012"
+      ],
+      "requirement_ids": [
+        "REQ-014"
+      ],
+      "status": "implemented and statically integrated; no global transaction is claimed",
+      "completion_conditions": "Use the later closure evidence and current source state; runtime/release acceptance remains separately evidenced.",
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-012",
+      "parent_id": "GOAL-002",
+      "kind": "historical_architecture",
+      "title": "Maintain one canonical encounter-family catalogue",
+      "objective": "Provide a deterministic structural catalogue for authored families and derived coverage without duplicating dynamic authorities.",
+      "classification": "historically_approved_and_closed_in_bounded_form",
+      "sources": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md"
+      ],
+      "capability_ids": [
+        "CAP-013"
+      ],
+      "requirement_ids": [
+        "REQ-015"
+      ],
+      "status": "canonical catalogue present; broad dynamic authoring is not implied",
+      "completion_conditions": "Use the later closure evidence and current source state; runtime/release acceptance remains separately evidenced.",
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-013",
+      "parent_id": "GOAL-003",
+      "kind": "historical_product_capability",
+      "title": "Provide privacy-safe ordinary-player recovery",
+      "objective": "Offer safe retry, revalidated actions and explicit confirmation for destructive evidence discard.",
+      "classification": "historically_optional_then_selected_and_closed",
+      "sources": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md"
+      ],
+      "capability_ids": [
+        "CAP-014"
+      ],
+      "requirement_ids": [
+        "REQ-016"
+      ],
+      "status": "implemented and connected in current source; user acceptance not refreshed",
+      "completion_conditions": "Use the later closure evidence and current source state; runtime/release acceptance remains separately evidenced.",
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-014",
+      "parent_id": "GOAL-002",
+      "kind": "optional_architecture_proposal",
+      "title": "Consider broader data-oriented encounter authoring",
+      "objective": "Optional proposal to move authored capabilities, lanes, fairness, assets, flavour and route effects into local data.",
+      "classification": "optional_proposal_not_a_current_requirement",
+      "sources": [
+        "docs/audits/2026-08-06_documentation_reconciliation_audit.md",
+        "docs/audits/2026-08-09_source_completion_and_remaining_gates.md"
+      ],
+      "capability_ids": [],
+      "requirement_ids": [
+        "REQ-017"
+      ],
+      "status": "not selected; no mandatory task; distinct from structural catalogue",
+      "completion_conditions": "Use the later closure evidence and current source state; runtime/release acceptance remains separately evidenced.",
+      "child_goal_ids": []
+    },
+    {
+      "id": "GOAL-015",
+      "parent_id": null,
+      "kind": "user_authorized_knowledge_reconstruction",
+      "title": "Preserve exhaustive repository knowledge and source-level evidence",
+      "objective": "Complete the evidence-grounded repository knowledge map and coverage/task ledger while reusing prior work and clearly separating static inspection from runtime verification.",
+      "classification": "explicit_current_user_assignment",
+      "sources": [
+        "user-provided repository investigation and execution-ledger specification (read 2026-10-27)"
+      ],
+      "capability_ids": [
+        "CAP-015",
+        "CAP-016"
+      ],
+      "requirement_ids": [
+        "REQ-018",
+        "REQ-019"
+      ],
+      "child_goal_ids": [],
+      "status": "Completed evidence-bounded repository knowledge reconstruction and applicability planning. Current inventory: 1,003 paths (950 full static, 17 partial binary metadata/hash-only, 33 documented, 3 excluded); 6,137 unique declaration records across 256 production paths. The applicability matrix covers 19 requirements, 14 universal mechanisms and 13 verification categories. No current source gap was established by the source delta audit; tests/runtime remain prohibited and six future verification tasks are deferred.",
+      "completion_conditions": "Accessible paths have an evidence-backed full/partial/excluded disposition; current goals and source states are traceable; repository-specific universal applicability and risk-based verification choices are documented; prohibited runtime and unresolved external/binary limitations remain explicit.",
+      "evidence": [
+        "docs/repository_knowledge/asset_visual_inventory.md",
+        "docs/repository_knowledge/inspection_TASK-A-016.md",
+        "docs/repository_knowledge/inspection_TASK-A-017.md",
+        "docs/repository_knowledge/inspection_TASK-A-018.md",
+        "docs/repository_knowledge/test_contract_inventory.json",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
+        "docs/repository_knowledge/file_inventory.json",
+        "EVID-062",
+        "EVID-063",
+        "EVID-064",
+        "EVID-065",
+        "EVID-066",
+        "docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md",
+        "docs/repository_knowledge/applicability_matrix.json",
+        "EVID-068"
+      ]
+    }
+  ]
+}

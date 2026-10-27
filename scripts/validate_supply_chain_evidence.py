@@ -9,10 +9,15 @@ import json
 import os
 import re
 import urllib.parse
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Sequence
 
 import strict_json
+from stable_file_reader import (
+    StableFileError,
+    checked_directory_path,
+    consume_regular_file,
+)
 
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -20,6 +25,13 @@ EXPECTED_CONFIGURATIONS = {
     "releaseRuntimeClasspath",
     "debugAndroidTestRuntimeClasspath",
 }
+EXPECTED_DECLARED_SOURCE_PATHS = {
+    "build.gradle.kts",
+    "app/build.gradle.kts",
+    "gradle/wrapper/gradle-wrapper.properties",
+    "scripts/requirements-ci.txt",
+}
+MAX_REFERENCED_FILE_BYTES = 512 * 1024 * 1024
 
 
 class SupplyChainEvidenceError(ValueError):
@@ -27,10 +39,15 @@ class SupplyChainEvidenceError(ValueError):
 
 
 def _canonical_bytes(value: object) -> bytes:
-    return (
-        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-        + "\n"
-    ).encode("utf-8")
+    try:
+        return (
+            json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise SupplyChainEvidenceError(
+            "evidence contains a string that is not valid Unicode"
+        ) from exc
 
 
 def _regular_non_symlink(path: Path, label: str) -> Path:
@@ -59,6 +76,10 @@ def _object(path: Path, label: str) -> dict[str, object]:
 def _string(value: object, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise SupplyChainEvidenceError(f"{label} must be a non-empty string")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise SupplyChainEvidenceError(f"{label} contains invalid Unicode") from exc
     return value
 
 
@@ -66,6 +87,25 @@ def _list(value: object, label: str) -> list[object]:
     if not isinstance(value, list):
         raise SupplyChainEvidenceError(f"{label} must be a list")
     return value
+
+
+def _repository_relative_path(value: object, label: str) -> str:
+    raw = _string(value, label)
+    path = PurePosixPath(raw)
+    if (
+        "\\" in raw
+        or "\x00" in raw
+        or ":" in raw
+        or any(ord(character) < 32 or ord(character) == 127 for character in raw)
+        or path.is_absolute()
+        or not path.parts
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or path.as_posix() != raw
+    ):
+        raise SupplyChainEvidenceError(
+            f"{label} must be a canonical repository-relative POSIX path"
+        )
+    return raw
 
 
 def _properties(value: object, label: str) -> dict[str, str]:
@@ -90,7 +130,33 @@ def _canonical_maven_purl(group: str, name: str, version: str) -> str:
     return f"pkg:maven/{namespace}/{encoded_name}@{encoded_version}"
 
 
-def validate_declared(payload: dict[str, object], expected_sha: str) -> set[tuple[str, str]]:
+def _verify_referenced_file(
+    root: Path,
+    relative: str,
+    expected_digest: str,
+    label: str,
+) -> None:
+    try:
+        _, actual_digest, _ = consume_regular_file(
+            root / relative,
+            label,
+            MAX_REFERENCED_FILE_BYTES,
+            retain_bytes=False,
+        )
+    except StableFileError as exc:
+        raise SupplyChainEvidenceError(str(exc)) from exc
+    if actual_digest != expected_digest:
+        raise SupplyChainEvidenceError(
+            f"{label} digest does not match referenced file: {relative}"
+        )
+
+
+def validate_declared(
+    payload: dict[str, object],
+    expected_sha: str,
+    *,
+    repository_root: Path | None = None,
+) -> set[tuple[str, str]]:
     if type(payload.get("schemaVersion")) is not int or payload["schemaVersion"] != 1:
         raise SupplyChainEvidenceError("declared schemaVersion must equal 1")
     if payload.get("candidateSha") != expected_sha:
@@ -101,7 +167,8 @@ def validate_declared(payload: dict[str, object], expected_sha: str) -> set[tupl
     entries = _list(payload.get("entries"), "declared.entries")
     if not entries:
         raise SupplyChainEvidenceError("declared.entries must not be empty")
-    if payload.get("entryCount") != len(entries):
+    entry_count = payload.get("entryCount")
+    if type(entry_count) is not int or entry_count != len(entries):
         raise SupplyChainEvidenceError("declared entryCount does not match entries")
     inventory_digest = _string(payload.get("inventorySha256"), "declared.inventorySha256")
     if not SHA256.fullmatch(inventory_digest):
@@ -116,15 +183,35 @@ def validate_declared(payload: dict[str, object], expected_sha: str) -> set[tupl
     for index, item in enumerate(source_files):
         if not isinstance(item, dict):
             raise SupplyChainEvidenceError(f"declared.sourceFiles[{index}] must be an object")
-        source_path = _string(item.get("path"), f"declared.sourceFiles[{index}].path")
+        source_path = _repository_relative_path(
+            item.get("path"), f"declared.sourceFiles[{index}].path"
+        )
         digest = _string(item.get("sha256"), f"declared.sourceFiles[{index}].sha256")
-        if Path(source_path).is_absolute() or ".." in Path(source_path).parts:
-            raise SupplyChainEvidenceError("declared source paths must be repository-relative")
         if source_path in seen_source_paths:
             raise SupplyChainEvidenceError(f"duplicate declared source path: {source_path}")
         if not SHA256.fullmatch(digest):
             raise SupplyChainEvidenceError(f"invalid declared source SHA-256: {source_path}")
+        if repository_root is not None:
+            _verify_referenced_file(
+                repository_root,
+                source_path,
+                digest,
+                f"declared source file {source_path}",
+            )
         seen_source_paths.add(source_path)
+    if seen_source_paths != EXPECTED_DECLARED_SOURCE_PATHS:
+        missing = sorted(EXPECTED_DECLARED_SOURCE_PATHS - seen_source_paths)
+        extra = sorted(seen_source_paths - EXPECTED_DECLARED_SOURCE_PATHS)
+        details = []
+        if missing:
+            details.append("missing=" + ",".join(missing))
+        if extra:
+            details.append("extra=" + ",".join(extra))
+        raise SupplyChainEvidenceError(
+            "declared sourceFiles do not match the required dependency inputs ("
+            + "; ".join(details)
+            + ")"
+        )
 
     runtime_direct_modules: set[tuple[str, str]] = set()
     for index, item in enumerate(entries):
@@ -151,10 +238,12 @@ def validate_resolved(
     payload: dict[str, object],
     expected_sha: str,
     runtime_direct_modules: set[tuple[str, str]],
+    *,
+    repository_root: Path | None = None,
 ) -> None:
     if payload.get("bomFormat") != "CycloneDX" or payload.get("specVersion") != "1.6":
         raise SupplyChainEvidenceError("resolved evidence must be CycloneDX 1.6")
-    if payload.get("version") != 1:
+    if type(payload.get("version")) is not int or payload["version"] != 1:
         raise SupplyChainEvidenceError("resolved CycloneDX version must equal 1")
 
     metadata = payload.get("metadata")
@@ -238,29 +327,59 @@ def validate_resolved(
         if not isinstance(item, dict):
             raise SupplyChainEvidenceError(f"source report {index} must be an object")
         configuration = _string(item.get("configuration"), f"source report {index}.configuration")
-        report_path = _string(item.get("path"), f"source report {index}.path")
+        report_path = _repository_relative_path(
+            item.get("path"), f"source report {index}.path"
+        )
         report_digest = _string(item.get("sha256"), f"source report {index}.sha256")
         if configuration in report_configurations:
             raise SupplyChainEvidenceError(f"duplicate source report configuration: {configuration}")
-        if report_path in report_paths or Path(report_path).is_absolute() or ".." in Path(report_path).parts:
+        if report_path in report_paths:
             raise SupplyChainEvidenceError("resolved source-report paths must be unique and relative")
         if not SHA256.fullmatch(report_digest):
             raise SupplyChainEvidenceError(f"invalid source report SHA-256: {report_path}")
+        if repository_root is not None:
+            _verify_referenced_file(
+                repository_root,
+                report_path,
+                report_digest,
+                f"resolved source report {report_path}",
+            )
         report_configurations.add(configuration)
         report_paths.add(report_path)
     if report_configurations != EXPECTED_CONFIGURATIONS:
         raise SupplyChainEvidenceError("source-report provenance does not cover required configurations")
 
 
-def validate(declared_path: Path, resolved_path: Path, expected_sha: str) -> None:
-    if not SHA40.fullmatch(expected_sha):
+def validate(
+    declared_path: Path,
+    resolved_path: Path,
+    expected_sha: str,
+    *,
+    repository_root: Path | None = None,
+) -> None:
+    if not isinstance(expected_sha, str) or not SHA40.fullmatch(expected_sha):
         raise SupplyChainEvidenceError(
             "expected commit must be exactly 40 lowercase hexadecimal characters"
         )
     declared = _object(declared_path, "declared dependency inventory")
     resolved = _object(resolved_path, "resolved dependency SBOM")
-    runtime_direct_modules = validate_declared(declared, expected_sha)
-    validate_resolved(resolved, expected_sha, runtime_direct_modules)
+    try:
+        root = checked_directory_path(
+            repository_root or Path.cwd(), "supply-chain repository root"
+        )
+    except StableFileError as exc:
+        raise SupplyChainEvidenceError(str(exc)) from exc
+    runtime_direct_modules = validate_declared(
+        declared,
+        expected_sha,
+        repository_root=root,
+    )
+    validate_resolved(
+        resolved,
+        expected_sha,
+        runtime_direct_modules,
+        repository_root=root,
+    )
 
 
 def _parser() -> argparse.ArgumentParser:

@@ -1,7 +1,9 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+import verify_store_listing_parity as listing_parity
 from verify_store_listing_parity import (
     StoreListingParityError,
     extract_canonical_metadata,
@@ -107,6 +109,79 @@ class StoreListingParityTest(unittest.TestCase):
             )
             with self.assertRaisesRegex(StoreListingParityError, "fenced text block"):
                 extract_canonical_metadata(wrong_fence)
+
+    def test_listing_source_rejects_bom_invalid_utf8_crlf_and_non_nfc(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary, "listing.md")
+            invalid_cases = (
+                (b"\xef\xbb\xbf# listing", "BOM"),
+                (b"\xff", "UTF-8"),
+                (b"# listing\r\n", "LF line endings"),
+                (self.listing_text(title="Cafe\u0301").encode("utf-8"), "NFC"),
+            )
+            for raw, message in invalid_cases:
+                with self.subTest(message=message):
+                    path.write_bytes(raw)
+                    with self.assertRaisesRegex(StoreListingParityError, message):
+                        extract_canonical_metadata(path)
+
+    def test_oversized_listing_is_rejected_before_open(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary, "listing.md")
+            path.write_bytes(b"x" * (listing_parity.MAX_LISTING_BYTES + 1))
+            with mock.patch.object(
+                listing_parity.os, "open", wraps=listing_parity.os.open
+            ) as opened:
+                with self.assertRaisesRegex(StoreListingParityError, "safety limit"):
+                    extract_canonical_metadata(path)
+            self.assertFalse(
+                any(call.args[0] == "listing.md" for call in opened.call_args_list),
+                "the oversized leaf must be rejected before it is opened",
+            )
+
+    def test_listing_parent_swap_to_external_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "root"
+            root.mkdir()
+            source = root / "listing.md"
+            source.write_text(self.listing_text(), encoding="utf-8")
+            saved_root = root.with_name(root.name + ".saved")
+            external = root.with_name(root.name + ".external")
+            external.mkdir()
+            (external / "listing.md").write_text(
+                self.listing_text(title="Another Run"), encoding="utf-8"
+            )
+            original_open = listing_parity.os.open
+            swapped = False
+
+            def swap_before_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                nonlocal swapped
+                if path == root.name and kwargs.get("dir_fd") is not None and not swapped:
+                    root.rename(saved_root)
+                    root.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(listing_parity.os, "open", side_effect=swap_before_open):
+                with self.assertRaises(StoreListingParityError):
+                    extract_canonical_metadata(source)
+            self.assertTrue(swapped)
+            self.assertTrue(root.is_symlink())
+
+    def test_listing_source_parent_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            outside = root / "outside"
+            outside.mkdir()
+            source = outside / "STORE_LISTING.md"
+            source.write_text(self.listing_text(), encoding="utf-8")
+            alias = root / "alias"
+            try:
+                alias.symlink_to(outside, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            with self.assertRaisesRegex(StoreListingParityError, "symbolic link"):
+                extract_canonical_metadata(alias / "STORE_LISTING.md")
 
     def test_release_wrapper_checks_listing_parity_before_candidate_metadata(self) -> None:
         source = (ROOT / "scripts" / "prepare_main_release.sh").read_text(encoding="utf-8")

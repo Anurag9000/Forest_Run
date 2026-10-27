@@ -50,6 +50,7 @@ class GameStateManager(
     private var exactScore: Float = 0f
 
     var scoreMultiplier: Float = 1f
+    private var scoreMultiplierTimer: Float = 0f
 
     var highScore: Int = SaveManager.loadHighScore(appContext)
         private set
@@ -188,6 +189,13 @@ class GameStateManager(
             updateHighScore()
         }
 
+        // The multiplier remains active for the complete frame that reaches
+        // its deadline, matching the speed-debuff timer's frame semantics.
+        if (scoreMultiplierTimer > 0f) {
+            scoreMultiplierTimer = (scoreMultiplierTimer - deltaTime).coerceAtLeast(0f)
+            if (scoreMultiplierTimer <= 0f) scoreMultiplier = 1f
+        }
+
         val milestone = score / 1000
         if (milestone > lastMilestone) {
             lastMilestone = milestone
@@ -214,7 +222,18 @@ class GameStateManager(
         addSeeds(1)
     }
 
-    fun addBonus(points: Int = 0, seeds: Int = 0, multiplierBoost: Float = 0f) {
+    /**
+     * Award points and seeds, then optionally boost scoring for a bounded time.
+     * Points in this call use the multiplier that was active before this bonus.
+     * A zero [durationSec] keeps a valid boost for the rest of the run. Invalid
+     * durations do not install a multiplier boost, but do not suppress rewards.
+     */
+    fun addBonus(
+        points: Int = 0,
+        seeds: Int = 0,
+        multiplierBoost: Float = 0f,
+        durationSec: Float = 0f
+    ) {
         val safePoints = points.coerceAtLeast(0)
         if (safePoints > 0) {
             val weightedPoints = safePoints.toDouble() * normalizedScoreMultiplier().toDouble()
@@ -227,8 +246,11 @@ class GameStateManager(
 
         addSeeds(seeds)
 
-        if (multiplierBoost.isFinite() && multiplierBoost > 0f) {
+        if (multiplierBoost.isFinite() && multiplierBoost > 0f &&
+            durationSec.isFinite() && durationSec >= 0f
+        ) {
             scoreMultiplier = multiplierBoost
+            scoreMultiplierTimer = durationSec
         }
     }
 
@@ -373,6 +395,7 @@ class GameStateManager(
         score = 0
         exactScore = 0f
         scoreMultiplier = 1f
+        scoreMultiplierTimer = 0f
         seedsThisRun = 0
         highScore = maxOf(
             SaveManager.loadHighScore(appContext),

@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0.0",
+  "current_phase": "Authorized source completion and verification reconciliation",
+  "current_phase_status": "TASK-A-035 completed the OWL_DIVE capture input path. EVID-072 records 1,387 passing Python tests, 1,297 passing JVM tests, passing debug/release lint and APK assembly on the merged candidate. TASK-C-007–C-011 remain partially completed; TASK-C-013 is blocked pending adb/device screenshot verification. The original dirty checkout remains untouched.",
+  "phases": [
+    {
+      "id": "A",
+      "name": "Source requirement reconciliation and implementation completion planning",
+      "task_ids": [
+        "TASK-A-030",
+        "TASK-A-031",
+        "TASK-A-032",
+        "TASK-A-033",
+        "TASK-A-034",
+        "TASK-A-035"
+      ],
+      "status": "Prior source delta review reused; TASK-A-035 closes one newly established OWL_DIVE screenshot input gap and is complete at source/test level.",
+      "entry_conditions": [
+        "Preserve dirty-tree ownership and baseline evidence",
+        "Reuse prior maps and inspect only changed or specifically unresolved evidence",
+        "Source implementation only for an established gap and explicit authorization; no tests or workflows in this assignment"
+      ],
+      "exit_conditions": [
+        "Requirement-backed source correction is documented and integrated",
+        "Full Python/JVM suites, lint and debug/release APK assembly pass on the merged candidate",
+        "Visual/device state and external gates are recorded as residual work"
+      ]
+    },
+    {
+      "id": "B",
+      "name": "Acceleration and computational optimization",
+      "task_ids": [
+        "TASK-B-001",
+        "TASK-B-002"
+      ],
+      "status": "DEFERRED",
+      "entry_conditions": [
+        "Authorized performance work",
+        "Frozen candidate and representative physical devices"
+      ],
+      "exit_conditions": [
+        "Baseline measured",
+        "Only measured bottlenecks proposed",
+        "Candidate optimizations assessed for semantics and remeasured"
+      ]
+    },
+    {
+      "id": "C",
+      "name": "Verification and implementation fidelity",
+      "task_ids": [
+        "TASK-C-001",
+        "TASK-C-002",
+        "TASK-C-003",
+        "TASK-C-004",
+        "TASK-C-005",
+        "TASK-C-006",
+        "TASK-C-007",
+        "TASK-C-008",
+        "TASK-C-009",
+        "TASK-C-010",
+        "TASK-C-011",
+        "TASK-C-012",
+        "TASK-C-013"
+      ],
+      "status": "TASK-C-007–C-011 partially completed by EVID-072; connected/device verification remains blocked by unavailable adb. TASK-C-012 concurrency-specific validation and TASK-C-013 OWL_DIVE screenshot-state evidence remain deferred.",
+      "entry_conditions": [
+        "Preserve exact candidate/base and the original dirty checkout",
+        "Use current test/build evidence from EVID-072; do not repeat passing suites without a source delta",
+        "Run connected/device checks only when adb and an authorized device are available"
+      ],
+      "exit_conditions": [
+        "Remaining focused verification criteria have evidence",
+        "Connected/device acceptance is recorded or explicitly externally blocked",
+        "No historical result is represented as current evidence"
+      ]
+    },
+    {
+      "id": "D",
+      "name": "Engineering closure and external release gates",
+      "task_ids": [
+        "TASK-D-001",
+        "TASK-D-002",
+        "TASK-D-003",
+        "TASK-D-004",
+        "TASK-D-005",
+        "TASK-D-006",
+        "TASK-D-007"
+      ],
+      "status": "DEFERRED",
+      "entry_conditions": [
+        "Candidate and accountable external owners",
+        "Physical/human/security/store resources",
+        "Separate authorization for external operations"
+      ],
+      "exit_conditions": [
+        "All required gate evidence is candidate-bound",
+        "External blockers are accepted or resolved by accountable owners"
+      ]
+    },
+    {
+      "id": "E",
+      "name": "Final targeted reconciliation and go/no-go",
+      "task_ids": [
+        "TASK-E-001"
+      ],
+      "status": "DEFERRED",
+      "entry_conditions": [
+        "A-D obligations addressed",
+        "Final evidence index and accountable reviewer"
+      ],
+      "exit_conditions": [
+        "Residual changed-code/evidence check complete",
+        "Explicit release disposition; no stale evidence silently reused"
+      ]
+    }
+  ],
+  "handoff": {
+    "project": "Forest Run is a native Kotlin Android landscape endless runner using SurfaceView/Canvas with persistent world state plus candidate-bound evidence/release tooling.",
+    "what_exists": "The master map, structured goal/capability/task/evidence ledgers, 1001-path inventory, 389 source-only test contracts, 58-image visual inventory, and 29-sprite frame/caller trace are present. No application behavior was executed. A merged candidate based on origin/main plus the reviewed delta passes the full Python/JVM suites, lint and debug/release APK assembly (EVID-072); OWL_DIVE now schedules a TAP_JUMP before capture.",
+    "what_remains": "TASK-A-003 found no accessible explicit activation requirement for the dormant multiplier; inaccessible conversation history remains uncertain. Nineteen inventory records remain partial (two maps reused at bounded depth and 17 binaries metadata-only). Runtime behavior, performance, external release acceptance and asset/rights decisions remain unverified or externally owned. No test tasks are queued under the current prompt. TASK-C-013 requires a candidate-bound OWL_DIVE screenshot; adb is unavailable. TASK-C-007–C-011 have suite-level partial evidence (EVID-072), and TASK-C-012 concurrency verification remains deferred.",
+    "do_not_repeat": "Reuse docs/REPO_CODEBASE_MAP.md, docs/REPO_MEMORY_MAP.md, docs/AUDIT_LEDGER.md and dated audits at their recorded snapshot. Refresh only changed/affected files and evidence; no ML training goal is applicable.",
+    "coordination": "One owner updates MASTER_EXECUTION_LEDGER.json and its history. Assign bounded future tasks with disjoint paths; coordinate stable_file_reader.py consumers and candidate/evidence directories. Keep source implementation, integration, runtime verification and external acceptance separate. Report exact revision, files read, evidence and limitations.",
+    "resume": "Check current HEAD/worktree and compare relevant hashes with file_inventory.json snapshot WT-D17D3FBCF2CB3B267FE9. Read MASTER_EXECUTION_LEDGER task records; reuse A-023 through A-026 handoffs and evidence. The lead alone updates shared ledgers. Do not run tests/scripts/builds/workflows under the present task constraint.",
+    "unknowns": "Earlier conversations outside available sources may contain additional product intent. Runtime behavior and visual rendering are unverified. Audio/font content and rights, human/creative approval, physical acceptance, signing/Play and governance remain unknown or externally owned. These do not authorize tests in the current assignment.",
+    "how_to_resume": {
+      "baseline": "Check HEAD/worktree; compare scoped dirty-file hashes to file_inventory.json working_tree_snapshot_id WT-D17D3FBCF2CB3B267FE9.",
+      "reuse": "Prior code/memory maps and dated audits remain revision-bounded; revisit only changed or contradictory evidence.",
+      "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
+      "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
+    }
+  },
+  "resume_procedure": {
+    "baseline": "Check HEAD/worktree; compare scoped dirty-file hashes to file_inventory.json working_tree_snapshot_id WT-D17D3FBCF2CB3B267FE9.",
+    "reuse": "Prior code/memory maps and dated audits remain revision-bounded; revisit only changed or contradictory evidence.",
+    "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
+    "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
+  }
+}

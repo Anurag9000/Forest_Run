@@ -1,11 +1,14 @@
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from PIL import Image
 
+import verify_store_graphics as store_graphics
 from verify_store_graphics import StoreGraphicsError, verify_store_graphics
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -97,6 +100,10 @@ class StoreGraphicsVerifierTest(unittest.TestCase):
         with self.assertRaisesRegex(StoreGraphicsError, "stale"):
             verify_store_graphics(self.root, self.graphics, self.candidate)
 
+    def test_expected_candidate_sha_requires_lowercase_hex(self) -> None:
+        with self.assertRaisesRegex(StoreGraphicsError, "lowercase"):
+            verify_store_graphics(self.root, self.graphics, self.candidate.upper())
+
     def test_tampered_output_and_unmanifested_file_are_rejected(self) -> None:
         self.write_graphic("promo-square.png", (512, 512), (1, 2, 3))
         with self.assertRaisesRegex(StoreGraphicsError, "hash/size"):
@@ -133,6 +140,25 @@ class StoreGraphicsVerifierTest(unittest.TestCase):
         with self.assertRaisesRegex(StoreGraphicsError, "mode"):
             verify_store_graphics(self.root, self.graphics, self.candidate)
 
+    def test_manifest_numeric_facts_must_be_exact_integers(self) -> None:
+        payload = json.loads((self.graphics / "graphics_manifest.json").read_text())
+        payload["outputs"][0]["width"] = float(payload["outputs"][0]["width"])
+        self.write_manifest(outputs=payload["outputs"])
+        with self.assertRaisesRegex(StoreGraphicsError, "invalid output evidence types"):
+            verify_store_graphics(self.root, self.graphics, self.candidate)
+
+        payload = json.loads((self.graphics / "graphics_manifest.json").read_text())
+        payload["outputs"][0]["bytes"] = float(payload["outputs"][0]["bytes"])
+        self.write_manifest(outputs=payload["outputs"])
+        with self.assertRaisesRegex(StoreGraphicsError, "invalid output evidence types"):
+            verify_store_graphics(self.root, self.graphics, self.candidate)
+
+        payload = json.loads((self.graphics / "graphics_manifest.json").read_text())
+        payload["sourceAssets"][0]["bytes"] = float(payload["sourceAssets"][0]["bytes"])
+        self.write_manifest(sourceAssets=payload["sourceAssets"])
+        with self.assertRaisesRegex(StoreGraphicsError, "invalid source evidence types"):
+            verify_store_graphics(self.root, self.graphics, self.candidate)
+
     def test_manifest_rejects_duplicate_keys_and_extra_schema_fields(self) -> None:
         manifest = self.graphics / "graphics_manifest.json"
         payload = json.loads(manifest.read_text(encoding="utf-8"))
@@ -167,7 +193,7 @@ class StoreGraphicsVerifierTest(unittest.TestCase):
             source.symlink_to(target)
         except OSError as exc:
             self.skipTest(f"symbolic links unavailable: {exc}")
-        with self.assertRaisesRegex(StoreGraphicsError, "must not be a symbolic link"):
+        with self.assertRaisesRegex(StoreGraphicsError, "non-symlink"):
             verify_store_graphics(self.root, self.graphics, self.candidate)
 
     def test_symlinked_graphic_and_graphics_directory_are_rejected(self) -> None:
@@ -186,8 +212,56 @@ class StoreGraphicsVerifierTest(unittest.TestCase):
         promo.write_bytes(target.read_bytes())
         alias = Path(self.temp.name) / "graphics-alias"
         alias.symlink_to(self.graphics, target_is_directory=True)
-        with self.assertRaisesRegex(StoreGraphicsError, "directory must not be a symbolic link"):
+        with self.assertRaisesRegex(StoreGraphicsError, "symbolic link"):
             verify_store_graphics(self.root, alias, self.candidate)
+
+    def test_symlinked_graphics_parent_is_rejected(self) -> None:
+        release_parent = self.root / "release" / "google-play"
+        alias = self.root / "graphics-parent-alias"
+        try:
+            alias.symlink_to(release_parent, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+        with self.assertRaisesRegex(StoreGraphicsError, "traverse a symbolic link"):
+            verify_store_graphics(
+                self.root,
+                alias / "graphics",
+                self.candidate,
+            )
+
+    def test_source_root_symlink_is_rejected(self) -> None:
+        alias = self.root.parent / (self.root.name + "-source-alias")
+        alias.symlink_to(self.root, target_is_directory=True)
+        try:
+            with self.assertRaisesRegex(StoreGraphicsError, "symbolic link"):
+                verify_store_graphics(alias, self.graphics, self.candidate)
+        finally:
+            alias.unlink()
+
+    def test_graphic_replaced_by_symlink_after_inspection_is_rejected(self) -> None:
+        source = self.graphics / "promo-square.png"
+        target = Path(self.temp.name, "promo-copy.png")
+        target.write_bytes(source.read_bytes())
+        original_open = store_graphics.os.open
+        swapped = False
+
+        def swap_before_open(path: object, flags: int, *args: object) -> int:
+            nonlocal swapped
+            if Path(path) == source:
+                swapped = True
+                displaced = source.with_suffix(".displaced")
+                source.replace(displaced)
+                source.symlink_to(target)
+            return original_open(path, flags, *args)
+
+        with mock.patch.object(store_graphics.os, "open", side_effect=swap_before_open):
+            with self.assertRaisesRegex(StoreGraphicsError, "safely open|changed while"):
+                store_graphics._read_regular_bytes(
+                    source,
+                    maximum_bytes=store_graphics.MAX_GRAPHIC_BYTES,
+                    label="generated graphic",
+                )
+        self.assertTrue(swapped)
 
 
 class StoreGraphicsReleaseContractTest(unittest.TestCase):

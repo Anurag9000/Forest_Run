@@ -60,9 +60,15 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
         for token in (
             "strict_json.loads(",
             "must not traverse a symbolic link",
-            "acceptance manifest must not be a symbolic link",
-            "path.lstat()",
+            "_read_bounded_file(path, \"acceptance manifest\", MAX_MANIFEST_BYTES)",
             "candidate.artifact_path",
+        ):
+            self.assertIn(token, source)
+        for token in (
+            "from stable_file_reader import (",
+            "StableFileError,",
+            "consume_regular_file,",
+            "atomic_write_bytes,",
         ):
             self.assertIn(token, source)
         tests = (SCRIPTS / "test_validate_device_acceptance.py").read_text(encoding="utf-8")
@@ -132,8 +138,8 @@ class CandidateEvidenceLayersContractTest(unittest.TestCase):
     def test_governance_contract_covers_all_external_decision_families(self) -> None:
         source = (SCRIPTS / "validate_release_governance.py").read_text(encoding="utf-8")
         for token in (
-            "installed_matrix.load_and_validate",
-            "play_delivery.load_and_validate",
+            "installed_matrix.validate_bundle",
+            "play_delivery.validate_bundle",
             "installed_identity_matrix",
             "play_delivery_record",
             "private_vulnerability_reporting_enabled",

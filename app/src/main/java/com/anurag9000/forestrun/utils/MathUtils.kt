@@ -31,7 +31,14 @@ object MathUtils {
      */
     fun normalise(value: Float, inMin: Float, inMax: Float): Float {
         val range = inMax - inMin
-        return if (range == 0f) 0f else clamp01((value - inMin) / range)
+        if (range == 0f) return 0f
+        if (!inMin.isFinite() || !inMax.isFinite()) {
+            return clamp01((value - inMin) / range)
+        }
+        val normalized =
+            (value.toDouble() - inMin.toDouble()) /
+                (inMax.toDouble() - inMin.toDouble())
+        return normalized.coerceIn(0.0, 1.0).toFloat()
     }
 
     /**

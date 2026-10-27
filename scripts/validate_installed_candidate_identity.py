@@ -15,13 +15,13 @@ import os
 import re
 import stat
 import sys
-import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
 
 import strict_json
+from stable_file_reader import StableFileError, atomic_write_json, checked_directory_path
 
 SCHEMA_VERSION = 1
 CANONICAL_REPOSITORY = "Anurag9000/Forest_Run"
@@ -89,6 +89,13 @@ def _string(value: Any, label: str, *, maximum: int = 4096) -> str:
     return result
 
 
+def _canonical_hash(value: Any, label: str, pattern: re.Pattern[str], description: str) -> str:
+    """Validate a digest's exact spelling instead of trimming it as display text."""
+    if not isinstance(value, str) or not pattern.fullmatch(value):
+        raise InstalledIdentityError(f"{label} must be {description}")
+    return value
+
+
 def _integer(value: Any, label: str, *, minimum: int = 0) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise InstalledIdentityError(f"{label} must be an integer")
@@ -127,16 +134,32 @@ def _parse_utc(value: Any, label: str) -> datetime:
 
 def _safe_relative_path(value: Any, label: str) -> str:
     text = _string(value, label, maximum=512)
-    if "\\" in text or text.startswith("~") or "\x00" in text:
+    if value != text:
+        raise InstalledIdentityError(f"{label} must not have surrounding whitespace")
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise InstalledIdentityError(
+            f"{label} must contain valid Unicode text"
+        ) from exc
+    if "\\" in text or ":" in text or text.startswith("~") or "\x00" in text:
         raise InstalledIdentityError(f"{label} must be a normalized POSIX relative path")
     path = PurePosixPath(text)
     if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
         raise InstalledIdentityError(f"{label} must be a safe relative path")
+    if path.as_posix() != text:
+        raise InstalledIdentityError(f"{label} must be a normalized POSIX relative path")
     return path.as_posix()
 
 
 def _resolve_inside(base: Path, relative: str, label: str) -> Path:
-    canonical = base.resolve()
+    try:
+        canonical = checked_directory_path(base, f"{label} evidence root")
+    except StableFileError as exc:
+        raise InstalledIdentityError(str(exc)) from exc
+    relative_path = PurePosixPath(relative)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise InstalledIdentityError(f"{label} resolves outside the evidence root")
     lexical = canonical / relative
     try:
         parts = lexical.relative_to(canonical).parts
@@ -153,42 +176,93 @@ def _resolve_inside(base: Path, relative: str, label: str) -> Path:
             raise InstalledIdentityError(f"could not inspect {label}: {current}: {exc}") from exc
         if stat.S_ISLNK(metadata.st_mode):
             raise InstalledIdentityError(f"{label} must not traverse a symbolic link: {current}")
-    resolved = lexical.resolve()
+    return lexical
+
+
+def _consume_regular_file(
+    path: Path, label: str, maximum_bytes: int, *, retain_bytes: bool
+) -> tuple[bytes | None, str, os.stat_result]:
+    """Consume a bounded file through no-follow directory descriptors."""
+    absolute = Path(os.path.abspath(os.fspath(path.expanduser())))
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+        raise InstalledIdentityError("safe evidence reads require O_NOFOLLOW and O_DIRECTORY")
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    file_flags = os.O_RDONLY | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        directory_flags |= os.O_CLOEXEC
+        file_flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NONBLOCK"):
+        file_flags |= os.O_NONBLOCK
+    directories: list[int] = []
+    descriptor: int | None = None
     try:
-        resolved.relative_to(canonical)
-    except ValueError as exc:
-        raise InstalledIdentityError(f"{label} resolves outside the evidence root") from exc
-    return resolved
+        current = os.open(absolute.anchor, directory_flags)
+        directories.append(current)
+        for component in absolute.parts[1:-1]:
+            current = os.open(component, directory_flags, dir_fd=current)
+            directories.append(current)
+        leaf = absolute.parts[-1]
+        before = os.stat(leaf, dir_fd=current, follow_symlinks=False)
+        if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+            raise InstalledIdentityError(f"{label} must be a regular non-symlink file: {absolute}")
+        if before.st_size <= 0 or before.st_size > maximum_bytes:
+            raise InstalledIdentityError(
+                f"{label} must be between 1 and {maximum_bytes} bytes: {absolute}"
+            )
+        descriptor = os.open(leaf, file_flags, dir_fd=current)
+        identity_fields = (
+            "st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns"
+        )
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or any(
+            getattr(before, field) != getattr(opened, field) for field in identity_fields
+        ):
+            raise InstalledIdentityError(f"{label} changed while being opened: {absolute}")
+        digest = hashlib.sha256()
+        chunks: list[bytes] = []
+        remaining = before.st_size
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise InstalledIdentityError(f"{label} changed while being read: {absolute}")
+            digest.update(chunk)
+            if retain_bytes:
+                chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise InstalledIdentityError(f"{label} changed while being read: {absolute}")
+        after = os.fstat(descriptor)
+        after_path = os.stat(leaf, dir_fd=current, follow_symlinks=False)
+        if any(
+            getattr(before, field) != getattr(after, field)
+            or getattr(before, field) != getattr(after_path, field)
+            for field in identity_fields
+        ):
+            raise InstalledIdentityError(f"{label} changed while being read: {absolute}")
+        return (b"".join(chunks) if retain_bytes else None), digest.hexdigest(), after
+    except InstalledIdentityError:
+        raise
+    except FileNotFoundError as exc:
+        raise InstalledIdentityError(f"{label} is missing or changed: {absolute}") from exc
+    except OSError as exc:
+        raise InstalledIdentityError(f"could not safely read {label}: {absolute}: {exc}") from exc
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        for directory in reversed(directories):
+            os.close(directory)
 
 
 def _hash_regular_file(path: Path, label: str, maximum_bytes: int) -> tuple[str, os.stat_result]:
-    try:
-        before = path.lstat()
-    except FileNotFoundError as exc:
-        raise InstalledIdentityError(f"{label} is missing: {path}") from exc
-    except OSError as exc:
-        raise InstalledIdentityError(f"could not inspect {label}: {path}: {exc}") from exc
-    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
-        raise InstalledIdentityError(f"{label} must be a regular non-symlink file: {path}")
-    if before.st_size <= 0 or before.st_size > maximum_bytes:
-        raise InstalledIdentityError(
-            f"{label} must be between 1 and {maximum_bytes} bytes: {path}"
-        )
-    digest = hashlib.sha256()
-    try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        after = path.lstat()
-    except OSError as exc:
-        raise InstalledIdentityError(f"could not read {label}: {path}: {exc}") from exc
-    if (
-        before.st_size != after.st_size
-        or before.st_mtime_ns != after.st_mtime_ns
-        or (before.st_ino and before.st_ino != after.st_ino)
-    ):
-        raise InstalledIdentityError(f"{label} changed while being hashed: {path}")
-    return digest.hexdigest(), after
+    _, digest, metadata = _consume_regular_file(path, label, maximum_bytes, retain_bytes=False)
+    return digest, metadata
+
+
+def _read_regular_bytes(path: Path, label: str, maximum_bytes: int) -> tuple[bytes, os.stat_result]:
+    """Read exact bytes from one stable, bounded regular-file inode."""
+    raw, _, metadata = _consume_regular_file(path, label, maximum_bytes, retain_bytes=True)
+    assert raw is not None
+    return raw, metadata
 
 
 def validate_bundle(
@@ -201,6 +275,15 @@ def validate_bundle(
         raise InstalledIdentityError(
             f"installed identity manifest must be between 1 and {MAX_MANIFEST_BYTES} bytes"
         )
+    try:
+        strict_json.loads_matching_object(
+            source_bytes,
+            data,
+            label="installed identity manifest source bytes",
+            maximum_bytes=MAX_MANIFEST_BYTES,
+        )
+    except strict_json.StrictJsonError as exc:
+        raise InstalledIdentityError(str(exc)) from exc
     root = _mapping(data, "root")
     _require_exact_keys(
         root,
@@ -237,22 +320,19 @@ def validate_bundle(
         raise InstalledIdentityError("candidate.repository is not canonical")
     if _string(candidate["branch"], "candidate.branch") != CANONICAL_BRANCH:
         raise InstalledIdentityError("candidate.branch must be main")
-    candidate_sha = _string(candidate["commit_sha"], "candidate.commit_sha", maximum=40).lower()
-    if not SHA40_RE.fullmatch(candidate_sha):
-        raise InstalledIdentityError("candidate.commit_sha must be lowercase 40-hex")
+    candidate_sha = _canonical_hash(
+        candidate["commit_sha"], "candidate.commit_sha", SHA40_RE, "lowercase 40-hex"
+    )
     application_id = _string(candidate["application_id"], "candidate.application_id", maximum=255)
     if application_id != CANONICAL_APPLICATION_ID:
         raise InstalledIdentityError("candidate.application_id is not canonical")
     version_code = _integer(candidate["version_code"], "candidate.version_code", minimum=1)
-    expected_cert = _string(
+    expected_cert = _canonical_hash(
         candidate["app_signing_certificate_sha256"],
         "candidate.app_signing_certificate_sha256",
-        maximum=64,
-    ).lower()
-    if not SHA256_RE.fullmatch(expected_cert):
-        raise InstalledIdentityError(
-            "candidate.app_signing_certificate_sha256 must be lowercase 64-hex"
-        )
+        SHA256_RE,
+        "lowercase 64-hex",
+    )
     expected_installer = _string(
         candidate["expected_installer_package"],
         "candidate.expected_installer_package",
@@ -269,9 +349,9 @@ def validate_bundle(
         {"serial_sha256", "manufacturer", "model", "device", "sdk", "build_fingerprint"},
         "device",
     )
-    serial_digest = _string(device["serial_sha256"], "device.serial_sha256", maximum=64).lower()
-    if not SHA256_RE.fullmatch(serial_digest):
-        raise InstalledIdentityError("device.serial_sha256 must be lowercase 64-hex")
+    serial_digest = _canonical_hash(
+        device["serial_sha256"], "device.serial_sha256", SHA256_RE, "lowercase 64-hex"
+    )
     for key in ("manufacturer", "model", "device", "build_fingerprint"):
         _string(device[key], f"device.{key}", maximum=1024)
     _integer(device["sdk"], "device.sdk", minimum=21)
@@ -298,16 +378,20 @@ def validate_bundle(
     installer = _string(installed["installer_package"], "installed_package.installer_package", maximum=255)
     if installer != expected_installer:
         raise InstalledIdentityError("installed package installer does not match expected Play Store installer")
-    observed_cert = _string(
+    observed_cert = _canonical_hash(
         installed["app_signing_certificate_sha256"],
         "installed_package.app_signing_certificate_sha256",
-        maximum=64,
-    ).lower()
+        SHA256_RE,
+        "lowercase 64-hex",
+    )
     if observed_cert != expected_cert:
         raise InstalledIdentityError("installed app-signing certificate does not match candidate")
-    base_apk_digest = _string(installed["base_apk_sha256"], "installed_package.base_apk_sha256", maximum=64).lower()
-    if not SHA256_RE.fullmatch(base_apk_digest):
-        raise InstalledIdentityError("installed_package.base_apk_sha256 must be lowercase 64-hex")
+    base_apk_digest = _canonical_hash(
+        installed["base_apk_sha256"],
+        "installed_package.base_apk_sha256",
+        SHA256_RE,
+        "lowercase 64-hex",
+    )
 
     apk_set = _sequence(installed["apk_set"], "installed_package.apk_set")
     if not apk_set:
@@ -323,16 +407,17 @@ def validate_bundle(
         if not APK_NAME_RE.fullmatch(name) or name in names:
             raise InstalledIdentityError(f"{label}.name is invalid or duplicated")
         names.add(name)
-        digest = _string(apk["sha256"], f"{label}.sha256", maximum=64).lower()
-        if not SHA256_RE.fullmatch(digest):
-            raise InstalledIdentityError(f"{label}.sha256 must be lowercase 64-hex")
+        digest = _canonical_hash(
+            apk["sha256"], f"{label}.sha256", SHA256_RE, "lowercase 64-hex"
+        )
         size_bytes = _integer(apk["size_bytes"], f"{label}.size_bytes", minimum=1)
         apk_observations[name] = (digest, size_bytes)
-        signer = _string(
+        signer = _canonical_hash(
             apk["signing_certificate_sha256"],
             f"{label}.signing_certificate_sha256",
-            maximum=64,
-        ).lower()
+            SHA256_RE,
+            "lowercase 64-hex",
+        )
         if signer != observed_cert:
             raise InstalledIdentityError(f"{label} signer does not match installed app-signing certificate")
         if name == "base.apk":
@@ -369,9 +454,9 @@ def validate_bundle(
         if relative in seen_paths:
             raise InstalledIdentityError(f"evidence path is reused: {relative}")
         seen_paths.add(relative)
-        expected = _string(reference["sha256"], f"{label}.sha256", maximum=64).lower()
-        if not SHA256_RE.fullmatch(expected):
-            raise InstalledIdentityError(f"{label}.sha256 must be lowercase 64-hex")
+        expected = _canonical_hash(
+            reference["sha256"], f"{label}.sha256", SHA256_RE, "lowercase 64-hex"
+        )
         path = _resolve_inside(evidence_base, relative, f"{label}.path")
         actual, metadata = _hash_regular_file(path, "installed identity evidence", MAX_EVIDENCE_FILE_BYTES)
         if actual != expected:
@@ -404,28 +489,9 @@ def validate_bundle(
 
 def load_and_validate(path: Path) -> InstalledIdentitySummary:
     path = path.expanduser()
-    try:
-        before = path.lstat()
-    except FileNotFoundError as exc:
-        raise InstalledIdentityError(f"installed identity manifest is missing: {path}") from exc
-    except OSError as exc:
-        raise InstalledIdentityError(f"could not inspect installed identity manifest: {exc}") from exc
-    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
-        raise InstalledIdentityError("installed identity manifest must be a regular non-symlink file")
-    try:
-        raw = path.read_bytes()
-        after = path.lstat()
-    except OSError as exc:
-        raise InstalledIdentityError(f"could not read installed identity manifest: {exc}") from exc
-    if (
-        len(raw) != before.st_size
-        or before.st_size <= 0
-        or before.st_size > MAX_MANIFEST_BYTES
-        or after.st_size != before.st_size
-        or after.st_mtime_ns != before.st_mtime_ns
-        or (before.st_ino and after.st_ino != before.st_ino)
-    ):
-        raise InstalledIdentityError("installed identity manifest is invalid or changed while being read")
+    raw, _ = _read_regular_bytes(
+        path, "installed identity manifest", MAX_MANIFEST_BYTES
+    )
     try:
         data = strict_json.loads(
             raw,
@@ -439,27 +505,10 @@ def load_and_validate(path: Path) -> InstalledIdentitySummary:
 
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temporary = Path(handle.name)
-            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        atomic_write_json(path, payload, "installed-identity summary")
+    except StableFileError as exc:
+        raise InstalledIdentityError(str(exc)) from exc
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -474,7 +523,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     payload = summary.to_json()
     if args.summary_output is not None:
-        _write_json(args.summary_output, payload)
+        try:
+            _write_json(args.summary_output, payload)
+        except (OSError, InstalledIdentityError) as exc:
+            print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+            return 1
     print(json.dumps(payload, sort_keys=True))
     return 0
 

@@ -1,8 +1,12 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+import verify_store_metadata as store_metadata
+import stable_file_reader
 from verify_store_metadata import (
     StoreMetadataError,
     finalize_metadata,
@@ -47,6 +51,16 @@ class StoreMetadataVerifierTest(unittest.TestCase):
                 with self.assertRaisesRegex(StoreMetadataError, "schemaVersion"):
                     verify_metadata(self.metadata, self.candidate)
 
+    def test_manifest_line_count_must_be_integer_not_boolean(self) -> None:
+        manifest = finalize_metadata(self.metadata, self.candidate)
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        title = next(entry for entry in payload["files"] if entry["file"] == "title.txt")
+        title["lines"] = True
+        manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+        with self.assertRaisesRegex(StoreMetadataError, "invalid file evidence types"):
+            verify_metadata(self.metadata, self.candidate)
+
     def test_finalize_then_verify_binds_exact_text_to_candidate(self) -> None:
         manifest = finalize_metadata(self.metadata, self.candidate)
         facts = verify_metadata(self.metadata, self.candidate)
@@ -66,6 +80,13 @@ class StoreMetadataVerifierTest(unittest.TestCase):
         finalize_metadata(self.metadata, self.candidate)
         with self.assertRaisesRegex(StoreMetadataError, "candidate"):
             verify_metadata(self.metadata, "b" * 40)
+
+    def test_finalize_and_verify_require_lowercase_candidate_sha(self) -> None:
+        with self.assertRaisesRegex(StoreMetadataError, "lowercase"):
+            finalize_metadata(self.metadata, self.candidate.upper())
+        finalize_metadata(self.metadata, self.candidate)
+        with self.assertRaisesRegex(StoreMetadataError, "lowercase"):
+            verify_metadata(self.metadata, self.candidate.upper())
 
     def test_control_whitespace_line_endings_and_placeholders_fail_closed(self) -> None:
         cases = (
@@ -156,14 +177,103 @@ class StoreMetadataVerifierTest(unittest.TestCase):
             alias.symlink_to(real, target_is_directory=True)
         except OSError as exc:
             self.skipTest(f"symbolic links unavailable: {exc}")
-        with self.assertRaisesRegex(StoreMetadataError, "directory must not be a symbolic link"):
+        with self.assertRaisesRegex(StoreMetadataError, "symbolic link"):
             verify_metadata(alias, self.candidate)
+
+    def test_symlinked_metadata_parent_is_rejected(self) -> None:
+        real_parent = Path(self.temp.name, "real-parent")
+        real = real_parent / "metadata"
+        real.mkdir(parents=True)
+        self.write_valid_metadata(real)
+        finalize_metadata(real, self.candidate)
+        parent_alias = Path(self.temp.name, "parent-alias")
+        try:
+            parent_alias.symlink_to(real_parent, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+
+        alias = parent_alias / "metadata"
+        with self.assertRaisesRegex(StoreMetadataError, "traverse a symbolic link"):
+            verify_metadata(alias, self.candidate)
+        with self.assertRaisesRegex(StoreMetadataError, "traverse a symbolic link"):
+            finalize_metadata(alias, self.candidate)
+
+    def test_finalize_does_not_create_metadata_beneath_symlinked_parent(self) -> None:
+        outside = Path(self.temp.name, "outside")
+        outside.mkdir()
+        alias = Path(self.temp.name, "outside-alias")
+        try:
+            alias.symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+        destination = alias / "new" / "metadata"
+
+        with self.assertRaisesRegex(StoreMetadataError, "traverse a symbolic link"):
+            finalize_metadata(destination, self.candidate)
+        self.assertFalse((outside / "new").exists())
+
+    def test_metadata_file_replaced_by_symlink_after_inspection_is_rejected(self) -> None:
+        source = self.metadata / "title.txt"
+        target = Path(self.temp.name, "alternate-title.txt")
+        target.write_text("Woodland!!", encoding="utf-8")
+        original_open = store_metadata.os.open
+        swapped = False
+
+        def swap_before_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+            nonlocal swapped
+            if (Path(path) == source or path == source.name) and not swapped:
+                swapped = True
+                displaced = source.with_suffix(".displaced")
+                source.replace(displaced)
+                source.symlink_to(target)
+            return original_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(store_metadata.os, "open", side_effect=swap_before_open):
+            with self.assertRaisesRegex(StoreMetadataError, "symbolic link|safely open|changed while"):
+                store_metadata._read_regular_bytes(
+                    source,
+                    maximum_bytes=store_metadata.MAX_METADATA_FILE_BYTES,
+                    label="store metadata",
+                )
+        self.assertTrue(swapped)
 
     def test_finalize_replaces_stale_manifest_atomically(self) -> None:
         manifest = self.metadata / "metadata_manifest.json"
         manifest.write_text("stale", encoding="utf-8")
         finalize_metadata(self.metadata, self.candidate)
         self.assertEqual(1, json.loads(manifest.read_text())["schemaVersion"])
+
+    def test_manifest_parent_swap_cannot_redirect_or_delete_previous_manifest(self) -> None:
+        manifest = finalize_metadata(self.metadata, self.candidate)
+        old_bytes = manifest.read_bytes()
+        external = Path(self.temp.name, "external")
+        external.mkdir()
+        saved_metadata = Path(self.temp.name, "metadata.saved")
+        original_open = os.open
+        swapped = False
+
+        def swap_before_temp_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+            nonlocal swapped
+            if (
+                isinstance(path, str)
+                and path.startswith(".metadata_manifest.json.")
+                and kwargs.get("dir_fd") is not None
+                and not swapped
+            ):
+                self.metadata.rename(saved_metadata)
+                self.metadata.symlink_to(external, target_is_directory=True)
+                swapped = True
+            return original_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(
+            stable_file_reader.os, "open", side_effect=swap_before_temp_open
+        ):
+            with self.assertRaisesRegex(StoreMetadataError, "symbolic link"):
+                finalize_metadata(self.metadata, self.candidate)
+
+        self.assertTrue(swapped)
+        self.assertFalse((external / "metadata_manifest.json").exists())
+        self.assertEqual(old_bytes, (saved_metadata / "metadata_manifest.json").read_bytes())
 
 
 class StoreMetadataReleaseContractTest(unittest.TestCase):

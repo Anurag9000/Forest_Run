@@ -18,7 +18,7 @@ The verifier:
 
 - freezes and SHA-256 hashes one bounded regular artifact;
 - rejects artifact/output symlinks, unsafe archive paths, duplicate entries, encrypted entries, archive symlinks, and size-bound violations;
-- enumerates every packaged `.so` file;
+- enumerates every packaged `.so` file and flags ELF content even when the archive filename has no `.so` suffix;
 - succeeds with `assessment=no-native-code` only when no native library is present;
 - fails closed under `--require-no-native-code` when a native library appears;
 - emits canonical candidate-bound JSON suitable for the final release-evidence index.

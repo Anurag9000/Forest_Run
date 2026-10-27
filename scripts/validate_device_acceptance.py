@@ -17,7 +17,6 @@ import os
 import re
 import stat
 import sys
-import tempfile
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -25,6 +24,13 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
 
 import strict_json
+from stable_file_reader import (
+    StableFileError,
+    atomic_write_bytes,
+    checked_directory_path,
+    consume_regular_file,
+    ensure_directory_exists,
+)
 
 SCHEMA_VERSION = 2
 CANONICAL_REPOSITORY = "Anurag9000/Forest_Run"
@@ -188,18 +194,32 @@ def _parse_utc(value: Any, label: str) -> datetime:
 
 def _safe_evidence_path(value: Any, label: str) -> str:
     text = _string(value, label)
-    if "\\" in text:
-        raise EvidenceError(f"{label} must use forward slashes")
+    if value != text:
+        raise EvidenceError(f"{label} must not have surrounding whitespace")
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise EvidenceError(f"{label} must contain valid Unicode text") from exc
+    if "\\" in text or ":" in text:
+        raise EvidenceError(f"{label} must use a canonical POSIX relative path")
     path = PurePosixPath(text)
     if path.is_absolute() or ".." in path.parts or text.startswith("~"):
         raise EvidenceError(f"{label} must be a safe relative path")
     if not path.parts or any(part in {"", "."} for part in path.parts):
         raise EvidenceError(f"{label} must be normalized")
+    if path.as_posix() != text:
+        raise EvidenceError(f"{label} must be normalized")
     return text
 
 
 def _resolve_evidence_file(base: Path, relative: str, label: str) -> Path:
-    canonical = base.resolve()
+    try:
+        canonical = checked_directory_path(base, f"{label} evidence root")
+    except StableFileError as exc:
+        raise EvidenceError(str(exc)) from exc
+    relative_path = PurePosixPath(relative)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise EvidenceError(f"{label} resolves outside evidence base")
     lexical = canonical / relative
     try:
         parts = lexical.relative_to(canonical).parts
@@ -218,53 +238,45 @@ def _resolve_evidence_file(base: Path, relative: str, label: str) -> Path:
         if stat.S_ISLNK(metadata.st_mode):
             raise EvidenceError(f"{label} must not traverse a symbolic link: {current}")
 
-    resolved = lexical.resolve()
-    try:
-        resolved.relative_to(canonical)
-    except ValueError as exc:
-        raise EvidenceError(f"{label} resolves outside evidence base") from exc
-    return resolved
+    return lexical
 
 
 def _hash_bounded_file(path: Path, label: str, maximum_bytes: int) -> tuple[str, os.stat_result]:
     try:
-        stat_result = path.lstat()
-    except FileNotFoundError as exc:
-        raise EvidenceError(f"{label} is missing: {path}") from exc
-    except OSError as exc:
-        raise EvidenceError(f"could not inspect {label} {path}: {exc}") from exc
-    if stat.S_ISLNK(stat_result.st_mode):
-        raise EvidenceError(f"{label} must not be a symbolic link: {path}")
-    if not stat.S_ISREG(stat_result.st_mode):
-        raise EvidenceError(f"{label} is not a regular file: {path}")
-    if stat_result.st_size <= 0:
-        raise EvidenceError(f"{label} is empty: {path}")
-    if stat_result.st_size > maximum_bytes:
-        raise EvidenceError(
-            f"{label} exceeds the {maximum_bytes}-byte safety limit: {path}"
+        _, digest, metadata = consume_regular_file(
+            path, label, maximum_bytes, retain_bytes=False
         )
-    digest = hashlib.sha256()
+    except StableFileError as exc:
+        raise EvidenceError(str(exc)) from exc
+    return digest, metadata
+
+
+def _read_bounded_file(path: Path, label: str, maximum_bytes: int) -> tuple[bytes, os.stat_result]:
     try:
-        with path.open("rb") as stream:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as exc:
-        raise EvidenceError(f"could not hash {label} {path}: {exc}") from exc
-    try:
-        after = path.lstat()
-    except OSError as exc:
-        raise EvidenceError(f"could not re-inspect {label} {path}: {exc}") from exc
-    if (
-        after.st_size != stat_result.st_size
-        or after.st_mtime_ns != stat_result.st_mtime_ns
-        or (stat_result.st_ino and after.st_ino != stat_result.st_ino)
-    ):
-        raise EvidenceError(f"{label} changed while being hashed: {path}")
-    return digest.hexdigest(), after
+        raw, _, metadata = consume_regular_file(
+            path, label, maximum_bytes, retain_bytes=True
+        )
+    except StableFileError as exc:
+        raise EvidenceError(str(exc)) from exc
+    assert raw is not None
+    return raw, metadata
 
 
 def _parse_thresholds(policy: Mapping[str, Any]) -> Thresholds:
     raw = _mapping(policy.get("thresholds"), "policy.thresholds")
+    _require_exact_keys(
+        raw,
+        {
+            "max_p95_frame_ms",
+            "max_p99_frame_ms",
+            "max_slow_frame_ratio",
+            "max_peak_pss_mb",
+            "max_crashes",
+            "max_anrs",
+            "min_duration_seconds",
+        },
+        "policy.thresholds",
+    )
     p95 = _finite_number(
         raw.get("max_p95_frame_ms"),
         "policy.thresholds.max_p95_frame_ms",
@@ -337,11 +349,11 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, st
     repository = _string(candidate.get("repository"), "candidate.repository")
     branch = _string(candidate.get("branch"), "candidate.branch")
     application_id = _string(candidate.get("application_id"), "candidate.application_id")
-    sha = _string(candidate.get("commit_sha"), "candidate.commit_sha").lower()
+    sha = _string(candidate.get("commit_sha"), "candidate.commit_sha")
     artifact_sha = _string(
         candidate.get("artifact_sha256"),
         "candidate.artifact_sha256",
-    ).lower()
+    )
     artifact_path = _safe_evidence_path(
         candidate.get("artifact_path"),
         "candidate.artifact_path",
@@ -372,7 +384,7 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, st
     upload_certificate_sha = _string(
         candidate.get("upload_certificate_sha256"),
         "candidate.upload_certificate_sha256",
-    ).lower()
+    )
     if not SHA256_RE.fullmatch(upload_certificate_sha):
         raise EvidenceError(
             "candidate.upload_certificate_sha256 must be a lowercase 64-hex digest"
@@ -413,7 +425,7 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, st
         _string(
             store.get("artifact_sha256"),
             "candidate.store_delivery.artifact_sha256",
-        ).lower()
+        )
         != artifact_sha
     ):
         raise EvidenceError(
@@ -422,7 +434,7 @@ def _validate_candidate(candidate: Mapping[str, Any]) -> tuple[str, str, str, st
     app_signing_certificate_sha = _string(
         store.get("app_signing_certificate_sha256"),
         "candidate.store_delivery.app_signing_certificate_sha256",
-    ).lower()
+    )
     if not SHA256_RE.fullmatch(app_signing_certificate_sha):
         raise EvidenceError(
             "candidate.store_delivery.app_signing_certificate_sha256 must be a lowercase 64-hex digest"
@@ -447,6 +459,21 @@ def _validate_session(
 ) -> tuple[str, str, tuple[str, str, str], set[str], datetime]:
     label = f"sessions[{index}]"
     session = _mapping(raw_session, label)
+    _require_exact_keys(
+        session,
+        {
+            "session_id",
+            "started_at_utc",
+            "completed_at_utc",
+            "duration_seconds",
+            "device",
+            "build",
+            "scenarios",
+            "performance",
+            "manual_checks",
+        },
+        label,
+    )
     session_id = _string(session.get("session_id"), f"{label}.session_id")
     if not SESSION_ID_RE.fullmatch(session_id):
         raise EvidenceError(f"{label}.session_id has invalid characters or length")
@@ -468,6 +495,24 @@ def _validate_session(
         raise EvidenceError(f"{label}.duration_seconds is inconsistent with timestamps")
 
     device = _mapping(session.get("device"), f"{label}.device")
+    _require_exact_keys(
+        device,
+        {
+            "class",
+            "manufacturer",
+            "model",
+            "build_fingerprint",
+            "sdk",
+            "ram_mb",
+            "width_px",
+            "height_px",
+            "density_dpi",
+            "tablet",
+            "cutout",
+            "refresh_hz",
+        },
+        f"{label}.device",
+    )
     device_class = _string(device.get("class"), f"{label}.device.class")
     manufacturer = _string(device.get("manufacturer"), f"{label}.device.manufacturer")
     model = _string(device.get("model"), f"{label}.device.model")
@@ -521,7 +566,7 @@ def _validate_session(
         f"{label}.build",
     )
     if (
-        _string(build.get("commit_sha"), f"{label}.build.commit_sha").lower()
+        _string(build.get("commit_sha"), f"{label}.build.commit_sha")
         != candidate_sha
     ):
         raise EvidenceError(f"{label}.build.commit_sha does not match candidate")
@@ -529,7 +574,7 @@ def _validate_session(
         _string(
             build.get("artifact_sha256"),
             f"{label}.build.artifact_sha256",
-        ).lower()
+        )
         != artifact_sha
     ):
         raise EvidenceError(f"{label}.build.artifact_sha256 does not match candidate")
@@ -546,7 +591,7 @@ def _validate_session(
         _string(
             build.get("app_signing_certificate_sha256"),
             f"{label}.build.app_signing_certificate_sha256",
-        ).lower()
+        )
         != app_signing_certificate_sha
     ):
         raise EvidenceError(
@@ -561,6 +606,11 @@ def _validate_session(
         raise EvidenceError(f"{label}.build.installed_via must be internal_store")
 
     scenarios = _mapping(session.get("scenarios"), f"{label}.scenarios")
+    _require_exact_keys(
+        scenarios,
+        required_scenarios,
+        f"{label}.scenarios",
+    )
     missing_scenarios = sorted(set(required_scenarios) - set(scenarios))
     if missing_scenarios:
         raise EvidenceError(
@@ -570,6 +620,11 @@ def _validate_session(
     for scenario_name in required_scenarios:
         result = _mapping(
             scenarios[scenario_name],
+            f"{label}.scenarios.{scenario_name}",
+        )
+        _require_exact_keys(
+            result,
+            {"passed", "evidence_files"},
             f"{label}.scenarios.{scenario_name}",
         )
         if not _bool(
@@ -592,8 +647,9 @@ def _validate_session(
                 f"{label}.scenarios.{scenario_name}.evidence_files[{file_index}]"
             )
             entry = _mapping(raw_entry, entry_label)
+            _require_exact_keys(entry, {"path", "sha256"}, entry_label)
             path = _safe_evidence_path(entry.get("path"), f"{entry_label}.path")
-            digest = _string(entry.get("sha256"), f"{entry_label}.sha256").lower()
+            digest = _string(entry.get("sha256"), f"{entry_label}.sha256")
             if not SHA256_RE.fullmatch(digest):
                 raise EvidenceError(
                     f"{entry_label}.sha256 must be a lowercase 64-hex digest"
@@ -604,6 +660,18 @@ def _validate_session(
         passed_scenarios.add(scenario_name)
 
     performance = _mapping(session.get("performance"), f"{label}.performance")
+    _require_exact_keys(
+        performance,
+        {
+            "p95_frame_ms",
+            "p99_frame_ms",
+            "slow_frame_ratio",
+            "peak_pss_mb",
+            "crashes",
+            "anrs",
+        },
+        f"{label}.performance",
+    )
     p95 = _finite_number(
         performance.get("p95_frame_ms"),
         f"{label}.performance.p95_frame_ms",
@@ -679,7 +747,28 @@ def validate_bundle(
         raise EvidenceError(
             f"acceptance manifest must be between 1 and {MAX_MANIFEST_BYTES} bytes"
         )
+    try:
+        strict_json.loads_matching_object(
+            source_bytes,
+            data,
+            label="acceptance manifest source bytes",
+            maximum_bytes=MAX_MANIFEST_BYTES,
+        )
+    except strict_json.StrictJsonError as exc:
+        raise EvidenceError(str(exc)) from exc
     root = _mapping(data, "root")
+    _require_exact_keys(
+        root,
+        {
+            "schema_version",
+            "generated_at_utc",
+            "candidate",
+            "policy",
+            "sessions",
+            "approvals",
+        },
+        "root",
+    )
     if (
         _integer(root.get("schema_version"), "schema_version", minimum=1)
         != SCHEMA_VERSION
@@ -698,6 +787,16 @@ def validate_bundle(
     ) = _validate_candidate(candidate)
 
     policy = _mapping(root.get("policy"), "policy")
+    _require_exact_keys(
+        policy,
+        {
+            "required_device_classes",
+            "required_scenarios",
+            "min_sessions_per_class",
+            "thresholds",
+        },
+        "policy",
+    )
     required_classes = _unique_strings(
         policy.get("required_device_classes"),
         "policy.required_device_classes",
@@ -787,9 +886,8 @@ def validate_bundle(
         )
 
     if evidence_base is not None:
-        canonical_base = evidence_base.resolve()
         resolved_artifact = _resolve_evidence_file(
-            canonical_base,
+            evidence_base,
             artifact_path,
             "candidate.artifact_path",
         )
@@ -809,7 +907,7 @@ def validate_bundle(
             seen_file_identities[(artifact_stat.st_dev, artifact_stat.st_ino)] = artifact_path
         for relative_path, expected_digest in evidence_paths.items():
             candidate_path = _resolve_evidence_file(
-                canonical_base,
+                evidence_base,
                 relative_path,
                 f"evidence path {relative_path}",
             )
@@ -884,31 +982,9 @@ def validate_bundle(
 
 def load_and_validate(path: Path) -> ValidationSummary:
     try:
-        before = path.lstat()
-    except FileNotFoundError as exc:
-        raise EvidenceError(f"acceptance manifest is missing: {path}") from exc
-    except OSError as exc:
-        raise EvidenceError(f"could not inspect acceptance manifest {path}: {exc}") from exc
-    if stat.S_ISLNK(before.st_mode):
-        raise EvidenceError("acceptance manifest must not be a symbolic link")
-    if not stat.S_ISREG(before.st_mode):
-        raise EvidenceError("acceptance manifest must be a regular file")
-    if before.st_size <= 0 or before.st_size > MAX_MANIFEST_BYTES:
-        raise EvidenceError(
-            f"acceptance manifest must be between 1 and {MAX_MANIFEST_BYTES} bytes"
-        )
-    try:
-        raw = path.read_bytes()
-        after = path.lstat()
-    except OSError as exc:
-        raise EvidenceError(f"could not read acceptance manifest {path}: {exc}") from exc
-    if (
-        len(raw) != before.st_size
-        or after.st_size != before.st_size
-        or after.st_mtime_ns != before.st_mtime_ns
-        or (before.st_ino and after.st_ino != before.st_ino)
-    ):
-        raise EvidenceError(f"acceptance manifest changed while being read: {path}")
+        raw, _ = _read_bounded_file(path, "acceptance manifest", MAX_MANIFEST_BYTES)
+    except EvidenceError as exc:
+        raise EvidenceError(f"could not safely read acceptance manifest: {exc}") from exc
     try:
         data = strict_json.loads(
             raw,
@@ -922,27 +998,12 @@ def load_and_validate(path: Path) -> ValidationSummary:
 
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as stream:
-            temporary_path = Path(stream.name)
-            json.dump(payload, stream, indent=2, sort_keys=True)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary_path, path)
-        temporary_path = None
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
+        ensure_directory_exists(path.parent, "summary output directory")
+        content = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        atomic_write_bytes(path, content, "device-acceptance summary")
+    except StableFileError as exc:
+        raise EvidenceError(str(exc)) from exc
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -959,7 +1020,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     payload = summary.to_json()
     if args.summary_output is not None:
-        _write_json(args.summary_output, payload)
+        try:
+            _write_json(args.summary_output, payload)
+        except (OSError, EvidenceError) as exc:
+            print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+            return 1
     print(json.dumps(payload, sort_keys=True))
     return 0
 

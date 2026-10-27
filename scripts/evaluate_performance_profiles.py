@@ -110,7 +110,10 @@ def _finite_number(source: dict[str, Any], key: str, label: str) -> float:
     value = source.get(key)
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ConfigurationError(f"{label}.{key} must be numeric")
-    number = float(value)
+    try:
+        number = float(value)
+    except OverflowError as exc:
+        raise ConfigurationError(f"{label}.{key} must be finite") from exc
     if not math.isfinite(number):
         raise ConfigurationError(f"{label}.{key} must be finite")
     return number

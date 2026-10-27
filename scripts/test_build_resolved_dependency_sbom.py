@@ -5,7 +5,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+import build_resolved_dependency_sbom as builder
 from build_resolved_dependency_sbom import (
     ResolvedDependencySbomError,
     build_sbom,
@@ -121,6 +123,18 @@ class ResolvedDependencySbomTest(unittest.TestCase):
         ):
             resolved_coordinates(report)
 
+    def test_failed_dependency_report_entry_is_not_emitted_as_resolved(self) -> None:
+        reports = (
+            "+--- com.example:missing:1.0 FAILED\n",
+            "+--- com.example:missing:1.0 -> 2.0 FAILED\n",
+        )
+        for report in reports:
+            with self.subTest(report=report):
+                with self.assertRaisesRegex(
+                    ResolvedDependencySbomError, "failed dependency"
+                ):
+                    resolved_coordinates(report)
+
     def test_invalid_candidate_empty_report_and_duplicate_configuration_fail(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -179,6 +193,28 @@ class ResolvedDependencySbomTest(unittest.TestCase):
             ):
                 publish(output_link, {"ok": True})
             self.assertEqual("unchanged", output_target.read_text(encoding="utf-8"))
+
+    def test_report_replaced_by_symlink_after_inspection_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            report = root / "report.txt"
+            report.write_text("+--- com.example:one:1.0\n", encoding="utf-8")
+            target = root / "target.txt"
+            target.write_text("+--- com.attacker:bad:9.9\n", encoding="utf-8")
+            displaced = root / "displaced.txt"
+            original_open = builder.os.open
+
+            def swap_before_open(path: object, flags: int, *args: object) -> int:
+                if Path(path) == report:
+                    report.replace(displaced)
+                    report.symlink_to(target)
+                return original_open(path, flags, *args)
+
+            with mock.patch.object(builder.os, "open", side_effect=swap_before_open):
+                with self.assertRaisesRegex(
+                    ResolvedDependencySbomError, "safely opened|changed while"
+                ):
+                    build_sbom([("release", report)], SHA)
 
     def test_publish_is_canonical_and_replaces_regular_file(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

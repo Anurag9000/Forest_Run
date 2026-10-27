@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import java.util.Locale
 import com.anurag9000.forestrun.engine.ApplicationPersistenceFacade
 import com.anurag9000.forestrun.engine.AssetPaths
 import com.anurag9000.forestrun.engine.CostumeManager
@@ -318,6 +319,12 @@ class GardenScreen internal constructor(
         typeface = pixelFont
         textAlign = Paint.Align.LEFT
     }
+    private val compactStatsPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 9f
+        typeface = pixelFont
+        textAlign = Paint.Align.LEFT
+    }
     private val runButtonPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.argb(225, 245, 226, 130)
         style = Paint.Style.FILL
@@ -481,6 +488,7 @@ class GardenScreen internal constructor(
     fun draw(canvas: Canvas) {
         val cw = screenW.toFloat()
         val ch = screenH.toFloat()
+        val compactSurface = ch < 700f
         val groundY = ch * 0.82f
 
         applyMoodPalette(ch)
@@ -504,11 +512,11 @@ class GardenScreen internal constructor(
         )
 
         titlePaint.color = forestMoodState.currentMood.accentColor
-        canvas.drawText("GARDEN", cw / 2f, ch * 0.10f, titlePaint)
-        canvas.drawText(forestMoodState.currentMood.gardenLine, cw / 2f, ch * 0.13f, moodPaint)
+        canvas.drawText("GARDEN", cw / 2f, ch * if (compactSurface) 0.085f else 0.10f, titlePaint)
+        canvas.drawText(forestMoodState.currentMood.gardenLine, cw / 2f, ch * if (compactSurface) 0.12f else 0.13f, moodPaint)
         returnMoment?.let { moment ->
-            canvas.drawText(moment.title, cw / 2f, ch * 0.16f, returnTitlePaint)
-            drawWrappedCenteredText(canvas, moment.line, cw / 2f, ch * 0.182f, cw * 0.60f, returnLinePaint)
+            canvas.drawText(moment.title, cw / 2f, ch * if (compactSurface) 0.155f else 0.16f, returnTitlePaint)
+            drawWrappedCenteredText(canvas, moment.line, cw / 2f, ch * if (compactSurface) 0.18f else 0.182f, cw * 0.60f, returnLinePaint, compactSurface)
             drawReturnVisitor(canvas, cw, ch)
             // Consumption follows successful presentation commands. Merely
             // entering/refreshing Garden must not burn an unseen return moment.
@@ -523,15 +531,15 @@ class GardenScreen internal constructor(
         }
         if (returnMoment == null && sanctuaryState.featuredVisitor != null && sanctuaryState.featuredVisitorLine.isNotBlank()) {
             if (sanctuaryState.featuredVisitorTitle.isNotBlank()) {
-                canvas.drawText(sanctuaryState.featuredVisitorTitle, cw / 2f, ch * 0.16f, returnTitlePaint)
+                canvas.drawText(sanctuaryState.featuredVisitorTitle, cw / 2f, ch * if (compactSurface) 0.155f else 0.16f, returnTitlePaint)
             }
-            drawWrappedCenteredText(canvas, sanctuaryState.featuredVisitorLine, cw / 2f, ch * 0.182f, cw * 0.60f, returnLinePaint)
+            drawWrappedCenteredText(canvas, sanctuaryState.featuredVisitorLine, cw / 2f, ch * if (compactSurface) 0.18f else 0.182f, cw * 0.60f, returnLinePaint, compactSurface)
             drawReturnVisitor(canvas, cw, ch)
         } else if (returnMoment == null && arrivalLine.isNotBlank()) {
-            drawWrappedCenteredText(canvas, arrivalLine, cw / 2f, ch * 0.166f, cw * 0.62f, returnLinePaint)
+            drawWrappedCenteredText(canvas, arrivalLine, cw / 2f, ch * if (compactSurface) 0.18f else 0.166f, cw * 0.62f, returnLinePaint, compactSurface)
         }
         if (sanctuaryState.sanctuaryLine.isNotBlank()) {
-            drawWrappedCenteredText(canvas, sanctuaryState.sanctuaryLine, cw / 2f, ch * 0.212f, cw * 0.64f, sanctuaryLinePaint)
+            drawWrappedCenteredText(canvas, sanctuaryState.sanctuaryLine, cw / 2f, ch * if (compactSurface) 0.222f else 0.212f, cw * 0.64f, sanctuaryLinePaint, compactSurface)
         }
         when {
             sanctuaryState.arrivalBadge.isNotBlank() -> {
@@ -631,27 +639,22 @@ class GardenScreen internal constructor(
         canvas.drawRoundRect(statsRect, 18f, 18f, statsBorderPaint)
 
         val rows = listOf(
-            "Best Run" to formatDistance(bestDistance),
-            "Last Killer" to lastKillerLabel,
+            "Best" to formatDistance(bestDistance),
+            "Killer" to lastKillerLabel,
             "Spared" to sparedTotal.toString(),
-            "Friend Biomes" to friendshipTotal.toString(),
-            "Strongest Bond" to strongestBondLabel,
-            "Memory Pages" to memoryPageCount.toString()
+            "Friends" to friendshipTotal.toString(),
+            "Bond" to strongestBondLabel,
+            "Pages" to memoryPageCount.toString()
         )
-        val innerLeft = statsRect.left + 18f
-        val rowHeight = (statsRect.height() - 46f) / rows.size
-        var top = statsRect.top + 26f
+        val innerLeft = statsRect.left + 12f
+        val rowHeight = (statsRect.height() - 30f) / rows.size
+        var baseline = statsRect.top + 22f
         canvas.save()
         canvas.clipRect(statsRect)
         rows.forEach { (label, value) ->
-            canvas.drawText(label, innerLeft, top, statsLabelPaint)
-            canvas.drawText(
-                ellipsizeText(value, statsRect.width() - 36f, statsValuePaint),
-                innerLeft,
-                top + 18f,
-                statsValuePaint
-            )
-            top += rowHeight
+            val line = ellipsizeText("$label: $value", statsRect.width() - 24f, compactStatsPaint)
+            canvas.drawText(line, innerLeft, baseline, compactStatsPaint)
+            baseline += rowHeight
         }
         canvas.restore()
     }
@@ -683,7 +686,13 @@ class GardenScreen internal constructor(
             canvas.drawRoundRect(rect, 16f, 16f, cardBorderPaint)
             drawCostumeIcon(canvas, rect, style, unlocked)
             wardrobeTextPaint.alpha = if (unlocked) 235 else 130
-            canvas.drawText(style.displayName, rect.centerX(), rect.bottom - 16f, wardrobeTextPaint)
+            val labelPaint = wardrobeTextPaint.apply {
+                textSize = if (rect.width() < 72f) 8f else 12f
+            }
+            canvas.drawText(
+                ellipsizeText(style.displayName, rect.width() - 8f, labelPaint),
+                rect.centerX(), rect.bottom - 8f, labelPaint
+            )
         }
 
         if (wardrobeMessageTimer > 0f && wardrobeMessage.isNotBlank()) {
@@ -745,7 +754,10 @@ class GardenScreen internal constructor(
         y += 21f
 
         fun narrative(label: String, line: String, maxLines: Int = 2) {
-            if (line.isBlank() || y >= bottomLimit) return
+            val availableBodyLines = ((bottomLimit - (y + 16f)) / (reflectionPaint.textSize + 4f))
+                .toInt()
+                .coerceIn(0, maxLines)
+            if (line.isBlank() || availableBodyLines == 0) return
             canvas.drawText(ellipsizeText(label, maxWidth, statsLabelPaint), left, y, statsLabelPaint)
             y += 16f
             y = drawWrappedLeftText(
@@ -755,7 +767,7 @@ class GardenScreen internal constructor(
                 baselineY = y,
                 maxWidth = maxWidth,
                 paint = reflectionPaint,
-                maxLines = maxLines
+                maxLines = availableBodyLines
             ) + 6f
         }
 
@@ -945,7 +957,7 @@ class GardenScreen internal constructor(
         return if (safeDistance < 1_000f) {
             "${safeDistance.toInt()} m"
         } else {
-            String.format("%.2f km", safeDistance / 1_000f)
+            String.format(Locale.getDefault(), "%.2f km", safeDistance / 1_000f)
         }
     }
 
@@ -1106,10 +1118,12 @@ class GardenScreen internal constructor(
         centerX: Float,
         baselineY: Float,
         maxWidth: Float,
-        paint: Paint
+        paint: Paint,
+        compact: Boolean = false
     ) {
+        val effectiveWidth = if (compact) maxWidth * 1.5f else maxWidth
         var y = baselineY
-        wrapTextLines(text, maxWidth, paint, maxLines = 2).forEach { line ->
+        wrapTextLines(text, effectiveWidth, paint, maxLines = if (compact) 1 else 2).forEach { line ->
             canvas.drawText(line, centerX, y, paint)
             y += paint.textSize + 6f
         }

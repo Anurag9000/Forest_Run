@@ -11,13 +11,11 @@ are actually represented in the final evidence index.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
 import stat
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping, Sequence
@@ -30,6 +28,13 @@ import validate_play_delivery_evidence as play_delivery
 import validate_release_governance as governance
 import verify_release_evidence_index as evidence_index
 import verify_store_metadata as store_metadata
+from stable_file_reader import (
+    StableFileError,
+    atomic_write_bytes,
+    checked_directory_path,
+    consume_regular_file,
+    ensure_directory_exists,
+)
 
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 MAX_INDEX_BYTES = evidence_index.MAX_INDEX_BYTES
@@ -102,7 +107,10 @@ def _expected_sha(value: str) -> str:
 
 
 def _safe_relative_path(path: Path, root: Path, label: str) -> tuple[str, Path]:
-    root = root.expanduser().resolve()
+    try:
+        root = checked_directory_path(root, f"{label} evidence root")
+    except StableFileError as exc:
+        raise ReleaseReadinessError(str(exc)) from exc
     lexical = Path(os.path.abspath(os.fspath(path.expanduser())))
     try:
         relative = lexical.relative_to(root)
@@ -112,7 +120,7 @@ def _safe_relative_path(path: Path, root: Path, label: str) -> tuple[str, Path]:
         raise ReleaseReadinessError(f"{label} has an unsafe relative path")
 
     current = root
-    for part in relative.parts:
+    for index, part in enumerate(relative.parts):
         current = current / part
         try:
             metadata = current.lstat()
@@ -122,23 +130,21 @@ def _safe_relative_path(path: Path, root: Path, label: str) -> tuple[str, Path]:
             raise ReleaseReadinessError(f"could not inspect {label}: {current}: {exc}") from exc
         if stat.S_ISLNK(metadata.st_mode):
             raise ReleaseReadinessError(f"{label} must not traverse a symbolic link: {current}")
-
-    resolved = lexical.resolve()
-    try:
-        resolved.relative_to(root)
-    except ValueError as exc:
-        raise ReleaseReadinessError(f"{label} resolves outside the evidence root") from exc
-    if not resolved.is_file():
-        raise ReleaseReadinessError(f"{label} must be a regular file")
-    return PurePosixPath(*relative.parts).as_posix(), resolved
+        if index < len(relative.parts) - 1 and not stat.S_ISDIR(metadata.st_mode):
+            raise ReleaseReadinessError(f"{label} path component is not a directory: {current}")
+        if index == len(relative.parts) - 1 and not stat.S_ISREG(metadata.st_mode):
+            raise ReleaseReadinessError(f"{label} must be a regular file")
+    return PurePosixPath(*relative.parts).as_posix(), lexical
 
 
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    try:
+        _, digest, _ = consume_regular_file(
+            path, "release evidence file", 64 * 1024 * 1024, retain_bytes=False
+        )
+    except StableFileError as exc:
+        raise ReleaseReadinessError(str(exc)) from exc
+    return digest
 
 
 def _load_json_object(path: Path, label: str, maximum_bytes: int) -> Mapping[str, Any]:
@@ -203,7 +209,6 @@ def validate_readiness(
     store_metadata_manifest: Path,
     release_index: Path,
 ) -> ReleaseReadinessSummary:
-    root = root.expanduser().resolve()
     expected = _expected_sha(expected_candidate_sha)
     device_relative, device_path = _safe_relative_path(
         device_manifest, root, "device acceptance manifest"
@@ -422,27 +427,14 @@ def validate_readiness(
 
 
 def _write_summary(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temporary = Path(handle.name)
-            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        ensure_directory_exists(path.parent, "summary output directory")
+        content = (
+            json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        ).encode("utf-8")
+        atomic_write_bytes(path, content, "release-readiness summary")
+    except StableFileError as exc:
+        raise ReleaseReadinessError(str(exc)) from exc
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -475,7 +467,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     payload = summary.to_json()
     if args.summary_output is not None:
-        _write_summary(args.summary_output, payload)
+        try:
+            _write_summary(args.summary_output, payload)
+        except (OSError, ReleaseReadinessError) as exc:
+            print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+            return 1
     print(json.dumps(payload, sort_keys=True))
     return 0
 

@@ -8,10 +8,10 @@ import datetime as dt
 import json
 import os
 import re
-import tempfile
 from pathlib import Path
 from typing import Any, Sequence
 
+from stable_file_reader import StableFileError, atomic_write_bytes, open_directory_descriptor
 from strict_json import StrictJsonError, load_file
 
 from screenshot_capture_evidence import (
@@ -19,10 +19,14 @@ from screenshot_capture_evidence import (
     EXPECTED_PACKAGE_NAME,
     CaptureEvidence,
     CaptureEvidenceError,
-    load_capture_evidence,
+    parse_capture_evidence,
     require_same_capture_identity,
 )
-from verify_curated_screenshot_set import CuratedScreenshotError, _inspect_png
+from verify_curated_screenshot_set import (
+    CuratedScreenshotError,
+    _admit_directory,
+    _inspect_png,
+)
 
 HEX_40 = re.compile(r"[0-9a-f]{40}")
 HEX_64 = re.compile(r"[0-9a-f]{64}")
@@ -34,7 +38,7 @@ class CaptureSessionFinalizeError(ValueError):
     """Raised when a raw capture directory is incomplete or internally inconsistent."""
 
 
-def _read_sidecar_identity(path: Path) -> tuple[str, str]:
+def _read_sidecar_identity(path: Path) -> tuple[str, str, dict[str, Any]]:
     try:
         size = path.stat().st_size
     except FileNotFoundError as exc:
@@ -59,9 +63,13 @@ def _read_sidecar_identity(path: Path) -> tuple[str, str]:
     scenario = raw.get("scenario")
     if not isinstance(raw_file, str) or not raw_file.strip():
         raise CaptureSessionFinalizeError(f"{path}: rawFile must be non-blank")
+    if raw_file != raw_file.strip():
+        raise CaptureSessionFinalizeError(f"{path}: rawFile must not have surrounding whitespace")
     if not isinstance(scenario, str) or SCENARIO_TOKEN.fullmatch(scenario.strip()) is None:
         raise CaptureSessionFinalizeError(f"{path}: scenario must be an uppercase token")
-    return raw_file.strip(), scenario.strip()
+    if scenario != scenario.strip():
+        raise CaptureSessionFinalizeError(f"{path}: scenario must not have surrounding whitespace")
+    return raw_file, scenario, raw
 
 
 def _parse_capture_time(value: str, path: Path) -> dt.datetime:
@@ -74,27 +82,22 @@ def _parse_capture_time(value: str, path: Path) -> dt.datetime:
     return parsed
 
 
-def _atomic_write(path: Path, payload: dict[str, object]) -> None:
-    temporary: Path | None = None
+def _atomic_write(
+    path: Path,
+    payload: dict[str, object],
+    *,
+    expected_directory_identity: tuple[int, int],
+) -> None:
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as stream:
-            temporary = Path(stream.name)
-            json.dump(payload, stream, indent=2, sort_keys=True)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        content = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        atomic_write_bytes(
+            path,
+            content,
+            "capture-session evidence",
+            expected_directory_identity=expected_directory_identity,
+        )
+    except StableFileError as exc:
+        raise CaptureSessionFinalizeError(str(exc)) from exc
 
 
 def finalize_capture_session(
@@ -109,21 +112,43 @@ def finalize_capture_session(
     expected_count: int,
     captured_at_utc: dt.datetime | None = None,
 ) -> Path:
-    output_dir = output_dir.expanduser().resolve()
-    if not output_dir.is_dir():
-        raise CaptureSessionFinalizeError(f"Capture output directory is missing: {output_dir}")
-    candidate_sha = candidate_sha.strip().lower()
-    origin_main_sha = origin_main_sha.strip().lower()
-    apk_sha256 = apk_sha256.strip().lower()
-    device_serial = device_serial.strip()
-    package_name = package_name.strip()
-    activity_name = activity_name.strip()
-    if HEX_40.fullmatch(candidate_sha) is None:
-        raise CaptureSessionFinalizeError("candidate_sha must be a 40-character Git SHA")
-    if HEX_40.fullmatch(origin_main_sha) is None or origin_main_sha != candidate_sha:
+    try:
+        output_dir = _admit_directory(
+            output_dir.expanduser(),
+            "Capture output directory",
+        )
+    except CuratedScreenshotError as exc:
+        raise CaptureSessionFinalizeError(str(exc)) from exc
+    try:
+        directory_fd = open_directory_descriptor(output_dir, "Capture output directory")
+        try:
+            directory_metadata = os.fstat(directory_fd)
+            output_directory_identity = (directory_metadata.st_dev, directory_metadata.st_ino)
+        finally:
+            os.close(directory_fd)
+    except StableFileError as exc:
+        raise CaptureSessionFinalizeError(str(exc)) from exc
+    for label, value in (
+        ("device_serial", device_serial),
+        ("package_name", package_name),
+        ("activity_name", activity_name),
+    ):
+        if not isinstance(value, str) or not value.strip():
+            raise CaptureSessionFinalizeError(f"{label} must be a non-blank string")
+        if value != value.strip():
+            raise CaptureSessionFinalizeError(
+                f"{label} must not have surrounding whitespace"
+            )
+    if not isinstance(candidate_sha, str) or HEX_40.fullmatch(candidate_sha) is None:
+        raise CaptureSessionFinalizeError(
+            "candidate_sha must be exactly 40 lowercase hexadecimal characters"
+        )
+    if not isinstance(origin_main_sha, str) or HEX_40.fullmatch(origin_main_sha) is None or origin_main_sha != candidate_sha:
         raise CaptureSessionFinalizeError("origin_main_sha must equal candidate_sha")
-    if HEX_64.fullmatch(apk_sha256) is None:
-        raise CaptureSessionFinalizeError("apk_sha256 must be a SHA-256 digest")
+    if not isinstance(apk_sha256, str) or HEX_64.fullmatch(apk_sha256) is None:
+        raise CaptureSessionFinalizeError(
+            "apk_sha256 must be exactly 64 lowercase hexadecimal characters"
+        )
     if not device_serial:
         raise CaptureSessionFinalizeError("device_serial must be non-blank")
     if package_name != EXPECTED_PACKAGE_NAME:
@@ -134,8 +159,8 @@ def finalize_capture_session(
         raise CaptureSessionFinalizeError(
             f"activity_name must equal {EXPECTED_ACTIVITY_NAME}"
         )
-    if isinstance(expected_count, bool) or expected_count <= 0:
-        raise CaptureSessionFinalizeError("expected_count must be positive")
+    if type(expected_count) is not int or expected_count <= 0:
+        raise CaptureSessionFinalizeError("expected_count must be a positive integer")
 
     png_paths = sorted(output_dir.glob("*.png"))
     sidecar_paths = sorted(output_dir.glob("*.capture.json"))
@@ -159,9 +184,16 @@ def finalize_capture_session(
     baseline: CaptureEvidence | None = None
     scenarios: set[str] = set()
     latest_capture: dt.datetime | None = None
+    validated_images: dict[str, tuple[int, int, str]] = {}
+    validated_sidecars: dict[str, tuple[str, str, dict[str, Any]]] = {}
     for png_path in png_paths:
         sidecar_path = png_path.with_suffix(".capture.json")
-        raw_file, scenario = _read_sidecar_identity(sidecar_path)
+        raw_file, scenario, sidecar_payload = _read_sidecar_identity(sidecar_path)
+        validated_sidecars[sidecar_path.name] = (
+            raw_file,
+            scenario,
+            sidecar_payload,
+        )
         if raw_file != png_path.name:
             raise CaptureSessionFinalizeError(
                 f"{sidecar_path}: rawFile {raw_file!r} does not match {png_path.name!r}"
@@ -171,7 +203,9 @@ def finalize_capture_session(
         scenarios.add(scenario)
         try:
             width, height, image_sha256 = _inspect_png(png_path)
-            evidence = load_capture_evidence(
+            validated_images[png_path.name] = (width, height, image_sha256)
+            evidence = parse_capture_evidence(
+                sidecar_payload,
                 sidecar_path,
                 expected_raw_file=png_path.name,
                 expected_scenario=scenario,
@@ -201,7 +235,39 @@ def finalize_capture_session(
 
     if baseline is None or latest_capture is None:
         raise CaptureSessionFinalizeError("No screenshots were validated")
-    session_time = captured_at_utc or dt.datetime.now(dt.timezone.utc)
+    current_png_paths = sorted(output_dir.glob("*.png"))
+    current_sidecar_paths = sorted(output_dir.glob("*.capture.json"))
+    if (
+        {path.name for path in current_png_paths} != png_names
+        or {path.name for path in current_sidecar_paths}
+        != {path.name for path in sidecar_paths}
+    ):
+        raise CaptureSessionFinalizeError(
+            "Capture set changed after screenshot validation"
+        )
+    try:
+        for png_path in current_png_paths:
+            if _inspect_png(png_path) != validated_images[png_path.name]:
+                raise CaptureSessionFinalizeError(
+                    f"Capture image changed after screenshot validation: {png_path}"
+                )
+        for sidecar_path in current_sidecar_paths:
+            current_identity = _read_sidecar_identity(sidecar_path)
+            if current_identity != validated_sidecars[sidecar_path.name]:
+                raise CaptureSessionFinalizeError(
+                    f"Capture sidecar changed after screenshot validation: {sidecar_path}"
+                )
+    except (CuratedScreenshotError, CaptureEvidenceError) as exc:
+        raise CaptureSessionFinalizeError(str(exc)) from exc
+    if captured_at_utc is not None and not isinstance(captured_at_utc, dt.datetime):
+        raise CaptureSessionFinalizeError(
+            "captured_at_utc must be a datetime"
+        )
+    session_time = (
+        captured_at_utc
+        if captured_at_utc is not None
+        else dt.datetime.now(dt.timezone.utc)
+    )
     if session_time.tzinfo is None or session_time.utcoffset() != dt.timedelta(0):
         raise CaptureSessionFinalizeError("captured_at_utc must be timezone-aware UTC")
     if session_time < latest_capture:
@@ -223,6 +289,7 @@ def finalize_capture_session(
             "capturedAtUtc": session_time.isoformat(),
             "screenshotCount": len(png_paths),
         },
+        expected_directory_identity=output_directory_identity,
     )
     return destination
 

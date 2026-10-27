@@ -17,7 +17,6 @@ import os
 import re
 import stat
 import sys
-import tempfile
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -26,6 +25,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 import strict_json
 import validate_installed_identity_matrix as installed_matrix
+from stable_file_reader import StableFileError, atomic_write_json, checked_directory_path
 
 SCHEMA_VERSION = 1
 MAX_MANIFEST_BYTES = 8 * 1024 * 1024
@@ -97,6 +97,13 @@ def _string(value: Any, label: str, *, maximum: int = 4096) -> str:
     return result
 
 
+def _canonical_hash(value: Any, label: str, pattern: re.Pattern[str], description: str) -> str:
+    """Check an identity digest exactly, without display-text normalization."""
+    if not isinstance(value, str) or not pattern.fullmatch(value):
+        raise PlayDeliveryError(f"{label} must be {description}")
+    return value
+
+
 def _integer(value: Any, label: str, *, minimum: int = 0) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise PlayDeliveryError(f"{label} must be an integer")
@@ -138,16 +145,30 @@ def _normalized_name(value: str) -> str:
 
 def _safe_relative_path(value: Any, label: str) -> str:
     text = _string(value, label, maximum=512)
-    if "\\" in text or text.startswith("~") or "\x00" in text:
+    if value != text:
+        raise PlayDeliveryError(f"{label} must not have surrounding whitespace")
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise PlayDeliveryError(f"{label} must contain valid Unicode text") from exc
+    if "\\" in text or ":" in text or text.startswith("~") or "\x00" in text:
         raise PlayDeliveryError(f"{label} must be a normalized POSIX relative path")
     path = PurePosixPath(text)
     if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
         raise PlayDeliveryError(f"{label} must be a safe relative path")
+    if path.as_posix() != text:
+        raise PlayDeliveryError(f"{label} must be a normalized POSIX relative path")
     return path.as_posix()
 
 
 def _resolve_inside(base: Path, relative: str, label: str) -> Path:
-    canonical = base.resolve()
+    try:
+        canonical = checked_directory_path(base, f"{label} evidence root")
+    except StableFileError as exc:
+        raise PlayDeliveryError(str(exc)) from exc
+    relative_path = PurePosixPath(relative)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise PlayDeliveryError(f"{label} resolves outside the evidence root")
     lexical = canonical / relative
     try:
         parts = lexical.relative_to(canonical).parts
@@ -164,62 +185,162 @@ def _resolve_inside(base: Path, relative: str, label: str) -> Path:
             raise PlayDeliveryError(f"could not inspect {label}: {current}: {exc}") from exc
         if stat.S_ISLNK(metadata.st_mode):
             raise PlayDeliveryError(f"{label} must not traverse a symbolic link: {current}")
-    resolved = lexical.resolve()
+    return lexical
+
+
+def _consume_regular_file(
+    path: Path,
+    label: str,
+    maximum_bytes: int,
+    *,
+    retain_bytes: bool,
+) -> tuple[bytes | None, str, os.stat_result]:
+    """Read/hash one file while walking every directory with O_NOFOLLOW."""
+    absolute = Path(os.path.abspath(os.fspath(path.expanduser())))
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+        raise PlayDeliveryError("safe evidence reads require O_NOFOLLOW and O_DIRECTORY")
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    file_flags = os.O_RDONLY | os.O_NOFOLLOW
+    if hasattr(os, "O_CLOEXEC"):
+        directory_flags |= os.O_CLOEXEC
+        file_flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NONBLOCK"):
+        file_flags |= os.O_NONBLOCK
+
+    directories: list[int] = []
+    descriptor: int | None = None
     try:
-        resolved.relative_to(canonical)
-    except ValueError as exc:
-        raise PlayDeliveryError(f"{label} resolves outside the evidence root") from exc
-    return resolved
+        current = os.open(absolute.anchor, directory_flags)
+        directories.append(current)
+        for component in absolute.parts[1:-1]:
+            current = os.open(component, directory_flags, dir_fd=current)
+            directories.append(current)
+        leaf = absolute.parts[-1]
+        before = os.stat(leaf, dir_fd=current, follow_symlinks=False)
+        if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+            raise PlayDeliveryError(
+                f"{label} must be a regular non-symlink file: {absolute}"
+            )
+        if before.st_size <= 0 or before.st_size > maximum_bytes:
+            raise PlayDeliveryError(f"{label} has an invalid size: {absolute}")
+        descriptor = os.open(leaf, file_flags, dir_fd=current)
+        identity_fields = (
+            "st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns"
+        )
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or any(
+            getattr(before, field) != getattr(opened, field)
+            for field in identity_fields
+        ):
+            raise PlayDeliveryError(f"{label} changed while being opened: {absolute}")
+
+        digest = hashlib.sha256()
+        chunks: list[bytes] = []
+        remaining = before.st_size
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise PlayDeliveryError(f"{label} changed while being read: {absolute}")
+            digest.update(chunk)
+            if retain_bytes:
+                chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise PlayDeliveryError(f"{label} changed while being read: {absolute}")
+        after = os.fstat(descriptor)
+        after_path = os.stat(leaf, dir_fd=current, follow_symlinks=False)
+        if any(
+            getattr(before, field) != getattr(after, field)
+            or getattr(before, field) != getattr(after_path, field)
+            for field in identity_fields
+        ):
+            raise PlayDeliveryError(f"{label} changed while being read: {absolute}")
+        return (b"".join(chunks) if retain_bytes else None), digest.hexdigest(), after
+    except PlayDeliveryError:
+        raise
+    except FileNotFoundError as exc:
+        raise PlayDeliveryError(f"{label} is missing or changed: {absolute}") from exc
+    except OSError as exc:
+        raise PlayDeliveryError(f"could not safely read {label}: {absolute}: {exc}") from exc
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        for directory in reversed(directories):
+            os.close(directory)
 
 
 def _hash_regular_file(path: Path, label: str, maximum_bytes: int) -> tuple[str, os.stat_result]:
-    try:
-        before = path.lstat()
-    except FileNotFoundError as exc:
-        raise PlayDeliveryError(f"{label} is missing: {path}") from exc
-    except OSError as exc:
-        raise PlayDeliveryError(f"could not inspect {label}: {path}: {exc}") from exc
-    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
-        raise PlayDeliveryError(f"{label} must be a regular non-symlink file: {path}")
-    if before.st_size <= 0 or before.st_size > maximum_bytes:
-        raise PlayDeliveryError(f"{label} has an invalid size: {path}")
-    digest = hashlib.sha256()
-    try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        after = path.lstat()
-    except OSError as exc:
-        raise PlayDeliveryError(f"could not read {label}: {path}: {exc}") from exc
-    if (
-        before.st_size != after.st_size
-        or before.st_mtime_ns != after.st_mtime_ns
-        or (before.st_ino and before.st_ino != after.st_ino)
-    ):
-        raise PlayDeliveryError(f"{label} changed while being hashed: {path}")
-    return digest.hexdigest(), after
+    _, digest, metadata = _consume_regular_file(
+        path, label, maximum_bytes, retain_bytes=False
+    )
+    return digest, metadata
 
 
-def _load_matrix(reference: Mapping[str, Any], base: Path) -> tuple[installed_matrix.InstalledIdentityMatrixSummary, str]:
+def _read_regular_bytes(
+    path: Path,
+    label: str,
+    maximum_bytes: int,
+) -> tuple[bytes, os.stat_result]:
+    raw, _, metadata = _consume_regular_file(
+        path, label, maximum_bytes, retain_bytes=True
+    )
+    assert raw is not None
+    return raw, metadata
+
+
+def _load_matrix(
+    reference: Mapping[str, Any],
+    base: Path,
+) -> tuple[
+    installed_matrix.InstalledIdentityMatrixSummary,
+    str,
+    Path,
+    tuple[int, int],
+]:
     _require_exact_keys(reference, {"path", "sha256"}, "installed_identity_matrix")
     relative = _safe_relative_path(reference["path"], "installed_identity_matrix.path")
-    expected = _string(reference["sha256"], "installed_identity_matrix.sha256", maximum=64).lower()
-    if not SHA256_RE.fullmatch(expected):
-        raise PlayDeliveryError("installed_identity_matrix.sha256 must be lowercase 64-hex")
+    expected = _canonical_hash(
+        reference["sha256"],
+        "installed_identity_matrix.sha256",
+        SHA256_RE,
+        "lowercase 64-hex",
+    )
     path = _resolve_inside(base, relative, "installed_identity_matrix.path")
-    actual, _ = _hash_regular_file(path, "installed identity matrix", installed_matrix.MAX_MANIFEST_BYTES)
+    raw, metadata = _read_regular_bytes(
+        path, "installed identity matrix", installed_matrix.MAX_MANIFEST_BYTES
+    )
+    actual = hashlib.sha256(raw).hexdigest()
     if actual != expected:
         raise PlayDeliveryError("installed identity matrix digest mismatch")
     try:
-        summary = installed_matrix.load_and_validate(path)
-    except installed_matrix.InstalledIdentityMatrixError as exc:
+        data = strict_json.loads(
+            raw,
+            label=str(path),
+            maximum_bytes=installed_matrix.MAX_MANIFEST_BYTES,
+            require_object=True,
+        )
+        summary = installed_matrix.validate_bundle(
+            data,
+            source_bytes=raw,
+            evidence_base=path.parent,
+        )
+    except (installed_matrix.InstalledIdentityMatrixError, strict_json.StrictJsonError) as exc:
         raise PlayDeliveryError(f"referenced installed identity matrix is invalid: {exc}") from exc
-    return summary, actual
+    return summary, actual, path, (metadata.st_dev, metadata.st_ino)
 
 
 def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> PlayDeliverySummary:
-    if not source_bytes or len(source_bytes) > MAX_MANIFEST_BYTES:
+    if not isinstance(source_bytes, bytes) or not source_bytes or len(source_bytes) > MAX_MANIFEST_BYTES:
         raise PlayDeliveryError("Play delivery manifest has an invalid size")
+    try:
+        strict_json.loads_matching_object(
+            source_bytes,
+            data,
+            label="Play delivery manifest source bytes",
+            maximum_bytes=MAX_MANIFEST_BYTES,
+        )
+    except strict_json.StrictJsonError as exc:
+        raise PlayDeliveryError(f"invalid Play delivery manifest source bytes: {exc}") from exc
     root = _mapping(data, "root")
     _require_exact_keys(
         root,
@@ -237,7 +358,7 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> P
     if _integer(root["schema_version"], "schema_version", minimum=1) != SCHEMA_VERSION:
         raise PlayDeliveryError(f"schema_version must be {SCHEMA_VERSION}")
     generated_at = _parse_utc(root["generated_at_utc"], "generated_at_utc")
-    matrix_summary, matrix_digest = _load_matrix(
+    matrix_summary, matrix_digest, matrix_path, matrix_inode = _load_matrix(
         _mapping(root["installed_identity_matrix"], "installed_identity_matrix"),
         evidence_base,
     )
@@ -281,9 +402,13 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> P
     ):
         observed = candidate[key]
         if isinstance(expected_candidate[key], str) and key.endswith("sha256"):
-            observed = _string(observed, f"candidate.{key}", maximum=64).lower()
+            observed = _canonical_hash(
+                observed, f"candidate.{key}", SHA256_RE, "lowercase 64-hex"
+            )
         elif key == "commit_sha":
-            observed = _string(observed, "candidate.commit_sha", maximum=40).lower()
+            observed = _canonical_hash(
+                observed, "candidate.commit_sha", SHA40_RE, "lowercase 40-hex"
+            )
         else:
             observed = _string(observed, f"candidate.{key}", maximum=255)
         if observed != expected_candidate[key]:
@@ -341,7 +466,7 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> P
     evidence = _mapping(root["evidence"], "evidence")
     _require_exact_keys(evidence, REQUIRED_EVIDENCE_KINDS, "evidence")
     seen_paths: set[str] = set()
-    seen_inodes: set[tuple[int, int]] = set()
+    seen_inodes: set[tuple[int, int]] = {matrix_inode}
     for kind in sorted(REQUIRED_EVIDENCE_KINDS):
         label = f"evidence.{kind}"
         reference = _mapping(evidence[kind], label)
@@ -350,15 +475,19 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> P
         if relative in seen_paths:
             raise PlayDeliveryError(f"Play delivery evidence path is reused: {relative}")
         seen_paths.add(relative)
-        expected = _string(reference["sha256"], f"{label}.sha256", maximum=64).lower()
-        if not SHA256_RE.fullmatch(expected):
-            raise PlayDeliveryError(f"{label}.sha256 must be lowercase 64-hex")
+        expected = _canonical_hash(
+            reference["sha256"], f"{label}.sha256", SHA256_RE, "lowercase 64-hex"
+        )
         path = _resolve_inside(evidence_base, relative, f"{label}.path")
         actual, metadata = _hash_regular_file(path, "Play delivery evidence", MAX_EVIDENCE_FILE_BYTES)
         if actual != expected:
             raise PlayDeliveryError(f"Play delivery evidence digest mismatch: {relative}")
         if metadata.st_ino:
             identity_value = (metadata.st_dev, metadata.st_ino)
+            if path == matrix_path or identity_value == matrix_inode:
+                raise PlayDeliveryError(
+                    "Play delivery evidence must not reuse the installed identity matrix"
+                )
             if identity_value in seen_inodes:
                 raise PlayDeliveryError(f"Play delivery evidence is reused through a hard link: {relative}")
             seen_inodes.add(identity_value)
@@ -399,22 +528,9 @@ def validate_bundle(data: Any, *, source_bytes: bytes, evidence_base: Path) -> P
 def load_and_validate(path: Path) -> PlayDeliverySummary:
     path = path.expanduser()
     try:
-        before = path.lstat()
-        raw = path.read_bytes()
-        after = path.lstat()
-    except OSError as exc:
+        raw, _ = _read_regular_bytes(path, "Play delivery manifest", MAX_MANIFEST_BYTES)
+    except PlayDeliveryError as exc:
         raise PlayDeliveryError(f"could not read Play delivery manifest: {exc}") from exc
-    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
-        raise PlayDeliveryError("Play delivery manifest must be a regular non-symlink file")
-    if (
-        len(raw) != before.st_size
-        or before.st_size <= 0
-        or before.st_size > MAX_MANIFEST_BYTES
-        or after.st_size != before.st_size
-        or after.st_mtime_ns != before.st_mtime_ns
-        or (before.st_ino and after.st_ino != before.st_ino)
-    ):
-        raise PlayDeliveryError("Play delivery manifest is invalid or changed while being read")
     try:
         data = strict_json.loads(raw, label=str(path), maximum_bytes=MAX_MANIFEST_BYTES, require_object=True)
     except strict_json.StrictJsonError as exc:
@@ -423,20 +539,10 @@ def load_and_validate(path: Path) -> PlayDeliverySummary:
 
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False) as handle:
-            temporary = Path(handle.name)
-            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        temporary = None
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+        atomic_write_json(path, payload, "Play-delivery summary")
+    except StableFileError as exc:
+        raise PlayDeliveryError(str(exc)) from exc
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -451,7 +557,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     payload = summary.to_json()
     if args.summary_output is not None:
-        _write_json(args.summary_output, payload)
+        try:
+            _write_json(args.summary_output, payload)
+        except (OSError, PlayDeliveryError) as exc:
+            print(json.dumps({"status": "invalid", "error": str(exc)}, sort_keys=True))
+            return 1
     print(json.dumps(payload, sort_keys=True))
     return 0
 

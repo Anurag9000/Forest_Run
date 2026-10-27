@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import build_release_evidence_index as index_builder
 import compile_release_governance
@@ -11,6 +13,7 @@ import test_validate_device_acceptance as device_fixture
 import test_validate_release_governance as governance_fixture
 import validate_release_readiness as readiness
 import verify_store_metadata as store_metadata
+import stable_file_reader
 
 
 GENERIC_BOUND_KINDS = (
@@ -133,6 +136,23 @@ class ReleaseReadinessTest(unittest.TestCase):
             self.assertGreaterEqual(summary.evidence_entry_count, 13)
             self.assertRegex(summary.evidence_index_sha256, r"^[0-9a-f]{64}$")
             self.assertRegex(summary.evidence_set_sha256, r"^[0-9a-f]{64}$")
+
+    def test_readiness_rejects_symlinked_evidence_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            root = workspace / "evidence"
+            root.mkdir()
+            paths = prepare_complete_evidence(root)
+            alias = workspace / "evidence-alias"
+            try:
+                alias.symlink_to(root, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            with self.assertRaisesRegex(
+                readiness.ReleaseReadinessError,
+                "evidence root.*symbolic link",
+            ):
+                self.validate(alias, paths)
 
     def test_expected_candidate_must_match_all_validated_layers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -298,3 +318,190 @@ class ReleaseReadinessTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class ReleaseReadinessHelperBoundaryTest(unittest.TestCase):
+    def test_bound_manifest_hasher_rejects_parent_swap_to_external_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "evidence"
+            root.mkdir()
+            path = root / "manifest.json"
+            path.write_text("{}", encoding="utf-8")
+            saved_root = workspace / "evidence.saved"
+            external = workspace / "external"
+            external.mkdir()
+            (external / "manifest.json").write_text("{}", encoding="utf-8")
+            original_open = os.open
+            swapped = False
+
+            def swap_then_open(value, flags, *args, **kwargs):
+                nonlocal swapped
+                if value == root.name and kwargs.get("dir_fd") is not None and not swapped:
+                    root.rename(saved_root)
+                    root.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return original_open(value, flags, *args, **kwargs)
+
+            with patch.object(readiness.os, "open", side_effect=swap_then_open):
+                with self.assertRaises(readiness.ReleaseReadinessError):
+                    readiness._sha256_file(path)
+            self.assertTrue(swapped)
+            self.assertTrue(root.is_symlink())
+
+    def test_expected_sha_normalizes_whitespace_but_requires_lowercase_full_sha(self) -> None:
+        self.assertEqual(device_fixture.SHA, readiness._expected_sha(f"  {device_fixture.SHA}\n"))
+        for value in ("A" * 40, "f" * 39, "g" * 40, "main"):
+            with self.subTest(value=value), self.assertRaises(readiness.ReleaseReadinessError):
+                readiness._expected_sha(value)
+
+    def test_safe_relative_path_rejects_outside_missing_symlink_and_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            file = root / "valid.json"
+            file.write_text("{}")
+            self.assertEqual("valid.json", readiness._safe_relative_path(file, root, "input")[0])
+            with self.assertRaisesRegex(readiness.ReleaseReadinessError, "inside the evidence root"):
+                readiness._safe_relative_path(root.parent / "escape.json", root, "input")
+            with self.assertRaisesRegex(readiness.ReleaseReadinessError, "is missing"):
+                readiness._safe_relative_path(root / "missing.json", root, "input")
+            directory = root / "directory"
+            directory.mkdir()
+            with self.assertRaisesRegex(readiness.ReleaseReadinessError, "regular file"):
+                readiness._safe_relative_path(directory, root, "input")
+            alias = root / "alias.json"
+            try:
+                alias.symlink_to(file)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            with self.assertRaisesRegex(readiness.ReleaseReadinessError, "symbolic link"):
+                readiness._safe_relative_path(alias, root, "input")
+
+    def test_safe_relative_path_rejects_symlinked_evidence_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            root = workspace / "evidence"
+            root.mkdir()
+            file = root / "valid.json"
+            file.write_text("{}", encoding="utf-8")
+            alias = workspace / "evidence-alias"
+            try:
+                alias.symlink_to(root, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+            with self.assertRaisesRegex(
+                readiness.ReleaseReadinessError,
+                "evidence root.*symbolic link",
+            ):
+                readiness._safe_relative_path(file, alias, "input")
+
+    def test_entry_map_rejects_malformed_and_duplicate_entries(self) -> None:
+        for value in ({}, {"entries": "bad"}, {"entries": [1]},
+                      {"entries": [{"kind": 1}]},
+                      {"entries": [{"kind": "x"}, {"kind": "x"}]}):
+            with self.subTest(value=value), self.assertRaises(readiness.ReleaseReadinessError):
+                readiness._entry_map(value)
+        self.assertEqual({"ok": {"kind": "ok"}}, readiness._entry_map({"entries": [{"kind": "ok"}]}))
+
+    def test_index_reference_requires_exact_path_and_digest(self) -> None:
+        entries = {"x": {"path": "evidence.json", "sha256": "a" * 64}}
+        readiness._require_index_reference(entries, kind="x", expected_path="evidence.json", expected_sha256="a" * 64)
+        cases = (
+            ({}, "missing x"),
+            ({"x": {"path": "other", "sha256": "a" * 64}}, "path does not match"),
+            ({"x": {"path": "evidence.json", "sha256": "b" * 64}}, "digest does not match"),
+        )
+        for value, message in cases:
+            with self.subTest(message=message), self.assertRaisesRegex(readiness.ReleaseReadinessError, message):
+                readiness._require_index_reference(value, kind="x", expected_path="evidence.json", expected_sha256="a" * 64)
+
+    def test_summary_writer_is_atomic_and_removes_temporary_on_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output = root / "nested" / "summary.json"
+            readiness._write_summary(output, {"status": "valid", "value": 3})
+            self.assertEqual({"status": "valid", "value": 3}, json.loads(output.read_text()))
+            self.assertEqual([], list(output.parent.glob("*.tmp")))
+            with self.assertRaises(ValueError):
+                readiness._write_summary(output, {"bad": float("nan")})
+            self.assertEqual({"status": "valid", "value": 3}, json.loads(output.read_text()))
+            self.assertEqual([], list(output.parent.glob("*.tmp")))
+
+    def test_summary_parent_swap_cannot_redirect_atomic_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output_dir = root / "nested"
+            external = root / "external"
+            external.mkdir()
+            saved_output_dir = root / "nested.saved"
+            output = output_dir / "summary.json"
+            original_open = os.open
+            swapped = False
+
+            def swap_before_temp_open(path, flags, *args, **kwargs):
+                nonlocal swapped
+                if (
+                    isinstance(path, str)
+                    and path.startswith(".summary.json.")
+                    and kwargs.get("dir_fd") is not None
+                    and not swapped
+                ):
+                    output_dir.rename(saved_output_dir)
+                    output_dir.symlink_to(external, target_is_directory=True)
+                    swapped = True
+                return original_open(path, flags, *args, **kwargs)
+
+            with patch.object(
+                stable_file_reader.os, "open", side_effect=swap_before_temp_open
+            ):
+                with self.assertRaisesRegex(
+                    readiness.ReleaseReadinessError, "symbolic link"
+                ):
+                    readiness._write_summary(output, {"status": "valid"})
+
+            self.assertTrue(swapped)
+            self.assertFalse((external / "summary.json").exists())
+            self.assertFalse((saved_output_dir / "summary.json").exists())
+
+    def test_cli_success_publishes_summary_and_invalid_input_returns_one(self) -> None:
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = prepare_complete_evidence(root)
+            args = ["--root", str(root), "--expected-candidate-sha", device_fixture.SHA,
+                "--device-acceptance", str(paths["device"]), "--human-acceptance", str(paths["human"]),
+                "--installed-identity-matrix", str(paths["matrix"]), "--play-delivery", str(paths["play"]),
+                "--release-governance", str(paths["governance"]), "--store-metadata-manifest", str(paths["metadata"]),
+                "--release-evidence-index", str(paths["index"])]
+            output = root / "summary.json"
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(0, readiness.main([*args, "--summary-output", str(output)]))
+            self.assertEqual("valid", json.loads(stdout.getvalue())["status"])
+            self.assertEqual("valid", json.loads(output.read_text())["status"])
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(1, readiness.main([*args[:-1], str(root / "missing-index.json")]))
+            self.assertEqual("invalid", json.loads(stdout.getvalue())["status"])
+
+    def test_artifact_and_certificate_identity_mismatches_are_rejected(self) -> None:
+        from dataclasses import replace
+        from unittest import mock
+        cases = (
+            ("artifact_sha256", "artifact SHA-256 values do not match"),
+            ("upload_certificate_sha256", "upload-certificate SHA-256 values do not match"),
+            ("app_signing_certificate_sha256", "app-signing-certificate SHA-256 values do not match"),
+        )
+        for attribute, message in cases:
+            with self.subTest(attribute=attribute), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                paths = prepare_complete_evidence(root)
+                original = readiness.governance.load_and_validate(paths["governance"])
+                changed = replace(original, **{attribute: "f" * 64})
+                with mock.patch.object(readiness.governance, "load_and_validate", return_value=changed):
+                    with self.assertRaisesRegex(readiness.ReleaseReadinessError, message):
+                        readiness.validate_readiness(root=root, expected_candidate_sha=device_fixture.SHA,
+                            device_manifest=paths["device"], human_manifest=paths["human"],
+                            installed_identity_matrix=paths["matrix"], play_delivery_manifest=paths["play"],
+                            governance_manifest=paths["governance"], store_metadata_manifest=paths["metadata"],
+                            release_index=paths["index"])

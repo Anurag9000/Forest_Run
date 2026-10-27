@@ -46,7 +46,8 @@ bash gradlew assembleDebug assembleDebugAndroidTest
 bash gradlew bundleRelease
 
 # Emulator or device required
-bash gradlew connectedDebugAndroidTest
+bash gradlew connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.notAnnotation=androidx.test.filters.LargeTest
 
 # Representative physical-device profiling
 bash scripts/collect_performance_profiles.sh

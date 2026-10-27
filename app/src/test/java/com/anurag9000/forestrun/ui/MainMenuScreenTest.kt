@@ -3,6 +3,7 @@ package com.anurag9000.forestrun.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Paint
 import androidx.test.core.app.ApplicationProvider
 import com.anurag9000.forestrun.engine.SpriteManager
 import org.junit.Assert.assertEquals
@@ -72,6 +73,38 @@ class MainMenuScreenTest {
         advanceToReady(screen)
         screen.draw(canvas)
         assertEquals(MainMenuScreen.Phase.READY, screen.phase)
+    }
+
+    @Test
+    fun `menu title narrative and arrival badge occupy separate rows`() {
+        val screen = MainMenuScreen(context, spriteManager, 1_280, 720)
+        val bitmap = Bitmap.createBitmap(1_280, 720, Bitmap.Config.ARGB_8888)
+        val canvas = RecordingCanvas(bitmap)
+
+        screen.draw(canvas)
+
+        val title = canvas.texts.single { it.value == "FOREST RUN" }
+        val atmosphere = canvas.texts.first { it.value.contains("willow has kept") }
+        val secondary = canvas.texts.first { it.value.contains("Nothing here needs to hurry") }
+        val arrival = canvas.texts.single { it.value == "Homecoming" }
+
+        assertTrue(atmosphere.baselineY - title.baselineY >= title.textSize * 0.75f)
+        assertTrue(arrival.baselineY - secondary.baselineY >= secondary.textSize * 1.5f)
+    }
+
+    private data class DrawnText(
+        val value: String,
+        val baselineY: Float,
+        val textSize: Float
+    )
+
+    private class RecordingCanvas(bitmap: Bitmap) : Canvas(bitmap) {
+        val texts = mutableListOf<DrawnText>()
+
+        override fun drawText(text: String, x: Float, y: Float, paint: Paint) {
+            texts += DrawnText(text, y, paint.textSize)
+            super.drawText(text, x, y, paint)
+        }
     }
 
     private fun advanceToReady(screen: MainMenuScreen) {

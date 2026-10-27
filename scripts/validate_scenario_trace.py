@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import scenario_source_contract as source_contract
 import strict_json
+from stable_file_reader import StableFileError, consume_regular_file
 
 SCHEMA_VERSION = 2
 MAX_TRACE_BYTES = 256 * 1024
@@ -50,31 +52,14 @@ class ScenarioTraceError(ValueError):
 
 
 def _stable_read(path: Path) -> bytes:
-    resolved = path.expanduser().resolve()
+    absolute = Path(os.path.abspath(os.fspath(path.expanduser())))
     try:
-        before = resolved.stat()
-    except FileNotFoundError as exc:
-        raise ScenarioTraceError(f"scenario trace is missing: {resolved}") from exc
-    except OSError as exc:
-        raise ScenarioTraceError(f"could not inspect scenario trace {resolved}: {exc}") from exc
-    if not resolved.is_file():
-        raise ScenarioTraceError(f"scenario trace is not a regular file: {resolved}")
-    if before.st_size <= 0 or before.st_size > MAX_TRACE_BYTES:
-        raise ScenarioTraceError(
-            f"scenario trace must be between 1 and {MAX_TRACE_BYTES} bytes"
+        raw, _, _ = consume_regular_file(
+            absolute, "scenario trace", MAX_TRACE_BYTES, retain_bytes=True
         )
-    try:
-        raw = resolved.read_bytes()
-        after = resolved.stat()
-    except OSError as exc:
-        raise ScenarioTraceError(f"could not read scenario trace {resolved}: {exc}") from exc
-    if (
-        len(raw) != before.st_size
-        or after.st_size != before.st_size
-        or after.st_mtime_ns != before.st_mtime_ns
-        or (before.st_ino and after.st_ino != before.st_ino)
-    ):
-        raise ScenarioTraceError(f"scenario trace changed while being read: {resolved}")
+    except StableFileError as exc:
+        raise ScenarioTraceError(str(exc)) from exc
+    assert raw is not None
     return raw
 
 
@@ -141,16 +126,16 @@ def validate_trace(
         raise ScenarioTraceError("candidate_commit_sha must be lowercase 40-hex")
     if not SHA256_RE.fullmatch(artifact):
         raise ScenarioTraceError("artifact_sha256 must be lowercase 64-hex")
-    if expected_commit_sha is not None and commit != expected_commit_sha.lower():
+    if expected_commit_sha is not None and commit != expected_commit_sha:
         raise ScenarioTraceError("candidate_commit_sha does not match the expected candidate")
-    if expected_artifact_sha256 is not None and artifact != expected_artifact_sha256.lower():
+    if expected_artifact_sha256 is not None and artifact != expected_artifact_sha256:
         raise ScenarioTraceError("artifact_sha256 does not match the expected artifact")
 
     captured_at = _integer(data["captured_at_utc_ms"], "captured_at_utc_ms")
     scenario = _string(data["scenario"], "scenario")
     if expected_scenario is not None and scenario != expected_scenario:
         raise ScenarioTraceError("scenario does not match the expected scenario")
-    authored = _load_authored_contract(repository_root.expanduser().resolve(), scenario)
+    authored = _load_authored_contract(repository_root.expanduser(), scenario)
     if not authored.input_steps:
         raise ScenarioTraceError(
             "scenario has no authored deterministic input script and cannot produce trace evidence"
@@ -272,7 +257,7 @@ def load_and_validate(
     return validate_trace(
         data,
         raw=raw,
-        repository_root=repository_root.expanduser().resolve(),
+        repository_root=repository_root.expanduser(),
         expected_commit_sha=expected_commit_sha,
         expected_artifact_sha256=expected_artifact_sha256,
         expected_scenario=expected_scenario,

@@ -11,6 +11,12 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
+from stable_file_reader import (
+    StableFileError,
+    checked_directory_path,
+    consume_regular_file,
+)
+
 SCENARIO_FORMAT_VERSION = 1
 TRACE_CONTRACT_FORMAT_VERSION = 1
 MICROS_PER_SECOND = 1_000_000.0
@@ -62,35 +68,20 @@ class ScenarioTraceContract:
 
 
 def _stable_text(path: Path) -> str:
-    resolved = path.expanduser().resolve()
     try:
-        before = resolved.stat()
-    except FileNotFoundError as exc:
-        raise ScenarioSourceContractError(f"source file is missing: {resolved}") from exc
-    except OSError as exc:
-        raise ScenarioSourceContractError(f"could not inspect source file {resolved}: {exc}") from exc
-    if not resolved.is_file():
-        raise ScenarioSourceContractError(f"source path is not a regular file: {resolved}")
-    if before.st_size <= 0 or before.st_size > MAX_SOURCE_BYTES:
-        raise ScenarioSourceContractError(
-            f"source file must be between 1 and {MAX_SOURCE_BYTES} bytes: {resolved}"
+        raw, _, _ = consume_regular_file(
+            path,
+            "scenario source file",
+            MAX_SOURCE_BYTES,
+            retain_bytes=True,
         )
-    try:
-        raw = resolved.read_bytes()
-        after = resolved.stat()
-    except OSError as exc:
-        raise ScenarioSourceContractError(f"could not read source file {resolved}: {exc}") from exc
-    if (
-        len(raw) != before.st_size
-        or after.st_size != before.st_size
-        or after.st_mtime_ns != before.st_mtime_ns
-        or (before.st_ino and after.st_ino != before.st_ino)
-    ):
-        raise ScenarioSourceContractError(f"source file changed while being read: {resolved}")
+    except StableFileError as exc:
+        raise ScenarioSourceContractError(str(exc)) from exc
+    assert raw is not None
     try:
         return raw.decode("utf-8")
     except UnicodeDecodeError as exc:
-        raise ScenarioSourceContractError(f"source file is not valid UTF-8: {resolved}") from exc
+        raise ScenarioSourceContractError(f"source file is not valid UTF-8: {path}") from exc
 
 
 def _balanced_parenthesized(text: str, open_index: int) -> str:
@@ -352,7 +343,10 @@ def trace_contract_canonical_bytes(
 
 
 def load_trace_contract(repository_root: Path, scenario_name: str) -> ScenarioTraceContract:
-    root = repository_root.expanduser().resolve()
+    try:
+        root = checked_directory_path(repository_root, "scenario source root")
+    except StableFileError as exc:
+        raise ScenarioSourceContractError(str(exc)) from exc
     encounter_source = _stable_text(
         root
         / "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt"

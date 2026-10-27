@@ -89,13 +89,31 @@ class DebugScenarioScriptTest {
                 EncounterScenario.CACTUS_READ,
                 EncounterScenario.CAT_KINDNESS,
                 EncounterScenario.FOX_MIRROR,
-                EncounterScenario.EAGLE_MARK
+                EncounterScenario.EAGLE_MARK,
+                EncounterScenario.OWL_DIVE
             )
         }
 
         unscripted.forEach { scenario ->
             assertTrue("$scenario should be manual", DebugScenarioScript.stepsFor(scenario).isEmpty())
         }
+    }
+
+    @Test
+    fun `owl dive capture schedules a visible jump before its settle window ends`() {
+        val script = DebugScenarioScript()
+        val observed = mutableListOf<DebugScenarioTimedAction>()
+        script.prepare(EncounterScenario.OWL_DIVE)
+
+        script.advanceTimed(1.79f, observed::add)
+        assertTrue(observed.isEmpty())
+
+        script.advanceTimed(1.80f, observed::add)
+        assertEquals(
+            listOf(DebugScenarioTimedAction(DebugScenarioAction.TAP_JUMP, 1.80f, 0f)),
+            observed
+        )
+        assertEquals(1, script.traceSnapshot().events.size)
     }
 
     @Test

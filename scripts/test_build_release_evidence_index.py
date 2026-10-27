@@ -138,7 +138,11 @@ class ReleaseEvidenceIndexTest(unittest.TestCase):
         for spec in (
             "bad=../escape.json",
             "bad=/absolute.json",
+            "bad=C:/escape.json",
             r"bad=evidence\windows.json",
+            "bad=evidence//nested.json",
+            "bad=evidence/line\x01break.json",
+            "bad=evidence/\ud800.json",
             "bad=evidence/file.exe",
         ):
             with self.subTest(spec=spec):
@@ -161,13 +165,15 @@ class ReleaseEvidenceIndexTest(unittest.TestCase):
             self.build(["link=evidence/link.json"])
 
     def test_candidate_timestamp_required_kind_and_json_are_strict(self) -> None:
-        with self.assertRaisesRegex(indexer.EvidenceIndexError, "40 lowercase"):
-            indexer.build_index(
-                self.root,
-                "A" * 40,
-                ["device=evidence/device.json"],
-                generated_at_utc=self.timestamp,
-            )
+        for candidate in ("A" * 40, self.candidate + " "):
+            with self.subTest(candidate=candidate):
+                with self.assertRaisesRegex(indexer.EvidenceIndexError, "40 lowercase"):
+                    indexer.build_index(
+                        self.root,
+                        candidate,
+                        ["device=evidence/device.json"],
+                        generated_at_utc=self.timestamp,
+                    )
         with self.assertRaisesRegex(indexer.EvidenceIndexError, "UTC Z"):
             indexer.build_index(
                 self.root,
@@ -180,9 +186,41 @@ class ReleaseEvidenceIndexTest(unittest.TestCase):
                 ["device_acceptance=evidence/device.json"],
                 require_bound_kinds=["screenshot_manifest"],
             )
+        for required in ([None], [7], [object()]):
+            with self.subTest(required=required):
+                with self.assertRaisesRegex(
+                    indexer.EvidenceIndexError,
+                    "required candidate-bound kinds",
+                ):
+                    self.build(
+                        ["device_acceptance=evidence/device.json"],
+                        require_bound_kinds=required,
+                    )
         self.manifest.write_bytes(b"{not json}")
         with self.assertRaisesRegex(indexer.EvidenceIndexError, "invalid JSON evidence"):
             self.build(["device=evidence/device.json"])
+
+    def test_padded_candidate_identity_in_evidence_is_rejected(self) -> None:
+        self.manifest.write_text(
+            json.dumps({"candidate": {"commit_sha": self.candidate + " "}}),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(indexer.EvidenceIndexError, "malformed candidate SHA"):
+            self.build(["device=evidence/device.json"])
+
+    def test_non_string_candidate_identity_fields_are_not_treated_as_unbound(self) -> None:
+        for payload in (
+            {"candidateSha": None},
+            {"candidate_sha": 7},
+            {"candidate": {"commit_sha": []}},
+        ):
+            with self.subTest(payload=payload):
+                self.manifest.write_text(json.dumps(payload), encoding="utf-8")
+                with self.assertRaisesRegex(
+                    indexer.EvidenceIndexError,
+                    "candidate identity field|candidate commit field",
+                ):
+                    self.build(["device=evidence/device.json"])
 
     def test_builder_rejects_ambiguous_and_nonstandard_json_before_publication(self) -> None:
         for payload in (
@@ -292,6 +330,26 @@ class ReleaseEvidenceIndexTest(unittest.TestCase):
         )
         self.assertEqual(1, result)
         self.assertFalse(failure_output.exists())
+
+    def test_cli_rejects_symlinked_evidence_root(self) -> None:
+        alias = self.root.parent / (self.root.name + "-cli-alias")
+        alias.symlink_to(self.root, target_is_directory=True)
+        output = self.root / "cli-alias-index.json"
+        try:
+            result = indexer.main(
+                [
+                    "--root", str(alias),
+                    "--candidate-sha", self.candidate,
+                    "--entry", "device_acceptance=evidence/device.json",
+                    "--require-bound-kind", "device_acceptance",
+                    "--generated-at-utc", self.timestamp,
+                    "--output", str(output),
+                ]
+            )
+            self.assertEqual(1, result)
+            self.assertFalse(output.exists())
+        finally:
+            alias.unlink()
 
 
 if __name__ == "__main__":

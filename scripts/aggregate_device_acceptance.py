@@ -15,7 +15,6 @@ import hashlib
 import json
 import math
 import os
-import tempfile
 import unicodedata
 from pathlib import Path
 from statistics import fmean
@@ -24,6 +23,12 @@ from typing import Any, Mapping, Sequence
 import strict_json
 import validate_device_acceptance as acceptance
 import validate_manifest_scenario_traces as manifest_traces
+from stable_file_reader import (
+    StableFileError,
+    atomic_write_bytes,
+    consume_regular_file,
+    ensure_directory_exists,
+)
 
 SCHEMA_VERSION = 2
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -50,35 +55,24 @@ class AggregationError(ValueError):
 
 
 def _stable_manifest_read(path: Path) -> tuple[bytes, tuple[int, int, int]]:
-    resolved = path.expanduser().resolve()
+    resolved = Path(os.path.abspath(os.fspath(path.expanduser())))
     try:
-        before = resolved.stat()
-    except FileNotFoundError as exc:
-        raise AggregationError(f"acceptance manifest is missing: {resolved}") from exc
-    except OSError as exc:
-        raise AggregationError(f"could not inspect acceptance manifest {resolved}: {exc}") from exc
-    if not resolved.is_file():
-        raise AggregationError(f"acceptance manifest is not a regular file: {resolved}")
-    if before.st_size <= 0 or before.st_size > acceptance.MAX_MANIFEST_BYTES:
-        raise AggregationError(
-            f"acceptance manifest must be between 1 and {acceptance.MAX_MANIFEST_BYTES} bytes"
+        raw, _, metadata = consume_regular_file(
+            resolved,
+            "acceptance manifest",
+            acceptance.MAX_MANIFEST_BYTES,
+            retain_bytes=True,
         )
-    try:
-        raw = resolved.read_bytes()
-        after = resolved.stat()
-    except OSError as exc:
-        raise AggregationError(f"could not read acceptance manifest {resolved}: {exc}") from exc
-    before_identity = (before.st_size, before.st_mtime_ns, before.st_ino)
-    after_identity = (after.st_size, after.st_mtime_ns, after.st_ino)
-    if len(raw) != before.st_size or after_identity != before_identity:
-        raise AggregationError(f"acceptance manifest changed while being read: {resolved}")
-    return raw, before_identity
+    except StableFileError as exc:
+        raise AggregationError(str(exc)) from exc
+    assert raw is not None
+    return raw, (metadata.st_size, metadata.st_mtime_ns, metadata.st_ino)
 
 
 def _load_validated_manifest(
     path: Path,
 ) -> tuple[dict[str, Any], acceptance.ValidationSummary, dict[str, Any]]:
-    resolved = path.expanduser().resolve()
+    resolved = Path(os.path.abspath(os.fspath(path.expanduser())))
     raw, identity = _stable_manifest_read(resolved)
     try:
         data = strict_json.loads(
@@ -491,25 +485,20 @@ def _write_json_atomic(
     *,
     protected_paths: Sequence[Path] = (),
 ) -> None:
-    destination = path.expanduser().resolve()
+    destination = Path(os.path.abspath(os.fspath(path.expanduser())))
     _assert_output_is_separate(destination, protected_paths)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{destination.name}.",
-        suffix=".tmp",
-        dir=destination.parent,
-    )
-    temporary = Path(temporary_name)
+    ensure_directory_exists(destination.parent, "aggregate output parent directory")
+    _assert_output_is_separate(destination, protected_paths)
+    encoded = (json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
     try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
-            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
         _assert_output_is_separate(destination, protected_paths)
-        os.replace(temporary, destination)
-    except (OSError, AggregationError) as exc:
-        temporary.unlink(missing_ok=True)
+        atomic_write_bytes(
+            destination,
+            encoded,
+            "device acceptance aggregate",
+            reject_symlink_leaf=True,
+        )
+    except (OSError, StableFileError, AggregationError) as exc:
         if isinstance(exc, AggregationError):
             raise
         raise AggregationError(f"could not publish aggregate {destination}: {exc}") from exc

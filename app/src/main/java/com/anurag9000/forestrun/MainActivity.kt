@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private var configurationWidthDp = 0
     private var configurationHeightDp = 0
     private var surfaceRecreationRequested = false
+    private var saveIntegrityReady = false
     private val debugLaunchGate = LatestRequestGate()
 
     companion object {
@@ -64,7 +65,8 @@ class MainActivity : AppCompatActivity() {
         configurationWidthDp = resources.configuration.screenWidthDp
         configurationHeightDp = resources.configuration.screenHeightDp
 
-        SaveIntegrityManager.repair(this)
+        saveIntegrityReady = continueAfterSaveRepair(SaveIntegrityManager.repair(this))
+        if (!saveIntegrityReady) return
         handleRecoveryMaintenanceIntent(intent, allowMutation = true)
         FeedbackSettings.init(this)
         RuntimeAssetValidator.validateRelease(this)
@@ -116,6 +118,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (!saveIntegrityReady) return
         val launchToken = debugLaunchGate.begin()
         if (::gameView.isInitialized) {
             // A newly delivered singleTask intent supersedes any scenario that

@@ -340,8 +340,8 @@ class MainMenuScreen internal constructor(
 
         // Title
         canvas.drawText("FOREST RUN", cw / 2f, ch * 0.10f + titlePaint.textSize, titlePaint)
-        drawWrappedCenteredText(canvas, sceneCopy.atmosphereLine, cw / 2f, ch * 0.17f, cw * 0.70f, atmospherePaint)
-        drawWrappedCenteredText(canvas, sceneCopy.secondaryAtmosphereLine, cw / 2f, ch * 0.205f, cw * 0.68f, secondaryAtmospherePaint)
+        drawWrappedCenteredText(canvas, sceneCopy.atmosphereLine, cw / 2f, ch * 0.185f, cw * 0.70f, atmospherePaint)
+        drawWrappedCenteredText(canvas, sceneCopy.secondaryAtmosphereLine, cw / 2f, ch * 0.23f, cw * 0.68f, secondaryAtmospherePaint)
         drawArrivalBadge(canvas, cw, ch)
         drawHomeSign(canvas, cw, ch)
         drawHomeCharacter(canvas, cw, ch)
@@ -382,8 +382,8 @@ class MainMenuScreen internal constructor(
 
     private fun drawAmbientBird(canvas: Canvas, cw: Float, ch: Float) {
         val flap = sin(elapsedT * 1.8f)
-        val birdX = cw * 0.24f + sin(elapsedT * 0.45f) * cw * 0.08f
-        val birdY = ch * 0.18f + flap * ch * 0.02f
+        val birdX = cw * 0.90f + sin(elapsedT * 0.45f) * cw * 0.035f
+        val birdY = ch * 0.30f + flap * ch * 0.018f
         val birdH = 88f
         val birdW = SpriteSizing.widthForHeight(birdSprite, birdH, minWidth = birdH * 0.7f)
         birdRect.set(birdX - birdW / 2f, birdY - birdH / 2f, birdX + birdW / 2f, birdY + birdH / 2f)
@@ -494,8 +494,9 @@ class MainMenuScreen internal constructor(
     private fun drawArrivalBadge(canvas: Canvas, cw: Float, ch: Float) {
         if (sanctuaryState.arrivalBadge.isBlank()) return
         val width = cw * 0.22f
-        val height = ch * 0.05f
-        val rect = RectF(cw / 2f - width / 2f, ch * 0.205f, cw / 2f + width / 2f, ch * 0.205f + height)
+        val height = ch * 0.035f
+        val top = ch * 0.26f
+        val rect = RectF(cw / 2f - width / 2f, top, cw / 2f + width / 2f, top + height)
         canvas.drawRoundRect(rect, 18f, 18f, badgePaint)
         canvas.drawRoundRect(rect, 18f, 18f, badgeBorderPaint)
         val labelY = rect.centerY() - (badgeTextPaint.descent() + badgeTextPaint.ascent()) / 2f
@@ -526,7 +527,7 @@ class MainMenuScreen internal constructor(
             canvas,
             sanctuaryState.homeCharacterLine,
             rect.centerX(),
-            rect.bottom + 18f,
+            ch * 0.43f,
             width,
             secondaryAtmospherePaint
         )
@@ -536,8 +537,8 @@ class MainMenuScreen internal constructor(
         val consequences = sanctuaryState.homecomingConsequences.take(2)
         if (consequences.isEmpty()) return
         val chipWidth = cw * 0.18f
-        val chipHeight = ch * 0.04f
-        val rowTop = groundY - ch * 0.17f
+        val chipHeight = ch * 0.035f
+        val rowTop = groundY + ch * 0.01f
         val gap = cw * 0.02f
         val totalWidth = consequences.size * chipWidth + (consequences.size - 1) * gap
         var left = cw / 2f - totalWidth / 2f
@@ -553,7 +554,7 @@ class MainMenuScreen internal constructor(
             canvas,
             consequences.first().line,
             cw / 2f,
-            rowTop + chipHeight + 18f,
+            rowTop + chipHeight + ch * 0.02f,
             cw * 0.56f,
             secondaryAtmospherePaint
         )

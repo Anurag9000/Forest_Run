@@ -47,6 +47,23 @@ class ForestJournalLifecycleInstrumentedTest {
     }
 
     @Test
+    fun returnActionUsesLocalizedLabelAndAccessibleDescription() {
+        ActivityScenario.launch(ForestJournalActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val returnButton = findButton(
+                    activity.window.decorView,
+                    activity.getString(R.string.journal_return_to_forest)
+                )
+                assertNotNull(returnButton)
+                assertEquals(
+                    activity.getString(R.string.journal_return_to_forest_description),
+                    returnButton!!.contentDescription.toString()
+                )
+            }
+        }
+    }
+
+    @Test
     fun selectedSectionSurvivesActivityRecreationWithoutWritingGameProgress() {
         val gamePrefs = targetContext.getSharedPreferences(
             "forest_run_prefs",

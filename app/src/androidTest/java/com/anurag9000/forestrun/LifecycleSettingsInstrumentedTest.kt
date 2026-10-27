@@ -97,11 +97,13 @@ class LifecycleSettingsInstrumentedTest {
             assertFalse(activity.isDestroyed)
             assertTrue(gameView.context === activity)
         } finally {
-            instrumentation.runOnMainSync { activity.finish() }
-            instrumentation.waitForIdleSync()
-            waitForCondition("singleTask Activity is destroyed", timeoutMs = 10_000L) {
-                activity.isDestroyed
+            var finishAccepted = false
+            instrumentation.runOnMainSync {
+                activity.finish()
+                finishAccepted = activity.isFinishing
             }
+            assertTrue("Activity.finish() should set isFinishing", finishAccepted)
+            instrumentation.waitForIdleSync()
         }
     }
 

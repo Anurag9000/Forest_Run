@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import build_declared_dependency_inventory as inventory
 
@@ -26,6 +27,7 @@ class DeclaredDependencyInventoryTest(unittest.TestCase):
             ) + '\n',
             encoding="utf-8",
         )
+
         (root / "app" / "build.gradle.kts").write_text(
             '\n'.join(
                 [
@@ -46,6 +48,19 @@ class DeclaredDependencyInventoryTest(unittest.TestCase):
             'Pillow==11.3.0\n',
             encoding="utf-8",
         )
+
+    def test_source_root_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "checkout"
+            root.mkdir()
+            self._fixture(root)
+            alias = parent / "checkout-alias"
+            alias.symlink_to(root, target_is_directory=True)
+            with self.assertRaisesRegex(
+                inventory.DeclaredDependencyInventoryError, "symbolic link"
+            ):
+                inventory.build_inventory(alias, CANDIDATE)
 
     def test_inventory_is_candidate_bound_deterministic_and_explicitly_limited(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -113,6 +128,23 @@ class DeclaredDependencyInventoryTest(unittest.TestCase):
             ):
                 inventory.build_inventory(root, CANDIDATE)
 
+    def test_requires_expected_plugin_identities_not_only_two_plugin_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._fixture(root)
+            build_file = root / "build.gradle.kts"
+            build_file.write_text(
+                build_file.read_text(encoding="utf-8")
+                .replace("com.android.application", "example.fake.android")
+                .replace("org.jetbrains.kotlin.android", "example.fake.kotlin"),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                inventory.DeclaredDependencyInventoryError,
+                "expected the Android application and Kotlin Android",
+            ):
+                inventory.build_inventory(root, CANDIDATE)
+
     def test_source_digests_change_when_declarations_change(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -127,6 +159,37 @@ class DeclaredDependencyInventoryTest(unittest.TestCase):
 
             self.assertNotEqual(first["inventorySha256"], second["inventorySha256"])
             self.assertNotEqual(first["sourceFiles"], second["sourceFiles"])
+
+    def test_comments_and_non_code_strings_do_not_become_inventory_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._fixture(root)
+            app_build = root / "app" / "build.gradle.kts"
+            app_build.write_text(
+                app_build.read_text(encoding="utf-8")
+                + '\n// implementation("phantom:line-comment:9.9")\n'
+                + '/* androidTestImplementation("phantom:block-comment:8.8") */\n'
+                + 'val commentText = "literal // marker; implementation(\\"phantom:string:7.7\\")"\n'
+                + 'val sample = """\nimplementation("phantom:raw-string:6.6")\n"""\n',
+                encoding="utf-8",
+            )
+            root_build = root / "build.gradle.kts"
+            root_build.write_text(
+                root_build.read_text(encoding="utf-8")
+                + '\n// id("phantom.plugin") version "9.9"\n'
+                + 'val pluginExample = """id("phantom.raw-plugin") version "8.8"""\n',
+                encoding="utf-8",
+            )
+
+            payload = inventory.build_inventory(root, CANDIDATE)
+
+        entries = payload["entries"]
+        self.assertNotIn("phantom:line-comment", [entry.get("name") for entry in entries])
+        self.assertNotIn("phantom:block-comment", [entry.get("name") for entry in entries])
+        self.assertNotIn("phantom:string", [entry.get("name") for entry in entries])
+        self.assertNotIn("phantom:raw-string", [entry.get("name") for entry in entries])
+        self.assertNotIn("phantom.plugin", [entry.get("name") for entry in entries])
+        self.assertNotIn("phantom.raw-plugin", [entry.get("name") for entry in entries])
 
     @unittest.skipUnless(hasattr(os, "symlink"), "symlink support required")
     def test_publish_rejects_output_symlink(self) -> None:
@@ -167,6 +230,87 @@ class DeclaredDependencyInventoryTest(unittest.TestCase):
             ).encode("utf-8")
             self.assertEqual(expected, raw)
             self.assertEqual(payload, json.loads(raw.decode("utf-8")))
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlink support required")
+    def test_dependency_source_parent_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "root"
+            outside = Path(temporary) / "outside"
+            root.mkdir()
+            (outside / "app").mkdir(parents=True)
+            source = outside / "app" / "build.gradle.kts"
+            source.write_text("plugins {}\n", encoding="utf-8")
+            (root / "app").symlink_to(outside / "app", target_is_directory=True)
+
+            with self.assertRaisesRegex(
+                inventory.DeclaredDependencyInventoryError, "symbolic link"
+            ):
+                inventory._read(root, Path("app/build.gradle.kts"))
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlink support required")
+    def test_dependency_source_replaced_by_symlink_after_inspection_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "build.gradle.kts"
+            source.write_text("plugins {}\n", encoding="utf-8")
+            target = root / "target.txt"
+            target.write_text("attacker source\n", encoding="utf-8")
+            displaced = root / "displaced.txt"
+            original_open = inventory.os.open
+
+            def swap_before_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                if path == source.name and kwargs.get("dir_fd") is not None:
+                    source.replace(displaced)
+                    source.symlink_to(target)
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(inventory.os, "open", side_effect=swap_before_open):
+                with self.assertRaisesRegex(
+                    inventory.DeclaredDependencyInventoryError,
+                    "symbolic link|changed while",
+                ):
+                    inventory._read(root, Path("build.gradle.kts"))
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlink support required")
+    def test_dependency_parent_swap_to_symlink_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "root"
+            app = root / "app"
+            app.mkdir(parents=True)
+            (app / "build.gradle.kts").write_text('implementation("a:b:1")\n', encoding="utf-8")
+            outside = Path(temporary) / "outside"
+            outside.mkdir()
+            (outside / "build.gradle.kts").write_text('implementation("x:y:9")\n', encoding="utf-8")
+            displaced = root / "app.saved"
+            original_open = inventory.os.open
+            swapped = False
+
+            def swap_parent(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                nonlocal swapped
+                if path == "app" and kwargs.get("dir_fd") is not None and not swapped:
+                    app.rename(displaced)
+                    app.symlink_to(outside, target_is_directory=True)
+                    swapped = True
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(inventory.os, "open", side_effect=swap_parent):
+                with self.assertRaisesRegex(
+                    inventory.DeclaredDependencyInventoryError,
+                    "symbolic link|safely read",
+                ):
+                    inventory._read(root, Path("app/build.gradle.kts"))
+            self.assertTrue(swapped)
+
+    def test_dependency_source_size_is_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "large.gradle.kts"
+            source.write_bytes(b"x" * (inventory.MAX_SOURCE_BYTES + 1))
+            with self.assertRaisesRegex(
+                inventory.DeclaredDependencyInventoryError,
+                "safety limit exceeded",
+            ):
+                inventory._read(root, Path("large.gradle.kts"))
 
 
 if __name__ == "__main__":

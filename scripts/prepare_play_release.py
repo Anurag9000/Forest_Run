@@ -25,6 +25,7 @@ from verify_curated_screenshot_set import (
     CuratedScreenshotError,
     verify_curated_set,
 )
+from stable_file_reader import StableFileError, atomic_write_bytes, ensure_directory_exists
 
 try:
     from PIL import Image, UnidentifiedImageError
@@ -84,19 +85,30 @@ def fail(message: str) -> NoReturn:
     raise SystemExit(message)
 
 
+def _display_path(path: Path) -> Path:
+    try:
+        return path.relative_to(ROOT)
+    except ValueError:
+        return path
+
+
 def require_file(path: Path, label: str = "required file") -> Path:
+    try:
+        relative = path.relative_to(ROOT)
+    except ValueError:
+        relative = None
+    if relative is not None:
+        current = ROOT
+        for part in relative.parts:
+            current = current / part
+            if current.is_symlink():
+                fail(f"Symbolic link is not allowed for {label}: {current.relative_to(ROOT)}")
+    elif path.is_symlink():
+        fail(f"Symbolic link is not allowed for {label}: {path}")
     if not path.is_file():
-        try:
-            display_path = path.relative_to(ROOT)
-        except ValueError:
-            display_path = path
-        fail(f"Missing {label}: {display_path}")
+        fail(f"Missing {label}: {_display_path(path)}")
     if path.stat().st_size == 0:
-        try:
-            display_path = path.relative_to(ROOT)
-        except ValueError:
-            display_path = path
-        fail(f"Empty {label}: {display_path}")
+        fail(f"Empty {label}: {_display_path(path)}")
     return path
 
 
@@ -159,13 +171,90 @@ def verify_candidate_tree(expected_sha: str | None = None) -> dict[str, str]:
     return {"sha": candidate_sha, "branch": branch}
 
 
+def _strip_kotlin_comments(source: str) -> str:
+    output: list[str] = []
+    index = 0
+    block_depth = 0
+    in_line_comment = False
+    string_delimiter: str | None = None
+    escaped = False
+    while index < len(source):
+        current = source[index]
+        following = source[index + 1] if index + 1 < len(source) else ""
+
+        if in_line_comment:
+            if current == "\n":
+                output.append(current)
+                in_line_comment = False
+            else:
+                output.append(" ")
+            index += 1
+            continue
+
+        if block_depth:
+            if current == "/" and following == "*":
+                block_depth += 1
+                output.extend((" ", " "))
+                index += 2
+            elif current == "*" and following == "/":
+                block_depth -= 1
+                output.extend((" ", " "))
+                index += 2
+            else:
+                output.append("\n" if current == "\n" else " ")
+                index += 1
+            continue
+
+        if string_delimiter is not None:
+            if string_delimiter == '"""':
+                if source.startswith('"""', index):
+                    output.extend(('"', '"', '"'))
+                    index += 3
+                    string_delimiter = None
+                else:
+                    output.append(current)
+                    index += 1
+                continue
+            output.append(current)
+            if escaped:
+                escaped = False
+            elif current == "\\":
+                escaped = True
+            elif current == string_delimiter:
+                string_delimiter = None
+            index += 1
+            continue
+
+        if current == "/" and following == "/":
+            output.extend((" ", " "))
+            index += 2
+            in_line_comment = True
+        elif current == "/" and following == "*":
+            output.extend((" ", " "))
+            index += 2
+            block_depth = 1
+        elif source.startswith('"""', index):
+            output.extend(('"', '"', '"'))
+            index += 3
+            string_delimiter = '"""'
+        elif current in {'"', "'"}:
+            output.append(current)
+            string_delimiter = current
+            index += 1
+        else:
+            output.append(current)
+            index += 1
+    return "".join(output)
+
+
 def parse_assignment(build_text: str, key: str) -> str:
+    source = _strip_kotlin_comments(build_text)
     patterns = (
-        rf'\b{re.escape(key)}\s*=\s*"([^"]+)"',
-        rf"\b{re.escape(key)}\s*=\s*([0-9]+)",
+        rf'(?m)^\s*{re.escape(key)}\s*=\s*"([^"]+)"',
+        rf"(?m)^\s*{re.escape(key)}\s*=\s*([0-9]+)",
     )
     for pattern in patterns:
-        match = re.search(pattern, build_text)
+        match = re.search(pattern, source)
         if match:
             return match.group(1)
     fail(f"Unable to parse {key} from app/build.gradle.kts")
@@ -180,15 +269,15 @@ def inspect_png(path: Path, expected_size: tuple[int, int] | None = None) -> dic
             width, height = source.size
             mode = source.mode
     except (UnidentifiedImageError, OSError) as exc:
-        fail(f"Invalid PNG {path.relative_to(ROOT)}: {exc}")
+        fail(f"Invalid PNG {_display_path(path)}: {exc}")
 
     if expected_size is not None and (width, height) != expected_size:
         fail(
-            f"{path.relative_to(ROOT)} has size {width}x{height}; "
+            f"{_display_path(path)} has size {width}x{height}; "
             f"expected {expected_size[0]}x{expected_size[1]}"
         )
     return {
-        "path": str(path.relative_to(ROOT)),
+        "path": str(_display_path(path)),
         "width": width,
         "height": height,
         "mode": mode,
@@ -425,10 +514,26 @@ def verify_audio_assets() -> list[str]:
     if not raw_dir.is_dir():
         fail(f"Missing Android raw-resource directory: {raw_dir.relative_to(ROOT)}")
 
-    available = {path.stem for path in raw_dir.iterdir() if path.is_file()}
-    missing = [name for name in REQUIRED_AUDIO if name not in available]
+    by_stem: dict[str, list[Path]] = {}
+    for path in raw_dir.iterdir():
+        if path.is_file():
+            by_stem.setdefault(path.stem, []).append(path)
+    missing = [name for name in REQUIRED_AUDIO if name not in by_stem]
     if missing:
         fail("Missing required audio resources:\n- " + "\n- ".join(missing))
+
+    for name in REQUIRED_AUDIO:
+        matches = by_stem[name]
+        if len(matches) != 1:
+            fail(f"Required audio resource has multiple files with the same Android name: {name}")
+        path = matches[0]
+        if path.is_symlink():
+            fail(f"Required audio resource must not be a symbolic link: {path.relative_to(ROOT)}")
+        if path.suffix.lower() != ".ogg" or path.stat().st_size < 4:
+            fail(f"Required audio resource is empty or not an OGG file: {path.relative_to(ROOT)}")
+        with path.open("rb") as stream:
+            if stream.read(4) != b"OggS":
+                fail(f"Required audio resource has an invalid OGG signature: {path.relative_to(ROOT)}")
     return sorted(REQUIRED_AUDIO)
 
 
@@ -521,10 +626,49 @@ def verify_bundle(
     }
 
 
-def write_summaries(payload: dict) -> None:
-    MACHINE_SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    MACHINE_SUMMARY_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+def _ensure_safe_output_path(path: Path, label: str) -> None:
+    try:
+        relative = path.relative_to(ROOT)
+    except ValueError:
+        fail(f"{label} must be written inside the repository: {path}")
+    current = ROOT
+    for part in relative.parts[:-1]:
+        current = current / part
+        try:
+            current.lstat()
+        except FileNotFoundError:
+            continue
+        if current.is_symlink():
+            fail(f"Symbolic link is not allowed in {label} path: {current.relative_to(ROOT)}")
+        if not current.is_dir():
+            fail(f"Directory component for {label} is not a directory: {current.relative_to(ROOT)}")
+    try:
+        ensure_directory_exists(path.parent, f"{label} parent directory")
+    except StableFileError as exc:
+        detail = str(exc)
+        if "symbolic link" in detail:
+            fail(f"Symbolic link is not allowed in {label} path: {path.parent}")
+        fail(f"Directory component for {label} is not a directory: {path.parent}: {detail}")
+    if path.is_symlink():
+        fail(f"Symbolic link is not allowed for {label}: {path.relative_to(ROOT)}")
+    if path.exists() and not path.is_file():
+        fail(f"{label} is not a regular file: {path.relative_to(ROOT)}")
 
+
+def _atomic_write_text(path: Path, content: str, label: str) -> None:
+    _ensure_safe_output_path(path, label)
+    try:
+        atomic_write_bytes(
+            path,
+            content.encode("utf-8"),
+            label,
+            reject_symlink_leaf=True,
+        )
+    except StableFileError as exc:
+        raise OSError(f"could not safely publish {label}: {exc}") from exc
+
+
+def write_summaries(payload: dict) -> None:
     candidate = payload["candidate"]
     identity = payload["identity"]
     screenshots = payload["screenshots"]
@@ -596,7 +740,12 @@ def write_summaries(payload: dict) -> None:
             "- verification of current Android and Play requirements immediately before upload",
         ]
     )
-    SUMMARY_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    machine_content = json.dumps(payload, indent=2) + "\n"
+    summary_content = "\n".join(lines) + "\n"
+    _ensure_safe_output_path(MACHINE_SUMMARY_PATH, "machine release summary")
+    _ensure_safe_output_path(SUMMARY_PATH, "human release summary")
+    _atomic_write_text(MACHINE_SUMMARY_PATH, machine_content, "machine release summary")
+    _atomic_write_text(SUMMARY_PATH, summary_content, "human release summary")
 
 
 def main() -> int:

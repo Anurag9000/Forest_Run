@@ -98,13 +98,13 @@ def verify_main_candidate(
         )
 
     if expected_sha is not None:
-        normalized_expected = expected_sha.strip().lower()
-        if not _SHA_PATTERN.fullmatch(normalized_expected):
+        expected = expected_sha.strip()
+        if not _SHA_PATTERN.fullmatch(expected):
             _fail(f"Expected SHA is not a full 40-character commit ID: {expected_sha!r}")
-        if head_sha != normalized_expected:
+        if head_sha != expected:
             _fail(
                 "Candidate SHA does not match the requested frozen commit: "
-                f"expected {normalized_expected}, found {head_sha}"
+                f"expected {expected}, found {head_sha}"
             )
 
     return MainCandidate(
