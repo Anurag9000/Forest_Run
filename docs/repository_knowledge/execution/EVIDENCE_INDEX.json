@@ -1221,6 +1221,20 @@
       ],
       "disposition": "JSON/JSONL parse; file inventory and coverage counts reconcile; unique file/task/evidence IDs; evidence references resolve; present paths and stable hashes verify; local Markdown links resolve; no sensitive absolute paths in updated reports; bash syntax and whitespace checks pass. Full script suite passed 1,387 tests (EVID-083).",
       "limitations": "Static checks and host scripts suite do not establish corrected API35 connected behavior or process-death persistence."
+    },
+    {
+      "id": "EVID-089",
+      "type": "exact-candidate hosted Android API 35 workflow result",
+      "path": "GitHub Actions run 40480503602; host job 122109307395; connected job 122111792697",
+      "revision": "d8afcd8ea8703043157abc1e08c3b9c6b2cfcb53",
+      "date": "2026-10-27",
+      "supports": [
+        "TASK-C-008",
+        "TASK-C-011",
+        "GAP-007"
+      ],
+      "result": "Host/release/lint/package validation job succeeded, including compile/test/lint/assemble/release hardening and source immutability. API 35 connected validation job failed at the named step; connected artifact upload step succeeded. Public job annotation reports only \"/usr/bin/sh\" exit code 1.",
+      "limitations": "Detailed workflow logs and uploaded artifact contents were not accessible from the unauthenticated public page. The failing command within run_connected_validation.sh is unknown; this is failure evidence, not proof of a specific root cause and not process-death durability evidence."
     }
   ]
 }
