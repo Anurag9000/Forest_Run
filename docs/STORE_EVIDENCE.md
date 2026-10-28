@@ -131,6 +131,8 @@ Capture eight deterministic scenarios from a freshly built exact-candidate debug
 bash scripts/capture_store_screenshots.sh
 ```
 
+The API 35 Android validation workflow also runs this capture against its exact `main` candidate and publishes the raw screenshots and sidecars with the connected-validation artifact. These emulator captures provide reproducible candidate-bound evidence; they do not constitute physical-device acceptance, human visual approval, screenshot curation, or release approval.
+
 For every image, capture verifies the exact scenario readiness marker, process liveness, and the expected resumed Activity before and after `screencap`. The strict writer validates the full PNG and atomically records candidate, APK, device, package, Activity, scenario, timing, dimensions, and image hash.
 
 The session finalizer revalidates the complete raw image/sidecar set, requires unique scenarios and one shared identity, and atomically writes `raw/capture-session.json` only after every capture succeeds.

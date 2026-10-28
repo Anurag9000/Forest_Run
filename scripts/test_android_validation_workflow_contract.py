@@ -30,8 +30,19 @@ class AndroidValidationWorkflowContractTest(unittest.TestCase):
         self.assertNotIn("uses: actions/checkout@v4", self.source)
         self.assertNotIn("uses: actions/checkout@v5", self.source)
         self.assertEqual(2, self.source.count("ref: ${{ github.sha }}"))
-        self.assertEqual(2, self.source.count("fetch-depth: 1"))
+        self.assertEqual(1, self.source.count("fetch-depth: 1"))
+        self.assertEqual(1, self.source.count("fetch-depth: 0"))
         self.assertEqual(2, self.source.count("persist-credentials: false"))
+
+    def test_connected_capture_is_candidate_bound_and_precedes_connected_tests(self) -> None:
+        self.assertIn("git switch --create main \"${GITHUB_SHA}\"", self.source)
+        self.assertIn("Install screenshot validation dependency", self.source)
+        capture = "OUTPUT_DIR=build/ci-screenshot-capture bash scripts/capture_store_screenshots.sh"
+        connected = "bash scripts/run_connected_validation.sh --skip-origin-main-check --candidate-sha ${{ github.sha }}"
+        self.assertIn(capture, self.source)
+        self.assertIn(connected, self.source)
+        self.assertLess(self.source.index(capture), self.source.index(connected))
+        self.assertIn("build/ci-screenshot-capture/", self.source)
 
     def test_host_job_runs_tooling_tests_and_real_asset_preflight(self) -> None:
         self.assertIn(
@@ -83,7 +94,11 @@ class AndroidValidationWorkflowContractTest(unittest.TestCase):
     def test_connected_job_uses_hardened_runner_on_api_35(self) -> None:
         self.assertIn("uses: reactivecircus/android-emulator-runner@v2", self.source)
         self.assertIn("api-level: 35", self.source)
-        self.assertIn("script: bash scripts/run_connected_validation.sh", self.source)
+        self.assertIn("bash scripts/run_connected_validation.sh", self.source)
+        self.assertIn(
+            "OUTPUT_DIR=build/ci-screenshot-capture bash scripts/capture_store_screenshots.sh",
+            self.source,
+        )
         self.assertIn("emulator-boot-timeout: 900", self.source)
         self.assertIn("-no-snapshot", self.source)
         self.assertIn("-noaudio", self.source)
