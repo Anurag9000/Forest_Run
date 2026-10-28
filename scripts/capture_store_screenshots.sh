@@ -185,12 +185,17 @@ dismiss_fullscreen_confirmation() {
 
   bounds="$(printf '%s' "${hierarchy}" | "${PYTHON_BIN}" -c '
 import re, sys
-xml = sys.stdin.read()
-match = re.search(r"<node\b(?=[^>]*\btext=\"Got it\")(?=[^>]*\bbounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]")[^>]*>", xml)
-if match:
-    x1, y1, x2, y2 = map(int, match.groups())
-    if x2 > x1 and y2 > y1:
-        print((x1 + x2) // 2, (y1 + y2) // 2)
+import xml.etree.ElementTree as ET
+root = ET.fromstring(sys.stdin.read())
+for node in root.iter("node"):
+    if node.attrib.get("text") != "Got it":
+        continue
+    match = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", node.attrib.get("bounds", ""))
+    if match:
+        x1, y1, x2, y2 = map(int, match.groups())
+        if x2 > x1 and y2 > y1:
+            print((x1 + x2) // 2, (y1 + y2) // 2)
+    break
 ')"
   if [[ ! "${bounds}" =~ ^[0-9]+[[:space:]][0-9]+$ ]]; then
     echo "Android fullscreen confirmation is visible but its Got it button bounds are unavailable." >&2

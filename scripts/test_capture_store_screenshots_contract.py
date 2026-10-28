@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -83,6 +84,34 @@ class StoreScreenshotCaptureContractTest(unittest.TestCase):
         self.assertIn("shell input tap", self.source)
         self.assertIn("bounds are unavailable", self.source)
         self.assertIn("remained visible after tapping Got it", self.source)
+
+    def test_immersive_prompt_bounds_parser_compiles_and_selects_semantic_button(self) -> None:
+        parser = self.source.split('"${PYTHON_BIN}" -c \'\n', maxsplit=1)[1].split(
+            "\n')\"", maxsplit=1
+        )[0]
+        result = subprocess.run(
+            [sys.executable, "-c", parser],
+            input=(
+                '<hierarchy><node text="Other" bounds="[0,0][1,1]" />'
+                '<node text="Got it" bounds="[100,200][300,260]" />'
+                "</hierarchy>"
+            ),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("200 230\n", result.stdout)
+
+        malformed = subprocess.run(
+            [sys.executable, "-c", parser],
+            input='<hierarchy><node text="Got it" bounds="invalid" /></hierarchy>',
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(0, malformed.returncode, malformed.stderr)
+        self.assertEqual("", malformed.stdout)
 
     def test_device_and_timeout_inputs_fail_closed(self) -> None:
         self.assertIn("STARTUP_TIMEOUT_S must be a positive integer", self.source)
