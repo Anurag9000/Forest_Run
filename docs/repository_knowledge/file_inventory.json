@@ -8,7 +8,7 @@
     "preexisting_dirty_paths": 166,
     "initial_visible_paths_reported": 961
   },
-  "current_inventory_count": 1009,
+  "current_inventory_count": 1010,
   "scope": "Union of tracked paths and visible workspace paths, excluding .git internals and ignored build/.gradle trees. Tracked release paths hidden by ignore rules are retained. New docs are included.",
   "coverage_semantics": "INVENTORIED means path/classification only; PARTIALLY_INSPECTED means bounded changed regions or prior map consultation; FULLY_STATICALLY_INSPECTED is reserved for complete small-file reading; generated exclusions have reasons. No inventory state implies runtime verification.",
   "records": [
@@ -3832,15 +3832,15 @@
       "classification": "Android production Kotlin source",
       "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b plus reviewed delta, uncommitted at capture",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Full source read at lines 1-168; symbol/responsibility note in production_kotlin_A010.md. No runtime validation.",
+      "inspection_detail": "Full source read at lines 1-168; symbol/responsibility note in production_kotlin_A010.md. No runtime validation. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [
         "DebugScenarioAction`, `DebugScenarioStep`, `DebugScenarioTimedAction`, `DebugScenarioScript.prepare/clear/advanceTimed/stepsFor"
       ],
       "relationships": [],
       "evidence_ref": "EVID-028",
-      "next_action": "Runtime OWL_DIVE screenshot validation remains TASK-C-013; complete JVM/Python suites and local lint/APK build evidence are in EVID-072.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -4213,17 +4213,17 @@
       "id": "FILE-B455DF7906B3",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Full source read at lines 1-404; symbol/responsibility note in production_kotlin_A010.md. No runtime validation.",
+      "inspection_detail": "Full source read at lines 1-404; symbol/responsibility note in production_kotlin_A010.md. No runtime validation. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [
         "EncounterStep`, `EncounterScenario`, `EncounterSpawnDirective`, `EncounterStepRandomSeed.forStep`, `EncounterDirector"
       ],
       "relationships": [],
       "evidence_ref": "EVID-028",
-      "next_action": "Reuse current full source findings; runtime verification remains separate.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -4294,17 +4294,17 @@
       "id": "FILE-7921B53A0638",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprint.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Full source read at lines 1-90; symbol/responsibility note in production_kotlin_A010.md. No runtime validation.",
+      "inspection_detail": "Full source read at lines 1-90; symbol/responsibility note in production_kotlin_A010.md. No runtime validation. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [
         "EncounterScenarioFingerprint.sha256/traceContractSha256/catalogueSha256"
       ],
       "relationships": [],
       "evidence_ref": "EVID-028",
-      "next_action": "Reuse current full source findings; runtime verification remains separate.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -5246,9 +5246,9 @@
       "classification": "Android production Kotlin source",
       "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Complete current worktree file read; 526 newline-terminated source lines. Component behavior and callers summarized in deep_inspection_TASK-A-024_kotlin.md; static only.",
+      "inspection_detail": "Complete current worktree file read; 526 newline-terminated source lines. Component behavior and callers summarized in deep_inspection_TASK-A-024_kotlin.md; static only. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [
         "SYM-005"
       ],
@@ -5256,7 +5256,7 @@
         "symbol record: SYM-005"
       ],
       "evidence_ref": "EVID-001; EVID-002 where applicable",
-      "next_action": "Reuse full current-worktree inspection; revisit only on a relevant content delta.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-002",
@@ -5332,15 +5332,15 @@
       "id": "FILE-B3E842968E04",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Complete current worktree file read; 1965 newline-terminated source lines. Component behavior and callers summarized in deep_inspection_TASK-A-024_kotlin.md; static only.",
+      "inspection_detail": "Complete current worktree file read; 1965 newline-terminated source lines. Component behavior and callers summarized in deep_inspection_TASK-A-024_kotlin.md; static only. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [],
       "relationships": [],
       "evidence_ref": "EVID-001; EVID-002 where applicable",
-      "next_action": "Reuse full current-worktree inspection; revisit only on a relevant content delta.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-002",
@@ -6002,15 +6002,15 @@
       "id": "FILE-B4122F8DBB0C",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/MercySystem.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Prior full source read explicitly recorded in docs/REPO_CODEBASE_MAP.md; exact scoped source unchanged from HEAD at reconciliation. Evidence reused, not freshly reread; runtime unverified.",
+      "inspection_detail": "Prior full source read explicitly recorded in docs/REPO_CODEBASE_MAP.md; exact scoped source unchanged from HEAD at reconciliation. Evidence reused, not freshly reread; runtime unverified. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [],
       "relationships": [],
       "evidence_ref": "EVID-029",
-      "next_action": "Reuse current source evidence; delta-review only if this path changes.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -11956,9 +11956,9 @@
       "classification": "JVM/Robolectric test source",
       "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b plus reviewed delta, uncommitted at capture",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Entire source read; inspected lines 10-157; contract in test_contracts_kotlin_engine_A-G.md; not executed.",
+      "inspection_detail": "Entire source read; inspected lines 10-157; contract in test_contracts_kotlin_engine_A-G.md; not executed. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [
         "DebugScenarioScript",
         "EncounterScenario"
@@ -11968,7 +11968,7 @@
         "EncounterScenario"
       ],
       "evidence_ref": "EVID-025",
-      "next_action": "Runtime OWL_DIVE screenshot validation remains TASK-C-013; complete JVM/Python suites and local lint/APK build evidence are in EVID-072.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -12503,11 +12503,11 @@
       "id": "FILE-85743300DA35",
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprintTest.kt",
       "classification": "JVM/Robolectric test source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Entire source read; inspected lines 8-72; contract in test_contracts_kotlin_engine_A-G.md; not executed.",
+      "inspection_detail": "Entire source read; inspected lines 8-72; contract in test_contracts_kotlin_engine_A-G.md; not executed. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [
         "EncounterScenarioFingerprint"
       ],
@@ -12515,7 +12515,7 @@
         "EncounterScenarioFingerprint"
       ],
       "evidence_ref": "EVID-025",
-      "next_action": "Reuse test-source contract; runtime verification remains separately authorized.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -26919,13 +26919,13 @@
       "classification": "evidence/release/maintenance tooling",
       "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Complete current worktree source read in bounded ranges; per-file behavior, symbols, interfaces, consumers and limits summarized in deep_inspection_TASK-A-023_python_shell.md. No script or workflow execution.",
+      "inspection_detail": "Complete current worktree source read in bounded ranges; per-file behavior, symbols, interfaces, consumers and limits summarized in deep_inspection_TASK-A-023_python_shell.md. No script or workflow execution. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [],
       "relationships": [],
       "evidence_ref": "EVID-001; EVID-002 where applicable",
-      "next_action": "Reuse full source read at recorded worktree hash; revisit only on relevant source delta.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-005"
       ],
@@ -29870,13 +29870,13 @@
       "classification": "Python test source",
       "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b plus reviewed delta, uncommitted at capture",
+      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Current source read and test contract documented in test_contract_inventory.json; test not executed.",
+      "inspection_detail": "Current source read and test contract documented in test_contract_inventory.json; test not executed. WOLF delta read through source and integration assertions; EVID-114.",
       "symbols_or_consumers": [],
       "relationships": [],
       "evidence_ref": "EVID-039",
-      "next_action": "Runtime OWL_DIVE screenshot validation remains TASK-C-013; complete JVM/Python suites and local lint/APK build evidence are in EVID-072.",
+      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-005"
       ],
@@ -32571,17 +32571,38 @@
       ],
       "file_type": "Markdown",
       "language_or_format": "Markdown"
+    },
+    {
+      "id": "FILE-F63DA117209B",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/WolfScenarioIntegrationTest.kt",
+      "classification": "JVM/Robolectric integration test",
+      "worktree_status": "tracked_clean",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "113a4ebdf671dc16470b18de0d4dff7685230045; EVID-114 local test evidence",
+      "prior_evidence": "Fresh bounded inspection of WOLF_CHARGE and its actual gameplay owners.",
+      "inspection_detail": "Full source read; integration observes both Wolves in HOWLING, CHARGING and SPARED; local suite and exact-SHA hosted evidence EVID-114–116.",
+      "symbols_or_consumers": [
+        "WolfScenarioIntegrationTest fixture/reset isolation",
+        "WolfScenarioIntegrationTest director/entity/player/collision sequence"
+      ],
+      "relationships": [
+        "TASK-A-037",
+        "TASK-C-015",
+        "REQ-020"
+      ],
+      "evidence_ref": "EVID-114; EVID-115; EVID-116",
+      "next_action": "No source/integration action remains in recorded scope; physical/human presentation acceptance is separate."
     }
   ],
   "coverage_counts": {
-    "FULLY_STATICALLY_INSPECTED": 951,
+    "EXCLUDED_WITH_REASON": 3,
+    "FULLY_STATICALLY_INSPECTED": 952,
     "PARTIALLY_INSPECTED": 17,
-    "DOCUMENTED": 37,
-    "EXCLUDED_WITH_REASON": 3
+    "DOCUMENTED": 38
   },
   "inspection_update": {
     "date": "2026-10-28",
-    "delta": "Reconciled the Wolf rename/frame count and added the current source-completion delta. Baseline full-inspection counts remain revision-bounded; only the renamed asset and new current delta artifact were added/updated here. No 100% source/runtime coverage claim is made."
+    "delta": "The WOLF_CHARGE correction is committed at 113a4ebdf671dc16470b18de0d4dff7685230045; its test row is tracked. Other worktree_status fields and WT-D17D3FBCF2CB3B267FE9 are preserved as the initial inventory snapshot, not a live post-commit git status. Exact-SHA Android validation remains pending."
   },
   "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9",
   "working_tree_hash_policy": {

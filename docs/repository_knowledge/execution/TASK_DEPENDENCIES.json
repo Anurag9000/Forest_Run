@@ -262,6 +262,16 @@
       "from": "TASK-C-014",
       "to": "TASK-E-001",
       "reason": "Final residual reconciliation requires current source-delta verification evidence."
+    },
+    {
+      "from": "TASK-A-037",
+      "to": "TASK-C-015",
+      "reason": "Exact-candidate verification follows implementation and focused contracts."
+    },
+    {
+      "from": "TASK-C-015",
+      "to": "TASK-E-001",
+      "reason": "Final reconciliation must include the WOLF_CHARGE source delta and exact-candidate evidence."
     }
   ],
   "parallel_waves": [
@@ -441,8 +451,17 @@
         "TASK-C-012"
       ],
       "notes": "Five focused scopes C-007–C-010 and C-012 can run concurrently after explicit verification authorization and revision freeze. Coordinate Android device ownership across C-010/C-012. C-011 is downstream integration/full-regression and waits for all five focused scopes; TASK-E-001 follows it."
+    },
+    {
+      "wave_id": "WAVE-WOLF-LOCAL",
+      "phase": "A/C authorized source delta",
+      "task_ids": [
+        "TASK-A-037"
+      ],
+      "status": "COMPLETED",
+      "note": "C-015 enters exact-SHA queue after A-037 is committed."
     }
   ],
-  "cycle_check": "Acyclic; static DFS verified on 2026-10-27; 48 hard dependency edges over 58 task records.",
+  "cycle_check": "Acyclic; static DFS rechecked after 2026-10-28 delta across 54 hard edges and 38 participating task nodes; all 62 task records are represented in the master ledger (isolated/no-prerequisite tasks need no graph edge).",
   "ready_rule": "Only tasks belonging to the explicitly authorized active phase may become READY; all hard prerequisites must be completed with evidence and no ownership/resource conflict may remain."
 }

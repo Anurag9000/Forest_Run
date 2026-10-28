@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-  "inspection_date": "2026-10-27",
+  "source_revision": "113a4ebdf671dc16470b18de0d4dff7685230045; Android workflow 40620167730 pending",
+  "inspection_date": "2026-10-28",
   "scope_note": "Meaningful declaration inventory across production Kotlin and Python/shell files. It retains 91 prior high-detail records and adds all shard declarations using path + fully qualified name + source start line as identity, so same-name overloads remain distinct. See per-shard methodology/limitations. Test sources/helpers and generated artifacts are excluded with file-level reasons. This is static evidence, not runtime validation; caller links are only included where established.",
   "records": [
     {
@@ -188135,6 +188135,138 @@
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "FULLY_STATICALLY_INSPECTED",
       "purpose_basis": "Shard description; see its limitations."
+    },
+    {
+      "id": "SYM-6138",
+      "name": "com.anurag9000.forestrun.engine.EncounterScenario.startingMercyHearts",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
+      "lines": "26",
+      "kind": "property",
+      "signature": "val startingMercyHearts: Int = 0,",
+      "purpose": "Run-local fixture hearts included in deterministic scenario identity; only WOLF_CHARGE sets eight.",
+      "inputs": "Kotlin signature parameters; bounded to 0..MercySystem.MAX_HEARTS where applicable.",
+      "outputs": "Int",
+      "state_or_effects": "WOLF_CHARGE debug scenario initialization only.",
+      "dependencies": [],
+      "consumers": [
+        "WOLF_CHARGE debug launch flow",
+        "WolfScenarioIntegrationTest"
+      ],
+      "goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "implementation_status": "Source-defined; debug route and deterministic integration separately tested.",
+      "evidence_status": "Local JVM full suite and exact-SHA host/API35 verification passed (EVID-114–EVID-116).",
+      "source_revision": {
+        "commit": "113a4ebdf671dc16470b18de0d4dff7685230045"
+      },
+      "shard": "current WOLF_CHARGE committed delta",
+      "inspection": "FULLY_STATICALLY_INSPECTED",
+      "purpose_basis": "Direct source inspection at committed revision plus WOLF integration test; behavior evidence EVID-114."
+    },
+    {
+      "id": "SYM-6139",
+      "name": "com.anurag9000.forestrun.engine.EncounterScenario.initializeDebugRunState",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
+      "lines": "312-314",
+      "kind": "function/method",
+      "signature": "internal fun initializeDebugRunState(gameState: GameStateManager)",
+      "purpose": "Applies the bounded mercy fixture through the debug-only state helper after reset.",
+      "inputs": "Kotlin signature parameters; bounded to 0..MercySystem.MAX_HEARTS where applicable.",
+      "outputs": "Unit",
+      "state_or_effects": "WOLF_CHARGE debug scenario initialization only.",
+      "dependencies": [],
+      "consumers": [
+        "WOLF_CHARGE debug launch flow",
+        "WolfScenarioIntegrationTest"
+      ],
+      "goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "implementation_status": "Source-defined; debug route and deterministic integration separately tested.",
+      "evidence_status": "Local JVM full suite and exact-SHA host/API35 verification passed (EVID-114–EVID-116).",
+      "source_revision": {
+        "commit": "113a4ebdf671dc16470b18de0d4dff7685230045"
+      },
+      "shard": "current WOLF_CHARGE committed delta",
+      "inspection": "FULLY_STATICALLY_INSPECTED",
+      "purpose_basis": "Direct source inspection at committed revision plus WOLF integration test; behavior evidence EVID-114."
+    },
+    {
+      "id": "SYM-6140",
+      "name": "com.anurag9000.forestrun.engine.GameStateManager.debugPrimeMercyHearts",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/GameStateManager.kt",
+      "lines": "269-271",
+      "kind": "function/method",
+      "signature": "internal fun debugPrimeMercyHearts(hearts: Int)",
+      "purpose": "Delegates the bounded scenario fixture to MercySystem without creating near-miss history.",
+      "inputs": "Kotlin signature parameters; bounded to 0..MercySystem.MAX_HEARTS where applicable.",
+      "outputs": "Unit",
+      "state_or_effects": "WOLF_CHARGE debug scenario initialization only.",
+      "dependencies": [],
+      "consumers": [
+        "WOLF_CHARGE debug launch flow",
+        "WolfScenarioIntegrationTest"
+      ],
+      "goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "implementation_status": "Source-defined; debug route and deterministic integration separately tested.",
+      "evidence_status": "Local JVM full suite and exact-SHA host/API35 verification passed (EVID-114–EVID-116).",
+      "source_revision": {
+        "commit": "113a4ebdf671dc16470b18de0d4dff7685230045"
+      },
+      "shard": "current WOLF_CHARGE committed delta",
+      "inspection": "FULLY_STATICALLY_INSPECTED",
+      "purpose_basis": "Direct source inspection at committed revision plus WOLF integration test; behavior evidence EVID-114."
+    },
+    {
+      "id": "SYM-6141",
+      "name": "com.anurag9000.forestrun.engine.MercySystem.debugPrimeMercyHearts",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/MercySystem.kt",
+      "lines": "41-43",
+      "kind": "function/method",
+      "signature": "internal fun debugPrimeMercyHearts(hearts: Int)",
+      "purpose": "Sets bounded run-local mercy hearts without claiming near-miss or persistent history.",
+      "inputs": "Kotlin signature parameters; bounded to 0..MercySystem.MAX_HEARTS where applicable.",
+      "outputs": "Unit",
+      "state_or_effects": "WOLF_CHARGE debug scenario initialization only.",
+      "dependencies": [],
+      "consumers": [
+        "WOLF_CHARGE debug launch flow",
+        "WolfScenarioIntegrationTest"
+      ],
+      "goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "implementation_status": "Source-defined; debug route and deterministic integration separately tested.",
+      "evidence_status": "Local JVM full suite and exact-SHA host/API35 verification passed (EVID-114–EVID-116).",
+      "source_revision": {
+        "commit": "113a4ebdf671dc16470b18de0d4dff7685230045"
+      },
+      "shard": "current WOLF_CHARGE committed delta",
+      "inspection": "FULLY_STATICALLY_INSPECTED",
+      "purpose_basis": "Direct source inspection at committed revision plus WOLF integration test; behavior evidence EVID-114."
     }
   ],
   "shard_summary": {
@@ -188159,6 +188291,6 @@
       "explicitly_excluded_local_declarations": 0
     }
   },
-  "symbol_count": 6137,
+  "symbol_count": 6141,
   "identity_key": "path + fully qualified declaration name + source start line; same-name overloads remain separate."
 }

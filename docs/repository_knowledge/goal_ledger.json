@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "repository": "Forest_Run",
-  "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+  "source_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
   "snapshot_date": "2026-10-27",
   "records": [
     {
@@ -47,12 +47,14 @@
         "docs/REPO_CODEBASE_MAP.md"
       ],
       "capability_ids": [
-        "CAP-002"
+        "CAP-002",
+        "CAP-006"
       ],
-      "status": "substantial_static_evidence; current_delta_not_fully_verified",
+      "status": "WOLF_CHARGE source correction and local/exact-SHA host/API35 verification complete; physical/human acceptance remains separately tracked.",
       "completion_conditions": "Each requirement has source ownership and appropriate independent behavioral evidence on the intended candidate.",
       "requirement_ids": [
-        "REQ-002"
+        "REQ-002",
+        "REQ-020"
       ],
       "child_goal_ids": [
         "GOAL-008",

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42; later documentation commits are tracked separately",
+  "repository_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
   "snapshot_date": "2026-10-28",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -1634,6 +1634,86 @@
       ],
       "result": "Host/release/lint/package and API35 connected jobs passed; 28/28 connected tests passed; 8/8 raw screenshots passed capture-set verification; candidate-bound Owl alert state is visible in the inspected emulator image. Training applicability and estate-certificate runs 40610098264 and 40610098198 passed.",
       "limitations": "Hosted API35 emulator capture only. This is not physical-device acceptance, human gameplay/accessibility/creative approval, store curation, rights/provenance approval, or release approval. Screenshot artifact is retained by GitHub, not copied into the repository."
+    },
+    {
+      "id": "EVID-114",
+      "type": "local full-suite and WOLF_CHARGE delta verification",
+      "path": "app/build/test-results/testDebugUnitTest/TEST-*.xml; local Gradle/Python outputs; app/build debug APK/AAB",
+      "revision": "113a4ebdf671dc16470b18de0d4dff7685230045 (source commit; local execution logs/artifacts were produced before commit from equivalent staged contents)",
+      "supports": [
+        "REQ-020",
+        "FIND-021",
+        "GAP-010",
+        "TASK-A-037",
+        "TASK-C-015",
+        "CAP-002"
+      ],
+      "observation": "Python scripts suite passed 1,398 tests. With cached JDK 21, full JVM/Robolectric suite passed 1,307 tests (0 failures/errors/skips). Integration observed both Wolves in HOWLING, CHARGING and SPARED, with no hits/ordinary clean passes and no persistent Wolf encounter/spare records. Focused Wolf integration passed 2 tests; scenario source contract passed 10. Kotlin compile, debug/release lint, debug/instrumentation APK and release AAB bundle succeeded. Stale local-test APK initially contained the pre-rename Wolf path; only packageDebugUnitTestForUnitTest was rerun, without cleaning, after which the asset contract and full suite passed. No generated state was deleted.",
+      "commands": [
+        "python3 -m unittest discover -s scripts -p test_*.py (1,398 passed)",
+        "PYTHONPATH=scripts python3 -m unittest scripts.test_scenario_source_contract (10 passed)",
+        "JAVA_HOME=cached JDK 21 ./gradlew :app:packageDebugUnitTestForUnitTest --rerun-tasks --no-daemon",
+        "JAVA_HOME=cached JDK 21 ./gradlew testDebugUnitTest --no-daemon (1,307 passed)",
+        "JAVA_HOME=cached JDK 21 ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease --no-daemon (successful; full suite rerun after final test-only assertion passed)",
+        "git diff --check"
+      ],
+      "result": "Local source/test delta is verified at stated scopes. Source is now committed/pushed; exact-SHA hosted Android verification is tracked separately in TASK-C-015.",
+      "limitations": "Exact-SHA hosted Android validation is still in progress. No physical device, human review, creative/legal approval or release gate is established."
+    },
+    {
+      "id": "EVID-115",
+      "type": "exact-SHA Android host/release/lint/package validation",
+      "path": "GitHub Actions run 40620167730, host job 122592006989; workflow artifact 12787496440",
+      "revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+      "supports": [
+        "REQ-020",
+        "FIND-021",
+        "GAP-010",
+        "TASK-C-015",
+        "CAP-002"
+      ],
+      "observation": "Exact commit 113a4ebdf671dc16470b18de0d4dff7685230045 completed the Android validation host/release/lint/package job successfully. Source-contract check, Python performance/release/connected-tooling suite, source immutability, hosted SDK/API 36 setup, dependency evidence, Kotlin/unit-test/lint/build/package/release hardening, native page-size inspection and R8/source immutability steps completed successfully. Host artifact is 17,814,582 bytes with GitHub-reported SHA-256 9c506976586101d1b0b4baaea99b9c81072a807c46c2071d0f160276fdbf6807. API35 connected job 122594376073 is still in progress; no connected success is claimed yet.",
+      "commands": [
+        "GitHub Actions push workflow on exact SHA 113a4ebdf671dc16470b18de0d4dff7685230045; host job 122592006989"
+      ],
+      "result": "Exact-candidate host/release/lint/package validation passed; connected API35 verification pending.",
+      "limitations": "This is the hosted host job only. API35 connected tests and deterministic evidence are pending; physical devices, human review, creative/legal approval and external release gates are not established."
+    },
+    {
+      "id": "EVID-116",
+      "type": "exact-SHA API 35 connected and deterministic evidence validation",
+      "path": "GitHub Actions run 40620167730, connected job 122594376073; artifact 12787029693",
+      "revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+      "supports": [
+        "REQ-020",
+        "FIND-021",
+        "GAP-010",
+        "TASK-C-015",
+        "CAP-002",
+        "TASK-A-037"
+      ],
+      "observation": "Exact-SHA API 35 connected job completed successfully. The emulator executed 28 connected tests with 0 skipped and 0 failed. The host-verified process-death test passed its prepare/force-stop/no-process/fresh-process restore sequence (1 test in each phase). The canonical screenshot workflow verified eight raw captures against candidate 113a4ebdf671dc16470b18de0d4dff7685230045, APK SHA-256 6cba144842fdc2f5077e49345d92ebc4a601d7cc2fb2ec3b3a78b6068da0c5ea, and emulator-5554. The 71-file connected artifact is 1,626,783 bytes with GitHub-reported SHA-256 a391a669560052d8e993d7647c33d4f37d58736627e650873b53b293cfe5dc81. Run 40620167730 and exact-source host job 122592006989 also succeeded; applicability and certificate workflows 40620167767/40620167515 succeeded.",
+      "commands": [
+        "GitHub Actions Android validation push workflow on exact SHA 113a4ebdf671dc16470b18de0d4dff7685230045; host job 122592006989 and API35 connected job 122594376073"
+      ],
+      "result": "Exact-SHA Android workflow passed host/release/lint/package and API35 connected/deterministic evidence jobs. WOLF_CHARGE verification is complete at local plus hosted API35 scope.",
+      "limitations": "Hosted API35/emulator evidence does not establish physical/OEM performance or device acceptance, human gameplay/accessibility/creative approval, provenance/licensing, signing, Play delivery, policy governance, or accountable production release."
+    },
+    {
+      "id": "EVID-117",
+      "type": "knowledge ledger and documentation consistency self-audit",
+      "path": "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/TASK_DEPENDENCIES.json; edited markdown indexes and maps",
+      "revision": "113a4ebdf671dc16470b18de0d4dff7685230045 plus documentation reconciliation",
+      "supports": [
+        "REQ-018",
+        "GOAL-014"
+      ],
+      "observation": "All seven structured ledgers parsed as JSON. Across goal, requirement, capability, algorithm, component, execution-path, finding, gap, task, applicability, verification-suite, file, symbol, test-contract and evidence records there were 7,466 unique IDs and no duplicates. All task relationship/evidence references resolved; 54 dependency edges were acyclic. Five edited Markdown entrypoints had zero broken relative links. File inventory 1,010 records, symbol inventory 6,141 records and test-contract inventory 390 records were cross-checked. git diff --check passed.",
+      "commands": [
+        "Python static JSON/ID/reference/dependency/relative-link validator; git diff --check"
+      ],
+      "result": "Documentation and ledger consistency checks passed at the recorded scope.",
+      "limitations": "This validates structured records, links, uniqueness and graph consistency; it does not claim all source symbols have complete semantic call-graph analysis, nor substitute for runtime or external acceptance."
     }
   ]
 }

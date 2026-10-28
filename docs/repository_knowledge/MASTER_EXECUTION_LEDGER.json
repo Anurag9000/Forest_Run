@@ -426,6 +426,27 @@
         "capability_ids": [
           "CAP-016"
         ]
+      },
+      {
+        "id": "REQ-020",
+        "goal_id": "GOAL-002",
+        "statement": "Each authored deterministic showcase that claims a gameplay sequence must exercise it in the real gameplay owners, isolate fixture state from ordinary persistent progression, and bind mechanic-relevant initial state into scenario identity.",
+        "classification": "explicit_current_user_assignment_from_forest_run_completion_addendum",
+        "evidence": [
+          "docs/GAME_DESIGN.md",
+          "docs/DETERMINISTIC_SCENARIO_EVIDENCE.md",
+          "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt"
+        ],
+        "status": "IMPLEMENTED_AND_VERIFIED: WOLF_CHARGE exercises both howl-charge-spare branches in an isolated deterministic run; local and exact-SHA hosted evidence EVID-114..116.",
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "verification_task_ids": [
+          "TASK-A-037",
+          "TASK-C-015"
+        ]
       }
     ],
     "capabilities": [
@@ -450,14 +471,19 @@
         "id": "CAP-002",
         "goal_id": "GOAL-002",
         "name": "Input, player movement, encounter arbitration, Seeds/Bloom and progression",
-        "implementation": "SUBSTANTIALLY_COMPLETE",
-        "verification": "STATIC_EVIDENCE_ONLY plus historical scoped evidence",
+        "implementation": "SUBSTANTIALLY_COMPLETE; the WOLF_CHARGE scenario branch is source-corrected and integrated.",
+        "verification": "LOCAL_FULL_SUITES_AND_EXACT_SHA_HOSTED_HOST_API35_PASSED",
         "evidence": [
           "docs/ARCHITECTURE.md",
-          "docs/AUDIT_LEDGER.md"
+          "docs/AUDIT_LEDGER.md",
+          "EVID-114",
+          "app/src/test/java/com/anurag9000/forestrun/engine/WolfScenarioIntegrationTest.kt",
+          "EVID-115",
+          "EVID-116"
         ],
         "requirement_ids": [
-          "REQ-002"
+          "REQ-002",
+          "REQ-020"
         ],
         "goal_ids": [
           "GOAL-002",
@@ -1039,7 +1065,7 @@
       {
         "id": "FIND-006",
         "kind": "historical architecture reconciliation",
-        "statement": "Aug 6 listed four architecture extractions as open and the canonical catalogue/recovery UI as optional/open; Aug 9 records bounded closure of all six, later Sep 20 closure does not reopen them, and targeted current-source inspection corroborates the structural seams. No implementation task is reopened. The broader data-oriented catalogue remains optional and unselected.",
+        "statement": "At the prior audit snapshot, file_inventory.json had 389 test-related source/support records and all 389 were represented in the then-current test contract inventory. Current file inventory and contract inventory each have 390 records after the WOLF_CHARGE integration test was added; see EVID-114 and current test_contract_inventory.json.",
         "evidence": [
           "EVID-019",
           "EVID-020",
@@ -1072,7 +1098,8 @@
           "CAP-014"
         ],
         "confidence": "historical closure documentation plus static current-source corroboration; no runtime claim",
-        "next_action": "Reuse these bounded closures unless affected source changes or contrary evidence appears."
+        "next_action": "Reuse these bounded closures unless affected source changes or contrary evidence appears.",
+        "status": "Resolved at 389-path source-contract scope during prior audit; current expanded test_contract_inventory.json contains 390 records after WOLF integration test was added."
       },
       {
         "id": "FIND-007",
@@ -1400,24 +1427,67 @@
           "FIND-012"
         ],
         "limitations": "Exact candidate host and API35 connected workflows pass. Human visual/creative/provenance review remains separate."
+      },
+      {
+        "id": "FIND-021",
+        "kind": "deterministic gameplay scenario reachability gap",
+        "statement": "WOLF_CHARGE claimed howl/charge/spare tension, but fresh debug reset left mercy at zero while Wolf stand-down requires eight; it had no authored input through both charge windows. The delta primes bounded run-local debug mercy, scripts two held jumps, fingerprints fixture state, and tests each Wolf through HOWLING, CHARGING and SPARED.",
+        "status": "RESOLVED_SOURCE_AND_EXACT_SHA_VERIFIED",
+        "evidence_ids": [
+          "EVID-114",
+          "EVID-115",
+          "EVID-116"
+        ],
+        "related_task_ids": [
+          "TASK-A-037",
+          "TASK-C-015"
+        ],
+        "related_goal_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "limitations": "Local tests do not establish physical or human presentation acceptance; exact-candidate workflow is pending."
       }
     ],
     "gaps": [
       {
         "id": "GAP-001",
         "kind": "coverage",
-        "statement": "Not every changed/new source or test body in the 166-path dirty tree received full content inspection; selected regions/diffs were reviewed and the rest is explicitly inventoried.",
+        "statement": "The initial dirty-tree inspection left some paths at partial/inventoried-only status. Subsequent A-001 through A-025 work completed assigned source, test, historical-document, asset, and residual-map inspection scopes; 17 binary-only partial records and two reused prior maps remain explicitly scoped limitations in the coverage ledger.",
         "resolution_task_ids": [
           "TASK-A-001",
-          "TASK-A-002"
+          "TASK-A-002",
+          "TASK-A-004",
+          "TASK-A-025"
+        ],
+        "disposition": "Resolved for required authored-source and document coverage to each inventory record’s stated scope. Binary-only artifacts and two prior maps remain partial/excluded by documented reason; this is not a claim that every binary payload was semantically inspected.",
+        "evidence_ids": [
+          "EVID-067",
+          "EVID-069",
+          "EVID-113"
         ]
       },
       {
         "id": "GAP-002",
         "kind": "verification evidence boundary",
-        "statement": "Runtime/behavioral verification is absent because the governing prompt excludes tests and application workflows. This is an evidence limitation, not an established implementation defect; static source completeness is assessed independently.",
-        "resolution_task_ids": [],
-        "disposition": "Scope exclusion/evidence limitation; no defect finding and no test task under current prompt."
+        "statement": "Hosted exact-candidate API35 and automated verification evidence exists, but real physical-device and human/creative acceptance is not established. This is an acceptance-evidence boundary, not a demonstrated source defect.",
+        "resolution_task_ids": [
+          "TASK-D-001",
+          "TASK-D-002",
+          "TASK-D-003",
+          "TASK-E-001"
+        ],
+        "disposition": "Automated source/runtime checks are recorded at revision-bounded scopes; remaining external evidence is explicitly tracked under B/D/E. Do not describe verification as prohibited or absent.",
+        "evidence_ids": [
+          "EVID-113"
+        ]
       },
       {
         "id": "GAP-003",
@@ -1472,15 +1542,17 @@
       {
         "id": "GAP-007",
         "kind": "OWL_DIVE capture did not exercise its named interaction",
-        "statement": "The noninteractive Play screenshot capture could not trigger the jump-responsive Owl Dive mechanic. The source input route is now connected; visual output and candidate-bound capture acceptance remain unverified.",
+        "statement": "The noninteractive OWL_DIVE capture previously could not trigger the jump-responsive Owl mechanic. The source input route was connected, then exact candidate 871467c2437a9949da6bf9c0119a31c405d7fa42 produced a verified API35 capture whose 07-owl.png visibly shows alert rings.",
         "resolution_task_ids": [
           "TASK-A-035",
           "TASK-C-013"
         ],
-        "disposition": "Source portion resolved by TASK-A-035; runtime screenshot verification remains blocked pending adb/device availability.",
+        "disposition": "RESOLVED for hosted API35 candidate capture and visible-state evidence by TASK-A-035/TASK-C-013 and EVID-113. Physical/OEM presentation and human visual acceptance remain under TASK-D-001/TASK-D-002.",
         "evidence_ids": [
-          "EVID-072"
-        ]
+          "EVID-072",
+          "EVID-113"
+        ],
+        "status": "RESOLVED_HOSTED_API35_CAPTURE; PHYSICAL_AND_HUMAN_ACCEPTANCE_SEPARATE"
       },
       {
         "id": "GAP-008",
@@ -1512,6 +1584,22 @@
           "EVID-109"
         ],
         "status": "RESOLVED_SOURCE_AND_AUTOMATED_VERIFICATION; HUMAN_CREATIVE_REVIEW_SEPARATE"
+      },
+      {
+        "id": "GAP-010",
+        "kind": "WOLF_CHARGE named mechanic was unreachable in a clean deterministic run",
+        "statement": "Reset state could not reach the eight-mercy-heart Wolf spare branch and the scenario had no scripted jumps through its charge windows.",
+        "resolution_task_ids": [
+          "TASK-A-037",
+          "TASK-C-015"
+        ],
+        "disposition": "The scenario uses bounded run-local fixture state and deterministic input; both real Wolf instances were observed to traverse HOWLING, CHARGING, SPARED with no persistence contamination. Local and exact-SHA hosted evidence EVID-114..116.",
+        "evidence_ids": [
+          "EVID-114",
+          "EVID-115",
+          "EVID-116"
+        ],
+        "status": "RESOLVED_SOURCE_AND_EXACT_SHA_HOSTED_VERIFIED"
       }
     ],
     "tasks": [
@@ -2770,7 +2858,7 @@
         "target_phase": "E - final reconciliation",
         "objective": "Reconcile only changed source, affected evidence and residual requirements; issue an evidence-backed release disposition for the exact candidate.",
         "motivation": "Earlier audits should be reused, but changes invalidate only their dependent evidence; final closure must account for all remaining gates without repeating the whole audit.",
-        "current_state": "No current candidate or release acceptance is established by this documentation pass.",
+        "current_state": "All repository-controlled implementation tasks are complete at their recorded scopes, including WOLF_CHARGE exact-SHA validation. Physical performance/device tasks B-001/B-002 and external/device/human governance tasks D-001..D-007 remain outstanding.",
         "required_final_state": "All mandatory requirements have evidence-backed disposition, residual/external blockers are explicit, and an accountable owner records go/no-go.",
         "scope": [
           "this knowledge map and all linked ledgers",
@@ -2809,7 +2897,9 @@
           "TASK-A-034",
           "TASK-C-011",
           "TASK-C-013",
-          "TASK-D-007"
+          "TASK-D-007",
+          "TASK-C-014",
+          "TASK-C-015"
         ],
         "downstream_task_ids": [],
         "conflicts": [
@@ -2821,24 +2911,28 @@
         "execution_status": "DEFERRED",
         "owner": null,
         "blockers": [
-          "TASK-C-013 candidate-bound screenshot/device evidence remains outstanding.",
-          "Physical performance baseline and external D-001 through D-007 release-governance evidence remain outstanding."
+          "TASK-B-001/TASK-B-002 physical-device performance evidence and explicit disposition.",
+          "TASK-D-001 through TASK-D-007 candidate-bound physical, human, creative/rights, security/privacy, Play, signing, governance and accountable review evidence."
         ],
         "evidence_ids": [
           "EVID-006",
           "EVID-072",
           "EVID-074",
-          "EVID-075"
+          "EVID-075",
+          "EVID-113",
+          "EVID-114",
+          "EVID-115",
+          "EVID-116"
         ],
         "uncertainty": "Current outstanding scope may change after authorized external decisions.",
-        "remaining_work": "Complete after residual requirement-level exclusions are reconciled, TASK-C-013 candidate-bound screenshot/device evidence exists, physical performance work is addressed or explicitly dispositioned, and accountable external release owners provide their candidate-bound evidence and go/no-go.",
+        "remaining_work": "Complete after remaining physical performance and external D-gate evidence is supplied or explicitly dispositioned by accountable owners; then perform a targeted candidate/readiness reconciliation and record the accountable go/no-go.",
         "completion_evidence": [],
         "related_prior_work": [
           "docs/RELEASE_READINESS.md",
           "docs/AUDIT_LEDGER.md"
         ],
-        "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c; verification status refreshed 2026-10-27",
-        "next_action": "Only execute after all dependencies and authorized candidate review are complete.",
+        "last_reconciled_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42 (exact-SHA hosted workflow 40610098124); ledger refreshed in documentation commit f4acd6dffafbf5e5a8bcc8cef31d292790435cc2.",
+        "next_action": "Resume when actual B/D owner evidence or explicit dispositions are supplied; then perform targeted residual/readiness reconciliation.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
         "evidence_status": "INSUFFICIENT_OR_CONTRADICTORY_EVIDENCE"
@@ -4974,7 +5068,7 @@
         "target_phase": "A - repository reconstruction and documentation",
         "objective": "Create one structured contract record for each of the 60 Python test files already read in TASK-A-017 and present in the file inventory but absent from test_contract_inventory.json.",
         "motivation": "File-level coverage shows the files were read, but the reusable per-file contract ledger omits them; future verification agents should not have to rediscover each test source’s asserted behavior.",
-        "current_state": "All 60 scoped Python test paths were fully statically inspected and their structured records have been merged; the complete test contract ledger has 389 paths.",
+        "current_state": "All 60 scoped Python test paths were fully statically inspected in the prior audit and their records remain applicable; the current consolidated test contract inventory contains 390 records after adding the WOLF scenario test.",
         "required_final_state": "Exactly one contract record exists per target path, describing the authored test behavior and subject symbols without claiming execution or pass/fail.",
         "scope": [
           "scripts/test_aggregate_device_acceptance_aliases.py",
@@ -5114,7 +5208,7 @@
         "target_phase": "A - repository reconstruction and documentation",
         "objective": "Create structured contracts for the 24 Kotlin test/harness source paths that have file-level source coverage but no record in test_contract_inventory.json.",
         "motivation": "The current contract ledger does not cover all inspected Android/JVM test sources, so future verifiers lack a complete per-file map of assertions and fixture behavior.",
-        "current_state": "All 24 scoped Kotlin test/support paths were fully read and their structured records have been merged; all 389 test-related paths now have contract rows.",
+        "current_state": "All 24 scoped Kotlin test/support paths were fully read in the prior audit and their records remain applicable; the current consolidated test contract inventory contains 390 records after adding the WOLF scenario test.",
         "required_final_state": "One accurate test-source contract record per scoped Kotlin path, with source lines, symbols, assertion behavior and not-executed status.",
         "scope": [
           "app/src/androidTest/java/com/anurag9000/forestrun/BambooEncounterInstrumentedTest.kt",
@@ -7617,7 +7711,8 @@
           "EVID-109",
           "EVID-110",
           "EVID-111",
-          "EVID-112"
+          "EVID-112",
+          "EVID-113"
         ],
         "uncertainty": "Exact candidate host and API 35 connected workflow job conclusions are directly confirmed. Detailed connected JUnit counts and transcript are present only in uploaded artifacts that could not be downloaded anonymously (HTTP 401); no count is inferred. Physical/device/human acceptance is not established by emulator CI.",
         "remaining_work": "None within this exact-source-delta verification task. Candidate-bound Owl screenshot/visual inspection and physical/human/external release gates remain separately tracked.",
@@ -7633,11 +7728,193 @@
           "TASK-A-036",
           "2026-10-27 exact-main and process-death evidence EVID-101/EVID-102"
         ],
-        "last_reconciled_revision": "8c335aef232ee8f164847631a74d1abb7409dd86 (source) plus f00f78e820ae2a158ef420d634f7c410a27ef2b3 (documentation-only verification tree)",
-        "next_action": "No task-local action. Continue with TASK-C-013 when an authorized Android capture device is available; retain physical, human, provenance, governance, signing and Play gates under their existing tasks.",
+        "last_reconciled_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42 (exact-SHA hosted workflow 40610098124)",
+        "next_action": "No task-local action. TASK-E-001 may use this completed exact-candidate evidence after physical performance and external D-gate inputs are available.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "VERIFIED",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
+      },
+      {
+        "id": "TASK-A-037",
+        "title": "Make WOLF_CHARGE exercise its authored howl-charge-spare sequence",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "implementation and deterministic scenario integration",
+        "target_phase": "A - authorized source completion",
+        "objective": "Ensure WOLF_CHARGE starts with bounded run-local state required for Wolf stand-down, scripts evasions through both charge windows, and fingerprints initial mechanic state.",
+        "motivation": "The prior scenario claimed howl, charge and spare, but reset state had zero mercy while the real spare branch requires eight; no jump inputs existed.",
+        "current_state": "Clean reset made the spare branch unreachable and scenario had no scripted charge response.",
+        "required_final_state": "Only WOLF_CHARGE receives isolated eight-heart fixture after reset; two authored holds evade the charge interactions; fingerprint binds the fixture; ordinary gameplay and persistent state stay unchanged.",
+        "scope": [
+          "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/GameStateManager.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/MercySystem.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprint.kt",
+          "app/src/test/java/com/anurag9000/forestrun/engine/DebugScenarioScriptTest.kt",
+          "app/src/test/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprintTest.kt",
+          "app/src/test/java/com/anurag9000/forestrun/engine/WolfScenarioIntegrationTest.kt",
+          "scripts/scenario_source_contract.py",
+          "scripts/test_scenario_source_contract.py",
+          "docs/DETERMINISTIC_SCENARIO_EVIDENCE.md"
+        ],
+        "required_actions": [
+          "Prime scenario-only mercy fixture after reset.",
+          "Keep helper bounded and isolated from near-miss history and normal persistence.",
+          "Script held jumps in both authored Wolf charge windows.",
+          "Bind initial fixture into Kotlin and Python scenario canonicalization.",
+          "Assert both Wolves enter HOWLING, CHARGING and SPARED, with no hits, ordinary clean passes or durable progression contamination."
+        ],
+        "inputs": [
+          "FIND-021",
+          "GAP-010",
+          "REQ-020",
+          "Wolf.resolveSpecialSafeDeparture",
+          "EncounterScenario.WOLF_CHARGE"
+        ],
+        "deliverables": [
+          "Debug fixture and scripted input",
+          "Fingerprint/source parser parity",
+          "JVM and Python regression tests",
+          "Updated scenario documentation"
+        ],
+        "acceptance_criteria": [
+          "Fixture is applied only after reset in debug scenario launch path.",
+          "Both Wolves are observed in HOWLING, CHARGING and SPARED at 60 Hz.",
+          "Two spares, zero hits and zero ordinary clean passes.",
+          "No durable Wolf encounter/spare, high-score or lifetime-Seed contamination.",
+          "Kotlin/Python canonicalization parity and source tests pass."
+        ],
+        "verification_method": "Focused Kotlin integration/fingerprint tests, full JVM/Python suites and exact-SHA hosted Android workflow.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-015",
+          "TASK-E-001"
+        ],
+        "conflicts": [
+          "Scenario source, input, fingerprint and tests; serialize overlapping edits."
+        ],
+        "execution_constraints": "Authorized source completion; fixture only in deterministic debug run; no fabricated acceptance.",
+        "complexity": "medium",
+        "priority": "P1 requirement-backed scenario fidelity",
+        "execution_status": "COMPLETED",
+        "owner": null,
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-114",
+          "EVID-115",
+          "EVID-116"
+        ],
+        "uncertainty": "Local simulation does not substitute for exact-candidate hosted verification.",
+        "remaining_work": "None in implementation scope; exact-SHA verification is separate.",
+        "completion_evidence": [
+          "WOLF_CHARGE implementation/test committed at 113a4ebdf671dc16470b18de0d4dff7685230045.",
+          "EVID-114 local Python/JVM and package/build checks.",
+          "EVID-115 exact-SHA host/release/lint/package pass.",
+          "EVID-116 exact-SHA API35 28/28 connected tests, 8 verified captures, process-death recovery."
+        ],
+        "related_prior_work": [
+          "TASK-A-035; EVID-113"
+        ],
+        "last_reconciled_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+        "next_action": "No implementation action remains; exact source verification is complete in TASK-C-015.",
+        "investigation_coverage": "DOCUMENTED",
+        "implementation_or_investigation_status": "IMPLEMENTED / INTEGRATED",
+        "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-C-015",
+        "title": "Verify WOLF_CHARGE sequence and debug-state isolation on exact candidate",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "focused fidelity verification",
+        "target_phase": "C - implementation fidelity and risk-based verification",
+        "objective": "Establish WOLF_CHARGE correction against exact source candidate and repository validation workflows.",
+        "motivation": "Local tests establish deterministic gameplay path; the source candidate must pass host and connected gates.",
+        "current_state": "Source correction committed at 113a4ebdf671dc16470b18de0d4dff7685230045; local full suites/build passed; exact-SHA Android host/release/lint/package and API35 connected jobs passed, including 28/28 tests, eight screenshot captures and process-death recovery.",
+        "required_final_state": "Committed exact-main SHA passes Python, host/release/lint/package and API35 connected validation; training-applicability and certificate workflows pass on that SHA.",
+        "scope": [
+          "TASK-A-037 source/test/doc delta",
+          "exact-SHA Android workflow",
+          "exact-SHA no-trainable-surface and certificate workflows"
+        ],
+        "required_actions": [
+          "Commit only authorized WOLF/ledger paths.",
+          "Run and inspect exact-SHA Android workflow through terminal success.",
+          "Run and inspect applicability and certificate workflows.",
+          "Record artifacts and limitations without claiming external acceptance."
+        ],
+        "inputs": [
+          "TASK-A-037",
+          "EVID-114",
+          "docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md"
+        ],
+        "deliverables": [
+          "Exact-SHA hosted CI results",
+          "Updated evidence and candidate ledger",
+          "WOLF scenario verification disposition"
+        ],
+        "acceptance_criteria": [
+          "Host/release/lint/package and API35 connected pass for exact SHA.",
+          "Training applicability remains N/A and controller passes.",
+          "Certificate workflow passes for same SHA.",
+          "No claim extends to physical/human/creative/legal/store acceptance."
+        ],
+        "verification_method": "GitHub Actions logs and artifact indexes; source-immutability check.",
+        "dependency_ids": [
+          "TASK-A-037"
+        ],
+        "downstream_task_ids": [
+          "TASK-E-001"
+        ],
+        "conflicts": [
+          "GitHub Actions evidence capture."
+        ],
+        "execution_constraints": "No fabricated results, weakened gates, PRs or release-readiness claims.",
+        "complexity": "low",
+        "priority": "P1",
+        "execution_status": "COMPLETED",
+        "owner": null,
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-114",
+          "EVID-115",
+          "EVID-116"
+        ],
+        "uncertainty": "No unresolved source behavior within the task scope. Hosted API35 evidence does not substitute for physical/human acceptance.",
+        "remaining_work": "None in the WOLF_CHARGE source-verification scope.",
+        "completion_evidence": [
+          "EVID-114",
+          "EVID-115",
+          "EVID-116"
+        ],
+        "related_prior_work": [
+          "TASK-C-014; EVID-113; previous source runs do not validate this delta."
+        ],
+        "last_reconciled_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+        "next_action": "No further action in this task. Physical/human Wolf readability is tracked separately under TASK-D-001/TASK-D-002.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "VERIFICATION REQUIRED",
+        "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED"
       }
     ],
     "applicability_matrix": [
@@ -8229,26 +8506,33 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42",
-    "working_tree_delta": "Committed and pushed to canonical main; tracked worktree clean at evidence capture; unrelated untracked user/generated state preserved and excluded.",
+    "base_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+    "working_tree_delta": "Source committed/pushed; docs reconciliation is in progress; unrelated untracked user/generated state preserved.",
     "evidence_ids": [
-      "EVID-113"
+      "EVID-114",
+      "EVID-115",
+      "EVID-116",
+      "EVID-117"
     ],
-    "status": "Exact-SHA Android run 40610098124 passed host/release/lint/package and API35 connected jobs. API35 JUnit: 28 passed, 0 failed/errors/skipped. Screenshot workflow verified eight captures and candidate/APK/device identity; inspected Owl image shows alert rings. Training applicability run 40610098264 and certificate run 40610098198 passed. This does not establish physical/human/legal/store acceptance.",
-    "documentation_verification_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42"
+    "status": "Local Python 1,398 and JVM/Robolectric 1,307 passed; exact-SHA host/release/lint/package passed; API35 connected 28/28 passed; process-death recovery and eight candidate-bound screenshots verified. Training-applicability and certificate workflows passed. Physical/human/external acceptance remains separate.",
+    "documentation_verification_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2",
+    "documentation_workflow_run": "Prior documentation-only workflows apply to earlier revisions; this ledger is being reconciled against exact source candidate 113a4ebdf671dc16470b18de0d4dff7685230045."
   },
   "current_repository_state": {
     "branch": "main",
-    "verified_source_candidate_sha": "871467c2437a9949da6bf9c0119a31c405d7fa42",
-    "candidate_remote_confirmation": "origin/main matched the candidate at push and exact-SHA hosted workflow dispatch.",
-    "working_tree": "source candidate is committed and verified; this ledger records exact candidate evidence; unrelated untracked user/generated state remains preserved",
-    "current_delta_task": "TASK-C-013",
+    "verified_source_candidate_sha": "113a4ebdf671dc16470b18de0d4dff7685230045",
+    "candidate_remote_confirmation": "A fresh fetch confirmed origin/main and local main both equal 113a4ebdf671dc16470b18de0d4dff7685230045. Exact-SHA Android run 40620167730, applicability 40620167767 and estate certificate 40620167515 passed.",
+    "working_tree": "Source is committed and exact-SHA verified. Documentation/ledger reconciliation is in progress. Pre-existing untracked user/generated state remains preserved and excluded.",
+    "current_delta_task": "TASK-E-001",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
     "evidence_ids": [
-      "EVID-113"
+      "EVID-114",
+      "EVID-115",
+      "EVID-116",
+      "EVID-117"
     ],
-    "latest_documentation_verification_sha": "871467c2437a9949da6bf9c0119a31c405d7fa42",
-    "latest_documentation_workflow": "40610098124 host/API35 connected passed; training applicability and certificate workflows 40610098264/40610098198 passed."
+    "latest_documentation_verification_sha": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2",
+    "latest_documentation_workflow": "Current source candidate 113a4eb exact-SHA Android workflow 40620167730 passed both host and API35 connected jobs; exact workflow artifact IDs 12787496440 and 12787029693. No-trainable-surface 40620167767 and estate certificate 40620167515 passed."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
@@ -8269,5 +8553,17 @@
       "EVID-101"
     ],
     "status": "Exact candidate API35 ordinary connected tests passed 28/28; both candidate APK installs succeeded; process-death prepare passed, host confirmed no app PID after force-stop, and fresh-process restore passed. Host/release/lint/package also passed. Physical/OEM durability remains unverified."
+  },
+  "pending_source_delta": {
+    "base_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+    "description": "No pending source delta. WOLF_CHARGE source correction is committed and exact-SHA verified; physical/human acceptance is separately tracked.",
+    "task_ids": [],
+    "evidence_ids": [
+      "EVID-114",
+      "EVID-115",
+      "EVID-116",
+      "EVID-117"
+    ],
+    "status": "NO_PENDING_SOURCE_DELTA"
   }
 }

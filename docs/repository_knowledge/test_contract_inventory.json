@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b plus reviewed delta (2026-10-27)",
-  "snapshot_date": "2026-10-27",
+  "repository_revision": "113a4ebdf671dc16470b18de0d4dff7685230045; exact-SHA host/API35 passed (EVID-115/EVID-116)",
+  "snapshot_date": "2026-10-28",
   "authority": "Static contract summaries preserve what the test sources assert. Per-source execution dispositions are now reconciled separately against EVID-072 (full Python/JVM suite), EVID-074 (exact-head API 35 connected workflow, excluding @LargeTest), and EVID-075 (focused concurrency). These results are revision- and environment-bounded.",
   "records": [
     {
@@ -7933,17 +7933,42 @@
         "EVID-072"
       ],
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/WolfScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+      "worktree_status": "tracked_clean",
+      "inspected_line_range": "1-137",
+      "line_count": 137,
+      "test_annotation_count_static": 2,
+      "contract_summary": "A fixture test proves the eight-heart state resets without altering saved high score/lifetime Seeds or near-miss history. The integration test runs the real EncounterDirector/EntityManager/Player/collision path for 20 seconds at 60 Hz, records each Wolf state, requires HOWLING, CHARGING and SPARED for both, zero hits/ordinary clean passes and no persistent Wolf encounter/spare history.",
+      "subjects": [
+        "WOLF_CHARGE initial mercy fixture",
+        "scripted held-jump dispatch",
+        "Wolf state transitions and stand-down",
+        "debug progression isolation"
+      ],
+      "evidence_type": "Robolectric integration assertions; source does not imply hosted/device acceptance.",
+      "runtime_status": "PASSED_LOCAL_AND_EXACT_SHA_HOST_JOB",
+      "task_id": "TASK-A-037",
+      "latest_execution_evidence_ids": [
+        "EVID-114",
+        "EVID-115"
+      ],
+      "latest_execution_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+      "execution_evidence": "EVID-114: focused 2 tests and full 1,307-test JVM/Robolectric suite passed locally. EVID-115: exact-SHA host testDebugUnitTest passed. EVID-116: exact-SHA API35 connected run passed 28/28 tests; process-death recovery passed."
     }
   ],
   "scope_reconciliation": {
-    "file_inventory_test_related_paths": 389,
-    "contract_records": 389,
+    "file_inventory_test_related_paths": 390,
+    "contract_records": 390,
     "previously_missing_contract_rows": 84,
     "completed_by": [
       "TASK-A-019",
       "TASK-A-020"
     ],
-    "note": "389 per-file source contracts are mapped to current execution evidence by suite/path where available. Static contract descriptions remain distinct from test pass claims; @LargeTest and support-source dispositions remain explicit."
+    "note": "390 per-file source contracts are mapped to current execution evidence by suite/path where available. Static contract descriptions remain distinct from test pass claims; @LargeTest and support-source dispositions remain explicit."
   },
   "line_count_reconciliation": {
     "checked_date": "2026-10-27",
@@ -7973,6 +7998,16 @@
       "stable_file_reader_python_tests_passed": 54,
       "targeted_jvm_tests_passed": 29,
       "exact_head_connected_workflow_run": "40468712221"
+    },
+    "current_delta": {
+      "evidence_id": "EVID-114",
+      "python_tests": 1398,
+      "jvm_tests": 1307,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus WOLF delta",
+      "note": "Full Python and JVM/Robolectric suites pass locally; exact-SHA hosted CI pending."
     }
   }
 }
