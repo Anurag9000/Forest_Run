@@ -5142,17 +5142,17 @@
       "id": "FILE-626F65F719E7",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProvider.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local source/test delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Full source read at lines 1-259; symbol/responsibility note in production_kotlin_A010.md. No runtime validation.",
+      "inspection_detail": "Full source read and changed query-scope branch reviewed; 264 lines; focused provider test and integrated full local suite pass (EVID-140/EVID-142). Exact-SHA hosted and physical accessibility checks remain separate.",
       "symbols_or_consumers": [
         "GameAccessibilityNodeProvider"
       ],
       "relationships": [],
-      "evidence_ref": "EVID-028",
-      "next_action": "Reuse current full source findings; runtime verification remains separate.",
+      "evidence_ref": "EVID-140",
+      "next_action": "Commit/push and verify exact-SHA Android; physical TalkBack review remains pending.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -13113,11 +13113,11 @@
       "id": "FILE-EFB59DEC48F1",
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProviderTest.kt",
       "classification": "JVM/Robolectric test source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local source/test delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Entire source read; inspected lines 18-169; contract in test_contracts_kotlin_engine_A-G.md; not executed.",
+      "inspection_detail": "Entire provider test source reviewed through line 194; five test methods including host-versus-leaf text-search scope; focused and full local suite pass (EVID-140/EVID-142).",
       "symbols_or_consumers": [
         "GameAccessibilityNodeProvider",
         "GameAccessibilityActionRouter"
@@ -13126,8 +13126,8 @@
         "GameAccessibilityNodeProvider",
         "GameAccessibilityActionRouter"
       ],
-      "evidence_ref": "EVID-025",
-      "next_action": "Reuse test-source contract; runtime verification remains separately authorized.",
+      "evidence_ref": "EVID-140",
+      "next_action": "Exact-SHA hosted validation; physical TalkBack/service review remains pending.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -32943,7 +32943,7 @@
   },
   "inspection_update": {
     "date": "2026-10-28",
-    "delta": "Three new Robolectric scenario integration test files were fully read and passed under the full Java21 suite. EncounterDirector BLOOM_SHOWCASE offsets were inspected and corrected. The inherited original snapshot counts remain historical; exact-SHA hosted result is pending."
+    "delta": "Three new Robolectric scenario integration test files were fully read and passed under the full Java21 suite. EncounterDirector BLOOM_SHOWCASE offsets were inspected and corrected. The inherited original snapshot counts remain historical; exact-SHA hosted result is pending. A newly inspected accessibility provider query path was corrected and the existing provider test was extended; focused and full Java21 Robolectric validation passed (EVID-140/EVID-142). Those two inventory paths are marked tracked_modified for this delta; the working_tree_snapshot_id remains the original audit snapshot and is not claimed to hash this new local delta."
   },
   "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9",
   "working_tree_hash_policy": {

@@ -2085,6 +2085,82 @@
       ],
       "result": "Exact current HEAD is hosted and workflows were pending/in progress at the observation time; no current-HEAD success inferred.",
       "limitations": "Public run listing is a point-in-time status; inspect terminal jobs and artifacts. No physical-device access; full scenario matrix and external human/legal/Play/release acceptance remain open."
+    },
+    {
+      "id": "EVID-140",
+      "type": "focused accessibility virtual-tree regression",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProvider.kt; app/src/test/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProviderTest.kt",
+      "revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local accessibility delta",
+      "supports": [
+        "TASK-A-046",
+        "TASK-C-018"
+      ],
+      "observation": "The provider now scopes text lookup to the host-rooted flat semantic tree. The new test verifies a host-root query finds Open Garden and a leaf-root query does not return that sibling.",
+      "commands": [
+        "JAVA_HOME=/opt/android-studio/jbr PATH=/opt/android-studio/jbr/bin:$PATH ./gradlew testDebugUnitTest --tests com.anurag9000.forestrun.engine.GameAccessibilityNodeProviderTest --no-daemon"
+      ],
+      "result": "BUILD SUCCESSFUL; focused GameAccessibilityNodeProviderTest passed. The integrated full suite later includes this test (EVID-142).",
+      "limitations": "Robolectric does not establish physical TalkBack traversal/usability or framework behavior on every supported Android version."
+    },
+    {
+      "id": "EVID-141",
+      "type": "full Python tooling regression for integrated scenario and accessibility delta",
+      "path": "scripts/",
+      "revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local accessibility delta",
+      "supports": [
+        "TASK-C-018"
+      ],
+      "observation": "The complete Python scripts test discovery suite completed against the current worktree. Expected diagnostic output from fail-closed negative cases was emitted during tests.",
+      "commands": [
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "1,398 tests passed; exit status 0.",
+      "limitations": "Does not execute Android runtime, physical-device, human acceptance or Play/release external workflows."
+    },
+    {
+      "id": "EVID-142",
+      "type": "full Java 21 Android compile test lint and packaging gate for integrated delta",
+      "path": "app/src/main/java/; app/src/test/; app/src/androidTest/; app/build.gradle.kts",
+      "revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local accessibility delta",
+      "supports": [
+        "TASK-A-046",
+        "TASK-C-018"
+      ],
+      "observation": "The full requested local Java 21 Gradle gate completed after integrating the accessibility provider fix. It compiled debug/release/unit-test/instrumentation Kotlin, ran the full JVM/Robolectric suite, linted debug/release, and packaged the debug APK, instrumentation APK, and release AAB.",
+      "commands": [
+        "JAVA_HOME=/opt/android-studio/jbr PATH=/opt/android-studio/jbr/bin:$PATH ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease --no-daemon"
+      ],
+      "result": "BUILD SUCCESSFUL; 1,328 JVM/Robolectric tests, zero failures/errors/skips; 133 actionable tasks (33 executed, 100 up-to-date).",
+      "limitations": "No connected Android test or physical-device acceptance ran locally. This validates the integrated worktree before its final commit SHA; exact-SHA hosted workflows remain required."
+    },
+    {
+      "id": "EVID-143",
+      "type": "focused persistence recovery and save-integrity delta audit",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/{RunOutcomePersistenceCoordinator.kt,RunOutcomeRecoveryStore.kt,SaveIntegrityManager.kt,ApplicationPersistenceFacade.kt,RecoveryEvidenceMaintenance.kt}; app/src/main/java/com/anurag9000/forestrun/SaveIntegrityStartupGate.kt; related engine tests; docs/RUN_OUTCOME_PERSISTENCE.md; docs/RUN_OUTCOME_RECOVERY.md; docs/audits/2026-08-02_run_outcome_recovery_audit.md; docs/repository_knowledge/source_completion_reconciliation_2026-10-27.md",
+      "revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus current local accessibility delta",
+      "supports": [
+        "TASK-C-008",
+        "TASK-C-018"
+      ],
+      "observation": "A bounded delta review reused earlier recovery evidence and re-read the persistence coordinator, recovery store, save-integrity manager, facade, maintenance adapter, startup gate, related tests and canonical recovery documents. It found no new defect in the reviewed scope: journal precedes side effects, replay compares before/after state, summary/route use a combined snapshot, corrupt/conflicting evidence is retained and blocks writes, failed clear is retryable, and future-schema primary data remains isolated behind compatibility behavior.",
+      "commands": [
+        "JAVA_HOME=/opt/android-studio/jbr PATH=/opt/android-studio/jbr/bin:$PATH ./gradlew testDebugUnitTest --tests 'com.anurag9000.forestrun.engine.RunOutcomeRecovery*Test' --tests 'com.anurag9000.forestrun.engine.RunOutcomePersistence*Test' --tests 'com.anurag9000.forestrun.engine.SaveIntegrity*Test' --tests 'com.anurag9000.forestrun.engine.SaveManagerTest' --no-daemon"
+      ],
+      "result": "68 focused JVM/Robolectric tests passed; zero failures, errors, skips.",
+      "limitations": "Does not establish process-kill behavior on a physical device or OEM-specific recovery behavior; full local suite and exact SHA are separately evidenced."
+    },
+    {
+      "id": "EVID-144",
+      "type": "static Android CI workflow delta review",
+      "path": ".github/workflows/android-validation.yml and directly referenced setup action usage",
+      "revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e",
+      "supports": [
+        "TASK-C-018"
+      ],
+      "observation": "A bounded read-only review reused prior workflow reports and checked Android SDK/API setup, Java 21, exact-SHA checkout, bounded timeouts, fail-closed setup, API35 emulator packages and unconditional diagnostic artifact upload. No concrete unresolved repository-controlled setup defect was identified in this review.",
+      "commands": [],
+      "result": "No workflow source changes recommended by this bounded review.",
+      "limitations": "The exact current-head Android run was still in progress during review. This static review does not establish job success, connected device results or artifact validity."
     }
   ]
 }

@@ -116,3 +116,11 @@ This is a classification of known statements and classes of statements, not a cl
 ### Exact-candidate hosted capture update (2026-10-28)
 
 The current candidate `871467c2437a9949da6bf9c0119a31c405d7fa42` passed exact-SHA Android validation. The API35 connected report passed 28 tests, and its eight screenshot captures passed raw-set identity verification. `07-owl.png` visually shows Owl alert rings; candidate/APK/device/scenario identity is recorded in EVID-113. This closes TASK-C-013 at hosted-emulator scope only. Physical device performance/readability, human creative/accessibility approval, legal/provenance, Play and governance gates remain outstanding.
+
+
+## Accessibility provider subtree text search delta (2026-10-28)
+
+- **Finding:** `findAccessibilityNodeInfosByText` ignored `virtualViewId` and searched the flat semantic tree from any query root.
+- **Correction:** child-root queries now return empty because virtual nodes have no children; host-root search remains global across its direct children.
+- **Regression:** `GameAccessibilityNodeProviderTest.textSearchIsScopedToTheRequestedVirtualNodeSubtree` passes locally (EVID-140).
+- **Status:** locally fixed with focused and full-suite evidence (EVID-140/EVID-142); exact-SHA hosted validation and physical/human acceptance pending. Device/service traversal and human accessibility review remain pending.

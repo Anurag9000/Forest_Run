@@ -26484,7 +26484,7 @@
     {
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProvider.kt",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + dirty snapshot WT-D17D3FBCF2CB3B267FE9",
+      "source_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local accessibility delta",
       "symbols": [
         {
           "name": "com.anurag9000.forestrun.engine.interface",
@@ -26708,7 +26708,7 @@
           "lines": "53",
           "signature": "override fun findAccessibilityNodeInfosByText( searched: String, virtualViewId: Int ): MutableList<AccessibilityNodeInfo> {",
           "visibility": "public_or_default",
-          "purpose": "Implements findAccessibilityNodeInfosByText on GameAccessibilityNodeProvider; see the source body and mechanism hint at app/src/main/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProvider.kt:53.",
+          "purpose": "Searches the flat virtual semantic tree only from HOST_VIEW_ID; non-host virtual leaves have no children and return no matches. Case-insensitive label/state matching creates only current virtual nodes.",
           "inputs": [
             {
               "name": "searched",
@@ -26729,10 +26729,15 @@
           "capability_ids": [
             "CAP-015"
           ],
-          "implementation_status": "body statically present",
-          "evidence_status": "static source only",
+          "implementation_status": "body statically present; focused and full local Robolectric regression passed",
+          "evidence_status": "EVID-140 focused and EVID-142 full local Java21 suite; current candidate hosted validation pending",
           "purpose_basis": "symbol and body location",
-          "relationship_basis": "file inventory association; no stronger per-symbol goal attribution inferred"
+          "relationship_basis": "file inventory association; no stronger per-symbol goal attribution inferred",
+          "source_revision": {
+            "commit": "a5bafb28dc3f547dedda6aef8547759719c0bb3e",
+            "working_tree_snapshot_id": null,
+            "working_tree_delta": "accessibility text-search scope change, 2026-10-28"
+          }
         },
         {
           "name": "com.anurag9000.forestrun.engine.GameAccessibilityNodeProvider.findFocus",

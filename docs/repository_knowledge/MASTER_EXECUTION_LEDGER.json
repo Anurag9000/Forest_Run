@@ -5,13 +5,13 @@
     "branch": "main",
     "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
     "date": "2026-10-03",
-    "current_candidate": "996e21fb3e0798d450b3d3509e8faf152c17bb95"
+    "current_candidate": "a5bafb28dc3f547dedda6aef8547759719c0bb3e"
   },
   "snapshot_date": "2026-10-28",
   "working_tree_at_start": {
-    "dirty_path_count": 166,
-    "ownership": "pre-existing user changes; preserved",
-    "application_execution": "prohibited for this documentation phase"
+    "dirty_path_count": 5,
+    "ownership": "Pre-existing untracked user artifacts retained and excluded from owned changes: .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md, docs/repository_knowledge/current_worktree_delta_20261027/.",
+    "application_execution": "Authorized source change and tests were performed; physical-device access is unavailable."
   },
   "status_model": {
     "investigation_coverage": [
@@ -183,14 +183,20 @@
           "docs/ACCESSIBILITY.md",
           "docs/REPO_CODEBASE_MAP.md",
           "app/src/main/java/com/anurag9000/forestrun/engine/HapticManager.kt",
-          "app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt"
+          "app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProvider.kt",
+          "app/src/test/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProviderTest.kt",
+          "EVID-140",
+          "EVID-142"
         ],
-        "status": "source regions statically inspected; no runtime evidence refreshed",
+        "status": "Provider text-search subtree scope defect corrected locally; focused and full Java21 tests pass (EVID-140/EVID-142); exact-SHA hosted, physical TalkBack and human accessibility review remain pending.",
         "capability_ids": [
           "CAP-004"
         ],
         "verification_task_ids": [
-          "TASK-C-010"
+          "TASK-C-010",
+          "TASK-A-046",
+          "TASK-C-018"
         ]
       },
       {
@@ -527,12 +533,14 @@
         "id": "CAP-004",
         "goal_id": "GOAL-004",
         "name": "Accessibility, comfort settings, audio/haptics and adaptive layout",
-        "implementation": "SUBSTANTIALLY_COMPLETE",
-        "verification": "STATIC_EVIDENCE_ONLY for changed regions",
+        "implementation": "SUBSTANTIALLY_COMPLETE; virtual text-search root bug locally fixed",
+        "verification": "FOCUSED_AND_FULL_LOCAL_JAVA21_TESTS_PASS; exact-SHA hosted and human/device review pending",
         "evidence": [
           "docs/ACCESSIBILITY.md",
           "app/src/main/java/com/anurag9000/forestrun/engine/HapticManager.kt",
-          "app/src/main/java/com/anurag9000/forestrun/ui/HUD.kt"
+          "app/src/main/java/com/anurag9000/forestrun/ui/HUD.kt",
+          "EVID-140",
+          "EVID-142"
         ],
         "requirement_ids": [
           "REQ-005"
@@ -1614,6 +1622,30 @@
           "CAP-006"
         ],
         "limitations": "Source/Robolectric behavior only; no physical readability, human approval or exact-SHA hosted validation yet."
+      },
+      {
+        "id": "FIND-027",
+        "kind": "Accessibility text search ignored requested virtual-node scope",
+        "statement": "GameAccessibilityNodeProvider.findAccessibilityNodeInfosByText searched every semantic node regardless of virtualViewId. Because the provider exposes a flat tree whose semantic controls are direct host children and have no descendants, a query scoped to one virtual child incorrectly returned unrelated sibling matches. The provider now returns no matches for a non-host search root, and a regression test checks host and leaf queries.",
+        "status": "SOURCE_AND_REGRESSION_FIXED; FOCUSED_AND_FULL_LOCAL_TESTS_PASS; EXACT_SHA_PENDING",
+        "evidence_ids": [
+          "EVID-140",
+          "EVID-142"
+        ],
+        "related_task_ids": [
+          "TASK-A-046",
+          "TASK-C-018"
+        ],
+        "related_goal_ids": [
+          "GOAL-005"
+        ],
+        "related_requirement_ids": [
+          "REQ-005"
+        ],
+        "related_capability_ids": [
+          "CAP-005"
+        ],
+        "limitations": "Focused Robolectric evidence only; full current-candidate and Android service/device traversal are not established."
       }
     ],
     "gaps": [
@@ -1864,6 +1896,29 @@
           "TASK-C-018"
         ],
         "next_action": "Commit and push the authorized source/test/documentation delta, then obtain exact-SHA hosted Java21/API35 validation; physical/human review remains external."
+      },
+      {
+        "id": "GAP-016",
+        "kind": "Virtual accessibility text search did not honor subtree scope",
+        "statement": "The provider accepted a virtualViewId but searched the global flat semantic list. Android accessibility text search is scoped to the requested node subtree; virtual semantic leaves have no descendants and should not expose sibling results.",
+        "resolution_task_ids": [
+          "TASK-A-046",
+          "TASK-C-018"
+        ],
+        "disposition": "Provider child-root queries now return no sibling matches while host-root text search remains functional. Focused and full local Java21 Gradle evidence passed.",
+        "evidence_ids": [
+          "EVID-140",
+          "EVID-142"
+        ],
+        "status": "LOCALLY_RESOLVED; EXACT_SHA_HOSTED_VERIFICATION_PENDING",
+        "related_requirement_ids": [
+          "REQ-005"
+        ],
+        "related_task_ids": [
+          "TASK-A-046",
+          "TASK-C-018"
+        ],
+        "next_action": "Commit and push the combined authorized source/test/documentation delta, then verify exact-SHA hosted Android jobs; physical/human review remains external."
       }
     ],
     "tasks": [
@@ -7186,7 +7241,8 @@
           "EVID-098",
           "EVID-099",
           "EVID-100",
-          "EVID-101"
+          "EVID-101",
+          "EVID-143"
         ],
         "uncertainty": "Verification is bounded to the hosted API35 emulator and tested state contract. Physical/OEM process death, device-specific storage behavior, and power-loss recovery remain outside this task evidence.",
         "remaining_work": "None within the specified source and hosted emulator scope. Device-specific acceptance remains a separate deferred release gate.",
@@ -8860,7 +8916,7 @@
       },
       {
         "id": "TASK-C-018",
-        "title": "Verify selected scenario integration delta on exact committed main candidate",
+        "title": "Verify the integrated source delta on exact committed main candidate",
         "parent_ids": [
           "GOAL-002",
           "GOAL-005"
@@ -8874,21 +8930,22 @@
         ],
         "category": "exact-SHA regression and integration verification",
         "target_phase": "C - implementation fidelity and risk-based verification",
-        "objective": "Run the added scenario integration tests and applicable full Android host/API35 validation for the exact pushed main SHA.",
+        "objective": "Run the added scenario and accessibility regression tests and applicable full Android host/API35 validation for the exact pushed main SHA.",
         "motivation": "Local changes include scenario-script timing and several new tests; previous exact-SHA evidence does not cover this delta.",
-        "current_state": "Local scenario source/test delta now also includes all-five-family BLOOM_SHOWCASE correction and three scenario integration test classes. Full Python 1,398/1,398 and Java21 Gradle 1,327/1,327 plus compile/lint/package passed locally (EVID-135/136). Existing d0eb exact-SHA Android run cannot validate this later delta; public API polling is currently rate-limited.",
+        "current_state": "Scenario source/test delta is pushed at e1e8501; current main at start of this delta is docs-only a5bafb28. Accessibility text-search query-scope defect was fixed locally and tested. Full local Python (1,398) and Java21 Gradle (1,328) compile/test/lint/package gates now pass for the integrated worktree (EVID-141/142); exact-SHA hosted result for the current uncommitted source delta does not exist.",
         "required_final_state": "Exact SHA has successful host/release/lint/package and API35 connected results, including these tests.",
         "scope": [
-          "current source/test delta",
+          "scenario source/test delta at e1e8501451d17996469fc82973076ed0d1fb9d22",
+          "accessibility provider fix and regression test",
           "exact pushed main SHA",
           "hosted Android validation",
           "applicability and estate-certificate workflows"
         ],
         "required_actions": [
-          "Review owned diff and preserve unrelated user state.",
-          "Commit and push the authorized delta directly to main.",
-          "Verify exact SHA and workflow/job conclusions.",
-          "Record artifacts/results; investigate failures without weakening coverage."
+          "Review all owned source/test/docs delta and preserve pre-existing untracked state.",
+          "Commit and push authorized changes directly on main.",
+          "Inspect exact SHA workflow job/step conclusions and artifacts.",
+          "Record artifact/result evidence and keep physical/human/external acceptance separate."
         ],
         "inputs": [
           "TASK-A-039",
@@ -8913,7 +8970,8 @@
           "TASK-A-042",
           "TASK-A-043",
           "TASK-A-044",
-          "TASK-A-045"
+          "TASK-A-045",
+          "TASK-A-046"
         ],
         "downstream_task_ids": [
           "TASK-E-001"
@@ -8925,8 +8983,10 @@
         "complexity": "medium",
         "priority": "P1 current-candidate verification",
         "execution_status": "IN_PROGRESS",
-        "owner": null,
-        "blockers": [],
+        "owner": "/root",
+        "blockers": [
+          "Exact-candidate hosted Android validation must rerun for the accessibility source change."
+        ],
         "evidence_ids": [
           "EVID-123",
           "EVID-126",
@@ -8942,17 +9002,22 @@
           "EVID-136",
           "EVID-137",
           "EVID-138",
-          "EVID-139"
+          "EVID-139",
+          "EVID-140",
+          "EVID-141",
+          "EVID-142",
+          "EVID-143",
+          "EVID-144"
         ],
-        "uncertainty": "The exact current candidate is not yet committed or hosted-verified. Physical-device access is unavailable.",
-        "remaining_work": "Commit/push authorized delta, verify exact full SHA and terminal hosted jobs, then reconcile remaining scenario/physical/human/external gates.",
+        "uncertainty": "The accessibility source delta is locally verified but not yet committed/pushed or hosted-verified. Physical-device access remains unavailable.",
+        "remaining_work": "Review and commit/push the combined delta, inspect terminal exact-SHA hosted jobs, then reconcile broad scenario and physical/human/external gates.",
         "completion_evidence": [],
         "related_prior_work": [
           "TASK-C-015 WOLF_CHARGE exact-SHA verification",
           "TASK-C-016 predecessor source verification"
         ],
-        "last_reconciled_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local source/test/docs delta",
-        "next_action": "Review and commit/push the authorized local delta; inspect exact-SHA Android host/API35 and applicability/certificate workflow results. Current unauthenticated GitHub API requests are rate-limited; retain pending status until a valid exact-candidate result is observed.",
+        "last_reconciled_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus current local accessibility delta",
+        "next_action": "Review owned source/test/docs changes and commit/push directly to main; then verify exact-SHA hosted Android jobs.",
         "investigation_coverage": "INTEGRATION TRACED",
         "implementation_or_investigation_status": "FOCUSED LOCAL TESTS PASS; EXACT CANDIDATE REQUIRED",
         "evidence_status": "CURRENT FOCUSED EVIDENCE CONFIRMED"
@@ -9114,6 +9179,81 @@
         "investigation_coverage": "INTEGRATION TRACED",
         "implementation_or_investigation_status": "FOCUSED AND FULL LOCAL TESTS PASS",
         "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-A-046",
+        "title": "Honor virtual subtree scope in accessibility text search",
+        "parent_ids": [
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-005"
+        ],
+        "capability_ids": [
+          "CAP-005"
+        ],
+        "category": "accessibility correctness and regression coverage",
+        "target_phase": "A - source completion",
+        "objective": "Make findAccessibilityNodeInfosByText return matches only from the requested node subtree; in the current flat virtual hierarchy only HOST_VIEW_ID has children.",
+        "motivation": "Ignoring virtualViewId violates provider query scope and can return unrelated controls to services searching below a leaf node.",
+        "current_state": "Provider now rejects non-host query roots; the focused provider test verifies one host match and no child-root sibling match.",
+        "required_final_state": "Host search preserves case-insensitive label/state matching; all current virtual leaf searches return no sibling matches; stale IDs remain fail-closed.",
+        "scope": [
+          "app/src/main/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProvider.kt:findAccessibilityNodeInfosByText",
+          "app/src/test/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProviderTest.kt"
+        ],
+        "required_actions": [
+          "Check the actual virtual-node parent/child structure.",
+          "Guard text search by the requested virtual root.",
+          "Add a regression for host and child-root query results."
+        ],
+        "inputs": [
+          "REQ-005",
+          "Android AccessibilityNodeProvider subtree query contract",
+          "existing semantic node builder"
+        ],
+        "deliverables": [
+          "Scoped provider implementation",
+          "Focused regression test"
+        ],
+        "acceptance_criteria": [
+          "Host-root query finds the expected matching semantic control.",
+          "Query scoped to a current leaf returns no sibling matches.",
+          "Focused provider test passes.",
+          "No touch action or domain mutation behavior changes."
+        ],
+        "verification_method": "Focused GameAccessibilityNodeProviderTest Robolectric suite; full local Gradle validation and exact-SHA hosted verification tracked separately by TASK-C-018.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-018"
+        ],
+        "conflicts": [
+          "Accessibility provider and provider test are owned by this task; do not edit unrelated UI/provider contracts concurrently."
+        ],
+        "execution_constraints": "No physical TalkBack usability claim from Robolectric; no full-workflow claim from this focused test.",
+        "complexity": "small",
+        "priority": "P1 correctness of installed virtual tree queries",
+        "execution_status": "COMPLETED",
+        "owner": "/root/accessibility_delta",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-140",
+          "EVID-142"
+        ],
+        "uncertainty": "Framework/device service traversal behavior is not covered by the focused test.",
+        "remaining_work": "Exact-SHA hosted verification and physical/human accessibility acceptance are separate; see TASK-C-018 and external TASK-D gates.",
+        "completion_evidence": [
+          "EVID-140",
+          "EVID-142"
+        ],
+        "related_prior_work": [
+          "TASK-C-009 accessibility provider and semantic action verification"
+        ],
+        "last_reconciled_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local accessibility delta",
+        "next_action": "Include in reviewed combined main commit; exact candidate check follows commit.",
+        "investigation_coverage": "FOCUSED SOURCE REVIEW AND REGRESSION TEST",
+        "implementation_or_investigation_status": "IMPLEMENTED; FOCUSED TEST PASS",
+        "evidence_status": "LOCAL FOCUSED EVIDENCE CONFIRMED"
       }
     ],
     "applicability_matrix": [
@@ -9705,32 +9845,35 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846",
-    "working_tree_delta": "Corrects BLOOM_SHOWCASE world offsets after a real path exposed Duck/Willow passing after Bloom expiry; adds three Robolectric scenario integration classes and linked evidence/coverage records. CACTUS_READ correction and selected scenario coverage are included.",
+    "base_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e",
+    "working_tree_delta": "Fixes a confirmed accessibility text-search scope defect in the flat virtual-node provider and adds a host-versus-leaf Robolectric regression. Prior scenario code remains at pushed e1e8501451d17996469fc82973076ed0d1fb9d22.",
     "evidence_ids": [
-      "EVID-134",
-      "EVID-135",
-      "EVID-136",
-      "EVID-137"
+      "EVID-140",
+      "EVID-141",
+      "EVID-142",
+      "EVID-143",
+      "EVID-144"
     ],
-    "status": "Local Python 1,398/1,398 and Java21 full Gradle 1,327/1,327 plus compile/lint/package pass. The delta is not yet committed or exact-SHA hosted-verified. No physical device access.",
-    "documentation_verification_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus local source/test/docs delta",
-    "documentation_workflow_run": "Exact SHA must be established after commit; GitHub unauthenticated API currently rate-limited."
+    "status": "Accessibility source/test delta locally complete; Python 1,398 and Java21 Gradle 1,328 full gates pass. Not yet committed/pushed or exact-SHA hosted-verified. No physical device access.",
+    "documentation_verification_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus current accessibility source/test/docs delta",
+    "documentation_workflow_run": "Exact-SHA Android and connected validation must be inspected after the new source delta is committed."
   },
   "current_repository_state": {
     "branch": "main",
-    "verified_source_candidate_sha": "d0eb2f6953951ab29f0a262977a86d0f097b2846",
-    "candidate_remote_confirmation": "Local main and origin/main matched at d0eb2f6953951ab29f0a262977a86d0f097b2846 before current owned source/test/docs delta.",
-    "working_tree": "Pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md, and docs/repository_knowledge/current_worktree_delta_20261027/ are preserved. Owned delta changes EncounterDirector BLOOM_SHOWCASE staging, adds three scenario integration tests, and reconciles ledgers/docs.",
-    "current_delta_task": "TASK-A-044/TASK-A-045; TASK-C-018",
+    "verified_source_candidate_sha": "e1e8501451d17996469fc82973076ed0d1fb9d22",
+    "candidate_remote_confirmation": "Current main and origin/main were verified at a5bafb28dc3f547dedda6aef8547759719c0bb3e before the new local accessibility source/test delta; the scenario source delta remains pushed at e1e8501.",
+    "working_tree": "Only owned modifications are the accessibility provider fix, its test, and linked documentation/ledger changes. Pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md, and docs/repository_knowledge/current_worktree_delta_20261027/ are preserved and excluded.",
+    "current_delta_task": "TASK-A-046; TASK-C-018",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
     "evidence_ids": [
-      "EVID-134",
-      "EVID-135",
-      "EVID-136"
+      "EVID-140",
+      "EVID-141",
+      "EVID-142",
+      "EVID-143",
+      "EVID-144"
     ],
-    "latest_documentation_verification_sha": "d0eb2f6953951ab29f0a262977a86d0f097b2846 before current delta",
-    "latest_documentation_workflow": "No exact-SHA current-delta workflow result yet. Public unauthenticated GitHub API is rate-limited; verify after push."
+    "latest_documentation_verification_sha": "a5bafb28dc3f547dedda6aef8547759719c0bb3e before current local source/test/docs delta",
+    "latest_documentation_workflow": "No exact-SHA hosted Android result for the accessibility source delta until after commit/push."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
@@ -9753,18 +9896,16 @@
     "status": "Exact candidate API35 ordinary connected tests passed 28/28; both candidate APK installs succeeded; process-death prepare passed, host confirmed no app PID after force-stop, and fresh-process restore passed. Host/release/lint/package also passed. Physical/OEM durability remains unverified."
   },
   "pending_source_delta": {
-    "base_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846",
-    "description": "Correct BLOOM_SHOWCASE full-lane conversion offsets; add three bounded Robolectric scenario integration classes; update linked evidence/coverage and execution ledgers. Existing user/generated untracked workspace artifacts remain excluded.",
+    "base_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e",
+    "description": "Correct findAccessibilityNodeInfosByText to honor the current flat virtual-tree root and add a focused regression test; synchronize file/test/symbol inventories, evidence and docs. Preserve pre-existing untracked workspace artifacts.",
     "task_ids": [
-      "TASK-A-044",
-      "TASK-A-045",
+      "TASK-A-046",
       "TASK-C-018"
     ],
     "evidence_ids": [
-      "EVID-134",
-      "EVID-135",
-      "EVID-136",
-      "EVID-137"
+      "EVID-140",
+      "EVID-141",
+      "EVID-142"
     ],
     "status": "IMPLEMENTED_LOCALLY; FULL_LOCAL_GATES_PASS; EXACT_SHA_HOSTED_VALIDATION_PENDING"
   }

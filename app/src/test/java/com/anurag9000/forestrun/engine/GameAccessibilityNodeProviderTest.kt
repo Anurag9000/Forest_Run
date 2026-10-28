@@ -54,6 +54,31 @@ class GameAccessibilityNodeProviderTest {
     }
 
     @Test
+    fun textSearchIsScopedToTheRequestedVirtualNodeSubtree() {
+        val host = View(ApplicationProvider.getApplicationContext()).apply {
+            layout(0, 0, 1000, 600)
+        }
+        val router = GameAccessibilityActionRouter(
+            snapshotProvider = { AccessibilitySemanticSnapshot(AccessibilitySurface.MENU) },
+            handler = AccessibilitySemanticActionHandler { _, _ -> true }
+        )
+        val provider = provider(host, router)
+
+        val rootMatches = provider.findAccessibilityNodeInfosByText(
+            "garden",
+            AccessibilityNodeProvider.HOST_VIEW_ID
+        )
+        val leafMatches = provider.findAccessibilityNodeInfosByText(
+            "garden",
+            AccessibilityNodeIds.MENU_CONTINUE
+        )
+
+        assertEquals(1, rootMatches.size)
+        assertEquals("Open Garden", rootMatches.single().contentDescription.toString())
+        assertTrue(leafMatches.isEmpty())
+    }
+
+    @Test
     fun clickDelegatesOnlyTheSemanticActionPublishedByCurrentTree() {
         val calls = mutableListOf<Pair<Int, AccessibilitySemanticAction>>()
         val host = View(ApplicationProvider.getApplicationContext()).apply {

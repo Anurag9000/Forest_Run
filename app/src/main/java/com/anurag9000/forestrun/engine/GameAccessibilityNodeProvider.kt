@@ -54,6 +54,11 @@ internal class GameAccessibilityNodeProvider(
         searched: String,
         virtualViewId: Int
     ): MutableList<AccessibilityNodeInfo> {
+        // Semantic nodes are flat children of the host (none has descendants).
+        // Android asks this provider to search below the supplied virtual ID;
+        // returning matches from the whole tree for a child query would violate
+        // that scope and can make services rediscover unrelated controls.
+        if (virtualViewId != HOST_VIEW_ID) return mutableListOf()
         val needle = searched.trim().lowercase()
         if (needle.isEmpty()) return mutableListOf()
         val nodes = currentNodesOrEmpty()

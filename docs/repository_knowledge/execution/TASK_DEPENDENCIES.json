@@ -332,6 +332,11 @@
       "from": "TASK-A-045",
       "to": "TASK-C-018",
       "reason": "Exact-SHA host/API35 validation must include the Bloom showcase correction and new scenario integration tests."
+    },
+    {
+      "from": "TASK-A-046",
+      "to": "TASK-C-018",
+      "reason": "Exact-candidate verification must include the new accessibility provider source and regression test."
     }
   ],
   "parallel_waves": [
@@ -346,7 +351,8 @@
         "TASK-A-030",
         "TASK-A-031",
         "TASK-A-032",
-        "TASK-A-033"
+        "TASK-A-033",
+        "TASK-A-046"
       ],
       "notes": "At the investigation snapshot these delta-inspection tasks have completed; source-reconciliation tasks remain deferred unless a separately evidenced requirement and authorization exists. TASK-A-026 is completed at static source level in the current worktree; no source implementation work is currently queued. TASK-A-028/A-029 completed independent full-text reviews of both legacy maps; stale status/index statements are reconciled in FIND-008 and the current master map. Symbol coverage is now a confirmed documentation gap (FIND-014/GAP-005); four disjoint production-source inventory tasks are active.",
       "status": "COMPLETED; merged to symbol_inventory.json (EVID-067)"
@@ -522,6 +528,6 @@
       "note": "C-015 enters exact-SHA queue after A-037 is committed."
     }
   ],
-  "cycle_check": "Acyclic; static DFS rechecked on 2026-10-28 after the audio/C-016 delta across 56 hard edges and 39 participating task nodes.",
+  "cycle_check": "Acyclic; 67 hard prerequisite edges; static DFS rechecked after adding TASK-A-046 -> TASK-C-018 on 2026-10-28.",
   "ready_rule": "Only tasks belonging to the explicitly authorized active phase may become READY; all hard prerequisites must be completed with evidence and no ownership/resource conflict may remain."
 }

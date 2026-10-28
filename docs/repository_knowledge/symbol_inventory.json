@@ -31114,7 +31114,7 @@
       "lines": "53",
       "kind": "function_or_method",
       "signature": "override fun findAccessibilityNodeInfosByText( searched: String, virtualViewId: Int ): MutableList<AccessibilityNodeInfo> {",
-      "purpose": "Implements findAccessibilityNodeInfosByText on GameAccessibilityNodeProvider; see the source body and mechanism hint at app/src/main/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProvider.kt:53.",
+      "purpose": "Searches the flat virtual semantic tree only from HOST_VIEW_ID; non-host virtual leaves have no children and return no matches. Case-insensitive label/state matching creates only current virtual nodes.",
       "inputs": [
         {
           "name": "searched",
@@ -31135,11 +31135,12 @@
       "capability_ids": [
         "CAP-015"
       ],
-      "implementation_status": "body statically present",
-      "evidence_status": "static source only",
+      "implementation_status": "body statically present; focused and full local Robolectric regression passed",
+      "evidence_status": "EVID-140 focused and EVID-142 full local Java21 suite; current candidate hosted validation pending",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "a5bafb28dc3f547dedda6aef8547759719c0bb3e",
+        "working_tree_snapshot_id": null,
+        "working_tree_delta": "accessibility text-search scope change, 2026-10-28"
       },
       "shard": "docs/repository_knowledge/symbol_shards/engine_a_m.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
