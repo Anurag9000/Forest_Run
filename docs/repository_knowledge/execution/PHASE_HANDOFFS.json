@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "current_phase": "Authorized source completion and verification reconciliation",
-  "current_phase_status": "Authorized source completion and verification reconciliation: bounded source review found no new source gap (EVID-074); exact-main focused tests (EVID-076/EVID-079), 29-sheet static visual review (EVID-077), and hosted Android run 40471923390 (EVID-078) are recorded. TASK-C-009 and automated/API35 TASK-C-010 are complete; TASK-C-007 authored mechanics/property scope is complete (EVID-079); TASK-C-008 process-kill/restore residual keeps TASK-C-011 partial; EVID-080 adds a compile-only connected candidate. TASK-C-013 and physical/human/external acceptance remain open.",
+  "current_phase_status": "Exact candidate 871467c2437a9949da6bf9c0119a31c405d7fa42 passed exact-SHA host/release/lint/package, API35 connected validation (28/28), screenshot capture (8/8 raw images verified), no-trainable-surface and estate-certificate workflows (EVID-113). TASK-C-013 is complete for hosted API35 Owl alert capture and visible-state evidence. Physical-device performance/acceptance and human, legal, store, governance, signing and release gates remain open.",
   "phases": [
     {
       "id": "A",
@@ -62,10 +62,10 @@
         "TASK-C-012",
         "TASK-C-013"
       ],
-      "status": "TASK-C-007 through TASK-C-012 complete at their stated scopes (EVID-075/EVID-076/EVID-079/EVID-101/EVID-102); TASK-C-013 candidate-bound screenshot remains deferred pending authorized device access.",
+      "status": "TASK-C-007 through TASK-C-014 are complete at their recorded scopes. TASK-C-013 candidate-bound OWL_DIVE capture and visual state are verified for hosted API35 (EVID-113); this does not establish physical/human acceptance.",
       "entry_conditions": [
         "Preserve exact candidate/base and the original dirty checkout",
-        "Reuse EVID-072 and EVID-074\u2013EVID-078; do not repeat passing suites without a source or requirement delta",
+        "Reuse EVID-072 and EVID-074–EVID-078; do not repeat passing suites without a source or requirement delta",
         "Use hosted API 35 evidence where applicable; physical-device checks require an authorized device"
       ],
       "exit_conditions": [
@@ -116,12 +116,12 @@
   ],
   "handoff": {
     "project": "Forest Run is a native Kotlin Android landscape endless runner using SurfaceView/Canvas with persistent world state plus candidate-bound evidence/release tooling.",
-    "what_exists": "The master map and linked ledgers preserve original baseline eeccc677107f69039dbf71053c18a9038d4b5ff6 and exact tested source candidate b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b. Current inventory: 1,008 records (951 fully statically inspected, 17 partial, 37 documented, 3 excluded); 6,137 declarations across 256 production paths; 389 source test contracts inventoried. Full Python/JVM source suites (latest local Python 1,388; prior JVM 1,297), exact-main focused tests, lint/package and exact candidate hosted API35 validation passed (EVID-072/EVID-076/EVID-078/EVID-079/EVID-100/EVID-101). Exact candidate ordinary API35 tests passed 28/28 and process-death prepare/restore passed around a host-confirmed no-PID interval. All 29 runtime sprite sheets received static visual review (EVID-077). No additional source defect was established in bounded parallel delta audits.",
-    "what_remains": "TASK-C-011 is complete for the documented full regression/integration scope after targeted reconciliation (EVID-101/EVID-102). TASK-C-013 needs an exact-candidate OWL_DIVE screenshot on an authorized device. Human gameplay/readability/accessibility and art/audio/haptic review, rights/licensing, physical-device/performance acceptance, security/privacy/policy, signing, Play delivery and accountable release approval remain under existing B/D/E tasks; TASK-E-001 stays deferred until these are discharged.",
+    "what_exists": "The master map and linked ledgers preserve original baseline eeccc677107f69039dbf71053c18a9038d4b5ff6 and exact tested source candidate b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b. Current inventory: 1,008 records (951 fully statically inspected, 17 partial, 37 documented, 3 excluded); 6,137 declarations across 256 production paths; 389 source test contracts inventoried. Full Python/JVM source suites (latest local Python 1,388; prior JVM 1,297), exact-main focused tests, lint/package and exact candidate hosted API35 validation passed (EVID-072/EVID-076/EVID-078/EVID-079/EVID-100/EVID-101). Exact candidate ordinary API35 tests passed 28/28 and process-death prepare/restore passed around a host-confirmed no-PID interval. All 29 runtime sprite sheets received static visual review (EVID-077). No additional source defect was established in bounded parallel delta audits. Exact candidate 871467c2437a9949da6bf9c0119a31c405d7fa42 passed host/release/lint/package, API35 connected tests 28/28, and all 8 screenshot captures; inspected 07-owl.png shows alert rings with candidate/APK/device/scenario identity recorded in EVID-113.",
+    "what_remains": "TASK-C-013 and TASK-C-014 are complete at their stated hosted/API35 and exact-candidate scopes (EVID-113). Physical device/performance acceptance, human gameplay/readability/accessibility and creative review, provenance/licensing, privacy/security/Play declarations, signing and Play delivery, accountable release approval remain under B/D/E tasks; TASK-E-001 stays deferred until these are discharged or dispositioned by accountable owners.",
     "do_not_repeat": "Reuse docs/REPO_CODEBASE_MAP.md, docs/REPO_MEMORY_MAP.md, docs/AUDIT_LEDGER.md and dated audits at their recorded snapshot. Refresh only changed/affected files and evidence; no ML training goal is applicable.",
     "coordination": "One owner updates MASTER_EXECUTION_LEDGER.json and its history. Assign bounded future tasks with disjoint paths; coordinate stable_file_reader.py consumers and candidate/evidence directories. Keep source implementation, integration, runtime verification and external acceptance separate. Report exact revision, files read, evidence and limitations.",
-    "resume": "Check current HEAD/worktree and compare relevant hashes with file_inventory.json and evidence revisions. TASK-A-036, TASK-C-008 and TASK-C-011 are complete at their documented hosted/API35 regression scopes (EVID-101/EVID-102); C-013 and B/D/E tasks remain deferred until required devices/owners/authorizations exist. Reuse prior source audits and passing suites; rerun only for a specific affected source or requirement delta. The lead alone updates shared ledgers.",
-    "unknowns": "Earlier conversations outside available sources may contain additional product intent. Hosted API35 behavior is demonstrated only for its exact candidate/emulator; physical/OEM behavior and visual rendering remain unverified. Audio/font content and rights, human/creative approval, physical acceptance, signing/Play and governance remain unknown or externally owned.",
+    "resume": "Check current HEAD/worktree and compare relevant hashes with file_inventory.json and evidence revisions. C-013 is complete only for hosted API35 candidate capture (EVID-113); do not repeat it absent a candidate change. Physical/human B/D gates and final TASK-E-001 remain deferred. Reuse prior source audits and passing suites; rerun only for a specific affected source or requirement delta. The lead alone updates shared ledgers.",
+    "unknowns": "Physical/OEM gameplay and visual behavior, real-device performance, human creative/accessibility/gameplay approval, asset/audio/font rights, privacy/public URL and Play policy decisions, production signing and delivery, governance approval remain unknown or externally owned.",
     "how_to_resume": {
       "baseline": "Check HEAD/worktree; compare scoped dirty-file hashes to file_inventory.json working_tree_snapshot_id WT-D17D3FBCF2CB3B267FE9.",
       "reuse": "Prior code/memory maps and dated audits remain revision-bounded; revisit only changed or contradictory evidence.",
@@ -130,7 +130,7 @@
     }
   },
   "resume_procedure": {
-    "baseline": "Check HEAD/worktree; compare scoped dirty-file hashes to file_inventory.json working_tree_snapshot_id WT-D17D3FBCF2CB3B267FE9.",
+    "baseline": "Current verified source candidate at ledger update: 871467c2437a9949da6bf9c0119a31c405d7fa42. Check HEAD/worktree before resuming; preserve unrelated untracked user/generated state.",
     "reuse": "Prior code/memory maps and dated audits remain revision-bounded; revisit only changed or contradictory evidence.",
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + working-tree overlay; per-record revisions authoritative",
+  "repository_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42; later documentation commits are tracked separately",
   "snapshot_date": "2026-10-28",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -1613,6 +1613,27 @@
       ],
       "result": "Both exact-SHA workflow runs completed successfully on f00f78e820ae2a158ef420d634f7c410a27ef2b3.",
       "limitations": "These workflows confirm N/A applicability and certificate checks only; they do not imply a trainable ML surface."
+    },
+    {
+      "id": "EVID-113",
+      "type": "exact-candidate API35 screenshot capture and instrumented validation",
+      "path": "GitHub Actions run 40610098124; connected artifact 12782857785; /tmp/forest-run-connected-871467c2/ (ephemeral inspection copy)",
+      "revision": "871467c2437a9949da6bf9c0119a31c405d7fa42",
+      "supports": [
+        "TASK-C-013",
+        "TASK-C-014",
+        "TASK-C-010",
+        "CAP-006"
+      ],
+      "observation": "Exact-SHA host/release/lint/package and API35 connected jobs passed. The connected JUnit report contains 28 tests with 0 failures, 0 errors, and 0 skipped. The canonical screenshot workflow captured eight raw images; its verifier confirmed the candidate SHA, APK SHA-256 0d51293fc8a544f891a9091097dfb79c23354afb65f7ed5ca6ea7c8e180a0806, and device emulator-5554. 07-owl.capture.json binds OWL_DIVE, SCREENSHOT_CAPTURE, the readiness marker, and 2400x1080 output. Inspected 07-owl.png SHA-256 59c017ff6ea79716448789173b07bc082e91e572cb447f8e95d644b09b363895; it visibly shows the Owl alert halo/rings and player. Downloaded ZIP SHA-256 matches GitHub artifact digest 2f4412a0f4ff552fd7667b4ff2bce28b6fecd1c30cd6b90a7ca882344e5590f1.",
+      "commands": [
+        "python3 -m unittest discover -s scripts -p test_*.py (1,398 tests, passed locally on 871467c2)",
+        "bash -n scripts/capture_store_screenshots.sh",
+        "git diff --check",
+        "Read-only inspection of exact-SHA run 40610098124 and artifact 12782857785; verified ZIP digest and JUnit/capture sidecars; visually inspected 07-owl.png"
+      ],
+      "result": "Host/release/lint/package and API35 connected jobs passed; 28/28 connected tests passed; 8/8 raw screenshots passed capture-set verification; candidate-bound Owl alert state is visible in the inspected emulator image. Training applicability and estate-certificate runs 40610098264 and 40610098198 passed.",
+      "limitations": "Hosted API35 emulator capture only. This is not physical-device acceptance, human gameplay/accessibility/creative approval, store curation, rights/provenance approval, or release approval. Screenshot artifact is retained by GitHub, not copied into the repository."
     }
   ]
 }

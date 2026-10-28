@@ -7352,7 +7352,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification",
         "objective": "Run the canonical store screenshot path on an authorized Android device and establish that 07-owl.png visibly contains the intended Owl alert/dive state after the scripted jump.",
         "motivation": "Source and unit contracts establish that input is scheduled, but do not establish game-thread timing, actual Owl visibility, or captured pixels.",
-        "current_state": "TASK-A-035 schedules the jump at 1.80 seconds; local full suites/build passed. adb is unavailable in the current environment, and no screenshot was captured.",
+        "current_state": "Exact candidate 871467c2437a9949da6bf9c0119a31c405d7fa42 passed hosted API35 connected validation. The canonical screenshot workflow captured and validated all eight images; the 07-owl sidecar matches candidate/APK/device/scenario and visual inspection shows Owl alert rings (EVID-113).",
         "required_final_state": "A fresh candidate-bound raw screenshot and sidecar from the canonical capture workflow show the Owl alert or dive, pass existing raw-set validation, and preserve exact candidate/APK/device/scenario identity.",
         "scope": [
           "scripts/capture_store_screenshots.sh",
@@ -7394,27 +7394,28 @@
         "conflicts": [
           "Writes only generated screenshot evidence under the dedicated raw-capture directory; follow canonical staging/publish safeguards."
         ],
-        "execution_constraints": "Requires adb and an authorized attached Android device; do not run until available. No current screenshot or external approval may be fabricated.",
+        "execution_constraints": "This task is complete for hosted API35 candidate capture and visible-state evidence. Do not generalize to physical devices or human creative approval; those remain under TASK-D-001/TASK-D-002.",
         "complexity": "medium",
         "priority": "P1 release evidence",
-        "execution_status": "DEFERRED",
+        "execution_status": "COMPLETED",
         "owner": null,
-        "blockers": [
-          "adb is not installed in the current environment; no authorized device is attached."
-        ],
+        "blockers": [],
         "evidence_ids": [
-          "EVID-072"
+          "EVID-072",
+          "EVID-113"
         ],
-        "uncertainty": "Actual runtime visibility and timing are unknown.",
-        "remaining_work": "Run candidate-bound capture and inspect/validate the OWL_DIVE image when device access is available.",
-        "completion_evidence": [],
+        "uncertainty": "Exact hosted API35 emulator capture demonstrates visible alert state for the exact candidate. Physical/OEM rendering, human readability, and creative approval remain unverified.",
+        "remaining_work": "None within candidate-bound API35 capture scope. Physical device and human readability/creative acceptance remain separate external obligations.",
+        "completion_evidence": [
+          "EVID-113: exact candidate hosted workflow passed; 28 connected tests passed; all eight raw captures validated; candidate/APK/device/scenario sidecar verified; 07-owl.png visibly contains Owl alert rings (image SHA-256 59c017ff6ea79716448789173b07bc082e91e572cb447f8e95d644b09b363895)."
+        ],
         "related_prior_work": [
           "TASK-A-022 runtime sprite/frame trace"
         ],
-        "last_reconciled_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b + reviewed worktree delta (2026-10-27)",
-        "next_action": "Wait for an authorized Android device and adb.",
+        "last_reconciled_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42 (exact-SHA hosted workflow 40610098124)",
+        "next_action": "No task-local work. Physical-device and human gameplay/readability/creative acceptance remain under TASK-D-001/TASK-D-003.",
         "investigation_coverage": "DOCUMENTED",
-        "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
+        "implementation_or_investigation_status": "VERIFIED",
         "evidence_status": "CURRENT_EVIDENCE_CONFIRMED"
       },
       {
@@ -8228,39 +8229,26 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "8c335aef232ee8f164847631a74d1abb7409dd86",
-    "working_tree_delta": "committed and pushed to canonical main; tracked worktree clean; unrelated untracked state preserved and excluded",
+    "base_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42",
+    "working_tree_delta": "Committed and pushed to canonical main; tracked worktree clean at evidence capture; unrelated untracked user/generated state preserved and excluded.",
     "evidence_ids": [
-      "EVID-108",
-      "EVID-109",
-      "EVID-110",
-      "EVID-111",
-      "EVID-112"
+      "EVID-113"
     ],
-    "status": "Exact-SHA run 40602123824 passed host/release/lint/package and API 35 connected jobs; no-trainable-surface run 40602123869 and certificate run 40602123856 also passed. This closes TASK-C-014 for the source delta. External/device/human release acceptance remains separately open. Documentation-only descendant f00f78e8 also passed the same exact-SHA host/API35 and training-applicability workflows (EVID-111/EVID-112); the application source is unchanged from tested 8c335aef.",
-    "documentation_verification_revision": "f00f78e820ae2a158ef420d634f7c410a27ef2b3"
+    "status": "Exact-SHA Android run 40610098124 passed host/release/lint/package and API35 connected jobs. API35 JUnit: 28 passed, 0 failed/errors/skipped. Screenshot workflow verified eight captures and candidate/APK/device identity; inspected Owl image shows alert rings. Training applicability run 40610098264 and certificate run 40610098198 passed. This does not establish physical/human/legal/store acceptance.",
+    "documentation_verification_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42"
   },
   "current_repository_state": {
     "branch": "main",
-    "verified_source_candidate_sha": "8c335aef232ee8f164847631a74d1abb7409dd86",
-    "candidate_remote_confirmation": "origin/main matched the candidate when it was pushed and the exact-SHA workflow was dispatched",
+    "verified_source_candidate_sha": "871467c2437a9949da6bf9c0119a31c405d7fa42",
+    "candidate_remote_confirmation": "origin/main matched the candidate at push and exact-SHA hosted workflow dispatch.",
     "working_tree": "source candidate is committed and verified; this ledger records exact candidate evidence; unrelated untracked user/generated state remains preserved",
-    "current_delta_task": "TASK-C-014",
+    "current_delta_task": "TASK-C-013",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
     "evidence_ids": [
-      "EVID-103",
-      "EVID-104",
-      "EVID-105",
-      "EVID-106",
-      "EVID-107",
-      "EVID-108",
-      "EVID-109",
-      "EVID-110",
-      "EVID-111",
-      "EVID-112"
+      "EVID-113"
     ],
-    "latest_documentation_verification_sha": "f00f78e820ae2a158ef420d634f7c410a27ef2b3",
-    "latest_documentation_workflow": "40604093279; host/API35 connected and both training-control workflows passed (EVID-111/EVID-112)"
+    "latest_documentation_verification_sha": "871467c2437a9949da6bf9c0119a31c405d7fa42",
+    "latest_documentation_workflow": "40610098124 host/API35 connected passed; training applicability and certificate workflows 40610098264/40610098198 passed."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
