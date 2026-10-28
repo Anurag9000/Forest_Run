@@ -25,7 +25,7 @@ class EncounterScenarioFingerprintTest {
         val payload = EncounterScenarioFingerprint.canonicalBytes(scenario)
             .toString(Charsets.UTF_8)
 
-        assertTrue(payload.startsWith("forest-run-encounter-scenario-v1\n"))
+        assertTrue(payload.startsWith("forest-run-encounter-scenario-v2\n"))
         assertTrue(payload.contains("CACTUS_READ"))
         assertTrue(payload.contains(scenario.title))
         assertTrue(payload.contains(scenario.summary))
@@ -39,11 +39,11 @@ class EncounterScenarioFingerprintTest {
     @Test
     fun `cactus fingerprints match independent Python canonical constants`() {
         assertEquals(
-            "3246dd15f7e694d387d06430537bf1805e8d57a53a9bcd1bdc5dd13e929b524c",
+            "cf23943b2ce595b05920917a3940616480ff25181c6433156787cdf22497d253",
             EncounterScenarioFingerprint.sha256(EncounterScenario.CACTUS_READ)
         )
         assertEquals(
-            "edb682a29079ceaebf9c3e56c2f24362ce3335a0c1432e3803305a5dc2b58430",
+            "5812fc981b28157c90f5d88f3c6f31c32bbb8dbfe5d32e1ba38e973625ca81a7",
             EncounterScenarioFingerprint.traceContractSha256(EncounterScenario.CACTUS_READ)
         )
     }
@@ -61,6 +61,20 @@ class EncounterScenarioFingerprintTest {
         assertTrue(payload.contains("5360000\n"))
         assertTrue(payload.contains("HOLD_JUMP_START"))
         assertTrue(payload.contains("HOLD_JUMP_END"))
+    }
+
+    @Test
+    fun `wolf scenario fingerprint binds its isolated mercy starting state`() {
+        val wolf = EncounterScenario.WOLF_CHARGE
+        val payload = EncounterScenarioFingerprint.canonicalBytes(wolf)
+            .toString(Charsets.UTF_8)
+
+        assertEquals(8, wolf.startingMercyHearts)
+        assertTrue(payload.contains("8\n"))
+        assertEquals(
+            "a2ad41316226b88568b04e2def0edab77f6a8b4960b8808d0509346a6a10fe31",
+            EncounterScenarioFingerprint.sha256(wolf)
+        )
     }
 
     @Test

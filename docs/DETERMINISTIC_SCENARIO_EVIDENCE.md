@@ -46,10 +46,12 @@ Before a script is activated, `DebugScenarioInputContract` verifies:
 
 `EncounterScenarioFingerprint` produces two SHA-256 identities:
 
-1. `scenario_definition_sha256` covers the scenario name, title, summary, forced biome, Bloom-start policy, ghost-playback policy, and every ordered encounter step including timing, entity, offset, and variant.
+1. `scenario_definition_sha256` covers the scenario name, title, summary, forced biome, Bloom-start policy, ghost-playback policy, run-local starting mercy fixture, and every ordered encounter step including timing, entity, offset, and variant.
 2. `trace_contract_sha256` covers the scenario-definition hash plus every ordered deterministic input step, schedule, and action.
 
 All Float timing and offset values are converted to integer microseconds or micro-pixels before hashing. JVM tests and the independent Python source parser assert the same fixed hashes for `CACTUS_READ`; either implementation drifting independently fails validation.
+
+`WOLF_CHARGE` begins its isolated debug run with eight run-local mercy hearts so its authored Wolves can reach the existing stand-down branch. The scenario scripts two held jumps timed for the authored walk → howl → charge sequence. This fixture does not create persistent near-miss history or change ordinary-run Wolf eligibility; it is included in the scenario-definition fingerprint.
 
 ## Candidate-bound schema v2 encoding
 

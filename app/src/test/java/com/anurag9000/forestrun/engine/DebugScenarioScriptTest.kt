@@ -5,8 +5,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class DebugScenarioScriptTest {
     @Test
     fun `due actions dispatch in order exactly once`() {
@@ -89,6 +91,7 @@ class DebugScenarioScriptTest {
                 EncounterScenario.CACTUS_READ,
                 EncounterScenario.CAT_KINDNESS,
                 EncounterScenario.FOX_MIRROR,
+                EncounterScenario.WOLF_CHARGE,
                 EncounterScenario.EAGLE_MARK,
                 EncounterScenario.OWL_DIVE
             )
@@ -114,6 +117,32 @@ class DebugScenarioScriptTest {
             observed
         )
         assertEquals(1, script.traceSnapshot().events.size)
+    }
+
+    @Test
+    fun `wolf charge script clears both authored charge windows`() {
+        val script = DebugScenarioScript()
+        val observed = mutableListOf<DebugScenarioTimedAction>()
+        script.prepare(EncounterScenario.WOLF_CHARGE)
+
+        script.advanceTimed(9.60f, observed::add)
+        script.advanceTimed(9.95f, observed::add)
+        script.advanceTimed(14.50f, observed::add)
+        script.advanceTimed(14.85f, observed::add)
+
+        assertEquals(
+            listOf(
+                DebugScenarioAction.HOLD_JUMP_START,
+                DebugScenarioAction.HOLD_JUMP_END,
+                DebugScenarioAction.HOLD_JUMP_START,
+                DebugScenarioAction.HOLD_JUMP_END
+            ),
+            observed.map { it.action }
+        )
+        assertEquals(listOf(9.60f, 9.95f, 14.50f, 14.85f), observed.map { it.scheduledAtSeconds })
+        assertEquals(0.35f, observed[1].holdDurationSeconds, 0.001f)
+        assertEquals(0.35f, observed[3].holdDurationSeconds, 0.001f)
+        assertTrue(DeterministicScenarioReplayContract.matches(script.traceSnapshot()))
     }
 
     @Test

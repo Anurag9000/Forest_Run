@@ -5,7 +5,7 @@ import kotlin.math.roundToLong
 
 /** Stable SHA-256 identities for authored deterministic encounter definitions. */
 internal object EncounterScenarioFingerprint {
-    private const val FORMAT_VERSION = 1
+    private const val FORMAT_VERSION = 2
     private const val TRACE_CONTRACT_FORMAT_VERSION = 1
     private const val MICROS_PER_SECOND = 1_000_000.0
     private const val MICRO_PIXELS_PER_PIXEL = 1_000_000.0
@@ -36,6 +36,7 @@ internal object EncounterScenarioFingerprint {
             appendLengthPrefixed(scenario.forcedBiome?.name.orEmpty())
             append(if (scenario.startsWithBloom) '1' else '0').append('\n')
             append(if (scenario.allowGhostPlayback) '1' else '0').append('\n')
+            append(scenario.startingMercyHearts).append('\n')
             append(scenario.steps.size).append('\n')
             scenario.steps.forEachIndexed { index, step ->
                 append(index).append('\n')

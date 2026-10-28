@@ -265,6 +265,11 @@ class GameStateManager(
         bloomTimer = 0f
     }
 
+    /** Seeds run-local mercy for deterministic scenario fixtures only. */
+    internal fun debugPrimeMercyHearts(hearts: Int) {
+        mercySystem.debugPrimeMercyHearts(hearts)
+    }
+
     fun debugActivateBloom() {
         bloomMeter = 0
         isBloomActive = true

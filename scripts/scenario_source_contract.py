@@ -17,7 +17,7 @@ from stable_file_reader import (
     consume_regular_file,
 )
 
-SCENARIO_FORMAT_VERSION = 1
+SCENARIO_FORMAT_VERSION = 2
 TRACE_CONTRACT_FORMAT_VERSION = 1
 MICROS_PER_SECOND = 1_000_000.0
 MICRO_PIXELS_PER_PIXEL = 1_000_000.0
@@ -56,6 +56,7 @@ class ScenarioDefinition:
     forced_biome: str
     starts_with_bloom: bool
     allow_ghost_playback: bool
+    starting_mercy_hearts: int
     steps: tuple[EncounterStepDefinition, ...]
 
 
@@ -252,6 +253,10 @@ def parse_scenario_definition(source: str, scenario_name: str) -> ScenarioDefini
         raise ScenarioSourceContractError("scenario name is malformed")
     block = _extract_scenario_block(source, scenario_name)
     biome_match = re.search(r"\bforcedBiome\s*=\s*Biome\.([A-Z][A-Z0-9_]*)", block)
+    mercy_match = re.search(r"\bstartingMercyHearts\s*=\s*(\d+)\b", block)
+    starting_mercy_hearts = int(mercy_match.group(1)) if mercy_match else 0
+    if starting_mercy_hearts > 10:
+        raise ScenarioSourceContractError("scenario starting mercy exceeds the run-local bound")
     return ScenarioDefinition(
         name=scenario_name,
         title=_required_string_field(block, "title"),
@@ -263,6 +268,7 @@ def parse_scenario_definition(source: str, scenario_name: str) -> ScenarioDefini
         allow_ghost_playback=bool(
             re.search(r"\ballowGhostPlayback\s*=\s*true\b", block)
         ),
+        starting_mercy_hearts=starting_mercy_hearts,
         steps=_parse_encounter_steps(block),
     )
 
@@ -305,6 +311,7 @@ def scenario_canonical_bytes(definition: ScenarioDefinition) -> bytes:
         _length_prefixed(definition.forced_biome),
         ("1" if definition.starts_with_bloom else "0") + "\n",
         ("1" if definition.allow_ghost_playback else "0") + "\n",
+        f"{definition.starting_mercy_hearts}\n",
         f"{len(definition.steps)}\n",
     ]
     for index, step in enumerate(definition.steps):

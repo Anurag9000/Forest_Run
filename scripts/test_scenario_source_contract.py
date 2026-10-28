@@ -9,8 +9,8 @@ import scenario_source_contract as contract
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CACTUS_SCENARIO_SHA = "3246dd15f7e694d387d06430537bf1805e8d57a53a9bcd1bdc5dd13e929b524c"
-CACTUS_TRACE_SHA = "edb682a29079ceaebf9c3e56c2f24362ce3335a0c1432e3803305a5dc2b58430"
+CACTUS_SCENARIO_SHA = "cf23943b2ce595b05920917a3940616480ff25181c6433156787cdf22497d253"
+CACTUS_TRACE_SHA = "5812fc981b28157c90f5d88f3c6f31c32bbb8dbfe5d32e1ba38e973625ca81a7"
 CACTUS_STEP = "EncounterStep(0.20f, EntityType.CACTUS, 420f)"
 
 
@@ -42,6 +42,7 @@ class ScenarioSourceContractTest(unittest.TestCase):
         self.assertEqual("DUSK_CANYON", result.scenario.forced_biome)
         self.assertFalse(result.scenario.starts_with_bloom)
         self.assertFalse(result.scenario.allow_ghost_playback)
+        self.assertEqual(0, result.scenario.starting_mercy_hearts)
         self.assertEqual(2, len(result.scenario.steps))
         self.assertEqual(200_000, result.scenario.steps[0].at_micros)
         self.assertEqual(420_000_000, result.scenario.steps[0].x_offset_micro_pixels)
@@ -55,12 +56,15 @@ class ScenarioSourceContractTest(unittest.TestCase):
         bloom = contract.load_trace_contract(ROOT, "BLOOM_SHOWCASE")
         ghost = contract.load_trace_contract(ROOT, "GHOST_READABILITY")
         dog = contract.load_trace_contract(ROOT, "DOG_HAZARD")
+        wolf = contract.load_trace_contract(ROOT, "WOLF_CHARGE")
         owl = contract.load_trace_contract(ROOT, "OWL_DIVE")
 
         self.assertTrue(bloom.scenario.starts_with_bloom)
         self.assertTrue(ghost.scenario.allow_ghost_playback)
         self.assertEqual((), ghost.input_steps)
         self.assertEqual("DOG_HAZARD", dog.scenario.steps[0].variant)
+        self.assertEqual(8, wolf.scenario.starting_mercy_hearts)
+        self.assertEqual(4, len(wolf.input_steps))
         self.assertEqual(1, len(owl.input_steps))
         self.assertEqual(1_800_000, owl.input_steps[0].at_micros)
         self.assertEqual("TAP_JUMP", owl.input_steps[0].action)
@@ -187,6 +191,12 @@ class ScenarioSourceContractTest(unittest.TestCase):
                 definition = contract.load_trace_contract(ROOT, name).scenario
                 self.assertEqual(2, len(definition.steps))
                 self.assertEqual([entity, entity], [step.entity_type for step in definition.steps])
+
+        self.assertIn("scenario.initializeDebugRunState(gameState)", method)
+        self.assertEqual(
+            8,
+            contract.load_trace_contract(ROOT, "WOLF_CHARGE").scenario.starting_mercy_hearts,
+        )
 
 
     def test_scripted_inputs_are_admitted_before_physics_and_collision(self) -> None:

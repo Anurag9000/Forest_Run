@@ -37,6 +37,11 @@ class MercySystem {
         kindnessChain = 0
     }
 
+    /** Seeds a bounded run-local fixture without claiming a real near miss. */
+    internal fun debugPrimeMercyHearts(hearts: Int) {
+        mercyHearts = hearts.coerceIn(0, MAX_HEARTS)
+    }
+
     fun reset() {
         mercyHearts = 0
         nearMisses = 0

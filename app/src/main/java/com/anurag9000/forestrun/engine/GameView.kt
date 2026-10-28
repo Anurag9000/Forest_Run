@@ -1850,6 +1850,7 @@ class GameView(
         debugScenarioScript.prepare(scenario)
         player.setCostume(CostumeManager.activeCostume(context))
         runResetManager.executeReset(gameState, entityManager, player)
+        scenario.initializeDebugRunState(gameState)
         entityManager.biomeManager.forceDebugBiome(scenario.forcedBiome)
         if (scenario.startsWithBloom) {
             gameState.debugActivateBloom()

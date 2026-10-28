@@ -22,6 +22,8 @@ enum class EncounterScenario(
     val forcedBiome: Biome? = null,
     val startsWithBloom: Boolean = false,
     val allowGhostPlayback: Boolean = false,
+    /** Isolated run-local state required to demonstrate a deterministic scenario branch. */
+    val startingMercyHearts: Int = 0,
     val steps: List<EncounterStep>
 ) {
     OPENING_READABILITY(
@@ -229,6 +231,7 @@ enum class EncounterScenario(
         title = "Wolf Charge",
         summary = "Howl, charge, and spare tension",
         forcedBiome = Biome.ANCIENT_GROVE,
+        startingMercyHearts = 8,
         steps = listOf(
             EncounterStep(0.20f, EntityType.WOLF, 240f),
             EncounterStep(1.90f, EntityType.WOLF, 720f)
@@ -297,10 +300,17 @@ enum class EncounterScenario(
     init {
         require(title.isNotBlank()) { "Encounter scenario title cannot be blank." }
         require(summary.isNotBlank()) { "Encounter scenario summary cannot be blank." }
+        require(startingMercyHearts in 0..MercySystem.MAX_HEARTS) {
+            "Scenario starting mercy must be within the run-local heart bound."
+        }
         require(steps.isNotEmpty()) { "Encounter scenario must contain at least one step." }
         require(steps.zipWithNext().all { (first, second) -> first.atSeconds <= second.atSeconds }) {
             "Encounter scenario steps must be ordered by time."
         }
+    }
+
+    internal fun initializeDebugRunState(gameState: GameStateManager) {
+        gameState.debugPrimeMercyHearts(startingMercyHearts)
     }
 }
 

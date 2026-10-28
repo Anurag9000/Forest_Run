@@ -156,6 +156,15 @@ internal class DebugScenarioScript {
                 DebugScenarioStep(4.35f, DebugScenarioAction.HOLD_JUMP_START),
                 DebugScenarioStep(4.64f, DebugScenarioAction.HOLD_JUMP_END)
             )
+            // The authored Wolves walk to the screen midpoint, howl, then
+            // charge. These holds clear each charge while preserving the
+            // clean-departure path that consumes the scenario's primed mercy.
+            EncounterScenario.WOLF_CHARGE -> listOf(
+                DebugScenarioStep(9.60f, DebugScenarioAction.HOLD_JUMP_START),
+                DebugScenarioStep(9.95f, DebugScenarioAction.HOLD_JUMP_END),
+                DebugScenarioStep(14.50f, DebugScenarioAction.HOLD_JUMP_START),
+                DebugScenarioStep(14.85f, DebugScenarioAction.HOLD_JUMP_END)
+            )
             EncounterScenario.EAGLE_MARK -> listOf(
                 DebugScenarioStep(1.35f, DebugScenarioAction.HOLD_JUMP_START),
                 DebugScenarioStep(1.66f, DebugScenarioAction.HOLD_JUMP_END),
