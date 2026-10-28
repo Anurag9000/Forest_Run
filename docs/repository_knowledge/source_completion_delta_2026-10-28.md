@@ -106,3 +106,9 @@ After the final source/test delta, `python3 -m unittest discover -s scripts -p '
 
 
 The final static ledger self-audit passed (EVID-137): unique IDs/paths, task/evidence references, acyclic dependencies, inventory coverage counts, selected Markdown links, and JSONL parsing all reconcile; `git diff --check` is clean. This checks documentation structure, not every recorded technical claim.
+
+## Pushed scenario candidate `e1e8501451d17996469fc82973076ed0d1fb9d22`
+
+- The reviewed source, tests and knowledge-ledger changes were committed directly to `main` and pushed; `git ls-remote origin refs/heads/main` confirmed the same SHA. Pre-existing untracked `.coverage`, `.training_control/`, `artifacts/`, `docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md`, and `docs/repository_knowledge/current_worktree_delta_20261027/` were preserved and excluded.
+- Exact-SHA public workflow listing showed Android validation run [40628306759](https://github.com/Anurag9000/Forest_Run/actions/runs/40628306759) and training-control applicability run [40628306963](https://github.com/Anurag9000/Forest_Run/actions/runs/40628306963) in progress. Estate certificate run [40628306741](https://github.com/Anurag9000/Forest_Run/actions/runs/40628306741) completed. This was an in-progress snapshot; terminal job outcomes have not yet been verified. See EVID-138 / TASK-C-018.
+- Local Python and Java21 Gradle suites passed before commit (EVID-135/136). Their local evidence is distinct from hosted exact-SHA results. Physical-device access is unavailable; broad scenario-catalogue, human, legal, Play and production gates remain unresolved.

@@ -14,10 +14,10 @@ The original static investigation's read-only restriction was superseded by the 
 
 
 
-Canonical source candidate before the current local delta is `d0eb2f6953951ab29f0a262977a86d0f097b2846`. Local full Python/Java21 Gradle validation passes for current delta (EVID-135/136); prior applicability/certificate workflows cover d0eb only, not this delta. Exact-SHA Android validation remains pending under TASK-C-018. Prior audio evidence remains EVID-118/EVID-119. Physical-device access is unavailable, so B-001/B-002 remain blocked; D-001..D-007 require genuine human/external owner evidence; E-001 remains dependent on those gates and exact-candidate closure.
+The scenario source/test delta is pushed at `e1e8501451d17996469fc82973076ed0d1fb9d22`. Local full Python/Java21 Gradle validation passes for current delta (EVID-135/136); prior applicability/certificate workflows cover d0eb only, not this delta. Exact-SHA Android run 40628306759 and training-applicability run 40628306963 were in progress at the latest poll; estate certificate 40628306741 completed. TASK-C-018 remains open until terminal results are inspected. Prior audio evidence remains EVID-118/EVID-119. Physical-device access is unavailable, so B-001/B-002 remain blocked; D-001..D-007 require genuine human/external owner evidence; E-001 remains dependent on those gates and exact-candidate closure.
 
 
-4. **Scenario delta — `TASK-A-039`–`TASK-A-045` complete locally; `TASK-C-018` next.** Focused tests, full Python suite (1,398) and full Java21 Gradle compile/test/lint/package (1,327) pass (EVID-123, EVID-126–130, EVID-134–136). Review and commit only the owned delta, push authorized main, then inspect exact-SHA hosted Java21/API35 workflows. The broader REQ-020 scenario matrix remains partial; do not infer complete mechanics coverage.
+4. **Scenario delta — `TASK-A-039`–`TASK-A-045` complete locally; `TASK-C-018` next.** Focused tests, full Python suite (1,398) and full Java21 Gradle compile/test/lint/package (1,327) pass (EVID-123, EVID-126–130, EVID-134–136). Inspect terminal results and artifacts for the pushed candidate workflows, then update TASK-C-018 with exact job evidence. The broader REQ-020 scenario matrix remains partial; do not infer complete mechanics coverage.
 
 ### Current scenario delta (2026-10-28)
 

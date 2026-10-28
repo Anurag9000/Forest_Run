@@ -1,8 +1,8 @@
 # Forest Run execution dashboard
 
-**Snapshot:** 2026-10-28. Canonical `main`/`origin/main` are at `d0eb2f6953951ab29f0a262977a86d0f097b2846` before the current owned local delta. Current delta corrects the BLOOM_SHOWCASE full-lane timing mismatch and adds selected Robolectric scenario integrations. Local Python passes 1,398/1,398; full Java21 Gradle passes 1,327 tests plus compile/lint/package (EVID-134–136). Exact-SHA hosted Android validation is pending and public API status polling is rate-limited. No physical-device access is available; human, legal, store, governance and release gates remain open. Pre-existing user/generated untracked state is preserved and excluded.
+**Snapshot:** 2026-10-28. Canonical `main`/`origin/main` are at pushed `e1e8501451d17996469fc82973076ed0d1fb9d22`. Current delta corrects the BLOOM_SHOWCASE full-lane timing mismatch and adds selected Robolectric scenario integrations. Local Python passes 1,398/1,398; full Java21 Gradle passes 1,327 tests plus compile/lint/package (EVID-134–136). Exact-SHA hosted Android validation is pending and public run listing shows Android validation 40628306759 and applicability audit 40628306963 in progress; certificate 40628306741 completed. No physical-device access is available; human, legal, store, governance and release gates remain open. Pre-existing user/generated untracked state is preserved and excluded.
 
-**Current phase:** Scenario delta tasks TASK-A-039–045 are locally complete with focused and full-suite evidence. TASK-C-018 is ready for exact-SHA hosted verification after commit/push. Remaining work includes the broader scenario catalogue, physical/external gates and residual readiness reconciliation.
+**Current phase:** Scenario delta tasks TASK-A-039–045 are locally complete with focused and full-suite evidence. TASK-C-018 is awaiting terminal exact-SHA hosted verification after push. Remaining work includes the broader scenario catalogue, physical/external gates and residual readiness reconciliation.
 
 ## Project state
 

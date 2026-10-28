@@ -2051,6 +2051,23 @@
       ],
       "result": "PASS. 1,019 file records; 398 test-contract records; 73 unique tasks; 135 evidence records; 975 fully statically inspected, 39 documented, 3 excluded, 2 partially inspected; task statuses reconcile to 55 completed, 2 in progress, 10 deferred, 6 canceled/superseded; dependency graph acyclic.",
       "limitations": "This validates ledger/documentation structure and cited local paths, not every technical claim or runtime behavior. Current source delta still requires exact-SHA hosted validation and external physical/human/release evidence."
+    },
+    {
+      "id": "EVID-138",
+      "type": "exact pushed-candidate workflow status snapshot",
+      "path": ".github/workflows/android-validation.yml; .github/workflows/training-control-audit.yml; .github/workflows/estate-training-control-local.yml",
+      "revision": "e1e8501451d17996469fc82973076ed0d1fb9d22",
+      "supports": [
+        "TASK-C-018"
+      ],
+      "observation": "The scenario source/test/documentation commit was pushed to canonical main and origin/main resolved to this SHA. The public GitHub Actions run listing showed Android validation run 40628306759 and training-control applicability run 40628306963 in progress; estate local training-control certificate run 40628306741 completed. This is a time-bounded status snapshot, not a pass for in-progress workflows.",
+      "commands": [
+        "git push --porcelain origin main",
+        "git ls-remote origin refs/heads/main",
+        "GET https://github.com/Anurag9000/Forest_Run/actions?query=branch%3Amain"
+      ],
+      "result": "Push confirmed at exact SHA; hosted Android and training applicability still in progress; estate certificate workflow completed.",
+      "limitations": "Run listing does not establish final job results; check run detail pages and artifacts. Exact-SHA Android/connected validation remains open until terminal successful jobs and artifacts are confirmed. No physical-device access; broader scenario catalogue and human/external release gates remain open."
     }
   ]
 }

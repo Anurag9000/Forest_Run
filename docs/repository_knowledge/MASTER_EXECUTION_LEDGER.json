@@ -5,7 +5,7 @@
     "branch": "main",
     "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
     "date": "2026-10-03",
-    "current_candidate": "d0eb2f6953951ab29f0a262977a86d0f097b2846"
+    "current_candidate": "e1e8501451d17996469fc82973076ed0d1fb9d22"
   },
   "snapshot_date": "2026-10-28",
   "working_tree_at_start": {
@@ -8940,7 +8940,8 @@
           "EVID-134",
           "EVID-135",
           "EVID-136",
-          "EVID-137"
+          "EVID-137",
+          "EVID-138"
         ],
         "uncertainty": "The exact current candidate is not yet committed or hosted-verified. Physical-device access is unavailable.",
         "remaining_work": "Commit/push authorized delta, verify exact full SHA and terminal hosted jobs, then reconcile remaining scenario/physical/human/external gates.",
