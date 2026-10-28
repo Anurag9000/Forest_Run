@@ -26,13 +26,24 @@ class AndroidValidationWorkflowContractTest(unittest.TestCase):
         self.assertEqual(2, self.workflow.count("persist-credentials: false"))
 
     def test_connected_job_uses_hardened_readiness_runner(self) -> None:
+        capture = (
+            "OUTPUT_DIR=build/ci-screenshot-capture "
+            "bash scripts/capture_store_screenshots.sh"
+        )
+        connected = (
+            "bash scripts/run_connected_validation.sh "
+            "--skip-origin-main-check --candidate-sha ${{ github.sha }}"
+        )
         for required_contract in (
             "Enable KVM group permissions",
             "emulator-boot-timeout: 900",
             "disable-spellchecker: true",
-            "script: bash scripts/run_connected_validation.sh",
+            "script: |",
+            capture,
+            connected,
         ):
             self.assertIn(required_contract, self.workflow)
+        self.assertLess(self.workflow.index(capture), self.workflow.index(connected))
         self.assertNotIn(
             "script: ./gradlew connectedDebugAndroidTest",
             self.workflow,
