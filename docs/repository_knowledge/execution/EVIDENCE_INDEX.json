@@ -2068,6 +2068,23 @@
       ],
       "result": "Push confirmed at exact SHA; hosted Android and training applicability still in progress; estate certificate workflow completed.",
       "limitations": "Run listing does not establish final job results; check run detail pages and artifacts. Exact-SHA Android/connected validation remains open until terminal successful jobs and artifacts are confirmed. No physical-device access; broader scenario catalogue and human/external release gates remain open."
+    },
+    {
+      "id": "EVID-139",
+      "type": "exact current-main workflow status snapshot",
+      "path": ".github/workflows/android-validation.yml; .github/workflows/training-control-audit.yml; .github/workflows/estate-training-control-local.yml",
+      "revision": "996e21fb3e0798d450b3d3509e8faf152c17bb95",
+      "supports": [
+        "TASK-C-018"
+      ],
+      "observation": "The public Actions listing showed current documentation-only HEAD 996e21fb with Android validation run 40628433659 pending, training-control applicability run 40628433860 in progress, and estate certificate run 40628433833 in progress. The application source delta is e1e85014; its applicability and estate-certificate runs completed, while Android run 40628306759 remained in progress.",
+      "commands": [
+        "git rev-parse HEAD",
+        "git rev-parse origin/main",
+        "GET https://github.com/Anurag9000/Forest_Run/actions?query=branch%3Amain"
+      ],
+      "result": "Exact current HEAD is hosted and workflows were pending/in progress at the observation time; no current-HEAD success inferred.",
+      "limitations": "Public run listing is a point-in-time status; inspect terminal jobs and artifacts. No physical-device access; full scenario matrix and external human/legal/Play/release acceptance remain open."
     }
   ]
 }
