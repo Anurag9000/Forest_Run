@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "source_revision": "113a4ebdf671dc16470b18de0d4dff7685230045; Android workflow 40620167730 pending",
+  "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local delta",
   "inspection_date": "2026-10-28",
   "scope_note": "Meaningful declaration inventory across production Kotlin and Python/shell files. It retains 91 prior high-detail records and adds all shard declarations using path + fully qualified name + source start line as identity, so same-name overloads remain distinct. See per-shard methodology/limitations. Test sources/helpers and generated artifacts are excluded with file-level reasons. This is static evidence, not runtime validation; caller links are only included where established.",
   "records": [
@@ -12024,9 +12024,12 @@
         }
       ],
       "outputs": "List<DebugScenarioStep>",
-      "state_or_effects": "EncounterScenario.CACTUS_READ -> listOf( DebugScenarioStep(3.18f, DebugScenarioAction.HOLD_JUMP_START), DebugScenarioStep(3.48f, DebugScenarioAction.HOLD_JUMP_END),",
+      "state_or_effects": "EncounterScenario.CACTUS_READ -> held jump pairs scheduled at 2.40/2.70 and 4.30/4.60 seconds; real-path integration asserts both Cactus encounters cleanly pass (EVID-126).",
       "dependencies": [],
-      "consumers": [],
+      "consumers": [
+        "GameView deterministic debug scenario script dispatch",
+        "NamedFloraTreeScenarioIntegrationTest"
+      ],
       "goal_ids": [
         "GOAL-015"
       ],
@@ -12036,8 +12039,8 @@
       "implementation_status": "body statically present",
       "evidence_status": "static source only",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "8f9340d431f7abb84719aef0a5b1174cafb0c437",
+        "working_tree_delta": "CACTUS_READ schedule correction verified by EVID-126"
       },
       "shard": "docs/repository_knowledge/symbol_shards/engine_a_m.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",

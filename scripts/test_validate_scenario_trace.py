@@ -180,15 +180,24 @@ class ValidateScenarioTraceTest(unittest.TestCase):
         cases.append((sequence, "sequence must equal 1"))
 
         schedule = valid_trace()
-        schedule["events"][1]["scheduled_at_micros"] = 3_000_000
+        schedule["events"][1]["scheduled_at_micros"] = 2_300_000
         cases.append((schedule, "schedule is not chronological"))
 
         dispatch = valid_trace()
-        dispatch["events"][1]["dispatched_at_micros"] = 3_100_000
+        dispatch["events"][0]["dispatched_at_micros"] = 4_000_000
+        dispatch["events"][0]["lateness_micros"] = (
+            dispatch["events"][0]["dispatched_at_micros"]
+            - dispatch["events"][0]["scheduled_at_micros"]
+        )
+        dispatch["events"][1]["dispatched_at_micros"] = 3_900_000
+        dispatch["events"][1]["lateness_micros"] = (
+            dispatch["events"][1]["dispatched_at_micros"]
+            - dispatch["events"][1]["scheduled_at_micros"]
+        )
         cases.append((dispatch, "dispatch is not chronological"))
 
         early = valid_trace()
-        early["events"][0]["dispatched_at_micros"] = 3_000_000
+        early["events"][0]["dispatched_at_micros"] = 2_300_000
         cases.append((early, "dispatch precedes"))
 
         lateness = valid_trace()

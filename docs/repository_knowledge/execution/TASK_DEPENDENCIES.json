@@ -282,6 +282,46 @@
       "from": "TASK-C-016",
       "to": "TASK-E-001",
       "reason": "Final readiness requires evidence on the current source candidate."
+    },
+    {
+      "from": "TASK-A-039",
+      "to": "TASK-C-017",
+      "reason": "Exact-candidate verification must include the completed EAGLE_MARK scenario-to-mechanic integration test."
+    },
+    {
+      "from": "TASK-C-017",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation must account for exact-candidate verification of the EAGLE_MARK scenario integration."
+    },
+    {
+      "from": "TASK-A-039",
+      "to": "TASK-C-018",
+      "reason": "Existing Eagle scenario test is included in exact-candidate verification."
+    },
+    {
+      "from": "TASK-A-040",
+      "to": "TASK-C-018",
+      "reason": "Cactus timing correction and real-path regression are verified on exact candidate."
+    },
+    {
+      "from": "TASK-A-041",
+      "to": "TASK-C-018",
+      "reason": "Flora/tree scenario integration tests are verified on exact candidate."
+    },
+    {
+      "from": "TASK-A-042",
+      "to": "TASK-C-018",
+      "reason": "Animal scenario integration tests are verified on exact candidate."
+    },
+    {
+      "from": "TASK-A-043",
+      "to": "TASK-C-018",
+      "reason": "Owl/Chickadee scenario tests are verified on exact candidate."
+    },
+    {
+      "from": "TASK-C-018",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation must reuse exact candidate scenario evidence."
     }
   ],
   "parallel_waves": [

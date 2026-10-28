@@ -139,10 +139,10 @@ internal class DebugScenarioScript {
     companion object {
         internal fun stepsFor(scenario: EncounterScenario): List<DebugScenarioStep> = when (scenario) {
             EncounterScenario.CACTUS_READ -> listOf(
-                DebugScenarioStep(3.18f, DebugScenarioAction.HOLD_JUMP_START),
-                DebugScenarioStep(3.48f, DebugScenarioAction.HOLD_JUMP_END),
-                DebugScenarioStep(5.06f, DebugScenarioAction.HOLD_JUMP_START),
-                DebugScenarioStep(5.36f, DebugScenarioAction.HOLD_JUMP_END)
+                DebugScenarioStep(2.40f, DebugScenarioAction.HOLD_JUMP_START),
+                DebugScenarioStep(2.70f, DebugScenarioAction.HOLD_JUMP_END),
+                DebugScenarioStep(4.30f, DebugScenarioAction.HOLD_JUMP_START),
+                DebugScenarioStep(4.60f, DebugScenarioAction.HOLD_JUMP_END)
             )
             EncounterScenario.CAT_KINDNESS -> listOf(
                 DebugScenarioStep(0.95f, DebugScenarioAction.HOLD_JUMP_START),

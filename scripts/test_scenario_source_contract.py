@@ -10,7 +10,7 @@ import scenario_source_contract as contract
 
 ROOT = Path(__file__).resolve().parents[1]
 CACTUS_SCENARIO_SHA = "cf23943b2ce595b05920917a3940616480ff25181c6433156787cdf22497d253"
-CACTUS_TRACE_SHA = "5812fc981b28157c90f5d88f3c6f31c32bbb8dbfe5d32e1ba38e973625ca81a7"
+CACTUS_TRACE_SHA = "7c48df64352a1df6b6b0a28ebd121ad1123a43c9ee8709f25831825acfe8be34"
 CACTUS_STEP = "EncounterStep(0.20f, EntityType.CACTUS, 420f)"
 
 
@@ -47,7 +47,7 @@ class ScenarioSourceContractTest(unittest.TestCase):
         self.assertEqual(200_000, result.scenario.steps[0].at_micros)
         self.assertEqual(420_000_000, result.scenario.steps[0].x_offset_micro_pixels)
         self.assertEqual(4, len(result.input_steps))
-        self.assertEqual(3_180_000, result.input_steps[0].at_micros)
+        self.assertEqual(2_400_000, result.input_steps[0].at_micros)
         self.assertEqual("HOLD_JUMP_START", result.input_steps[0].action)
         self.assertEqual(CACTUS_SCENARIO_SHA, result.scenario_definition_sha256)
         self.assertEqual(CACTUS_TRACE_SHA, result.trace_contract_sha256)
@@ -138,8 +138,8 @@ class ScenarioSourceContractTest(unittest.TestCase):
             script_text = script.read_text(encoding="utf-8")
             script.write_text(
                 script_text.replace(
-                    "DebugScenarioStep(3.18f, DebugScenarioAction.HOLD_JUMP_START)",
-                    "DebugScenarioStep(3.19f, DebugScenarioAction.HOLD_JUMP_START)",
+                    "DebugScenarioStep(2.40f, DebugScenarioAction.HOLD_JUMP_START)",
+                    "DebugScenarioStep(2.41f, DebugScenarioAction.HOLD_JUMP_START)",
                     1,
                 ),
                 encoding="utf-8",

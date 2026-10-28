@@ -438,14 +438,21 @@
           "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
           "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt"
         ],
-        "status": "IMPLEMENTED_AND_VERIFIED: WOLF_CHARGE exercises both howl-charge-spare branches in an isolated deterministic run; local and exact-SHA hosted evidence EVID-114..116.",
+        "status": "PARTIAL: scenario integration evidence now covers WOLF_CHARGE (EVID-114..116), EAGLE_MARK (EVID-123), CACTUS_READ and selected flora/tree showcases (EVID-126), five animal behaviors (EVID-127), and Owl/Chickadee behavior (EVID-128). Remaining authored scenarios need individual mechanic-to-scenario disposition; exact-candidate hosted validation is pending.",
         "capability_ids": [
           "CAP-002",
           "CAP-006"
         ],
         "verification_task_ids": [
           "TASK-A-037",
-          "TASK-C-015"
+          "TASK-A-039",
+          "TASK-A-040",
+          "TASK-A-041",
+          "TASK-A-042",
+          "TASK-A-043",
+          "TASK-C-015",
+          "TASK-C-017",
+          "TASK-C-018"
         ]
       }
     ],
@@ -1482,6 +1489,94 @@
           "CAP-015"
         ],
         "limitations": "No audio was listened to; decoded signal metrics do not establish artistic quality, appropriate loop seams, true peak, perceived loudness, rights, or acceptance."
+      },
+      {
+        "id": "FIND-023",
+        "kind": "EAGLE_MARK scenario-to-mechanic integration coverage gap",
+        "statement": "The authored EAGLE_MARK scenario previously had spawn/script-presence checks but no test that connected its real EncounterDirector and DebugScenarioScript to Eagle target announcement and lock behavior. A new Robolectric integration test now drives the scenario at 60 Hz through EntityManager and collision arbitration and observes exactly two Eagles both announce and lock their targets. This was a verification gap; the earlier evidence did not establish that the scenario failed at runtime.",
+        "status": "FOCUSED_SOURCE_COVERAGE_ADDED; EXACT_CANDIDATE_HOSTED_VERIFICATION_PENDING",
+        "evidence_ids": [
+          "EVID-123",
+          "EVID-124",
+          "EVID-125"
+        ],
+        "related_task_ids": [
+          "TASK-A-039",
+          "TASK-C-017"
+        ],
+        "related_goal_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "limitations": "The local full JVM/Robolectric suite could not run under JDK 17 because existing Robolectric tests request Android SDK 36, which requires Java 21. Focused SDK 35 test passed. Hosted exact-candidate Java 21 validation is required. The test does not establish visual readability on physical hardware."
+      },
+      {
+        "id": "FIND-024",
+        "kind": "CACTUS_READ scripted jump timing defect",
+        "statement": "Driving the real director, timed script, Player, EntityManager and collision arbitration showed both CACTUS_READ encounters resolving HIT: old jump pairs at 3.18/3.48 and 5.06/5.36 seconds happened after contact. The schedule was corrected to 2.40/2.70 and 4.30/4.60 seconds; focused real-path integration now observes two clean passes and zero hits.",
+        "status": "SOURCE_CORRECTED; FOCUSED_TEST_PASSES; EXACT_CANDIDATE_PENDING",
+        "evidence_ids": [
+          "EVID-126",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "related_task_ids": [
+          "TASK-A-040",
+          "TASK-A-041",
+          "TASK-C-018"
+        ],
+        "related_goal_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "limitations": "Focused Robolectric evidence only; exact-SHA hosted validation and physical/human fairness/readability remain unverified."
+      },
+      {
+        "id": "FIND-025",
+        "kind": "Selected authored scenario integration coverage added",
+        "statement": "Targeted tests now connect selected flora/tree, animal, Owl, Chickadee and Eagle scenario claims to runtime behavior. This closes only bounded source-level coverage gaps; it does not establish complete 28-scenario coverage or external acceptance.",
+        "status": "FOCUSED_TESTS_PASS; WHOLE_CATALOGUE_PARTIAL",
+        "evidence_ids": [
+          "EVID-123",
+          "EVID-126",
+          "EVID-127",
+          "EVID-128",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "related_task_ids": [
+          "TASK-A-039",
+          "TASK-A-041",
+          "TASK-A-042",
+          "TASK-A-043",
+          "TASK-C-018"
+        ],
+        "related_goal_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "limitations": "Exact candidate not yet verified; no physical device access; remaining scenarios are not all dispositioned."
       }
     ],
     "gaps": [
@@ -1641,6 +1736,68 @@
           "EVID-119"
         ],
         "status": "RESOLVED_SOURCE_DOCUMENTATION_RECONCILED"
+      },
+      {
+        "id": "GAP-012",
+        "kind": "EAGLE_MARK authored scenario was not linked to its target-lock mechanic by an integration assertion",
+        "statement": "The scenario name/summary promises an Eagle target mark and lock-on beat. Before the new test, only script scheduling and direct Eagle behavior were tested separately. The missing integration assertion is now implemented and passes locally; exact candidate workflow remains pending.",
+        "evidence_ids": [
+          "EVID-123",
+          "EVID-125"
+        ],
+        "status": "LOCALLY_RESOLVED; EXACT_CANDIDATE_VERIFICATION_PENDING",
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_task_ids": [
+          "TASK-A-039",
+          "TASK-C-017"
+        ],
+        "next_action": "Commit the source and ledger delta to canonical main, then verify Java 21 host/release/lint/package and API35 connected workflows for the exact SHA."
+      },
+      {
+        "id": "GAP-013",
+        "kind": "CACTUS_READ authored jumps occurred after actual collision",
+        "statement": "The real scenario path showed both Cacti resolving HIT despite the action trace. Script timing was corrected and a focused integration regression now requires clean passes.",
+        "evidence_ids": [
+          "EVID-126",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "status": "LOCALLY_RESOLVED; EXACT_CANDIDATE_PENDING",
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_task_ids": [
+          "TASK-A-040",
+          "TASK-C-018"
+        ],
+        "next_action": "Verify exact committed candidate with hosted Java21/API35 workflows."
+      },
+      {
+        "id": "GAP-014",
+        "kind": "Selected named scenarios lacked direct mechanic-path integration assertions",
+        "statement": "Focused tests now cover selected flora/tree composition and geometry, animal outcomes, Owl alert-to-dive, Chickadee seeded altitude and Eagle mark/lock. The full scenario catalogue remains partially dispositioned.",
+        "evidence_ids": [
+          "EVID-123",
+          "EVID-126",
+          "EVID-127",
+          "EVID-128",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "status": "BOUNDED_LOCAL_COVERAGE_ADDED; FULL_CATALOGUE_AND_EXACT_CANDIDATE_PENDING",
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_task_ids": [
+          "TASK-A-039",
+          "TASK-A-041",
+          "TASK-A-042",
+          "TASK-A-043",
+          "TASK-C-018"
+        ],
+        "next_action": "Verify exact candidate and continue only targeted remaining scenario dispositions."
       }
     ],
     "tasks": [
@@ -2902,7 +3059,7 @@
         "target_phase": "E - final reconciliation",
         "objective": "Reconcile only changed source, affected evidence and residual requirements; issue an evidence-backed release disposition for the exact candidate.",
         "motivation": "Earlier audits should be reused, but changes invalidate only their dependent evidence; final closure must account for all remaining gates without repeating the whole audit.",
-        "current_state": "All repository-controlled implementation tasks are complete at their recorded scopes, including WOLF_CHARGE exact-SHA validation. Physical performance/device tasks B-001/B-002 and external/device/human governance tasks D-001..D-007 remain outstanding.",
+        "current_state": "Extensive source and verification work is documented at recorded scopes. Current EAGLE_MARK source coverage is locally implemented but exact hosted verification is pending; physical performance/device and external/human governance gates remain open.",
         "required_final_state": "All mandatory requirements have evidence-backed disposition, residual/external blockers are explicit, and an accountable owner records go/no-go.",
         "scope": [
           "this knowledge map and all linked ledgers",
@@ -2944,7 +3101,9 @@
           "TASK-D-007",
           "TASK-C-014",
           "TASK-C-015",
-          "TASK-C-016"
+          "TASK-C-016",
+          "TASK-A-039",
+          "TASK-C-017"
         ],
         "downstream_task_ids": [],
         "conflicts": [
@@ -2970,7 +3129,10 @@
           "EVID-116",
           "EVID-120",
           "EVID-121",
-          "EVID-122"
+          "EVID-122",
+          "EVID-123",
+          "EVID-124",
+          "EVID-125"
         ],
         "uncertainty": "Current outstanding scope may change after authorized external decisions.",
         "remaining_work": "Complete after remaining physical performance and external D-gate evidence is supplied or explicitly dispositioned by accountable owners; then perform a targeted candidate/readiness reconciliation and record the accountable go/no-go.",
@@ -2979,8 +3141,8 @@
           "docs/RELEASE_READINESS.md",
           "docs/AUDIT_LEDGER.md"
         ],
-        "last_reconciled_revision": "871467c2437a9949da6bf9c0119a31c405d7fa42 (exact-SHA hosted workflow 40610098124); ledger refreshed in documentation commit f4acd6dffafbf5e5a8bcc8cef31d292790435cc2.",
-        "next_action": "Resume when actual B/D owner evidence or explicit dispositions are supplied; then perform targeted residual/readiness reconciliation.",
+        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local delta",
+        "next_action": "Complete TASK-C-016 predecessor API35 poll, then exact-CI TASK-C-017; resume final reconciliation only after applicable external evidence/dispositions.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
         "evidence_status": "INSUFFICIENT_OR_CONTRADICTORY_EVIDENCE"
@@ -8077,19 +8239,20 @@
         ],
         "category": "exact-SHA regression and integration verification",
         "target_phase": "C - implementation fidelity and risk-based verification",
-        "objective": "Confirm exact main SHA bac310 passes repository Android and applicable certificate/applicability workflows after removal of the stale Duck comment.",
-        "motivation": "The previous verified source candidate was 113a4eb; any subsequent source commit requires exact-candidate evidence before claiming current-source CI validation.",
-        "current_state": "Candidate bac310 is pushed; training-applicability and estate-certificate workflows passed. Android validation is still running. The source delta only removes an obsolete comment/blank line and does not alter behavior.",
-        "required_final_state": "Exact bac310 Android validation and applicable policy/certificate workflows conclude successfully, with no source mutation and failures diagnosed accurately.",
+        "objective": "Confirm exact 8f9340d main candidate passes Android host and API35 connected validation after the audio/Duck-note documentation delta.",
+        "motivation": "Validate the pushed audio source documentation cleanup on the exact candidate; prior 113a4eb evidence is predecessor-only.",
+        "current_state": "Exact run 40623906250 is for 8f9340d. Host/release/lint/package job 122604560951 succeeded; API35 connected job 122606210657 was in progress at last poll.",
+        "required_final_state": "Both exact 8f9340d host and API35 connected jobs conclude successfully; applicability and certificate workflows 40623906223 and 40623906191 succeed; no external acceptance inferred.",
         "scope": [
-          "bac310001d48629d4542c3ed75b65d1fb5d241ad",
-          "GitHub Actions Android validation, training-control applicability, estate certificate"
+          "8f9340d431f7abb84719aef0a5b1174cafb0c437",
+          "GitHub Actions run 40623906250 host and API35 jobs",
+          "applicability 40623906223",
+          "estate certificate 40623906191"
         ],
         "required_actions": [
-          "Inspect exact-SHA workflow run 40623171681 to terminal conclusion.",
-          "Record job conclusions and artifact/test counts only when directly available.",
-          "Confirm applicability 40623171660 and estate-certificate 40623171680 on the same SHA.",
-          "Update candidate/evidence records and final readiness dependencies."
+          "Poll exact-SHA run 40623906250 to terminal status.",
+          "Record job conclusions and any API35 test/artifact details actually available.",
+          "Keep results revision-bound to 8f9340d."
         ],
         "inputs": [
           "TASK-A-038",
@@ -8121,23 +8284,598 @@
         "execution_status": "IN_PROGRESS",
         "owner": "/root",
         "blockers": [
-          "Android validation run 40623171681 in progress."
+          "API35 connected job 122606210657 is running as of the last authoritative poll."
         ],
         "evidence_ids": [
           "EVID-118",
           "EVID-119"
         ],
-        "uncertainty": "Android run terminal status unavailable at this snapshot.",
-        "remaining_work": "Wait for exact-SHA Android workflow, inspect job summaries, then update dependent records.",
+        "uncertainty": "API35 connected conclusion is pending; exact source validation does not include later EAGLE_MARK delta.",
+        "remaining_work": "Poll API35 job 122606210657; then close this predecessor candidate task. The next source delta is covered by TASK-C-017.",
         "completion_evidence": [],
         "related_prior_work": [
           "TASK-C-015; source candidate 113a4eb does not verify bac310."
         ],
-        "last_reconciled_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
-        "next_action": "Poll GitHub Actions run 40623171681.",
+        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437",
+        "next_action": "Poll run 40623906250 API35 connected job.",
         "investigation_coverage": "INTEGRATION TRACED",
         "implementation_or_investigation_status": "VERIFICATION REQUIRED",
         "evidence_status": "CURRENT EVIDENCE PENDING"
+      },
+      {
+        "id": "TASK-A-039",
+        "title": "Prove the authored EAGLE_MARK scenario reaches both Eagle target announcements and locks",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "scenario integration test",
+        "target_phase": "A - source completion",
+        "objective": "Connect EAGLE_MARK scenario scheduling, scripted player input, Eagle updates and collision arbitration in a Robolectric integration test; assert that both authored Eagles announce and lock targets and that the script trace is canonical.",
+        "motivation": "A named deterministic scenario must exercise the game mechanic it claims to demonstrate; separate script-presence and direct-entity tests did not prove the authored scenario path.",
+        "current_state": "EAGLE_MARK has two authored Eagle steps and two held-jump pairs; prior tests separately checked script actions and Eagle behavior but did not connect the scenario to target announcement/lock.",
+        "required_final_state": "A focused integration test drives the actual EncounterDirector, DebugScenarioScript, Player and EntityManager/collision path; exactly two Eagles are observed and each announces and locks its target; action trace validates; debug run does not record persistent Eagle encounters.",
+        "scope": [
+          "app/src/test/java/com/anurag9000/forestrun/engine/EagleScenarioIntegrationTest.kt",
+          "EncounterScenario.EAGLE_MARK",
+          "DebugScenarioScript.stepsFor(EAGLE_MARK)",
+          "Eagle.updatePlayerInteraction/update",
+          "EntityManager.update/checkCollisions"
+        ],
+        "required_actions": [
+          "Reset isolated test preferences and managers.",
+          "Run authored EAGLE_MARK at 60 Hz for the scenario window using actual scheduled actions.",
+          "Observe targetAnnounced and isLocked on each scenario-spawned Eagle.",
+          "Assert exactly two Eagle instances, four canonical action trace events, and no persistent Eagle encounter progression."
+        ],
+        "inputs": [
+          "REQ-020",
+          "EncounterDirector.kt",
+          "DebugScenarioScript.kt",
+          "WolfScenarioIntegrationTest.kt",
+          "EagleDepartureIntegrationTest.kt"
+        ],
+        "deliverables": [
+          "EagleScenarioIntegrationTest.kt"
+        ],
+        "acceptance_criteria": [
+          "Both authored Eagles are reached through the scenario path and each target announcement and lock is observed.",
+          "Exactly two Eagles are spawned in DEBUG_SCENARIO and action trace matches DeterministicScenarioReplayContract.",
+          "No normal persistent Eagle encounter count is written.",
+          "Focused Robolectric test passes."
+        ],
+        "verification_method": "./gradlew testDebugUnitTest --tests com.anurag9000.forestrun.engine.EagleScenarioIntegrationTest",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-017"
+        ],
+        "conflicts": [
+          "Shares the scenario-test source area with prior Wolf and Eagle integration tests; no production source file is modified."
+        ],
+        "execution_constraints": "No production behavior change; preserve deterministic run isolation. Physical visual acceptance is separate.",
+        "complexity": "medium",
+        "priority": "P1 scenario evidence integrity",
+        "execution_status": "COMPLETED",
+        "owner": "/root",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-123"
+        ],
+        "uncertainty": "Hosted exact-candidate verification is separate and tracked by TASK-C-017.",
+        "remaining_work": "None for the bounded test implementation; obtain exact-SHA hosted verification.",
+        "completion_evidence": [
+          "EVID-123"
+        ],
+        "related_prior_work": [
+          "TASK-A-035 OWL_DIVE input/capture correction",
+          "TASK-A-037 WOLF_CHARGE scenario correction"
+        ],
+        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 + uncommitted test delta",
+        "next_action": "Complete exact-candidate CI under TASK-C-017.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "IMPLEMENTED; FOCUSED TEST PASSED LOCALLY",
+        "evidence_status": "CURRENT FOCUSED EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-C-017",
+        "title": "Verify the EAGLE_MARK integration test on the exact committed main candidate",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "exact-SHA regression and integration verification",
+        "target_phase": "C - implementation fidelity and risk-based verification",
+        "objective": "Run the new EAGLE_MARK integration test and applicable full required Android validation on the exact pushed main SHA, using the hosted Java 21/API35 workflow.",
+        "motivation": "The local focused test passes, but JDK 17 cannot run all repository Robolectric tests targeting SDK 36; exact-candidate hosted verification must cover the added test and release checks.",
+        "current_state": "Source test is implemented and the focused SDK35 Robolectric test passes locally. Python scripts suite passes 1,398 tests. Local full Gradle suite is blocked by JDK17 versus Robolectric SDK36 requirement; exact candidate is not yet committed.",
+        "required_final_state": "Exact candidate SHA has successful host/release/lint/package and applicable API35 connected workflow results; any failure is investigated without reducing coverage.",
+        "scope": [
+          "new EagleScenarioIntegrationTest.kt",
+          "exact pushed main SHA",
+          "hosted Android validation and applicable training-applicability/estate-certificate workflows"
+        ],
+        "required_actions": [
+          "Commit only reviewed source and documentation delta directly on main.",
+          "Inspect workflow run SHA and job/step conclusions.",
+          "Confirm host tests include EagleScenarioIntegrationTest and pass under Java21.",
+          "Confirm API35 connected validation and other required gates for the exact SHA.",
+          "Record actual artifacts/results and keep physical/human/external claims separate."
+        ],
+        "inputs": [
+          "TASK-A-039",
+          "EVID-123",
+          "EVID-124",
+          "EVID-125"
+        ],
+        "deliverables": [
+          "Exact-SHA workflow evidence and updated capability/gap ledgers"
+        ],
+        "acceptance_criteria": [
+          "All required hosted jobs for the exact full SHA succeed.",
+          "New scenario integration test is included and passes.",
+          "No source immutability or release hardening check is weakened."
+        ],
+        "verification_method": "GitHub Actions exact-head run/job/step summaries and artifacts; local Java17 limitation remains explicit.",
+        "dependency_ids": [
+          "TASK-A-039"
+        ],
+        "downstream_task_ids": [
+          "TASK-E-001"
+        ],
+        "conflicts": [
+          "Any later source change invalidates exact-SHA evidence."
+        ],
+        "execution_constraints": "Do not claim physical, human, legal, signing, Play or release acceptance from CI.",
+        "complexity": "medium",
+        "priority": "P1 current-candidate verification",
+        "execution_status": "IN_PROGRESS",
+        "owner": "/root",
+        "blockers": [
+          "Await source commit/push and terminal exact-SHA workflow results."
+        ],
+        "evidence_ids": [
+          "EVID-123",
+          "EVID-124",
+          "EVID-125"
+        ],
+        "uncertainty": "Exact SHA and hosted outcomes do not yet exist.",
+        "remaining_work": "Commit reviewed delta, then follow the new exact-candidate workflows to terminal status.",
+        "completion_evidence": [],
+        "related_prior_work": [
+          "TASK-C-015 WOLF_CHARGE exact-SHA verification",
+          "TASK-C-016 predecessor source verification"
+        ],
+        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 + local test delta",
+        "next_action": "Review staged paths and commit source/docs/ledger delta.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "VERIFICATION REQUIRED",
+        "evidence_status": "LOCAL FOCUSED EVIDENCE; EXACT CANDIDATE PENDING"
+      },
+      {
+        "id": "TASK-A-040",
+        "title": "Correct CACTUS_READ jump timing against real contact geometry",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "scenario input correction",
+        "target_phase": "A - source completion",
+        "objective": "Move the two authored held jumps early enough to clear each Cactus encounter at canonical starting speed.",
+        "motivation": "The real scenario path showed old jumps at 3.18/3.48 and 5.06/5.36 seconds occurred after contact; both Cacti resolved HIT.",
+        "current_state": "Bounded scenario-to-mechanic evidence gap was identified; new focused integration test now exists.",
+        "required_final_state": "Both authored Cacti resolve CLEAN_PASS with zero hits in the real director/script/Player/entity/collision path.",
+        "scope": [
+          "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt",
+          "app/src/test/java/com/anurag9000/forestrun/engine/NamedFloraTreeScenarioIntegrationTest.kt"
+        ],
+        "required_actions": [
+          "Observe actual collision timing at 60 Hz.",
+          "Adjust script pairs to 2.40/2.70 and 4.30/4.60 seconds.",
+          "Assert clean passes, zero hits, canonical trace, and no persistent debug progression."
+        ],
+        "inputs": [
+          "REQ-020",
+          "EncounterDirector.kt",
+          "DebugScenarioScript.kt",
+          "WolfScenarioIntegrationTest.kt",
+          "EagleDepartureIntegrationTest.kt"
+        ],
+        "deliverables": [
+          "DebugScenarioScript.kt correction",
+          "CACTUS_READ integration regression"
+        ],
+        "acceptance_criteria": [
+          "Both authored Eagles are reached through the scenario path and each target announcement and lock is observed.",
+          "Exactly two Eagles are spawned in DEBUG_SCENARIO and action trace matches DeterministicScenarioReplayContract.",
+          "No normal persistent Eagle encounter count is written.",
+          "Focused Robolectric test passes."
+        ],
+        "verification_method": "Focused Robolectric test command for the corresponding class; exact command and result recorded in EVID-126.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-018"
+        ],
+        "conflicts": [
+          "Keep ownership limited to the listed test/source paths; do not overlap active edits."
+        ],
+        "execution_constraints": "No production behavior change; preserve deterministic run isolation. Physical visual acceptance is separate.",
+        "complexity": "medium",
+        "priority": "P1 scenario behavior/evidence",
+        "execution_status": "COMPLETED",
+        "owner": "/root",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-126",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "uncertainty": "Exact-SHA workflow, full catalogue coverage, physical readability and human acceptance remain separate.",
+        "remaining_work": "Exact candidate validation under TASK-C-018.",
+        "completion_evidence": [
+          "EVID-126",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "related_prior_work": [
+          "TASK-A-035 OWL_DIVE input/capture correction",
+          "TASK-A-037 WOLF_CHARGE scenario correction"
+        ],
+        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta; full Python and Java21 Gradle suites passed",
+        "next_action": "No further work for this bounded task; exact candidate workflow remains TASK-C-018.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "FOCUSED TEST PASSED LOCALLY",
+        "evidence_status": "CURRENT FOCUSED EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-A-041",
+        "title": "Cover flora/tree showcase dispatch and named geometry scenarios",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "scenario integration coverage",
+        "target_phase": "A - source completion",
+        "objective": "Add scenario-path assertions for ordered flora/tree showcase content, Orchid/Bamboo geometry, and selected named presentation state.",
+        "motivation": "Existing catalogue/entity tests did not establish all selected scenario claims through actual director/factory/runtime paths.",
+        "current_state": "Bounded scenario-to-mechanic evidence gap was identified; new focused integration test now exists.",
+        "required_final_state": "Exact showcase order and viable safe geometry are established using real spawned entities; selected named presentation paths advance.",
+        "scope": [
+          "app/src/test/java/com/anurag9000/forestrun/engine/NamedFloraTreeScenarioIntegrationTest.kt"
+        ],
+        "required_actions": [
+          "Drive actual EncounterDirector and EntityManager at 60 Hz.",
+          "Assert exact ordered entities for both showcases.",
+          "Check Orchid thread admits Player body and Bamboo gap is body-sized and jump-reachable.",
+          "Exercise selected named flora/tree live states."
+        ],
+        "inputs": [
+          "REQ-020",
+          "EncounterDirector.kt",
+          "DebugScenarioScript.kt",
+          "WolfScenarioIntegrationTest.kt",
+          "EagleDepartureIntegrationTest.kt"
+        ],
+        "deliverables": [
+          "NamedFloraTreeScenarioIntegrationTest.kt"
+        ],
+        "acceptance_criteria": [
+          "Both authored Eagles are reached through the scenario path and each target announcement and lock is observed.",
+          "Exactly two Eagles are spawned in DEBUG_SCENARIO and action trace matches DeterministicScenarioReplayContract.",
+          "No normal persistent Eagle encounter count is written.",
+          "Focused Robolectric test passes."
+        ],
+        "verification_method": "Focused Robolectric test command for the corresponding class; exact command and result recorded in EVID-126.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-018"
+        ],
+        "conflicts": [
+          "Keep ownership limited to the listed test/source paths; do not overlap active edits."
+        ],
+        "execution_constraints": "No production behavior change; preserve deterministic run isolation. Physical visual acceptance is separate.",
+        "complexity": "medium",
+        "priority": "P1 scenario behavior/evidence",
+        "execution_status": "COMPLETED",
+        "owner": "/root",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-126",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "uncertainty": "Exact-SHA workflow, full catalogue coverage, physical readability and human acceptance remain separate.",
+        "remaining_work": "Exact candidate validation under TASK-C-018.",
+        "completion_evidence": [
+          "EVID-126",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "related_prior_work": [
+          "TASK-A-035 OWL_DIVE input/capture correction",
+          "TASK-A-037 WOLF_CHARGE scenario correction"
+        ],
+        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta; full Python and Java21 Gradle suites passed",
+        "next_action": "No further work for this bounded task; exact candidate workflow remains TASK-C-018.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "FOCUSED TEST PASSED LOCALLY",
+        "evidence_status": "CURRENT FOCUSED EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-A-042",
+        "title": "Exercise named animal scenario behaviors through real scenario paths",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "scenario integration coverage",
+        "target_phase": "A - source completion",
+        "objective": "Connect CAT_KINDNESS, FOX_MIRROR, HEDGEHOG_DEBUFF, DOG_HAZARD and DOG_BUDDY to their actual runtime outcomes/actions.",
+        "motivation": "Entity presence and direct unit tests did not prove these named scenarios actually demonstrate their advertised behaviors.",
+        "current_state": "Bounded scenario-to-mechanic evidence gap was identified; new focused integration test now exists.",
+        "required_final_state": "Each scenario runs through real director/script/Player/entity/collision owners and demonstrates its named behavior without persistent debug contamination.",
+        "scope": [
+          "app/src/test/java/com/anurag9000/forestrun/engine/NamedAnimalScenarioIntegrationTest.kt"
+        ],
+        "required_actions": [
+          "Drive each authored scenario through the real update/collision path.",
+          "Assert specific named outcome/behavior.",
+          "Assert debug progression isolation."
+        ],
+        "inputs": [
+          "REQ-020",
+          "EncounterDirector.kt",
+          "DebugScenarioScript.kt",
+          "WolfScenarioIntegrationTest.kt",
+          "EagleDepartureIntegrationTest.kt"
+        ],
+        "deliverables": [
+          "NamedAnimalScenarioIntegrationTest.kt"
+        ],
+        "acceptance_criteria": [
+          "Both authored Eagles are reached through the scenario path and each target announcement and lock is observed.",
+          "Exactly two Eagles are spawned in DEBUG_SCENARIO and action trace matches DeterministicScenarioReplayContract.",
+          "No normal persistent Eagle encounter count is written.",
+          "Focused Robolectric test passes."
+        ],
+        "verification_method": "Focused Robolectric test command for the corresponding class; exact command and result recorded in EVID-127.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-018"
+        ],
+        "conflicts": [
+          "Keep ownership limited to the listed test/source paths; do not overlap active edits."
+        ],
+        "execution_constraints": "No production behavior change; preserve deterministic run isolation. Physical visual acceptance is separate.",
+        "complexity": "medium",
+        "priority": "P1 scenario behavior/evidence",
+        "execution_status": "COMPLETED",
+        "owner": "/root",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-127",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "uncertainty": "Exact-SHA workflow, full catalogue coverage, physical readability and human acceptance remain separate.",
+        "remaining_work": "Exact candidate validation under TASK-C-018.",
+        "completion_evidence": [
+          "EVID-127",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "related_prior_work": [
+          "TASK-A-035 OWL_DIVE input/capture correction",
+          "TASK-A-037 WOLF_CHARGE scenario correction"
+        ],
+        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta; full Python and Java21 Gradle suites passed",
+        "next_action": "No further work for this bounded task; exact candidate workflow remains TASK-C-018.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "FOCUSED TEST PASSED LOCALLY",
+        "evidence_status": "CURRENT FOCUSED EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-A-043",
+        "title": "Connect Owl and Chickadee scenarios to their runtime mechanic states",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "scenario integration coverage",
+        "target_phase": "A - source completion",
+        "objective": "Prove OWL_DIVE advances alert-to-dive and CHICKADEE_SWERVE produces seeded altitude variation consistently through the real scenario path.",
+        "motivation": "Previous direct behavior evidence did not connect these authored scenario definitions to their advertised mechanics.",
+        "current_state": "Bounded scenario-to-mechanic evidence gap was identified; new focused integration test now exists.",
+        "required_final_state": "Focused tests observe Owl alert/dive and repeatable seeded Chickadee variation using actual director/factory/entity updates.",
+        "scope": [
+          "app/src/test/java/com/anurag9000/forestrun/engine/OwlScenarioIntegrationTest.kt",
+          "app/src/test/java/com/anurag9000/forestrun/engine/ChickadeeScenarioIntegrationTest.kt"
+        ],
+        "required_actions": [
+          "Run OWL_DIVE through alert and dive.",
+          "Run/replay CHICKADEE_SWERVE and compare seeded behavior."
+        ],
+        "inputs": [
+          "REQ-020",
+          "EncounterDirector.kt",
+          "DebugScenarioScript.kt",
+          "WolfScenarioIntegrationTest.kt",
+          "EagleDepartureIntegrationTest.kt"
+        ],
+        "deliverables": [
+          "OwlScenarioIntegrationTest.kt",
+          "ChickadeeScenarioIntegrationTest.kt"
+        ],
+        "acceptance_criteria": [
+          "Both authored Eagles are reached through the scenario path and each target announcement and lock is observed.",
+          "Exactly two Eagles are spawned in DEBUG_SCENARIO and action trace matches DeterministicScenarioReplayContract.",
+          "No normal persistent Eagle encounter count is written.",
+          "Focused Robolectric test passes."
+        ],
+        "verification_method": "Focused Robolectric test command for the corresponding class; exact command and result recorded in EVID-128.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-018"
+        ],
+        "conflicts": [
+          "Keep ownership limited to the listed test/source paths; do not overlap active edits."
+        ],
+        "execution_constraints": "No production behavior change; preserve deterministic run isolation. Physical visual acceptance is separate.",
+        "complexity": "medium",
+        "priority": "P1 scenario behavior/evidence",
+        "execution_status": "COMPLETED",
+        "owner": "/root",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-128",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "uncertainty": "Exact-SHA workflow, full catalogue coverage, physical readability and human acceptance remain separate.",
+        "remaining_work": "Exact candidate validation under TASK-C-018.",
+        "completion_evidence": [
+          "EVID-128",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "related_prior_work": [
+          "TASK-A-035 OWL_DIVE input/capture correction",
+          "TASK-A-037 WOLF_CHARGE scenario correction"
+        ],
+        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta; full Python and Java21 Gradle suites passed",
+        "next_action": "No further work for this bounded task; exact candidate workflow remains TASK-C-018.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "FOCUSED TEST PASSED LOCALLY",
+        "evidence_status": "CURRENT FOCUSED EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-C-018",
+        "title": "Verify selected scenario integration delta on exact committed main candidate",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "exact-SHA regression and integration verification",
+        "target_phase": "C - implementation fidelity and risk-based verification",
+        "objective": "Run the added scenario integration tests and applicable full Android host/API35 validation for the exact pushed main SHA.",
+        "motivation": "Local changes include scenario-script timing and several new tests; previous exact-SHA evidence does not cover this delta.",
+        "current_state": "Full Python suite passes 1,398 tests (EVID-129); full Java21 Gradle compile/test/lint/package run passes with 1,320 tests (EVID-130). Current delta is not yet committed/pushed or validated by exact-SHA hosted workflows.",
+        "required_final_state": "Exact SHA has successful host/release/lint/package and API35 connected results, including these tests.",
+        "scope": [
+          "current source/test delta",
+          "exact pushed main SHA",
+          "hosted Android validation",
+          "applicability and estate-certificate workflows"
+        ],
+        "required_actions": [
+          "Review owned diff and preserve unrelated user state.",
+          "Commit and push the authorized delta directly to main.",
+          "Verify exact SHA and workflow/job conclusions.",
+          "Record artifacts/results; investigate failures without weakening coverage."
+        ],
+        "inputs": [
+          "TASK-A-039",
+          "EVID-123",
+          "EVID-124",
+          "EVID-125"
+        ],
+        "deliverables": [
+          "Exact-SHA workflow evidence",
+          "Updated scenario status ledger"
+        ],
+        "acceptance_criteria": [
+          "All required hosted jobs for the exact full SHA succeed.",
+          "New scenario integration test is included and passes.",
+          "No source immutability or release hardening check is weakened."
+        ],
+        "verification_method": "GitHub Actions exact-head run/job/step summaries and artifacts; local Java17 limitation remains explicit.",
+        "dependency_ids": [
+          "TASK-A-039",
+          "TASK-A-040",
+          "TASK-A-041",
+          "TASK-A-042",
+          "TASK-A-043"
+        ],
+        "downstream_task_ids": [
+          "TASK-E-001"
+        ],
+        "conflicts": [
+          "Any later source change invalidates exact-SHA evidence."
+        ],
+        "execution_constraints": "Do not claim physical, human, legal, signing, Play or release acceptance from CI.",
+        "complexity": "medium",
+        "priority": "P1 current-candidate verification",
+        "execution_status": "NOT STARTED",
+        "owner": null,
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-123",
+          "EVID-126",
+          "EVID-127",
+          "EVID-128",
+          "EVID-129",
+          "EVID-130"
+        ],
+        "uncertainty": "Exact candidate SHA/workflow outcome are future evidence.",
+        "remaining_work": "Review, commit, push and verify exact candidate.",
+        "completion_evidence": [],
+        "related_prior_work": [
+          "TASK-C-015 WOLF_CHARGE exact-SHA verification",
+          "TASK-C-016 predecessor source verification"
+        ],
+        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+        "next_action": "Review owned diff and preserve unrelated state, then commit/push this authorized delta and verify its exact SHA through required workflows.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "FOCUSED LOCAL TESTS PASS; EXACT CANDIDATE REQUIRED",
+        "evidence_status": "CURRENT FOCUSED EVIDENCE CONFIRMED"
       }
     ],
     "applicability_matrix": [
@@ -8729,35 +9467,31 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
-    "working_tree_delta": "Source comment-only cleanup is pushed; audio knowledge-base reconciliation is in progress. Local main and origin/main matched at bac310 before documentation update. Android validation 40623171681 is in progress on bac310; applicability 40623171660 and estate certificate 40623171680 passed.",
+    "base_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437",
+    "working_tree_delta": "Added EagleScenarioIntegrationTest plus linked ledgers/docs. Focused test and full Python suite pass locally. The full JVM command cannot run here because installed Java17 cannot support existing Robolectric SDK36 tests; exact hosted Java21/API35 validation is pending after commit.",
     "evidence_ids": [
-      "EVID-118",
-      "EVID-119",
-      "EVID-120",
-      "EVID-121",
-      "EVID-122"
+      "EVID-123",
+      "EVID-124",
+      "EVID-125"
     ],
-    "status": "Prior exact-source validation applies to behavior-identical ancestor 113a4eb. For exact bac310, applicability and estate certificate passed; Android validation remains in progress. Physical/human/external gates remain open.",
-    "documentation_verification_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad (current source snapshot before this documentation update)",
-    "documentation_workflow_run": "Android 40623171681 in progress on bac310; applicability 40623171660 and estate certificate 40623171680 succeeded."
+    "status": "The exact 8f host/release/lint/package job succeeded in run 40623906250; its API35 connected job was still in progress at last poll. New EAGLE_MARK integration test is locally focused-passing but not yet exact-SHA verified. Physical/human/external gates remain open.",
+    "documentation_verification_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current source/documentation delta",
+    "documentation_workflow_run": "Run 40623906250 exact 8f: host job success; API35 job in progress. New-source validation is TASK-C-017."
   },
   "current_repository_state": {
     "branch": "main",
-    "verified_source_candidate_sha": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
-    "candidate_remote_confirmation": "Local main and origin/main matched at bac310 before documentation edits; workflow run records use the same full SHA.",
-    "working_tree": "Source commit bac310 pushed. Preserved pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md and docs/repository_knowledge/current_worktree_delta_20261027/. New audio documentation/ledgers are lead-owned; do not stage unrelated untracked files.",
-    "current_delta_task": "TASK-E-001",
+    "verified_source_candidate_sha": "8f9340d431f7abb84719aef0a5b1174cafb0c437",
+    "candidate_remote_confirmation": "Local main and origin/main matched at 8f9340d before current source/docs edits.",
+    "working_tree": "Pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md and docs/repository_knowledge/current_worktree_delta_20261027/ are preserved. Current owned delta includes EagleScenarioIntegrationTest and linked documentation/ledger updates only; unrelated untracked state must not be staged.",
+    "current_delta_task": "TASK-C-017",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md; docs/repository_knowledge/audio_asset_and_wiring_review_2026-10-28.md",
     "evidence_ids": [
-      "EVID-118",
-      "EVID-119",
-      "EVID-120",
-      "EVID-121",
-      "EVID-122"
+      "EVID-123",
+      "EVID-124",
+      "EVID-125"
     ],
-    "latest_documentation_verification_sha": "bac310001d48629d4542c3ed75b65d1fb5d241ad (prior to current doc update)",
-    "latest_documentation_workflow": "Android run 40623171681 in progress; applicability 40623171660 and estate certificate 40623171680 passed on bac310."
+    "latest_documentation_verification_sha": "8f9340d431f7abb84719aef0a5b1174cafb0c437 before current EAGLE_MARK delta",
+    "latest_documentation_workflow": "Prior exact 8f run 40623906250 host job succeeded; API35 connected job was in progress. New source verification awaits TASK-C-017."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
@@ -8780,15 +9514,17 @@
     "status": "Exact candidate API35 ordinary connected tests passed 28/28; both candidate APK installs succeeded; process-death prepare passed, host confirmed no app PID after force-stop, and fresh-process restore passed. Host/release/lint/package also passed. Physical/OEM durability remains unverified."
   },
   "pending_source_delta": {
-    "base_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
-    "description": "No pending source delta. WOLF_CHARGE source correction is committed and exact-SHA verified; physical/human acceptance is separately tracked.",
-    "task_ids": [],
-    "evidence_ids": [
-      "EVID-114",
-      "EVID-115",
-      "EVID-116",
-      "EVID-117"
+    "base_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437",
+    "description": "Add focused EAGLE_MARK scenario integration coverage and update evidence/coverage/task ledgers. Does not modify production gameplay code. The whole authored scenario catalogue still needs requirement-level disposition; device/human/external gates remain open.",
+    "task_ids": [
+      "TASK-A-039",
+      "TASK-C-017"
     ],
-    "status": "NO_PENDING_SOURCE_DELTA"
+    "evidence_ids": [
+      "EVID-123",
+      "EVID-124",
+      "EVID-125"
+    ],
+    "status": "IMPLEMENTED_LOCALLY; EXACT_CANDIDATE_VERIFICATION_PENDING"
   }
 }

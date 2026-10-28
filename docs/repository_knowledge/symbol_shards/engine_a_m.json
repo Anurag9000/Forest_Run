@@ -9377,7 +9377,7 @@
             }
           ],
           "outputs": "List<DebugScenarioStep>",
-          "state_or_effects": "EncounterScenario.CACTUS_READ -> listOf( DebugScenarioStep(3.18f, DebugScenarioAction.HOLD_JUMP_START), DebugScenarioStep(3.48f, DebugScenarioAction.HOLD_JUMP_END),",
+          "state_or_effects": "EncounterScenario.CACTUS_READ -> listOf( DebugScenarioStep(2.40f, DebugScenarioAction.HOLD_JUMP_START), DebugScenarioStep(2.70f, DebugScenarioAction.HOLD_JUMP_END), DebugScenarioStep(4.30f, DebugScenarioAction.HOLD_JUMP_START), DebugScenarioStep(4.60f, DebugScenarioAction.HOLD_JUMP_END),",
           "dependencies": [],
           "consumers": [],
           "goal_ids": [
@@ -47855,6 +47855,6 @@
       "symbol_count": 11
     }
   ],
-  "current_delta_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + working-tree overlay (2026-10-28)",
-  "current_delta_note": "Only AssetPaths Wolf constant was reconciled in this declaration shard; the full current-source candidate verification is tracked by TASK-C-014."
+  "current_delta_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local CACTUS_READ timing correction",
+  "current_delta_note": "CACTUS_READ authored input timings changed to 2.40/2.70 and 4.30/4.60 seconds after real-path integration evidence showed the previous jumps were late; see FIND-024 and EVID-126."
 }

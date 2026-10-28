@@ -1,9 +1,11 @@
 # Forest Run source-completion delta — 2026-10-28
 
+> Chronological append-only investigation log. Each earlier subsection is a snapshot from the time it was written; later candidate sections supersede earlier “current” wording. The latest source section is at the end. Do not treat historical run-in-progress text as current CI state.
+
 ## Current source and audio delta — 2026-10-28
 
-- Current `main` is `bac310001d48629d4542c3ed75b65d1fb5d241ad`, pushed and matched by exact-SHA workflow metadata. It removes a stale Duck quack-SFX comment; this is comment-only and does not change gameplay behavior.
-- Exact-SHA applicability workflow [40623171660](https://github.com/Anurag9000/Forest_Run/actions/runs/40623171660) and estate certificate [40623171680](https://github.com/Anurag9000/Forest_Run/actions/runs/40623171680) passed. Android validation [40623171681](https://github.com/Anurag9000/Forest_Run/actions/runs/40623171681) is in progress at this snapshot; TASK-C-016 tracks it.
+- At the time of this initial note, `main` was bac310001d48629d4542c3ed75b65d1fb5d241ad, which removed a stale Duck quack-SFX comment without behavior change. This is a historical snapshot, superseded by later candidate sections.
+- The bac310 applicability/certificate runs and Android run are historical. TASK-C-016 was subsequently repointed to exact 8f9340d run 40623906250; its host job passed and API35 connected job was still in progress at the latest poll.
 - All 15 Ogg files were probed and decoded, then current payload hashes were checked against the review; all remain unchanged. Static call paths and the stale Duck note/history are reconciled in [audio_asset_and_wiring_review_2026-10-28.md](audio_asset_and_wiring_review_2026-10-28.md). No audio was listened to. Sample analysis does not establish mix, loop seam, true peak, creative approval, provenance, or licensing.
 - No physical-device access is available. Physical performance/acceptance and human/external release gates remain pending; hosted emulator evidence is not a substitute.
 - The previous exact-tested source candidate `113a4ebdf671dc16470b18de0d4dff7685230045` passed Android host/release/lint/package and API35 connected checks; this result is predecessor evidence, not exact-bac310 Android evidence.
@@ -70,3 +72,21 @@ On `113a4ebdf671dc16470b18de0d4dff7685230045`, host/release/lint/package and API
 ### Documentation-only HEAD reconciliation
 
 A fresh fetch on 2026-10-28 confirmed local `main` and `origin/main` at documentation-only commit `be5b402ddf4efdaaf0c3bde09093379bda15b5e9`; application source remains exact-tested commit `113a4ebdf671dc16470b18de0d4dff7685230045`. On `be5b402`, no-trainable-surface workflow `40622204348` and estate-certificate workflow `40622204354` passed; Android validation `40622204411` was still in progress at last observation. The master map and ledger now distinguish current documentation HEAD, verified application source, and the pending exact-HEAD Android result. Existing human/device/legal/Play/governance tasks remain external evidence gates.
+
+## EAGLE_MARK scenario-to-mechanic integration delta
+
+A bounded scenario review found that `EAGLE_MARK`'s authored director and four timed jump actions were checked separately from Eagle lock behavior. This did not prove that the scenario failed, but left its named target-mark/lock beat without an integration assertion. `EagleScenarioIntegrationTest` now advances the actual `EncounterDirector`, `DebugScenarioScript`, `Player`, `EntityManager` update and collision path for 20 seconds at 60 Hz. It observes the two authored Eagle objects and requires both to announce and lock targets, confirms the four-event trace satisfies `DeterministicScenarioReplayContract`, and confirms debug execution does not write the ordinary persistent Eagle encounter count.
+
+Focused command `./gradlew testDebugUnitTest --tests com.anurag9000.forestrun.engine.EagleScenarioIntegrationTest` passed 1 test with no skips/failures/errors on Kakarot using Java 17 and Robolectric SDK35 (EVID-123). The full Python scripts suite passed 1,398 tests in 24.091 seconds (EVID-124). The combined local Gradle compile/test/lint/package command did not complete: repository Robolectric tests requesting SDK36 require Java21, while this host only has Java17; failures occurred at sandbox creation before test methods (EVID-125). Do not classify that as a product defect or as a full-suite pass.
+
+The change remains an uncommitted source delta on top of `8f9340d431f7abb84719aef0a5b1174cafb0c437` at the time this paragraph was added. Exact-SHA hosted Java21 host/API35 validation is tracked by TASK-C-017. The previous exact-candidate run 40623906250 is for 8f9340d only: its host job passed, while API35 connected validation was still running at the last poll; it cannot validate this new test. REQ-020 remains partial at the whole scenario-catalogue level until the other authored scenario claims are dispositioned. Physical readability, human acceptance and external release gates remain separate.
+
+## Selected authored-scenario integration delta
+
+A real-path test found that `CACTUS_READ` scheduled both held jumps after the cactus hitboxes reached the Player. In the prior schedule (3.18/3.48 and 5.06/5.36 seconds), both encounters resolved `HIT`. `DebugScenarioScript` now schedules the pairs at 2.40/2.70 and 4.30/4.60 seconds. `NamedFloraTreeScenarioIntegrationTest` drives the director, timed script, Player, `EntityManager`, and collision arbitration; it now observes two clean passes and zero hits. Its other assertions cover ordered flora/tree showcase content, Orchid/Bamboo safe geometry, and selected flora/tree presentation paths. The focused class passed 5/5 under Java 21/Robolectric SDK35 (EVID-126).
+
+Additional focused tests cover Cat kindness, Fox mirror jump, Hedgehog stumble/debuff, Dog hazard and buddy modes (5/5, EVID-127); Owl alert-to-dive and Chickadee seeded altitude/replay consistency (2/2, EVID-128). These are bounded scenario checks and do not close the entire authored catalogue. Exact-SHA hosted verification for the current delta remains pending under TASK-C-018. No physical device access is available; these tests do not establish physical readability, hardware acceptance, creative approval, or release readiness.
+
+## Full local verification after scenario delta
+
+Using `/opt/android-studio/jbr` (Java 21), the requested combined local Gradle gate passed: debug/release/instrumentation Kotlin compile, full `testDebugUnitTest`, debug/release lint, debug and AndroidTest APK assembly, and release AAB bundle. The XML aggregate reports 1,320 tests, zero failures/errors/skips. The full Python scripts suite passed 1,398 tests (24.733s). See EVID-129 and EVID-130. These are local checks against the uncommitted delta; hosted exact-SHA CI and connected API35 execution are still required. Physical/human acceptance remains unavailable/pending, and no release acceptance is inferred.

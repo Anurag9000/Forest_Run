@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "current_phase": "Authorized source completion and verification reconciliation",
-  "current_phase_status": "Current source candidate bac310001d48629d4542c3ed75b65d1fb5d241ad is pushed. Applicability/certificate passed; Android validation 40623171681 is in progress (TASK-C-016). Audio payload/wiring delta is documented (EVID-118/EVID-119). Physical-device access is unavailable; device, human, external governance and final readiness gates remain open.",
+  "current_phase_status": "Canonical main/origin are at 8f9340d. Current source delta corrects late CACTUS_READ jumps and adds selected scenario integration coverage. Full Python scripts suite passed 1,398 tests and full Java21 Gradle compile/test/lint/package gate passed with 1,320 tests (EVID-129/130). TASK-A-039..043 are locally complete; TASK-C-018 tracks exact-candidate hosted validation. User reports no physical-device access; external gates remain open.",
   "phases": [
     {
       "id": "A",
@@ -13,7 +13,12 @@
         "TASK-A-033",
         "TASK-A-034",
         "TASK-A-035",
-        "TASK-A-038"
+        "TASK-A-038",
+        "TASK-A-039",
+        "TASK-A-040",
+        "TASK-A-041",
+        "TASK-A-042",
+        "TASK-A-043"
       ],
       "status": "Prior source delta review reused; TASK-A-035 closes the OWL_DIVE capture input gap. Exact-main delta review at 1d1a found no additional requirement-backed source change (EVID-074/EVID-077).",
       "entry_conditions": [
@@ -62,9 +67,11 @@
         "TASK-C-011",
         "TASK-C-012",
         "TASK-C-013",
-        "TASK-C-016"
+        "TASK-C-016",
+        "TASK-C-017",
+        "TASK-C-018"
       ],
-      "status": "Current exact-candidate TASK-C-016 is pending hosted Android run 40623171681; source/audio delta is reconciled in EVID-118/EVID-119. Older tasks remain completed at recorded scopes.",
+      "status": "Full local Java21 compile/test/lint/package gate passes (1,320 tests); full Python suite passes (1,398 tests). Exact-candidate hosted verification is TASK-C-018. Physical access is unavailable.",
       "entry_conditions": [
         "Preserve exact candidate/base and the original dirty checkout",
         "Reuse EVID-072 and EVID-074–EVID-078; do not repeat passing suites without a source or requirement delta",
@@ -137,5 +144,5 @@
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
   },
-  "baseline": "Current source candidate: bac310001d48629d4542c3ed75b65d1fb5d241ad. Reconcile local/remote and preserved untracked state before resuming."
+  "baseline": "Source baseline 8f9340d431f7abb84719aef0a5b1174cafb0c437; current local delta is tracked by TASK-A-039/TASK-C-017."
 }

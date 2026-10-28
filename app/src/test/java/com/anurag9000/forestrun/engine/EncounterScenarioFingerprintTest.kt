@@ -43,7 +43,7 @@ class EncounterScenarioFingerprintTest {
             EncounterScenarioFingerprint.sha256(EncounterScenario.CACTUS_READ)
         )
         assertEquals(
-            "5812fc981b28157c90f5d88f3c6f31c32bbb8dbfe5d32e1ba38e973625ca81a7",
+            "7c48df64352a1df6b6b0a28ebd121ad1123a43c9ee8709f25831825acfe8be34",
             EncounterScenarioFingerprint.traceContractSha256(EncounterScenario.CACTUS_READ)
         )
     }
@@ -55,10 +55,10 @@ class EncounterScenarioFingerprintTest {
             .toString(Charsets.UTF_8)
 
         assertTrue(payload.startsWith("forest-run-scenario-trace-contract-v1\n"))
-        assertTrue(payload.contains("3180000\n"))
-        assertTrue(payload.contains("3480000\n"))
-        assertTrue(payload.contains("5060000\n"))
-        assertTrue(payload.contains("5360000\n"))
+        assertTrue(payload.contains("2400000\n"))
+        assertTrue(payload.contains("2700000\n"))
+        assertTrue(payload.contains("4300000\n"))
+        assertTrue(payload.contains("4600000\n"))
         assertTrue(payload.contains("HOLD_JUMP_START"))
         assertTrue(payload.contains("HOLD_JUMP_END"))
     }

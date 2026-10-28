@@ -52,7 +52,7 @@ class DeterministicScenarioReplayContractTest {
             DeterministicScenarioReplayContract.matches(
                 valid.copy(
                     events = valid.events.toMutableList().also { events ->
-                        events[0] = events[0].copy(scheduledAtSeconds = 3.17f)
+                        events[0] = events[0].copy(scheduledAtSeconds = 2.39f)
                     }
                 )
             )

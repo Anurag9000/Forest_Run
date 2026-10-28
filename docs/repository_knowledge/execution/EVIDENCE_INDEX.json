@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad plus documentation working-tree delta",
+  "repository_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local source/test/docs delta",
   "snapshot_date": "2026-10-28",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -1800,6 +1800,141 @@
       ],
       "result": "Documentation consistency remained valid after physical-device access blocker was recorded.",
       "limitations": "The count of 119 evidence records was before adding this EVID-122 record. Static document validation does not establish runtime behavior, Android CI completion, physical/human acceptance or release readiness."
+    },
+    {
+      "id": "EVID-123",
+      "type": "focused EAGLE_MARK scenario-to-mechanic Robolectric regression",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/EagleScenarioIntegrationTest.kt; app/build/test-results/testDebugUnitTest/TEST-com.anurag9000.forestrun.engine.EagleScenarioIntegrationTest.xml",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus uncommitted test delta",
+      "supports": [
+        "REQ-020",
+        "FIND-023",
+        "GAP-012",
+        "TASK-A-039"
+      ],
+      "observation": "The focused test drives EAGLE_MARK through the actual EncounterDirector, DebugScenarioScript, Player, EntityManager and collision checks for 20 seconds at 60 Hz. It observes exactly two Eagles; each reaches targetAnnounced and isLocked; the script emits four actions whose trace matches DeterministicScenarioReplayContract; no persistent Eagle encounter is written.",
+      "commands": [
+        "./gradlew testDebugUnitTest --tests com.anurag9000.forestrun.engine.EagleScenarioIntegrationTest"
+      ],
+      "result": "BUILD SUCCESSFUL; test report: 1 test, 0 skipped, 0 failures, 0 errors; test duration 2.906s. Local host Kakarot, Java 17, Robolectric SDK35.",
+      "limitations": "Uncommitted source delta is not an exact canonical candidate. This test proves internal target announcement and lock states, not visual readability or human/device acceptance. Exact-SHA hosted Java21 verification is required."
+    },
+    {
+      "id": "EVID-124",
+      "type": "full Python script-suite regression after EAGLE_MARK test delta",
+      "path": "scripts/",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local test delta",
+      "supports": [
+        "TASK-C-017"
+      ],
+      "observation": "The complete Python scripts unittest suite was run from the active Forest_Run checkout.",
+      "commands": [
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "Ran 1,398 tests in 24.091s; OK; exit code 0.",
+      "limitations": "Python evidence tooling results do not establish Android/Kotlin behavior or exact-candidate hosted validation."
+    },
+    {
+      "id": "EVID-125",
+      "type": "local broad Gradle validation blocked by installed Java version",
+      "path": "app/build/test-results/testDebugUnitTest/TEST-com.anurag9000.forestrun.engine.DifficultyScalerTest.xml; app/build/reports/tests/testDebugUnitTest/index.html",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local test delta",
+      "supports": [
+        "TASK-C-017"
+      ],
+      "observation": "The requested combined Gradle compile/test/lint/package command reached :app:testDebugUnitTest but existing Robolectric test classes selecting Android SDK36 failed sandbox creation before test methods. The XML reason is: “Android SDK 36 requires Java 21 (have Java 17)”. The focused new SDK35 test passed separately.",
+      "commands": [
+        "./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease"
+      ],
+      "result": "The broad Gradle command failed at :app:testDebugUnitTest because the invocation used Java17; AndroidTest Kotlin compilation had completed, while subsequent lint/package tasks did not complete in this invocation. A later Java21 full-gate rerun is tracked by EVID-129.",
+      "limitations": "This command was invoked using the system-default Java 17 before the available Android Studio JBR at /opt/android-studio/jbr was discovered. The observed failure is still accurately attributed to the process running Java17 against Robolectric SDK36; a later full rerun under Java21 is recorded separately. Do not use this event to claim the host lacks Java21."
+    },
+    {
+      "id": "EVID-126",
+      "type": "CACTUS_READ timing correction and flora/tree integration test",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt; app/src/test/java/com/anurag9000/forestrun/engine/NamedFloraTreeScenarioIntegrationTest.kt",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local source/test/docs delta",
+      "supports": [
+        "TASK-A-040",
+        "TASK-A-041",
+        "TASK-C-018"
+      ],
+      "observation": "A real director/script/player/EntityManager/collision simulation showed the original CACTUS_READ jump actions occurred after contact and both Cacti resolved HIT. The script now schedules jumps at 2.40/2.70 and 4.30/4.60 seconds. The focused flora/tree integration class then passed all five tests, including two clean Cactus passes, exact showcase dispatch, Orchid safe-thread admission, Bamboo reachable-gap admission, and focused flora/tree presentation advancement.",
+      "commands": [
+        "JAVA_HOME=/opt/android-studio/jbr PATH=/opt/android-studio/jbr/bin:$PATH ./gradlew :app:testDebugUnitTest --tests com.anurag9000.forestrun.engine.NamedFloraTreeScenarioIntegrationTest --no-daemon"
+      ],
+      "result": "BUILD SUCCESSFUL; 5 tests, 0 failures, 0 errors, 0 skipped.",
+      "limitations": "Focused Robolectric/source behavior only. Exact-SHA hosted validation remains pending; no physical gameplay/readability or human acceptance evidence."
+    },
+    {
+      "id": "EVID-127",
+      "type": "Named animal deterministic scenario integration tests",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedAnimalScenarioIntegrationTest.kt",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local source/test/docs delta",
+      "supports": [
+        "TASK-A-042",
+        "TASK-C-018"
+      ],
+      "observation": "Five authored scenarios are driven through scenario/director/script/player/entity/collision owners. The assertions cover Cat kindness/clean pass, Fox mirror jump, Hedgehog nonlethal stumble/debuff, Dog hazard projectile, Dog harmless buddy, and debug persistence isolation.",
+      "commands": [
+        "./gradlew testDebugUnitTest --tests com.anurag9000.forestrun.engine.NamedAnimalScenarioIntegrationTest"
+      ],
+      "result": "Agent-reported BUILD SUCCESSFUL; 5 tests, 0 failures, 0 errors, 0 skipped.",
+      "limitations": "Focused Robolectric tests; root inspected test source. Exact-SHA hosted verification remains pending."
+    },
+    {
+      "id": "EVID-128",
+      "type": "Owl and Chickadee deterministic scenario integration tests",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/OwlScenarioIntegrationTest.kt; app/src/test/java/com/anurag9000/forestrun/engine/ChickadeeScenarioIntegrationTest.kt",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local source/test/docs delta",
+      "supports": [
+        "TASK-A-043",
+        "TASK-C-018"
+      ],
+      "observation": "Owl scenario integration observes the actual OWL_DIVE alert-to-dive progression through the real scenario path. Chickadee scenario integration observes seeded altitude variation and repeatability through director/factory/entity updates.",
+      "commands": [
+        "JAVA_HOME=/opt/android-studio/jbr PATH=/opt/android-studio/jbr/bin:$PATH ./gradlew testDebugUnitTest --tests com.anurag9000.forestrun.engine.OwlScenarioIntegrationTest --tests com.anurag9000.forestrun.engine.ChickadeeScenarioIntegrationTest --no-daemon"
+      ],
+      "result": "Agent-reported BUILD SUCCESSFUL; 2 tests total, 0 failures, 0 errors, 0 skipped.",
+      "limitations": "Focused Robolectric tests. Static timing review only for other bird scenarios; this is not physical readability or acceptance evidence."
+    },
+    {
+      "id": "EVID-129",
+      "type": "full Python scripts test suite after CACTUS_READ timing and fixture reconciliation",
+      "path": "scripts/test_*.py; scripts/test_scenario_source_contract.py; scripts/test_validate_scenario_trace.py",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local source/test delta",
+      "supports": [
+        "TASK-A-040",
+        "TASK-A-041",
+        "TASK-A-042",
+        "TASK-A-043",
+        "TASK-C-018"
+      ],
+      "observation": "The entire Python scripts unittest suite completed after updating the source-derived CACTUS_READ trace digest and refreshing malformed-trace test fixtures to retain their intended chronology/order failure conditions.",
+      "commands": [
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "Ran 1,398 tests in 24.733 seconds; OK (all passed).",
+      "limitations": "Local host test evidence only; this is not exact-SHA hosted workflow or physical/human acceptance."
+    },
+    {
+      "id": "EVID-130",
+      "type": "full local Java21 compile/test/lint/package validation after scenario delta",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt; app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioReplayContractTest.kt; app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceTest.kt; app/src/test/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprintTest.kt; app/src/test/java/com/anurag9000/forestrun/engine/*ScenarioIntegrationTest.kt",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local source/test delta",
+      "supports": [
+        "TASK-A-040",
+        "TASK-A-041",
+        "TASK-A-042",
+        "TASK-A-043",
+        "TASK-C-018"
+      ],
+      "observation": "Full local Android build/verification chain completed using the Android Studio JBR Java21 runtime. It includes Kotlin debug/release/instrumentation compilation, the full Robolectric/JVM suite, lintDebug/lintRelease, debug and AndroidTest APKs, and release AAB assembly.",
+      "commands": [
+        "JAVA_HOME=/opt/android-studio/jbr PATH=/opt/android-studio/jbr/bin:$PATH ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease --no-daemon"
+      ],
+      "result": "BUILD SUCCESSFUL in 1m 32s. XML aggregation: 1,320 tests, 0 failures, 0 errors, 0 skipped. Outputs exist: debug APK 10,741,795 bytes; AndroidTest APK 663,513 bytes; release AAB 6,353,956 bytes.",
+      "limitations": "Local build and Robolectric evidence only. This does not run connected instrumentation tests, prove exact-SHA hosted CI, establish physical-device/human acceptance, license/provenance approval, Play delivery, or production release readiness."
     }
   ]
 }

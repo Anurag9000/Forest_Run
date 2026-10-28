@@ -9,7 +9,7 @@
     "initial_visible_paths_reported": 961,
     "inventory_records": 1011
   },
-  "current_inventory_count": 1010,
+  "current_inventory_count": 1016,
   "scope": "Union of tracked paths and visible workspace paths, excluding .git internals and ignored build/.gradle trees. Tracked release paths hidden by ignore rules are retained. New docs are included.",
   "coverage_semantics": "INVENTORIED means path/classification only; PARTIALLY_INSPECTED means bounded changed regions or prior map consultation; FULLY_STATICALLY_INSPECTED is reserved for complete small-file reading; generated exclusions have reasons. No inventory state implies runtime verification.",
   "records": [
@@ -3831,7 +3831,7 @@
       "id": "FILE-85D657E41775",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_modified",
+      "worktree_status": "modified current source delta",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
       "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
@@ -3839,9 +3839,15 @@
       "symbols_or_consumers": [
         "DebugScenarioAction`, `DebugScenarioStep`, `DebugScenarioTimedAction`, `DebugScenarioScript.prepare/clear/advanceTimed/stepsFor"
       ],
-      "relationships": [],
+      "relationships": [
+        "REQ-020",
+        "FIND-024",
+        "GAP-013",
+        "TASK-A-040",
+        "EVID-126"
+      ],
       "evidence_ref": "EVID-028",
-      "next_action": "Exact-SHA hosted verification in TASK-C-015.",
+      "next_action": "Exact-candidate hosted verification under TASK-C-018.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -32629,6 +32635,191 @@
       "language_or_format": "Markdown",
       "assigned_task_id": "TASK-A-038",
       "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-EAGLE-SCENARIO-20261028",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/EagleScenarioIntegrationTest.kt",
+      "classification": "JVM/Robolectric integration test",
+      "worktree_status": "new current source delta",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus new local delta",
+      "prior_evidence": "Scenario coverage gap reported by bounded static review; harness pattern reused from WolfScenarioIntegrationTest and EagleDepartureIntegrationTest.",
+      "inspection_detail": "Full 129-line source inspection. Runs EAGLE_MARK through actual director, timed script, Player, EntityManager update and collision path; checks exactly two Eagles each announce and lock, canonical action trace and no persistent encounter record. Focused test passes locally under SDK35.",
+      "symbols_or_consumers": [
+        "EagleScenarioIntegrationTest.eagle mark scenario drives both authored Eagles through target announcement and lock",
+        "observe",
+        "privateBoolean"
+      ],
+      "relationships": [
+        "REQ-020",
+        "FIND-023",
+        "GAP-012",
+        "TASK-A-039",
+        "TASK-C-017",
+        "EVID-123"
+      ],
+      "evidence_ref": "EVID-123",
+      "next_action": "Obtain exact-candidate Java21 host/API35 workflow evidence under TASK-C-017.",
+      "related_goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-039",
+      "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-NAMED-FLORA-TREE-SCENARIO-20261028",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedFloraTreeScenarioIntegrationTest.kt",
+      "classification": "JVM/Robolectric integration test",
+      "worktree_status": "new current source delta",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local delta",
+      "prior_evidence": "Scenario coverage gap reported by bounded static review; harness pattern reused from WolfScenarioIntegrationTest and EagleDepartureIntegrationTest.",
+      "inspection_detail": "279-line file read in full. Real director/script/entity/collision integration for flora/tree order, corrected Cactus clear timing, Orchid/Bamboo safe geometry and selected named presentation paths; focused 5/5.",
+      "symbols_or_consumers": [
+        "NamedFloraTreeScenarioIntegrationTest"
+      ],
+      "relationships": [
+        "REQ-020",
+        "TASK-A-041",
+        "EVID-126"
+      ],
+      "evidence_ref": "EVID-126",
+      "next_action": "Exact-SHA hosted verification under TASK-C-018.",
+      "related_goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-041",
+      "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-NAMED-ANIMAL-SCENARIO-20261028",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedAnimalScenarioIntegrationTest.kt",
+      "classification": "JVM/Robolectric integration test",
+      "worktree_status": "new current source delta",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local delta",
+      "prior_evidence": "Scenario coverage gap reported by bounded static review; harness pattern reused from WolfScenarioIntegrationTest and EagleDepartureIntegrationTest.",
+      "inspection_detail": "197-line file read in full. Actual scenario-path coverage for Cat kindness, Fox mirror, Hedgehog stumble/debuff, Dog hazard and buddy; focused 5/5.",
+      "symbols_or_consumers": [
+        "NamedAnimalScenarioIntegrationTest"
+      ],
+      "relationships": [
+        "REQ-020",
+        "TASK-A-042",
+        "EVID-127"
+      ],
+      "evidence_ref": "EVID-127",
+      "next_action": "Exact-SHA hosted verification under TASK-C-018.",
+      "related_goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-042",
+      "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-OWL-SCENARIO-20261028",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/OwlScenarioIntegrationTest.kt",
+      "classification": "JVM/Robolectric integration test",
+      "worktree_status": "new current source delta",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local delta",
+      "prior_evidence": "Scenario coverage gap reported by bounded static review; harness pattern reused from WolfScenarioIntegrationTest and EagleDepartureIntegrationTest.",
+      "inspection_detail": "107-line file read in full. Actual OWL_DIVE scenario alert-to-dive integration; focused 1/1.",
+      "symbols_or_consumers": [
+        "OwlScenarioIntegrationTest"
+      ],
+      "relationships": [
+        "REQ-020",
+        "TASK-A-043",
+        "EVID-128"
+      ],
+      "evidence_ref": "EVID-128",
+      "next_action": "Exact-SHA hosted verification under TASK-C-018.",
+      "related_goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-043",
+      "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-CHICKADEE-SCENARIO-20261028",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/ChickadeeScenarioIntegrationTest.kt",
+      "classification": "JVM/Robolectric integration test",
+      "worktree_status": "new current source delta",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local delta",
+      "prior_evidence": "Scenario coverage gap reported by bounded static review; harness pattern reused from WolfScenarioIntegrationTest and EagleDepartureIntegrationTest.",
+      "inspection_detail": "116-line file read in full. Actual CHICKADEE_SWERVE seeded altitude and replay integration; focused 1/1.",
+      "symbols_or_consumers": [
+        "ChickadeeScenarioIntegrationTest"
+      ],
+      "relationships": [
+        "REQ-020",
+        "TASK-A-043",
+        "EVID-128"
+      ],
+      "evidence_ref": "EVID-128",
+      "next_action": "Exact-SHA hosted verification under TASK-C-018.",
+      "related_goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-043",
+      "assigned_owner": "/root"
     }
   ],
   "coverage_counts": {
@@ -32678,7 +32869,8 @@
   "coverage_counts_current": {
     "DOCUMENTED": 39,
     "EXCLUDED_WITH_REASON": 3,
-    "FULLY_STATICALLY_INSPECTED": 967,
+    "FULLY_STATICALLY_INSPECTED": 968,
     "PARTIALLY_INSPECTED": 2
-  }
+  },
+  "snapshot_date": "2026-10-28"
 }

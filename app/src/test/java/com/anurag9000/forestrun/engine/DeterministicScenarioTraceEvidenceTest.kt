@@ -73,7 +73,7 @@ class DeterministicScenarioTraceEvidenceTest {
         val incomplete = valid.copy(events = valid.events.dropLast(1))
         val alteredSchedule = valid.copy(
             events = valid.events.toMutableList().also { events ->
-                events[0] = events[0].copy(scheduledAtSeconds = 3.17f)
+                events[0] = events[0].copy(scheduledAtSeconds = 2.39f)
             }
         )
         val alteredAction = valid.copy(

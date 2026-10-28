@@ -14,4 +14,13 @@ The original static investigation's read-only restriction was superseded by the 
 
 
 
-Current source candidate is `bac310001d48629d4542c3ed75b65d1fb5d241ad`. Exact-SHA applicability and estate-certificate workflows passed; Android validation `40623171681` is in progress under `TASK-C-016`. The latest audio payload/wiring delta is recorded in EVID-118/EVID-119 and the linked audio report. Physical-device access is unavailable, so B-001/B-002 remain blocked; D-001..D-007 require genuine human/external owner evidence; E-001 remains dependent on those gates and exact-candidate closure.
+Canonical source candidate remains `8f9340d431f7abb84719aef0a5b1174cafb0c437` while the owned scenario delta is staged. Local full Python and Java21 Gradle validation passed (EVID-129/EVID-130); exact-SHA hosted validation for the changed candidate is TASK-C-018. Prior audio evidence remains EVID-118/EVID-119. Physical-device access is unavailable, so B-001/B-002 remain blocked; D-001..D-007 require genuine human/external owner evidence; E-001 remains dependent on those gates and exact-candidate closure.
+
+
+4. **Scenario delta — `TASK-A-039`–`TASK-A-043` complete locally; `TASK-C-018` next.** Focused tests, full Python suite (1,398) and full Java21 Gradle compile/test/lint/package (1,320) pass (EVID-123, EVID-126–130). Review and commit only the owned delta, push authorized main, then inspect exact-SHA hosted Java21/API35 workflows. The broader REQ-020 scenario matrix remains partial; do not infer complete mechanics coverage.
+
+### Current scenario delta (2026-10-28)
+
+- `CACTUS_READ` authored jumps were late; `DebugScenarioScript` timing is corrected and its real-path flora/tree test passes (5/5; EVID-126).
+- Focused scenario integrations pass for five animal behaviors (5/5; EVID-127), Owl alert-to-dive and Chickadee seeded altitude (2/2; EVID-128), and Eagle mark/lock (1/1; EVID-123).
+- Full Python (1,398) and Java21 Gradle (1,320) local suites pass (EVID-129/130); exact-candidate Java 21/API35 workflow remains pending under `TASK-C-018`; the broader 28-scenario catalogue remains only partially dispositioned. No physical device access is available.

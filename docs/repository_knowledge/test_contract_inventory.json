@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "113a4ebdf671dc16470b18de0d4dff7685230045; exact-SHA host/API35 passed (EVID-115/EVID-116)",
+  "repository_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local delta",
   "snapshot_date": "2026-10-28",
   "authority": "Static contract summaries preserve what the test sources assert. Per-source execution dispositions are now reconciled separately against EVID-072 (full Python/JVM suite), EVID-074 (exact-head API 35 connected workflow, excluding @LargeTest), and EVID-075 (focused concurrency). These results are revision- and environment-bounded.",
   "records": [
@@ -1023,11 +1023,11 @@
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioReplayContractTest.kt",
       "language": "Kotlin",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
-      "inspected_line_range": "7-85",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local CACTUS_READ timing delta",
+      "inspected_line_range": "1-85",
       "line_count": 85,
       "test_annotation_count_static": 3,
-      "contract_summary": "Complete authored script is accepted; unscripted scenario cannot generate replay evidence; missing, extra, rescheduled, and substituted actions are rejected.",
+      "contract_summary": "Complete authored script is accepted; unscripted scenario cannot generate replay evidence; missing, extra, rescheduled, and substituted actions are rejected. CACTUS_READ invalid-scheduled-time mutation updated to remain a well-formed trace event under revised authored timing. Full Python/JVM verification disposition recorded in EVID-129–130.",
       "evidence_type": "JVM/Robolectric test source assertions and fixtures only",
       "runtime_status": "PASSED_FULL_JVM_SUITE_EVID-072",
       "production_links": [
@@ -1038,7 +1038,8 @@
       "latest_execution_evidence_ids": [
         "EVID-072"
       ],
-      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c",
+      "execution_status": "FULL SUITES PASSED LOCALLY (EVID-129, EVID-130)"
     },
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceAdversarialTest.kt",
@@ -1083,11 +1084,11 @@
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceTest.kt",
       "language": "Kotlin",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
-      "inspected_line_range": "11-144",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local CACTUS_READ timing delta",
+      "inspected_line_range": "1-144",
       "line_count": 144,
       "test_annotation_count_static": 3,
-      "contract_summary": "Normal scripts trace by default and retain trace after clear. Encoding is deterministic, finite, candidate/artifact/definition/contract-bound, canonical, and hashed; incomplete, altered, overflowed, malformed identity/time inputs fail closed.",
+      "contract_summary": "Normal scripts trace by default and retain trace after clear. Encoding is deterministic, finite, candidate/artifact/definition/contract-bound, canonical, and hashed; incomplete, altered, overflowed, malformed identity/time inputs fail closed. Altered-schedule fail-closed fixture updated to use a valid event whose schedule differs from the authored contract. Full Python/JVM verification disposition recorded in EVID-129–130.",
       "evidence_type": "JVM/Robolectric test source assertions and fixtures only",
       "runtime_status": "PASSED_FULL_JVM_SUITE_EVID-072",
       "production_links": [
@@ -1099,7 +1100,8 @@
       "latest_execution_evidence_ids": [
         "EVID-072"
       ],
-      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c",
+      "execution_status": "FULL SUITES PASSED LOCALLY (EVID-129, EVID-130)"
     },
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/DeterministicScenarioTraceEvidenceVerifierTest.kt",
@@ -1294,11 +1296,11 @@
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/EncounterScenarioFingerprintTest.kt",
       "language": "Kotlin",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
-      "inspected_line_range": "8-72",
-      "line_count": 72,
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local CACTUS_READ timing delta",
+      "inspected_line_range": "1-86",
+      "line_count": 86,
       "test_annotation_count_static": 5,
-      "contract_summary": "Scenario and catalogue SHA-256 identities are stable/unique; canonical payload uses integer timing and authored fields; cactus digest values are pinned to independent constants; trace contract includes exact authored actions/times.",
+      "contract_summary": "Scenario and catalogue SHA-256 identities are stable/unique; canonical payload uses integer timing and authored fields; cactus digest values are pinned to independent constants; trace contract includes exact authored actions/times. Cross-language CACTUS_READ trace-contract digest and canonical payload timestamps updated to the revised authored input schedule; scenario-definition digest is unchanged. Full Python/JVM verification disposition recorded in EVID-129–130.",
       "evidence_type": "JVM/Robolectric test source assertions and fixtures only",
       "runtime_status": "PASSED_FULL_JVM_SUITE_EVID-072",
       "production_links": [
@@ -1308,7 +1310,8 @@
       "latest_execution_evidence_ids": [
         "EVID-072"
       ],
-      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c",
+      "execution_status": "FULL SUITES PASSED LOCALLY (EVID-129, EVID-130)"
     },
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/EncounterSelectionBagTest.kt",
@@ -7155,10 +7158,10 @@
     {
       "path": "scripts/test_scenario_source_contract.py",
       "language": "Python",
-      "source_revision": "origin/main 21efd764a5c9f7773a70ac50f2569153e01f914b + reviewed delta (2026-10-27)",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local CACTUS_READ timing delta",
       "worktree_status": "MODIFIED",
-      "inspected_line_range": "1-243",
-      "line_count": 243,
+      "inspected_line_range": "1-253",
+      "line_count": 253,
       "test_symbols": [
         "ScenarioSourceContractTest"
       ],
@@ -7166,14 +7169,15 @@
         "Kotlin deterministic scenario parser",
         "canonical hashes and dispatch ordering"
       ],
-      "contract_summary": "Pins scenario/trace hashes, optional flags and variants, Float32/rounding edge semantics, invalid negative/overflow literals and selective hash invalidation; parser fails closed, authored Wolf/Eagle steps remain owned, and GameView dispatches scripted input before physics/collision. Independently reconstructs OWL_DIVE TAP_JUMP at 1.80 seconds and its trace-contract hash.",
+      "contract_summary": "Pins scenario/trace hashes, optional flags and variants, Float32/rounding edge semantics, invalid negative/overflow literals and selective hash invalidation; parser fails closed, authored Wolf/Eagle steps remain owned, and GameView dispatches scripted input before physics/collision. Independently reconstructs OWL_DIVE TAP_JUMP at 1.80 seconds and its trace-contract hash. Cross-language source parser contract pins the new CACTUS_READ timing/digest and mutates the canonical current action to prove input-change detection. Full Python/JVM verification disposition recorded in EVID-129–130.",
       "evidence_type": "test source assertions and fixtures only",
       "runtime_status": "PASSED_FULL_PYTHON_SUITE_EVID-072",
       "task_id": "TASK-A-019",
       "latest_execution_evidence_ids": [
         "EVID-072"
       ],
-      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c",
+      "execution_status": "FULL SUITES PASSED LOCALLY (EVID-129, EVID-130)"
     },
     {
       "path": "scripts/test_scenario_trace_zero_action.py",
@@ -7559,10 +7563,10 @@
     {
       "path": "scripts/test_validate_scenario_trace.py",
       "language": "Python",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + current dirty worktree",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local CACTUS_READ timing delta",
       "worktree_status": "MODIFIED",
-      "inspected_line_range": "1-256",
-      "line_count": 256,
+      "inspected_line_range": "1-265",
+      "line_count": 265,
       "test_symbols": [
         "ValidateScenarioTraceTest"
       ],
@@ -7570,14 +7574,15 @@
         "authored deterministic trace verifier",
         "candidate and event contract"
       ],
-      "contract_summary": "Checks exact root/event schema and candidate/artifact/scenario/source hash binding, count/sequence/scheduled/dispatched/lateness/action constraints and exact authored events; rejects unauthored-but-well-formed, duplicate-key, oversized and symlink/parent-swap inputs; CLI expected-SHA errors are covered.",
+      "contract_summary": "Checks exact root/event schema and candidate/artifact/scenario/source hash binding, count/sequence/scheduled/dispatched/lateness/action constraints and exact authored events; rejects unauthored-but-well-formed, duplicate-key, oversized and symlink/parent-swap inputs; CLI expected-SHA errors are covered. Malformed trace cases now construct chronological, schedule-consistent payloads to reach the intended schedule/dispatch ordering guards under revised CACTUS_READ action times. Full Python/JVM verification disposition recorded in EVID-129–130.",
       "evidence_type": "test source assertions and fixtures only",
       "runtime_status": "PASSED_FULL_PYTHON_SUITE_EVID-072",
       "task_id": "TASK-A-019",
       "latest_execution_evidence_ids": [
         "EVID-072"
       ],
-      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c",
+      "execution_status": "FULL SUITES PASSED LOCALLY (EVID-129, EVID-130)"
     },
     {
       "path": "scripts/test_validate_supply_chain_evidence.py",
@@ -7958,17 +7963,109 @@
       ],
       "latest_execution_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
       "execution_evidence": "EVID-114: focused 2 tests and full 1,307-test JVM/Robolectric suite passed locally. EVID-115: exact-SHA host testDebugUnitTest passed. EVID-116: exact-SHA API35 connected run passed 28/28 tests; process-death recovery passed."
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/EagleScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "worktree_status": "new local source delta",
+      "inspected_line_range": "1-129",
+      "line_count": 129,
+      "test_annotation_count_static": 1,
+      "contract_summary": "Runs authored EAGLE_MARK for 20 seconds at 60 Hz through real EncounterDirector, DebugScenarioScript, Player, EntityManager updates and collision checks. Requires exactly two Eagle instances and observes each targetAnnounced and locked; verifies four-event deterministic trace and no persistent Eagle encounter count.",
+      "subjects": [
+        "EAGLE_MARK scenario-to-Eagle target announcement/lock",
+        "authored timed jump actions",
+        "deterministic scenario trace",
+        "debug persistence isolation"
+      ],
+      "evidence_type": "Robolectric integration assertions; no physical visual acceptance claim.",
+      "runtime_status": "PASSED_FOCUSED_LOCAL; EXACT_SHA_HOSTED_PENDING",
+      "task_id": "TASK-A-039",
+      "latest_execution_evidence_ids": [
+        "EVID-123"
+      ],
+      "latest_execution_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "execution_evidence": "EVID-123: focused test passed on Kakarot with local Java 17 and Robolectric SDK35. The full repository JVM suite was not run successfully because existing SDK36 Robolectric tests require Java21 (EVID-125); hosted exact-SHA workflow remains required.",
+      "evidence_ids": [
+        "EVID-130"
+      ],
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedFloraTreeScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "inspected_line_range": "1-279",
+      "line_count": 279,
+      "test_annotation_count_static": 5,
+      "contract_summary": "Real scenario path asserts flora/tree showcase order, corrected Cactus clean passes, Orchid/Bamboo geometry and selected flora/tree live state; 5/5 focused (EVID-126).",
+      "primary_task_id": "TASK-A-041",
+      "evidence_ids": [
+        "EVID-126",
+        "EVID-130"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedAnimalScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "inspected_line_range": "1-197",
+      "line_count": 197,
+      "test_annotation_count_static": 5,
+      "contract_summary": "Actual Cat/Fox/Hedgehog/Dog scenario behaviors plus debug persistence isolation; 5/5 focused (EVID-127).",
+      "primary_task_id": "TASK-A-042",
+      "evidence_ids": [
+        "EVID-127",
+        "EVID-130"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/OwlScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "inspected_line_range": "1-107",
+      "line_count": 107,
+      "test_annotation_count_static": 1,
+      "contract_summary": "OWL_DIVE reaches alert then dive through scenario path; 1/1 focused (EVID-128).",
+      "primary_task_id": "TASK-A-043",
+      "evidence_ids": [
+        "EVID-128",
+        "EVID-130"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/ChickadeeScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "inspected_line_range": "1-116",
+      "line_count": 116,
+      "test_annotation_count_static": 1,
+      "contract_summary": "CHICKADEE_SWERVE observes seeded altitude variation and replay consistency through scenario path; 1/1 focused (EVID-128).",
+      "primary_task_id": "TASK-A-043",
+      "evidence_ids": [
+        "EVID-128",
+        "EVID-130"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
     }
   ],
   "scope_reconciliation": {
-    "file_inventory_test_related_paths": 390,
-    "contract_records": 390,
+    "file_inventory_test_related_paths": 391,
+    "contract_records": 391,
     "previously_missing_contract_rows": 84,
     "completed_by": [
       "TASK-A-019",
       "TASK-A-020"
     ],
-    "note": "390 per-file source contracts are mapped to current execution evidence by suite/path where available. Static contract descriptions remain distinct from test pass claims; @LargeTest and support-source dispositions remain explicit."
+    "note": "391 per-file source contracts are mapped to current execution evidence by suite/path where available. Static contract descriptions remain distinct from pass claims; the three @LargeTest suites and two support sources retain explicit dispositions. New EAGLE_MARK scenario integration source is covered by EVID-123 locally; exact-SHA hosted Java21 verification is pending."
   },
   "line_count_reconciliation": {
     "checked_date": "2026-10-27",
@@ -8000,14 +8097,16 @@
       "exact_head_connected_workflow_run": "40468712221"
     },
     "current_delta": {
-      "evidence_id": "EVID-114",
+      "evidence_ids": [
+        "EVID-123",
+        "EVID-124",
+        "EVID-125"
+      ],
+      "focused_eagle_scenario_tests_passed": 1,
       "python_tests": 1398,
-      "jvm_tests": 1307,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0,
-      "revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus WOLF delta",
-      "note": "Full Python and JVM/Robolectric suites pass locally; exact-SHA hosted CI pending."
+      "jvm_full_suite": "BLOCKED_BEFORE_METHOD_EXECUTION: Robolectric Android SDK 36 requires Java 21; local Java is 17",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local EAGLE_MARK integration-test delta",
+      "note": "Focused EAGLE_MARK SDK35 Robolectric integration test and full Python suite passed locally. Hosted exact-candidate Java21 validation is required; no full local Gradle/lint/package pass is claimed."
     }
   }
 }
