@@ -116,9 +116,9 @@
     {
       "path": "app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt",
       "language": "Kotlin",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
+      "source_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus current test delta",
       "inspected_line_range": "1-290",
-      "line_count": 290,
+      "line_count": 296,
       "test_annotation_count_static": 4,
       "test_symbols": [
         "captureOpeningReadabilityHardwarePass",
@@ -126,7 +126,7 @@
         "captureGhostReadabilityHardwarePass",
         "captureRestLoopHardwarePass"
       ],
-      "contract_summary": "Large device/emulator capture harness launches deterministic screenshot scenarios, waits for live rendered frames, uses PixelCopy, rejects blank captures, and publishes PNGs through a pending MediaStore transaction. Rest-loop case captures live, dying, game-over, and Garden-return stages. Setup deletes prior captures in its managed MediaStore path; this harness was not run.",
+      "contract_summary": "Large capture harness launches deterministic screenshot scenarios through production GameView, waits for active state/rendered frames, and uses PixelCopy with blank-image rejection. GHOST_READABILITY now waits for the GameView-owned GhostPlayer to be loaded and visible before captures. Rest-loop captures live, dying, game-over and Garden-return stages. AndroidTest source compiled; new @LargeTest not yet executed.",
       "subjects": [
         "GameView deterministic launch",
         "EncounterScenario",
@@ -134,7 +134,7 @@
         "PendingCaptureMediaPublisher",
         "MediaStore"
       ],
-      "evidence_type": "test source assertions and fixtures only",
+      "evidence_type": "test source assertions and fixtures; AndroidTest compile only for new assertion",
       "runtime_status": "NOT_EXECUTED_LARGE_TEST_FILTERED_EVID-074",
       "production_links": [
         "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
@@ -142,10 +142,10 @@
       ],
       "task_id": "TASK-A-020",
       "latest_execution_evidence_ids": [
-        "EVID-074"
+        "EVID-148"
       ],
-      "latest_execution_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c",
-      "execution_limit": "The exact-head hosted connected workflow excludes androidx.test.filters.LargeTest physical-device/performance tests."
+      "latest_execution_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus current instrumentation-test delta",
+      "execution_limit": "New assertion in @LargeTest not run locally; exact-SHA hosted connected workflow required; not physical/human acceptance."
     },
     {
       "path": "app/src/androidTest/java/com/anurag9000/forestrun/HardwareInputLatencyProfileTest.kt",
@@ -1740,7 +1740,7 @@
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProviderTest.kt",
       "language": "Kotlin",
-      "source_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local source/test delta",
+      "source_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4",
       "inspected_line_range": "18-194",
       "line_count": 194,
       "test_annotation_count_static": 5,
@@ -1756,7 +1756,7 @@
         "EVID-140",
         "EVID-142"
       ],
-      "latest_execution_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local source/test delta"
+      "latest_execution_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 (locally tested source files)"
     },
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/GameAccessibilitySemanticsTest.kt",
@@ -8178,8 +8178,8 @@
         "assembleDebugAndroidTest",
         "bundleRelease"
       ],
-      "revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus current local source/test delta",
-      "note": "The integrated full local Java21 Gradle gate and full Python suite pass after the accessibility provider text-search scope fix. Exact-SHA hosted validation must be repeated after the new source commit; physical/human acceptance is not inferred."
+      "revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4",
+      "note": "The integrated Python and Java21 local gates passed before this commit on identical application/test source contents. The test result is recorded separately from exact-SHA hosted validation; physical/human acceptance is not inferred."
     },
     "prior_delta_reconciliation": {
       "evidence_ids": [

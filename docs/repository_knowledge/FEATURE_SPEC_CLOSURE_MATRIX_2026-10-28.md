@@ -123,4 +123,9 @@ The current candidate `871467c2437a9949da6bf9c0119a31c405d7fa42` passed exact-SH
 - **Finding:** `findAccessibilityNodeInfosByText` ignored `virtualViewId` and searched the flat semantic tree from any query root.
 - **Correction:** child-root queries now return empty because virtual nodes have no children; host-root search remains global across its direct children.
 - **Regression:** `GameAccessibilityNodeProviderTest.textSearchIsScopedToTheRequestedVirtualNodeSubtree` passes locally (EVID-140).
-- **Status:** locally fixed with focused and full-suite evidence (EVID-140/EVID-142); exact-SHA hosted validation and physical/human acceptance pending. Device/service traversal and human accessibility review remain pending.
+- **Status:** committed as bef4ab354a013892dd0d0289ec3616a20ef0d2d4 with focused and full-suite local evidence (EVID-140/EVID-142); exact-SHA hosted validation and physical/human acceptance pending. Device/service traversal and human accessibility review remain pending.
+
+
+### GHOST_READABILITY production-path assertion (EVID-147/148)
+
+The scenario reconciliation found that the standalone Robolectric test did not exercise the GameView-owned ghost, while the actual screenshot capture path lacked a visibility assertion. The Android instrumentation capture now waits for the production GameView GhostPlayer to be loaded and reach positive visibility before capture. Its source compiles; hosted exact-SHA connected execution is pending. This does not establish human visual quality or physical readability.

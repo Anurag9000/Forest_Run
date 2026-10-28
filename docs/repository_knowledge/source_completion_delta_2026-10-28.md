@@ -119,3 +119,24 @@ The final static ledger self-audit passed (EVID-137): unique IDs/paths, task/evi
 - Added `GameAccessibilityNodeProviderTest.textSearchIsScopedToTheRequestedVirtualNodeSubtree`, covering both a matching host query and an empty leaf query. The focused test passed (EVID-140).
 - After integration, full Python passed 1,398 tests (EVID-141), and the full Java21 Gradle compile/test/lint/package gate passed 1,328 tests with zero failures/errors/skips (EVID-142). This is local evidence, not exact-SHA hosted or physical TalkBack acceptance.
 - Accessibility code/test changes and ledger updates are not yet committed at this log entry; exact-candidate hosted validation must be repeated after the new source commit. Physical-device access remains unavailable.
+
+## Accessibility delta pushed at `bef4ab354a013892dd0d0289ec3616a20ef0d2d4`
+
+- The provider fix, regression test, and synchronized documentation/ledger delta were committed directly to `main` and pushed; local, origin-tracking, and remote branch SHA matched. Pre-existing untracked workspace state was preserved and excluded (EVID-145).
+- Exact-SHA Android validation run [40629702414](https://github.com/Anurag9000/Forest_Run/actions/runs/40629702414) was pending; applicability [40629702454](https://github.com/Anurag9000/Forest_Run/actions/runs/40629702454) and estate certificate [40629702394](https://github.com/Anurag9000/Forest_Run/actions/runs/40629702394) were in progress at the latest listing (EVID-146). Do not claim success before terminal jobs/artifacts are inspected.
+- Local integrated checks remain Python 1,398/1,398 and Java21 Gradle 1,328/1,328 plus compile/lint/package (EVID-141/142). Physical-device access remains unavailable; broader scenario and external human/release gates remain open.
+
+
+## GHOST_READABILITY production-path verification delta
+
+- All 28 scenarios were reconciled against current production definitions, tests, instrumentation routes and prior evidence (EVID-147). This exposed a test gap, not a confirmed gameplay defect: the Robolectric test drove a separate GhostPlayer, while the actual GameView capture lacked a ghost visibility assertion.
+- Added a wait/assertion to `HardwareCoreFlowCaptureTest.captureGhostReadabilityHardwarePass` for the GameView-owned ghost to be loaded and reach positive visibility before capture. AndroidTest compilation passes; the `@LargeTest` itself remains unexecuted locally.
+- Local regression: Python 1,398 passed; full Java21 Gradle compile/test/lint/package succeeded with 1,328 JVM/Robolectric tests and zero failures/errors/skips (EVID-148). The test-only delta needs a commit and exact-SHA hosted connected execution.
+- Bounded reviews found no new source defect in input/Player physics (EVID-149), spawn/Seed Orb/Bloom (EVID-150), or Wolf/bird asset mapping (EVID-151). Human/device readability, pairwise fairness acceptance, creative approval and provenance remain unverified.
+
+
+## Exact bef4ab candidate hosted verification — 2026-10-28
+
+- The exact committed candidate `bef4ab354a013892dd0d0289ec3616a20ef0d2d4` completed Android validation run `40629702414`: host/release/lint/package job `122623118133` and API35 connected job `122625349202` both concluded success.
+- Exact-SHA no-trainable-surface workflow `40629702454` (job `122622965372`) and estate certificate workflow `40629702394` (job `122622965322`) also concluded success. Evidence is recorded in `EVID-153`.
+- This hosted candidate predates the uncommitted `TASK-A-047` production GameView ghost-visibility assertion. Commit that bounded test/docs delta and require a new exact-SHA connected run before claiming the assertion passed. The broader scenario catalogue remains partially dispositioned; physical/human acceptance and external release gates remain open.

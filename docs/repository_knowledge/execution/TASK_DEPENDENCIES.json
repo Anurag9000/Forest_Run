@@ -337,6 +337,16 @@
       "from": "TASK-A-046",
       "to": "TASK-C-018",
       "reason": "Exact-candidate verification must include the new accessibility provider source and regression test."
+    },
+    {
+      "from": "TASK-A-047",
+      "to": "TASK-C-018",
+      "reason": "Exact candidate connected verification follows the production-path GHOST_READABILITY assertion."
+    },
+    {
+      "from": "TASK-A-039",
+      "to": "TASK-E-001",
+      "reason": "Final residual readiness reconciliation requires the current complete scenario source/task delta dispositioned alongside exact-candidate verification."
     }
   ],
   "parallel_waves": [
@@ -505,7 +515,7 @@
       "eligible_after_phase_authorization": [
         "TASK-C-006"
       ],
-      "notes": "TASK-C-006 was canceled under the earlier scope. It is not reactivated; new test-planning tasks C-007–C-011 are deferred under REQ-019 pending explicit authorization."
+      "notes": "TASK-C-006 was canceled under the earlier scope. It is not reactivated; new test-planning tasks C-007\u2013C-011 are deferred under REQ-019 pending explicit authorization."
     },
     {
       "wave": "C-risk-based-verification",
@@ -516,7 +526,7 @@
         "TASK-C-010",
         "TASK-C-012"
       ],
-      "notes": "Five focused scopes C-007–C-010 and C-012 can run concurrently after explicit verification authorization and revision freeze. Coordinate Android device ownership across C-010/C-012. C-011 is downstream integration/full-regression and waits for all five focused scopes; TASK-E-001 follows it."
+      "notes": "Five focused scopes C-007\u2013C-010 and C-012 can run concurrently after explicit verification authorization and revision freeze. Coordinate Android device ownership across C-010/C-012. C-011 is downstream integration/full-regression and waits for all five focused scopes; TASK-E-001 follows it."
     },
     {
       "wave_id": "WAVE-WOLF-LOCAL",
@@ -528,6 +538,6 @@
       "note": "C-015 enters exact-SHA queue after A-037 is committed."
     }
   ],
-  "cycle_check": "Acyclic; 67 hard prerequisite edges; static DFS rechecked after adding TASK-A-046 -> TASK-C-018 on 2026-10-28.",
+  "cycle_check": "Acyclic; 69 hard prerequisite edges; DFS validated 2026-10-28 after reconciling task prerequisite parity for TASK-A-039 -> TASK-E-001 and TASK-A-047 -> TASK-C-018.",
   "ready_rule": "Only tasks belonging to the explicitly authorized active phase may become READY; all hard prerequisites must be completed with evidence and no ownership/resource conflict may remain."
 }

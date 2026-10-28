@@ -14,7 +14,7 @@ The original static investigation's read-only restriction was superseded by the 
 
 
 
-Prior scenario source/test delta is at `e1e8501451d17996469fc82973076ed0d1fb9d22`; current tracked main baseline for the local accessibility delta is `a5bafb28dc3f547dedda6aef8547759719c0bb3e`. The accessibility provider correction and regression are uncommitted; integrated Python and Java21 full validation pass (EVID-140–142). Exact-SHA results from earlier candidates do not cover the new accessibility source delta. The current local source/test delta must be committed and its new hosted jobs inspected. TASK-C-018 remains open until terminal results are inspected. Prior audio evidence remains EVID-118/EVID-119. Physical-device access is unavailable, so B-001/B-002 remain blocked; D-001..D-007 require genuine human/external owner evidence; E-001 remains dependent on those gates and exact-candidate closure.
+Prior scenario source/test delta is at `e1e8501451d17996469fc82973076ed0d1fb9d22`; current accessibility provider correction and regression are committed at `bef4ab354a013892dd0d0289ec3616a20ef0d2d4`; integrated Python and Java21 full validation pass (EVID-140–142). Exact-SHA results from earlier candidates do not cover the new accessibility source delta. Exact-SHA Android host and API35 connected jobs passed; applicability and certificate runs passed (EVID-153). This candidate predates the new ghost assertion, so fresh exact-SHA verification is still required. The new uncommitted test delta requires a later exact-SHA run. TASK-C-018 remains open until terminal results are inspected. Prior audio evidence remains EVID-118/EVID-119. Physical-device access is unavailable, so B-001/B-002 remain blocked; D-001..D-007 require genuine human/external owner evidence; E-001 remains dependent on those gates and exact-candidate closure.
 
 
 4. **Prior scenario delta — `TASK-A-039`–`TASK-A-045` locally complete.** It remains separately revision-bound by EVID-123, EVID-126–130, EVID-134–136. Its full authored scenario catalogue is still only partially dispositioned. The broader REQ-020 scenario matrix remains partial; do not infer complete mechanics coverage.
@@ -23,7 +23,9 @@ Prior scenario source/test delta is at `e1e8501451d17996469fc82973076ed0d1fb9d22
 
 - `CACTUS_READ` authored jumps were late; `DebugScenarioScript` timing is corrected and its real-path flora/tree test passes (5/5; EVID-126).
 - Focused scenario integrations pass for five animal behaviors (5/5; EVID-127), Owl alert-to-dive and Chickadee seeded altitude (2/2; EVID-128), and Eagle mark/lock (1/1; EVID-123).
-- Full Python (1,398) and Java21 Gradle (1,328) local suites pass (EVID-141/142); exact-candidate Java 21/API35 workflow remains pending under `TASK-C-018`; the broader 28-scenario catalogue remains only partially dispositioned. No physical device access is available.
+- Full Python (1,398) and Java21 Gradle (1,328) local suites pass (EVID-141/142); the bef4ab35 exact-SHA host passed while API35 connected job remained in progress at EVID-153. The broader 28-scenario catalogue remains only partially dispositioned. No physical device access is available.
 
 
-5. **Accessibility subtree search — `TASK-A-046` locally complete.** Regression test and full local Python/Java21 Gradle gates pass (EVID-140–142). Commit/push the reviewed source/test/ledger delta and inspect new exact-SHA Android host/API35 workflows under TASK-C-018. Physical TalkBack review remains externally pending.
+5. **Accessibility subtree search — `TASK-A-046` locally complete.** Regression test and full local Python/Java21 Gradle gates pass (EVID-140–142). The committed host and API35 connected jobs passed at EVID-153; physical TalkBack review remains externally pending.
+
+6. **Production ghost capture assertion — `TASK-A-047` locally complete.** AndroidTest source compiles and full local gates pass (EVID-147/148). Commit the focused test and synchronized docs; run exact-SHA API35 connected validation. Human/device visual acceptance remains separate.

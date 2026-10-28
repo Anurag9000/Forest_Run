@@ -1646,13 +1646,13 @@
       "classification": "Android instrumentation test source",
       "worktree_status": "tracked_modified",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus current test delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Current source read and test contract documented in test_contract_inventory.json; test not executed.",
+      "inspection_detail": "Added production GameView ghost visibility assertion; compiled but not run on Android device.",
       "symbols_or_consumers": [],
       "relationships": [],
-      "evidence_ref": "EVID-042",
-      "next_action": "Inspect changed content under applicable deferred coverage task",
+      "evidence_ref": "EVID-148",
+      "next_action": "Run exact-SHA hosted API35 connected workflow after commit.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-002",
@@ -1672,8 +1672,8 @@
       ],
       "file_type": "kt",
       "language_or_format": "Kotlin",
-      "worktree_content_sha256": "05ad89a0d767a5087f25a5089d60747f7387223ea3d564dd1f79da95820f8193",
-      "worktree_content_bytes": 12133,
+      "worktree_content_sha256": "8264821de217eb9b03f1af22ef92c07993cd36b816dfa963dbb4a67046fe193c",
+      "worktree_content_bytes": 12475,
       "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR"
     },
     {
@@ -5142,9 +5142,9 @@
       "id": "FILE-626F65F719E7",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProvider.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_modified",
+      "worktree_status": "tracked_clean",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local source/test delta",
+      "source_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
       "inspection_detail": "Full source read and changed query-scope branch reviewed; 264 lines; focused provider test and integrated full local suite pass (EVID-140/EVID-142). Exact-SHA hosted and physical accessibility checks remain separate.",
       "symbols_or_consumers": [
@@ -5152,7 +5152,7 @@
       ],
       "relationships": [],
       "evidence_ref": "EVID-140",
-      "next_action": "Commit/push and verify exact-SHA Android; physical TalkBack review remains pending.",
+      "next_action": "Reuse current source and local test evidence; exact-SHA hosted workflow/task TASK-C-018 remains pending.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -13113,9 +13113,9 @@
       "id": "FILE-EFB59DEC48F1",
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProviderTest.kt",
       "classification": "JVM/Robolectric test source",
-      "worktree_status": "tracked_modified",
+      "worktree_status": "tracked_clean",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local source/test delta",
+      "source_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
       "inspection_detail": "Entire provider test source reviewed through line 194; five test methods including host-versus-leaf text-search scope; focused and full local suite pass (EVID-140/EVID-142).",
       "symbols_or_consumers": [
@@ -13127,7 +13127,7 @@
         "GameAccessibilityActionRouter"
       ],
       "evidence_ref": "EVID-140",
-      "next_action": "Exact-SHA hosted validation; physical TalkBack/service review remains pending.",
+      "next_action": "Reuse current source and local test evidence; exact-SHA hosted workflow/task TASK-C-018 remains pending.",
       "related_goal_ids": [
         "GOAL-015"
       ],

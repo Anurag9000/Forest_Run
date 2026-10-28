@@ -31136,11 +31136,10 @@
         "CAP-015"
       ],
       "implementation_status": "body statically present; focused and full local Robolectric regression passed",
-      "evidence_status": "EVID-140 focused and EVID-142 full local Java21 suite; current candidate hosted validation pending",
+      "evidence_status": "EVID-140 focused and EVID-142 full local Java21 suite; exact-SHA hosted workflow pending",
       "source_revision": {
-        "commit": "a5bafb28dc3f547dedda6aef8547759719c0bb3e",
-        "working_tree_snapshot_id": null,
-        "working_tree_delta": "accessibility text-search scope change, 2026-10-28"
+        "commit": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4",
+        "working_tree_snapshot_id": null
       },
       "shard": "docs/repository_knowledge/symbol_shards/engine_a_m.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",

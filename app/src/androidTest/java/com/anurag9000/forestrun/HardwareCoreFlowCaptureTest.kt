@@ -25,6 +25,7 @@ import com.anurag9000.forestrun.engine.RunState
 import com.anurag9000.forestrun.engine.SaveManager
 import com.anurag9000.forestrun.entities.PlayerState
 import com.anurag9000.forestrun.systems.GhostFrame
+import com.anurag9000.forestrun.systems.GhostPlayer
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -90,6 +91,11 @@ class HardwareCoreFlowCaptureTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val gameView = requireGameView(scenario)
             prepareScenario(gameView, EncounterScenario.GHOST_READABILITY)
+
+            val productionGhost = getPrivateField(gameView, "ghostPlayer") as GhostPlayer
+            waitForCondition("production GameView ghost becomes visible in the scenario lane") {
+                productionGhost.hasGhost && productionGhost.visibilityAlphaForTest > 0f
+            }
 
             captureAtOffsets(gameView, "ghost_readability", 500L, 1300L, 2300L, 3200L)
         }

@@ -5,7 +5,7 @@
     "branch": "main",
     "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
     "date": "2026-10-03",
-    "current_candidate": "a5bafb28dc3f547dedda6aef8547759719c0bb3e"
+    "current_candidate": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4"
   },
   "snapshot_date": "2026-10-28",
   "working_tree_at_start": {
@@ -445,7 +445,7 @@
           "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
           "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt"
         ],
-        "status": "PARTIAL: real-path integration evidence now covers WOLF_CHARGE (EVID-114..116), EAGLE_MARK (EVID-123), CACTUS_READ and selected flora/tree showcases (EVID-126), five animal behaviors (EVID-127), Owl/Chickadee behavior (EVID-128), scenario rosters and selected bird/showcase mechanics, and all five BLOOM_SHOWCASE conversions (EVID-134..136). Remaining authored scenarios still require individual requirement-level disposition; exact-SHA hosted validation for the present delta is pending.",
+        "status": "PARTIAL: all 28 authored scenarios were reconciled at bounded source/test/capture scope (EVID-147); mechanic integration depth differs and human visual/device acceptance is separate. GHOST_READABILITY now asserts production GameView ghost visibility locally (EVID-148); exact-SHA hosted connected execution and remaining scenario-specific obligations stay open.",
         "capability_ids": [
           "CAP-002",
           "CAP-006"
@@ -461,7 +461,8 @@
           "TASK-C-017",
           "TASK-C-018",
           "TASK-A-044",
-          "TASK-A-045"
+          "TASK-A-045",
+          "TASK-A-047"
         ]
       }
     ],
@@ -1479,7 +1480,7 @@
       {
         "id": "FIND-022",
         "kind": "audio payload and runtime wiring reconciliation",
-        "statement": "The 15 shipped Ogg files decode and have unique hashes; static manager/caller paths support documented music states and semantic SFX. Music tracks are short (0.39–1.39 s) but no source/design evidence establishes that this is wrong; audible quality, looping seams, mix, fatigue, and rights require external human evidence. Duck uses the currently specified visual/dialogue timing cue; its stale Phase 20 SFX comment was removed at bac310 without behavior change.",
+        "statement": "The 15 shipped Ogg files decode and have unique hashes; static manager/caller paths support documented music states and semantic SFX. Music tracks are short (0.39\u20131.39 s) but no source/design evidence establishes that this is wrong; audible quality, looping seams, mix, fatigue, and rights require external human evidence. Duck uses the currently specified visual/dialogue timing cue; its stale Phase 20 SFX comment was removed at bac310 without behavior change.",
         "status": "SOURCE_WIRING_STATICALLY_RECONCILED; HUMAN_AUDIO_REVIEW_PENDING",
         "evidence_ids": [
           "EVID-118",
@@ -1599,7 +1600,7 @@
       {
         "id": "FIND-026",
         "kind": "BLOOM_SHOWCASE full-lane conversion timing defect",
-        "statement": "The real scenario path showed Duck and Weeping Willow still pending when the single six-second Bloom expired; each then resolved HIT, contradicting BLOOM_SHOWCASE’s authored summary that the full lane converts. Shorter/staggered world offsets now let all five family encounters pass through the existing conversion owner before expiry; the focused integration asserts exclusive outcomes and rewards.",
+        "statement": "The real scenario path showed Duck and Weeping Willow still pending when the single six-second Bloom expired; each then resolved HIT, contradicting BLOOM_SHOWCASE\u2019s authored summary that the full lane converts. Shorter/staggered world offsets now let all five family encounters pass through the existing conversion owner before expiry; the focused integration asserts exclusive outcomes and rewards.",
         "status": "SOURCE_CORRECTED; FOCUSED_AND_FULL_LOCAL_TESTS_PASS; EXACT_SHA_PENDING",
         "evidence_ids": [
           "EVID-134",
@@ -1646,6 +1647,31 @@
           "CAP-005"
         ],
         "limitations": "Focused Robolectric evidence only; full current-candidate and Android service/device traversal are not established."
+      },
+      {
+        "id": "FIND-028",
+        "kind": "GHOST_READABILITY production-path assertion missing",
+        "statement": "The focused Robolectric GHOST_READABILITY test created and advanced a separate GhostPlayer rather than asserting the production GameView GhostPlayer on the actual screenshot launch path. Added instrumentation now waits for the GameView-owned ghost to become visible before capture.",
+        "status": "TEST_GAP_CLOSED_LOCALLY; INSTRUMENTATION_COMPILED; EXACT_SHA_EXECUTION_PENDING",
+        "evidence_ids": [
+          "EVID-147",
+          "EVID-148"
+        ],
+        "related_task_ids": [
+          "TASK-A-047",
+          "TASK-C-018"
+        ],
+        "related_goal_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_capability_ids": [
+          "CAP-006"
+        ],
+        "limitations": "Compiled only; exact hosted and human visual acceptance remain outstanding."
       }
     ],
     "gaps": [
@@ -1659,7 +1685,7 @@
           "TASK-A-004",
           "TASK-A-025"
         ],
-        "disposition": "Resolved for required authored-source and document coverage to each inventory record’s stated scope. Binary-only artifacts and two prior maps remain partial/excluded by documented reason; this is not a claim that every binary payload was semantically inspected.",
+        "disposition": "Resolved for required authored-source and document coverage to each inventory record\u2019s stated scope. Binary-only artifacts and two prior maps remain partial/excluded by documented reason; this is not a claim that every binary payload was semantically inspected.",
         "evidence_ids": [
           "EVID-067",
           "EVID-069",
@@ -1714,7 +1740,7 @@
           "TASK-A-032",
           "TASK-A-033"
         ],
-        "disposition": "RESOLVED at declaration-index coverage level by TASK-A-030–A-033 and EVID-067. This resolves documentation coverage for inventoried declarations, not comprehensive call-graph semantics or runtime verification.",
+        "disposition": "RESOLVED at declaration-index coverage level by TASK-A-030\u2013A-033 and EVID-067. This resolves documentation coverage for inventoried declarations, not comprehensive call-graph semantics or runtime verification.",
         "evidence_ids": [
           "EVID-069"
         ]
@@ -1726,7 +1752,7 @@
         "resolution_task_ids": [
           "TASK-A-034"
         ],
-        "disposition": "RESOLVED by docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md and applicability_matrix.json (EVID-068). Test execution is separately deferred in TASK-C-007–TASK-C-011.",
+        "disposition": "RESOLVED by docs/repository_knowledge/APPLICABILITY_AND_VERIFICATION_MATRIX.md and applicability_matrix.json (EVID-068). Test execution is separately deferred in TASK-C-007\u2013TASK-C-011.",
         "evidence_ids": [
           "EVID-069"
         ]
@@ -1919,6 +1945,29 @@
           "TASK-C-018"
         ],
         "next_action": "Commit and push the combined authorized source/test/documentation delta, then verify exact-SHA hosted Android jobs; physical/human review remains external."
+      },
+      {
+        "id": "GAP-017",
+        "kind": "Production GHOST_READABILITY path lacked a visibility assertion",
+        "statement": "Focused automated coverage did not prove the production GameView scenario route loads and makes its own deterministic ghost visible before capture.",
+        "resolution_task_ids": [
+          "TASK-A-047",
+          "TASK-C-018"
+        ],
+        "disposition": "Production ActivityScenario capture now asserts the GameView-owned GhostPlayer is loaded and reaches positive visibility alpha. AndroidTest source compiles; exact-SHA connected execution pending.",
+        "evidence_ids": [
+          "EVID-147",
+          "EVID-148"
+        ],
+        "status": "LOCALLY_RESOLVED; EXACT_SHA_CONNECTED_VERIFICATION_PENDING",
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_task_ids": [
+          "TASK-A-047",
+          "TASK-C-018"
+        ],
+        "next_action": "Commit the test delta and verify exact-SHA API35 connected execution; retain physical/human visual acceptance separately."
       }
     ],
     "tasks": [
@@ -4655,7 +4704,7 @@
           "Preserve the dirty worktree and report current baseline.",
           "Historical results remain revision-bounded."
         ],
-        "complexity": "High; 46–47 dated audit documents each, overlapping chronology requires deduplication.",
+        "complexity": "High; 46\u201347 dated audit documents each, overlapping chronology requires deduplication.",
         "priority": "High for recovering historical intent without replaying completed audits.",
         "execution_status": "COMPLETED",
         "owner": null,
@@ -4788,7 +4837,7 @@
           "Preserve the dirty worktree and report current baseline.",
           "Historical results remain revision-bounded."
         ],
-        "complexity": "High; 46–47 dated audit documents each, overlapping chronology requires deduplication.",
+        "complexity": "High; 46\u201347 dated audit documents each, overlapping chronology requires deduplication.",
         "priority": "High for recovering historical intent without replaying completed audits.",
         "execution_status": "COMPLETED",
         "owner": null,
@@ -4920,7 +4969,7 @@
           "Preserve the dirty worktree and report current baseline.",
           "Historical results remain revision-bounded."
         ],
-        "complexity": "High; 46–47 dated audit documents each, overlapping chronology requires deduplication.",
+        "complexity": "High; 46\u201347 dated audit documents each, overlapping chronology requires deduplication.",
         "priority": "High for recovering historical intent without replaying completed audits.",
         "execution_status": "COMPLETED",
         "owner": null,
@@ -5398,7 +5447,7 @@
         "category": "Static test-source contract documentation",
         "target_phase": "A - repository reconstruction and documentation",
         "objective": "Create one structured contract record for each of the 60 Python test files already read in TASK-A-017 and present in the file inventory but absent from test_contract_inventory.json.",
-        "motivation": "File-level coverage shows the files were read, but the reusable per-file contract ledger omits them; future verification agents should not have to rediscover each test source’s asserted behavior.",
+        "motivation": "File-level coverage shows the files were read, but the reusable per-file contract ledger omits them; future verification agents should not have to rediscover each test source\u2019s asserted behavior.",
         "current_state": "All 60 scoped Python test paths were fully statically inspected in the prior audit and their records remain applicable; the current consolidated test contract inventory contains 390 records after adding the WOLF scenario test.",
         "required_final_state": "Exactly one contract record exists per target path, describing the authored test behavior and subject symbols without claiming execution or pass/fail.",
         "scope": [
@@ -5790,7 +5839,7 @@
         ],
         "category": "Static asset-consumer integration tracing",
         "target_phase": "A - repository reconstruction and documentation",
-        "objective": "Trace the 29 packaged runtime sprite assets from path constants/registries through load and crop/frame-selection consumers, and compare visible sheet organization/duplicate aliases with the code’s expected frame counts and selection paths.",
+        "objective": "Trace the 29 packaged runtime sprite assets from path constants/registries through load and crop/frame-selection consumers, and compare visible sheet organization/duplicate aliases with the code\u2019s expected frame counts and selection paths.",
         "motivation": "A-021 found eight visible wolf drawings under a 4frames filename, labels embedded in some runtime plant strips, and five byte-identical bird base/flying aliases. Static source linkage is needed to explain actual frame consumption without presuming defects.",
         "current_state": "All 29 runtime sprite paths are traced through asset constants, loader declarations, crop math and production callers in docs/repository_knowledge/runtime_sprite_frame_trace.md. EVID-058 additionally reconciles the Wolf four-frame contract against creative direction and source history; only visual grouping, plant/alias details, rights and approval remain unresolved.",
         "required_final_state": "A source-referenced table links each relevant asset group to its loader/crop/frame count and callers, identifying whether visible discrepancies are explained, unused, or unresolved. No defect is classified without a written contract mismatch.",
@@ -5842,7 +5891,7 @@
           "EVID-058",
           "EVID-059"
         ],
-        "uncertainty": "Wolf runtime frame count is explicit and historically reconciled at four; the asset image’s eight visible motifs may be paired/composited art, but no authoritative layout source establishes their internal intent. Plant numerals, duplicated bird pixels, dog shade, and visual approval remain unresolved as non-defect observations.",
+        "uncertainty": "Wolf runtime frame count is explicit and historically reconciled at four; the asset image\u2019s eight visible motifs may be paired/composited art, but no authoritative layout source establishes their internal intent. Plant numerals, duplicated bird pixels, dog shade, and visual approval remain unresolved as non-defect observations.",
         "remaining_work": "No source work established. Preserve remaining art/layout, alias, and approval observations as unresolved until an authoritative asset/layout decision exists.",
         "completion_evidence": [
           {
@@ -6668,9 +6717,9 @@
         "implementation_or_investigation_status": "IMPLEMENTED / INVESTIGATED",
         "evidence_status": "CURRENT EVIDENCE CONFIRMED",
         "id": "TASK-A-030",
-        "title": "Kotlin production symbol inventory: engine A–M",
+        "title": "Kotlin production symbol inventory: engine A\u2013M",
         "objective": "Create a comprehensive meaningful-symbol inventory shard for 75 assigned production files in app/src/main/java/com/anurag9000/forestrun/engine/[A-M]*.kt.",
-        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 75 engine files whose basename starts A-M; reuses A-010–A-012 and full changed-file reads.",
+        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 75 engine files whose basename starts A-M; reuses A-010\u2013A-012 and full changed-file reads.",
         "current_state": "75 assigned production files are already covered at file/source-inspection level in prior passes, but not comprehensively represented in the symbol ledger.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun/engine/[A-M]*.kt",
@@ -6751,9 +6800,9 @@
         "implementation_or_investigation_status": "IMPLEMENTED / INVESTIGATED",
         "evidence_status": "CURRENT EVIDENCE CONFIRMED",
         "id": "TASK-A-031",
-        "title": "Kotlin production symbol inventory: engine N–Z",
+        "title": "Kotlin production symbol inventory: engine N\u2013Z",
         "objective": "Create a comprehensive meaningful-symbol inventory shard for 52 assigned production files in app/src/main/java/com/anurag9000/forestrun/engine/[N-Z]*.kt.",
-        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 52 engine files whose basename starts N-Z; reuses A-010–A-012 and full changed-file reads.",
+        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 52 engine files whose basename starts N-Z; reuses A-010\u2013A-012 and full changed-file reads.",
         "current_state": "52 assigned production files are already covered at file/source-inspection level in prior passes, but not comprehensively represented in the symbol ledger.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun/engine/[N-Z]*.kt",
@@ -6919,7 +6968,7 @@
         "id": "TASK-A-033",
         "title": "Kotlin production symbol inventory: non-engine packages",
         "objective": "Create a comprehensive meaningful-symbol inventory shard for 64 assigned production files in app/src/main/java/com/anurag9000/forestrun excluding engine/.",
-        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 64 production Kotlin files under entities, systems, ui, utils and root activities/facades; reuse A-010–A-024 full reads.",
+        "motivation": "FIND-014/GAP-005: the existing machine symbol inventory is selected (91 records/84 paths), so future agents cannot navigate all meaningful declarations without repeating file reading. 64 production Kotlin files under entities, systems, ui, utils and root activities/facades; reuse A-010\u2013A-024 full reads.",
         "current_state": "64 assigned production files are already covered at file/source-inspection level in prior passes, but not comprehensively represented in the symbol ledger.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun excluding engine/",
@@ -6951,7 +7000,7 @@
         ],
         "category": "documentation / applicability reconciliation",
         "target_phase": "A - source requirements and applicability reconciliation",
-        "objective": "Map universal engineering, architecture, verification and testing requirements to Forest Run’s actual goals, existing components, evidence and scope disposition.",
+        "objective": "Map universal engineering, architecture, verification and testing requirements to Forest Run\u2019s actual goals, existing components, evidence and scope disposition.",
         "motivation": "The existing capability ledger describes project requirements but has no unified matrix explaining why generic requirements apply, where they belong, or which verification evidence would establish them.",
         "current_state": "Prior repository map and execution ledger are extensive; independent comparison found no unified applicability/testing matrix. Source snapshot remains at eeccc677107f69039dbf71053c18a9038d4b5ff6 with 162 non-documentation hashed worktree files matching inventory.",
         "required_final_state": "A linked human-readable and machine-readable matrix covers all current REQ records and relevant universal requirement families, explains architecture ownership and planned risk-based checks, and distinguishes current static evidence from unexecuted/externally blocked verification.",
@@ -7027,7 +7076,7 @@
           "EVID-069"
         ],
         "uncertainty": "Repository-specific evidence and task scope are known; future test execution requires separately permitted phase.",
-        "remaining_work": "No work remains for matrix creation. Future tests remain in TASK-C-007–TASK-C-011, deferred under current scope; external and performance tasks remain in their existing phases.",
+        "remaining_work": "No work remains for matrix creation. Future tests remain in TASK-C-007\u2013TASK-C-011, deferred under current scope; external and performance tasks remain in their existing phases.",
         "completion_evidence": [
           "EVID-068",
           "EVID-069"
@@ -7127,14 +7176,14 @@
           "EVID-079"
         ],
         "uncertainty": "Full source suites and local lint/APK gates pass on the merged candidate; connected/device coverage and per-requirement external evidence are not established.",
-        "remaining_work": "No remaining work within this task’s authored deterministic unit/property scope. Human/perceptual gameplay fairness remains under TASK-D-001/TASK-D-002; candidate runtime OWL_DIVE visual proof remains under TASK-C-013.",
+        "remaining_work": "No remaining work within this task\u2019s authored deterministic unit/property scope. Human/perceptual gameplay fairness remains under TASK-D-001/TASK-D-002; candidate runtime OWL_DIVE visual proof remains under TASK-C-013.",
         "completion_evidence": [
           "EVID-072",
           "EVID-076: 27 tests passed across InputHandlerTest, CollisionOutcomeDispatcherTest, BloomEconomyTest and BloomTimerPartitionPropertyTest at exact main; exact-main API 35 workflow succeeded (EVID-078).",
           "EVID-079: 23 tests passed at exact main: FrameInputAdmissionTest 5, PlayerBoundaryTest 11, PlayerPhysicsTest 4, PlayerJumpVelocityTest 3; zero failures/errors/skips. Combined with EVID-076 gameplay selection, all scoped authored contract classes passed."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -7253,7 +7302,7 @@
           "EVID-101: exact candidate API35 ordinary suite and process-death prepare/force-stop/no-PID/fresh-process restore passed."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -7351,7 +7400,7 @@
           "EVID-076: scoped authored tests/build checks passed at exact main; EVID-078: exact-main hosted API 35 workflow passed."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -7449,7 +7498,7 @@
           "EVID-076: scoped authored tests/build checks passed at exact main; EVID-078: exact-main hosted API 35 workflow passed."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -7567,7 +7616,7 @@
           "EVID-102: targeted source-path delta and task-evidence reconciliation found no cross-task integration mismatch; exact candidate CI satisfies documented full regression scope."
         ],
         "related_prior_work": [
-          "A-004–A-009 source-only contract reviews",
+          "A-004\u2013A-009 source-only contract reviews",
           "TASK-A-019/TASK-A-020 test-contract inventory",
           "2026-10-03 historical test/build reports (revision-bounded only)"
         ],
@@ -7669,7 +7718,7 @@
         ],
         "related_prior_work": [
           "TASK-A-019/A-020 passive test-contract inventory",
-          "TASK-C-007–C-012 future verification contracts",
+          "TASK-C-007\u2013C-012 future verification contracts",
           "EVID-070 source evidence and EVID-071 documentation consistency check"
         ],
         "last_reconciled_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c (clean; tests run 2026-10-27)",
@@ -7862,7 +7911,7 @@
         "target_phase": "A - authorized source completion",
         "objective": "Ensure the exact candidate debug and AndroidTest APKs are installed, resolve the registered runner for the debug target, and invoke its process-death test with numeric user and correctly paired extras.",
         "motivation": "Exact API 35 CI logs show the process-death prepare stage fails before executing its test because am instrument reports Invalid userId -2.",
-        "current_state": "Numeric user, separate extras, and dynamic component filtering are implemented locally (EVID-090–EVID-098). Exact facd8c06 API35 logs show the registered test runner is absent after Gradle cleanup (EVID-099). Current local code reinstalls exact app and AndroidTest APKs before lookup; focused contracts and full suite pass 1,388/1,388 (EVID-100). Exact pushed candidate b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b passed API35 workflow 40492450144: ordinary connected tests 28/28; both APK installs succeeded; direct prepare and restore each passed; host confirmed no target process between stages (EVID-101).",
+        "current_state": "Numeric user, separate extras, and dynamic component filtering are implemented locally (EVID-090\u2013EVID-098). Exact facd8c06 API35 logs show the registered test runner is absent after Gradle cleanup (EVID-099). Current local code reinstalls exact app and AndroidTest APKs before lookup; focused contracts and full suite pass 1,388/1,388 (EVID-100). Exact pushed candidate b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b passed API35 workflow 40492450144: ordinary connected tests 28/28; both APK installs succeeded; direct prepare and restore each passed; host confirmed no target process between stages (EVID-101).",
         "required_final_state": "The runner resolves a numeric foreground user; reinstalls the exact candidate debug and AndroidTest APKs without clearing app data; discovers exactly one AndroidJUnitRunner registered for the debug target; passes -e arguments as separate name/value pairs; preserves test-result validation; and exact API35 process-death prepare/force-stop/verify succeeds.",
         "scope": [
           "scripts/run_connected_validation.sh::run_process_death_instrumentation",
@@ -7973,7 +8022,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification after source delta is frozen",
         "objective": "Validate the merged main baseline plus the preserved 2026-10-28 source delta as one exact candidate, including host Python/JVM/lint/package and ordinary API35 connected checks; keep all outcomes revision-bound.",
         "motivation": "The prior C-011 evidence covers b9a79b23 and its bounded source delta. The current baseline advanced to 946130c and includes a distinct Wolf asset/frame correction, GameView lifecycle/input changes, release-doc contracts, and Python compatibility changes.",
-        "current_state": "The source overlay was committed and pushed as exact main/origin/main candidate 8c335aef232ee8f164847631a74d1abb7409dd86. Exact-SHA hosted host/release/lint/package, API 35 connected validation, no-trainable-surface audit, and certificate workflows all completed successfully (EVID-108–EVID-110).",
+        "current_state": "The source overlay was committed and pushed as exact main/origin/main candidate 8c335aef232ee8f164847631a74d1abb7409dd86. Exact-SHA hosted host/release/lint/package, API 35 connected validation, no-trainable-surface audit, and certificate workflows all completed successfully (EVID-108\u2013EVID-110).",
         "required_final_state": "An exact candidate containing the reviewed source delta passes the applicable full host/release gates and ordinary API35 connected suite, with exact commit identity and source immutability recorded. Any failure remains visible and is corrected before completion.",
         "scope": [
           "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
@@ -8932,14 +8981,15 @@
         "target_phase": "C - implementation fidelity and risk-based verification",
         "objective": "Run the added scenario and accessibility regression tests and applicable full Android host/API35 validation for the exact pushed main SHA.",
         "motivation": "Local changes include scenario-script timing and several new tests; previous exact-SHA evidence does not cover this delta.",
-        "current_state": "Scenario source/test delta is pushed at e1e8501; current main at start of this delta is docs-only a5bafb28. Accessibility text-search query-scope defect was fixed locally and tested. Full local Python (1,398) and Java21 Gradle (1,328) compile/test/lint/package gates now pass for the integrated worktree (EVID-141/142); exact-SHA hosted result for the current uncommitted source delta does not exist.",
+        "current_state": "Exact-SHA run 40629702414 completed successfully for committed bef4ab354a013892dd0d0289ec3616a20ef0d2d4: host/release/lint/package and API35 connected jobs passed. Runs 40629702454 and 40629702394 also passed their applicability and estate-certificate jobs (EVID-153). The production-path GHOST_READABILITY instrumentation assertion is locally compiled but remains an uncommitted worktree delta; a fresh exact-SHA run including it is still required.",
         "required_final_state": "Exact SHA has successful host/release/lint/package and API35 connected results, including these tests.",
         "scope": [
           "scenario source/test delta at e1e8501451d17996469fc82973076ed0d1fb9d22",
           "accessibility provider fix and regression test",
           "exact pushed main SHA",
           "hosted Android validation",
-          "applicability and estate-certificate workflows"
+          "applicability and estate-certificate workflows",
+          "app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt production GameView ghost visibility assertion"
         ],
         "required_actions": [
           "Review all owned source/test/docs delta and preserve pre-existing untracked state.",
@@ -8951,7 +9001,10 @@
           "TASK-A-039",
           "EVID-123",
           "EVID-124",
-          "EVID-125"
+          "EVID-125",
+          "TASK-A-047",
+          "EVID-147",
+          "EVID-148"
         ],
         "deliverables": [
           "Exact-SHA workflow evidence",
@@ -8971,7 +9024,8 @@
           "TASK-A-043",
           "TASK-A-044",
           "TASK-A-045",
-          "TASK-A-046"
+          "TASK-A-046",
+          "TASK-A-047"
         ],
         "downstream_task_ids": [
           "TASK-E-001"
@@ -8985,7 +9039,8 @@
         "execution_status": "IN_PROGRESS",
         "owner": "/root",
         "blockers": [
-          "Exact-candidate hosted Android validation must rerun for the accessibility source change."
+          "New production GameView ghost visibility assertion is not yet on a committed candidate and requires a fresh exact-SHA API35 connected run.",
+          "Physical-device access unavailable for physical/human acceptance."
         ],
         "evidence_ids": [
           "EVID-123",
@@ -9007,17 +9062,26 @@
           "EVID-141",
           "EVID-142",
           "EVID-143",
-          "EVID-144"
+          "EVID-144",
+          "EVID-145",
+          "EVID-146",
+          "EVID-147",
+          "EVID-148",
+          "EVID-149",
+          "EVID-150",
+          "EVID-151",
+          "EVID-152",
+          "EVID-153"
         ],
-        "uncertainty": "The accessibility source delta is locally verified but not yet committed/pushed or hosted-verified. Physical-device access remains unavailable.",
-        "remaining_work": "Review and commit/push the combined delta, inspect terminal exact-SHA hosted jobs, then reconcile broad scenario and physical/human/external gates.",
+        "uncertainty": "The bef4ab candidate is verified by hosted CI. The uncommitted assertion has only local compile evidence; exact connected execution remains pending. Physical device access remains unavailable.",
+        "remaining_work": "Commit the bounded test/docs delta and inspect fresh exact-SHA connected workflow results; preserve physical/human/external acceptance gates as open.",
         "completion_evidence": [],
         "related_prior_work": [
           "TASK-C-015 WOLF_CHARGE exact-SHA verification",
           "TASK-C-016 predecessor source verification"
         ],
-        "last_reconciled_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus current local accessibility delta",
-        "next_action": "Review owned source/test/docs changes and commit/push directly to main; then verify exact-SHA hosted Android jobs.",
+        "last_reconciled_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus uncommitted AndroidTest/docs delta",
+        "next_action": "Finish diff review, commit the owned test and synchronized ledgers on main, push, then inspect all fresh exact-SHA workflow jobs to terminal status.",
         "investigation_coverage": "INTEGRATION TRACED",
         "implementation_or_investigation_status": "FOCUSED LOCAL TESTS PASS; EXACT CANDIDATE REQUIRED",
         "evidence_status": "CURRENT FOCUSED EVIDENCE CONFIRMED"
@@ -9048,7 +9112,7 @@
         ],
         "required_actions": [
           "Drive the actual director and EntityManager at a fixed simulation step.",
-          "Adjust only the scenario’s authored staging offsets, preserving the six-second Bloom mechanic and five encounter types.",
+          "Adjust only the scenario\u2019s authored staging offsets, preserving the six-second Bloom mechanic and five encounter types.",
           "Assert all five outcomes, expiry, exclusivity, run rewards and debug persistence isolation."
         ],
         "inputs": [
@@ -9241,7 +9305,7 @@
           "EVID-142"
         ],
         "uncertainty": "Framework/device service traversal behavior is not covered by the focused test.",
-        "remaining_work": "Exact-SHA hosted verification and physical/human accessibility acceptance are separate; see TASK-C-018 and external TASK-D gates.",
+        "remaining_work": "Hosted exact-SHA verification under TASK-C-018; physical TalkBack/accessibility human review remains external and unavailable.",
         "completion_evidence": [
           "EVID-140",
           "EVID-142"
@@ -9249,11 +9313,89 @@
         "related_prior_work": [
           "TASK-C-009 accessibility provider and semantic action verification"
         ],
-        "last_reconciled_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local accessibility delta",
-        "next_action": "Include in reviewed combined main commit; exact candidate check follows commit.",
+        "last_reconciled_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4",
+        "next_action": "Source fix and focused/full local tests are committed at bef4ab35; use TASK-C-018 for exact-SHA hosted validation. Physical TalkBack review remains external.",
         "investigation_coverage": "FOCUSED SOURCE REVIEW AND REGRESSION TEST",
         "implementation_or_investigation_status": "IMPLEMENTED; FOCUSED TEST PASS",
         "evidence_status": "LOCAL FOCUSED EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-A-047",
+        "title": "Assert production GameView ghost visibility in GHOST_READABILITY capture",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-006"
+        ],
+        "category": "instrumentation integration regression coverage",
+        "target_phase": "A - authorized source completion and test strengthening",
+        "objective": "Make the candidate-bound GHOST_READABILITY Android capture test assert that the production GameView GhostPlayer is loaded and becomes visible before captures are accepted.",
+        "motivation": "The focused Robolectric test drove a separate GhostPlayer; the production capture path only rejected blank pixels and could pass without the scenario ghost being visible.",
+        "current_state": "Production GameView scenario wiring exists, but its capture test lacked a visibility assertion. The test now waits for GameView\u2019s own GhostPlayer to be loaded and have positive visibility alpha.",
+        "required_final_state": "The real Android ActivityScenario launches GHOST_READABILITY through GameView and the test waits for its production ghost to become visible before capture; the AndroidTest source compiles. Exact-SHA connected verification is separately owned by TASK-C-018.",
+        "scope": [
+          "app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt",
+          "GameView.applyDebugLaunchIntent",
+          "GameView.shouldDrawGhostPlayback"
+        ],
+        "required_actions": [
+          "Inspect production scenario and ghost update path.",
+          "Assert GameView-owned GhostPlayer is loaded and visible before capture.",
+          "Compile AndroidTest source and record local compile evidence; leave exact-SHA connected execution to TASK-C-018."
+        ],
+        "inputs": [
+          "REQ-020",
+          "FIND-028",
+          "GAP-017",
+          "GHOST_READABILITY scenario"
+        ],
+        "deliverables": [
+          "Production-path Android instrumentation assertion"
+        ],
+        "acceptance_criteria": [
+          "Test obtains GameView\u2019s GhostPlayer after production scenario launch.",
+          "Test waits for hasGhost and visibilityAlpha > 0 before captures.",
+          "AndroidTest source compiles."
+        ],
+        "verification_method": "Local AndroidTest compile plus exact-SHA hosted API35 connected workflow; physical/human visual acceptance is separate.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-018"
+        ],
+        "conflicts": [
+          "Only HardwareCoreFlowCaptureTest.kt and linked ledgers are owned by this task."
+        ],
+        "execution_constraints": "Test/documentation change only; no production runtime behavior change.",
+        "complexity": "small",
+        "priority": "P2 verification coverage",
+        "execution_status": "COMPLETED",
+        "owner": "/root",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-147",
+          "EVID-148"
+        ],
+        "uncertainty": "Positive visibility alpha proves production update/gating, not perceptual quality.",
+        "remaining_work": "",
+        "completion_evidence": [
+          "EVID-147",
+          "EVID-148"
+        ],
+        "related_prior_work": [
+          "TASK-A-045",
+          "EVID-113",
+          "EVID-142"
+        ],
+        "last_reconciled_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus uncommitted AndroidTest delta",
+        "next_action": "TASK-C-018 must execute this test in the exact-SHA hosted API35 connected workflow.",
+        "investigation_coverage": "FULLY INSPECTED; TEST CHANGE COMPILED",
+        "implementation_or_investigation_status": "TEST ASSERTION IMPLEMENTED AND COMPILED",
+        "evidence_status": "LOCAL SOURCE/COMPILE EVIDENCE CONFIRMED; CONNECTED RUN PENDING"
       }
     ],
     "applicability_matrix": [
@@ -9846,34 +9988,46 @@
   },
   "latest_candidate": {
     "base_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e",
-    "working_tree_delta": "Fixes a confirmed accessibility text-search scope defect in the flat virtual-node provider and adds a host-versus-leaf Robolectric regression. Prior scenario code remains at pushed e1e8501451d17996469fc82973076ed0d1fb9d22.",
+    "working_tree_delta": "Added production-path GHOST_READABILITY Android instrumentation visibility assertion to source candidate bef4ab354a013892dd0d0289ec3616a20ef0d2d4; local compile and full gates pass; pending commit/push.",
     "evidence_ids": [
       "EVID-140",
       "EVID-141",
       "EVID-142",
-      "EVID-143",
-      "EVID-144"
+      "EVID-145",
+      "EVID-146",
+      "EVID-147",
+      "EVID-148",
+      "EVID-149",
+      "EVID-150",
+      "EVID-151",
+      "EVID-152"
     ],
-    "status": "Accessibility source/test delta locally complete; Python 1,398 and Java21 Gradle 1,328 full gates pass. Not yet committed/pushed or exact-SHA hosted-verified. No physical device access.",
-    "documentation_verification_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus current accessibility source/test/docs delta",
-    "documentation_workflow_run": "Exact-SHA Android and connected validation must be inspected after the new source delta is committed."
+    "status": "Accessibility/scenario source at bef4ab354a013892dd0d0289ec3616a20ef0d2d4 is committed/pushed. Production GameView ghost visibility assertion compiles locally; full Python 1,398 and Java21 Gradle 1,328 gates pass. Android 40629702414 in progress; applicability 40629702454 and estate certificate 40629702394 passed. Test delta awaits commit/exact-SHA connected validation; physical-device access unavailable.",
+    "documentation_verification_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4",
+    "documentation_workflow_run": "Run 40629702414 host succeeded; API35 connected job 122625349202 running at 2026-10-28 04:11 UTC. Applicability and certificate runs 40629702454/40629702394 succeeded. New instrumentation assertion delta requires its own exact-SHA run."
   },
   "current_repository_state": {
     "branch": "main",
-    "verified_source_candidate_sha": "e1e8501451d17996469fc82973076ed0d1fb9d22",
-    "candidate_remote_confirmation": "Current main and origin/main were verified at a5bafb28dc3f547dedda6aef8547759719c0bb3e before the new local accessibility source/test delta; the scenario source delta remains pushed at e1e8501.",
-    "working_tree": "Only owned modifications are the accessibility provider fix, its test, and linked documentation/ledger changes. Pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md, and docs/repository_knowledge/current_worktree_delta_20261027/ are preserved and excluded.",
-    "current_delta_task": "TASK-A-046; TASK-C-018",
+    "verified_source_candidate_sha": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4",
+    "candidate_remote_confirmation": "git fetch, local main, origin/main, and git ls-remote origin refs/heads/main all confirm bef4ab354a013892dd0d0289ec3616a20ef0d2d4.",
+    "working_tree": "Tracked docs and HardwareCoreFlowCaptureTest instrumentation assertion modified locally; pre-existing untracked user artifacts remain preserved and excluded.",
+    "current_delta_task": "TASK-A-047 locally completed; TASK-C-018 in progress",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
     "evidence_ids": [
       "EVID-140",
       "EVID-141",
       "EVID-142",
-      "EVID-143",
-      "EVID-144"
+      "EVID-145",
+      "EVID-146",
+      "EVID-147",
+      "EVID-148",
+      "EVID-149",
+      "EVID-150",
+      "EVID-151",
+      "EVID-152"
     ],
-    "latest_documentation_verification_sha": "a5bafb28dc3f547dedda6aef8547759719c0bb3e before current local source/test/docs delta",
-    "latest_documentation_workflow": "No exact-SHA hosted Android result for the accessibility source delta until after commit/push."
+    "latest_documentation_verification_sha": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus instrumentation-test delta",
+    "latest_documentation_workflow": "Run 40629702414 host job succeeded; API35 connected job 122625349202 still running at 04:11 UTC; applicability and certificate runs succeeded. Current instrumentation assertion is not included and requires a new candidate."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
@@ -9895,18 +10049,5 @@
     ],
     "status": "Exact candidate API35 ordinary connected tests passed 28/28; both candidate APK installs succeeded; process-death prepare passed, host confirmed no app PID after force-stop, and fresh-process restore passed. Host/release/lint/package also passed. Physical/OEM durability remains unverified."
   },
-  "pending_source_delta": {
-    "base_revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e",
-    "description": "Correct findAccessibilityNodeInfosByText to honor the current flat virtual-tree root and add a focused regression test; synchronize file/test/symbol inventories, evidence and docs. Preserve pre-existing untracked workspace artifacts.",
-    "task_ids": [
-      "TASK-A-046",
-      "TASK-C-018"
-    ],
-    "evidence_ids": [
-      "EVID-140",
-      "EVID-141",
-      "EVID-142"
-    ],
-    "status": "IMPLEMENTED_LOCALLY; FULL_LOCAL_GATES_PASS; EXACT_SHA_HOSTED_VALIDATION_PENDING"
-  }
+  "pending_source_delta": "App runtime unchanged since bef4ab354a013892dd0d0289ec3616a20ef0d2d4; test-only GameView ghost visibility assertion compiles and awaits commit plus exact-SHA connected validation."
 }
