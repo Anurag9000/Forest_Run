@@ -1,12 +1,20 @@
 # Forest Run source-completion delta — 2026-10-28
 
+## Current source and audio delta — 2026-10-28
+
+- Current `main` is `bac310001d48629d4542c3ed75b65d1fb5d241ad`, pushed and matched by exact-SHA workflow metadata. It removes a stale Duck quack-SFX comment; this is comment-only and does not change gameplay behavior.
+- Exact-SHA applicability workflow [40623171660](https://github.com/Anurag9000/Forest_Run/actions/runs/40623171660) and estate certificate [40623171680](https://github.com/Anurag9000/Forest_Run/actions/runs/40623171680) passed. Android validation [40623171681](https://github.com/Anurag9000/Forest_Run/actions/runs/40623171681) is in progress at this snapshot; TASK-C-016 tracks it.
+- All 15 Ogg files were probed and decoded, then current payload hashes were checked against the review; all remain unchanged. Static call paths and the stale Duck note/history are reconciled in [audio_asset_and_wiring_review_2026-10-28.md](audio_asset_and_wiring_review_2026-10-28.md). No audio was listened to. Sample analysis does not establish mix, loop seam, true peak, creative approval, provenance, or licensing.
+- No physical-device access is available. Physical performance/acceptance and human/external release gates remain pending; hosted emulator evidence is not a substitute.
+- The previous exact-tested source candidate `113a4ebdf671dc16470b18de0d4dff7685230045` passed Android host/release/lint/package and API35 connected checks; this result is predecessor evidence, not exact-bac310 Android evidence.
+
 ## Repository identity and scope
 
 - Verified source candidate: commit `8c335aef232ee8f164847631a74d1abb7409dd86`, pushed to canonical `main` after baseline `946130c19878f99f1c9ee21506fb89e1ab940525`; the exact-SHA workflow ran on this source candidate.
 - The reviewed source, test and documentation delta was committed and pushed to canonical `main`. The tracked worktree is clean. Pre-existing untracked `.coverage`, `.training_control/`, `artifacts/`, `docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md`, and `docs/repository_knowledge/current_worktree_delta_20261027/` remain preserved and outside the commit.
 - Host tests/build outputs were produced in `/var/tmp/forest-run-main-20261028-check`, a checksum-matched copy of the authored source snapshot. Its checksum-aware comparison found no authored-file differences from the candidate.
 
-## Source delta and static disposition
+## Historical source delta and static disposition (8c335aef snapshot)
 
 - **Wolf atlas/runtime mismatch:** the authored source atlas is a 4×2 layout with eight poses. The importer emits eight horizontal cells to `app/src/main/assets/sprites/animals/wolf_8frames.png`; SHA-256 is `bd9f60a4a85cec937b0df2c7709d2962ece8deda1cab246c71f77d4b2ec19225`. `AssetPaths.Animals.WOLF`, `SpriteManager`, importer output, tests, docs and packaged asset now agree on eight frames. The earlier four-frame conclusion is superseded. This does not establish human animation approval or provenance.
 - **Lifecycle/input delta:** `GameView` cancels active gesture/duck ownership when paused or when its Surface is destroyed, and gates gameplay input on lifecycle and Surface readiness. Focused Kotlin/source-contract regressions were added. An independent static review found no confirmed regression in the changed region.
@@ -15,7 +23,7 @@
 - **Training applicability:** the no-trainable-surface checks guard against false interpretation of ordinary game/release identifiers. No ML functionality or fake training jobs were added; training remains N/A for this game.
 - The old checked-in `release/google-play/BUILD_SUMMARY.md` is absent on current main; the release README identifies summary output as generated candidate evidence.
 
-## Exact-candidate verification
+## Historical exact-candidate verification (8c335aef snapshot)
 
 - Full Python scripts suite on the checksum-matched source copy: **1,395 passed**, exit 0, 18.379 seconds (EVID-104).
 - Android host suite/build on the same copy: **1,303 JVM/Robolectric tests**, zero failures/errors/skips; Kotlin compilation, debug/release lint, debug/instrumentation APK and release AAB packaging succeeded. `lintRelease bundleRelease` and a sequential `lintDebug` invocation explicitly reported `BUILD SUCCESSFUL` (EVID-105).

@@ -1454,6 +1454,34 @@
           "CAP-006"
         ],
         "limitations": "Local tests do not establish physical or human presentation acceptance; exact-candidate workflow is pending."
+      },
+      {
+        "id": "FIND-022",
+        "kind": "audio payload and runtime wiring reconciliation",
+        "statement": "The 15 shipped Ogg files decode and have unique hashes; static manager/caller paths support documented music states and semantic SFX. Music tracks are short (0.39–1.39 s) but no source/design evidence establishes that this is wrong; audible quality, looping seams, mix, fatigue, and rights require external human evidence. Duck uses the currently specified visual/dialogue timing cue; its stale Phase 20 SFX comment was removed at bac310 without behavior change.",
+        "status": "SOURCE_WIRING_STATICALLY_RECONCILED; HUMAN_AUDIO_REVIEW_PENDING",
+        "evidence_ids": [
+          "EVID-118",
+          "EVID-119"
+        ],
+        "related_task_ids": [
+          "TASK-A-038",
+          "TASK-D-002",
+          "TASK-D-003"
+        ],
+        "related_goal_ids": [
+          "GOAL-002",
+          "GOAL-006",
+          "GOAL-014"
+        ],
+        "related_requirement_ids": [
+          "REQ-005"
+        ],
+        "related_capability_ids": [
+          "CAP-004",
+          "CAP-015"
+        ],
+        "limitations": "No audio was listened to; decoded signal metrics do not establish artistic quality, appropriate loop seams, true peak, perceived loudness, rights, or acceptance."
       }
     ],
     "gaps": [
@@ -1600,6 +1628,19 @@
           "EVID-116"
         ],
         "status": "RESOLVED_SOURCE_AND_EXACT_SHA_HOSTED_VERIFIED"
+      },
+      {
+        "id": "GAP-011",
+        "kind": "stale Duck quack implementation comment contradicted active source",
+        "statement": "Duck.kt documented a future quack SFX call while current runtime and active product spec used visual/dialogue timing cues and no quack asset/call. The stale note could mislead future implementation and source understanding.",
+        "resolution_task_ids": [
+          "TASK-A-038"
+        ],
+        "disposition": "Removed the obsolete Phase 20 comment in bac310. Historical c489889f and current GAME_DESIGN support the completed visual/dialogue cue behavior; no audible Duck feature is implied.",
+        "evidence_ids": [
+          "EVID-119"
+        ],
+        "status": "RESOLVED_SOURCE_DOCUMENTATION_RECONCILED"
       }
     ],
     "tasks": [
@@ -2200,10 +2241,11 @@
         "execution_status": "DEFERRED",
         "owner": null,
         "blockers": [
-          "Frozen candidate and physical device access."
+          "Frozen candidate and physical device access; user reported on 2026-10-28 that no physical device is currently available."
         ],
         "evidence_ids": [
-          "EVID-008"
+          "EVID-008",
+          "EVID-121"
         ],
         "uncertainty": "Current suitable physical devices and measurement availability are unknown.",
         "remaining_work": "Collect evidence baseline when authorized.",
@@ -2212,7 +2254,7 @@
           "docs/PERFORMANCE.md"
         ],
         "last_reconciled_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "next_action": "Do not propose measured optimization claims before baseline capture.",
+        "next_action": "Resume only when a real physical device/profile becomes available; do not infer physical performance from emulator results.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "NOT_INVESTIGATED",
         "evidence_status": "EVIDENCE_REQUIRES_DELTA_REVIEW"
@@ -2270,7 +2312,8 @@
         "execution_status": "DEFERRED",
         "owner": null,
         "blockers": [
-          "TASK-B-001."
+          "TASK-B-001",
+          "No physical device access currently reported (EVID-121)."
         ],
         "evidence_ids": [
           "EVID-008"
@@ -2346,10 +2389,11 @@
         "execution_status": "DEFERRED",
         "owner": null,
         "blockers": [
-          "Candidate freeze, physical device access and accountable reviewers."
+          "Candidate freeze, physical device access (currently unavailable per EVID-121), and accountable reviewers."
         ],
         "evidence_ids": [
-          "EVID-009"
+          "EVID-009",
+          "EVID-121"
         ],
         "uncertainty": "Availability and final required matrix need current owner confirmation.",
         "remaining_work": "Execute approved matrix and compile evidence.",
@@ -2899,7 +2943,8 @@
           "TASK-C-013",
           "TASK-D-007",
           "TASK-C-014",
-          "TASK-C-015"
+          "TASK-C-015",
+          "TASK-C-016"
         ],
         "downstream_task_ids": [],
         "conflicts": [
@@ -2922,7 +2967,10 @@
           "EVID-113",
           "EVID-114",
           "EVID-115",
-          "EVID-116"
+          "EVID-116",
+          "EVID-120",
+          "EVID-121",
+          "EVID-122"
         ],
         "uncertainty": "Current outstanding scope may change after authorized external decisions.",
         "remaining_work": "Complete after remaining physical performance and external D-gate evidence is supplied or explicitly dispositioned by accountable owners; then perform a targeted candidate/readiness reconciliation and record the accountable go/no-go.",
@@ -7915,6 +7963,181 @@
         "investigation_coverage": "INTEGRATION TRACED",
         "implementation_or_investigation_status": "VERIFICATION REQUIRED",
         "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-A-038",
+        "title": "Inspect packaged audio payloads and reconcile sound wiring with current game specification",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-006",
+          "GOAL-014"
+        ],
+        "requirement_ids": [
+          "REQ-005"
+        ],
+        "capability_ids": [
+          "CAP-004",
+          "CAP-015"
+        ],
+        "category": "asset investigation, integration trace, and stale-source-note correction",
+        "target_phase": "A - authorized source completion and evidence reconciliation",
+        "objective": "Account for all packaged audio payloads, statically trace their runtime owners/callers/fallbacks, reconcile the stale Duck quack note against current product canon and history, and preserve the external audio-review boundary.",
+        "motivation": "Prior coverage inspected metadata and code mappings but did not inspect decoded payload signals; Duck.kt retained a misleading future SFX comment despite completed visual/dialogue behavior.",
+        "current_state": "Fifteen audio files are present and statically wired; Duck has visual/dialogue timing cues. The old source comment was removed in bac310.",
+        "required_final_state": "All fifteen current payload hashes and decode/signal observations are recorded; sound call-path and lifecycle ownership are documented; source comments align with current product truth; no unverified human audio claim is made.",
+        "scope": [
+          "app/src/main/res/raw/*.ogg",
+          "app/src/main/java/com/anurag9000/forestrun/engine/RuntimeAssetValidator.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/LeitmotifManager.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/SfxManager.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
+          "app/src/main/java/com/anurag9000/forestrun/entities/birds/Duck.kt",
+          "app/src/main/java/com/anurag9000/forestrun/entities/birds/Owl.kt",
+          "app/src/main/java/com/anurag9000/forestrun/entities/birds/Eagle.kt",
+          "app/src/main/java/com/anurag9000/forestrun/entities/animals/Wolf.kt",
+          "app/src/main/java/com/anurag9000/forestrun/entities/animals/Dog.kt",
+          "app/src/main/java/com/anurag9000/forestrun/Player.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/SeedOrbManager.kt",
+          "docs/GAME_DESIGN.md",
+          "docs/repository_knowledge/audio_asset_and_wiring_review_2026-10-28.md"
+        ],
+        "required_actions": [
+          "Probe and decode each current Ogg file; record hashes and bounded signal measures without implying listening.",
+          "Trace required/optional asset admission, playback semantics, state transitions, preference, lifecycle and fallbacks.",
+          "Compare Duck SFX comment against current source, current product requirement and relevant history.",
+          "Remove the stale source comment; document that no required Duck-audio defect was established.",
+          "Record human/device listening, mix, fatigue, provenance and licensing as separate external evidence."
+        ],
+        "inputs": [
+          "REQ-005",
+          "c489889f",
+          "docs/GAME_DESIGN.md",
+          "prior TASK-A-018 asset inventory"
+        ],
+        "deliverables": [
+          "audio_asset_and_wiring_review_2026-10-28.md",
+          "EVID-118 and EVID-119",
+          "corrected Duck source comment in bac310",
+          "updated file/symbol coverage records"
+        ],
+        "acceptance_criteria": [
+          "All 15 current audio hashes match documented evidence.",
+          "Static call paths match actual owners and documented intended sound states.",
+          "No conclusion mistakes signal statistics for human listening or creative approval.",
+          "No obsolete claim of an unimplemented Duck audio call remains."
+        ],
+        "verification_method": "Asset hash comparison, source/history inspection, document/ledger consistency; exact-head Android workflow is tracked separately in TASK-C-016.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-016",
+          "TASK-D-002",
+          "TASK-D-003"
+        ],
+        "conflicts": [
+          "Duck comment was an isolated two-line source note; lead owns shared ledgers."
+        ],
+        "execution_constraints": "Do not fabricate creative, rights, or physical acceptance.",
+        "complexity": "low",
+        "priority": "P2 source/documentation fidelity",
+        "execution_status": "COMPLETED",
+        "owner": null,
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-118",
+          "EVID-119"
+        ],
+        "uncertainty": "No audio was listened to. Signal analysis does not establish artistic or human acceptance.",
+        "remaining_work": "No source/static payload work remains in this bounded scope; human/device listening, provenance and licensing remain external.",
+        "completion_evidence": [
+          "All 15 hashes rechecked equal documented values.",
+          "EVID-118 payload signal inspection; EVID-119 source wiring/history reconciliation."
+        ],
+        "related_prior_work": [
+          "TASK-A-018; EVID-037; c489889f"
+        ],
+        "last_reconciled_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "next_action": "Use report during any future authorized human/device audio review.",
+        "investigation_coverage": "DOCUMENTED",
+        "implementation_or_investigation_status": "IMPLEMENTED / INTEGRATED",
+        "evidence_status": "CURRENT EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-C-016",
+        "title": "Verify the obsolete Duck-note cleanup on the exact pushed source candidate",
+        "parent_ids": [
+          "GOAL-006",
+          "GOAL-014"
+        ],
+        "requirement_ids": [
+          "REQ-005"
+        ],
+        "capability_ids": [
+          "CAP-004",
+          "CAP-015"
+        ],
+        "category": "exact-SHA regression and integration verification",
+        "target_phase": "C - implementation fidelity and risk-based verification",
+        "objective": "Confirm exact main SHA bac310 passes repository Android and applicable certificate/applicability workflows after removal of the stale Duck comment.",
+        "motivation": "The previous verified source candidate was 113a4eb; any subsequent source commit requires exact-candidate evidence before claiming current-source CI validation.",
+        "current_state": "Candidate bac310 is pushed; training-applicability and estate-certificate workflows passed. Android validation is still running. The source delta only removes an obsolete comment/blank line and does not alter behavior.",
+        "required_final_state": "Exact bac310 Android validation and applicable policy/certificate workflows conclude successfully, with no source mutation and failures diagnosed accurately.",
+        "scope": [
+          "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+          "GitHub Actions Android validation, training-control applicability, estate certificate"
+        ],
+        "required_actions": [
+          "Inspect exact-SHA workflow run 40623171681 to terminal conclusion.",
+          "Record job conclusions and artifact/test counts only when directly available.",
+          "Confirm applicability 40623171660 and estate-certificate 40623171680 on the same SHA.",
+          "Update candidate/evidence records and final readiness dependencies."
+        ],
+        "inputs": [
+          "TASK-A-038",
+          "EVID-118",
+          "EVID-119"
+        ],
+        "deliverables": [
+          "Exact-SHA workflow evidence",
+          "Updated current-candidate and coverage records"
+        ],
+        "acceptance_criteria": [
+          "Android workflow on exact bac310 concludes successfully.",
+          "Applicability and estate certificate on the same SHA succeed.",
+          "No claim about physical/human/legal/store acceptance is inferred."
+        ],
+        "verification_method": "GitHub Actions run/job summaries with exact candidate SHA.",
+        "dependency_ids": [
+          "TASK-A-038"
+        ],
+        "downstream_task_ids": [
+          "TASK-E-001"
+        ],
+        "conflicts": [
+          "Candidate change invalidates exact-SHA verification."
+        ],
+        "execution_constraints": "Do not weaken required validation or invent results.",
+        "complexity": "low",
+        "priority": "P1 candidate verification gate",
+        "execution_status": "IN_PROGRESS",
+        "owner": "/root",
+        "blockers": [
+          "Android validation run 40623171681 in progress."
+        ],
+        "evidence_ids": [
+          "EVID-118",
+          "EVID-119"
+        ],
+        "uncertainty": "Android run terminal status unavailable at this snapshot.",
+        "remaining_work": "Wait for exact-SHA Android workflow, inspect job summaries, then update dependent records.",
+        "completion_evidence": [],
+        "related_prior_work": [
+          "TASK-C-015; source candidate 113a4eb does not verify bac310."
+        ],
+        "last_reconciled_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "next_action": "Poll GitHub Actions run 40623171681.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "VERIFICATION REQUIRED",
+        "evidence_status": "CURRENT EVIDENCE PENDING"
       }
     ],
     "applicability_matrix": [
@@ -8506,33 +8729,35 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
-    "working_tree_delta": "Application source remains the exact-tested 113a4eb candidate; documentation-only reconciliation is recorded on 2026-10-28. At the be5b402 documentation snapshot, the exact-HEAD Android workflow 40622204411 was in progress; the applicability and estate-certificate workflows passed.",
+    "base_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+    "working_tree_delta": "Source comment-only cleanup is pushed; audio knowledge-base reconciliation is in progress. Local main and origin/main matched at bac310 before documentation update. Android validation 40623171681 is in progress on bac310; applicability 40623171660 and estate certificate 40623171680 passed.",
     "evidence_ids": [
-      "EVID-114",
-      "EVID-115",
-      "EVID-116",
-      "EVID-117"
+      "EVID-118",
+      "EVID-119",
+      "EVID-120",
+      "EVID-121",
+      "EVID-122"
     ],
-    "status": "Local Python 1,398 and JVM/Robolectric 1,307 passed; exact-SHA host/release/lint/package passed; API35 connected 28/28 passed; process-death recovery and eight candidate-bound screenshots verified. Training-applicability and certificate workflows passed. Physical/human/external acceptance remains separate.",
-    "documentation_verification_revision": "be5b402ddf4efdaaf0c3bde09093379bda15b5e9 (snapshot immediately before this documentation reconciliation)",
-    "documentation_workflow_run": "Android exact-HEAD workflow 40622204411 was in progress at the latest observation; no-trainable-surface 40622204348 and estate certificate 40622204354 passed. Source SHA 113a4eb Android host/API35 run 40620167730 passed."
+    "status": "Prior exact-source validation applies to behavior-identical ancestor 113a4eb. For exact bac310, applicability and estate certificate passed; Android validation remains in progress. Physical/human/external gates remain open.",
+    "documentation_verification_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad (current source snapshot before this documentation update)",
+    "documentation_workflow_run": "Android 40623171681 in progress on bac310; applicability 40623171660 and estate certificate 40623171680 succeeded."
   },
   "current_repository_state": {
     "branch": "main",
-    "verified_source_candidate_sha": "113a4ebdf671dc16470b18de0d4dff7685230045",
-    "candidate_remote_confirmation": "Fresh fetch at this reconciliation confirmed local main and origin/main both equal documentation-only commit be5b402ddf4efdaaf0c3bde09093379bda15b5e9; application source candidate 113a4eb is its tested ancestor.",
-    "working_tree": "At the be5b402 snapshot, prior source and ledger changes were committed and pushed. This documentation reconciliation corrects the authoritative map/ledger snapshot; pre-existing untracked user/generated state remains preserved and excluded.",
+    "verified_source_candidate_sha": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+    "candidate_remote_confirmation": "Local main and origin/main matched at bac310 before documentation edits; workflow run records use the same full SHA.",
+    "working_tree": "Source commit bac310 pushed. Preserved pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md and docs/repository_knowledge/current_worktree_delta_20261027/. New audio documentation/ledgers are lead-owned; do not stage unrelated untracked files.",
     "current_delta_task": "TASK-E-001",
-    "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+    "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md; docs/repository_knowledge/audio_asset_and_wiring_review_2026-10-28.md",
     "evidence_ids": [
-      "EVID-114",
-      "EVID-115",
-      "EVID-116",
-      "EVID-117"
+      "EVID-118",
+      "EVID-119",
+      "EVID-120",
+      "EVID-121",
+      "EVID-122"
     ],
-    "latest_documentation_verification_sha": "be5b402ddf4efdaaf0c3bde09093379bda15b5e9 (pre-reconciliation documentation snapshot)",
-    "latest_documentation_workflow": "Android exact-HEAD run 40622204411 was in progress at latest observation; no-trainable-surface 40622204348 and estate certificate 40622204354 passed. The source candidate 113a4eb passed host/API35 Android run 40620167730."
+    "latest_documentation_verification_sha": "bac310001d48629d4542c3ed75b65d1fb5d241ad (prior to current doc update)",
+    "latest_documentation_workflow": "Android run 40623171681 in progress; applicability 40623171660 and estate certificate 40623171680 passed on bac310."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",

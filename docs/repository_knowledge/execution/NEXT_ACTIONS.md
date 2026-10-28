@@ -14,4 +14,4 @@ The original static investigation's read-only restriction was superseded by the 
 
 
 
-Current source candidate is `113a4ebdf671dc16470b18de0d4dff7685230045`; all repository-controlled tasks are complete at their recorded scopes. Remaining actions are physical-device performance (B-001/B-002), human/external acceptance (D-001..D-007), and final readiness reconciliation (E-001).
+Current source candidate is `bac310001d48629d4542c3ed75b65d1fb5d241ad`. Exact-SHA applicability and estate-certificate workflows passed; Android validation `40623171681` is in progress under `TASK-C-016`. The latest audio payload/wiring delta is recorded in EVID-118/EVID-119 and the linked audio report. Physical-device access is unavailable, so B-001/B-002 remain blocked; D-001..D-007 require genuine human/external owner evidence; E-001 remains dependent on those gates and exact-candidate closure.

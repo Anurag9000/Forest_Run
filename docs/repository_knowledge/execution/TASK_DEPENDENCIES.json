@@ -272,6 +272,16 @@
       "from": "TASK-C-015",
       "to": "TASK-E-001",
       "reason": "Final reconciliation must include the WOLF_CHARGE source delta and exact-candidate evidence."
+    },
+    {
+      "from": "TASK-A-038",
+      "to": "TASK-C-016",
+      "reason": "Exact-SHA verification follows source/audio reconciliation."
+    },
+    {
+      "from": "TASK-C-016",
+      "to": "TASK-E-001",
+      "reason": "Final readiness requires evidence on the current source candidate."
     }
   ],
   "parallel_waves": [
@@ -462,6 +472,6 @@
       "note": "C-015 enters exact-SHA queue after A-037 is committed."
     }
   ],
-  "cycle_check": "Acyclic; static DFS rechecked after 2026-10-28 delta across 54 hard edges and 38 participating task nodes; all 62 task records are represented in the master ledger (isolated/no-prerequisite tasks need no graph edge).",
+  "cycle_check": "Acyclic; static DFS rechecked on 2026-10-28 after the audio/C-016 delta across 56 hard edges and 39 participating task nodes.",
   "ready_rule": "Only tasks belonging to the explicitly authorized active phase may become READY; all hard prerequisites must be completed with evidence and no ownership/resource conflict may remain."
 }

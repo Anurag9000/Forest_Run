@@ -10183,7 +10183,7 @@
     },
     {
       "path": "app/src/main/java/com/anurag9000/forestrun/entities/birds/Duck.kt",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad (comment-only delta from 113a4eb)",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
       "symbol_count": 27,
       "symbols": [
@@ -10630,9 +10630,9 @@
         {
           "name": "com.anurag9000.forestrun.entities.birds.Duck.update",
           "kind": "function/method",
-          "lines": "79-79",
+          "lines": "77",
           "signature": "override fun update(deltaTime: Float, scrollSpeed: Float) {",
-          "purpose": "Phase 20: play quack SFX 0.5s before entering screen here",
+          "purpose": "Moves the Duck, updates visual call/low-lane cues and animation, and performs offscreen cleanup; no SFX is invoked.",
           "inputs": "deltaTime: Float, scrollSpeed: Float",
           "outputs": "Return type shown in signature where declared; otherwise Kotlin Unit/inferred.",
           "state_or_effects": "See body outline and referenced source lines; side effects are not inferred from the symbol name.",
@@ -10655,7 +10655,7 @@
         {
           "name": "com.anurag9000.forestrun.entities.birds.Duck.draw",
           "kind": "function/method",
-          "lines": "100-100",
+          "lines": "98",
           "signature": "override fun draw(canvas: Canvas) {",
           "purpose": "Project-specific draw operation; inspect the linked body for detailed branch behavior.",
           "inputs": "canvas: Canvas",
@@ -10680,7 +10680,7 @@
         {
           "name": "com.anurag9000.forestrun.entities.birds.Duck.performUniqueAction",
           "kind": "function/method",
-          "lines": "133-133",
+          "lines": "131",
           "signature": "override fun performUniqueAction(player: Player, gameState: GameStateManager) {",
           "purpose": "Project-specific performUniqueAction operation; inspect the linked body for detailed branch behavior.",
           "inputs": "player: Player, gameState: GameStateManager",
@@ -10705,7 +10705,7 @@
         {
           "name": "com.anurag9000.forestrun.entities.birds.Duck.updatePlayerInteraction",
           "kind": "function/method",
-          "lines": "147-147",
+          "lines": "145",
           "signature": "override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {",
           "purpose": "Project-specific updatePlayerInteraction operation; inspect the linked body for detailed branch behavior.",
           "inputs": "player: Player, gameState: GameStateManager",
@@ -10730,7 +10730,7 @@
         {
           "name": "com.anurag9000.forestrun.entities.birds.Duck.onCollision",
           "kind": "function/method",
-          "lines": "187-188",
+          "lines": "185-186",
           "signature": "override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {",
           "purpose": "Project-specific onCollision operation; inspect the linked body for detailed branch behavior.",
           "inputs": "player: Player, gameState: GameStateManager",

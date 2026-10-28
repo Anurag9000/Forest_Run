@@ -104384,8 +104384,8 @@
       "implementation_status": "Source-defined; file is statically inspected, integration is documented separately.",
       "evidence_status": "Static source only; no runtime execution.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104413,8 +104413,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104442,8 +104442,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104471,8 +104471,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104500,8 +104500,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104529,8 +104529,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104558,8 +104558,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104587,8 +104587,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104616,8 +104616,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104645,8 +104645,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104674,8 +104674,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104703,8 +104703,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104732,8 +104732,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104761,8 +104761,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104790,8 +104790,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104819,8 +104819,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104848,8 +104848,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104877,8 +104877,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104906,8 +104906,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104935,8 +104935,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104964,8 +104964,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -104993,8 +104993,8 @@
       "implementation_status": "Source-defined; cross-file consumers not resolved in this shard.",
       "evidence_status": "Static source only.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -105004,10 +105004,10 @@
       "id": "SYM-3714",
       "name": "com.anurag9000.forestrun.entities.birds.Duck.update",
       "path": "app/src/main/java/com/anurag9000/forestrun/entities/birds/Duck.kt",
-      "lines": "79-79",
+      "lines": "77",
       "kind": "function/method",
       "signature": "override fun update(deltaTime: Float, scrollSpeed: Float) {",
-      "purpose": "Phase 20: play quack SFX 0.5s before entering screen here",
+      "purpose": "Moves the Duck left at scroll speed, updates pulsing visual call and low-lane cues and sprite animation, and deactivates it offscreen; it does not play audio.",
       "inputs": "deltaTime: Float, scrollSpeed: Float",
       "outputs": "Return type shown in signature where declared; otherwise Kotlin Unit/inferred.",
       "state_or_effects": "See body outline and referenced source lines; side effects are not inferred from the symbol name.",
@@ -105022,8 +105022,8 @@
       "implementation_status": "Source-defined; reachability requires separate call-path evidence.",
       "evidence_status": "Static source only; no runtime execution.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -105033,7 +105033,7 @@
       "id": "SYM-3715",
       "name": "com.anurag9000.forestrun.entities.birds.Duck.draw",
       "path": "app/src/main/java/com/anurag9000/forestrun/entities/birds/Duck.kt",
-      "lines": "100-100",
+      "lines": "98",
       "kind": "function/method",
       "signature": "override fun draw(canvas: Canvas) {",
       "purpose": "Project-specific draw operation; inspect the linked body for detailed branch behavior.",
@@ -105051,8 +105051,8 @@
       "implementation_status": "Source-defined; reachability requires separate call-path evidence.",
       "evidence_status": "Static source only; no runtime execution.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -105062,7 +105062,7 @@
       "id": "SYM-3716",
       "name": "com.anurag9000.forestrun.entities.birds.Duck.performUniqueAction",
       "path": "app/src/main/java/com/anurag9000/forestrun/entities/birds/Duck.kt",
-      "lines": "133-133",
+      "lines": "131",
       "kind": "function/method",
       "signature": "override fun performUniqueAction(player: Player, gameState: GameStateManager) {",
       "purpose": "Project-specific performUniqueAction operation; inspect the linked body for detailed branch behavior.",
@@ -105080,8 +105080,8 @@
       "implementation_status": "Source-defined; reachability requires separate call-path evidence.",
       "evidence_status": "Static source only; no runtime execution.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -105091,7 +105091,7 @@
       "id": "SYM-3717",
       "name": "com.anurag9000.forestrun.entities.birds.Duck.updatePlayerInteraction",
       "path": "app/src/main/java/com/anurag9000/forestrun/entities/birds/Duck.kt",
-      "lines": "147-147",
+      "lines": "145",
       "kind": "function/method",
       "signature": "override fun updatePlayerInteraction(player: Player, gameState: GameStateManager) {",
       "purpose": "Project-specific updatePlayerInteraction operation; inspect the linked body for detailed branch behavior.",
@@ -105109,8 +105109,8 @@
       "implementation_status": "Source-defined; reachability requires separate call-path evidence.",
       "evidence_status": "Static source only; no runtime execution.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
@@ -105120,7 +105120,7 @@
       "id": "SYM-3718",
       "name": "com.anurag9000.forestrun.entities.birds.Duck.onCollision",
       "path": "app/src/main/java/com/anurag9000/forestrun/entities/birds/Duck.kt",
-      "lines": "187-188",
+      "lines": "185-186",
       "kind": "function/method",
       "signature": "override fun onCollision(player: Player, gameState: GameStateManager): CollisionResult {",
       "purpose": "Project-specific onCollision operation; inspect the linked body for detailed branch behavior.",
@@ -105138,8 +105138,8 @@
       "implementation_status": "Source-defined; reachability requires separate call-path evidence.",
       "evidence_status": "Static source only; no runtime execution.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "bac310001d48629d4542c3ed75b65d1fb5d241ad",
+        "working_tree_snapshot": "comment-only delta from 113a4eb"
       },
       "shard": "docs/repository_knowledge/symbol_shards/kotlin_non_engine.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",

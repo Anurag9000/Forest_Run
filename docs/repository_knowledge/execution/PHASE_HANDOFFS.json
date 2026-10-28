@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "current_phase": "Authorized source completion and verification reconciliation",
-  "current_phase_status": "Exact candidate 871467c2437a9949da6bf9c0119a31c405d7fa42 passed exact-SHA host/release/lint/package, API35 connected validation (28/28), screenshot capture (8/8 raw images verified), no-trainable-surface and estate-certificate workflows (EVID-113). TASK-C-013 is complete for hosted API35 Owl alert capture and visible-state evidence. Physical-device performance/acceptance and human, legal, store, governance, signing and release gates remain open.",
+  "current_phase_status": "Current source candidate bac310001d48629d4542c3ed75b65d1fb5d241ad is pushed. Applicability/certificate passed; Android validation 40623171681 is in progress (TASK-C-016). Audio payload/wiring delta is documented (EVID-118/EVID-119). Physical-device access is unavailable; device, human, external governance and final readiness gates remain open.",
   "phases": [
     {
       "id": "A",
@@ -12,7 +12,8 @@
         "TASK-A-032",
         "TASK-A-033",
         "TASK-A-034",
-        "TASK-A-035"
+        "TASK-A-035",
+        "TASK-A-038"
       ],
       "status": "Prior source delta review reused; TASK-A-035 closes the OWL_DIVE capture input gap. Exact-main delta review at 1d1a found no additional requirement-backed source change (EVID-074/EVID-077).",
       "entry_conditions": [
@@ -60,9 +61,10 @@
         "TASK-C-010",
         "TASK-C-011",
         "TASK-C-012",
-        "TASK-C-013"
+        "TASK-C-013",
+        "TASK-C-016"
       ],
-      "status": "TASK-C-007 through TASK-C-014 are complete at their recorded scopes. TASK-C-013 candidate-bound OWL_DIVE capture and visual state are verified for hosted API35 (EVID-113); this does not establish physical/human acceptance.",
+      "status": "Current exact-candidate TASK-C-016 is pending hosted Android run 40623171681; source/audio delta is reconciled in EVID-118/EVID-119. Older tasks remain completed at recorded scopes.",
       "entry_conditions": [
         "Preserve exact candidate/base and the original dirty checkout",
         "Reuse EVID-072 and EVID-074–EVID-078; do not repeat passing suites without a source or requirement delta",
@@ -134,5 +136,6 @@
     "reuse": "Prior code/memory maps and dated audits remain revision-bounded; revisit only changed or contradictory evidence.",
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
-  }
+  },
+  "baseline": "Current source candidate: bac310001d48629d4542c3ed75b65d1fb5d241ad. Reconcile local/remote and preserved untracked state before resuming."
 }

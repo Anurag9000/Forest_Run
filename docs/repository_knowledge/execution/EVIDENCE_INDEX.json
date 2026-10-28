@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+  "repository_revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad plus documentation working-tree delta",
   "snapshot_date": "2026-10-28",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -1714,6 +1714,92 @@
       ],
       "result": "Documentation and ledger consistency checks passed at the recorded scope.",
       "limitations": "This validates structured records, links, uniqueness and graph consistency; it does not claim all source symbols have complete semantic call-graph analysis, nor substitute for runtime or external acceptance."
+    },
+    {
+      "id": "EVID-118",
+      "type": "audio payload decode and signal inspection",
+      "path": "app/src/main/res/raw/*.ogg; docs/repository_knowledge/audio_asset_and_wiring_review_2026-10-28.md",
+      "revision": "03f6b331a2f4ecacab6083c1d8d044b73ef3f12c; all 15 current payload SHA-256 values rechecked unchanged at bac310001d48629d4542c3ed75b65d1fb5d241ad",
+      "supports": [
+        "REQ-005",
+        "CAP-004",
+        "CAP-015"
+      ],
+      "observation": "All 15 Ogg Vorbis files probed and decoded successfully; current hashes match the report. Signal checks found no decoder warnings, nonfinite samples, sample clipping, long internal silence, duplicate hashes, or equal-duration resampled pairs with zero-lag normalized correlation above 0.5. Music durations are 0.39–1.39 s; short duration alone is not established as a defect. No listening occurred.",
+      "commands": [
+        "ffprobe -v error -show_format -show_streams -of json <path>",
+        "ffmpeg astats and silencedetect to null output",
+        "ffmpeg mono 8 kHz float32 decode to memory; pairwise equal-length normalized dot product"
+      ],
+      "result": "Static payload and decoded-signal review documented; hashes confirmed unchanged at current source head.",
+      "limitations": "Tool versions were not captured. No listening, loop-seam judgment, perceived loudness, true-peak measurement, mix/fatigue assessment, creative approval or rights decision. Numerical checks do not imply musical quality."
+    },
+    {
+      "id": "EVID-119",
+      "type": "audio runtime wiring and stale Duck note reconciliation",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/{RuntimeAssetValidator.kt,LeitmotifManager.kt,SfxManager.kt,GameView.kt}; app/src/main/java/com/anurag9000/forestrun/entities/{birds/Duck.kt,birds/Owl.kt,birds/Eagle.kt,animals/Wolf.kt,animals/Dog.kt}; app/src/main/java/com/anurag9000/forestrun/Player.kt; app/src/main/java/com/anurag9000/forestrun/engine/SeedOrbManager.kt; docs/GAME_DESIGN.md; git history c489889f; docs/repository_knowledge/audio_asset_and_wiring_review_2026-10-28.md",
+      "revision": "Static wiring inspected at 03f6b331a2f4ecacab6083c1d8d044b73ef3f12c; stale Duck source note removed at bac310001d48629d4542c3ed75b65d1fb5d241ad",
+      "supports": [
+        "REQ-005",
+        "CAP-004",
+        "CAP-015"
+      ],
+      "observation": "Static call-path review accounts for required audio asset inventory, music state mapping, lifecycle/preferences/fallbacks, and semantic Player/Seed/Wolf/Dog/Owl/Eagle SFX callers. Duck currently uses visual/dialogue timing cues and has no dedicated sound; current design asks for a readable timing cue. Historical c489889f records completion of the quack visual/dialogue payoff; bac310 removes the stale source comment without behavior change.",
+      "commands": [
+        "Static source and git history inspection; no application/test execution for this review"
+      ],
+      "result": "Current source and documented sound requirements reconciled for the reviewed pathways; no missing required Duck-audio feature established.",
+      "limitations": "Static reachability does not establish device audibility/mix quality. Human/device listening and creative review remain external."
+    },
+    {
+      "id": "EVID-120",
+      "type": "2026-10-28 documentation/ledger delta consistency audit",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/REPO_CODEBASE_MAP.md; docs/repository_knowledge/{MASTER_EXECUTION_LEDGER.json,file_inventory.json,symbol_inventory.json,symbol_shards/kotlin_non_engine.json,execution/EVIDENCE_INDEX.json,execution/TASK_DEPENDENCIES.json,execution/PHASE_HANDOFFS.json,execution/EXECUTION_DASHBOARD.md,execution/NEXT_ACTIONS.md,execution/STATE_HISTORY.jsonl,source_completion_delta_2026-10-28.md,audio_asset_and_wiring_review_2026-10-28.md}",
+      "revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad plus current documentation working-tree delta",
+      "supports": [
+        "GOAL-014",
+        "REQ-018"
+      ],
+      "observation": "Static documentation consistency audit parsed all updated JSON. It found 189 unique IDs across the master structured records and 117 unique evidence IDs; all task dependency/evidence references resolved; 56 dependency edges were acyclic; all 1,011 inventory paths existed and inventory coverage counts reconciled; 65 relative links across edited Markdown files resolved. git diff --check passed. Sensitive-value pattern scan on edited documentation found no matches.",
+      "commands": [
+        "Python static JSON/ID/reference/DAG/inventory/path/relative-link validation",
+        "git diff --check",
+        "rg sensitive-value pattern scan on newly edited documentation"
+      ],
+      "result": "Static documentation and ledger checks passed at the listed scope.",
+      "limitations": "This is documentation consistency evidence only. It does not validate game behavior, exact-candidate Android CI, physical devices, human acceptance, provenance or external release requirements."
+    },
+    {
+      "id": "EVID-121",
+      "type": "user-reported external resource availability",
+      "path": "Conversation user reply, 2026-10-28; no repository artifact",
+      "revision": "Current task context",
+      "supports": [
+        "TASK-B-001",
+        "TASK-D-001",
+        "GOAL-006"
+      ],
+      "observation": "User stated: “No physical device access yet.” This establishes that physical-device performance/acceptance work cannot be performed in the current environment at this time.",
+      "commands": [],
+      "result": "Physical-device gate remains pending; hosted emulator evidence is not a substitute.",
+      "limitations": "This is a time-bound user-reported resource fact, not evidence that access can never become available or that any product behavior passed/failed."
+    },
+    {
+      "id": "EVID-122",
+      "type": "post-resource-report documentation consistency check",
+      "path": "docs/repository_knowledge/{MASTER_EXECUTION_LEDGER.json,file_inventory.json,symbol_inventory.json,execution/EVIDENCE_INDEX.json,execution/TASK_DEPENDENCIES.json,execution/PHASE_HANDOFFS.json,execution/STATE_HISTORY.jsonl,execution/EXECUTION_DASHBOARD.md,execution/NEXT_ACTIONS.md}; docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/REPO_CODEBASE_MAP.md; docs/repository_knowledge/source_completion_delta_2026-10-28.md; docs/repository_knowledge/audio_asset_and_wiring_review_2026-10-28.md",
+      "revision": "bac310001d48629d4542c3ed75b65d1fb5d241ad plus current documentation working-tree delta",
+      "supports": [
+        "GOAL-014",
+        "REQ-018"
+      ],
+      "observation": "After recording user-reported lack of physical-device access, a repeat static check parsed all structured JSON, verified 189 unique IDs across master ledgers, 119 existing evidence records before this entry, valid task/evidence/dependency references, acyclic 56-edge dependency graph, 1,011 existing inventory paths with matching coverage counts, and 65 resolving Markdown relative links; git diff --check passed.",
+      "commands": [
+        "Python JSON/ID/reference/DAG/inventory/path/link static validator",
+        "git diff --check"
+      ],
+      "result": "Documentation consistency remained valid after physical-device access blocker was recorded.",
+      "limitations": "The count of 119 evidence records was before adding this EVID-122 record. Static document validation does not establish runtime behavior, Android CI completion, physical/human acceptance or release readiness."
     }
   ]
 }
