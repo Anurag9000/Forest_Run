@@ -74,8 +74,6 @@ class Duck(
         hitbox.set(x + insetX, y + insetY, x + birdW - insetX, y + birdH - insetY)
     }
 
-    // Phase 20: play quack SFX 0.5s before entering screen here
-
     override fun update(deltaTime: Float, scrollSpeed: Float) {
         x -= scrollSpeed * deltaTime
         cuePulse += deltaTime * 5.2f
