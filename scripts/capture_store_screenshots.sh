@@ -163,6 +163,53 @@ wait_for_scenario() {
   return 1
 }
 
+dump_accessibility_window() {
+  local dump_path="/sdcard/forest_run_capture_window.xml"
+  "${ADB[@]}" shell uiautomator dump --compressed "${dump_path}" >/dev/null 2>&1
+  "${ADB[@]}" shell cat "${dump_path}" 2>/dev/null | tr -d '\r'
+}
+
+dismiss_fullscreen_confirmation() {
+  local hierarchy bounds center_x center_y
+  hierarchy="$(dump_accessibility_window)" || {
+    echo "Unable to inspect the Android window before screenshot capture." >&2
+    return 1
+  }
+
+  # Android displays this system-owned confirmation the first time an app enters
+  # immersive mode. It can cover a valid scenario-ready marker and dim the game,
+  # so dismiss it by its semantic button only when the dialog is actually present.
+  if [[ "${hierarchy}" != *'Viewing full screen'* && "${hierarchy}" != *'text="Got it"'* ]]; then
+    return 0
+  fi
+
+  bounds="$(printf '%s' "${hierarchy}" | "${PYTHON_BIN}" -c '
+import re, sys
+xml = sys.stdin.read()
+match = re.search(r"<node\b(?=[^>]*\btext=\"Got it\")(?=[^>]*\bbounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]")[^>]*>", xml)
+if match:
+    x1, y1, x2, y2 = map(int, match.groups())
+    if x2 > x1 and y2 > y1:
+        print((x1 + x2) // 2, (y1 + y2) // 2)
+')"
+  if [[ ! "${bounds}" =~ ^[0-9]+[[:space:]][0-9]+$ ]]; then
+    echo "Android fullscreen confirmation is visible but its Got it button bounds are unavailable." >&2
+    return 1
+  fi
+  read -r center_x center_y <<<"${bounds}"
+  "${ADB[@]}" shell input tap "${center_x}" "${center_y}"
+  sleep 0.5
+
+  hierarchy="$(dump_accessibility_window)" || {
+    echo "Unable to confirm dismissal of the Android fullscreen confirmation." >&2
+    return 1
+  }
+  if [[ "${hierarchy}" == *'Viewing full screen'* || "${hierarchy}" == *'text="Got it"'* ]]; then
+    echo "Android fullscreen confirmation remained visible after tapping Got it." >&2
+    return 1
+  fi
+}
+
 assert_app_foreground() {
   local resumed
   resumed="$(
@@ -212,6 +259,7 @@ capture() {
     --es debug_scenario "${scenario}" \
     --es run_mode "${RUN_MODE}" >/dev/null
   wait_for_process
+  dismiss_fullscreen_confirmation
   local readiness_marker
   readiness_marker="$(wait_for_scenario "${scenario}")"
   sleep "${settle_seconds}"

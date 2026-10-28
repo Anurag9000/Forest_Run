@@ -69,6 +69,21 @@ class StoreScreenshotCaptureContractTest(unittest.TestCase):
         self.assertIn("FOREST_RUN_SCENARIO_READY", self.source)
         self.assertIn("logcat -c", self.source)
 
+    def test_capture_dismisses_only_a_detected_android_immersive_prompt(self) -> None:
+        capture_body = self.source.split("capture() {", maxsplit=1)[1].split("\n}", maxsplit=1)[0]
+        dismiss_index = capture_body.index("dismiss_fullscreen_confirmation")
+        readiness_index = capture_body.index("wait_for_scenario")
+        screencap_index = capture_body.index("exec-out screencap -p")
+
+        self.assertLess(dismiss_index, readiness_index)
+        self.assertLess(dismiss_index, screencap_index)
+        self.assertIn("uiautomator dump --compressed", self.source)
+        self.assertIn("Viewing full screen", self.source)
+        self.assertIn("text=\"Got it\"", self.source)
+        self.assertIn("shell input tap", self.source)
+        self.assertIn("bounds are unavailable", self.source)
+        self.assertIn("remained visible after tapping Got it", self.source)
+
     def test_device_and_timeout_inputs_fail_closed(self) -> None:
         self.assertIn("STARTUP_TIMEOUT_S must be a positive integer", self.source)
         self.assertIn("grep -Fxq", self.source)
