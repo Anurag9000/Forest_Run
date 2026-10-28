@@ -8507,7 +8507,7 @@
   },
   "latest_candidate": {
     "base_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
-    "working_tree_delta": "Source committed/pushed; docs reconciliation is in progress; unrelated untracked user/generated state preserved.",
+    "working_tree_delta": "Application source remains the exact-tested 113a4eb candidate; documentation-only reconciliation is recorded on 2026-10-28. At the be5b402 documentation snapshot, the exact-HEAD Android workflow 40622204411 was in progress; the applicability and estate-certificate workflows passed.",
     "evidence_ids": [
       "EVID-114",
       "EVID-115",
@@ -8515,14 +8515,14 @@
       "EVID-117"
     ],
     "status": "Local Python 1,398 and JVM/Robolectric 1,307 passed; exact-SHA host/release/lint/package passed; API35 connected 28/28 passed; process-death recovery and eight candidate-bound screenshots verified. Training-applicability and certificate workflows passed. Physical/human/external acceptance remains separate.",
-    "documentation_verification_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2",
-    "documentation_workflow_run": "Prior documentation-only workflows apply to earlier revisions; this ledger is being reconciled against exact source candidate 113a4ebdf671dc16470b18de0d4dff7685230045."
+    "documentation_verification_revision": "be5b402ddf4efdaaf0c3bde09093379bda15b5e9 (snapshot immediately before this documentation reconciliation)",
+    "documentation_workflow_run": "Android exact-HEAD workflow 40622204411 was in progress at the latest observation; no-trainable-surface 40622204348 and estate certificate 40622204354 passed. Source SHA 113a4eb Android host/API35 run 40620167730 passed."
   },
   "current_repository_state": {
     "branch": "main",
     "verified_source_candidate_sha": "113a4ebdf671dc16470b18de0d4dff7685230045",
-    "candidate_remote_confirmation": "A fresh fetch confirmed origin/main and local main both equal 113a4ebdf671dc16470b18de0d4dff7685230045. Exact-SHA Android run 40620167730, applicability 40620167767 and estate certificate 40620167515 passed.",
-    "working_tree": "Source is committed and exact-SHA verified. Documentation/ledger reconciliation is in progress. Pre-existing untracked user/generated state remains preserved and excluded.",
+    "candidate_remote_confirmation": "Fresh fetch at this reconciliation confirmed local main and origin/main both equal documentation-only commit be5b402ddf4efdaaf0c3bde09093379bda15b5e9; application source candidate 113a4eb is its tested ancestor.",
+    "working_tree": "At the be5b402 snapshot, prior source and ledger changes were committed and pushed. This documentation reconciliation corrects the authoritative map/ledger snapshot; pre-existing untracked user/generated state remains preserved and excluded.",
     "current_delta_task": "TASK-E-001",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
     "evidence_ids": [
@@ -8531,8 +8531,8 @@
       "EVID-116",
       "EVID-117"
     ],
-    "latest_documentation_verification_sha": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2",
-    "latest_documentation_workflow": "Current source candidate 113a4eb exact-SHA Android workflow 40620167730 passed both host and API35 connected jobs; exact workflow artifact IDs 12787496440 and 12787029693. No-trainable-surface 40620167767 and estate certificate 40620167515 passed."
+    "latest_documentation_verification_sha": "be5b402ddf4efdaaf0c3bde09093379bda15b5e9 (pre-reconciliation documentation snapshot)",
+    "latest_documentation_workflow": "Android exact-HEAD run 40622204411 was in progress at latest observation; no-trainable-surface 40622204348 and estate certificate 40622204354 passed. The source candidate 113a4eb passed host/API35 Android run 40620167730."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
