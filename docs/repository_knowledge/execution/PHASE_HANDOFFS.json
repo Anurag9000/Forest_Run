@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "current_phase": "Authorized source completion and verification reconciliation",
-  "current_phase_status": "Canonical main/origin are at 8f9340d. Current source delta corrects late CACTUS_READ jumps and adds selected scenario integration coverage. Full Python scripts suite passed 1,398 tests and full Java21 Gradle compile/test/lint/package gate passed with 1,320 tests (EVID-129/130). TASK-A-039..043 are locally complete; TASK-C-018 tracks exact-candidate hosted validation. User reports no physical-device access; external gates remain open.",
+  "current_phase_status": "Local source delta based on d0eb2f6953951ab29f0a262977a86d0f097b2846 corrects BLOOM_SHOWCASE full-lane conversion spacing and adds three selected scenario integration classes. Full local Python 1,398 and Java21 Gradle 1,327 test/build/lint/package gates passed (EVID-135/136). Exact candidate has not yet been committed or verified by hosted Android workflow. User reports no physical-device access; human/external gates remain open.",
   "phases": [
     {
       "id": "A",
@@ -71,7 +71,7 @@
         "TASK-C-017",
         "TASK-C-018"
       ],
-      "status": "Full local Java21 compile/test/lint/package gate passes (1,320 tests); full Python suite passes (1,398 tests). Exact-candidate hosted verification is TASK-C-018. Physical access is unavailable.",
+      "status": "Full local Java21 compile/test/lint/package gate passes (1,327 tests); full Python suite passes (1,398 tests). Exact-candidate hosted verification is TASK-C-018. Physical access is unavailable.",
       "entry_conditions": [
         "Preserve exact candidate/base and the original dirty checkout",
         "Reuse EVID-072 and EVID-074–EVID-078; do not repeat passing suites without a source or requirement delta",
@@ -144,5 +144,5 @@
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
   },
-  "baseline": "Source baseline 8f9340d431f7abb84719aef0a5b1174cafb0c437; current local delta is tracked by TASK-A-039/TASK-C-017."
+  "baseline": "Current source baseline d0eb2f6953951ab29f0a262977a86d0f097b2846; existing user-owned/generated untracked state is preserved and excluded."
 }

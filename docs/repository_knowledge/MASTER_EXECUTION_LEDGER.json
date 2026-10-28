@@ -4,7 +4,8 @@
   "baseline": {
     "branch": "main",
     "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-    "date": "2026-10-03"
+    "date": "2026-10-03",
+    "current_candidate": "d0eb2f6953951ab29f0a262977a86d0f097b2846"
   },
   "snapshot_date": "2026-10-28",
   "working_tree_at_start": {
@@ -438,7 +439,7 @@
           "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
           "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt"
         ],
-        "status": "PARTIAL: scenario integration evidence now covers WOLF_CHARGE (EVID-114..116), EAGLE_MARK (EVID-123), CACTUS_READ and selected flora/tree showcases (EVID-126), five animal behaviors (EVID-127), and Owl/Chickadee behavior (EVID-128). Remaining authored scenarios need individual mechanic-to-scenario disposition; exact-candidate hosted validation is pending.",
+        "status": "PARTIAL: real-path integration evidence now covers WOLF_CHARGE (EVID-114..116), EAGLE_MARK (EVID-123), CACTUS_READ and selected flora/tree showcases (EVID-126), five animal behaviors (EVID-127), Owl/Chickadee behavior (EVID-128), scenario rosters and selected bird/showcase mechanics, and all five BLOOM_SHOWCASE conversions (EVID-134..136). Remaining authored scenarios still require individual requirement-level disposition; exact-SHA hosted validation for the present delta is pending.",
         "capability_ids": [
           "CAP-002",
           "CAP-006"
@@ -452,7 +453,9 @@
           "TASK-A-043",
           "TASK-C-015",
           "TASK-C-017",
-          "TASK-C-018"
+          "TASK-C-018",
+          "TASK-A-044",
+          "TASK-A-045"
         ]
       }
     ],
@@ -478,15 +481,18 @@
         "id": "CAP-002",
         "goal_id": "GOAL-002",
         "name": "Input, player movement, encounter arbitration, Seeds/Bloom and progression",
-        "implementation": "SUBSTANTIALLY_COMPLETE; the WOLF_CHARGE scenario branch is source-corrected and integrated.",
-        "verification": "LOCAL_FULL_SUITES_AND_EXACT_SHA_HOSTED_HOST_API35_PASSED",
+        "implementation": "SUBSTANTIALLY_COMPLETE; CACTUS_READ and BLOOM_SHOWCASE source timing/spacing are corrected with real-path tests.",
+        "verification": "LOCAL_FULL_PYTHON_AND_JAVA21_GRADLE_PASS_ON_CURRENT_DELTA; EXACT_SHA_HOSTED_PENDING",
         "evidence": [
           "docs/ARCHITECTURE.md",
           "docs/AUDIT_LEDGER.md",
           "EVID-114",
           "app/src/test/java/com/anurag9000/forestrun/engine/WolfScenarioIntegrationTest.kt",
           "EVID-115",
-          "EVID-116"
+          "EVID-116",
+          "EVID-134",
+          "EVID-135",
+          "EVID-136"
         ],
         "requirement_ids": [
           "REQ-002",
@@ -1556,13 +1562,44 @@
           "EVID-127",
           "EVID-128",
           "EVID-129",
-          "EVID-130"
+          "EVID-130",
+          "EVID-134",
+          "EVID-136"
         ],
         "related_task_ids": [
           "TASK-A-039",
           "TASK-A-041",
           "TASK-A-042",
           "TASK-A-043",
+          "TASK-C-018",
+          "TASK-A-044",
+          "TASK-A-045"
+        ],
+        "related_goal_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "limitations": "Selected additional scenario integrations pass locally, including the full Bloom window; this does not close all 28 scenarios, exact-SHA hosting, or external acceptance."
+      },
+      {
+        "id": "FIND-026",
+        "kind": "BLOOM_SHOWCASE full-lane conversion timing defect",
+        "statement": "The real scenario path showed Duck and Weeping Willow still pending when the single six-second Bloom expired; each then resolved HIT, contradicting BLOOM_SHOWCASE’s authored summary that the full lane converts. Shorter/staggered world offsets now let all five family encounters pass through the existing conversion owner before expiry; the focused integration asserts exclusive outcomes and rewards.",
+        "status": "SOURCE_CORRECTED; FOCUSED_AND_FULL_LOCAL_TESTS_PASS; EXACT_SHA_PENDING",
+        "evidence_ids": [
+          "EVID-134",
+          "EVID-136"
+        ],
+        "related_task_ids": [
+          "TASK-A-044",
+          "TASK-A-045",
           "TASK-C-018"
         ],
         "related_goal_ids": [
@@ -1576,7 +1613,7 @@
           "CAP-002",
           "CAP-006"
         ],
-        "limitations": "Exact candidate not yet verified; no physical device access; remaining scenarios are not all dispositioned."
+        "limitations": "Source/Robolectric behavior only; no physical readability, human approval or exact-SHA hosted validation yet."
       }
     ],
     "gaps": [
@@ -1784,9 +1821,11 @@
           "EVID-127",
           "EVID-128",
           "EVID-129",
-          "EVID-130"
+          "EVID-130",
+          "EVID-134",
+          "EVID-136"
         ],
-        "status": "BOUNDED_LOCAL_COVERAGE_ADDED; FULL_CATALOGUE_AND_EXACT_CANDIDATE_PENDING",
+        "status": "BOUNDED_SELECTED_SCENARIO_COVERAGE_ADDED; WHOLE_CATALOGUE_AND_EXACT_CANDIDATE_PENDING",
         "related_requirement_ids": [
           "REQ-020"
         ],
@@ -1795,9 +1834,36 @@
           "TASK-A-041",
           "TASK-A-042",
           "TASK-A-043",
+          "TASK-C-018",
+          "TASK-A-044",
+          "TASK-A-045"
+        ],
+        "next_action": "Verify exact committed candidate; continue only with concrete uncovered scenario claims and preserve the explicit manual-scenario policy."
+      },
+      {
+        "id": "GAP-015",
+        "kind": "BLOOM_SHOWCASE encounters outlasted its single Bloom window",
+        "statement": "The scenario promised full-lane conversion but later entities cleared the Player only after Bloom expired, and resolved as HIT. The offset schedule was brought inside the existing six-second window without changing Bloom duration or normal mechanics.",
+        "resolution_task_ids": [
+          "TASK-A-044",
+          "TASK-A-045",
           "TASK-C-018"
         ],
-        "next_action": "Verify exact candidate and continue only targeted remaining scenario dispositions."
+        "disposition": "Focused real-path integration now observes all five authored types resolving once as BLOOM_CONVERTED before timer expiry and matching one-Seed-per-conversion accounting (EVID-134). The full local Java21 suite passes (EVID-136). Exact candidate remains pending.",
+        "evidence_ids": [
+          "EVID-134",
+          "EVID-136"
+        ],
+        "status": "LOCALLY_RESOLVED; EXACT_SHA_HOSTED_VERIFICATION_PENDING",
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_task_ids": [
+          "TASK-A-044",
+          "TASK-A-045",
+          "TASK-C-018"
+        ],
+        "next_action": "Commit and push the authorized source/test/documentation delta, then obtain exact-SHA hosted Java21/API35 validation; physical/human review remains external."
       }
     ],
     "tasks": [
@@ -8241,7 +8307,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification",
         "objective": "Confirm exact 8f9340d main candidate passes Android host and API35 connected validation after the audio/Duck-note documentation delta.",
         "motivation": "Validate the pushed audio source documentation cleanup on the exact candidate; prior 113a4eb evidence is predecessor-only.",
-        "current_state": "Exact run 40623906250 is for 8f9340d. Host/release/lint/package job 122604560951 succeeded; API35 connected job 122606210657 was in progress at last poll.",
+        "current_state": "Exact 8f9340d Android run host job succeeded, but API35 connected job was cancelled when newer candidate d0eb2f69 triggered concurrency cancellation. The predecessor candidate is superseded; connected validation did not pass.",
         "required_final_state": "Both exact 8f9340d host and API35 connected jobs conclude successfully; applicability and certificate workflows 40623906223 and 40623906191 succeed; no external acceptance inferred.",
         "scope": [
           "8f9340d431f7abb84719aef0a5b1174cafb0c437",
@@ -8281,23 +8347,26 @@
         "execution_constraints": "Do not weaken required validation or invent results.",
         "complexity": "low",
         "priority": "P1 candidate verification gate",
-        "execution_status": "IN_PROGRESS",
+        "execution_status": "CANCELLED / SUPERSEDED",
         "owner": "/root",
         "blockers": [
           "API35 connected job 122606210657 is running as of the last authoritative poll."
         ],
         "evidence_ids": [
           "EVID-118",
-          "EVID-119"
+          "EVID-119",
+          "EVID-133"
         ],
-        "uncertainty": "API35 connected conclusion is pending; exact source validation does not include later EAGLE_MARK delta.",
-        "remaining_work": "Poll API35 job 122606210657; then close this predecessor candidate task. The next source delta is covered by TASK-C-017.",
-        "completion_evidence": [],
+        "uncertainty": "The old API35 job was cancelled by a newer push, not failed. New candidate workflow must complete.",
+        "remaining_work": "None for the superseded 8f candidate; its exact verification is replaced by TASK-C-018 for d0eb2f69.",
+        "completion_evidence": [
+          "EVID-133"
+        ],
         "related_prior_work": [
           "TASK-C-015; source candidate 113a4eb does not verify bac310."
         ],
         "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437",
-        "next_action": "Poll run 40623906250 API35 connected job.",
+        "next_action": "Do not rerun the obsolete predecessor; track the exact new candidate under TASK-C-018.",
         "investigation_coverage": "INTEGRATION TRACED",
         "implementation_or_investigation_status": "VERIFICATION REQUIRED",
         "evidence_status": "CURRENT EVIDENCE PENDING"
@@ -8807,7 +8876,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification",
         "objective": "Run the added scenario integration tests and applicable full Android host/API35 validation for the exact pushed main SHA.",
         "motivation": "Local changes include scenario-script timing and several new tests; previous exact-SHA evidence does not cover this delta.",
-        "current_state": "Full Python suite passes 1,398 tests (EVID-129); full Java21 Gradle compile/test/lint/package run passes with 1,320 tests (EVID-130). Current delta is not yet committed/pushed or validated by exact-SHA hosted workflows.",
+        "current_state": "Local scenario source/test delta now also includes all-five-family BLOOM_SHOWCASE correction and three scenario integration test classes. Full Python 1,398/1,398 and Java21 Gradle 1,327/1,327 plus compile/lint/package passed locally (EVID-135/136). Existing d0eb exact-SHA Android run cannot validate this later delta; public API polling is currently rate-limited.",
         "required_final_state": "Exact SHA has successful host/release/lint/package and API35 connected results, including these tests.",
         "scope": [
           "current source/test delta",
@@ -8842,7 +8911,9 @@
           "TASK-A-040",
           "TASK-A-041",
           "TASK-A-042",
-          "TASK-A-043"
+          "TASK-A-043",
+          "TASK-A-044",
+          "TASK-A-045"
         ],
         "downstream_task_ids": [
           "TASK-E-001"
@@ -8853,7 +8924,7 @@
         "execution_constraints": "Do not claim physical, human, legal, signing, Play or release acceptance from CI.",
         "complexity": "medium",
         "priority": "P1 current-candidate verification",
-        "execution_status": "NOT STARTED",
+        "execution_status": "IN_PROGRESS",
         "owner": null,
         "blockers": [],
         "evidence_ids": [
@@ -8862,20 +8933,185 @@
           "EVID-127",
           "EVID-128",
           "EVID-129",
-          "EVID-130"
+          "EVID-130",
+          "EVID-131",
+          "EVID-132",
+          "EVID-133",
+          "EVID-134",
+          "EVID-135",
+          "EVID-136",
+          "EVID-137"
         ],
-        "uncertainty": "Exact candidate SHA/workflow outcome are future evidence.",
-        "remaining_work": "Review, commit, push and verify exact candidate.",
+        "uncertainty": "The exact current candidate is not yet committed or hosted-verified. Physical-device access is unavailable.",
+        "remaining_work": "Commit/push authorized delta, verify exact full SHA and terminal hosted jobs, then reconcile remaining scenario/physical/human/external gates.",
         "completion_evidence": [],
         "related_prior_work": [
           "TASK-C-015 WOLF_CHARGE exact-SHA verification",
           "TASK-C-016 predecessor source verification"
         ],
-        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
-        "next_action": "Review owned diff and preserve unrelated state, then commit/push this authorized delta and verify its exact SHA through required workflows.",
+        "last_reconciled_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local source/test/docs delta",
+        "next_action": "Review and commit/push the authorized local delta; inspect exact-SHA Android host/API35 and applicability/certificate workflow results. Current unauthenticated GitHub API requests are rate-limited; retain pending status until a valid exact-candidate result is observed.",
         "investigation_coverage": "INTEGRATION TRACED",
         "implementation_or_investigation_status": "FOCUSED LOCAL TESTS PASS; EXACT CANDIDATE REQUIRED",
         "evidence_status": "CURRENT FOCUSED EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-A-044",
+        "title": "Stage all BLOOM_SHOWCASE encounters inside the single active window",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "deterministic scenario source correction",
+        "target_phase": "A - source completion",
+        "objective": "Correct the authored Bloom showcase spacing so all five defined encounters are passed and exclusively converted before the existing six-second Bloom timer expires.",
+        "motivation": "The scenario summary promises full-lane conversion; real path testing showed later Duck and Willow encounters resolved HIT after Bloom expiry.",
+        "current_state": "Old scenario offsets staged encounters too far ahead; the mechanics correctly used the existing single six-second timer.",
+        "required_final_state": "Cactus, Lily, Cat, Duck and Willow each resolve exactly once as BLOOM_CONVERTED inside the timer; each conversion awards one conversion Seed and no normal pass/spare/hit effect is co-awarded.",
+        "scope": [
+          "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
+          "BLOOM_SHOWCASE offsets only"
+        ],
+        "required_actions": [
+          "Drive the actual director and EntityManager at a fixed simulation step.",
+          "Adjust only the scenario’s authored staging offsets, preserving the six-second Bloom mechanic and five encounter types.",
+          "Assert all five outcomes, expiry, exclusivity, run rewards and debug persistence isolation."
+        ],
+        "inputs": [
+          "REQ-020",
+          "EncounterDirector.kt",
+          "GameStateManager.kt",
+          "EntityManager.kt"
+        ],
+        "deliverables": [
+          "Corrected BLOOM_SHOWCASE offsets",
+          "Robolectric scenario integration regression"
+        ],
+        "acceptance_criteria": [
+          "All five types are observed exactly once.",
+          "All resolve as BLOOM_CONVERTED before Bloom expiry.",
+          "Conversion count and Seed reward equal five; ordinary clean pass, hit and spare counts remain zero.",
+          "Focused test and full authorized local gates pass."
+        ],
+        "verification_method": "ShowcaseScenarioIntegrationTest plus full Python/Java21 Gradle gate; exact candidate hosted gate tracked separately by TASK-C-018.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-018"
+        ],
+        "conflicts": [
+          "Shared EncounterDirector.kt is owned for this source correction; scenario fingerprint and release evidence consumers must be reviewed."
+        ],
+        "execution_constraints": "Do not extend/restart Bloom or change ordinary game mechanics; preserve debug progression isolation. Physical readability remains separate.",
+        "complexity": "medium",
+        "priority": "P1 named mechanic/runtime inconsistency",
+        "execution_status": "COMPLETED",
+        "owner": "/root",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-134",
+          "EVID-136"
+        ],
+        "uncertainty": "Visual spacing and physical hazard readability remain unverified; implementation timing is verified under deterministic source simulation.",
+        "remaining_work": "Exact-SHA hosted validation under TASK-C-018.",
+        "completion_evidence": [
+          "EVID-134",
+          "EVID-136"
+        ],
+        "related_prior_work": [
+          "TASK-A-040 CACTUS_READ timed input correction"
+        ],
+        "last_reconciled_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus local delta",
+        "next_action": "Include in authorized commit; verify the exact committed SHA with Android host/API35 workflows.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "SOURCE CORRECTED; FOCUSED AND FULL LOCAL GATES PASS",
+        "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED"
+      },
+      {
+        "id": "TASK-A-045",
+        "title": "Exercise selected authored scenario paths with bounded integration assertions",
+        "parent_ids": [
+          "GOAL-002",
+          "GOAL-005"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "scenario integration coverage",
+        "target_phase": "A - source completion",
+        "objective": "Add source-level integration assertions for BLOOM_SHOWCASE exclusive full-lane conversion, GHOST_READABILITY live ghost playback, REST_LOOP terminal setup, named showcase rosters, and DUCK_TEACH/TIT_WAVE authored encounter dispatch.",
+        "motivation": "Scenario definitions and isolated entity tests alone did not establish that selected named scenarios reach their intended production owners.",
+        "current_state": "Three new Robolectric classes now exercise these bounded scenario paths; several manual scenarios intentionally remain un-scripted and require user control.",
+        "required_final_state": "The tests assert only scenario claims they can deterministically prove, distinguish manual interaction from authored input, and preserve no-persistence behavior for debug scenarios.",
+        "scope": [
+          "app/src/test/java/com/anurag9000/forestrun/engine/ShowcaseScenarioIntegrationTest.kt",
+          "app/src/test/java/com/anurag9000/forestrun/engine/NamedShowcaseRosterIntegrationTest.kt",
+          "app/src/test/java/com/anurag9000/forestrun/engine/BirdNamedScenarioMechanicsIntegrationTest.kt"
+        ],
+        "required_actions": [
+          "Drive director, factory and EntityManager paths at a deterministic fixed step.",
+          "Observe the exact authored showcase roster and selected live states.",
+          "Assert Bloom conversion exclusivity and reward accounting.",
+          "Assert ghost playback advances only for an opting-in scenario.",
+          "Represent REST_LOOP forced-hit behavior as a bounded terminal setup check, not as proof of full external Rest/Garden acceptance.",
+          "Do not assert player interactions that these intentionally manual scenarios do not script."
+        ],
+        "inputs": [
+          "REQ-020",
+          "EncounterDirector.kt",
+          "DebugScenarioScript.kt",
+          "existing entity-specific scenario tests"
+        ],
+        "deliverables": [
+          "Three Robolectric scenario integration test classes"
+        ],
+        "acceptance_criteria": [
+          "All new test methods pass in the full JVM/Robolectric suite.",
+          "Tests avoid interpreting transient UI text after its lifetime as proof of an event.",
+          "Debug run state does not contaminate ordinary persistent progression.",
+          "The whole authored catalogue remains explicitly partial until each relevant claim is dispositioned."
+        ],
+        "verification_method": "Full Java21 Gradle testDebugUnitTest and focused new classes; exact-SHA host/API35 validation tracked by TASK-C-018.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-018"
+        ],
+        "conflicts": [
+          "Distinct new test paths; scenario integration coverage is bounded and must not be used to infer full catalogue acceptance."
+        ],
+        "execution_constraints": "No physical/human/visual acceptance claim from Robolectric.",
+        "complexity": "medium",
+        "priority": "P1 scenario evidence completeness",
+        "execution_status": "COMPLETED",
+        "owner": "/root",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-134",
+          "EVID-136"
+        ],
+        "uncertainty": "Physical and human experience, the other authored scenario mechanics, and exact-SHA hosted validation remain open.",
+        "remaining_work": "Exact-SHA hosted validation under TASK-C-018; broader REQ-020 disposition remains incomplete.",
+        "completion_evidence": [
+          "EVID-136"
+        ],
+        "related_prior_work": [
+          "TASK-A-039 through TASK-A-043 scenario-specific integrations"
+        ],
+        "last_reconciled_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus local delta",
+        "next_action": "Include in authorized commit; exact candidate check follows commit.",
+        "investigation_coverage": "INTEGRATION TRACED",
+        "implementation_or_investigation_status": "FOCUSED AND FULL LOCAL TESTS PASS",
+        "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED"
       }
     ],
     "applicability_matrix": [
@@ -9467,31 +9703,32 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437",
-    "working_tree_delta": "Added EagleScenarioIntegrationTest plus linked ledgers/docs. Focused test and full Python suite pass locally. The full JVM command cannot run here because installed Java17 cannot support existing Robolectric SDK36 tests; exact hosted Java21/API35 validation is pending after commit.",
+    "base_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846",
+    "working_tree_delta": "Corrects BLOOM_SHOWCASE world offsets after a real path exposed Duck/Willow passing after Bloom expiry; adds three Robolectric scenario integration classes and linked evidence/coverage records. CACTUS_READ correction and selected scenario coverage are included.",
     "evidence_ids": [
-      "EVID-123",
-      "EVID-124",
-      "EVID-125"
+      "EVID-134",
+      "EVID-135",
+      "EVID-136",
+      "EVID-137"
     ],
-    "status": "The exact 8f host/release/lint/package job succeeded in run 40623906250; its API35 connected job was still in progress at last poll. New EAGLE_MARK integration test is locally focused-passing but not yet exact-SHA verified. Physical/human/external gates remain open.",
-    "documentation_verification_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current source/documentation delta",
-    "documentation_workflow_run": "Run 40623906250 exact 8f: host job success; API35 job in progress. New-source validation is TASK-C-017."
+    "status": "Local Python 1,398/1,398 and Java21 full Gradle 1,327/1,327 plus compile/lint/package pass. The delta is not yet committed or exact-SHA hosted-verified. No physical device access.",
+    "documentation_verification_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus local source/test/docs delta",
+    "documentation_workflow_run": "Exact SHA must be established after commit; GitHub unauthenticated API currently rate-limited."
   },
   "current_repository_state": {
     "branch": "main",
-    "verified_source_candidate_sha": "8f9340d431f7abb84719aef0a5b1174cafb0c437",
-    "candidate_remote_confirmation": "Local main and origin/main matched at 8f9340d before current source/docs edits.",
-    "working_tree": "Pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md and docs/repository_knowledge/current_worktree_delta_20261027/ are preserved. Current owned delta includes EagleScenarioIntegrationTest and linked documentation/ledger updates only; unrelated untracked state must not be staged.",
-    "current_delta_task": "TASK-C-017",
-    "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md; docs/repository_knowledge/audio_asset_and_wiring_review_2026-10-28.md",
+    "verified_source_candidate_sha": "d0eb2f6953951ab29f0a262977a86d0f097b2846",
+    "candidate_remote_confirmation": "Local main and origin/main matched at d0eb2f6953951ab29f0a262977a86d0f097b2846 before current owned source/test/docs delta.",
+    "working_tree": "Pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md, and docs/repository_knowledge/current_worktree_delta_20261027/ are preserved. Owned delta changes EncounterDirector BLOOM_SHOWCASE staging, adds three scenario integration tests, and reconciles ledgers/docs.",
+    "current_delta_task": "TASK-A-044/TASK-A-045; TASK-C-018",
+    "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
     "evidence_ids": [
-      "EVID-123",
-      "EVID-124",
-      "EVID-125"
+      "EVID-134",
+      "EVID-135",
+      "EVID-136"
     ],
-    "latest_documentation_verification_sha": "8f9340d431f7abb84719aef0a5b1174cafb0c437 before current EAGLE_MARK delta",
-    "latest_documentation_workflow": "Prior exact 8f run 40623906250 host job succeeded; API35 connected job was in progress. New source verification awaits TASK-C-017."
+    "latest_documentation_verification_sha": "d0eb2f6953951ab29f0a262977a86d0f097b2846 before current delta",
+    "latest_documentation_workflow": "No exact-SHA current-delta workflow result yet. Public unauthenticated GitHub API is rate-limited; verify after push."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
@@ -9514,17 +9751,19 @@
     "status": "Exact candidate API35 ordinary connected tests passed 28/28; both candidate APK installs succeeded; process-death prepare passed, host confirmed no app PID after force-stop, and fresh-process restore passed. Host/release/lint/package also passed. Physical/OEM durability remains unverified."
   },
   "pending_source_delta": {
-    "base_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437",
-    "description": "Add focused EAGLE_MARK scenario integration coverage and update evidence/coverage/task ledgers. Does not modify production gameplay code. The whole authored scenario catalogue still needs requirement-level disposition; device/human/external gates remain open.",
+    "base_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846",
+    "description": "Correct BLOOM_SHOWCASE full-lane conversion offsets; add three bounded Robolectric scenario integration classes; update linked evidence/coverage and execution ledgers. Existing user/generated untracked workspace artifacts remain excluded.",
     "task_ids": [
-      "TASK-A-039",
-      "TASK-C-017"
+      "TASK-A-044",
+      "TASK-A-045",
+      "TASK-C-018"
     ],
     "evidence_ids": [
-      "EVID-123",
-      "EVID-124",
-      "EVID-125"
+      "EVID-134",
+      "EVID-135",
+      "EVID-136",
+      "EVID-137"
     ],
-    "status": "IMPLEMENTED_LOCALLY; EXACT_CANDIDATE_VERIFICATION_PENDING"
+    "status": "IMPLEMENTED_LOCALLY; FULL_LOCAL_GATES_PASS; EXACT_SHA_HOSTED_VALIDATION_PENDING"
   }
 }

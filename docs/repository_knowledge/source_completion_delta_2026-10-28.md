@@ -90,3 +90,19 @@ Additional focused tests cover Cat kindness, Fox mirror jump, Hedgehog stumble/d
 ## Full local verification after scenario delta
 
 Using `/opt/android-studio/jbr` (Java 21), the requested combined local Gradle gate passed: debug/release/instrumentation Kotlin compile, full `testDebugUnitTest`, debug/release lint, debug and AndroidTest APK assembly, and release AAB bundle. The XML aggregate reports 1,320 tests, zero failures/errors/skips. The full Python scripts suite passed 1,398 tests (24.733s). See EVID-129 and EVID-130. These are local checks against the uncommitted delta; hosted exact-SHA CI and connected API35 execution are still required. Physical/human acceptance remains unavailable/pending, and no release acceptance is inferred.
+
+## Exact-SHA early workflow results
+
+After commit/push to `d0eb2f6953951ab29f0a262977a86d0f097b2846`, the no-trainable-surface workflow `40626476537` (job `122612483127`) and estate certificate workflow `40626476460` (job `122612483046`) passed for that exact SHA (EVID-131/EVID-132). Android validation run `40626476441` was pending at the latest poll; do not claim exact candidate Android/connected validation until its terminal jobs and artifacts are inspected.
+
+
+## BLOOM_SHOWCASE window correction and selected scenario coverage (local delta)
+
+A new real-path simulation found that the scenario's authored summary (“convert the full lane”) was not true at the existing six-second Bloom duration. Duck and Weeping Willow did not clear the Player before the timer expired, so ordinary collision resumed and they resolved as HIT. The correction moves only those scenario origins closer and staggers the five authored types; it does not extend or restart Bloom. `ShowcaseScenarioIntegrationTest` now requires Cactus, Lily, Cat, Duck and Willow to each resolve exactly once as `BLOOM_CONVERTED` before expiry, checks one conversion Seed per encounter, and checks that ordinary pass/hit/spare rewards are not co-awarded. EVID-134 records the reproduced source defect and passing regression.
+
+Three new selected scenario test classes cover full Bloom conversion, GhostPlayer advancement in the opted-in readability scenario, the bounded REST_LOOP forced terminal fixture, actual ordered BIRD/ANIMAL showcase rosters and selected Wolf/Eagle states, plus DUCK_TEACH/TIT_WAVE roster dispatch and debug isolation. The two bird scenarios are intentionally manual; their response mechanics are not falsely attributed to unscripted automated inputs. These tests do not close the other authored scenarios or establish visual/hardware acceptance.
+
+After the final source/test delta, `python3 -m unittest discover -s scripts -p 'test_*.py'` passed 1,398 tests (EVID-135). The full Java21 Gradle compile/test/lint/package command completed BUILD SUCCESSFUL with 1,327 JVM/Robolectric tests, zero failures/errors/skips, and all requested APK/AAB tasks successful (EVID-136). The delta is not yet committed; exact-SHA hosted Android validation is pending. GitHub public API requests were rate-limited during this check, so the preceding d0eb2f69 run is not substituted for current-candidate evidence. No physical-device access is available.
+
+
+The final static ledger self-audit passed (EVID-137): unique IDs/paths, task/evidence references, acyclic dependencies, inventory coverage counts, selected Markdown links, and JSONL parsing all reconcile; `git diff --check` is clean. This checks documentation structure, not every recorded technical claim.

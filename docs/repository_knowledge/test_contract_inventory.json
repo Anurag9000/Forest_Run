@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local delta",
+  "repository_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local delta",
   "snapshot_date": "2026-10-28",
   "authority": "Static contract summaries preserve what the test sources assert. Per-source execution dispositions are now reconciled separately against EVID-072 (full Python/JVM suite), EVID-074 (exact-head API 35 connected workflow, excluding @LargeTest), and EVID-075 (focused concurrency). These results are revision- and environment-bounded.",
   "records": [
@@ -643,6 +643,22 @@
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
     },
     {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/BirdNamedScenarioMechanicsIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local delta",
+      "inspected_line_range": "1-129",
+      "line_count": 129,
+      "test_annotation_count_static": 2,
+      "contract_summary": "DUCK_TEACH and TIT_WAVE authored roster dispatch and debug isolation; intentionally manual response controls remain in focused entity tests. Full Java21 Gradle suite passes (EVID-136).",
+      "primary_task_id": "TASK-A-045",
+      "evidence_ids": [
+        "EVID-134",
+        "EVID-136"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FULL JAVA21 GRADLE SUITE PASSED (EVID-136)"
+    },
+    {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/BloomEconomyTest.kt",
       "language": "Kotlin",
       "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
@@ -804,6 +820,22 @@
         "EVID-072"
       ],
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/ChickadeeScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "inspected_line_range": "1-116",
+      "line_count": 116,
+      "test_annotation_count_static": 1,
+      "contract_summary": "CHICKADEE_SWERVE observes seeded altitude variation and replay consistency through scenario path; 1/1 focused (EVID-128).",
+      "primary_task_id": "TASK-A-043",
+      "evidence_ids": [
+        "EVID-128",
+        "EVID-130"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
     },
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/CinematicOverlayRendererCacheTest.kt",
@@ -1207,6 +1239,34 @@
         "EVID-072"
       ],
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/EagleScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "worktree_status": "new local source delta",
+      "inspected_line_range": "1-129",
+      "line_count": 129,
+      "test_annotation_count_static": 1,
+      "contract_summary": "Runs authored EAGLE_MARK for 20 seconds at 60 Hz through real EncounterDirector, DebugScenarioScript, Player, EntityManager updates and collision checks. Requires exactly two Eagle instances and observes each targetAnnounced and locked; verifies four-event deterministic trace and no persistent Eagle encounter count.",
+      "subjects": [
+        "EAGLE_MARK scenario-to-Eagle target announcement/lock",
+        "authored timed jump actions",
+        "deterministic scenario trace",
+        "debug persistence isolation"
+      ],
+      "evidence_type": "Robolectric integration assertions; no physical visual acceptance claim.",
+      "runtime_status": "PASSED_FOCUSED_LOCAL; EXACT_SHA_HOSTED_PENDING",
+      "task_id": "TASK-A-039",
+      "latest_execution_evidence_ids": [
+        "EVID-123"
+      ],
+      "latest_execution_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "execution_evidence": "EVID-123: focused test passed on Kakarot with local Java 17 and Robolectric SDK35. The full repository JVM suite was not run successfully because existing SDK36 Robolectric tests require Java21 (EVID-125); hosted exact-SHA workflow remains required.",
+      "evidence_ids": [
+        "EVID-130"
+      ],
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
     },
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/EncounterActionFeasibilityTest.kt",
@@ -2381,6 +2441,54 @@
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
     },
     {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedAnimalScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "inspected_line_range": "1-197",
+      "line_count": 197,
+      "test_annotation_count_static": 5,
+      "contract_summary": "Actual Cat/Fox/Hedgehog/Dog scenario behaviors plus debug persistence isolation; 5/5 focused (EVID-127).",
+      "primary_task_id": "TASK-A-042",
+      "evidence_ids": [
+        "EVID-127",
+        "EVID-130"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedFloraTreeScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "inspected_line_range": "1-279",
+      "line_count": 279,
+      "test_annotation_count_static": 5,
+      "contract_summary": "Real scenario path asserts flora/tree showcase order, corrected Cactus clean passes, Orchid/Bamboo geometry and selected flora/tree live state; 5/5 focused (EVID-126).",
+      "primary_task_id": "TASK-A-041",
+      "evidence_ids": [
+        "EVID-126",
+        "EVID-130"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedShowcaseRosterIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local delta",
+      "inspected_line_range": "1-168",
+      "line_count": 168,
+      "test_annotation_count_static": 2,
+      "contract_summary": "BIRD_SHOWCASE and ANIMAL_SHOWCASE ordered runtime rosters and selected live behavior, including Eagle lock and Wolf state; debug progression isolation. Full Java21 Gradle suite passes (EVID-136).",
+      "primary_task_id": "TASK-A-045",
+      "evidence_ids": [
+        "EVID-134",
+        "EVID-136"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FULL JAVA21 GRADLE SUITE PASSED (EVID-136)"
+    },
+    {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/NonTerminalCollisionFeedbackPresenterIntegrationTest.kt",
       "language": "Kotlin",
       "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
@@ -2464,6 +2572,22 @@
         "EVID-072"
       ],
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/OwlScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
+      "inspected_line_range": "1-107",
+      "line_count": 107,
+      "test_annotation_count_static": 1,
+      "contract_summary": "OWL_DIVE reaches alert then dive through scenario path; 1/1 focused (EVID-128).",
+      "primary_task_id": "TASK-A-043",
+      "evidence_ids": [
+        "EVID-128",
+        "EVID-130"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
     },
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/PacifistPresentationTest.kt",
@@ -3667,6 +3791,22 @@
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
     },
     {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/ShowcaseScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local delta",
+      "inspected_line_range": "1-246",
+      "line_count": 246,
+      "test_annotation_count_static": 3,
+      "contract_summary": "BLOOM_SHOWCASE full-lane exclusive conversion; GHOST_READABILITY production ghost advancement; REST_LOOP forced terminal fixture behavior. Does not claim physical acceptance or full Garden transition. Full Java21 Gradle suite passes (EVID-136).",
+      "primary_task_id": "TASK-A-045",
+      "evidence_ids": [
+        "EVID-134",
+        "EVID-136"
+      ],
+      "inspection_status": "FULLY_INSPECTED",
+      "execution_status": "FULL JAVA21 GRADLE SUITE PASSED (EVID-136)"
+    },
+    {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/SoundSampleReadinessTest.kt",
       "language": "Kotlin",
       "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
@@ -3956,6 +4096,31 @@
         "EVID-072"
       ],
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/WolfScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+      "worktree_status": "tracked_clean",
+      "inspected_line_range": "1-137",
+      "line_count": 137,
+      "test_annotation_count_static": 2,
+      "contract_summary": "A fixture test proves the eight-heart state resets without altering saved high score/lifetime Seeds or near-miss history. The integration test runs the real EncounterDirector/EntityManager/Player/collision path for 20 seconds at 60 Hz, records each Wolf state, requires HOWLING, CHARGING and SPARED for both, zero hits/ordinary clean passes and no persistent Wolf encounter/spare history.",
+      "subjects": [
+        "WOLF_CHARGE initial mercy fixture",
+        "scripted held-jump dispatch",
+        "Wolf state transitions and stand-down",
+        "debug progression isolation"
+      ],
+      "evidence_type": "Robolectric integration assertions; source does not imply hosted/device acceptance.",
+      "runtime_status": "PASSED_LOCAL_AND_EXACT_SHA_HOST_JOB",
+      "task_id": "TASK-A-037",
+      "latest_execution_evidence_ids": [
+        "EVID-114",
+        "EVID-115"
+      ],
+      "latest_execution_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
+      "execution_evidence": "EVID-114: focused 2 tests and full 1,307-test JVM/Robolectric suite passed locally. EVID-115: exact-SHA host testDebugUnitTest passed. EVID-116: exact-SHA API35 connected run passed 28/28 tests; process-death recovery passed."
     },
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/WorldOpinionPresentationTest.kt",
@@ -7938,134 +8103,17 @@
         "EVID-072"
       ],
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
-    },
-    {
-      "path": "app/src/test/java/com/anurag9000/forestrun/engine/WolfScenarioIntegrationTest.kt",
-      "language": "Kotlin",
-      "source_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
-      "worktree_status": "tracked_clean",
-      "inspected_line_range": "1-137",
-      "line_count": 137,
-      "test_annotation_count_static": 2,
-      "contract_summary": "A fixture test proves the eight-heart state resets without altering saved high score/lifetime Seeds or near-miss history. The integration test runs the real EncounterDirector/EntityManager/Player/collision path for 20 seconds at 60 Hz, records each Wolf state, requires HOWLING, CHARGING and SPARED for both, zero hits/ordinary clean passes and no persistent Wolf encounter/spare history.",
-      "subjects": [
-        "WOLF_CHARGE initial mercy fixture",
-        "scripted held-jump dispatch",
-        "Wolf state transitions and stand-down",
-        "debug progression isolation"
-      ],
-      "evidence_type": "Robolectric integration assertions; source does not imply hosted/device acceptance.",
-      "runtime_status": "PASSED_LOCAL_AND_EXACT_SHA_HOST_JOB",
-      "task_id": "TASK-A-037",
-      "latest_execution_evidence_ids": [
-        "EVID-114",
-        "EVID-115"
-      ],
-      "latest_execution_revision": "113a4ebdf671dc16470b18de0d4dff7685230045",
-      "execution_evidence": "EVID-114: focused 2 tests and full 1,307-test JVM/Robolectric suite passed locally. EVID-115: exact-SHA host testDebugUnitTest passed. EVID-116: exact-SHA API35 connected run passed 28/28 tests; process-death recovery passed."
-    },
-    {
-      "path": "app/src/test/java/com/anurag9000/forestrun/engine/EagleScenarioIntegrationTest.kt",
-      "language": "Kotlin",
-      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
-      "worktree_status": "new local source delta",
-      "inspected_line_range": "1-129",
-      "line_count": 129,
-      "test_annotation_count_static": 1,
-      "contract_summary": "Runs authored EAGLE_MARK for 20 seconds at 60 Hz through real EncounterDirector, DebugScenarioScript, Player, EntityManager updates and collision checks. Requires exactly two Eagle instances and observes each targetAnnounced and locked; verifies four-event deterministic trace and no persistent Eagle encounter count.",
-      "subjects": [
-        "EAGLE_MARK scenario-to-Eagle target announcement/lock",
-        "authored timed jump actions",
-        "deterministic scenario trace",
-        "debug persistence isolation"
-      ],
-      "evidence_type": "Robolectric integration assertions; no physical visual acceptance claim.",
-      "runtime_status": "PASSED_FOCUSED_LOCAL; EXACT_SHA_HOSTED_PENDING",
-      "task_id": "TASK-A-039",
-      "latest_execution_evidence_ids": [
-        "EVID-123"
-      ],
-      "latest_execution_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
-      "execution_evidence": "EVID-123: focused test passed on Kakarot with local Java 17 and Robolectric SDK35. The full repository JVM suite was not run successfully because existing SDK36 Robolectric tests require Java21 (EVID-125); hosted exact-SHA workflow remains required.",
-      "evidence_ids": [
-        "EVID-130"
-      ],
-      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
-    },
-    {
-      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedFloraTreeScenarioIntegrationTest.kt",
-      "language": "Kotlin",
-      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
-      "inspected_line_range": "1-279",
-      "line_count": 279,
-      "test_annotation_count_static": 5,
-      "contract_summary": "Real scenario path asserts flora/tree showcase order, corrected Cactus clean passes, Orchid/Bamboo geometry and selected flora/tree live state; 5/5 focused (EVID-126).",
-      "primary_task_id": "TASK-A-041",
-      "evidence_ids": [
-        "EVID-126",
-        "EVID-130"
-      ],
-      "inspection_status": "FULLY_INSPECTED",
-      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
-    },
-    {
-      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedAnimalScenarioIntegrationTest.kt",
-      "language": "Kotlin",
-      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
-      "inspected_line_range": "1-197",
-      "line_count": 197,
-      "test_annotation_count_static": 5,
-      "contract_summary": "Actual Cat/Fox/Hedgehog/Dog scenario behaviors plus debug persistence isolation; 5/5 focused (EVID-127).",
-      "primary_task_id": "TASK-A-042",
-      "evidence_ids": [
-        "EVID-127",
-        "EVID-130"
-      ],
-      "inspection_status": "FULLY_INSPECTED",
-      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
-    },
-    {
-      "path": "app/src/test/java/com/anurag9000/forestrun/engine/OwlScenarioIntegrationTest.kt",
-      "language": "Kotlin",
-      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
-      "inspected_line_range": "1-107",
-      "line_count": 107,
-      "test_annotation_count_static": 1,
-      "contract_summary": "OWL_DIVE reaches alert then dive through scenario path; 1/1 focused (EVID-128).",
-      "primary_task_id": "TASK-A-043",
-      "evidence_ids": [
-        "EVID-128",
-        "EVID-130"
-      ],
-      "inspection_status": "FULLY_INSPECTED",
-      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
-    },
-    {
-      "path": "app/src/test/java/com/anurag9000/forestrun/engine/ChickadeeScenarioIntegrationTest.kt",
-      "language": "Kotlin",
-      "source_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local delta",
-      "inspected_line_range": "1-116",
-      "line_count": 116,
-      "test_annotation_count_static": 1,
-      "contract_summary": "CHICKADEE_SWERVE observes seeded altitude variation and replay consistency through scenario path; 1/1 focused (EVID-128).",
-      "primary_task_id": "TASK-A-043",
-      "evidence_ids": [
-        "EVID-128",
-        "EVID-130"
-      ],
-      "inspection_status": "FULLY_INSPECTED",
-      "execution_status": "FOCUSED AND FULL JVM SUITES PASSED (EVID-126..130)"
     }
   ],
   "scope_reconciliation": {
-    "file_inventory_test_related_paths": 391,
-    "contract_records": 391,
+    "file_inventory_test_related_paths": 398,
+    "contract_records": 398,
     "previously_missing_contract_rows": 84,
     "completed_by": [
       "TASK-A-019",
       "TASK-A-020"
     ],
-    "note": "391 per-file source contracts are mapped to current execution evidence by suite/path where available. Static contract descriptions remain distinct from pass claims; the three @LargeTest suites and two support sources retain explicit dispositions. New EAGLE_MARK scenario integration source is covered by EVID-123 locally; exact-SHA hosted Java21 verification is pending."
+    "note": "The three added scenario integration classes are included and pass in the full Java21 suite (EVID-136). Static test contracts and scenario-specific assertions remain distinct from physical/human acceptance; the complete catalogue remains partially dispositioned."
   },
   "line_count_reconciliation": {
     "checked_date": "2026-10-27",
@@ -8074,7 +8122,7 @@
     "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus dirty worktree"
   },
   "execution_reconciliation": {
-    "date": "2026-10-27",
+    "date": "2026-10-28",
     "source_revision": "d1f31d473f5ca9303706164b6cc817703e0e7c7c",
     "tested_source_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a",
     "source_and_test_paths_unchanged_between_tested_and_reconciled_revisions": true,
@@ -8097,6 +8145,34 @@
       "exact_head_connected_workflow_run": "40468712221"
     },
     "current_delta": {
+      "evidence_ids": [
+        "EVID-134",
+        "EVID-135",
+        "EVID-136"
+      ],
+      "python_tests": 1398,
+      "jvm_full_suite": {
+        "passed": 1327,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "gradle_tasks": [
+        "compileDebugKotlin",
+        "compileDebugUnitTestKotlin",
+        "compileReleaseKotlin",
+        "compileDebugAndroidTestKotlin",
+        "testDebugUnitTest",
+        "lintDebug",
+        "lintRelease",
+        "assembleDebug",
+        "assembleDebugAndroidTest",
+        "bundleRelease"
+      ],
+      "revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local source/test delta",
+      "note": "The full Java21 local Gradle gate and full Python suite pass on the current source/test delta. Exact-SHA hosted host/API35 validation is pending; physical-device/human acceptance is not inferred."
+    },
+    "prior_delta_reconciliation": {
       "evidence_ids": [
         "EVID-123",
         "EVID-124",

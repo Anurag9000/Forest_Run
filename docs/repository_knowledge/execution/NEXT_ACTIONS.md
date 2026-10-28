@@ -14,13 +14,13 @@ The original static investigation's read-only restriction was superseded by the 
 
 
 
-Canonical source candidate remains `8f9340d431f7abb84719aef0a5b1174cafb0c437` while the owned scenario delta is staged. Local full Python and Java21 Gradle validation passed (EVID-129/EVID-130); exact-SHA hosted validation for the changed candidate is TASK-C-018. Prior audio evidence remains EVID-118/EVID-119. Physical-device access is unavailable, so B-001/B-002 remain blocked; D-001..D-007 require genuine human/external owner evidence; E-001 remains dependent on those gates and exact-candidate closure.
+Canonical source candidate before the current local delta is `d0eb2f6953951ab29f0a262977a86d0f097b2846`. Local full Python/Java21 Gradle validation passes for current delta (EVID-135/136); prior applicability/certificate workflows cover d0eb only, not this delta. Exact-SHA Android validation remains pending under TASK-C-018. Prior audio evidence remains EVID-118/EVID-119. Physical-device access is unavailable, so B-001/B-002 remain blocked; D-001..D-007 require genuine human/external owner evidence; E-001 remains dependent on those gates and exact-candidate closure.
 
 
-4. **Scenario delta — `TASK-A-039`–`TASK-A-043` complete locally; `TASK-C-018` next.** Focused tests, full Python suite (1,398) and full Java21 Gradle compile/test/lint/package (1,320) pass (EVID-123, EVID-126–130). Review and commit only the owned delta, push authorized main, then inspect exact-SHA hosted Java21/API35 workflows. The broader REQ-020 scenario matrix remains partial; do not infer complete mechanics coverage.
+4. **Scenario delta — `TASK-A-039`–`TASK-A-045` complete locally; `TASK-C-018` next.** Focused tests, full Python suite (1,398) and full Java21 Gradle compile/test/lint/package (1,327) pass (EVID-123, EVID-126–130, EVID-134–136). Review and commit only the owned delta, push authorized main, then inspect exact-SHA hosted Java21/API35 workflows. The broader REQ-020 scenario matrix remains partial; do not infer complete mechanics coverage.
 
 ### Current scenario delta (2026-10-28)
 
 - `CACTUS_READ` authored jumps were late; `DebugScenarioScript` timing is corrected and its real-path flora/tree test passes (5/5; EVID-126).
 - Focused scenario integrations pass for five animal behaviors (5/5; EVID-127), Owl alert-to-dive and Chickadee seeded altitude (2/2; EVID-128), and Eagle mark/lock (1/1; EVID-123).
-- Full Python (1,398) and Java21 Gradle (1,320) local suites pass (EVID-129/130); exact-candidate Java 21/API35 workflow remains pending under `TASK-C-018`; the broader 28-scenario catalogue remains only partially dispositioned. No physical device access is available.
+- Full Python (1,398) and Java21 Gradle (1,327) local suites pass (EVID-135/136); exact-candidate Java 21/API35 workflow remains pending under `TASK-C-018`; the broader 28-scenario catalogue remains only partially dispositioned. No physical device access is available.

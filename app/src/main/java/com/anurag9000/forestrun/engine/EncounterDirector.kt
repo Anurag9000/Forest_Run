@@ -270,10 +270,13 @@ enum class EncounterScenario(
         startsWithBloom = true,
         steps = listOf(
             EncounterStep(0.20f, EntityType.CACTUS, 420f),
-            EncounterStep(0.75f, EntityType.LILY_OF_VALLEY, 620f),
-            EncounterStep(1.35f, EntityType.CAT, 860f),
-            EncounterStep(2.00f, EntityType.DUCK, 1_080f),
-            EncounterStep(2.70f, EntityType.WEEPING_WILLOW, 1_320f)
+            // Keep full safe departure, rather than spawn time, inside the
+            // one six-second Bloom window. Each later origin is staged closer
+            // so all five families convert before Bloom expires.
+            EncounterStep(0.75f, EntityType.LILY_OF_VALLEY, 445f),
+            EncounterStep(1.35f, EntityType.CAT, 480f),
+            EncounterStep(2.00f, EntityType.DUCK, 480f),
+            EncounterStep(2.70f, EntityType.WEEPING_WILLOW, -400f)
         )
     ),
     GHOST_READABILITY(

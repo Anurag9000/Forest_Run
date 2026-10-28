@@ -16708,7 +16708,7 @@
       "lines": "19",
       "kind": "type",
       "signature": "enum class EncounterScenario( val title: String, val summary: String, val forcedBiome: Biome? = null, val startsWithBloom: Boolean = false, val allowGhostPlayback: Boolean = false, val steps: List<EncounterStep> ) {",
-      "purpose": "Declares the EncounterScenario type; its state and members are individually indexed below.",
+      "purpose": "Declares the authored EncounterScenario catalogue and fields; the BLOOM_SHOWCASE steps now stage all five encounter families to resolve inside the existing six-second window (EVID-134/136). The remaining catalogue’s scenario-mechanic coverage remains partial.",
       "inputs": [],
       "outputs": null,
       "state_or_effects": "val startsWithBloom: Boolean = false, val allowGhostPlayback: Boolean = false, val steps: List<EncounterStep>",
@@ -16720,15 +16720,14 @@
       "capability_ids": [
         "CAP-015"
       ],
-      "implementation_status": "type declaration present; integration assessed separately",
-      "evidence_status": "static source only",
+      "implementation_status": "Source-defined catalogue; BLOOM_SHOWCASE full-lane conversion spacing corrected and integration-tested locally; full scenario-catalogue disposition remains partial.",
+      "evidence_status": "Static source plus full local Java21 Robolectric evidence EVID-134/136; exact-SHA hosted validation pending.",
       "source_revision": {
-        "commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
-        "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9"
+        "commit": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local source delta"
       },
       "shard": "docs/repository_knowledge/symbol_shards/engine_a_m.json",
       "inspection": "static declaration inventory; FULLY_STATICALLY_INSPECTED",
-      "purpose_basis": "declaration and source context"
+      "purpose_basis": "Direct source delta and scenario-level integration test; no assertion of full-catalogue visual or external acceptance."
     },
     {
       "id": "SYM-0582",

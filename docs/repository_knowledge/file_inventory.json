@@ -9,7 +9,7 @@
     "initial_visible_paths_reported": 961,
     "inventory_records": 1011
   },
-  "current_inventory_count": 1016,
+  "current_inventory_count": 1019,
   "scope": "Union of tracked paths and visible workspace paths, excluding .git internals and ignored build/.gradle trees. Tracked release paths hidden by ignore rules are retained. New docs are included.",
   "coverage_semantics": "INVENTORIED means path/classification only; PARTIALLY_INSPECTED means bounded changed regions or prior map consultation; FULLY_STATICALLY_INSPECTED is reserved for complete small-file reading; generated exclusions have reasons. No inventory state implies runtime verification.",
   "records": [
@@ -4220,16 +4220,21 @@
       "id": "FILE-B455DF7906B3",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_modified",
+      "worktree_status": "modified in current local scenario delta",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "f4acd6dffafbf5e5a8bcc8cef31d292790435cc2 plus active WOLF delta",
+      "source_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Full source read at lines 1-404; symbol/responsibility note in production_kotlin_A010.md. No runtime validation. WOLF delta read through source and integration assertions; EVID-114.",
+      "inspection_detail": "Full source read at lines 1-404; symbol/responsibility note in production_kotlin_A010.md. No runtime validation. WOLF delta read through source and integration assertions; EVID-114. BLOOM_SHOWCASE offsets were re-reviewed and integration-tested so all five entities clear within the one active timer (EVID-134/136).",
       "symbols_or_consumers": [
         "EncounterStep`, `EncounterScenario`, `EncounterSpawnDirective`, `EncounterStepRandomSeed.forStep`, `EncounterDirector"
       ],
-      "relationships": [],
-      "evidence_ref": "EVID-028",
+      "relationships": [
+        "TASK-A-044",
+        "FIND-026",
+        "GAP-015",
+        "EVID-134"
+      ],
+      "evidence_ref": "EVID-134",
       "next_action": "Exact-SHA hosted verification in TASK-C-015.",
       "related_goal_ids": [
         "GOAL-015"
@@ -32820,6 +32825,114 @@
       "language_or_format": "Kotlin",
       "assigned_task_id": "TASK-A-043",
       "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-BIRD-NAMED-SCENARIO-20261028",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/BirdNamedScenarioMechanicsIntegrationTest.kt",
+      "classification": "JVM/Robolectric integration test",
+      "worktree_status": "new current local source delta",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local delta",
+      "prior_evidence": "Prior scenario catalogue and entity-specific tests reused; new scenario-to-mechanic link assertions added only where concrete coverage gaps were identified.",
+      "inspection_detail": "129-line file read in full; scenario behavior is limited to the exact deterministic assertions stated by BirdNamedScenarioMechanicsIntegrationTest. Full Java21 suite passes (EVID-136).",
+      "symbols_or_consumers": [
+        "BirdNamedScenarioMechanicsIntegrationTest"
+      ],
+      "relationships": [
+        "REQ-020",
+        "TASK-A-045",
+        "EVID-136"
+      ],
+      "evidence_ref": "EVID-136",
+      "next_action": "Exact-SHA hosted validation under TASK-C-018; retain physical/human readability as separate acceptance.",
+      "related_goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-045",
+      "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-NAMED-SHOWCASE-ROSTER-20261028",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/NamedShowcaseRosterIntegrationTest.kt",
+      "classification": "JVM/Robolectric integration test",
+      "worktree_status": "new current local source delta",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local delta",
+      "prior_evidence": "Prior scenario catalogue and entity-specific tests reused; new scenario-to-mechanic link assertions added only where concrete coverage gaps were identified.",
+      "inspection_detail": "168-line file read in full; scenario behavior is limited to the exact deterministic assertions stated by NamedShowcaseRosterIntegrationTest. Full Java21 suite passes (EVID-136).",
+      "symbols_or_consumers": [
+        "NamedShowcaseRosterIntegrationTest"
+      ],
+      "relationships": [
+        "REQ-020",
+        "TASK-A-045",
+        "EVID-136"
+      ],
+      "evidence_ref": "EVID-136",
+      "next_action": "Exact-SHA hosted validation under TASK-C-018; retain physical/human readability as separate acceptance.",
+      "related_goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-045",
+      "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-SHOWCASE-SCENARIO-20261028",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/ShowcaseScenarioIntegrationTest.kt",
+      "classification": "JVM/Robolectric integration test",
+      "worktree_status": "new current local source delta",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local delta",
+      "prior_evidence": "Prior scenario catalogue and entity-specific tests reused; new scenario-to-mechanic link assertions added only where concrete coverage gaps were identified.",
+      "inspection_detail": "246-line file read in full; scenario behavior is limited to the exact deterministic assertions stated by ShowcaseScenarioIntegrationTest. Full Java21 suite passes (EVID-136).",
+      "symbols_or_consumers": [
+        "ShowcaseScenarioIntegrationTest"
+      ],
+      "relationships": [
+        "REQ-020",
+        "TASK-A-045",
+        "EVID-136"
+      ],
+      "evidence_ref": "EVID-136",
+      "next_action": "Exact-SHA hosted validation under TASK-C-018; retain physical/human readability as separate acceptance.",
+      "related_goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-045",
+      "assigned_owner": "/root"
     }
   ],
   "coverage_counts": {
@@ -32830,7 +32943,7 @@
   },
   "inspection_update": {
     "date": "2026-10-28",
-    "delta": "The WOLF_CHARGE correction is committed at 113a4ebdf671dc16470b18de0d4dff7685230045; its test row is tracked. Other worktree_status fields and WT-D17D3FBCF2CB3B267FE9 are preserved as the initial inventory snapshot, not a live post-commit git status. Exact-SHA Android validation remains pending."
+    "delta": "Three new Robolectric scenario integration test files were fully read and passed under the full Java21 suite. EncounterDirector BLOOM_SHOWCASE offsets were inspected and corrected. The inherited original snapshot counts remain historical; exact-SHA hosted result is pending."
   },
   "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9",
   "working_tree_hash_policy": {
@@ -32869,7 +32982,7 @@
   "coverage_counts_current": {
     "DOCUMENTED": 39,
     "EXCLUDED_WITH_REASON": 3,
-    "FULLY_STATICALLY_INSPECTED": 968,
+    "FULLY_STATICALLY_INSPECTED": 975,
     "PARTIALLY_INSPECTED": 2
   },
   "snapshot_date": "2026-10-28"

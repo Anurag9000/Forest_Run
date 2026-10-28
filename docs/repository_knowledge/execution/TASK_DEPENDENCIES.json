@@ -322,6 +322,16 @@
       "from": "TASK-C-018",
       "to": "TASK-E-001",
       "reason": "Final residual reconciliation must reuse exact candidate scenario evidence."
+    },
+    {
+      "from": "TASK-A-044",
+      "to": "TASK-C-018",
+      "reason": "Exact-SHA host/API35 validation must include the Bloom showcase correction and new scenario integration tests."
+    },
+    {
+      "from": "TASK-A-045",
+      "to": "TASK-C-018",
+      "reason": "Exact-SHA host/API35 validation must include the Bloom showcase correction and new scenario integration tests."
     }
   ],
   "parallel_waves": [

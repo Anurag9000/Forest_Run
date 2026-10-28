@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local source/test/docs delta",
+  "repository_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local source/test/docs delta",
   "snapshot_date": "2026-10-28",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -1935,6 +1935,122 @@
       ],
       "result": "BUILD SUCCESSFUL in 1m 32s. XML aggregation: 1,320 tests, 0 failures, 0 errors, 0 skipped. Outputs exist: debug APK 10,741,795 bytes; AndroidTest APK 663,513 bytes; release AAB 6,353,956 bytes.",
       "limitations": "Local build and Robolectric evidence only. This does not run connected instrumentation tests, prove exact-SHA hosted CI, establish physical-device/human acceptance, license/provenance approval, Play delivery, or production release readiness."
+    },
+    {
+      "id": "EVID-131",
+      "type": "exact-SHA no-trainable-surface applicability audit",
+      "path": ".training_control/; .github/workflows/training-control-applicability.yml",
+      "revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846",
+      "supports": [
+        "TASK-C-018"
+      ],
+      "observation": "The repository applicability audit workflow completed successfully for the exact pushed candidate. It remains a no-trainable-surface certification for this native Android game; it does not create or require ML training jobs.",
+      "commands": [
+        "GitHub Actions run 40626476537; job 122612483127 no-trainable-surface"
+      ],
+      "result": "Workflow run completed successfully on exact SHA d0eb2f6953951ab29f0a262977a86d0f097b2846.",
+      "limitations": "This certifies repository scanning/applicability only; it is not app behavior or external release acceptance."
+    },
+    {
+      "id": "EVID-132",
+      "type": "exact-SHA estate local training-control certificate",
+      "path": ".training_control/; .github/workflows/estate-training-control-certificate.yml",
+      "revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846",
+      "supports": [
+        "TASK-C-018"
+      ],
+      "observation": "The estate local training-control certificate workflow completed successfully for the exact pushed candidate and represents Forest Run as no trainable surface.",
+      "commands": [
+        "GitHub Actions run 40626476460; job 122612483046 certificate"
+      ],
+      "result": "Workflow run completed successfully on exact SHA d0eb2f6953951ab29f0a262977a86d0f097b2846.",
+      "limitations": "This certificate does not validate gameplay behavior or external release acceptance."
+    },
+    {
+      "id": "EVID-133",
+      "type": "predecessor 8f Android workflow cancelled when newer candidate was pushed",
+      "path": ".github/workflows/android-validation.yml",
+      "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 (predecessor to d0eb2f69)",
+      "supports": [
+        "TASK-C-016",
+        "TASK-C-018"
+      ],
+      "observation": "Public GitHub Actions API shows predecessor run 40623906250 exact SHA 8f9340d had a successful Host/release/lint/package job 122604560951, while API35 connected job 122606210657 was cancelled at 2026-10-28T03:25:24Z after the newer d0eb2f69 push. This is not a connected-test pass or a project failure.",
+      "commands": [
+        "GitHub Actions public run API: run 40623906250 and jobs endpoint, checked 2026-10-28"
+      ],
+      "result": "Predecessor workflow terminal conclusion cancelled; host job success; API35 connected job cancelled. Newer exact-SHA d0eb2f69 Android run 40626476441 is active and supersedes it.",
+      "limitations": "Does not validate d0eb2f69; use TASK-C-018. Do not report the predecessor connected check as passed."
+    },
+    {
+      "id": "EVID-134",
+      "type": "BLOOM_SHOWCASE full-lane conversion timing correction",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt; app/src/test/java/com/anurag9000/forestrun/engine/ShowcaseScenarioIntegrationTest.kt",
+      "revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local source/test delta",
+      "supports": [
+        "TASK-A-044",
+        "TASK-A-045",
+        "FIND-026",
+        "GAP-015",
+        "TASK-C-018"
+      ],
+      "observation": "A new full-scenario integration test drove all five BLOOM_SHOWCASE entities through the real director, entity factory, update and collision/pass arbitration. The old offsets left Duck and Weeping Willow unresolved until after the single six-second Bloom window, producing HIT instead of the documented full-lane conversions. The authored offsets were moved nearer while preserving staggered dispatch. The test now observes all five distinct family types resolving exactly once as BLOOM_CONVERTED before expiry, with one conversion Seed each and no normal pass/hit/spare outcomes.",
+      "commands": [
+        "JAVA_HOME=/opt/android-studio/jbr PATH=/opt/android-studio/jbr/bin:$PATH ./gradlew testDebugUnitTest --tests com.anurag9000.forestrun.engine.ShowcaseScenarioIntegrationTest --no-daemon",
+        "Full Java 21 Gradle compile/test/lint/package command recorded in EVID-136"
+      ],
+      "result": "Focused ShowcaseScenarioIntegrationTest passes 3/3 after correction; full suite EVID-136 passes.",
+      "limitations": "Robolectric evidence proves deterministic source behavior under the test setup, not visual spacing/readability on a physical device. Exact-SHA hosted validation is pending."
+    },
+    {
+      "id": "EVID-135",
+      "type": "full Python validation for the current local delta",
+      "path": "scripts/",
+      "revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local source/test/docs delta",
+      "supports": [
+        "TASK-A-044",
+        "TASK-A-045",
+        "TASK-C-018"
+      ],
+      "observation": "The repository Python scripts test suite completed successfully after the scenario source change. Expected negative-case diagnostics were emitted by tests that verify fail-closed behavior.",
+      "commands": [
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "1,398 tests passed; exit status 0.",
+      "limitations": "Host-side Python tooling tests do not establish Android runtime, physical-device, human or release acceptance."
+    },
+    {
+      "id": "EVID-136",
+      "type": "full Java 21 Android host and packaging validation for current local delta",
+      "path": "app/src/main/java/; app/src/test/; app/src/androidTest/; app/build.gradle.kts",
+      "revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local source/test/docs delta",
+      "supports": [
+        "TASK-A-044",
+        "TASK-A-045",
+        "TASK-C-018"
+      ],
+      "observation": "The full requested local Java 21 Gradle gate completed successfully after all current scenario changes. It compiled debug/release/unit-test/instrumentation Kotlin, ran all JVM/Robolectric tests, linted debug/release, and packaged debug APK, instrumentation APK and release AAB.",
+      "commands": [
+        "JAVA_HOME=/opt/android-studio/jbr PATH=/opt/android-studio/jbr/bin:$PATH ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease --no-daemon"
+      ],
+      "result": "BUILD SUCCESSFUL; 1,327 JVM/Robolectric tests, zero failures, errors or skips; all requested compile/lint/package tasks succeeded.",
+      "limitations": "No connected Android or physical-device test was run locally. This local run predates the eventual commit SHA; exact-SHA hosted Android validation remains required."
+    },
+    {
+      "id": "EVID-137",
+      "type": "current knowledge and execution ledger consistency audit",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/{EVIDENCE_INDEX.json,TASK_DEPENDENCIES.json,STATE_HISTORY.jsonl}; docs/repository_knowledge/{file_inventory.json,test_contract_inventory.json,symbol_inventory.json,symbol_shards/engine_a_m.json}",
+      "revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local source/test/docs delta",
+      "supports": [
+        "TASK-C-018"
+      ],
+      "observation": "Static consistency validation checked unique master/evidence/file/test IDs and paths, task-to-evidence and relationship references, dependency references and graph acyclicity, file coverage count reconciliation, selected Markdown links, JSONL parseability, and git diff whitespace. Three previous mixed-space file coverage values were normalized to the canonical FULLY_STATICALLY_INSPECTED spelling; all coverage counts now sum to the current inventory.",
+      "commands": [
+        "Inline Python validator over the named JSON/JSONL/Markdown ledgers",
+        "git diff --check"
+      ],
+      "result": "PASS. 1,019 file records; 398 test-contract records; 73 unique tasks; 135 evidence records; 975 fully statically inspected, 39 documented, 3 excluded, 2 partially inspected; task statuses reconcile to 55 completed, 2 in progress, 10 deferred, 6 canceled/superseded; dependency graph acyclic.",
+      "limitations": "This validates ledger/documentation structure and cited local paths, not every technical claim or runtime behavior. Current source delta still requires exact-SHA hosted validation and external physical/human/release evidence."
     }
   ]
 }
