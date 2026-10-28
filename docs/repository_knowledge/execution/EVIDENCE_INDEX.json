@@ -1580,6 +1580,39 @@
       ],
       "result": "Both exact-SHA workflow runs completed with success.",
       "limitations": "These establish the repository-specific N/A guard and certificate workflows only; they do not imply any ML/training feature or game runtime acceptance."
+    },
+    {
+      "id": "EVID-111",
+      "type": "exact latest-tree host/release/lint/package and API35 connected workflow",
+      "path": "https://github.com/Anurag9000/Forest_Run/actions/runs/40604093279; host job 122539158093; connected job 122541808355; host artifact 12780112471 sha256:1e7998dd14059596cb3bc4fcf51089350f386d8f44c40e38053a471ac1e71a7a; connected artifact 12780856634 sha256:458808cf3482b8af9de9a77cf1a4b90b08305cb912920364834bd982d92b874d",
+      "revision": "f00f78e820ae2a158ef420d634f7c410a27ef2b3",
+      "date": "2026-10-28",
+      "supports": [
+        "TASK-C-014"
+      ],
+      "observation": "A documentation-only follow-up commit atop the verified application source candidate completed the exact-SHA Android workflow. Both host/release/lint/package and API35 connected jobs succeeded, and both artifacts were uploaded with the listed SHA-256 digests. The workflow run page reports total duration 14m42s; host job 7m05s and connected job 7m31s.",
+      "commands": [
+        "Read-only GitHub Actions run/job/artifact summary inspection for run 40604093279"
+      ],
+      "result": "Run 40604093279 succeeded on exact pushed tree f00f78e820ae2a158ef420d634f7c410a27ef2b3.",
+      "limitations": "This commit changed documentation/ledgers only; application source remains the already verified 8c335aef candidate. Detailed test reports inside artifacts were not extracted; no remote test counts are inferred."
+    },
+    {
+      "id": "EVID-112",
+      "type": "exact latest-tree training applicability and certificate workflows",
+      "path": "https://github.com/Anurag9000/Forest_Run/actions/runs/40604093598; https://github.com/Anurag9000/Forest_Run/actions/runs/40604093353",
+      "revision": "f00f78e820ae2a158ef420d634f7c410a27ef2b3",
+      "date": "2026-10-28",
+      "supports": [
+        "TASK-C-014",
+        "GOAL-007"
+      ],
+      "observation": "The no-trainable-surface applicability and estate certificate workflows completed successfully on the documentation-reconciled tree.",
+      "commands": [
+        "Read-only GitHub Actions run metadata inspection for runs 40604093598 and 40604093353"
+      ],
+      "result": "Both exact-SHA workflow runs completed successfully on f00f78e820ae2a158ef420d634f7c410a27ef2b3.",
+      "limitations": "These workflows confirm N/A applicability and certificate checks only; they do not imply a trainable ML surface."
     }
   ]
 }

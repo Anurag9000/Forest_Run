@@ -7614,21 +7614,25 @@
           "EVID-107",
           "EVID-108",
           "EVID-109",
-          "EVID-110"
+          "EVID-110",
+          "EVID-111",
+          "EVID-112"
         ],
         "uncertainty": "Exact candidate host and API 35 connected workflow job conclusions are directly confirmed. Detailed connected JUnit counts and transcript are present only in uploaded artifacts that could not be downloaded anonymously (HTTP 401); no count is inferred. Physical/device/human acceptance is not established by emulator CI.",
         "remaining_work": "None within this exact-source-delta verification task. Candidate-bound Owl screenshot/visual inspection and physical/human/external release gates remain separately tracked.",
         "completion_evidence": [
           "EVID-108: exact-SHA host/release/lint/package job 122532575053 passed, including full Python tooling tests, Kotlin/JVM tests, compilation, lint, APK/AAB packaging, native alignment, R8, and source immutability.",
           "EVID-109: exact-SHA API 35 connected job 122534456541 passed; connected-validation artifact uploaded. Detailed test counts were not independently retrieved because unauthenticated artifact download returned HTTP 401.",
-          "EVID-110: exact-SHA no-trainable-surface audit and certificate workflow runs 40602123869/40602123856 both passed."
+          "EVID-110: exact-SHA no-trainable-surface audit and certificate workflow runs 40602123869/40602123856 both passed.",
+          "EVID-111: documentation-reconciled tree f00f78e820ae2a158ef420d634f7c410a27ef2b3 passed exact-SHA host/release/lint/package and API35 connected workflow 40604093279; both artifacts uploaded with recorded digests. This is a docs-only descendant of source candidate 8c335aef.",
+          "EVID-112: no-trainable-surface and certificate workflows 40604093598/40604093353 passed on exact documentation tree f00f78e820ae2a158ef420d634f7c410a27ef2b3."
         ],
         "related_prior_work": [
           "TASK-C-011",
           "TASK-A-036",
           "2026-10-27 exact-main and process-death evidence EVID-101/EVID-102"
         ],
-        "last_reconciled_revision": "8c335aef232ee8f164847631a74d1abb7409dd86",
+        "last_reconciled_revision": "8c335aef232ee8f164847631a74d1abb7409dd86 (source) plus f00f78e820ae2a158ef420d634f7c410a27ef2b3 (documentation-only verification tree)",
         "next_action": "No task-local action. Continue with TASK-C-013 when an authorized Android capture device is available; retain physical, human, provenance, governance, signing and Play gates under their existing tasks.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "VERIFIED",
@@ -8229,9 +8233,12 @@
     "evidence_ids": [
       "EVID-108",
       "EVID-109",
-      "EVID-110"
+      "EVID-110",
+      "EVID-111",
+      "EVID-112"
     ],
-    "status": "Exact-SHA run 40602123824 passed host/release/lint/package and API 35 connected jobs; no-trainable-surface run 40602123869 and certificate run 40602123856 also passed. This closes TASK-C-014 for the source delta. External/device/human release acceptance remains separately open."
+    "status": "Exact-SHA run 40602123824 passed host/release/lint/package and API 35 connected jobs; no-trainable-surface run 40602123869 and certificate run 40602123856 also passed. This closes TASK-C-014 for the source delta. External/device/human release acceptance remains separately open. Documentation-only descendant f00f78e8 also passed the same exact-SHA host/API35 and training-applicability workflows (EVID-111/EVID-112); the application source is unchanged from tested 8c335aef.",
+    "documentation_verification_revision": "f00f78e820ae2a158ef420d634f7c410a27ef2b3"
   },
   "current_repository_state": {
     "branch": "main",
@@ -8248,8 +8255,12 @@
       "EVID-107",
       "EVID-108",
       "EVID-109",
-      "EVID-110"
-    ]
+      "EVID-110",
+      "EVID-111",
+      "EVID-112"
+    ],
+    "latest_documentation_verification_sha": "f00f78e820ae2a158ef420d634f7c410a27ef2b3",
+    "latest_documentation_workflow": "40604093279; host/API35 connected and both training-control workflows passed (EVID-111/EVID-112)"
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
