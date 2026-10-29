@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus current TASK-A-050 working-tree delta",
+  "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 and canonical-doc reconciliation",
   "inspection_date": "2026-10-29",
-  "scope_note": "Meaningful declaration inventory across production Kotlin and Python/shell files. It retains 91 prior high-detail records and adds all shard declarations using path + fully qualified name + source start line as identity, so same-name overloads remain distinct. See per-shard methodology/limitations. Test sources/helpers and generated artifacts are excluded with file-level reasons. This is static evidence, not runtime validation; caller links are only included where established. The 2026-10-29 TASK-A-050 delta updates changed importer/runtime declaration records and adds its four new importer helpers; this delta does not imply refreshed whole-repository symbol extraction.",
+  "scope_note": "Meaningful declaration inventory across production Kotlin and Python/shell files. It retains 91 prior high-detail records and adds all shard declarations using path + fully qualified name + source start line as identity, so same-name overloads remain distinct. See per-shard methodology/limitations. Test sources/helpers and generated artifacts are excluded with file-level reasons. This is static evidence, not runtime validation; caller links are only included where established. The 2026-10-29 TASK-A-050 delta updates changed importer/runtime declaration records and adds its four new importer helpers; this delta does not imply refreshed whole-repository symbol extraction. Canonical architecture and codebase map were reconciled in the 2026-10-29 atlas correction; this remains a targeted delta, not a whole-repository refresh.",
   "records": [
     {
       "id": "SYM-001",
@@ -3918,7 +3918,7 @@
       "purpose": "Declares the Char type; its state and members are individually indexed below.",
       "inputs": [],
       "outputs": null,
-      "state_or_effects": "const val RUN = \"sprites/char/runner_girl_technical_48frame.png\" const val JUMP = \"sprites/char/runner_girl_jump_48frame.png\" const val DUCK = \"sprites/char/runner_girl_duck_48frame.png\"",
+      "state_or_effects": "const val RUN = \"sprites/char/runner_girl_technical_48frame.png\" const val JUMP = \"sprites/char/runner_girl_jump_42frame.png\" const val DUCK = \"sprites/char/runner_girl_duck_36frame.png\"",
       "dependencies": [],
       "consumers": [],
       "goal_ids": [

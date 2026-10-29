@@ -18843,15 +18843,20 @@
       "id": "FILE-FF21B6B9A3A3",
       "path": "docs/ARCHITECTURE.md",
       "classification": "product/architecture/evidence documentation",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "MODIFIED_IN_DOCUMENTATION_FOLLOWUP",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 plus documentation-only reconciliation",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Complete text/document content read and reconciled against current map/source evidence; see A-016 shard.",
+      "inspection_detail": "Current-facing runtime sprite path/frame references reconciled against the 42/36 importer and RuntimeAssetContractTest; historical/source-atlas labels explicitly distinguished.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-038",
-      "next_action": "Reuse findings; revisit only when affected docs/source or candidate evidence changes.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-164",
+        "EVID-165"
+      ],
+      "evidence_ref": "EVID-164",
+      "next_action": "No source/documentation work remains for this bounded atlas delta; human/physical acceptance remains external.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-005",
@@ -18869,7 +18874,7 @@
       ],
       "file_type": "md",
       "language_or_format": "Markdown",
-      "assigned_task_id": "TASK-A-016",
+      "assigned_task_id": "TASK-A-050",
       "assigned_owner": "/root/docs_history"
     },
     {
@@ -20071,15 +20076,20 @@
       "id": "FILE-36328969B72B",
       "path": "docs/REPO_CODEBASE_MAP.md",
       "classification": "product/architecture/evidence documentation",
-      "worktree_status": "untracked",
+      "worktree_status": "MODIFIED_IN_DOCUMENTATION_FOLLOWUP",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 plus documentation-only reconciliation",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Full text read lines 1-1181 on 2026-10-27. All material architecture/implementation requirements reconcile with current goal/capability records; map status dated through 2026-10-09 is historical and superseded by the current ledger. No source changes or runtime actions. Evidence EVID-063.",
+      "inspection_detail": "Current-facing runtime sprite path/frame references reconciled against the 42/36 importer and RuntimeAssetContractTest; historical/source-atlas labels explicitly distinguished.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-063",
-      "next_action": "Reuse the historical architecture map where consistent; use the current master ledger for project status and revisit only for a concrete source/requirement delta.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-164",
+        "EVID-165"
+      ],
+      "evidence_ref": "EVID-164",
+      "next_action": "No source/documentation work remains for this bounded atlas delta; human/physical acceptance remains external.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-005",
@@ -20104,7 +20114,8 @@
       "post_investigation_content_sha256": "ecdabd92becd0aa353205b0e5b96a9373d9d661d9b35191de6e196150e0d646d",
       "post_investigation_content_bytes": 455390,
       "post_investigation_hash_date": "2026-10-27",
-      "post_investigation_note": "Private machine-local absolute path removed for repository publication; task-start hash remains in worktree_content_sha256 and working_tree_snapshot_id."
+      "post_investigation_note": "Private machine-local absolute path removed for repository publication; task-start hash remains in worktree_content_sha256 and working_tree_snapshot_id.",
+      "assigned_task_id": "TASK-A-050"
     },
     {
       "id": "FILE-C2A667FF6BA7",
@@ -33133,7 +33144,7 @@
       "classification": "source completion and verification delta report",
       "worktree_status": "UNTRACKED_NEW_DOCUMENTATION",
       "coverage_status": "DOCUMENTED",
-      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus current working tree delta",
+      "source_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 plus documentation-only reconciliation",
       "inspection_detail": "Current correction, evidence classes, commands, outcomes and limits documented; not a whole-repository re-audit.",
       "symbols_or_consumers": [],
       "relationships": [
@@ -33141,10 +33152,11 @@
         "GAP-020",
         "TASK-A-050",
         "TASK-C-019",
-        "EVID-163"
+        "EVID-163",
+        "EVID-165"
       ],
-      "evidence_ref": "EVID-163",
-      "next_action": "After exact-SHA validation, append hosted evidence; preserve physical/human/external limitations.",
+      "evidence_ref": "EVID-164",
+      "next_action": "No source/documentation work remains for this bounded atlas delta; human/physical acceptance remains external.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-006"
@@ -33170,7 +33182,7 @@
   },
   "inspection_update": {
     "date": "2026-10-29",
-    "delta": "Added verified atlas/runtime correction records: source assets remain legacy-named references; current runtime jump/duck assets have 42/36-frame names. Added source-completion delta report, finding/gap/task evidence; exact-SHA hosted validation remains pending.",
+    "delta": "Added verified atlas/runtime correction records: source assets remain legacy-named references; current runtime jump/duck assets have 42/36-frame names. Added source-completion delta report, finding/gap/task evidence; exact-SHA hosted validation remains pending. A subsequent static review reconciled stale 48-frame runtime claims in ARCHITECTURE and the older codebase/symbol maps (EVID-164). The TASK-A-050 exact-SHA Android, applicability, and estate certificate gates passed (EVID-165).",
     "paths": [
       "docs/repository_knowledge/source_completion_delta_2026-10-29.md",
       "scripts/import_final_assets.py",

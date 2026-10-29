@@ -9851,10 +9851,12 @@
         "owner": "/root",
         "blockers": [],
         "evidence_ids": [
-          "EVID-163"
+          "EVID-163",
+          "EVID-164",
+          "EVID-165"
         ],
         "uncertainty": "The row-major order is adopted and structurally verified; semantic animation quality and readability still need human/physical assessment.",
-        "remaining_work": "No known source task within this atlas/importer/runtime correction. Exact-commit host validation is tracked separately; physical/human readability and provenance remain external.",
+        "remaining_work": "No source or canonical documentation work remains in this bounded atlas correction. Physical/human readability and provenance/licensing are external acceptance tasks.",
         "completion_evidence": [
           {
             "evidence_id": "EVID-163",
@@ -9866,8 +9868,8 @@
           "TASK-A-022",
           "TASK-C-018"
         ],
-        "last_reconciled_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus current working tree delta",
-        "next_action": "After committing, satisfy TASK-C-019 using exact-commit hosted workflow evidence.",
+        "last_reconciled_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 plus documentation-only canonical map update",
+        "next_action": "No further implementation action in this bounded correction; preserve physical/human acceptance separately.",
         "investigation_coverage": "SOURCE ATLAS, IMPORTER, RUNTIME COUNTS/RANGES, REGRESSION TEST AND PACKAGED ASSET CONTRACT INSPECTED",
         "implementation_or_investigation_status": "CORRECTED AND LOCALLY VERIFIED",
         "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED; HOSTED EXACT-COMMIT VERIFICATION PENDING"
@@ -9889,7 +9891,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification",
         "objective": "Run the repository-controlled exact-SHA host/source-contract and Android workflow gates for TASK-A-050, confirming the new runtime asset names and 42/36-frame contracts are present in the committed candidate.",
         "motivation": "Local tests establish behavior on the current worktree but do not prove the pushed immutable candidate and its hosted workflow.",
-        "current_state": "Local Python suite, Java21 full Gradle validation, visual contact-sheet review, output hashes and frame geometry passed on the uncommitted delta (EVID-163). No attached adb device exists; connected instrumentation and physical review were not performed.",
+        "current_state": "Exact candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 is pushed to origin/main. Android host/release/lint/package and API35 connected jobs passed (run 40833316035, jobs 123312241064 and 123314851778); training-applicability 40833316021 and certificate 40833315997 passed. See EVID-165; local test/build evidence is EVID-163.",
         "required_final_state": "Exact committed main SHA has successful repository-controlled host/Android/source-contract checks covering the asset importer and runtime sprite contract; any infrastructure failure is diagnosed and not mislabeled as source failure.",
         "scope": [
           "TASK-A-050 outputs",
@@ -9925,21 +9927,31 @@
         "execution_constraints": "No physical device is available. Do not weaken required coverage to obtain green status.",
         "complexity": "small",
         "priority": "P1 exact candidate integrity",
-        "execution_status": "AWAITING_VERIFICATION",
+        "execution_status": "COMPLETED",
         "owner": null,
         "blockers": [],
         "evidence_ids": [
-          "EVID-163"
+          "EVID-163",
+          "EVID-165"
         ],
         "uncertainty": "The hosted workflow may depend on external runner/SDK availability; current local evidence is not hosted exact-SHA evidence.",
-        "remaining_work": "Run and inspect hosted workflows on the committed candidate; retain physical/human acceptance in existing deferred tasks.",
-        "completion_evidence": [],
+        "remaining_work": "No exact-SHA automated source/Android work remains for this delta. Physical-device/human readability are distinct external acceptance.",
+        "completion_evidence": [
+          {
+            "evidence_id": "EVID-163",
+            "result": "Local focused/full Python and Java21 Gradle suite/build passed."
+          },
+          {
+            "evidence_id": "EVID-165",
+            "result": "All exact-candidate Android, applicability and estate certificate workflows passed."
+          }
+        ],
         "related_prior_work": [
           "TASK-C-017",
           "TASK-C-018"
         ],
-        "last_reconciled_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus current working tree delta",
-        "next_action": "Commit the reviewed source delta, then inspect exact-SHA hosted workflow results.",
+        "last_reconciled_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357",
+        "next_action": "No further exact-SHA source validation in this task; retain physical and human acceptance as external.",
         "investigation_coverage": "TASK CONTRACT PREPARED; EXACT-SHA HOSTED VALIDATION NOT YET RUN",
         "implementation_or_investigation_status": "VERIFICATION REQUIRED",
         "evidence_status": "CURRENT LOCAL EVIDENCE AVAILABLE; EXACT-SHA EVIDENCE REQUIRED"
@@ -10534,29 +10546,33 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "b586f17a12c359718d8056c9fe7983cd157c894c",
-    "working_tree_delta": "Player jump/duck atlas slicing corrected to 42/36 frames; scoped annotation removal; four sprite outputs and runtime/test/docs synchronized.",
+    "base_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357",
+    "working_tree_delta": "Documentation-only reconciliation of stale 48-frame jump/runtime asset references; application source is the successfully exact-SHA-verified candidate.",
     "evidence_ids": [
-      "EVID-163"
+      "EVID-163",
+      "EVID-164",
+      "EVID-165"
     ],
-    "status": "Local full Python and Java21 Gradle checks passed on dirty worktree; exact-commit hosted validation pending as TASK-C-019. No adb device or physical/human asset acceptance.",
-    "documentation_verification_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus current documentation/ledger delta"
+    "status": "TASK-A-050 source correction committed/pushed. Local Python/Java21 Gradle and exact-SHA Android host/API35 connected, applicability, and certificate workflows passed (EVID-163/165). Physical/human/external acceptance remains open.",
+    "documentation_verification_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 plus documentation-only current reconciliation"
   },
   "current_repository_state": {
     "branch": "main",
-    "verified_source_candidate_sha": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
-    "candidate_remote_confirmation": "Current HEAD b586f17a12c359718d8056c9fe7983cd157c894c is origin/main; it is a documentation-only descendant of exact-SHA-verified d63 source candidate.",
-    "working_tree": "Authorized source, generated sprite, regression test, and knowledge-documentation changes for TASK-A-050 are present but not committed. Pre-existing user-owned untracked files are preserved and excluded.",
-    "current_delta_task": "TASK-A-050 complete on local evidence; TASK-C-019 awaits exact committed main validation. Earlier physical/human/external and residual release acceptance remain deferred.",
+    "verified_source_candidate_sha": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357",
+    "candidate_remote_confirmation": "git ls-remote origin refs/heads/main returned exact 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357. Exact-SHA Android, applicability and estate-certificate workflow runs all passed (EVID-165).",
+    "working_tree": "TASK-A-050 source/assets/tests are committed and pushed. Documentation-only reconciliation of stale canonical architecture/symbol references is staged for a follow-up commit. Pre-existing user-owned untracked files remain preserved/excluded.",
+    "current_delta_task": "TASK-A-050 and TASK-C-019 complete for source, local tests and exact-SHA automated Android/host workflow scope. Physical/human/external acceptance and residual release reconciliation remain deferred.",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-29.md",
     "evidence_ids": [
       "EVID-159",
       "EVID-161",
       "EVID-162",
-      "EVID-163"
+      "EVID-163",
+      "EVID-164",
+      "EVID-165"
     ],
-    "latest_documentation_verification_sha": "b586f17a12c359718d8056c9fe7983cd157c894c",
-    "latest_documentation_verification": "Current task/evidence/file inventory records added for uncommitted source delta; static ledger checks pending."
+    "latest_documentation_verification_sha": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357",
+    "latest_documentation_verification": "Exact-candidate workflows passed; current-facing canonical docs and ledgers reconciled with EVID-164."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
@@ -10578,16 +10594,5 @@
     ],
     "status": "Exact candidate API35 ordinary connected tests passed 28/28; both candidate APK installs succeeded; process-death prepare passed, host confirmed no app PID after force-stop, and fresh-process restore passed. Host/release/lint/package also passed. Physical/OEM durability remains unverified."
   },
-  "pending_source_delta": {
-    "task_ids": [
-      "TASK-A-050",
-      "TASK-C-019"
-    ],
-    "evidence_ids": [
-      "EVID-163"
-    ],
-    "scope": "Corrected authored jump/duck atlas slicing, detached label cleanup and runtime frame contract. Local tests/build pass; exact-commit hosted checks pending.",
-    "current_worktree_base": "b586f17a12c359718d8056c9fe7983cd157c894c",
-    "physical_device_access": "Unavailable per user; physical and human readability acceptance remains deferred."
-  }
+  "pending_source_delta": null
 }

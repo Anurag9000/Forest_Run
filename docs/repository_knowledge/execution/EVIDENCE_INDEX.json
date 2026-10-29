@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local worktree delta",
+  "repository_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 plus documentation-only current reconciliation",
   "snapshot_date": "2026-10-29",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -2487,7 +2487,7 @@
       "id": "EVID-163",
       "type": "current-worktree sprite atlas correction and local validation",
       "path": "docs/repository_knowledge/source_completion_delta_2026-10-29.md; scripts/import_final_assets.py; scripts/test_import_final_assets.py; RuntimeAssetContractTest; generated runtime sprite sheets",
-      "revision": "main baseline b586f17a12c359718d8056c9fe7983cd157c894c plus uncommitted source/documentation delta",
+      "revision": "committed/pushed main candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357; exact-SHA hosted workflows ongoing",
       "supports": [
         "FIND-031",
         "GAP-020",
@@ -2502,8 +2502,46 @@
         "env PATH=\"/opt/android-studio/jbr/bin:/home/anurag-basistha/Android/Sdk/platform-tools:$PATH\" ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease: BUILD SUCCESSFUL; 1,330 JVM/Robolectric tests, 0 failures/errors/skips",
         "Re-imported four changed runtime outputs and compared SHA-256 byte-for-byte; inspected jump/duck/Hyacinth/Vanilla contact sheets and frame bounds."
       ],
-      "result": "Focused Python 9/9 and full Python 1,403/1,403 passed. Full Java21 Gradle compile, JVM/Robolectric, AndroidTest compilation, debug/release lint, debug/instrumentation APK and release AAB packaging passed. RuntimeAssetContractTest 4/4 passed.",
-      "limitations": "Tests and build were run against the local dirty working tree, not a committed exact SHA. adb devices -l returned no devices; connected instrumentation and physical readability/human creative acceptance were not performed. Provenance/licensing remains separate."
+      "result": "Focused Python 9/9 and full Python 1,403/1,403 passed. Full Java21 Gradle compile, JVM/Robolectric, AndroidTest compilation, debug/release lint, debug/instrumentation APK and release AAB packaging passed. RuntimeAssetContractTest 4/4 passed. Exact-SHA estate certificate and training-applicability workflows passed; host/release/lint/package job passed (run 40833316035, job 123312241064); API35 connected job passed with artifact upload (run 40833316035, job 123314851778).",
+      "limitations": "The local test/build ran on the same source delta before commit. Exact-SHA hosted workflow results are detailed in EVID-165. No physical-device or human creative acceptance; provenance/licensing remains separate."
+    },
+    {
+      "id": "EVID-164",
+      "type": "post-commit canonical documentation and ledger consistency review",
+      "path": "docs/ARCHITECTURE.md; docs/REPO_CODEBASE_MAP.md; docs/repository_knowledge/symbol_inventory.json; docs/repository_knowledge/symbol_shards/engine_a_m.json; docs/repository_knowledge/file_inventory.json; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json",
+      "revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 plus documentation-only follow-up worktree delta",
+      "supports": [
+        "REQ-021",
+        "FIND-031",
+        "GAP-020",
+        "TASK-A-050",
+        "TASK-C-019"
+      ],
+      "observation": "The canonical architecture doc had called jump animation 48-frame and the source map/symbol declarations still listed old runtime names. These now state 42-frame jump, 36-frame duck and distinguish the legacy-named source atlases from generated runtime outputs. Ledger JSON parses; IDs are unique; file/symbol totals match records; task/evidence references resolve; dependency graph is acyclic; current delta paths resolve; git diff --check passes.",
+      "result": "Current-facing architecture, file map, aggregate symbol map and shard declarations were reconciled; remaining old names are historical or source-atlas identifiers.",
+      "limitations": "Static documentation consistency only. This does not close the still-running exact-SHA API35 connected job, device/human review, or whole-repository re-audit."
+    },
+    {
+      "id": "EVID-165",
+      "type": "exact-commit hosted Android and repository-control workflow results",
+      "path": "GitHub Actions Android validation run 40833316035; training-applicability audit run 40833316021; estate certificate run 40833315997",
+      "revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 on origin/main",
+      "supports": [
+        "TASK-C-019",
+        "TASK-A-050",
+        "REQ-021",
+        "FIND-031",
+        "GAP-020"
+      ],
+      "observation": "Each run is bound to exact head SHA 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357. Android host/release/lint/package job 123312241064 and API35 connected job 123314851778 both completed successfully. All 15 connected-job steps including SDK/API35 setup, connected validation, artifact upload and cleanup completed successfully. The training-applicability and estate-certificate workflows also completed successfully.",
+      "commands": [
+        "Read public GitHub Actions run page https://github.com/Anurag9000/Forest_Run/actions/runs/40833316035 and inspected job details 123312241064/123314851778.",
+        "Read public GitHub Actions run page https://github.com/Anurag9000/Forest_Run/actions/runs/40833316021.",
+        "Read public GitHub Actions run page https://github.com/Anurag9000/Forest_Run/actions/runs/40833315997.",
+        "git ls-remote origin refs/heads/main"
+      ],
+      "result": "Android validation, training applicability and estate certificate all passed for exact candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357; origin/main matches that SHA at verification.",
+      "limitations": "Detailed per-test counts/logs were not retrieved; do not infer counts from job success. CI emulator evidence does not establish physical performance, device matrix, human gameplay/accessibility/creative approval, legal provenance, Play/governance, or production release readiness."
     }
   ]
 }

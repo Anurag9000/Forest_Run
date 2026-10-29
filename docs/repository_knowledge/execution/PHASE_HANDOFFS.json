@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "current_phase": "A - authorized source completion, followed by C exact-candidate verification",
-  "current_phase_status": "TASK-A-050 corrected player jump/duck atlas imports (42 and 36 frames), scoped detached-label cleanup, runtime paths/counts, regression tests, and docs. Local Python and Java21 Gradle verification passed (EVID-163). The delta is currently uncommitted; TASK-C-019 awaits exact-commit hosted verification. No attached device is available, so physical animation readability and human creative approval remain open. Existing d63/8a evidence remains bound to those exact revisions.",
+  "current_phase_status": "TASK-A-050 is committed and pushed as 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357. Local Python/Java21 validation passed (EVID-163). Exact-SHA Android host/release/lint/package and API35 connected, training-applicability, and estate-certificate workflows all passed (EVID-165). Current-facing stale architecture/symbol references were corrected (EVID-164). No physical device is available; physical animation readability and human creative approval remain open.",
   "phases": [
     {
       "id": "A",
@@ -137,8 +137,8 @@
       "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
       "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
     },
-    "next_action": "Commit only the reviewed TASK-A-050 owned changes to main, preserving excluded pre-existing user artifacts; then inspect exact-SHA host/Android workflows and update TASK-C-019/EVID-163 continuation.",
-    "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus local TASK-A-050 delta"
+    "next_action": "Proceed only with authorized/dependency-ready physical, human and external evidence tasks when owners/resources are available; reuse EVID-163/165 and retain external blockers.",
+    "source_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 plus documentation-only current delta"
   },
   "resume_procedure": {
     "baseline": "Verified application source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; documentation-only main/origin descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 passed hosted status checks (EVID-161). Verify live HEAD/worktree and preserve pre-existing untracked artifacts.",
@@ -146,7 +146,7 @@
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
   },
-  "baseline": "Current committed main/origin baseline b586f17a12c359718d8056c9fe7983cd157c894c; previous application source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd has exact-source evidence. Current TASK-A-050 worktree delta is local/uncommitted; verify exact candidate after commit.",
-  "what_remains": "Commit and run exact-SHA hosted validation for TASK-A-050 (TASK-C-019). Physical performance/readability and human creative/accessibility acceptance require unavailable hardware/reviewers. Rights, privacy, Play delivery/signing and governance require accountable external owners. TASK-E-001 remains residual final reconciliation after gates.",
-  "what_exists": "The latest committed main source remains previously validated at d63, with documentation-only descendants through b586. The current worktree corrects sprite atlas geometry and has local 1,403 Python tests plus Java21 full Gradle compile/test/lint/package evidence (EVID-163). The changes are not yet committed or hosted-verified. User-owned untracked artifacts are preserved. Physical/human/external release gates remain open."
+  "baseline": "Current source candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 is confirmed at origin/main and passed exact-SHA host/API35 and ancillary workflows; a documentation-only follow-up is staged.",
+  "what_remains": "Physical performance/readability and human creative/accessibility acceptance require unavailable hardware/reviewers. Rights, privacy, Play delivery/signing and governance require accountable external owners. TASK-E-001 remains residual final reconciliation after gates.",
+  "what_exists": "The atlas correction and source changes are committed/pushed. Exact-SHA host, API35 connected, applicability, and certificate checks passed (EVID-165). Local full validation and static docs reconciliation are recorded in EVID-163/164."
 }

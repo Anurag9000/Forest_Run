@@ -587,7 +587,8 @@
       "task_ids": [
         "TASK-C-019"
       ],
-      "condition": "After TASK-A-050 is committed; only then may exact-SHA hosted verification run."
+      "condition": "Exact candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 host/API35, applicability and certificate workflows passed (EVID-165).",
+      "status": "COMPLETED"
     }
   ],
   "cycle_check": "Acyclic; 70 hard prerequisite edges; DFS validated 2026-10-28 after adding TASK-A-048 -> TASK-C-018.",
