@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "current_phase": "A - authorized source completion, followed by C exact-candidate verification",
-  "current_phase_status": "TASK-A-050 source correction is committed and exact-SHA verified at 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 (EVID-163/165); those results are bound to that SHA. Later documentation descendants were not covered by that Android evidence. A DUCK_TEACH scenario integration test delta is now locally focused-tested (EVID-166); the full Python suite (1,403) and Java21 Gradle gate (1,330 tests, zero failures/errors/skips, compile/lint/package) passed locally (EVID-166); exact-candidate checks are pending under TASK-C-020. No physical device is available; physical readability and human creative approval remain open.",
+  "current_phase_status": "TASK-A-051 and TASK-C-020 are complete on exact candidate f4686f0daf0d00b490880dbfaaa2b4a599180055. Local focused/full Python and Java21 Gradle checks passed (EVID-166); exact-SHA Android host/API35 connected, applicability and estate certificate workflows passed (EVID-167). REQ-020 remains partial for other scenario integration/perceptual obligations. No physical device is available; physical readability, human creative approval and external release gates remain open.",
   "phases": [
     {
       "id": "A",
@@ -127,33 +127,32 @@
   ],
   "handoff": {
     "project": "Forest Run is a native Kotlin Android landscape endless runner using SurfaceView/Canvas with persistent world state plus candidate-bound evidence/release tooling.",
-    "what_exists": "Verified source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd is on main/origin. Host/API35, applicability, and estate-certificate workflows passed (EVID-159), including 1,400 Python tests, the full requested Java21 Gradle compile/test/lint/package/hardening gate, 28 ordinary connected tests, the explicitly selected ghost-capture LargeTest invocation (1/1), process-death instrumentation (1/1), and automated verification of eight candidate-bound raw screenshots. The current inventories and task states are in MASTER_EXECUTION_LEDGER.json. A subsequent local DUCK_TEACH test delta connects the production cue, Player duck controls, and CLEAN_PASS outcomes; focused class passes (EVID-166), while full-candidate verification remains pending.",
+    "what_exists": "Verified source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd is on main/origin. Host/API35, applicability, and estate-certificate workflows passed (EVID-159), including 1,400 Python tests, the full requested Java21 Gradle compile/test/lint/package/hardening gate, 28 ordinary connected tests, the explicitly selected ghost-capture LargeTest invocation (1/1), process-death instrumentation (1/1), and automated verification of eight candidate-bound raw screenshots. The current inventories and task states are in MASTER_EXECUTION_LEDGER.json. A subsequent local DUCK_TEACH test delta connects the production cue, Player duck controls, and CLEAN_PASS outcomes; focused class passes (EVID-166), while full-candidate verification remains pending. TASK-A-051 is now committed and exact-SHA verified on f4686f0; the full test/build/lint/package and API35 connected workflows passed (EVID-166/167).",
     "what_remains": "Physical-device performance/readability acceptance is blocked by unavailable hardware. Human gameplay, visual, creative and accessibility review; rights/licensing; privacy/Play; production signing/delivery; governance and accountable release approval require genuine external evidence. TASK-E-001 is deferred until prerequisites exist. Full runtime perfection or one separate test per method is not claimed.",
     "do_not_repeat": "Reuse docs/REPO_CODEBASE_MAP.md, docs/REPO_MEMORY_MAP.md, docs/AUDIT_LEDGER.md and dated audits at their recorded snapshot. Refresh only changed/affected files and evidence; no ML training goal is applicable.",
     "coordination": "One owner updates MASTER_EXECUTION_LEDGER.json and its history. Assign bounded future tasks with disjoint paths; coordinate stable_file_reader.py consumers and candidate/evidence directories. Keep source implementation, integration, runtime verification and external acceptance separate. Report exact revision, files read, evidence and limitations.",
-    "resume": "Check exact current HEAD, working tree, and pending local delta. Reuse EVID-165 only for 26fb6ad. Run TASK-C-020 after committing TASK-A-051; use new exact-SHA results for the changed candidate. Preserve the pre-existing untracked user artifacts.",
+    "resume": "Check live main/origin and clean expected worktree. Reuse EVID-166/167 for the exact f4686f0 candidate; re-open only changed/contradictory areas. TASK-C-020 is complete. REQ-020 remains partial; physical/human/external work requires actual access and owners.",
     "unknowns": "Physical/OEM gameplay and visual behavior, real-device performance, human creative/accessibility/gameplay approval, asset/audio/font rights, privacy/public URL and Play policy decisions, production signing and delivery, governance approval remain unknown or externally owned.",
     "how_to_resume": {
-      "baseline": "At delta start, origin/main and local main were 187466cbec0d80226d692588ade3e61fc8ddd921. EVID-165 is bound to source candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357; local DUCK_TEACH test/documentation delta is separate and requires new candidate checks.",
-      "reuse": "Reuse EVID-163/165 only for the atlas correction on 26fb6ad; reuse EVID-166 only as focused local pre-commit test evidence. Review only changed files and evidence.",
+      "baseline": "Exact current candidate is f4686f0daf0d00b490880dbfaaa2b4a599180055 on main/origin; local and hosted automated evidence is EVID-166/167.",
+      "reuse": "Reuse EVID-163/165 for atlas source candidate 26fb6ad and EVID-166/167 for exact f4686f0 scenario delta. Refresh only changed or contradictory evidence.",
       "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
       "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
     },
-    "next_action": "Review/commit the locally verified TASK-A-051 test and documentation delta, then record exact-SHA hosted validation under TASK-C-020; keep physical, human and external evidence separate.",
-    "source_revision": "Verified application source candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357; current main documentation tip 187466cbec0d80226d692588ade3e61fc8ddd921; local DUCK_TEACH test/documentation delta pending commit.",
-    "baseline": "Current main HEAD at delta start was 187466cbec0d80226d692588ade3e61fc8ddd921; exact automated evidence EVID-165 applies to 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 only.",
+    "next_action": "Continue only other evidence-backed source/test gaps under REQ-020; retain physical, human and external acceptance limits, and reuse EVID-166/167 for the exact f4686f0 candidate.",
+    "source_revision": "f4686f0daf0d00b490880dbfaaa2b4a599180055 on main/origin; exact-SHA local/hosted evidence EVID-166/167.",
+    "baseline": "Current verified main/origin SHA f4686f0daf0d00b490880dbfaaa2b4a599180055; prior task and evidence history is revision-bound in the master ledger.",
     "next_action_task_ids": [
-      "TASK-C-020",
       "TASK-E-001"
     ]
   },
   "resume_procedure": {
-    "baseline": "At delta start, local main and origin/main were 187466cbec0d80226d692588ade3e61fc8ddd921. Exact prior application-source checks EVID-163/165 are bound to 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357. The DUCK_TEACH test/documentation delta is locally focused-tested as EVID-166; full and exact-candidate validation is TASK-C-020.",
-    "reuse": "Reuse EVID-163/165 only for source candidate 26fb6ad, EVID-166 only as focused local evidence for TASK-A-051, and prior audits only within their revision/scope. Refresh changed or contradictory evidence only.",
+    "baseline": "Current main/origin SHA f4686f0daf0d00b490880dbfaaa2b4a599180055; TASK-A-051 and TASK-C-020 completed with EVID-166/167.",
+    "reuse": "Reuse EVID-166/167 for exact f4686f0. Earlier evidence remains revision-bounded. Reassess only changed files or newly identified requirement gaps.",
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
-    "readiness": "TASK-C-020 is ready after TASK-A-051 local implementation. Finish the full gate, commit, and bind hosted results to the exact new SHA. Promote external deferred tasks only when owners/resources exist."
+    "readiness": "TASK-C-020 is completed. Keep REQ-020 partial for other scenario/perceptual obligations; external work stays deferred until owners/resources exist."
   },
-  "baseline": "Verified source SHA 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357; exact prior tests/CI EVID-163/165 apply to that SHA. Current HEAD at this delta start is 187466cbec0d80226d692588ade3e61fc8ddd921; source test and documentation delta EVID-166 is locally focused-tested and awaits full candidate verification.",
-  "what_remains": "Finish TASK-C-020 for the DUCK_TEACH test delta. Physical performance/readability and human creative/accessibility acceptance require unavailable hardware/reviewers. Rights, privacy, Play delivery/signing and governance require genuine external evidence. TASK-E-001 remains deferred until prerequisites and owners exist.",
-  "what_exists": "The atlas correction and source changes are committed/pushed. Exact-SHA host, API35 connected, applicability, and certificate checks passed (EVID-165). Local full validation and static docs reconciliation are recorded in EVID-163/164."
+  "baseline": "Verified main/origin candidate f4686f0daf0d00b490880dbfaaa2b4a599180055; full local and exact hosted automation passed for the new test delta (EVID-166/167).",
+  "what_remains": "REQ-020 retains broader scenario-mechanic integration and physical/human readability obligations. Physical acceptance is unavailable. Human creative/accessibility/gameplay review, rights, privacy, Play delivery/signing and governance require real external evidence. TASK-E-001 remains deferred until prerequisites and owners exist.",
+  "what_exists": "The atlas correction plus DUCK_TEACH scenario-level cue-to-response test delta are committed on main and passed local/full/exact hosted automated checks (EVID-163 through EVID-167), including API35 connected validation. Ledger documents the scope and limits."
 }

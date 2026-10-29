@@ -2564,6 +2564,27 @@
       ],
       "result": "Focused DUCK_TEACH test passed and the complete two-test Robolectric class passed (2 tests, 0 failures/errors/skips). Full Python tooling suite passed (1,403 tests). Full Java21 Gradle gate passed: debug/release Kotlin compile, unit/Robolectric tests (1,330 total; 0 failures, 0 errors, 0 skipped), AndroidTest compile, debug/release lint, debug APK, instrumentation APK, and release AAB packaging.",
       "limitations": "Evidence is for the local uncommitted delta based on 187466cbec0d80226d692588ade3e61fc8ddd921. Exact-SHA hosted validation is pending. No connected Android device was available; this does not establish scenario screenshots, physical/human readability, or external acceptance."
+    },
+    {
+      "id": "EVID-167",
+      "type": "exact-SHA hosted Android and repository applicability/certificate workflow results",
+      "path": "GitHub Actions Android validation run 40836494733 (host job 123322400580; API 35 connected job 123324541359); applicability run 40836494845; estate certificate run 40836494846",
+      "revision": "f4686f0daf0d00b490880dbfaaa2b4a599180055 on origin/main",
+      "supports": [
+        "TASK-C-020",
+        "TASK-A-051",
+        "REQ-020",
+        "FIND-032",
+        "GAP-021"
+      ],
+      "observation": "The exact candidate Android validation workflow completed successfully. Both Host, release, lint, and packaging and API 35 connected smoke/deterministic evidence jobs show success. Training-control applicability and estate local certificate workflows also show success for this SHA.",
+      "commands": [
+        "Read public GitHub Actions run pages for 40836494733, 40836494845, and 40836494846; verified run pages/jobs show the same candidate SHA and success.",
+        "git rev-parse HEAD",
+        "git ls-remote origin refs/heads/main"
+      ],
+      "result": "All four repository-controlled exact-SHA workflows passed on f4686f0daf0d00b490880dbfaaa2b4a599180055; local HEAD and origin/main match.",
+      "limitations": "Detailed hosted test counts were not retrievable from the public log endpoint; no counts are inferred. Local EVID-166 provides full Python/JVM counts. Hosted emulator evidence does not establish physical performance/readability, human acceptance, licensing, Play/governance, or production readiness."
     }
   ]
 }
