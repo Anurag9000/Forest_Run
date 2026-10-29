@@ -8225,7 +8225,8 @@
       "evidence_ids": [
         "EVID-155",
         "EVID-156",
-        "EVID-157"
+        "EVID-157",
+        "EVID-159"
       ],
       "counts": {
         "focused_runner_contract_tests": 18,
@@ -8234,7 +8235,16 @@
         "targeted_large_test_selection_added": 1
       },
       "focused_jvm_result": "OpeningReadabilityScenarioIntegrationTest: 1 passed, 0 failures/errors/skips; Gradle 8.13, OpenJDK 17.0.20, Robolectric SDK35.",
-      "limits": "The exact 81b connected job excluded the production ghost capture @LargeTest; explicit selection is pending exact-SHA execution. The new opening integration test has focused local execution but no current exact-SHA full suite result. Physical/human readability remains pending."
+      "limits": "The exact 81b connected job excluded the production ghost capture @LargeTest; explicit selection is pending exact-SHA execution. The new opening integration test has focused local execution but no current exact-SHA full suite result. Physical/human readability remains pending.",
+      "exact_sha_api35": {
+        "candidate_sha": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+        "run_id": 40823820982,
+        "ordinary_connected_tests_passed": 28,
+        "targeted_ghost_capture_tests_passed": 1,
+        "process_death_tests_passed": 1,
+        "raw_screenshots_verified": 8,
+        "evidence_id": "EVID-159"
+      }
     }
   }
 }

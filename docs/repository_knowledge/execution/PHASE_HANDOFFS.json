@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "current_phase": "Authorized source completion and verification reconciliation",
-  "current_phase_status": "The 81b1adcb test candidate host/API35 and applicability/certificate workflows succeeded (EVID-153/154), but exact workflow-path inspection found the ghost capture assertion is in a LargeTest class excluded by the ordinary connected invocation (FIND-029/GAP-018, EVID-155). Added a targeted one-method connected test selection and regression contracts; Bash syntax, 18 focused tests and full Python 1,400 pass (EVID-156). Runner correction is uncommitted and requires fresh exact-SHA connected execution. Physical, human, legal and release gates remain open.",
+  "current_phase": "Automated source completion verified; external acceptance deferred",
+  "current_phase_status": "Exact candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed exact-SHA host/API35 validation, no-trainable-surface and estate certificate workflows (EVID-159). The runner explicitly selected the production ghost capture LargeTest and one selected test passed; ordinary connected tests passed 28/28, process-death 1/1, and 8 raw screenshots verified. The opening scenario integration test is included in the successful host suite. Tasks TASK-C-017 and TASK-C-018 are complete for their automated scope. No physical device is available; physical performance/readability, human creative/accessibility review, external rights/privacy/Play/signing/governance, and final accountable release readiness remain deferred.",
   "phases": [
     {
       "id": "A",
@@ -71,10 +71,10 @@
         "TASK-C-017",
         "TASK-C-018"
       ],
-      "status": "Full local Java21 compile/test/lint/package gate passes (1,327 tests); full Python suite passes (1,398 tests). Exact-candidate hosted verification is TASK-C-018. Physical access is unavailable.",
+      "status": "Exact d63 source candidate passed host/API35 and related applicability/certificate workflows (EVID-159). The recorded software verification obligations are complete at their stated automated scope; physical/device verification remains unavailable and other device/human acceptance is deferred.",
       "entry_conditions": [
         "Preserve exact candidate/base and the original dirty checkout",
-        "Reuse EVID-072 and EVID-074\u2013EVID-078; do not repeat passing suites without a source or requirement delta",
+        "Reuse EVID-072 and EVID-074–EVID-078; do not repeat passing suites without a source or requirement delta",
         "Use hosted API 35 evidence where applicable; physical-device checks require an authorized device"
       ],
       "exit_conditions": [
@@ -125,26 +125,26 @@
   ],
   "handoff": {
     "project": "Forest Run is a native Kotlin Android landscape endless runner using SurfaceView/Canvas with persistent world state plus candidate-bound evidence/release tooling.",
-    "what_exists": "Prior scenario source candidate e1e8501451d17996469fc82973076ed0d1fb9d22 and accessibility correction bef4ab354a013892dd0d0289ec3616a20ef0d2d4 are pushed. Full local Python 1,398 and Java21 Gradle 1,328 compile/test/lint/package gates pass. Current inventories: 1,019 files, 6,141 declarations, 398 test contracts; 28 findings, 17 gaps, 75 tasks and 151 evidence records. A production GameView ghost visibility instrumentation assertion is compiled locally and awaits commit/exact-SHA connected execution.",
-    "what_remains": "Exact-SHA run 40629702414 host and API35 jobs, plus applicability/certificate runs 40629702454/40629702394, all succeeded (EVID-153). Commit the new TASK-A-047 test and obtain its fresh exact-SHA connected result under TASK-C-018. The full authored scenario catalogue remains partially dispositioned. Physical-device/performance acceptance is blocked by unavailable hardware; human creative/accessibility review, rights/licensing, privacy/security/Play declarations, signing/delivery and accountable approval remain external.",
+    "what_exists": "Verified source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd is on main/origin. Host/API35, applicability, and estate-certificate workflows passed (EVID-159), including 1,400 Python tests, the full requested Java21 Gradle compile/test/lint/package/hardening gate, 28 ordinary connected tests, the explicitly selected ghost-capture LargeTest invocation (1/1), process-death instrumentation (1/1), and automated verification of eight candidate-bound raw screenshots. The current inventories and task states are in MASTER_EXECUTION_LEDGER.json.",
+    "what_remains": "Physical-device performance/readability acceptance is blocked by unavailable hardware. Human gameplay, visual, creative and accessibility review; rights/licensing; privacy/Play; production signing/delivery; governance and accountable release approval require genuine external evidence. TASK-E-001 is deferred until prerequisites exist. Full runtime perfection or one separate test per method is not claimed.",
     "do_not_repeat": "Reuse docs/REPO_CODEBASE_MAP.md, docs/REPO_MEMORY_MAP.md, docs/AUDIT_LEDGER.md and dated audits at their recorded snapshot. Refresh only changed/affected files and evidence; no ML training goal is applicable.",
     "coordination": "One owner updates MASTER_EXECUTION_LEDGER.json and its history. Assign bounded future tasks with disjoint paths; coordinate stable_file_reader.py consumers and candidate/evidence directories. Keep source implementation, integration, runtime verification and external acceptance separate. Report exact revision, files read, evidence and limitations.",
-    "resume": "Check current HEAD and worktree; retain pre-existing untracked files. Review only the owned accessibility source/test plus ledgers, run the already-passed local evidence only if code changes, commit directly to main, then follow the exact-SHA Android and applicable policy workflows. Reuse prior scenario/persistence/audio audits; do not rerun unaffected whole-repository audits.",
+    "resume": "Check current HEAD and worktree; preserve pre-existing untracked artifacts. Reuse evidence EVID-159 and the source/test trace; inspect only changed files or concrete contradictory evidence. Promote deferred tasks only when their phase, prerequisites, resources and external owners are available; retain physical and human review boundaries.",
     "unknowns": "Physical/OEM gameplay and visual behavior, real-device performance, human creative/accessibility/gameplay approval, asset/audio/font rights, privacy/public URL and Play policy decisions, production signing and delivery, governance approval remain unknown or externally owned.",
     "how_to_resume": {
-      "baseline": "Check HEAD/worktree; compare scoped dirty-file hashes to file_inventory.json working_tree_snapshot_id WT-D17D3FBCF2CB3B267FE9.",
+      "baseline": "At this evidence snapshot, verified source main/origin is d63cf88c6af819f6e6186a72610df0a31117e2dd. Reconcile current HEAD/worktree before acting and preserve pre-existing untracked artifacts.",
       "reuse": "Prior code/memory maps and dated audits remain revision-bounded; revisit only changed or contradictory evidence.",
       "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
       "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
     }
   },
   "resume_procedure": {
-    "baseline": "Current canonical main/origin at this handoff is bef4ab354a013892dd0d0289ec3616a20ef0d2d4. Verify current HEAD and worktree; preserve pre-existing untracked artifacts. TASK-C-018 tracks exact hosted jobs.",
-    "reuse": "Prior code/memory maps and dated audits remain revision-bounded; revisit only changed or contradictory evidence.",
+    "baseline": "Verified source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; verify current HEAD/worktree and preserve pre-existing untracked artifacts.",
+    "reuse": "Reuse EVID-159 exact-SHA host/API35, applicability and certificate evidence plus prior scoped audits. Revisit only changed or contradictory evidence; physical/human/external acceptance remains outstanding.",
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
   },
   "baseline": "Current canonical main/origin: bef4ab354a013892dd0d0289ec3616a20ef0d2d4; pre-existing untracked user artifacts remain preserved and excluded.",
-  "what_remains": "Commit the targeted runner and contracts; inspect the fresh exact-SHA API35 log for captureGhostReadabilityHardwarePass passing. Broader REQ-020 scenario catalogue remains partially dispositioned. Physical device access is unavailable; physical performance/readability plus human creative/accessibility, rights/licensing, privacy/security/Play, signing/delivery and accountable approval remain external.",
-  "what_exists": "Prior scenario candidate e1e8501451d17996469fc82973076ed0d1fb9d22 and accessibility correction bef4ab354a013892dd0d0289ec3616a20ef0d2d4 are pushed; ghost assertion candidate 81b1adcb9651fe38742716487896831779b6c1ed is pushed. The latest 81b run passed host/API35, applicability and certificate jobs, but did not run the ghost assertion because that LargeTest was filtered. Local fix now explicitly selects the method. Current inventories: 1,019 files, 6,141 declarations, 398 test contracts; 29 findings, 18 gaps, 76 tasks and 154 evidence records."
+  "what_remains": "Physical-device access is unavailable. Physical performance/readability, human gameplay/creative/accessibility review, rights/licensing, privacy/Play, production signing/delivery, governance and accountable approval remain deferred; TASK-E-001 follows only after prerequisites.",
+  "what_exists": "The d63cf88c source candidate passed exact-SHA host/API35, no-trainable-surface, and estate-certificate workflows. The targeted production ghost-capture LargeTest and OPENING_READABILITY integration are included in the successful exact-candidate scope. Current inventories and task state are recorded in MASTER_EXECUTION_LEDGER.json; exact evidence and limits are EVID-159."
 }

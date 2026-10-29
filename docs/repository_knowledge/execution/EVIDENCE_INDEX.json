@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus uncommitted AndroidTest delta",
-  "snapshot_date": "2026-10-28",
+  "repository_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+  "snapshot_date": "2026-10-29",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
     {
@@ -2402,6 +2402,50 @@
       ],
       "result": "BLOCKED BEFORE METHOD EXECUTION: DefaultSdkProvider.java:170 reports Android SDK 36 requires Java 21 (have Java 17).",
       "limitations": "This is an environment limitation, not a test failure. Reuse prior Java21 evidence only for unchanged accessibility source/tests; rerun on Java21 if a relevant source/test delta occurs. No physical TalkBack/Switch Access acceptance is established."
+    },
+    {
+      "id": "EVID-159",
+      "type": "exact-SHA d63cf88c host/API35 connected and release-tooling validation",
+      "path": ".github/workflows/android-validation.yml; scripts/run_connected_validation.sh; app/src/test/java/com/anurag9000/forestrun/engine/OpeningReadabilityScenarioIntegrationTest.kt; app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt",
+      "revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+      "supports": [
+        "FIND-029",
+        "GAP-018",
+        "FIND-030",
+        "GAP-019",
+        "TASK-A-048",
+        "TASK-A-049",
+        "TASK-C-017",
+        "TASK-C-018"
+      ],
+      "observation": "Exact candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed Android validation run 40823820982: host job 123282160152 and API35 connected job 123283573679 both succeeded. The host log records all 1,400 Python script tests passing and BUILD SUCCESSFUL for compileDebugKotlin, compileDebugUnitTestKotlin, compileReleaseKotlin, compileDebugAndroidTestKotlin, testDebugUnitTest, lintDebug, lintRelease, assembleDebug, assembleDebugAndroidTest, bundleRelease, native page-size validation, R8 validation, and source immutability. API35 logs record the ordinary connected suite at 28/28 (0 skipped/failed), then a separate connectedDebugAndroidTest invocation reporting 1/1 passed before the ProcessDeathPersistenceInstrumentedTest stage; the checked-in runner at this exact SHA selects HardwareCoreFlowCaptureTest#captureGhostReadabilityHardwarePass for that single-test invocation. The later process-death test reports OK (1 test). The job also captured and verified 8 raw screenshots for this exact candidate, APK SHA-256 39a3bcbe442555caccd1b198523a1c9f21b5c412249ce5d80863e17286f49b1e, and emulator-5554. The exact-SHA no-trainable-surface run 40823820928 and estate certificate run 40823820907 also passed.",
+      "commands": [
+        "GitHub Actions Android validation run 40823820982: https://github.com/Anurag9000/Forest_Run/actions/runs/40823820982",
+        "GitHub Actions no-trainable-surface run 40823820928: https://github.com/Anurag9000/Forest_Run/actions/runs/40823820928",
+        "GitHub Actions estate certificate run 40823820907: https://github.com/Anurag9000/Forest_Run/actions/runs/40823820907",
+        "Host job log: https://github.com/Anurag9000/Forest_Run/actions/runs/40823820982/job/123282160152",
+        "API35 job log: https://github.com/Anurag9000/Forest_Run/actions/runs/40823820982/job/123283573679"
+      ],
+      "result": "All required hosted jobs succeeded. The targeted LargeTest selection passed one test; process-death instrumentation passed one test; 28 ordinary connected tests passed; eight raw screenshots passed the automated raw-set verifier; full host suite and release/package gates passed.",
+      "limitations": "The connected runner log exposes the second invocation as one test passed but does not print the selected class/method name in its progress line. The exact-SHA source at d63 binds that invocation to HardwareCoreFlowCaptureTest#captureGhostReadabilityHardwarePass; the invocation completed 1/1 before the separate process-death stage. This is API35 emulator evidence, not physical-device testing, full visual review, human acceptance, licensing, Play delivery, or production release approval. The emulator log includes graphics diagnostics (bad color buffer handle) despite successful test/capture validators; human visual review remains outstanding."
+    },
+    {
+      "id": "EVID-160",
+      "type": "post-EVID-159 knowledge-base and ledger reconciliation",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/FEATURE_SPEC_CLOSURE_MATRIX_2026-10-28.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/file_inventory.json; docs/repository_knowledge/execution/PHASE_HANDOFFS.json; docs/repository_knowledge/execution/EXECUTION_DASHBOARD.md; docs/repository_knowledge/execution/NEXT_ACTIONS.md; docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+      "revision": "source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd plus documentation-only working-tree reconciliation",
+      "supports": [
+        "coverage counts and snapshot consistency",
+        "current finding/gap status reconciliation",
+        "future handoff and dashboard current-state accuracy"
+      ],
+      "observation": "Static documentation reconciliation updated stale pending claims after exact-SHA evidence EVID-159; corrected file inventory coverage counts to match its 1,020 records (976 full, 2 partial, 39 documented, 3 excluded); aligned current task/finding/gap states and phase handoffs with current evidence. JSON ledgers parsed; file counts summed; evidence references resolved; 218 master record IDs were unique; 77 task dependency edges had valid endpoints and were acyclic; relative Markdown links in the changed knowledge documents resolved; git diff --check passed.",
+      "commands": [
+        "Python JSON parse and static ID/reference/count/dependency/link validation",
+        "git diff --check"
+      ],
+      "result": "Static knowledge-base consistency checks passed for the listed documentation and ledgers.",
+      "limitations": "Documentation consistency only. Does not add runtime, physical-device, human, legal, store or release acceptance evidence."
     }
   ]
 }

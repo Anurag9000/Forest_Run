@@ -1509,11 +1509,12 @@
         "id": "FIND-023",
         "kind": "EAGLE_MARK scenario-to-mechanic integration coverage gap",
         "statement": "The authored EAGLE_MARK scenario previously had spawn/script-presence checks but no test that connected its real EncounterDirector and DebugScenarioScript to Eagle target announcement and lock behavior. A new Robolectric integration test now drives the scenario at 60 Hz through EntityManager and collision arbitration and observes exactly two Eagles both announce and lock their targets. This was a verification gap; the earlier evidence did not establish that the scenario failed at runtime.",
-        "status": "FOCUSED_SOURCE_COVERAGE_ADDED; EXACT_CANDIDATE_HOSTED_VERIFICATION_PENDING",
+        "status": "FOCUSED_AND_EXACT_SHA_HOSTED_VERIFIED",
         "evidence_ids": [
           "EVID-123",
           "EVID-124",
-          "EVID-125"
+          "EVID-125",
+          "EVID-159"
         ],
         "related_task_ids": [
           "TASK-A-039",
@@ -1530,17 +1531,18 @@
           "CAP-002",
           "CAP-006"
         ],
-        "limitations": "The local full JVM/Robolectric suite could not run under JDK 17 because existing Robolectric tests request Android SDK 36, which requires Java 21. Focused SDK 35 test passed. Hosted exact-candidate Java 21 validation is required. The test does not establish visual readability on physical hardware."
+        "limitations": "The selected Eagle scenario integration and exact candidate host/API35 gates passed. Physical visual readability remains unverified."
       },
       {
         "id": "FIND-024",
         "kind": "CACTUS_READ scripted jump timing defect",
         "statement": "Driving the real director, timed script, Player, EntityManager and collision arbitration showed both CACTUS_READ encounters resolving HIT: old jump pairs at 3.18/3.48 and 5.06/5.36 seconds happened after contact. The schedule was corrected to 2.40/2.70 and 4.30/4.60 seconds; focused real-path integration now observes two clean passes and zero hits.",
-        "status": "SOURCE_CORRECTED; FOCUSED_TEST_PASSES; EXACT_CANDIDATE_PENDING",
+        "status": "SOURCE_CORRECTED; FOCUSED_AND_EXACT_SHA_HOSTED_VERIFIED",
         "evidence_ids": [
           "EVID-126",
           "EVID-129",
-          "EVID-130"
+          "EVID-130",
+          "EVID-159"
         ],
         "related_task_ids": [
           "TASK-A-040",
@@ -1558,13 +1560,13 @@
           "CAP-002",
           "CAP-006"
         ],
-        "limitations": "Focused Robolectric evidence only; exact-SHA hosted validation and physical/human fairness/readability remain unverified."
+        "limitations": "Automated source/hosted emulator evidence is revision-bound; physical fairness and readability remain unverified."
       },
       {
         "id": "FIND-025",
         "kind": "Selected authored scenario integration coverage added",
         "statement": "Targeted tests now connect selected flora/tree, animal, Owl, Chickadee and Eagle scenario claims to runtime behavior. This closes only bounded source-level coverage gaps; it does not establish complete 28-scenario coverage or external acceptance.",
-        "status": "FOCUSED_TESTS_PASS; WHOLE_CATALOGUE_PARTIAL",
+        "status": "BOUNDED_SCENARIO_TEST_TRACE_AND_EXACT_SHA_HOSTED_VERIFIED; FULL_PERCEPTUAL_ACCEPTANCE_OPEN",
         "evidence_ids": [
           "EVID-123",
           "EVID-126",
@@ -1573,7 +1575,8 @@
           "EVID-129",
           "EVID-130",
           "EVID-134",
-          "EVID-136"
+          "EVID-136",
+          "EVID-159"
         ],
         "related_task_ids": [
           "TASK-A-039",
@@ -1595,16 +1598,17 @@
           "CAP-002",
           "CAP-006"
         ],
-        "limitations": "Selected additional scenario integrations pass locally, including the full Bloom window; this does not close all 28 scenarios, exact-SHA hosting, or external acceptance."
+        "limitations": "The 28-scenario trace maps authored assertions and captures but does not mean every scenario independently exercises every mechanic or receives visual/human review. Physical/human acceptance remains open."
       },
       {
         "id": "FIND-026",
         "kind": "BLOOM_SHOWCASE full-lane conversion timing defect",
         "statement": "The real scenario path showed Duck and Weeping Willow still pending when the single six-second Bloom expired; each then resolved HIT, contradicting BLOOM_SHOWCASE’s authored summary that the full lane converts. Shorter/staggered world offsets now let all five family encounters pass through the existing conversion owner before expiry; the focused integration asserts exclusive outcomes and rewards.",
-        "status": "SOURCE_CORRECTED; FOCUSED_AND_FULL_LOCAL_TESTS_PASS; EXACT_SHA_PENDING",
+        "status": "SOURCE_CORRECTED; FOCUSED_AND_EXACT_SHA_HOSTED_VERIFIED",
         "evidence_ids": [
           "EVID-134",
-          "EVID-136"
+          "EVID-136",
+          "EVID-159"
         ],
         "related_task_ids": [
           "TASK-A-044",
@@ -1622,16 +1626,17 @@
           "CAP-002",
           "CAP-006"
         ],
-        "limitations": "Source/Robolectric behavior only; no physical readability, human approval or exact-SHA hosted validation yet."
+        "limitations": "Automated source/Robolectric/API35 evidence only; no physical readability or human approval."
       },
       {
         "id": "FIND-027",
         "kind": "Accessibility text search ignored requested virtual-node scope",
         "statement": "GameAccessibilityNodeProvider.findAccessibilityNodeInfosByText searched every semantic node regardless of virtualViewId. Because the provider exposes a flat tree whose semantic controls are direct host children and have no descendants, a query scoped to one virtual child incorrectly returned unrelated sibling matches. The provider now returns no matches for a non-host search root, and a regression test checks host and leaf queries.",
-        "status": "SOURCE_AND_REGRESSION_FIXED; FOCUSED_AND_FULL_LOCAL_TESTS_PASS; EXACT_SHA_PENDING",
+        "status": "SOURCE_AND_REGRESSION_FIXED; FOCUSED_FULL_LOCAL_AND_EXACT_SHA_HOSTED_VERIFIED",
         "evidence_ids": [
           "EVID-140",
-          "EVID-142"
+          "EVID-142",
+          "EVID-159"
         ],
         "related_task_ids": [
           "TASK-A-046",
@@ -1646,19 +1651,20 @@
         "related_capability_ids": [
           "CAP-005"
         ],
-        "limitations": "Focused Robolectric evidence only; full current-candidate and Android service/device traversal are not established."
+        "limitations": "Physical Android accessibility-service traversal and human TalkBack/Switch Access review remain outstanding."
       },
       {
         "id": "FIND-028",
         "kind": "GHOST_READABILITY production-path assertion missing",
         "statement": "The focused Robolectric GHOST_READABILITY test created and advanced a separate GhostPlayer rather than asserting the production GameView GhostPlayer on the actual screenshot launch path. Added instrumentation now waits for the GameView-owned ghost to become visible before capture.",
-        "status": "TEST_ASSERTION_COMMITTED; BASELINE 81b WORKFLOW SKIPPED LARGE TEST; RUNNER CORRECTION PENDING EXACT-SHA",
+        "status": "PRODUCTION_PATH_ASSERTION_COMMITTED_AND_EXACT_SHA_CONNECTED_TEST_PASSED",
         "evidence_ids": [
           "EVID-147",
           "EVID-148",
           "EVID-153",
           "EVID-155",
-          "EVID-156"
+          "EVID-156",
+          "EVID-159"
         ],
         "related_task_ids": [
           "TASK-A-047",
@@ -1675,16 +1681,17 @@
         "related_capability_ids": [
           "CAP-006"
         ],
-        "limitations": "Compiled only; exact hosted and human visual acceptance remain outstanding."
+        "limitations": "API35 test evidence does not establish physical display quality or human visual acceptance."
       },
       {
         "id": "FIND-029",
         "kind": "Production ghost LargeTest excluded from exact emulator verification",
         "statement": "The API35 connected workflow succeeded on 81b1adcb but run_connected_validation.sh passed notAnnotation=androidx.test.filters.LargeTest for its connectedDebugAndroidTest invocation. HardwareCoreFlowCaptureTest is a LargeTest, and the runner had no targeted re-selection for captureGhostReadabilityHardwarePass. Therefore the new production GameView ghost visibility assertion was compiled but not run by that workflow.",
-        "status": "RUNNER_GAP_CONFIRMED; TARGETED_SELECTION_ADDED_LOCALLY; EXACT_SHA_PENDING",
+        "status": "RUNNER_CORRECTION_EXACT_SHA_VERIFIED",
         "evidence_ids": [
           "EVID-155",
-          "EVID-156"
+          "EVID-156",
+          "EVID-159"
         ],
         "related_task_ids": [
           "TASK-A-048",
@@ -1706,9 +1713,10 @@
         "id": "FIND-030",
         "kind": "OPENING_READABILITY lacked real entity-dispatch coverage",
         "statement": "Existing opening-scenario checks did not assert that its authored Duck → Lily → Cat → Tit roster traversed the production EncounterDirector-to-EntityManager path or stayed isolated from persistent progression. A focused Robolectric integration test now covers that bounded contract.",
-        "status": "FOCUSED_TEST_ADDED_AND_PASSED; EXACT_SHA_VALIDATION_PENDING",
+        "status": "FOCUSED_AND_EXACT_SHA_TEST_VERIFIED",
         "evidence_ids": [
-          "EVID-157"
+          "EVID-157",
+          "EVID-159"
         ],
         "related_task_ids": [
           "TASK-A-049",
@@ -1892,9 +1900,10 @@
         "statement": "The scenario name/summary promises an Eagle target mark and lock-on beat. Before the new test, only script scheduling and direct Eagle behavior were tested separately. The missing integration assertion is now implemented and passes locally; exact candidate workflow remains pending.",
         "evidence_ids": [
           "EVID-123",
-          "EVID-125"
+          "EVID-125",
+          "EVID-159"
         ],
-        "status": "LOCALLY_RESOLVED; EXACT_CANDIDATE_VERIFICATION_PENDING",
+        "status": "FOCUSED_AND_EXACT_SHA_HOSTED_VERIFIED; PHYSICAL_READABILITY_OPEN",
         "related_requirement_ids": [
           "REQ-020"
         ],
@@ -1902,7 +1911,8 @@
           "TASK-A-039",
           "TASK-C-017"
         ],
-        "next_action": "Commit the source and ledger delta to canonical main, then verify Java 21 host/release/lint/package and API35 connected workflows for the exact SHA."
+        "next_action": "No remaining repository source/test task for this bounded obligation; preserve stated physical/human acceptance as a deferred external gate.",
+        "disposition": "The focused EAGLE_MARK integration and exact candidate validation passed (EVID-159). Physical/human mark and escape readability remain external."
       },
       {
         "id": "GAP-013",
@@ -1911,9 +1921,10 @@
         "evidence_ids": [
           "EVID-126",
           "EVID-129",
-          "EVID-130"
+          "EVID-130",
+          "EVID-159"
         ],
-        "status": "LOCALLY_RESOLVED; EXACT_CANDIDATE_PENDING",
+        "status": "SOURCE_CORRECTED_AND_EXACT_SHA_HOSTED_VERIFIED; PHYSICAL_FEEL_OPEN",
         "related_requirement_ids": [
           "REQ-020"
         ],
@@ -1921,7 +1932,8 @@
           "TASK-A-040",
           "TASK-C-018"
         ],
-        "next_action": "Verify exact committed candidate with hosted Java21/API35 workflows."
+        "next_action": "No remaining repository source/test task for this bounded obligation; preserve stated physical/human acceptance as a deferred external gate.",
+        "disposition": "CACTUS_READ scripted timing and focused clean-pass assertions are covered by exact candidate host/API35 validation (EVID-159). Physical feel/fairness remains open."
       },
       {
         "id": "GAP-014",
@@ -1935,9 +1947,10 @@
           "EVID-129",
           "EVID-130",
           "EVID-134",
-          "EVID-136"
+          "EVID-136",
+          "EVID-159"
         ],
-        "status": "BOUNDED_SELECTED_SCENARIO_COVERAGE_ADDED; WHOLE_CATALOGUE_AND_EXACT_CANDIDATE_PENDING",
+        "status": "BOUNDED_SCENARIO_TRACE_AND_EXACT_SHA_HOSTED_VERIFIED; PERCEPTUAL_COVERAGE_OPEN",
         "related_requirement_ids": [
           "REQ-020"
         ],
@@ -1950,7 +1963,8 @@
           "TASK-A-044",
           "TASK-A-045"
         ],
-        "next_action": "Verify exact committed candidate; continue only with concrete uncovered scenario claims and preserve the explicit manual-scenario policy."
+        "next_action": "No remaining repository source/test task for this bounded obligation; preserve stated physical/human acceptance as a deferred external gate.",
+        "disposition": "All 28 authored scenario definitions were reconciled against available source/test evidence and exact candidate host/API35 validation passed. Coverage depth differs by scenario; this is not a claim that all 28 have independent input scripts or physical/human mechanic acceptance."
       },
       {
         "id": "GAP-015",
@@ -1961,12 +1975,13 @@
           "TASK-A-045",
           "TASK-C-018"
         ],
-        "disposition": "Focused real-path integration now observes all five authored types resolving once as BLOOM_CONVERTED before timer expiry and matching one-Seed-per-conversion accounting (EVID-134). The full local Java21 suite passes (EVID-136). Exact candidate remains pending.",
+        "disposition": "BLOOM_SHOWCASE converts all five authored encounter types exclusively within one active timer in the focused integration; exact candidate host/API35 checks passed (EVID-159). Physical visual readability remains open.",
         "evidence_ids": [
           "EVID-134",
-          "EVID-136"
+          "EVID-136",
+          "EVID-159"
         ],
-        "status": "LOCALLY_RESOLVED; EXACT_SHA_HOSTED_VERIFICATION_PENDING",
+        "status": "SOURCE_CORRECTED_AND_EXACT_SHA_HOSTED_VERIFIED; PHYSICAL_READABILITY_OPEN",
         "related_requirement_ids": [
           "REQ-020"
         ],
@@ -1975,7 +1990,7 @@
           "TASK-A-045",
           "TASK-C-018"
         ],
-        "next_action": "Commit and push the authorized source/test/documentation delta, then obtain exact-SHA hosted Java21/API35 validation; physical/human review remains external."
+        "next_action": "No remaining repository source/test task for this bounded obligation; preserve stated physical/human acceptance as a deferred external gate."
       },
       {
         "id": "GAP-016",
@@ -1985,12 +2000,13 @@
           "TASK-A-046",
           "TASK-C-018"
         ],
-        "disposition": "Provider child-root queries now return no sibling matches while host-root text search remains functional. Focused and full local Java21 Gradle evidence passed.",
+        "disposition": "Provider scope correction and regression passed focused/full local tests and exact candidate host/API35 validation (EVID-159). Human service/device accessibility review remains external.",
         "evidence_ids": [
           "EVID-140",
-          "EVID-142"
+          "EVID-142",
+          "EVID-159"
         ],
-        "status": "LOCALLY_RESOLVED; EXACT_SHA_HOSTED_VERIFICATION_PENDING",
+        "status": "SOURCE_AND_REGRESSION_EXACT_SHA_HOSTED_VERIFIED; HUMAN_ACCESSIBILITY_OPEN",
         "related_requirement_ids": [
           "REQ-005"
         ],
@@ -1998,7 +2014,7 @@
           "TASK-A-046",
           "TASK-C-018"
         ],
-        "next_action": "Commit and push the combined authorized source/test/documentation delta, then verify exact-SHA hosted Android jobs; physical/human review remains external."
+        "next_action": "No remaining repository source/test task for this bounded obligation; preserve stated physical/human acceptance as a deferred external gate."
       },
       {
         "id": "GAP-017",
@@ -2009,14 +2025,15 @@
           "TASK-C-018",
           "TASK-A-048"
         ],
-        "disposition": "Production ActivityScenario capture now asserts the GameView-owned GhostPlayer is loaded and reaches positive visibility alpha. AndroidTest source compiles; exact-SHA connected execution pending.",
+        "disposition": "The GameView-owned ghost visibility assertion is included in the selected LargeTest invocation passed on d63 (EVID-159). Physical and human overlay review remain open.",
         "evidence_ids": [
           "EVID-147",
           "EVID-148",
           "EVID-155",
-          "EVID-156"
+          "EVID-156",
+          "EVID-159"
         ],
-        "status": "TEST_PRESENT; CONNECTED CI FILTERED IT; TARGETED RUNNER CORRECTION PENDING",
+        "status": "PRODUCTION_ASSERTION_AND_EXACT_SHA_CONNECTED_TEST_VERIFIED; HUMAN_VISUAL_REVIEW_OPEN",
         "related_requirement_ids": [
           "REQ-020"
         ],
@@ -2025,7 +2042,7 @@
           "TASK-C-018",
           "TASK-A-048"
         ],
-        "next_action": "Complete TASK-A-048 and confirm the targeted method on exact SHA under TASK-C-018."
+        "next_action": "No remaining repository source/test task for this bounded obligation; preserve stated physical/human acceptance as a deferred external gate."
       },
       {
         "id": "GAP-018",
@@ -2035,12 +2052,13 @@
           "TASK-A-048",
           "TASK-C-018"
         ],
-        "disposition": "Added an explicit one-method AndroidTest selection after the ordinary connected suite, while retaining exclusion of physical performance LargeTests. Runner contract tests and Python suite pass locally; exact-SHA API35 execution is pending.",
+        "disposition": "The selected one-test invocation passed on d63cf88c and was followed by successful process-death instrumentation. The runner source binds that invocation to the requested production capture method (EVID-159). Physical/human visual acceptance remains separate.",
         "evidence_ids": [
           "EVID-155",
-          "EVID-156"
+          "EVID-156",
+          "EVID-159"
         ],
-        "status": "RUNNER_CORRECTION_IMPLEMENTED_LOCALLY; EXACT_SHA_CONNECTED_VERIFICATION_PENDING",
+        "status": "EXACT_SHA_TARGETED_CONNECTED_TEST_PASSED",
         "related_requirement_ids": [
           "REQ-020"
         ],
@@ -2048,7 +2066,7 @@
           "TASK-A-048",
           "TASK-C-018"
         ],
-        "next_action": "Commit the runner and contract-test correction; confirm workflow logs show the selected captureGhostReadabilityHardwarePass test passing on the exact pushed candidate."
+        "next_action": "No remaining source/CI correction; retain physical/human visual acceptance as an external gate."
       },
       {
         "id": "GAP-019",
@@ -2058,11 +2076,12 @@
           "TASK-A-049",
           "TASK-C-018"
         ],
-        "disposition": "TASK-A-049 adds a focused real-path test for the exact roster order, director completion, and absence of ordinary encounter progression writes in DEBUG_SCENARIO; the test passes locally. Visual and physical acceptance remain separate.",
+        "disposition": "TASK-A-049 adds a focused real-path test for the exact roster order, director completion, and absence of ordinary encounter progression writes in DEBUG_SCENARIO; the test passes locally. Visual and physical acceptance remain separate. The full exact-SHA host Gradle test suite also passed with the test included (EVID-159).",
         "evidence_ids": [
-          "EVID-157"
+          "EVID-157",
+          "EVID-159"
         ],
-        "status": "FOCUSED_HOST_TEST_ADDED_AND_PASSED; EXACT_SHA_PENDING",
+        "status": "FOCUSED_AND_EXACT_SHA_COVERAGE_PASSED",
         "related_requirement_ids": [
           "REQ-020"
         ],
@@ -2070,7 +2089,7 @@
           "TASK-A-049",
           "TASK-C-018"
         ],
-        "next_action": "Include this test in the exact committed-candidate hosted Android validation; retain physical/human onboarding review as a separate external gate."
+        "next_action": "No remaining source/test task; visual and physical onboarding review remains external."
       }
     ],
     "tasks": [
@@ -8688,7 +8707,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification",
         "objective": "Run the new EAGLE_MARK integration test and applicable full required Android validation on the exact pushed main SHA, using the hosted Java 21/API35 workflow.",
         "motivation": "The local focused test passes, but JDK 17 cannot run all repository Robolectric tests targeting SDK 36; exact-candidate hosted verification must cover the added test and release checks.",
-        "current_state": "The focused EAGLE_MARK scenario test and scenario source are included in committed exact candidate 81b1adcb9651fe38742716487896831779b6c1ed; its verification is covered by the same fresh hosted Android validation run 40631367991 as TASK-C-018.",
+        "current_state": "The focused EAGLE_MARK scenario test and scenario source are included in committed exact candidate 81b1adcb9651fe38742716487896831779b6c1ed; its verification is covered by the same fresh hosted Android validation run 40631367991 as TASK-C-018. Exact candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed exact-SHA host/API35, applicability, and certificate workflows (EVID-159).",
         "required_final_state": "Exact candidate SHA has successful host/release/lint/package and applicable API35 connected workflow results; any failure is investigated without reducing coverage.",
         "scope": [
           "new EagleScenarioIntegrationTest.kt",
@@ -8729,29 +8748,30 @@
         "execution_constraints": "Do not claim physical, human, legal, signing, Play or release acceptance from CI.",
         "complexity": "medium",
         "priority": "P1 current-candidate verification",
-        "execution_status": "IN_PROGRESS",
+        "execution_status": "COMPLETED",
         "owner": "/root",
-        "blockers": [
-          "Exact-SHA Android host/API35 workflow 40631367991 remains in progress at EVID-154."
-        ],
+        "blockers": [],
         "evidence_ids": [
           "EVID-123",
           "EVID-124",
           "EVID-125",
-          "EVID-154"
+          "EVID-154",
+          "EVID-159"
         ],
-        "uncertainty": "Exact SHA and hosted outcomes do not yet exist.",
-        "remaining_work": "Commit reviewed delta, then follow the new exact-candidate workflows to terminal status.",
-        "completion_evidence": [],
+        "uncertainty": "The exact d63 host Gradle suite and API35 connected suite both passed; physical/human acceptance remains a separate deferred scope.",
+        "remaining_work": "No remaining in-scope automated exact-SHA verification work. Physical/human/external acceptance remains separately deferred under TASK-B-001 through TASK-D-007.",
+        "completion_evidence": [
+          "EVID-159"
+        ],
         "related_prior_work": [
           "TASK-C-015 WOLF_CHARGE exact-SHA verification",
           "TASK-C-016 predecessor source verification"
         ],
-        "last_reconciled_revision": "81b1adcb9651fe38742716487896831779b6c1ed",
-        "next_action": "Inspect run 40631367991 host and API35 connected jobs to terminal status; reuse their result for this overlapping candidate verification scope.",
+        "last_reconciled_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+        "next_action": "No additional task-specific source/automated check remains; retain external acceptance tasks separately.",
         "investigation_coverage": "INTEGRATION TRACED",
         "implementation_or_investigation_status": "VERIFICATION REQUIRED",
-        "evidence_status": "LOCAL FOCUSED EVIDENCE; EXACT CANDIDATE PENDING"
+        "evidence_status": "CURRENT EXACT-SHA HOST/API35 AND APPLICABILITY/CERTIFICATE EVIDENCE CONFIRMED"
       },
       {
         "id": "TASK-A-040",
@@ -9095,7 +9115,7 @@
         "target_phase": "C - implementation fidelity and risk-based verification",
         "objective": "Run the added scenario and accessibility regression tests and applicable full Android host/API35 validation for the exact pushed main SHA.",
         "motivation": "Local changes include scenario-script timing and several new tests; previous exact-SHA evidence does not cover this delta.",
-        "current_state": "The 81b1adcb host, API35, applicability and estate-certificate workflows all succeeded (EVID-153/154), but static workflow-path reconciliation found that the new ghost capture assertion is in a LargeTest class excluded by connected validation (FIND-029/GAP-018, EVID-155). Added a targeted single-method runner invocation and local regression contracts; the full Python suite now passes 1,400 (EVID-156). This runner delta is not committed; its own exact-SHA connected result remains required. An additional OPENING_READABILITY integration test now asserts its real spawn roster and debug-mode persistence isolation (EVID-157). A serial local accessibility retest was blocked before test execution because Java 17 cannot run Robolectric SDK 36; unchanged accessibility code remains supported by prior Java21 EVID-140/EVID-142 (EVID-158).",
+        "current_state": "The 81b1adcb host, API35, applicability and estate-certificate workflows all succeeded (EVID-153/154), but static workflow-path reconciliation found that the new ghost capture assertion is in a LargeTest class excluded by connected validation (FIND-029/GAP-018, EVID-155). Added a targeted single-method runner invocation and local regression contracts; the full Python suite now passes 1,400 (EVID-156). This runner delta is not committed; its own exact-SHA connected result remains required. An additional OPENING_READABILITY integration test now asserts its real spawn roster and debug-mode persistence isolation (EVID-157). A serial local accessibility retest was blocked before test execution because Java 17 cannot run Robolectric SDK 36; unchanged accessibility code remains supported by prior Java21 EVID-140/EVID-142 (EVID-158). Exact candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed exact-SHA host/API35, applicability, and certificate workflows (EVID-159).",
         "required_final_state": "Exact SHA has successful host/release/lint/package and API35 connected results, including these tests.",
         "scope": [
           "scenario source/test delta at e1e8501451d17996469fc82973076ed0d1fb9d22",
@@ -9152,12 +9172,9 @@
         "execution_constraints": "Do not claim physical, human, legal, signing, Play or release acceptance from CI.",
         "complexity": "medium",
         "priority": "P1 current-candidate verification",
-        "execution_status": "IN_PROGRESS",
+        "execution_status": "COMPLETED",
         "owner": "/root",
-        "blockers": [
-          "Targeted LargeTest runner correction is locally verified but not yet committed or exact-SHA connected-tested.",
-          "Physical-device access unavailable for physical/human acceptance."
-        ],
+        "blockers": [],
         "evidence_ids": [
           "EVID-123",
           "EVID-126",
@@ -9192,20 +9209,23 @@
           "EVID-155",
           "EVID-156",
           "EVID-157",
-          "EVID-158"
+          "EVID-158",
+          "EVID-159"
         ],
         "uncertainty": "Previous exact-SHA workflow success did not execute the capture LargeTest. The targeted runner correction requires a fresh exact-SHA run and log confirmation. Physical device access remains unavailable. The new OPENING_READABILITY test has focused local evidence only until exact-SHA hosted validation. Current local Java17 cannot rerun the SDK36 accessibility suite; unchanged Java21 evidence remains reusable.",
-        "remaining_work": "Commit the explicit LargeTest selection and contract tests, then require fresh exact-SHA Android host/API35 success and log evidence that captureGhostReadabilityHardwarePass passed. Include the newly added OPENING_READABILITY real-spawn integration test in the exact-SHA suite.",
-        "completion_evidence": [],
+        "remaining_work": "No remaining in-scope automated exact-SHA verification work. Physical/human/external acceptance remains separately deferred under TASK-B-001 through TASK-D-007.",
+        "completion_evidence": [
+          "EVID-159"
+        ],
         "related_prior_work": [
           "TASK-C-015 WOLF_CHARGE exact-SHA verification",
           "TASK-C-016 predecessor source verification"
         ],
-        "last_reconciled_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus current runner/test delta",
-        "next_action": "Commit and push runner/test/docs delta on main; inspect exact-SHA run steps and logs for the targeted capture test result.",
+        "last_reconciled_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+        "next_action": "Keep external and physical acceptance blockers visible; do not infer product/release approval from hosted tests.",
         "investigation_coverage": "INTEGRATION TRACED",
         "implementation_or_investigation_status": "RUNNER CORRECTION LOCALLY VERIFIED; EXACT CONNECTED EXECUTION REQUIRED",
-        "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED; FRESH EXACT-SHA RUN PENDING"
+        "evidence_status": "CURRENT EXACT-SHA HOST/API35 AND APPLICABILITY/CERTIFICATE EVIDENCE CONFIRMED"
       },
       {
         "id": "TASK-A-044",
@@ -9584,19 +9604,21 @@
         "owner": "/root",
         "blockers": [],
         "evidence_ids": [
-          "EVID-156"
+          "EVID-156",
+          "EVID-159"
         ],
-        "uncertainty": "The focused LargeTest selection is not yet proven in exact connected execution.",
-        "remaining_work": "Exact-SHA connected run must demonstrate this specific selected method passes.",
+        "uncertainty": "The hosted progress log reports a one-test invocation as 1/1 and the exact committed runner binds that invocation to the requested method; the method name is not repeated in the progress line.",
+        "remaining_work": "No remaining source/runner work in this task. Exact-SHA selected LargeTest execution is established in EVID-159; physical/human acceptance remains separate.",
         "completion_evidence": [
-          "EVID-156"
+          "EVID-156",
+          "EVID-159"
         ],
         "related_prior_work": [
           "TASK-A-047",
           "TASK-C-018"
         ],
-        "last_reconciled_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus current runner/test delta",
-        "next_action": "Commit and push with synchronized ledger; run fresh exact-SHA API35 validation and inspect that the targeted test method completed successfully.",
+        "last_reconciled_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+        "next_action": "No further runner change. Preserve exact-SHA evidence; human/physical visual review remains external.",
         "investigation_coverage": "FULLY INSPECTED; RUNNER DELTA TESTED LOCALLY",
         "implementation_or_investigation_status": "RUNNER CORRECTION AND CONTRACTS PASS LOCALLY",
         "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED; EXACT CONNECTED RUN REQUIRED"
@@ -9663,22 +9685,24 @@
         "owner": "/root/scenario_asset_completion",
         "blockers": [],
         "evidence_ids": [
-          "EVID-157"
+          "EVID-157",
+          "EVID-159"
         ],
         "uncertainty": "The test asserts deterministic spawn and isolation only; exact-SHA hosted validation and player-facing readability acceptance are separate.",
-        "remaining_work": "Exact-SHA validation under TASK-C-018; physical/human onboarding assessment remains external.",
+        "remaining_work": "No remaining source/test work in this task. The test passed locally and is included in the successful exact-SHA full host suite; visual/human onboarding acceptance remains external.",
         "completion_evidence": [
           {
             "evidence_id": "EVID-157",
             "result": "Focused test passed: 1 test, 0 failures/errors/skips."
-          }
+          },
+          "EVID-159"
         ],
         "related_prior_work": [
           "TASK-A-045",
           "TASK-C-018"
         ],
-        "last_reconciled_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local test delta",
-        "next_action": "Include in the next exact-SHA host/API35 validation and retain visual acceptance as separate.",
+        "last_reconciled_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+        "next_action": "No further code change in this task; retain physical/human acceptance separately.",
         "investigation_coverage": "FULLY INSPECTED; REAL SPAWN PATH TESTED LOCALLY",
         "implementation_or_investigation_status": "TEST ADDED AND FOCUSED CHECK PASSED",
         "evidence_status": "CURRENT LOCAL FOCUSED EVIDENCE CONFIRMED; EXACT SHA PENDING"
@@ -10273,55 +10297,42 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "81b1adcb9651fe38742716487896831779b6c1ed",
-    "working_tree_delta": "Found connected-CI LargeTest exclusion gap (FIND-029/GAP-018); added targeted runner invocation, Python contracts and ledger updates. Local Bash syntax, 18 focused tests and full Python 1,400 pass; exact candidate run is required.",
+    "base_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+    "working_tree_delta": "Runner explicitly selects the production ghost-capture LargeTest; focused OPENING_READABILITY real-spawn/persistence-isolation test added; task/evidence/dependency ledgers reconciled.",
     "evidence_ids": [
-      "EVID-140",
-      "EVID-141",
-      "EVID-142",
-      "EVID-145",
-      "EVID-146",
-      "EVID-147",
-      "EVID-148",
-      "EVID-149",
-      "EVID-150",
-      "EVID-151",
-      "EVID-152",
       "EVID-153",
       "EVID-154",
       "EVID-155",
-      "EVID-156"
+      "EVID-156",
+      "EVID-157",
+      "EVID-158",
+      "EVID-159",
+      "EVID-160"
     ],
-    "status": "81b1adcb host/release/lint/package, standard API35 connected, applicability and certificate jobs passed; however the standard connected suite excluded the new LargeTest assertion. Targeted invocation is implemented locally and awaits commit plus fresh exact-SHA verification.",
-    "documentation_verification_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus uncommitted runner/test/docs delta",
-    "documentation_workflow_run": "Run 40631367991 passed but excluded the capture LargeTest; see EVID-155. Targeted runner correction local evidence EVID-156; exact-SHA run pending."
+    "status": "Exact committed candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed host/API35, no-trainable-surface applicability, and estate certificate workflows. Host Python 1,400 and full Gradle compile/test/lint/package succeeded; API35 28 ordinary tests, targeted one-test LargeTest, process-death test, and 8 raw screenshot verification succeeded.",
+    "documentation_verification_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd plus docs-only reconciliation (EVID-160)",
+    "documentation_workflow_run": "Android 40823820982 passed host/API35; applicability 40823820928 and certificate 40823820907 passed. See EVID-159."
   },
   "current_repository_state": {
     "branch": "main",
-    "verified_source_candidate_sha": "81b1adcb9651fe38742716487896831779b6c1ed",
-    "candidate_remote_confirmation": "Remote main is verified at 81b1adcb9651fe38742716487896831779b6c1ed. Current local runner/test/docs changes are not committed.",
-    "working_tree": "Connected-validation runner and Python contract tests modified by this investigation; historical untracked user artifacts remain preserved/excluded.",
-    "current_delta_task": "TASK-A-048 locally completed; TASK-C-018 in progress",
+    "verified_source_candidate_sha": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+    "candidate_remote_confirmation": "git ls-remote origin refs/heads/main matched d63cf88c6af819f6e6186a72610df0a31117e2dd after push.",
+    "working_tree": "Current authorized documentation reconciliation is in progress; source candidate remains d63cf88c6af819f6e6186a72610df0a31117e2dd. Pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md, and docs/repository_knowledge/current_worktree_delta_20261027/ remain preserved and excluded.",
+    "current_delta_task": "TASK-A-048/A-049 and TASK-C-017/C-018 complete for source and automated exact-candidate scope; B/D/E external acceptance and residual release reconciliation remain deferred.",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
     "evidence_ids": [
-      "EVID-140",
-      "EVID-141",
-      "EVID-142",
-      "EVID-145",
-      "EVID-146",
-      "EVID-147",
-      "EVID-148",
-      "EVID-149",
-      "EVID-150",
-      "EVID-151",
-      "EVID-152",
       "EVID-153",
       "EVID-154",
       "EVID-155",
-      "EVID-156"
+      "EVID-156",
+      "EVID-157",
+      "EVID-158",
+      "EVID-159",
+      "EVID-160"
     ],
-    "latest_documentation_verification_sha": "81b1adcb9651fe38742716487896831779b6c1ed plus uncommitted runner/test/docs delta",
-    "latest_documentation_workflow": "81b1adcb workflow host/API35, applicability and certificate jobs succeeded, but standard connected suite filtered LargeTest and did not run ghost capture assertion. Targeted runner invocation awaits exact-SHA validation."
+    "latest_documentation_verification_sha": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+    "latest_documentation_workflow": "Exact Android host/API35 and applicability/certificate workflows succeeded; 28 ordinary API35 tests, targeted one-test ghost LargeTest, and separate process-death test passed.",
+    "latest_documentation_verification": "Static ledger/documentation consistency passed; current reconciliation is documentation-only, EVID-160."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
@@ -10343,5 +10354,5 @@
     ],
     "status": "Exact candidate API35 ordinary connected tests passed 28/28; both candidate APK installs succeeded; process-death prepare passed, host confirmed no app PID after force-stop, and fresh-process restore passed. Host/release/lint/package also passed. Physical/OEM durability remains unverified."
   },
-  "pending_source_delta": "Targeted connectedDebugAndroidTest selection for HardwareCoreFlowCaptureTest#captureGhostReadabilityHardwarePass plus shell/capture contracts; local gates pass (EVID-156), exact candidate validation pending."
+  "pending_source_delta": null
 }

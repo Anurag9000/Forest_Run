@@ -32568,11 +32568,11 @@
       "id": "FILE-83EEF36217EE",
       "path": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
       "classification": "current source-completion and verification delta",
-      "worktree_status": "created_and_updated_2026-10-28",
+      "worktree_status": "UPDATED_AND_RECONCILED_2026-10-29",
       "coverage_status": "DOCUMENTED",
-      "source_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + working-tree overlay",
+      "source_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd plus current documentation reconciliation",
       "prior_evidence": "TASK-C-014; EVID-103 through EVID-107",
-      "inspection_detail": "Revision-bounded account of the Wolf and lifecycle/source tooling delta, current host verification, connected-test termination, remote baseline CI and remaining acceptance limits.",
+      "inspection_detail": "Revision-bound source-completion history updated with exact d63 host/API35 evidence, task closure, and a 28-scenario source/test trace. Historical sections retain their original snapshot meaning.",
       "symbols_or_consumers": [
         "GameView",
         "AssetPaths.Animals.WOLF",
@@ -32583,8 +32583,8 @@
       "relationships": [
         "TASK-C-014"
       ],
-      "evidence_ref": "EVID-103 through EVID-107",
-      "next_action": "Update after exact-candidate hosted API35 verification; do not describe current overlay as candidate-verified before then.",
+      "evidence_ref": "EVID-103 through EVID-107; EVID-159",
+      "next_action": "Use the trace as a navigation map; physical/human/legal/Play acceptance gates remain deferred.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -32600,7 +32600,11 @@
         "docs/repository_knowledge/execution/NEXT_ACTIONS.md"
       ],
       "file_type": "Markdown",
-      "language_or_format": "Markdown"
+      "language_or_format": "Markdown",
+      "line_count": 204,
+      "worktree_content_sha256": "89fdab5a322f701570d117a819e594beecffae4bda115e4596ecd6767772add1",
+      "worktree_content_bytes": 37870,
+      "worktree_hash_status": "HASHED_STABLE_CONTENT"
     },
     {
       "id": "FILE-F63DA117209B",
@@ -32992,16 +32996,18 @@
     }
   ],
   "coverage_counts": {
+    "DOCUMENTED": 39,
     "EXCLUDED_WITH_REASON": 3,
-    "FULLY_STATICALLY_INSPECTED": 952,
-    "PARTIALLY_INSPECTED": 17,
-    "DOCUMENTED": 38
+    "FULLY_STATICALLY_INSPECTED": 976,
+    "PARTIALLY_INSPECTED": 2
   },
   "inspection_update": {
     "date": "2026-10-29",
-    "delta": "Added and fully inspected the focused OPENING_READABILITY real-spawn integration test; test result EVID-157. Prior inventory snapshot/hash policy is retained; this untracked test has its own SHA-256.",
+    "delta": "Recorded exact-SHA d63 host/API35, applicability, certificate, connected and screenshot results; added a trace for all 28 scenarios and closed only supported automated tasks. Physical/human/external acceptance remains deferred.",
     "paths": [
-      "app/src/test/java/com/anurag9000/forestrun/engine/OpeningReadabilityScenarioIntegrationTest.kt"
+      "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+      "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
+      "docs/repository_knowledge/execution/EXECUTION_DASHBOARD.md"
     ]
   },
   "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9",
