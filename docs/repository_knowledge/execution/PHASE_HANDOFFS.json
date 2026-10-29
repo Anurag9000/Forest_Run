@@ -131,23 +131,23 @@
     "what_remains": "Physical-device performance/readability acceptance is blocked by unavailable hardware. Human gameplay, visual, creative and accessibility review; rights/licensing; privacy/Play; production signing/delivery; governance and accountable release approval require genuine external evidence. TASK-E-001 is deferred until prerequisites exist. Full runtime perfection or one separate test per method is not claimed.",
     "do_not_repeat": "Reuse docs/REPO_CODEBASE_MAP.md, docs/REPO_MEMORY_MAP.md, docs/AUDIT_LEDGER.md and dated audits at their recorded snapshot. Refresh only changed/affected files and evidence; no ML training goal is applicable.",
     "coordination": "One owner updates MASTER_EXECUTION_LEDGER.json and its history. Assign bounded future tasks with disjoint paths; coordinate stable_file_reader.py consumers and candidate/evidence directories. Keep source implementation, integration, runtime verification and external acceptance separate. Report exact revision, files read, evidence and limitations.",
-    "resume": "Check live main/origin and clean expected worktree. Reuse EVID-166/167 for the exact f4686f0 candidate; re-open only changed/contradictory areas. TASK-C-020 is complete. REQ-020 remains partial; physical/human/external work requires actual access and owners.",
+    "resume": "Check live main/origin. Reuse EVID-166/167 for application/test candidate f4686f0 and note documentation-only descendant ea8ee6e5. Re-open only changed or contradictory source/test evidence. TASK-C-020 is complete; REQ-020 remains partial for other scenarios and perceptual acceptance.",
     "unknowns": "Physical/OEM gameplay and visual behavior, real-device performance, human creative/accessibility/gameplay approval, asset/audio/font rights, privacy/public URL and Play policy decisions, production signing and delivery, governance approval remain unknown or externally owned.",
     "how_to_resume": {
-      "baseline": "Exact current candidate is f4686f0daf0d00b490880dbfaaa2b4a599180055 on main/origin; local and hosted automated evidence is EVID-166/167.",
+      "baseline": "Exact application/test candidate f4686f0daf0d00b490880dbfaaa2b4a599180055 passed local/hosted automation; current main includes docs-only descendant ea8ee6e5a6b1c929622bb838eefa62c5d7e63cfd.",
       "reuse": "Reuse EVID-163/165 for atlas source candidate 26fb6ad and EVID-166/167 for exact f4686f0 scenario delta. Refresh only changed or contradictory evidence.",
       "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
       "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
     },
     "next_action": "Continue only other evidence-backed source/test gaps under REQ-020; retain physical, human and external acceptance limits, and reuse EVID-166/167 for the exact f4686f0 candidate.",
-    "source_revision": "f4686f0daf0d00b490880dbfaaa2b4a599180055 on main/origin; exact-SHA local/hosted evidence EVID-166/167.",
-    "baseline": "Current verified main/origin SHA f4686f0daf0d00b490880dbfaaa2b4a599180055; prior task and evidence history is revision-bound in the master ledger.",
+    "source_revision": "Application/test candidate f4686f0daf0d00b490880dbfaaa2b4a599180055; docs-only descendant ea8ee6e5a6b1c929622bb838eefa62c5d7e63cfd on main.",
+    "baseline": "Verified application/test candidate f4686f0daf0d00b490880dbfaaa2b4a599180055; current main includes documentation-only descendant ea8ee6e5a6b1c929622bb838eefa62c5d7e63cfd. Full local and hosted source/test evidence EVID-166/167 is bound to f4686f0.",
     "next_action_task_ids": [
       "TASK-E-001"
     ]
   },
   "resume_procedure": {
-    "baseline": "Current main/origin SHA f4686f0daf0d00b490880dbfaaa2b4a599180055; TASK-A-051 and TASK-C-020 completed with EVID-166/167.",
+    "baseline": "Current main includes docs-only descendant ea8ee6e5a6b1c929622bb838eefa62c5d7e63cfd. Exact application/test candidate f4686f0daf0d00b490880dbfaaa2b4a599180055 passed local and hosted automation (EVID-166/167).",
     "reuse": "Reuse EVID-166/167 for exact f4686f0. Earlier evidence remains revision-bounded. Reassess only changed files or newly identified requirement gaps.",
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "TASK-C-020 is completed. Keep REQ-020 partial for other scenario/perceptual obligations; external work stays deferred until owners/resources exist."

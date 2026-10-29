@@ -10754,7 +10754,7 @@
   "current_repository_state": {
     "branch": "main",
     "verified_source_candidate_sha": "f4686f0daf0d00b490880dbfaaa2b4a599180055",
-    "candidate_remote_confirmation": "Local main and origin/main both match f4686f0daf0d00b490880dbfaaa2b4a599180055; all four exact-SHA workflows recorded in EVID-167 passed.",
+    "candidate_remote_confirmation": "Current main/origin includes documentation-only descendant ea8ee6e5a6b1c929622bb838eefa62c5d7e63cfd. The exact application/test candidate f4686f0daf0d00b490880dbfaaa2b4a599180055 is its verified ancestor; all four exact-SHA workflows are recorded in EVID-167.",
     "working_tree": "Only preserved pre-existing user-owned untracked artifacts remain; no agent-owned intended changes are uncommitted.",
     "current_delta_task": "TASK-A-051 and TASK-C-020 complete for their bounded DUCK_TEACH integration evidence scope. REQ-020 remains partial outside this scenario test.",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-29.md",
@@ -10765,8 +10765,8 @@
       "EVID-166",
       "EVID-167"
     ],
-    "latest_documentation_verification_sha": "f4686f0daf0d00b490880dbfaaa2b4a599180055",
-    "latest_documentation_verification": "Ledger JSON/JSONL syntax, cross references, task dependency cycle check, changed-path existence, unique identifiers, and diff whitespace check passed."
+    "latest_documentation_verification_sha": "ea8ee6e5a6b1c929622bb838eefa62c5d7e63cfd",
+    "latest_documentation_verification": "Current branch/source distinction is explicit: source/test evidence is bound to f4686f0 and docs-only knowledge-base reconciliation is on descendant ea8ee6e5. Structured ledger references, dependency DAG, JSON/JSONL syntax and documentation link checks pass."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",

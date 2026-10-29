@@ -20,7 +20,7 @@ Forest Run is a native Kotlin Android endless runner. Its game loop uses a custo
 | Evidence item | Snapshot fact | Status / interpretation |
 |---|---|---|
 | Repository | `.` | Confirmed from current workspace |
-| Current branch / verified source candidate | Local `main` and `origin/main` are `f4686f0daf0d00b490880dbfaaa2b4a599180055`; full local and exact-SHA hosted evidence for the Duck scenario test is recorded in EVID-166/167. | Exact-SHA evidence is candidate-bound; physical and human acceptance remain separate |
+| Current branch / verified source candidate | `main` includes documentation-only descendant `ea8ee6e5a6b1c929622bb838eefa62c5d7e63cfd`; the exact application/test candidate is `f4686f0daf0d00b490880dbfaaa2b4a599180055`, with full local and exact-SHA hosted evidence for the Duck scenario test in EVID-166/167. | Exact-SHA evidence is candidate-bound; physical and human acceptance remain separate |
 | Tracked files | 939 | `git ls-files` count at start |
 | Changed/untracked paths | 166 | `git status --porcelain=v1`; user-owned pre-existing state |
 | Visible workspace paths | 961 initial listing | Historical 2026-10-27 discovery count; the then-current 1,008-path inventory is superseded by the current 1,020-record file_inventory.json |
