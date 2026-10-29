@@ -1,6 +1,6 @@
 # Forest Run execution dashboard
 
-**Snapshot:** 2026-10-29. Prior exact source candidate `d63cf88c6af819f6e6186a72610df0a31117e2dd` retains host/API35 validation evidence (EVID-159); the documentation-only descendant `b586f17a12c359718d8056c9fe7983cd157c894c` passed its recorded status checks (EVID-161). The sprite correction is committed/pushed as 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357. Its local full Python and Java21 Gradle checks passed (EVID-163); exact-SHA host/release/lint/package, applicability, and certificate jobs passed; API35 connected validation passed under TASK-C-019 (EVID-165).
+**Snapshot:** 2026-10-29. Prior exact source candidate `d63cf88c6af819f6e6186a72610df0a31117e2dd` retains host/API35 validation evidence (EVID-159); the documentation-only descendant `b586f17a12c359718d8056c9fe7983cd157c894c` passed its recorded status checks (EVID-161). The sprite correction is committed/pushed as 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357; current-facing documentation reconciliation is in descendant 130b9f291bd5f6ade457b0e3b9dbf4b930575326. Its local full Python and Java21 Gradle checks passed (EVID-163); exact-SHA host/release/lint/package, applicability, and certificate jobs passed; API35 connected validation passed under TASK-C-019 (EVID-165).
 
 ## Current project state
 

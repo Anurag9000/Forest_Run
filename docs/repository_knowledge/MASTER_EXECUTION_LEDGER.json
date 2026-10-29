@@ -10553,14 +10553,14 @@
       "EVID-164",
       "EVID-165"
     ],
-    "status": "TASK-A-050 source correction committed/pushed. Local Python/Java21 Gradle and exact-SHA Android host/API35 connected, applicability, and certificate workflows passed (EVID-163/165). Physical/human/external acceptance remains open.",
-    "documentation_verification_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 plus documentation-only current reconciliation"
+    "status": "All authorized source correction and current-facing documentation work is committed and pushed. Exact-SHA automated tests/workflows pass for source candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 (EVID-163/165); the documentation-only reconciliation is recorded at 130b9f29. Physical/human/external acceptance remains open.",
+    "documentation_verification_revision": "source candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357; documentation reconciliation commit 130b9f291bd5f6ade457b0e3b9dbf4b930575326"
   },
   "current_repository_state": {
     "branch": "main",
     "verified_source_candidate_sha": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357",
-    "candidate_remote_confirmation": "git ls-remote origin refs/heads/main returned exact 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357. Exact-SHA Android, applicability and estate-certificate workflow runs all passed (EVID-165).",
-    "working_tree": "TASK-A-050 source/assets/tests are committed and pushed. Documentation-only reconciliation of stale canonical architecture/symbol references is staged for a follow-up commit. Pre-existing user-owned untracked files remain preserved/excluded.",
+    "candidate_remote_confirmation": "Source candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 was verified on origin/main and passed all exact-SHA source/Android workflows. Current knowledge documents include documentation-only reconciliation commit 130b9f291bd5f6ade457b0e3b9dbf4b930575326; on resume, resolve the then-current documentation tip with git status and git ls-remote.",
+    "working_tree": "TASK-A-050 source/assets/tests and the canonical documentation reconciliation are committed and pushed. Only pre-existing user-owned untracked files remain and are preserved/excluded.",
     "current_delta_task": "TASK-A-050 and TASK-C-019 complete for source, local tests and exact-SHA automated Android/host workflow scope. Physical/human/external acceptance and residual release reconciliation remain deferred.",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-29.md",
     "evidence_ids": [
@@ -10571,8 +10571,8 @@
       "EVID-164",
       "EVID-165"
     ],
-    "latest_documentation_verification_sha": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357",
-    "latest_documentation_verification": "Exact-candidate workflows passed; current-facing canonical docs and ledgers reconciled with EVID-164."
+    "latest_documentation_verification_sha": "130b9f291bd5f6ade457b0e3b9dbf4b930575326",
+    "latest_documentation_verification": "At last reconciliation, 130b9f29 was pushed to main as a documentation-only descendant of exact source candidate 26fb6ad0; source test evidence remains bound to 26fb6ad0."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
