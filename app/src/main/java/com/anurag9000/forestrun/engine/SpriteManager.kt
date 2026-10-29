@@ -15,8 +15,8 @@ class SpriteManager(private val context: Context) {
     companion object {
         private const val TAG = "SpriteManager"
         private const val PLAYER_RUN_FRAMES = 48
-        private const val PLAYER_JUMP_STRIP_FRAMES = 48
-        private const val PLAYER_DUCK_FRAMES = 48
+        private const val PLAYER_JUMP_STRIP_FRAMES = 42
+        private const val PLAYER_DUCK_FRAMES = 36
         private const val PLAYER_HIT_FRAMES = 12
         private const val PLAYER_DEATH_FRAMES = 12
         private const val MIN_FRAME_EDGE_PX = 8

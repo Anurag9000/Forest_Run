@@ -33,6 +33,8 @@ class Mapping:
     remove_support_ratio: float = 0.0
     component_floor_ratio: float = 0.08
     explicit_indices: tuple[int, ...] | None = None
+    annotation_policy: str = "none"
+    row_columns: tuple[int, ...] | None = None
 
 
 def quantize(color: tuple[int, int, int, int]) -> tuple[int, int, int]:
@@ -217,6 +219,100 @@ def clear_bottom_band(image: Image.Image, ratio: float) -> Image.Image:
     return out
 
 
+def _is_top_index_annotation(
+    image: Image.Image,
+    component: list[int],
+    bbox: tuple[int, int, int, int],
+) -> bool:
+    width, height = image.size
+    x1, y1, x2, y2 = bbox
+    area = len(component)
+    component_width = x2 - x1
+    component_height = y2 - y1
+    touches_edge_guide = (
+        (y1 <= 1 or y2 >= height - 1)
+        and 1 <= area <= 200
+        and 3 <= component_width <= min(50, int(width * 0.65))
+        and 1 <= component_height <= 3
+    )
+    detached_grid_stroke = (
+        1 <= area <= 250
+        and component_height <= 12
+        and component_width >= max(6, component_height * 2)
+    )
+    clipped_edge_fragment = (
+        (x1 <= 1 or x2 >= width - 1)
+        and 1 <= area <= 300
+        and component_width <= 24
+        and component_height <= 30
+    )
+    return (
+        touches_edge_guide
+        or detached_grid_stroke
+        or clipped_edge_fragment
+        or (
+            y1 <= int(height * 0.28)
+            # Glyphs can be colored and fragment into tiny disconnected
+            # strokes after background removal. Keep this limited to small,
+            # detached components in the upper annotation gutter; pose pixels
+            # connected to the character are preserved.
+            and 1 <= area <= 250
+            and 1 <= component_width <= min(30, int(width * 0.35))
+            and 1 <= component_height <= 30
+            and y2 <= int(height * 0.26)
+        )
+    )
+
+
+def _is_bottom_index_annotation(
+    image: Image.Image,
+    component: list[int],
+    bbox: tuple[int, int, int, int],
+) -> bool:
+    _width, height = image.size
+    _x1, y1, x2, y2 = bbox
+    area = len(component)
+    component_width = x2 - _x1
+    component_height = y2 - y1
+    return (
+        y1 >= int(height * 0.62)
+        and 70 <= area <= 700
+        and 6 <= component_width <= 32
+        and 10 <= component_height <= 40
+    )
+
+
+def remove_frame_index_annotations(image: Image.Image, policy: str) -> Image.Image:
+    """Remove detached atlas index glyphs while preserving authored sprite pixels.
+
+    The jump atlas contains small detached labels and grid remnants around its
+    poses. The Hyacinth and Vanilla Orchid atlases contain one number below
+    each plant. Policies are attached only to those mappings, and remove whole
+    disconnected components matching the corresponding annotation region.
+    """
+    if policy == "none":
+        return image
+    if policy not in {"top_index", "bottom_index"}:
+        raise ValueError(f"Unsupported frame-index annotation policy: {policy}")
+
+    source = image.convert("RGBA")
+    components = connected_components(source)
+    remove_indices: set[int] = set()
+    pixels = _rgba_pixels(source)
+    matcher = _is_top_index_annotation if policy == "top_index" else _is_bottom_index_annotation
+    for component, bbox in components:
+        if matcher(source, component, bbox):
+            remove_indices.update(component)
+    if not remove_indices:
+        return source
+
+    for index in remove_indices:
+        pixels[index] = (0, 0, 0, 0)
+    result = Image.new("RGBA", source.size)
+    result.putdata(pixels)
+    return result
+
+
 def strip_light_neutral_background(frame: Image.Image) -> Image.Image:
     frame = frame.convert("RGBA")
     out = Image.new("RGBA", frame.size, (0, 0, 0, 0))
@@ -236,13 +332,21 @@ def strip_light_neutral_background(frame: Image.Image) -> Image.Image:
     return crop_alpha(out, pad=2)
 
 
-def process_frame(frame: Image.Image, *, strategy: str, remove_support_ratio: float, component_floor_ratio: float) -> Image.Image:
+def process_frame(
+    frame: Image.Image,
+    *,
+    strategy: str,
+    remove_support_ratio: float,
+    component_floor_ratio: float,
+    annotation_policy: str = "none",
+) -> Image.Image:
     if strategy == "char":
-        return strip_light_neutral_background(frame)
+        cleaned = strip_light_neutral_background(frame)
+        return remove_frame_index_annotations(cleaned, annotation_policy)
     cleaned = flood_fill_background(frame)
     cleaned = clear_bottom_band(cleaned, remove_support_ratio)
     cleaned = keep_subject_components(cleaned, component_floor_ratio=component_floor_ratio)
-    return crop_alpha(cleaned)
+    return remove_frame_index_annotations(cleaned, annotation_policy)
 
 
 def slice_grid(mapping: Mapping) -> list[Image.Image]:
@@ -250,6 +354,19 @@ def slice_grid(mapping: Mapping) -> list[Image.Image]:
         raise ValueError("Sprite grid rows, columns, and frame count must be positive")
     if mapping.strategy not in {"default", "char"}:
         raise ValueError(f"Unsupported sprite cleanup strategy: {mapping.strategy}")
+    if mapping.annotation_policy not in {"none", "top_index", "bottom_index"}:
+        raise ValueError(
+            f"Unsupported frame-index annotation policy: {mapping.annotation_policy}"
+        )
+    if mapping.row_columns is not None:
+        if len(mapping.row_columns) != mapping.rows:
+            raise ValueError("row_columns must provide one column count per row")
+        if any(columns <= 0 for columns in mapping.row_columns):
+            raise ValueError("row_columns entries must be positive")
+        if max(mapping.row_columns) > mapping.cols:
+            raise ValueError("row_columns entries cannot exceed the declared maximum columns")
+        if sum(mapping.row_columns) != mapping.count:
+            raise ValueError("row_columns must sum to the declared frame count")
     if not 0.0 <= mapping.remove_support_ratio < 1.0:
         raise ValueError("remove_support_ratio must be in [0, 1)")
     if not 0.0 <= mapping.component_floor_ratio <= 1.0:
@@ -264,6 +381,28 @@ def slice_grid(mapping: Mapping) -> list[Image.Image]:
             f"Sprite grid {mapping.cols}x{mapping.rows} exceeds sheet dimensions "
             f"{src.width}x{src.height}: {mapping.src_rel}"
         )
+    if mapping.row_columns is not None and mapping.explicit_indices is not None:
+        raise ValueError("explicit_indices cannot be combined with row_columns")
+    if mapping.row_columns is not None:
+        frames: list[Image.Image] = []
+        for row, columns in enumerate(mapping.row_columns):
+            top = row * src.height // mapping.rows
+            bottom = (row + 1) * src.height // mapping.rows
+            for column in range(columns):
+                left = column * src.width // columns
+                right = (column + 1) * src.width // columns
+                frame = src.crop((left, top, right, bottom))
+                frames.append(
+                    process_frame(
+                        frame,
+                        strategy=mapping.strategy,
+                        remove_support_ratio=mapping.remove_support_ratio,
+                        component_floor_ratio=mapping.component_floor_ratio,
+                        annotation_policy=mapping.annotation_policy,
+                    )
+                )
+        return frames
+
     frame_indices = (
         tuple(range(mapping.count))
         if mapping.explicit_indices is None
@@ -293,6 +432,7 @@ def slice_grid(mapping: Mapping) -> list[Image.Image]:
                 strategy=mapping.strategy,
                 remove_support_ratio=mapping.remove_support_ratio,
                 component_floor_ratio=mapping.component_floor_ratio,
+                annotation_policy=mapping.annotation_policy,
             )
         )
     return frames
@@ -321,18 +461,21 @@ def import_one(mapping: Mapping) -> None:
     pack_strip(frames, DST / mapping.dst_rel)
 
 
-def main() -> None:
-    mappings = [
+def asset_mappings() -> list[Mapping]:
+    return [
         Mapping("char/runner_girl_technical_48frame.png", "char/runner_girl_technical_48frame.png", 8, 6, 48, strategy="char", component_floor_ratio=0.02),
-        Mapping("char/runner_girl_jump_48frame.png", "char/runner_girl_jump_48frame.png", 8, 6, 48, strategy="char", component_floor_ratio=0.02),
-        Mapping("char/runner_girl_duck_48frame.png", "char/runner_girl_duck_48frame.png", 8, 6, 48, strategy="char", component_floor_ratio=0.02),
+        Mapping("char/runner_girl_jump_48frame.png", "char/runner_girl_jump_42frame.png", 8, 6, 42, strategy="char", component_floor_ratio=0.02, annotation_policy="top_index", row_columns=(6, 6, 6, 8, 8, 8)),
+        # The supplied duck atlas is a regular 6x6 grid despite its legacy
+        # source filename. Preserve its 36 authored poses and publish an
+        # accurately named runtime strip.
+        Mapping("char/runner_girl_duck_48frame.png", "char/runner_girl_duck_36frame.png", 6, 6, 36, strategy="char", component_floor_ratio=0.02, annotation_policy="top_index"),
         Mapping("char/runner_girl_hit_sequence.png", "char/runner_girl_hit_sequence.png", 4, 3, 12, strategy="char", component_floor_ratio=0.02),
         Mapping("char/runner_girl_death_sequence.png", "char/runner_girl_death_sequence.png", 4, 3, 12, strategy="char", component_floor_ratio=0.02),
         Mapping("plants/cactus/cactus_4frames.png", "plants/cactus_4frames.png", 4, 1, 4, component_floor_ratio=0.05),
         Mapping("plants/eucalyptus/eucalyptus_4frames.png", "plants/eucalyptus_4frames.png", 4, 1, 4, component_floor_ratio=0.05),
-        Mapping("plants/hyacinth/hyacinth_4frames.png", "plants/hyacinth_4frames.png", 4, 1, 4, component_floor_ratio=0.05),
+        Mapping("plants/hyacinth/hyacinth_4frames.png", "plants/hyacinth_4frames.png", 4, 1, 4, component_floor_ratio=0.05, annotation_policy="bottom_index"),
         Mapping("plants/lily_of_the_valley/lily_of_the_valley_4frames.png", "plants/lily_of_valley_4frames.png", 2, 2, 4, component_floor_ratio=0.04),
-        Mapping("plants/vanilla/vanilla_4frames.png", "plants/vanilla_orchid_4frames.png", 4, 1, 4, component_floor_ratio=0.05),
+        Mapping("plants/vanilla/vanilla_4frames.png", "plants/vanilla_orchid_4frames.png", 4, 1, 4, component_floor_ratio=0.05, annotation_policy="bottom_index"),
         Mapping("trees/bamboos/bamboos_4frames.png", "trees/bamboo_4frames.png", 4, 1, 4, component_floor_ratio=0.03),
         Mapping("trees/cherry_blossoms/cherry_blossoms_4frames.png", "trees/cherry_blossom_4frames.png", 2, 2, 4, component_floor_ratio=0.03),
         Mapping("trees/jacaranda/jacaranda_4frames.png", "trees/jacaranda_4frames.png", 2, 2, 4, component_floor_ratio=0.03),
@@ -355,7 +498,10 @@ def main() -> None:
         Mapping("vfx/vfx_jump_dust.png", "vfx/vfx_jump_dust.png", 4, 1, 4, component_floor_ratio=0.03),
         Mapping("vfx/vfx_slide_grass.png", "vfx/vfx_slide_grass.png", 4, 4, 16, component_floor_ratio=0.02),
     ]
-    for mapping in mappings:
+
+
+def main() -> None:
+    for mapping in asset_mappings():
         import_one(mapping)
 
 

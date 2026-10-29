@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "repository": "Forest_Run",
-  "inventory_snapshot_date": "2026-10-28",
+  "inventory_snapshot_date": "2026-10-29",
   "baseline_commit": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
   "baseline_counts": {
     "tracked_files": 939,
@@ -9,7 +9,7 @@
     "initial_visible_paths_reported": 961,
     "inventory_records": 1011
   },
-  "current_inventory_count": 1020,
+  "current_inventory_count": 1023,
   "scope": "Union of tracked paths and visible workspace paths, excluding .git internals and ignored build/.gradle trees. Tracked release paths hidden by ignore rules are retained. New docs are included.",
   "coverage_semantics": "INVENTORIED means path/classification only; PARTIALLY_INSPECTED means bounded changed regions or prior map consultation; FULLY_STATICALLY_INSPECTED is reserved for complete small-file reading; generated exclusions have reasons. No inventory state implies runtime verification.",
   "records": [
@@ -2537,15 +2537,20 @@
       "id": "FILE-4A2B29A9D75A",
       "path": "app/src/main/assets/sprites/char/runner_girl_duck_48frame.png",
       "classification": "packaged runtime asset",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "REMOVED_IN_CURRENT_SOURCE_DELTA",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
       "inspection_detail": "Visual contents inspected locally; per-file observations and uncertainty in asset_visual_inventory.md; no content editing/approval implied.",
       "symbols_or_consumers": [],
-      "relationships": [],
+      "relationships": [
+        "TASK-A-050",
+        "FIND-031",
+        "GAP-020",
+        "EVID-163"
+      ],
       "evidence_ref": "EVID-043",
-      "next_action": "Reuse bounded static findings; no execution is implied.",
+      "next_action": "Historical baseline path retained; current runtime asset has a new truthful frame-count path.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-006"
@@ -2601,15 +2606,20 @@
       "id": "FILE-D39BC9A7F9C7",
       "path": "app/src/main/assets/sprites/char/runner_girl_jump_48frame.png",
       "classification": "packaged runtime asset",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "REMOVED_IN_CURRENT_SOURCE_DELTA",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
       "inspection_detail": "Visual contents inspected locally; per-file observations and uncertainty in asset_visual_inventory.md; no content editing/approval implied.",
       "symbols_or_consumers": [],
-      "relationships": [],
+      "relationships": [
+        "TASK-A-050",
+        "FIND-031",
+        "GAP-020",
+        "EVID-163"
+      ],
       "evidence_ref": "EVID-043",
-      "next_action": "Reuse bounded static findings; no execution is implied.",
+      "next_action": "Historical baseline path retained; current runtime asset has a new truthful frame-count path.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-006"
@@ -2729,15 +2739,19 @@
       "id": "FILE-64C385E64BD0",
       "path": "app/src/main/assets/sprites/plants/hyacinth_4frames.png",
       "classification": "packaged runtime asset",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Visual contents inspected locally; per-file observations and uncertainty in asset_visual_inventory.md; no content editing/approval implied.",
+      "inspection_detail": "Current asset structure and atlas annotation correction reviewed; frame/output contract evidence EVID-163. Human and physical readability are not established.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-043",
-      "next_action": "Reuse bounded static findings; no execution is implied.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-006"
@@ -2754,7 +2768,7 @@
       ],
       "file_type": "png",
       "language_or_format": "Image asset",
-      "assigned_task_id": "TASK-A-018",
+      "assigned_task_id": "TASK-A-050",
       "assigned_owner": "/root/kotlin_delta"
     },
     {
@@ -2793,15 +2807,19 @@
       "id": "FILE-E09FB865A4F8",
       "path": "app/src/main/assets/sprites/plants/vanilla_orchid_4frames.png",
       "classification": "packaged runtime asset",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Visual contents inspected locally; per-file observations and uncertainty in asset_visual_inventory.md; no content editing/approval implied.",
+      "inspection_detail": "Current asset structure and atlas annotation correction reviewed; frame/output contract evidence EVID-163. Human and physical readability are not established.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-043",
-      "next_action": "Reuse bounded static findings; no execution is implied.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-006"
@@ -2818,7 +2836,7 @@
       ],
       "file_type": "png",
       "language_or_format": "Image asset",
-      "assigned_task_id": "TASK-A-018",
+      "assigned_task_id": "TASK-A-050",
       "assigned_owner": "/root/kotlin_delta"
     },
     {
@@ -3340,17 +3358,21 @@
       "id": "FILE-209E5A8D25E6",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/AssetPaths.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_clean",
-      "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
+      "coverage_status": "INTEGRATION_TRACED",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Full source read at lines 1-49; symbol/responsibility note in production_kotlin_A010.md. No runtime validation.",
+      "inspection_detail": "Current changed content read and traced through importer/runtime/test path; local verification evidence EVID-163. Exact candidate hosted verification remains TASK-C-019.",
       "symbols_or_consumers": [
         "AssetPaths` and nested path groups"
       ],
-      "relationships": [],
-      "evidence_ref": "EVID-028",
-      "next_action": "Reuse current full source findings; runtime verification remains separate.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -3372,7 +3394,8 @@
         "excluded_declaration_count": 0,
         "status": "INVENTORIED",
         "reason": null
-      }
+      },
+      "assigned_task_id": "TASK-A-050"
     },
     {
       "id": "FILE-E7A279FA9ED6",
@@ -6310,15 +6333,19 @@
       "id": "FILE-EA062A067E95",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/ParallaxBackground.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
       "inspection_detail": "Prior full source read explicitly recorded in docs/REPO_CODEBASE_MAP.md; exact scoped source unchanged from HEAD at reconciliation. Evidence reused, not freshly reread; runtime unverified.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-029",
-      "next_action": "Reuse current source evidence; delta-review only if this path changes.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -6340,7 +6367,8 @@
         "excluded_declaration_count": 0,
         "status": "INVENTORIED",
         "reason": null
-      }
+      },
+      "assigned_task_id": "TASK-A-050"
     },
     {
       "id": "FILE-F910351B9718",
@@ -7583,15 +7611,19 @@
       "id": "FILE-1D1790B2C5AC",
       "path": "app/src/main/java/com/anurag9000/forestrun/engine/SpriteManager.kt",
       "classification": "Android production Kotlin source",
-      "worktree_status": "tracked_clean",
-      "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
+      "coverage_status": "INTEGRATION_TRACED",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Prior full source read explicitly recorded in docs/REPO_CODEBASE_MAP.md; exact scoped source unchanged from HEAD at reconciliation. Evidence reused, not freshly reread; runtime unverified.",
+      "inspection_detail": "Current changed content read and traced through importer/runtime/test path; local verification evidence EVID-163. Exact candidate hosted verification remains TASK-C-019.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-029",
-      "next_action": "Reuse current source evidence; delta-review only if this path changes.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -7613,7 +7645,8 @@
         "excluded_declaration_count": 0,
         "status": "INVENTORIED",
         "reason": null
-      }
+      },
+      "assigned_task_id": "TASK-A-050"
     },
     {
       "id": "FILE-8F3A4E5A4439",
@@ -15625,19 +15658,22 @@
       "id": "FILE-C43EAEC8D350",
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/RuntimeAssetContractTest.kt",
       "classification": "JVM/Robolectric test source",
-      "worktree_status": "tracked_clean",
-      "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
+      "coverage_status": "INTEGRATION_TRACED",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Entire source read, lines 1-116; test contract in test_contracts_kotlin_engine_R-W.md; not executed.",
+      "inspection_detail": "Current changed content read and traced through importer/runtime/test path; local verification evidence EVID-163. Exact candidate hosted verification remains TASK-C-019.",
       "symbols_or_consumers": [
         "AssetPaths"
       ],
       "relationships": [
-        "AssetPaths"
+        "AssetPaths",
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
       ],
-      "evidence_ref": "EVID-027",
-      "next_action": "Reuse source contract; runtime verification is separately authorized.",
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -15649,7 +15685,8 @@
         "docs/repository_knowledge/test_contract_inventory.json"
       ],
       "file_type": "kt",
-      "language_or_format": "Kotlin"
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-050"
     },
     {
       "id": "FILE-2C1E6E253D54",
@@ -19996,15 +20033,19 @@
       "id": "FILE-80DAC4E9C88E",
       "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
       "classification": "new knowledge-base artifact",
-      "worktree_status": "created_by_this_investigation",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
       "coverage_status": "DOCUMENTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
       "inspection_detail": "Created by this task and linked from the master knowledge map.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-001; EVID-002 where applicable",
-      "next_action": "Inspect changed content under applicable deferred coverage task",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-005",
@@ -20023,7 +20064,8 @@
       "language_or_format": "Markdown",
       "worktree_content_sha256": "663790383f99c4fe330ce6fd5964964f9d352c37c62492d99398cd220937dfbb",
       "worktree_content_bytes": 44605,
-      "worktree_hash_status": "HASHED_STABLE_CONTENT"
+      "worktree_hash_status": "HASHED_STABLE_CONTENT",
+      "assigned_task_id": "TASK-A-050"
     },
     {
       "id": "FILE-36328969B72B",
@@ -24225,15 +24267,19 @@
       "id": "FILE-975C099D6EF0",
       "path": "docs/repository_knowledge/asset_visual_inventory.md",
       "classification": "new knowledge-base artifact",
-      "worktree_status": "created_by_current_investigation",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
       "coverage_status": "DOCUMENTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + documentation snapshot 2026-10-27",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "TASK-A-021 local visual inspection handoff",
       "inspection_detail": "Per-file visual observations for all 58 assigned PNG assets, with explicit inference/rights/suitability limitations.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-043",
-      "next_action": "Reuse visual map; refresh only if images/source consumers change.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -24247,7 +24293,8 @@
       "language_or_format": "Markdown",
       "worktree_content_sha256": "74f73cec129e594ced6e09f0b73a203e056d10b9e85b7852e685c2a20e7c7ff1",
       "worktree_content_bytes": 17368,
-      "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR"
+      "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR",
+      "assigned_task_id": "TASK-A-050"
     },
     {
       "id": "FILE-59FD08A0AA43",
@@ -24749,9 +24796,9 @@
       "id": "FILE-32CC9C286A1D",
       "path": "docs/repository_knowledge/runtime_sprite_frame_trace.md",
       "classification": "new knowledge-base artifact",
-      "worktree_status": "updated_for_2026-10-28_delta",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
       "coverage_status": "DOCUMENTED",
-      "source_revision": "946130c19878f99f1c9ee21506fb89e1ab940525 + working-tree overlay",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "TASK-A-022 static asset-to-frame trace",
       "inspection_detail": "Traces all 29 packaged runtime sprite PNGs through AssetPaths, SpriteManager, SpriteSheet frame crops and production callers; documents source/visual mismatches and limits.",
       "symbols_or_consumers": [
@@ -24764,9 +24811,13 @@
         "Owl",
         "GardenScreen"
       ],
-      "relationships": [],
-      "evidence_ref": "EVID-103",
-      "next_action": "Reuse this corrected frame/caller trace; review again only if source image, mapping or consuming code changes.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -24780,7 +24831,8 @@
       "language_or_format": "Markdown",
       "worktree_content_sha256": "600517b249887b81a9feb727746e0647730fe41fb3d5b6ce394b4446b137c6dd",
       "worktree_content_bytes": 17779,
-      "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR"
+      "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR",
+      "assigned_task_id": "TASK-A-050"
     },
     {
       "id": "FILE-36181EB04218",
@@ -26537,15 +26589,19 @@
       "id": "FILE-3A8B06E451E8",
       "path": "scripts/import_final_assets.py",
       "classification": "evidence/release/maintenance tooling",
-      "worktree_status": "tracked_modified",
-      "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
+      "coverage_status": "INTEGRATION_TRACED",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Complete current worktree source read in bounded ranges; per-file behavior, symbols, interfaces, consumers and limits summarized in deep_inspection_TASK-A-023_python_shell.md. No script or workflow execution.",
+      "inspection_detail": "Current changed content read and traced through importer/runtime/test path; local verification evidence EVID-163. Exact candidate hosted verification remains TASK-C-019.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-001; EVID-002 where applicable",
-      "next_action": "Reuse full source read at recorded worktree hash; revisit only on relevant source delta.",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-005"
       ],
@@ -26563,7 +26619,7 @@
       "worktree_content_sha256": "786f5fb7a9f3431c1a90e5e07cb0551f4be97f4c5fbdd9baaa28faae18623b59",
       "worktree_content_bytes": 15274,
       "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR",
-      "assigned_task_id": "TASK-A-023",
+      "assigned_task_id": "TASK-A-050",
       "assigned_owner": null,
       "symbol_inventory_task_id": "TASK-A-032",
       "symbol_inventory_owner": null,
@@ -28774,15 +28830,19 @@
       "id": "FILE-E53BD89D5837",
       "path": "scripts/test_import_final_assets.py",
       "classification": "Python test source",
-      "worktree_status": "untracked",
-      "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "worktree_status": "MODIFIED_IN_CURRENT_SOURCE_DELTA",
+      "coverage_status": "INTEGRATION_TRACED",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Current source read and test contract documented in test_contract_inventory.json; test not executed.",
+      "inspection_detail": "Current changed content read and traced through importer/runtime/test path; local verification evidence EVID-163. Exact candidate hosted verification remains TASK-C-019.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-039",
-      "next_action": "Inspect changed content under applicable deferred coverage task",
+      "relationships": [
+        "REQ-021",
+        "TASK-A-050",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Exact-commit hosted check tracked by TASK-C-019; physical/human readability remains separate.",
       "related_goal_ids": [
         "GOAL-005"
       ],
@@ -28799,7 +28859,8 @@
       "language_or_format": "Python",
       "worktree_content_sha256": "6227c10e2e1923f12a8d85d911d2be3cea4edebb67bbe45a7de123d330495ea4",
       "worktree_content_bytes": 7559,
-      "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR"
+      "worktree_hash_status": "HASHED_STABLE_DESCRIPTOR",
+      "assigned_task_id": "TASK-A-050"
     },
     {
       "id": "FILE-1C751229CC5B",
@@ -32993,21 +33054,130 @@
       "assigned_owner": "/root/scenario_asset_completion",
       "line_count": 98,
       "worktree_content_sha256": "8b457453db8274db000599e53ce772509ce4b81f56d3bbd774fa27d753dbea7f"
+    },
+    {
+      "id": "FILE-4051501D03BA",
+      "path": "app/src/main/assets/sprites/char/runner_girl_jump_42frame.png",
+      "classification": "packaged runtime asset",
+      "worktree_status": "UNTRACKED_NEW_RUNTIME_ASSET",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 delta",
+      "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
+      "inspection_detail": "Current generated runtime sheet visually inspected; declared 42-frame strip geometry and hashes recorded in source_completion_delta_2026-10-29.md; runtime contract tested in EVID-163.",
+      "symbols_or_consumers": [],
+      "relationships": [
+        "TASK-A-050",
+        "REQ-021",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Historical baseline path retained; current runtime asset has a new truthful frame-count path.",
+      "related_goal_ids": [
+        "GOAL-001",
+        "GOAL-006"
+      ],
+      "related_capability_ids": [
+        "CAP-001",
+        "CAP-007"
+      ],
+      "documentation_refs": [
+        "docs/CREATIVE_ASSET_PROVENANCE.md",
+        "docs/REPO_MEMORY_MAP.md",
+        "docs/repository_knowledge/asset_visual_inventory.md",
+        "docs/repository_knowledge/inspection_TASK-A-018.md"
+      ],
+      "file_type": "png",
+      "language_or_format": "Image asset",
+      "assigned_task_id": "TASK-A-050",
+      "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-4220167BBE24",
+      "path": "app/src/main/assets/sprites/char/runner_girl_duck_36frame.png",
+      "classification": "packaged runtime asset",
+      "worktree_status": "UNTRACKED_NEW_RUNTIME_ASSET",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 delta",
+      "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
+      "inspection_detail": "Current generated runtime sheet visually inspected; declared 36-frame strip geometry and hashes recorded in source_completion_delta_2026-10-29.md; runtime contract tested in EVID-163.",
+      "symbols_or_consumers": [],
+      "relationships": [
+        "TASK-A-050",
+        "REQ-021",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "Historical baseline path retained; current runtime asset has a new truthful frame-count path.",
+      "related_goal_ids": [
+        "GOAL-001",
+        "GOAL-006"
+      ],
+      "related_capability_ids": [
+        "CAP-001",
+        "CAP-007"
+      ],
+      "documentation_refs": [
+        "docs/CREATIVE_ASSET_PROVENANCE.md",
+        "docs/REPO_MEMORY_MAP.md",
+        "docs/repository_knowledge/asset_visual_inventory.md",
+        "docs/repository_knowledge/inspection_TASK-A-018.md"
+      ],
+      "file_type": "png",
+      "language_or_format": "Image asset",
+      "assigned_task_id": "TASK-A-050",
+      "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-5CC80F6D68FD",
+      "path": "docs/repository_knowledge/source_completion_delta_2026-10-29.md",
+      "classification": "source completion and verification delta report",
+      "worktree_status": "UNTRACKED_NEW_DOCUMENTATION",
+      "coverage_status": "DOCUMENTED",
+      "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus current working tree delta",
+      "inspection_detail": "Current correction, evidence classes, commands, outcomes and limits documented; not a whole-repository re-audit.",
+      "symbols_or_consumers": [],
+      "relationships": [
+        "FIND-031",
+        "GAP-020",
+        "TASK-A-050",
+        "TASK-C-019",
+        "EVID-163"
+      ],
+      "evidence_ref": "EVID-163",
+      "next_action": "After exact-SHA validation, append hosted evidence; preserve physical/human/external limitations.",
+      "related_goal_ids": [
+        "GOAL-001",
+        "GOAL-006"
+      ],
+      "related_capability_ids": [
+        "CAP-001"
+      ],
+      "documentation_refs": [
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "md",
+      "language_or_format": "Markdown",
+      "assigned_task_id": "TASK-A-050",
+      "assigned_owner": "/root"
     }
   ],
   "coverage_counts": {
-    "DOCUMENTED": 39,
     "EXCLUDED_WITH_REASON": 3,
-    "FULLY_STATICALLY_INSPECTED": 976,
-    "PARTIALLY_INSPECTED": 2
+    "FULLY_STATICALLY_INSPECTED": 973,
+    "PARTIALLY_INSPECTED": 2,
+    "INTEGRATION_TRACED": 5,
+    "DOCUMENTED": 40
   },
   "inspection_update": {
     "date": "2026-10-29",
-    "delta": "Recorded exact-SHA d63 host/API35, applicability, certificate, connected and screenshot results; added a trace for all 28 scenarios and closed only supported automated tasks. Physical/human/external acceptance remains deferred.",
+    "delta": "Added verified atlas/runtime correction records: source assets remain legacy-named references; current runtime jump/duck assets have 42/36-frame names. Added source-completion delta report, finding/gap/task evidence; exact-SHA hosted validation remains pending.",
     "paths": [
-      "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
-      "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md",
-      "docs/repository_knowledge/execution/EXECUTION_DASHBOARD.md"
+      "docs/repository_knowledge/source_completion_delta_2026-10-29.md",
+      "scripts/import_final_assets.py",
+      "scripts/test_import_final_assets.py",
+      "app/src/main/java/com/anurag9000/forestrun/engine/AssetPaths.kt",
+      "app/src/main/java/com/anurag9000/forestrun/engine/SpriteManager.kt",
+      "app/src/test/java/com/anurag9000/forestrun/engine/RuntimeAssetContractTest.kt"
     ]
   },
   "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9",
@@ -33042,13 +33212,17 @@
         "explicitly_excluded_declarations": 0
       }
     },
-    "authoritative_aggregate": "docs/repository_knowledge/symbol_inventory.json"
+    "authoritative_aggregate": "docs/repository_knowledge/symbol_inventory.json",
+    "delta_records_added": 4,
+    "current_aggregate_count": 6145,
+    "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 delta; remaining shard records retain their source snapshots"
   },
   "coverage_counts_current": {
-    "DOCUMENTED": 39,
     "EXCLUDED_WITH_REASON": 3,
-    "FULLY_STATICALLY_INSPECTED": 976,
-    "PARTIALLY_INSPECTED": 2
+    "FULLY_STATICALLY_INSPECTED": 973,
+    "PARTIALLY_INSPECTED": 2,
+    "INTEGRATION_TRACED": 5,
+    "DOCUMENTED": 40
   },
-  "snapshot_date": "2026-10-28"
+  "snapshot_date": "2026-10-29"
 }

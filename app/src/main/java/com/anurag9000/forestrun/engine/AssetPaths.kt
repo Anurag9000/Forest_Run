@@ -5,8 +5,8 @@ object AssetPaths {
 
     object Char {
         const val RUN = "sprites/char/runner_girl_technical_48frame.png"
-        const val JUMP = "sprites/char/runner_girl_jump_48frame.png"
-        const val DUCK = "sprites/char/runner_girl_duck_48frame.png"
+        const val JUMP = "sprites/char/runner_girl_jump_42frame.png"
+        const val DUCK = "sprites/char/runner_girl_duck_36frame.png"
         const val HIT = "sprites/char/runner_girl_hit_sequence.png"
         const val DEATH = "sprites/char/runner_girl_death_sequence.png"
     }

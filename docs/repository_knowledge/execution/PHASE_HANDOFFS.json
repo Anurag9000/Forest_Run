@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "current_phase": "Automated source completion verified; external acceptance deferred",
-  "current_phase_status": "Exact candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed exact-SHA host/API35 validation, no-trainable-surface and estate certificate workflows (EVID-159). The runner explicitly selected the production ghost capture LargeTest and one selected test passed; ordinary connected tests passed 28/28, process-death 1/1, and 8 raw screenshots verified. The opening scenario integration test is included in the successful host suite. Tasks TASK-C-017 and TASK-C-018 are complete for their automated scope. The documentation-only descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 also passed hosted host/API35, applicability and certificate status checks (EVID-161); detailed test totals remain bound to EVID-159. No physical device is available; physical performance/readability, human creative/accessibility review, external rights/privacy/Play/signing/governance, and final accountable release readiness remain deferred.",
+  "current_phase": "A - authorized source completion, followed by C exact-candidate verification",
+  "current_phase_status": "TASK-A-050 corrected player jump/duck atlas imports (42 and 36 frames), scoped detached-label cleanup, runtime paths/counts, regression tests, and docs. Local Python and Java21 Gradle verification passed (EVID-163). The delta is currently uncommitted; TASK-C-019 awaits exact-commit hosted verification. No attached device is available, so physical animation readability and human creative approval remain open. Existing d63/8a evidence remains bound to those exact revisions.",
   "phases": [
     {
       "id": "A",
@@ -136,7 +136,9 @@
       "reuse": "Prior code/memory maps and dated audits remain revision-bounded; revisit only changed or contradictory evidence.",
       "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
       "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
-    }
+    },
+    "next_action": "Commit only the reviewed TASK-A-050 owned changes to main, preserving excluded pre-existing user artifacts; then inspect exact-SHA host/Android workflows and update TASK-C-019/EVID-163 continuation.",
+    "source_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus local TASK-A-050 delta"
   },
   "resume_procedure": {
     "baseline": "Verified application source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; documentation-only main/origin descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 passed hosted status checks (EVID-161). Verify live HEAD/worktree and preserve pre-existing untracked artifacts.",
@@ -144,7 +146,7 @@
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
   },
-  "baseline": "Verified application source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; latest known documentation-only main/origin descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4. Reconcile current branch and worktree before acting.",
-  "what_remains": "Physical-device access is unavailable. Physical performance/readability, human gameplay/creative/accessibility review, rights/licensing, privacy/Play, production signing/delivery, governance and accountable approval remain deferred; TASK-E-001 follows only after prerequisites.",
-  "what_exists": "The d63cf88c source candidate passed exact-SHA host/API35, no-trainable-surface, and estate-certificate workflows. The targeted production ghost-capture LargeTest and OPENING_READABILITY integration are included in the successful exact-candidate scope. Current inventories and task state are recorded in MASTER_EXECUTION_LEDGER.json; exact evidence and limits are EVID-159."
+  "baseline": "Current committed main/origin baseline b586f17a12c359718d8056c9fe7983cd157c894c; previous application source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd has exact-source evidence. Current TASK-A-050 worktree delta is local/uncommitted; verify exact candidate after commit.",
+  "what_remains": "Commit and run exact-SHA hosted validation for TASK-A-050 (TASK-C-019). Physical performance/readability and human creative/accessibility acceptance require unavailable hardware/reviewers. Rights, privacy, Play delivery/signing and governance require accountable external owners. TASK-E-001 remains residual final reconciliation after gates.",
+  "what_exists": "The latest committed main source remains previously validated at d63, with documentation-only descendants through b586. The current worktree corrects sprite atlas geometry and has local 1,403 Python tests plus Java21 full Gradle compile/test/lint/package evidence (EVID-163). The changes are not yet committed or hosted-verified. User-owned untracked artifacts are preserved. Physical/human/external release gates remain open."
 }

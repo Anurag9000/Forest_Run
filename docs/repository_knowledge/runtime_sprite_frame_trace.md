@@ -2,7 +2,7 @@
 
 ## Scope and evidence boundary
 
-This report traces the 29 packaged PNGs under `app/src/main/assets/sprites/`, their `AssetPaths` constants, `SpriteManager` declarations/validation, `SpriteSheet` crop and frame-selection rules, and the production callers that choose or draw the sheets. Visual-layout observations are reused from `docs/repository_knowledge/asset_visual_inventory.md` (runtime-sprite rows at lines 45–73); dimensions and SHA-256 values below were read from the current PNG files. The baseline is `eeccc677107f69039dbf71053c18a9038d4b5ff6` plus the current dirty worktree, snapshot date 2026-10-27. Current scoped worktree differences: `GardenScreen.kt` is modified, and `asset_visual_inventory.md` is untracked; the 29 asset files and the other inspected Kotlin source files are clean against HEAD. The GardenScreen statements therefore describe current worktree source, not necessarily baseline HEAD.
+This report originally traced the packaged PNGs under `app/src/main/assets/sprites/`, their `AssetPaths` constants, `SpriteManager` declarations/validation, `SpriteSheet` crop and frame-selection rules, and production callers at the 2026-10-27 snapshot. The correction below supersedes the affected player-art rows and frame counts. Other historical paths and claims remain revision-bounded to the snapshot stated in the original report.
 
 No tests, build, script, application, or device workflow was run. This is static source inspection plus image metadata and previously recorded local visual inspection; it does not establish rendered runtime appearance, animation timing quality, or intended art provenance.
 
@@ -21,15 +21,15 @@ Dimensions come from PNG metadata. `logical crop` is width divided by the produc
 | Runtime asset path | PNG size | Declared frames | Crop per frame | Observed layout / trace note |
 |---|---:|---:|---:|---|
 | `app/src/main/assets/sprites/char/runner_girl_technical_48frame.png` | 3840×106 | 48 | 80×106 | 48 horizontal character drawings. |
-| `app/src/main/assets/sprites/char/runner_girl_jump_48frame.png` | 3840×106 | 48 | 80×106 | 48 horizontal drawings; same source is subdivided among jump-state sheets. |
-| `app/src/main/assets/sprites/char/runner_girl_duck_48frame.png` | 3840×106 | 48 | 80×106 | 48 horizontal drawings. |
+| `app/src/main/assets/sprites/char/runner_girl_jump_42frame.png` | 4,368×107 | 42 | 104×107 | Imported from per-row source counts `(6, 6, 6, 8, 8, 8)`; the shared bitmap supplies jump start `[0,2)`, jumping `[2,14)`, apex `[14,18)`, falling `[18,24)`, landing `[24,28)`, and menu stand-up `[0,18)`. |
+| `app/src/main/assets/sprites/char/runner_girl_duck_36frame.png` | 3,600×107 | 36 | 100×107 | Imported from the source's regular 6×6 populated grid; loops as the duck sheet at 12 fps. |
 | `app/src/main/assets/sprites/char/runner_girl_hit_sequence.png` | 1920×213 | 12 | 160×213 | 12 horizontal drawings. |
 | `app/src/main/assets/sprites/char/runner_girl_death_sequence.png` | 1920×209 | 12 | 160×209 | 12 horizontal drawings. |
 | `app/src/main/assets/sprites/plants/cactus_4frames.png` | 620×172 | 4 | 155×172 | Four horizontal potted cactus drawings. |
 | `app/src/main/assets/sprites/plants/lily_of_valley_4frames.png` | 740×214 | 4 | 185×214 | Four horizontal drawings, no visible pot/base. |
-| `app/src/main/assets/sprites/plants/hyacinth_4frames.png` | 448×269 | 4 | 112×269 | Four horizontal potted drawings; visible printed numerals 1–4 are pixels within frames. |
+| `app/src/main/assets/sprites/plants/hyacinth_4frames.png` | 448×269 | 4 | 112×269 | Four horizontal potted drawings; detached atlas numerals are removed by the importer. |
 | `app/src/main/assets/sprites/plants/eucalyptus_4frames.png` | 392×147 | 4 | 98×147 | Four horizontal potted plant drawings. |
-| `app/src/main/assets/sprites/plants/vanilla_orchid_4frames.png` | 520×245 | 4 | 130×245 | Four horizontal plant drawings; visible printed numerals 1–4 are within the full-height crops. |
+| `app/src/main/assets/sprites/plants/vanilla_orchid_4frames.png` | 520×245 | 4 | 130×245 | Four horizontal plant drawings; detached atlas numerals are removed by the importer. |
 | `app/src/main/assets/sprites/trees/weeping_willow_4frames.png` | 1060×288 | 4 | 265×288 | Four horizontal poses. |
 | `app/src/main/assets/sprites/trees/jacaranda_4frames.png` | 880×243 | 4 | 220×243 | Four horizontal poses. |
 | `app/src/main/assets/sprites/trees/bamboo_4frames.png` | 572×203 | 4 | 143×203 | Four horizontal clumps. |
@@ -66,7 +66,11 @@ Each pair is loaded from separate asset paths into separate `SpriteSheet` object
 
 ### Player
 
-`SpriteManager.kt:78-189` binds the five player assets. Run and duck are full 48-frame looping sheets (24 fps and 12 fps). Hit and death are full 12-frame nonlooping sheets (15 fps and 12 fps). The 48-frame jump bitmap produces distinct views over one shared bitmap: jump-start frames `[0,2)` at 20 fps; jumping `[2,14)` at 15 fps looping; apex `[14,18)` at 8 fps looping; falling `[18,24)` at 12 fps looping; landing `[24,28)` at 25 fps nonlooping; and a menu-only stand-up presentation `[0,18)` at 12 fps nonlooping. These constructor ranges are at `SpriteManager.kt:92-149`; the source strip itself remains 48 frames. `SpriteSheet.draw` converts each view's relative current frame to the source frame using `startFrame` (`SpriteSheet.kt:100-113`). `Player` consumes state sheets and can explicitly pin a terminal frame at `app/src/main/java/com/anurag9000/forestrun/entities/Player.kt:454`; wider owner selection is described in the existing code map. No claim here that each authored visual pose semantically matches its state is made.
+`SpriteManager.kt:78-189` binds the five player assets. Run uses 48 looping frames at 24 fps; duck uses the corrected 36-frame strip at 12 fps. Hit and death are 12-frame nonlooping sheets (15 fps and 12 fps). The corrected 42-frame jump bitmap produces distinct views over one shared bitmap: jump-start frames `[0,2)` at 20 fps; jumping `[2,14)` at 15 fps looping; apex `[14,18)` at 8 fps looping; falling `[18,24)` at 12 fps looping; landing `[24,28)` at 25 fps nonlooping; and a menu-only stand-up presentation `[0,18)` at 12 fps nonlooping. These constructor ranges are at `SpriteManager.kt:92-149`. `SpriteSheet.draw` converts each view's relative current frame to the source frame using `startFrame` (`SpriteSheet.kt:100-113`). `Player` consumes state sheets and can explicitly pin a terminal frame at `app/src/main/java/com/anurag9000/forestrun/entities/Player.kt:454`; wider owner selection is described in the existing code map.
+
+## 2026-10-29 runtime asset correction
+
+Direct source inspection and contact sheets showed that the old regular-grid importer sliced the player jump poses incorrectly and interpreted the duck source's 6×6 grid as 48 frames. It also retained index marks on jump, Hyacinth, and Vanilla Orchid. `scripts/import_final_assets.py` now imports jump using six cells on each of its first three rows and eight cells on each of its final three rows (42 total), imports duck as 36 cells, and removes detached atlas annotation components. Runtime paths, declared counts, and the asset contract test use the resulting `runner_girl_jump_42frame.png` and `runner_girl_duck_36frame.png` strips. The Python importer test checks the mapping, nonempty crops, and annotation removal. Refer to `source_completion_delta_2026-10-29.md` for verification and limitations.
 
 ### Flora and labels
 

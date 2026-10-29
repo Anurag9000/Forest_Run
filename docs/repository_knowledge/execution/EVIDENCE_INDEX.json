@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
+  "repository_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus TASK-A-050 local worktree delta",
   "snapshot_date": "2026-10-29",
   "evidence_authority_rule": "Each evidence record is bound to its stated repository revision and method. This phase includes authorized tests and hosted CI evidence; distinguish static inspection, local tests/builds, hosted emulator runs, and external/physical-device evidence. Do not transfer a result to a different SHA without unchanged-input evidence.",
   "records": [
@@ -2482,6 +2482,28 @@
       ],
       "result": "Static documentation and ledger consistency checks passed.",
       "limitations": "No application source or test changes were made in this documentation reconciliation. Static consistency does not prove gameplay correctness or physical/human/external acceptance."
+    },
+    {
+      "id": "EVID-163",
+      "type": "current-worktree sprite atlas correction and local validation",
+      "path": "docs/repository_knowledge/source_completion_delta_2026-10-29.md; scripts/import_final_assets.py; scripts/test_import_final_assets.py; RuntimeAssetContractTest; generated runtime sprite sheets",
+      "revision": "main baseline b586f17a12c359718d8056c9fe7983cd157c894c plus uncommitted source/documentation delta",
+      "supports": [
+        "FIND-031",
+        "GAP-020",
+        "TASK-A-050",
+        "TASK-C-019",
+        "REQ-021"
+      ],
+      "observation": "Duck source sheet is 6x6/36 poses; jump source sheet uses row counts 6,6,6,8,8,8/42 poses. Importer now slices these layouts and removes detached index/grid components in explicitly scoped mappings. Runtime paths/counts and packaged asset contracts use 36 and 42. Hyacinth and Vanilla detached label cleanup is covered.",
+      "commands": [
+        "python3 -m unittest test_import_final_assets -v (scripts working directory): 9 passed",
+        "python3 -m unittest discover -s scripts -p 'test_*.py' (repository root): 1,403 passed",
+        "env PATH=\"/opt/android-studio/jbr/bin:/home/anurag-basistha/Android/Sdk/platform-tools:$PATH\" ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease: BUILD SUCCESSFUL; 1,330 JVM/Robolectric tests, 0 failures/errors/skips",
+        "Re-imported four changed runtime outputs and compared SHA-256 byte-for-byte; inspected jump/duck/Hyacinth/Vanilla contact sheets and frame bounds."
+      ],
+      "result": "Focused Python 9/9 and full Python 1,403/1,403 passed. Full Java21 Gradle compile, JVM/Robolectric, AndroidTest compilation, debug/release lint, debug/instrumentation APK and release AAB packaging passed. RuntimeAssetContractTest 4/4 passed.",
+      "limitations": "Tests and build were run against the local dirty working tree, not a committed exact SHA. adb devices -l returned no devices; connected instrumentation and physical readability/human creative acceptance were not performed. Provenance/licensing remains separate."
     }
   ]
 }

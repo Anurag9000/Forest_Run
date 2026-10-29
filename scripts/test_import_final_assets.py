@@ -67,6 +67,121 @@ class ImportFinalAssetsTest(unittest.TestCase):
         self.assertEqual(0, character.getpixel((0, 0))[3])
         self.assertNotEqual(0, character.getpixel((2, 2))[3])
 
+    def test_frame_index_cleanup_removes_only_detached_atlas_annotations(self) -> None:
+        character = Image.new("RGBA", (80, 106), (0, 0, 0, 0))
+        for x in range(30, 55):
+            for y in range(30, 90):
+                character.putpixel((x, y), (18, 52, 86, 255))
+        for x in range(4, 10):
+            for y in range(3, 13):
+                character.putpixel((x, y), (18, 35, 90, 255))
+        # Colored, detached atlas text must be removed as well as grayscale text.
+        character.putpixel((72, 3), (28, 44, 100, 255))
+        for x in range(62, 68):
+            character.putpixel((x, 105), (34, 46, 90, 255))
+        for x in range(4, 18):
+            character.putpixel((x, 52), (38, 46, 105, 255))
+        for y in range(60, 67):
+            character.putpixel((79, y), (38, 46, 105, 255))
+        character.putpixel((72, 72), (150, 150, 150, 255))
+
+        cleaned_character = importer.remove_frame_index_annotations(character, "top_index")
+
+        self.assertEqual(character.size, cleaned_character.size)
+        self.assertEqual((0, 0, 0, 0), cleaned_character.getpixel((6, 8)))
+        self.assertEqual((0, 0, 0, 0), cleaned_character.getpixel((72, 3)))
+        self.assertEqual((0, 0, 0, 0), cleaned_character.getpixel((64, 105)))
+        self.assertEqual((0, 0, 0, 0), cleaned_character.getpixel((10, 52)))
+        self.assertEqual((0, 0, 0, 0), cleaned_character.getpixel((79, 63)))
+        self.assertEqual((18, 52, 86, 255), cleaned_character.getpixel((40, 50)))
+        self.assertEqual((150, 150, 150, 255), cleaned_character.getpixel((72, 72)))
+
+        plant = Image.new("RGBA", (160, 640), (0, 0, 0, 0))
+        for x in range(65, 96):
+            for y in range(370, 420):
+                plant.putpixel((x, y), (24, 96, 48, 255))
+        for x in range(74, 82):
+            for y in range(440, 450):
+                plant.putpixel((x, y), (0, 0, 0, 255))
+
+        cleaned_plant = importer.remove_frame_index_annotations(plant, "bottom_index")
+
+        self.assertEqual(plant.size, cleaned_plant.size)
+        self.assertEqual((0, 0, 0, 0), cleaned_plant.getpixel((76, 444)))
+        self.assertEqual((24, 96, 48, 255), cleaned_plant.getpixel((80, 400)))
+
+        with self.assertRaisesRegex(ValueError, "Unsupported frame-index annotation policy"):
+            importer.remove_frame_index_annotations(plant, "unknown")
+
+    def test_current_numbered_atlases_import_without_index_glyph_components(self) -> None:
+        indexed_sources = {
+            "char/runner_girl_jump_48frame.png",
+            "char/runner_girl_duck_48frame.png",
+            "plants/hyacinth/hyacinth_4frames.png",
+            "plants/vanilla/vanilla_4frames.png",
+        }
+        mappings = tuple(
+            mapping
+            for mapping in importer.asset_mappings()
+            if mapping.src_rel in indexed_sources
+        )
+        self.assertEqual(indexed_sources, {mapping.src_rel for mapping in mappings})
+        for mapping in mappings:
+            with self.subTest(source=mapping.src_rel):
+                frames = importer.slice_grid(mapping)
+                self.assertEqual(mapping.count, len(frames))
+                for frame in frames:
+                    components = importer.connected_components(frame)
+                    for component, bbox in components:
+                        if mapping.annotation_policy == "top_index":
+                            annotation = importer._is_top_index_annotation(frame, component, bbox)
+                        else:
+                            annotation = importer._is_bottom_index_annotation(frame, component, bbox)
+                        self.assertFalse(annotation, (mapping.src_rel, bbox))
+
+    def test_player_atlas_grid_matches_authored_source_layout(self) -> None:
+        mappings = {mapping.src_rel: mapping for mapping in importer.asset_mappings()}
+        expected = {
+            "char/runner_girl_technical_48frame.png": (8, 6, 48),
+            "char/runner_girl_jump_48frame.png": (8, 6, 42),
+            # The legacy-named source is visibly and structurally a 6x6 sheet.
+            "char/runner_girl_duck_48frame.png": (6, 6, 36),
+        }
+        for source, (cols, rows, count) in expected.items():
+            with self.subTest(source=source):
+                mapping = mappings[source]
+                self.assertEqual((cols, rows, count), (mapping.cols, mapping.rows, mapping.count))
+                with Image.open(importer.SRC / source) as atlas:
+                    column_widths = [
+                        ((column + 1) * atlas.width // mapping.cols)
+                        - (column * atlas.width // mapping.cols)
+                        for column in range(mapping.cols)
+                    ]
+                    row_heights = [
+                        ((row + 1) * atlas.height // mapping.rows)
+                        - (row * atlas.height // mapping.rows)
+                        for row in range(mapping.rows)
+                    ]
+                    self.assertLessEqual(max(column_widths) - min(column_widths), 1)
+                    self.assertLessEqual(max(row_heights) - min(row_heights), 1)
+
+        jump = mappings["char/runner_girl_jump_48frame.png"]
+        self.assertEqual((6, 6, 6, 8, 8, 8), jump.row_columns)
+        self.assertEqual("char/runner_girl_jump_42frame.png", jump.dst_rel)
+        jump_frames = importer.slice_grid(jump)
+        self.assertEqual(42, len(jump_frames))
+        self.assertTrue(all(frame.getbbox() is not None for frame in jump_frames))
+        self.assertTrue(all(sum(pixel[3] > 0 for pixel in importer._rgba_pixels(frame)) > 500
+                            for frame in jump_frames))
+
+        duck = mappings["char/runner_girl_duck_48frame.png"]
+        self.assertEqual("char/runner_girl_duck_36frame.png", duck.dst_rel)
+        duck_frames = importer.slice_grid(duck)
+        self.assertEqual(36, len(duck_frames))
+        self.assertTrue(all(frame.getbbox() is not None for frame in duck_frames))
+        self.assertTrue(all(sum(pixel[3] > 0 for pixel in importer._rgba_pixels(frame)) > 500
+                            for frame in duck_frames))
+
     def test_grid_slicing_validates_geometry_and_indices(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -112,6 +227,24 @@ class ImportFinalAssetsTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "component_floor_ratio"):
                     importer.slice_grid(
                         importer.Mapping("sheet.png", "out.png", 2, 2, 1, component_floor_ratio=-0.1)
+                    )
+                self.assertEqual(
+                    3,
+                    len(importer.slice_grid(
+                        importer.Mapping("sheet.png", "out.png", 2, 2, 3, row_columns=(2, 1))
+                    )),
+                )
+                with self.assertRaisesRegex(ValueError, "one column count per row"):
+                    importer.slice_grid(
+                        importer.Mapping("sheet.png", "out.png", 2, 2, 2, row_columns=(2,))
+                    )
+                with self.assertRaisesRegex(ValueError, "sum to the declared frame count"):
+                    importer.slice_grid(
+                        importer.Mapping("sheet.png", "out.png", 2, 2, 3, row_columns=(1, 1))
+                    )
+                with self.assertRaisesRegex(ValueError, "maximum columns"):
+                    importer.slice_grid(
+                        importer.Mapping("sheet.png", "out.png", 1, 2, 3, row_columns=(2, 1))
                     )
 
                 Image.new("RGBA", (5, 2), (1, 2, 3, 255)).save(root / "uneven-grid.png")

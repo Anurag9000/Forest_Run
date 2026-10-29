@@ -387,6 +387,11 @@
       "from": "TASK-D-007",
       "to": "TASK-E-001",
       "reason": "Final accountable decision requires reconciled governance evidence."
+    },
+    {
+      "from": "TASK-A-050",
+      "to": "TASK-C-019",
+      "reason": "Exact-commit hosted verification must follow the completed source correction and commit."
     }
   ],
   "parallel_waves": [
@@ -576,6 +581,13 @@
       ],
       "status": "COMPLETED",
       "note": "C-015 enters exact-SHA queue after A-037 is committed."
+    },
+    {
+      "wave": "current source correction follow-up",
+      "task_ids": [
+        "TASK-C-019"
+      ],
+      "condition": "After TASK-A-050 is committed; only then may exact-SHA hosted verification run."
     }
   ],
   "cycle_check": "Acyclic; 70 hard prerequisite edges; DFS validated 2026-10-28 after adding TASK-A-048 -> TASK-C-018.",

@@ -23,8 +23,8 @@ class RuntimeAssetContractTest {
     fun `all required sprite sheets decode and divide into declared frames`() {
         val contracts = listOf(
             SpriteContract(AssetPaths.Char.RUN, 48),
-            SpriteContract(AssetPaths.Char.JUMP, 48),
-            SpriteContract(AssetPaths.Char.DUCK, 48),
+            SpriteContract(AssetPaths.Char.JUMP, 42),
+            SpriteContract(AssetPaths.Char.DUCK, 36),
             SpriteContract(AssetPaths.Char.HIT, 12),
             SpriteContract(AssetPaths.Char.DEATH, 12),
             SpriteContract(AssetPaths.Plants.CACTUS, 4),
@@ -78,6 +78,31 @@ class RuntimeAssetContractTest {
             )
             bitmap.recycle()
         }
+    }
+
+    @Test
+    fun `player animation ranges fit the corrected imported jump and duck strips`() {
+        val sprites = SpriteManager(context)
+        val jumpViews = listOf(
+            sprites.playerJumpStart,
+            sprites.playerJumping,
+            sprites.playerApex,
+            sprites.playerFalling,
+            sprites.playerLanding,
+            sprites.playerStandUp
+        )
+        assertEquals(listOf(2, 12, 4, 6, 4, 18), jumpViews.map { it.frameCount })
+        assertTrue(jumpViews.all { it.bitmap === sprites.playerJumpStart.bitmap })
+        assertTrue(jumpViews.all { it.frameWidth == sprites.playerJumpStart.frameWidth })
+        assertEquals(
+            sprites.playerJumpStart.bitmap.width,
+            sprites.playerJumpStart.frameWidth * 42
+        )
+        assertEquals(36, sprites.playerDuck.frameCount)
+        assertEquals(
+            sprites.playerDuck.bitmap.width,
+            sprites.playerDuck.frameWidth * sprites.playerDuck.frameCount
+        )
     }
 
     @Test

@@ -7,7 +7,7 @@
     "date": "2026-10-03",
     "current_candidate": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4"
   },
-  "snapshot_date": "2026-10-28",
+  "snapshot_date": "2026-10-29",
   "working_tree_at_start": {
     "dirty_path_count": 5,
     "ownership": "Pre-existing untracked user artifacts retained and excluded from owned changes: .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md, docs/repository_knowledge/current_worktree_delta_20261027/.",
@@ -464,6 +464,25 @@
           "TASK-A-045",
           "TASK-A-047"
         ]
+      },
+      {
+        "id": "REQ-021",
+        "goal_id": "GOAL-006",
+        "statement": "Authored sprite atlas geometry and per-frame artwork must match importer slicing, runtime frame counts, declared animation ranges, and packaged asset contracts.",
+        "classification": "explicit_current_user_assignment_from_sprite_completion_addendum",
+        "evidence": [
+          "Pasted markdown (3)(3).md",
+          "docs/CREATIVE_DIRECTION.md",
+          "scripts/import_final_assets.py",
+          "app/src/main/java/com/anurag9000/forestrun/engine/SpriteManager.kt"
+        ],
+        "status": "corrected_in_current_worktree; local Python and Android verification passed; exact-commit hosted validation pending",
+        "capability_ids": [
+          "CAP-001"
+        ],
+        "verification_task_ids": [
+          "TASK-C-019"
+        ]
       }
     ],
     "capabilities": [
@@ -471,14 +490,16 @@
         "id": "CAP-001",
         "goal_id": "GOAL-001",
         "name": "Android game lifecycle, SurfaceView and frame loop",
-        "implementation": "SUBSTANTIALLY_COMPLETE",
-        "verification": "PRIOR_VERIFIED_EVIDENCE_REUSED; current delta not refreshed",
+        "implementation": "SUBSTANTIALLY_COMPLETE; current jump/duck asset slicing correction integrated locally",
+        "verification": "LOCAL_PYTHON_AND_JAVA21_GRADLE_VERIFIED; exact-commit hosted check pending; physical/human asset acceptance open",
         "evidence": [
           "docs/ARCHITECTURE.md",
-          "docs/REPO_CODEBASE_MAP.md"
+          "docs/REPO_CODEBASE_MAP.md",
+          "EVID-163"
         ],
         "requirement_ids": [
-          "REQ-001"
+          "REQ-001",
+          "REQ-021"
         ],
         "goal_ids": [
           "GOAL-001"
@@ -1734,6 +1755,30 @@
           "CAP-006"
         ],
         "limitations": "Does not establish visual onboarding/readability, hardware fairness, or complete OPENING_READABILITY product acceptance."
+      },
+      {
+        "id": "FIND-031",
+        "kind": "Player jump and duck atlas dimensions disagreed with importer and runtime frame counts",
+        "statement": "Visual inspection found the duck source atlas is a 6x6 (36-pose) grid, not 8x6/48; the jump atlas has row widths 6,6,6,8,8,8 (42 poses), not a uniform 8x6/48. The previous import cut poses and retained detached index/grid marks in these atlases and two plant sheets. Runtime frame counts and declared outputs therefore disagreed with the authored image geometry.",
+        "status": "SOURCE_CORRECTION_AND_LOCAL_VERIFICATION_COMPLETE; EXACT_COMMIT_VERIFICATION_PENDING",
+        "evidence_ids": [
+          "EVID-163"
+        ],
+        "related_task_ids": [
+          "TASK-A-050",
+          "TASK-C-019"
+        ],
+        "related_goal_ids": [
+          "GOAL-001",
+          "GOAL-006"
+        ],
+        "related_requirement_ids": [
+          "REQ-021"
+        ],
+        "related_capability_ids": [
+          "CAP-001"
+        ],
+        "limitations": "Static frame review plus local tests/builds do not establish physical animation readability, human creative approval, or exact-SHA hosted CI."
       }
     ],
     "gaps": [
@@ -2090,6 +2135,28 @@
           "TASK-C-018"
         ],
         "next_action": "No remaining source/test task; visual and physical onboarding review remains external."
+      },
+      {
+        "id": "GAP-020",
+        "kind": "Incorrect player atlas slicing, runtime count, and detached source-index artifacts",
+        "statement": "The prior import treated a 36-frame duck atlas and irregular 42-frame jump atlas as uniform 48-frame sheets, so frame crops/runtime interpretation were wrong and detached guide/index components entered packaged sprites.",
+        "resolution_task_ids": [
+          "TASK-A-050",
+          "TASK-C-019"
+        ],
+        "disposition": "TASK-A-050 now imports the observed row layouts, strips detached annotation components in explicitly scoped mappings, uses truthful runtime asset names/counts, and tests frame geometry and animation ranges. Local full Python and Java21 Gradle verification passed (EVID-163); final exact-commit hosted validation remains pending.",
+        "evidence_ids": [
+          "EVID-163"
+        ],
+        "status": "SOURCE_CORRECTION_COMPLETE; EXACT_COMMIT_VERIFICATION_PENDING",
+        "related_requirement_ids": [
+          "REQ-021"
+        ],
+        "related_task_ids": [
+          "TASK-A-050",
+          "TASK-C-019"
+        ],
+        "next_action": "Run exact-commit hosted Android and source-contract workflows after the commit; retain device/human readability as separate acceptance."
       }
     ],
     "tasks": [
@@ -9709,6 +9776,173 @@
         "investigation_coverage": "FULLY INSPECTED; REAL SPAWN PATH TESTED LOCALLY",
         "implementation_or_investigation_status": "TEST ADDED AND FOCUSED CHECK PASSED",
         "evidence_status": "CURRENT LOCAL FOCUSED EVIDENCE CONFIRMED; EXACT SHA PENDING"
+      },
+      {
+        "id": "TASK-A-050",
+        "title": "Correct player atlas slicing and runtime frame contracts",
+        "parent_ids": [
+          "GOAL-001",
+          "GOAL-006"
+        ],
+        "requirement_ids": [
+          "REQ-021"
+        ],
+        "capability_ids": [
+          "CAP-001"
+        ],
+        "category": "source correction, asset import, regression coverage and documentation",
+        "target_phase": "A - authorized source completion and test strengthening",
+        "objective": "Import each player animation atlas using its observed authored grid, remove detached guide/index artifacts from the scoped sprite sheets, and make runtime paths/counts/tests agree with resulting frames.",
+        "motivation": "Current atlas crop geometry cut poses and included detached index marks, undermining animation integrity and source/runtime truth.",
+        "current_state": "Jump atlas is irregular 42-pose layout (6,6,6,8,8,8 by row); duck atlas is regular 36-pose 6x6. Previous importer and SpriteManager declared 48 for both. Hyacinth and Vanilla plant sheets also included detached index artifacts.",
+        "required_final_state": "Importer output frame dimensions/counts match authored atlas geometry; runtime uses truthful paths and counts; all animation view ranges fit; source-art annotations are excluded from runtime crops; docs and contracts describe the current behavior.",
+        "scope": [
+          "scripts/import_final_assets.py: Mapping, slice_grid, process_frame, annotation cleanup, asset_mappings",
+          "scripts/test_import_final_assets.py",
+          "app/src/main/java/com/anurag9000/forestrun/engine/AssetPaths.kt",
+          "app/src/main/java/com/anurag9000/forestrun/engine/SpriteManager.kt",
+          "app/src/test/java/com/anurag9000/forestrun/engine/RuntimeAssetContractTest.kt",
+          "app/src/main/assets/sprites/char/*jump*",
+          "app/src/main/assets/sprites/char/*duck*",
+          "app/src/main/assets/sprites/plants/hyacinth_4frames.png",
+          "app/src/main/assets/sprites/plants/vanilla_orchid_4frames.png",
+          "sprite inventory and runtime trace documentation"
+        ],
+        "required_actions": [
+          "Inspect source atlas geometry and frame order.",
+          "Support variable row cell counts and validate row/count constraints.",
+          "Remove detached index/guides only for explicitly mapped sheets while preserving character/plant pixels.",
+          "Regenerate runtime assets with frame-count names.",
+          "Update runtime asset paths/counts and test all frame ranges and packaged dimensions.",
+          "Update current visual/runtime documentation and attach verification evidence."
+        ],
+        "inputs": [
+          "FIND-031",
+          "GAP-020",
+          "REQ-021",
+          "docs/repository_knowledge/source_completion_delta_2026-10-29.md"
+        ],
+        "deliverables": [
+          "Corrected importer and focused regression cases",
+          "Regenerated jump/duck/Hyacinth/Vanilla runtime sheets",
+          "Runtime path/count and animation-range contract",
+          "Updated source/runtime asset documentation"
+        ],
+        "acceptance_criteria": [
+          "Jump imports exactly 42 frames with row widths (6,6,6,8,8,8).",
+          "Duck imports exactly 36 frames from 6x6.",
+          "Every imported frame is nonempty and output width divides by declared count.",
+          "Scoped detached index/guides are removed without deleting character/plant pose pixels.",
+          "Runtime player view ranges remain in bitmap bounds and Kotlin asset contract passes.",
+          "Full scripts suite and full Gradle compile/test/lint/package command pass locally; exact-SHA CI is tracked separately."
+        ],
+        "verification_method": "python3 -m unittest test_import_final_assets -v; python3 -m unittest discover -s scripts -p 'test_*.py'; Java21 ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease; inspect contact sheets and static frame geometry.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-019"
+        ],
+        "conflicts": [
+          "Shared Gradle cache/worktree; serialize Gradle invocation. Existing .coverage/.training_control/artifacts and dated knowledge artifacts are user-owned and excluded."
+        ],
+        "execution_constraints": "Authorized Forest Run source completion applies. No physical device is available. Do not describe human visual acceptance, provenance, or licensing as complete.",
+        "complexity": "medium",
+        "priority": "P1 correctness of player animation assets",
+        "execution_status": "COMPLETED",
+        "owner": "/root",
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-163"
+        ],
+        "uncertainty": "The row-major order is adopted and structurally verified; semantic animation quality and readability still need human/physical assessment.",
+        "remaining_work": "No known source task within this atlas/importer/runtime correction. Exact-commit host validation is tracked separately; physical/human readability and provenance remain external.",
+        "completion_evidence": [
+          {
+            "evidence_id": "EVID-163",
+            "result": "Focused importer tests 9/9; full Python suite 1403/1403; Java21 Gradle full validation with JVM/Robolectric 1330/1330 and compile, AndroidTest compile, lint and packaging success; contact sheets and regeneration hashes reviewed."
+          }
+        ],
+        "related_prior_work": [
+          "TASK-A-021",
+          "TASK-A-022",
+          "TASK-C-018"
+        ],
+        "last_reconciled_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus current working tree delta",
+        "next_action": "After committing, satisfy TASK-C-019 using exact-commit hosted workflow evidence.",
+        "investigation_coverage": "SOURCE ATLAS, IMPORTER, RUNTIME COUNTS/RANGES, REGRESSION TEST AND PACKAGED ASSET CONTRACT INSPECTED",
+        "implementation_or_investigation_status": "CORRECTED AND LOCALLY VERIFIED",
+        "evidence_status": "CURRENT LOCAL EVIDENCE CONFIRMED; HOSTED EXACT-COMMIT VERIFICATION PENDING"
+      },
+      {
+        "id": "TASK-C-019",
+        "title": "Verify corrected animation assets on exact committed main candidate",
+        "parent_ids": [
+          "GOAL-001",
+          "GOAL-006"
+        ],
+        "requirement_ids": [
+          "REQ-021"
+        ],
+        "capability_ids": [
+          "CAP-001"
+        ],
+        "category": "exact-SHA source, asset and Android verification",
+        "target_phase": "C - implementation fidelity and risk-based verification",
+        "objective": "Run the repository-controlled exact-SHA host/source-contract and Android workflow gates for TASK-A-050, confirming the new runtime asset names and 42/36-frame contracts are present in the committed candidate.",
+        "motivation": "Local tests establish behavior on the current worktree but do not prove the pushed immutable candidate and its hosted workflow.",
+        "current_state": "Local Python suite, Java21 full Gradle validation, visual contact-sheet review, output hashes and frame geometry passed on the uncommitted delta (EVID-163). No attached adb device exists; connected instrumentation and physical review were not performed.",
+        "required_final_state": "Exact committed main SHA has successful repository-controlled host/Android/source-contract checks covering the asset importer and runtime sprite contract; any infrastructure failure is diagnosed and not mislabeled as source failure.",
+        "scope": [
+          "TASK-A-050 outputs",
+          "exact committed main SHA",
+          "applicable host and Android CI workflows"
+        ],
+        "required_actions": [
+          "Verify remote main contains the exact reviewed commit.",
+          "Inspect terminal workflow status for that SHA.",
+          "Confirm the asset importer and RuntimeAssetContractTest are included in host checks.",
+          "Record workflow URLs, status and any log-access limitations without transferring results across SHAs."
+        ],
+        "inputs": [
+          "TASK-A-050",
+          "EVID-163"
+        ],
+        "deliverables": [
+          "Exact-SHA workflow evidence entry and reconciled task status"
+        ],
+        "acceptance_criteria": [
+          "The exact committed SHA runs required host/source checks and Android compile/test/lint/package workflows successfully.",
+          "The relevant asset contract tests execute, not only compile.",
+          "No result is claimed for connected or physical testing absent device execution."
+        ],
+        "verification_method": "Repository exact-SHA hosted workflow status and detailed logs; compare SHA, job conclusions and relevant test reports.",
+        "dependency_ids": [
+          "TASK-A-050"
+        ],
+        "downstream_task_ids": [],
+        "conflicts": [
+          "None beyond immutable candidate sequencing; must not be run against a different SHA and attributed to this task."
+        ],
+        "execution_constraints": "No physical device is available. Do not weaken required coverage to obtain green status.",
+        "complexity": "small",
+        "priority": "P1 exact candidate integrity",
+        "execution_status": "AWAITING_VERIFICATION",
+        "owner": null,
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-163"
+        ],
+        "uncertainty": "The hosted workflow may depend on external runner/SDK availability; current local evidence is not hosted exact-SHA evidence.",
+        "remaining_work": "Run and inspect hosted workflows on the committed candidate; retain physical/human acceptance in existing deferred tasks.",
+        "completion_evidence": [],
+        "related_prior_work": [
+          "TASK-C-017",
+          "TASK-C-018"
+        ],
+        "last_reconciled_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus current working tree delta",
+        "next_action": "Commit the reviewed source delta, then inspect exact-SHA hosted workflow results.",
+        "investigation_coverage": "TASK CONTRACT PREPARED; EXACT-SHA HOSTED VALIDATION NOT YET RUN",
+        "implementation_or_investigation_status": "VERIFICATION REQUIRED",
+        "evidence_status": "CURRENT LOCAL EVIDENCE AVAILABLE; EXACT-SHA EVIDENCE REQUIRED"
       }
     ],
     "applicability_matrix": [
@@ -10300,47 +10534,29 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
-    "working_tree_delta": "Runner explicitly selects the production ghost-capture LargeTest; focused OPENING_READABILITY real-spawn/persistence-isolation test added; task/evidence/dependency ledgers reconciled.",
+    "base_revision": "b586f17a12c359718d8056c9fe7983cd157c894c",
+    "working_tree_delta": "Player jump/duck atlas slicing corrected to 42/36 frames; scoped annotation removal; four sprite outputs and runtime/test/docs synchronized.",
     "evidence_ids": [
-      "EVID-153",
-      "EVID-154",
-      "EVID-155",
-      "EVID-156",
-      "EVID-157",
-      "EVID-158",
-      "EVID-159",
-      "EVID-160",
-      "EVID-161",
-      "EVID-162"
+      "EVID-163"
     ],
-    "status": "Application source d63cf88c6af819f6e6186a72610df0a31117e2dd passed detailed exact-SHA tests/workflows (EVID-159); documentation-only descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 host/API35, applicability and certificate status also passed (EVID-161). Detailed 8a workflow logs were unavailable due API rate limit.",
-    "documentation_verification_revision": "application source d63cf88c6af819f6e6186a72610df0a31117e2dd; documentation-only hosted descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 plus current static reconciliation (EVID-161/EVID-162)",
-    "documentation_workflow_run": "Android 40823820982 passed host/API35; applicability 40823820928 and certificate 40823820907 passed. See EVID-159."
+    "status": "Local full Python and Java21 Gradle checks passed on dirty worktree; exact-commit hosted validation pending as TASK-C-019. No adb device or physical/human asset acceptance.",
+    "documentation_verification_revision": "b586f17a12c359718d8056c9fe7983cd157c894c plus current documentation/ledger delta"
   },
   "current_repository_state": {
     "branch": "main",
     "verified_source_candidate_sha": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
-    "candidate_remote_confirmation": "Verified source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd is an ancestor of the exact documentation-only main/origin candidate 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4.",
-    "working_tree": "The current application source equals verified candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; documentation-only updates for TASK-E-001 and exact 8a status are pending commit. Pre-existing untracked user artifacts remain preserved and excluded.",
-    "current_delta_task": "TASK-A-048/A-049 and TASK-C-017/C-018 complete for source and automated exact-candidate scope; B/D/E external acceptance and residual release reconciliation remain deferred.",
-    "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+    "candidate_remote_confirmation": "Current HEAD b586f17a12c359718d8056c9fe7983cd157c894c is origin/main; it is a documentation-only descendant of exact-SHA-verified d63 source candidate.",
+    "working_tree": "Authorized source, generated sprite, regression test, and knowledge-documentation changes for TASK-A-050 are present but not committed. Pre-existing user-owned untracked files are preserved and excluded.",
+    "current_delta_task": "TASK-A-050 complete on local evidence; TASK-C-019 awaits exact committed main validation. Earlier physical/human/external and residual release acceptance remain deferred.",
+    "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-29.md",
     "evidence_ids": [
-      "EVID-153",
-      "EVID-154",
-      "EVID-155",
-      "EVID-156",
-      "EVID-157",
-      "EVID-158",
       "EVID-159",
-      "EVID-160",
       "EVID-161",
-      "EVID-162"
+      "EVID-162",
+      "EVID-163"
     ],
-    "latest_documentation_verification_sha": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
-    "latest_documentation_workflow": "Exact 8a host and API35 jobs plus applicability and certificate checks passed (EVID-161); detailed tests and counts are bound to unchanged source candidate d63 (EVID-159).",
-    "latest_documentation_verification": "EVID-161 verifies terminal hosted checks for 8a; EVID-162 verifies the current static handoff/ledger reconciliation.",
-    "latest_documentation_descendant": "8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4"
+    "latest_documentation_verification_sha": "b586f17a12c359718d8056c9fe7983cd157c894c",
+    "latest_documentation_verification": "Current task/evidence/file inventory records added for uncommitted source delta; static ledger checks pending."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
@@ -10362,5 +10578,16 @@
     ],
     "status": "Exact candidate API35 ordinary connected tests passed 28/28; both candidate APK installs succeeded; process-death prepare passed, host confirmed no app PID after force-stop, and fresh-process restore passed. Host/release/lint/package also passed. Physical/OEM durability remains unverified."
   },
-  "pending_source_delta": null
+  "pending_source_delta": {
+    "task_ids": [
+      "TASK-A-050",
+      "TASK-C-019"
+    ],
+    "evidence_ids": [
+      "EVID-163"
+    ],
+    "scope": "Corrected authored jump/duck atlas slicing, detached label cleanup and runtime frame contract. Local tests/build pass; exact-commit hosted checks pending.",
+    "current_worktree_base": "b586f17a12c359718d8056c9fe7983cd157c894c",
+    "physical_device_access": "Unavailable per user; physical and human readability acceptance remains deferred."
+  }
 }

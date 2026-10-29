@@ -179,8 +179,8 @@ internal fun buildParallaxAtmosphereProfile(
  *  2  Ground path / grass         – 100% game speed (matches entity scroll)
  *  3  Near foreground strip        – 150% game speed (creates depth)
  *
- * Phase 4 (now): placeholder solid-colour bitmaps.
- * Phase 24: real pixel-art bitmaps loaded from assets.
+ * Each layer is a biome-specific, procedurally painted bitmap; the layers
+ * scroll at different rates to create the forest's depth.
  *
  * @param screenWidth  Device screen width in pixels.
  * @param screenHeight Device screen height in pixels.
@@ -198,10 +198,9 @@ class ParallaxBackground(
     private val speedFractions = floatArrayOf(0.10f, 0.30f, 1.00f, 1.50f)
 
     /**
-     * Placeholder colours that approximate the 4 depth zones.
-     * Phase 24 replaces these with real bitmaps from assets.
+     * Fallback colours used when a biome overlay has no explicit tint.
      */
-    private val placeholderColours = intArrayOf(
+    private val fallbackLayerColours = intArrayOf(
         Color.rgb( 30,  50,  90),   // Layer 0: deep blue-grey sky
         Color.rgb( 22,  70,  38),   // Layer 1: dark forest silhouettes
         Color.rgb( 42, 100,  40),   // Layer 2: mid green ground
@@ -210,7 +209,7 @@ class ParallaxBackground(
 
     /**
      * Fractional screen height each layer occupies (top → bottom).
-     * These define the "band" for placeholder drawing.
+     * These define the screen band for each fallback layer.
      * Layer 0 = top 65%, Layer 1 = 50-85%, Layer 2 = ground, Layer 3 = bottom strip.
      */
     private data class LayerBand(val topFrac: Float, val bottomFrac: Float)
@@ -222,7 +221,7 @@ class ParallaxBackground(
     )
 
     // -----------------------------------------------------------------------
-    // Parallax layers (bitmap-based, will swap in Phase 24)
+    // Biome-specific procedural scene layers.
     // -----------------------------------------------------------------------
     private val layers: Array<ParallaxLayer>
 
@@ -269,7 +268,7 @@ class ParallaxBackground(
         groundY = screenHeight * 0.82f
 
         layers = Array(4) { i ->
-            val bmp = buildPlaceholderBitmap(i, sceneBiome)
+            val bmp = buildSceneBitmap(i, sceneBiome)
             ParallaxLayer(bmp, speedFractions[i])
         }
 
@@ -305,9 +304,9 @@ class ParallaxBackground(
 
     fun draw(canvas: Canvas) {
         val topColor =
-            skyOverlayTop.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+            skyOverlayTop.takeUnless { it == Color.TRANSPARENT } ?: fallbackLayerColours[0]
         val bottomColor =
-            skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+            skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: fallbackLayerColours[0]
         val bloomStrength = maxOf(bloomLevel, bloomAfterglowLevel * 0.48f)
         val atmosphere = resolveParallaxAtmosphereProfile(
             target = reusableAtmosphere,
@@ -348,7 +347,7 @@ class ParallaxBackground(
 
     /**
      * Swap layer 1 (the biome-specific mid-tree silhouette layer) to a new bitmap.
-     * Called by BiomeManager on every 500m transition (Phase 13).
+     * Called by BiomeManager when the current biome changes.
      */
     fun swapBiomeLayer(bitmap: Bitmap) {
         layers[1] = ParallaxLayer(bitmap, speedFractions[1])
@@ -359,14 +358,14 @@ class ParallaxBackground(
         sceneBiome = biome
         for (index in layers.indices) {
             val previousX = layers[index].x
-            val rebuilt = ParallaxLayer(buildPlaceholderBitmap(index, biome), speedFractions[index])
+            val rebuilt = ParallaxLayer(buildSceneBitmap(index, biome), speedFractions[index])
             rebuilt.x = previousX
             layers[index] = rebuilt
         }
     }
 
     /**
-     * Push live-blended biome colours into the placeholder layer paints.
+     * Push live-blended biome colours into the scene-layer overlays.
      * Called every frame from GameView with values from [BiomeManager].
      *
      * @param skyTop       Sky top gradient colour (applied to layer 0 background).
@@ -375,9 +374,9 @@ class ParallaxBackground(
      * @param foliage      Mid-foliage colour (layer 1 silhouettes).
      */
     fun applyBiomeColours(skyTop: Int, skyBottom: Int, groundColour: Int, foliage: Int) {
-        // Recolour placeholder bitmaps is expensive — instead we store tint values
+        // Recolouring scene bitmaps is expensive — instead store tint values
         // and draw a colour-mode overlay on each layer during draw().
-        // For Phase 13, we tint the floor paint and the sky overlay directly.
+        // Tint the floor paint and sky/foliage overlays during draw().
         floorPaint.color = groundColour
 
         // Sky overlay paint — used in draw() to tint layer 0
@@ -441,7 +440,7 @@ class ParallaxBackground(
             (atmosphere.biomeSkyAlpha * 1.35f).toInt().coerceIn(0, 180)
         canvas.drawRect(skyRect, skyOverlayPaint)
 
-        val foliage = foliageOverlay.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[1]
+        val foliage = foliageOverlay.takeUnless { it == Color.TRANSPARENT } ?: fallbackLayerColours[1]
         foliageWashPaint.color = Color.argb(
             atmosphere.foliageWashAlpha,
             Color.red(foliage),
@@ -465,8 +464,8 @@ class ParallaxBackground(
         atmosphere: ParallaxAtmosphereProfile,
         lighting: RunLightingIdentity
     ) {
-        val foliage = foliageOverlay.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[1]
-        val skyBottom = skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: placeholderColours[0]
+        val foliage = foliageOverlay.takeUnless { it == Color.TRANSPARENT } ?: fallbackLayerColours[1]
+        val skyBottom = skyOverlayBottom.takeUnless { it == Color.TRANSPARENT } ?: fallbackLayerColours[0]
         val ribbonY = groundY - screenHeight * 0.22f
         val gustPulse = 0.55f + 0.45f * sin(ambienceTime * (0.78f + atmosphere.gustStrength * 0.55f))
         repeat(atmosphere.ribbonCount) { index ->
@@ -824,7 +823,7 @@ class ParallaxBackground(
         Color.blue(color) and 0xF8
     )
 
-    // ── Phase 24: Rich bitmap builder ─────────────────────────────────────
+    // ── Procedural biome scene builder ────────────────────────────────────
 
     /**
      * Builds a detailed 2× wide bitmap for a given layer index.
@@ -834,7 +833,7 @@ class ParallaxBackground(
      * Layer 2: Ground path — grass tufts + pebble dots
      * Layer 3: Near foreground strip — bright grass with colour accent edge
      */
-    private fun buildPlaceholderBitmap(layerIndex: Int, biome: Biome): Bitmap {
+    private fun buildSceneBitmap(layerIndex: Int, biome: Biome): Bitmap {
         val bmpW = screenWidth * 2
         val bmpH = screenHeight
         val bmp    = Bitmap.createBitmap(bmpW, bmpH, Bitmap.Config.ARGB_8888)
