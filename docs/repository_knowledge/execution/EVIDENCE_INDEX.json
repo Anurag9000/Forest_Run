@@ -2542,6 +2542,28 @@
       ],
       "result": "Android validation, training applicability and estate certificate all passed for exact candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357; origin/main matches that SHA at verification.",
       "limitations": "Detailed per-test counts/logs were not retrieved; do not infer counts from job success. CI emulator evidence does not establish physical performance, device matrix, human gameplay/accessibility/creative approval, legal provenance, Play/governance, or production release readiness."
+    },
+    {
+      "id": "EVID-166",
+      "type": "local scenario integration regression test and documentation delta",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/BirdNamedScenarioMechanicsIntegrationTest.kt; docs/repository_knowledge/runtime_sprite_frame_trace.md; docs/repository_knowledge/execution/EXECUTION_DASHBOARD.md",
+      "revision": "187466cbec0d80226d692588ade3e61fc8ddd921 plus local uncommitted delta",
+      "supports": [
+        "TASK-A-051",
+        "TASK-C-020",
+        "REQ-020",
+        "FIND-032",
+        "GAP-021"
+      ],
+      "observation": "Strengthened DUCK_TEACH integration fixture to respond to production quack cues through real Player duck controls, process collision outcomes and assert both Ducks accepted the low response and resolved CLEAN_PASS with two run clean passes, zero hits and no persistent encounter-history mutation. Corrected current-state sprite frame-count sentence to 42 jump/36 duck. First fixture attempt failed because the response was held through both encounters and the second call was not emitted while crouched; fixture was corrected to respond separately to each cue.",
+      "commands": [
+        "./gradlew testDebugUnitTest --tests 'com.anurag9000.forestrun.engine.BirdNamedScenarioMechanicsIntegrationTest.authored duck teach scenario cues and accepts a real duck response for both isolated encounters'",
+        "./gradlew testDebugUnitTest --tests 'com.anurag9000.forestrun.engine.BirdNamedScenarioMechanicsIntegrationTest'",
+        "python3 -m unittest discover -s scripts -p 'test_*.py'",
+        "JAVA_HOME=/home/anurag-basistha/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2 PATH=/home/anurag-basistha/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2/bin:$PATH ./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease"
+      ],
+      "result": "Focused DUCK_TEACH test passed and the complete two-test Robolectric class passed (2 tests, 0 failures/errors/skips). Full Python tooling suite passed (1,403 tests). Full Java21 Gradle gate passed: debug/release Kotlin compile, unit/Robolectric tests (1,330 total; 0 failures, 0 errors, 0 skipped), AndroidTest compile, debug/release lint, debug APK, instrumentation APK, and release AAB packaging.",
+      "limitations": "Evidence is for the local uncommitted delta based on 187466cbec0d80226d692588ade3e61fc8ddd921. Exact-SHA hosted validation is pending. No connected Android device was available; this does not establish scenario screenshots, physical/human readability, or external acceptance."
     }
   ]
 }

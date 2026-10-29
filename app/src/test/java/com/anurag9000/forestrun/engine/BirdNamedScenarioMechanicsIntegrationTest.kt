@@ -2,6 +2,7 @@ package com.anurag9000.forestrun.engine
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.anurag9000.forestrun.entities.EncounterOutcome
 import com.anurag9000.forestrun.entities.EntityType
 import com.anurag9000.forestrun.entities.Player
 import com.anurag9000.forestrun.entities.birds.Duck
@@ -39,7 +40,7 @@ class BirdNamedScenarioMechanicsIntegrationTest {
     }
 
     @Test
-    fun `authored duck teach scenario dispatches both isolated Duck encounters`() {
+    fun `authored duck teach scenario cues and accepts a real duck response for both isolated encounters`() {
         val scenario = EncounterScenario.DUCK_TEACH
         val state = GameStateManager(context) { false }
         state.resetRun()
@@ -52,9 +53,25 @@ class BirdNamedScenarioMechanicsIntegrationTest {
         }
         val ducks = java.util.Collections.newSetFromMap(IdentityHashMap<Duck, Boolean>())
         val delta = 1f / 60f
+        var respondingTo: Duck? = null
 
         repeat(12 * 60) {
             state.update(delta)
+            // DUCK_TEACH remains a manual scenario. The fixture responds to
+            // the real production cue through the same Player control method
+            // used by touch input; it does not add autoplay to scenario mode.
+            if (respondingTo == null) {
+                val promptedDuck = ducks.firstOrNull { duck ->
+                    booleanField(duck, "quackCalled") &&
+                        !booleanField(duck, "answeredQuack") &&
+                        duck.hitbox.right >= player.hitbox.left &&
+                        duck.hitbox.left <= player.hitbox.right + 220f
+                }
+                if (promptedDuck != null) {
+                    respondingTo = promptedDuck
+                    player.onDuckPressed()
+                }
+            }
             player.update(delta, state.scrollSpeed)
             entities.update(
                 deltaTime = delta,
@@ -64,12 +81,23 @@ class BirdNamedScenarioMechanicsIntegrationTest {
                 runMode = RunMode.DEBUG_SCENARIO
             )
             entities.activeEntities.filterIsInstance<Duck>().forEach(ducks::add)
+            entities.checkCollisions(player, state)
+
+            if (respondingTo?.hitbox?.right?.let { it < player.hitbox.left } == true) {
+                player.onDuckReleased()
+                respondingTo = null
+            }
         }
 
         assertEquals("DUCK_TEACH must dispatch both authored Duck steps", 2, ducks.size)
-        // DUCK_TEACH is intentionally an unscripted/manual scenario. Its
-        // control response is covered by Duck's focused interaction tests;
-        // this scenario-level contract is roster dispatch and debug isolation.
+        ducks.forEach { duck ->
+            assertTrue("Duck never emitted its call", booleanField(duck, "quackCalled"))
+            assertTrue("Duck did not accept the crouched answer", booleanField(duck, "answeredQuack"))
+            assertTrue("Duck did not record the low response", booleanField(duck, "stayedLow"))
+            assertEquals("Each Duck must resolve as one clean pass", EncounterOutcome.CLEAN_PASS, duck.encounterOutcome)
+        }
+        assertEquals(2, state.cleanPassesThisRun)
+        assertEquals(0, state.hitsThisRun)
         assertEquals(0, PersistentMemoryManager.getEncounterCount(context, EntityType.DUCK))
     }
 
@@ -126,4 +154,7 @@ class BirdNamedScenarioMechanicsIntegrationTest {
         DialogueBubbleManager.clear()
         FlavorTextManager.clear()
     }
+
+    private fun booleanField(instance: Any, name: String): Boolean =
+        instance.javaClass.getDeclaredField(name).apply { isAccessible = true }.getBoolean(instance)
 }

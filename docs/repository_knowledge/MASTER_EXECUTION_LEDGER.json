@@ -445,7 +445,7 @@
           "app/src/main/java/com/anurag9000/forestrun/engine/EncounterDirector.kt",
           "app/src/main/java/com/anurag9000/forestrun/engine/DebugScenarioScript.kt"
         ],
-        "status": "PARTIAL: all 28 authored scenarios were reconciled at bounded source/test/capture scope (EVID-147); mechanic integration depth differs and human visual/device acceptance is separate. GHOST_READABILITY now asserts production GameView ghost visibility locally (EVID-148); exact-SHA hosted connected execution and remaining scenario-specific obligations stay open.",
+        "status": "PARTIAL: bounded 28-scenario reconciliation remains revision-scoped (EVID-147). DUCK_TEACH now has local scenario-level cue→real Player duck response→CLEAN_PASS and isolation assertions (EVID-166); exact-candidate verification is pending. Other scenario integration depth and physical/human readability remain separate obligations.",
         "capability_ids": [
           "CAP-002",
           "CAP-006"
@@ -462,7 +462,9 @@
           "TASK-C-018",
           "TASK-A-044",
           "TASK-A-045",
-          "TASK-A-047"
+          "TASK-A-047",
+          "TASK-A-051",
+          "TASK-C-020"
         ]
       },
       {
@@ -1779,6 +1781,30 @@
           "CAP-001"
         ],
         "limitations": "Static frame review plus local tests/builds do not establish physical animation readability, human creative approval, or exact-SHA hosted CI."
+      },
+      {
+        "id": "FIND-032",
+        "kind": "DUCK_TEACH integration evidence did not connect cue, player response and terminal outcomes",
+        "statement": "The previous scenario-level DUCK_TEACH integration test established dispatch and progression isolation, while focused Duck tests separately established crouch interaction. A scenario-level test did not join the real cue, Player control action, Duck response state, and terminal outcome.",
+        "status": "SCENARIO_INTEGRATION_COVERAGE_STRENGTHENED_LOCALLY; EXACT_CANDIDATE_VERIFICATION_PENDING",
+        "evidence_ids": [
+          "EVID-166"
+        ],
+        "related_task_ids": [
+          "TASK-A-051",
+          "TASK-C-020"
+        ],
+        "related_goal_ids": [
+          "GOAL-002"
+        ],
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "limitations": "This is a verification-depth finding, not evidence that the gameplay implementation was defective. The test models a manual player response and does not establish visual or human readability."
       }
     ],
     "gaps": [
@@ -2157,6 +2183,28 @@
           "TASK-C-019"
         ],
         "next_action": "Run exact-commit hosted Android and source-contract workflows after the commit; retain device/human readability as separate acceptance."
+      },
+      {
+        "id": "GAP-021",
+        "kind": "Scenario-level Duck cue-to-response integration evidence was missing",
+        "statement": "DUCK_TEACH previously tested authored dispatch/isolation but did not prove the real Duck cue was answered through Player duck controls and resolved as intended.",
+        "resolution_task_ids": [
+          "TASK-A-051",
+          "TASK-C-020"
+        ],
+        "disposition": "The integration fixture now responds to the production Duck call using Player.onDuckPressed/onDuckReleased and asserts both encounters accept the low response, resolve CLEAN_PASS once, produce two clean passes with zero hits, and remain progression-isolated. Focused Robolectric class verification passed locally (EVID-166).",
+        "evidence_ids": [
+          "EVID-166"
+        ],
+        "status": "LOCAL_TEST_COVERAGE_ADDED; EXACT_CANDIDATE_VERIFICATION_PENDING",
+        "related_requirement_ids": [
+          "REQ-020"
+        ],
+        "related_task_ids": [
+          "TASK-A-051",
+          "TASK-C-020"
+        ],
+        "next_action": "Run the complete authorized host/Android candidate checks after commit; keep REQ-020 partial for remaining per-scenario and perceptual obligations."
       }
     ],
     "tasks": [
@@ -9955,6 +10003,141 @@
         "investigation_coverage": "TASK CONTRACT PREPARED; EXACT-SHA HOSTED VALIDATION NOT YET RUN",
         "implementation_or_investigation_status": "VERIFICATION REQUIRED",
         "evidence_status": "CURRENT LOCAL EVIDENCE AVAILABLE; EXACT-SHA EVIDENCE REQUIRED"
+      },
+      {
+        "id": "TASK-A-051",
+        "title": "Connect DUCK_TEACH scenario cue to real Player duck response and outcomes",
+        "parent_ids": [
+          "GOAL-002"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "scenario integration test",
+        "target_phase": "A - source completion and integration evidence",
+        "objective": "Strengthen the DUCK_TEACH scenario integration test so it drives the real Player duck control after the live Duck call and verifies response state, one terminal outcome per Duck, run counters, and persistence isolation.",
+        "motivation": "The prior test proved dispatch/isolation only; focused Duck tests did not establish the full scenario-to-control-to-outcome path.",
+        "current_state": "DUCK_TEACH is intentionally manual and has no deterministic production input script. The previous integration test omitted collision processing and only asserted two Duck entities plus no persistent encounter history.",
+        "required_final_state": "A scenario-level fixture observes the production call, uses Player control methods to answer each encounter, processes production collision arbitration, and checks accepted response and terminal outcomes without changing manual scenario semantics.",
+        "scope": [
+          "app/src/test/java/com/anurag9000/forestrun/engine/BirdNamedScenarioMechanicsIntegrationTest.kt",
+          "EncounterScenario.DUCK_TEACH",
+          "Duck.updatePlayerInteraction",
+          "EntityManager.checkCollisions"
+        ],
+        "required_actions": [
+          "Drive the real cue-to-response sequence in a fixed-delta scenario simulation.",
+          "Assert two distinct Duck instances, quack and low-answer flags, CLEAN_PASS terminal outcomes, two clean passes and zero hits.",
+          "Assert debug scenario persistence remains isolated."
+        ],
+        "inputs": [
+          "EVID-147",
+          "FIND-032",
+          "REQ-020"
+        ],
+        "deliverables": [
+          "Updated Robolectric scenario integration test"
+        ],
+        "acceptance_criteria": [
+          "Both scenario Ducks are observed and each emits the real call.",
+          "Both accept a real Player duck response and resolve exactly once as CLEAN_PASS.",
+          "Run summary has two clean passes and zero hits; persistent encounter count remains zero.",
+          "DUCK_TEACH runtime remains an unscripted/manual scenario."
+        ],
+        "verification_method": "Focused Robolectric test of BirdNamedScenarioMechanicsIntegrationTest, then full authorized suite and exact-commit CI.",
+        "dependency_ids": [],
+        "downstream_task_ids": [
+          "TASK-C-020"
+        ],
+        "conflicts": [
+          "None; test-only source file owned by this task."
+        ],
+        "execution_constraints": "Do not alter production scenario input or claim human readability from simulation.",
+        "complexity": "small",
+        "priority": "P1 scenario truth/evidence",
+        "execution_status": "COMPLETED",
+        "owner": null,
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-166"
+        ],
+        "uncertainty": "Physical/human readability remains unverified; exact candidate CI is tracked separately.",
+        "remaining_work": "Exact candidate CI is TASK-C-020; other scenario obligations remain under REQ-020.",
+        "completion_evidence": [
+          {
+            "evidence_id": "EVID-166",
+            "result": "Focused test and full two-test Robolectric class pass locally; full Python suite passes 1,403; full Java21 Gradle gate passes 1,330 tests with 0 failures/errors/skips, AndroidTest compile, lint, and APK/AAB packaging."
+          }
+        ],
+        "last_reconciliation_revision": "187466cbec0d80226d692588ade3e61fc8ddd921 plus local test/documentation delta",
+        "next_action": "Run candidate-level checks for TASK-C-020."
+      },
+      {
+        "id": "TASK-C-020",
+        "title": "Verify DUCK_TEACH cue-to-response integration test on the exact committed candidate",
+        "parent_ids": [
+          "GOAL-002"
+        ],
+        "requirement_ids": [
+          "REQ-020"
+        ],
+        "capability_ids": [
+          "CAP-002",
+          "CAP-006"
+        ],
+        "category": "focused regression, full host suite and exact-SHA candidate verification",
+        "target_phase": "C - implementation fidelity and risk-based verification",
+        "objective": "Verify the committed DUCK_TEACH integration coverage and confirm the test executes successfully on the exact candidate.",
+        "motivation": "Local focused evidence is attached to an uncommitted delta and cannot establish the committed candidate or full-suite compatibility.",
+        "current_state": "TASK-A-051 is implemented. Focused class and full local gates passed on the local delta (EVID-166); candidate not yet committed or hosted-verified.",
+        "required_final_state": "Exact committed SHA passes focused and full repository-controlled test/build workflows including the new scenario test, with results and SHA bound in the evidence ledger.",
+        "scope": [
+          "BirdNamedScenarioMechanicsIntegrationTest",
+          "exact candidate host/Android workflows"
+        ],
+        "required_actions": [
+          "After TASK-A-051 is committed, run the complete repository Python suite and required Java21 Gradle compile/unit/Robolectric/instrumentation compile/lint/package gate.",
+          "Inspect exact-SHA hosted workflow results and ensure relevant tests execute rather than only compile.",
+          "Record precise scope, counts and limits without extending evidence to physical/human acceptance."
+        ],
+        "inputs": [
+          "TASK-A-051",
+          "EVID-166"
+        ],
+        "deliverables": [
+          "Exact-SHA local/hosted verification evidence"
+        ],
+        "acceptance_criteria": [
+          "Focused scenario class and full authorized local suites pass.",
+          "Exact committed SHA has successful repository-controlled CI required for source candidate.",
+          "No human or physical acceptance is inferred."
+        ],
+        "verification_method": "Commands and exact-SHA GitHub Actions results plus test report inspection.",
+        "dependency_ids": [
+          "TASK-A-051"
+        ],
+        "downstream_task_ids": [],
+        "conflicts": [
+          "Candidate evidence is SHA-bound; never transfer results to a changed source candidate."
+        ],
+        "execution_constraints": "Respect environment availability and do not claim unavailable physical device tests.",
+        "complexity": "medium",
+        "priority": "P1",
+        "execution_status": "READY",
+        "owner": null,
+        "blockers": [],
+        "evidence_ids": [
+          "EVID-166"
+        ],
+        "uncertainty": "Hosted workflow and emulator availability may constrain exact candidate validation.",
+        "remaining_work": "Commit TASK-A-051 and its documentation ledger updates, inspect exact-SHA Android/source workflows, and add terminal evidence.",
+        "completion_evidence": [],
+        "last_reconciliation_revision": "187466cbec0d80226d692588ade3e61fc8ddd921 plus local test/documentation delta",
+        "next_action": "Review and commit only the authorized delta, then verify exact-SHA hosted workflows."
       }
     ],
     "applicability_matrix": [
@@ -10546,33 +10729,29 @@
     "change_details": "rationale and resulting state"
   },
   "latest_candidate": {
-    "base_revision": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357",
-    "working_tree_delta": "Documentation-only reconciliation of stale 48-frame jump/runtime asset references; application source is the successfully exact-SHA-verified candidate.",
+    "base_revision": "187466cbec0d80226d692588ade3e61fc8ddd921",
+    "working_tree_delta": "DUCK_TEACH scenario integration coverage, corrected current-state sprite trace wording, and synchronized execution ledgers/dashboard/handoff; full Java21 and exact-candidate verification pending.",
     "evidence_ids": [
-      "EVID-163",
-      "EVID-164",
-      "EVID-165"
+      "EVID-166"
     ],
-    "status": "All authorized source correction and current-facing documentation work is committed and pushed. Exact-SHA automated tests/workflows pass for source candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 (EVID-163/165); the documentation-only reconciliation is recorded at 130b9f29. Physical/human/external acceptance remains open.",
-    "documentation_verification_revision": "source candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357; documentation reconciliation commit 130b9f291bd5f6ade457b0e3b9dbf4b930575326"
+    "status": "TASK-A-051 focused integration test, full Python suite (1,403), and full Java21 Gradle gate (1,330 tests, zero failures/errors/skips; compile, AndroidTest compile, lint, APK/AAB) passed locally (EVID-166). Exact-CI evidence EVID-165 applies only to source candidate 26fb6ad, not this changed candidate. Exact candidate validation is pending.",
+    "documentation_verification_revision": "base 187466cbec0d80226d692588ade3e61fc8ddd921 plus pending local delta"
   },
   "current_repository_state": {
     "branch": "main",
     "verified_source_candidate_sha": "26fb6ad0fc5ff4e11f703b651216ca5b00f1e357",
-    "candidate_remote_confirmation": "Source candidate 26fb6ad0fc5ff4e11f703b651216ca5b00f1e357 was verified on origin/main and passed all exact-SHA source/Android workflows. Current knowledge documents include documentation-only reconciliation commit 130b9f291bd5f6ade457b0e3b9dbf4b930575326; on resume, resolve the then-current documentation tip with git status and git ls-remote.",
-    "working_tree": "TASK-A-050 source/assets/tests and the canonical documentation reconciliation are committed and pushed. Only pre-existing user-owned untracked files remain and are preserved/excluded.",
-    "current_delta_task": "TASK-A-050 and TASK-C-019 complete for source, local tests and exact-SHA automated Android/host workflow scope. Physical/human/external acceptance and residual release reconciliation remain deferred.",
+    "candidate_remote_confirmation": "Exact-SHA source/Android workflow EVID-165 is bound to 26fb6ad. At the start of this delta, local main and origin/main both matched 187466cbec0d80226d692588ade3e61fc8ddd921; current-tip Android workflow 40835360337 had not completed when last checked.",
+    "working_tree": "Contains this agent-owned test/documentation/ledger delta plus preserved pre-existing untracked user artifacts: .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md, docs/repository_knowledge/current_worktree_delta_20261027/.",
+    "current_delta_task": "TASK-A-051 focused local integration evidence complete; TASK-C-020 ready for full candidate-level verification.",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-29.md",
     "evidence_ids": [
-      "EVID-159",
-      "EVID-161",
-      "EVID-162",
       "EVID-163",
       "EVID-164",
-      "EVID-165"
+      "EVID-165",
+      "EVID-166"
     ],
-    "latest_documentation_verification_sha": "130b9f291bd5f6ade457b0e3b9dbf4b930575326",
-    "latest_documentation_verification": "At last reconciliation, 130b9f29 was pushed to main as a documentation-only descendant of exact source candidate 26fb6ad0; source test evidence remains bound to 26fb6ad0."
+    "latest_documentation_verification_sha": "187466cbec0d80226d692588ade3e61fc8ddd921 plus local delta",
+    "latest_documentation_verification": "Current sprite trace wording and execution dashboard scope have been corrected; structured ledger relationships and full post-delta static checks remain to be completed."
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",
@@ -10594,5 +10773,17 @@
     ],
     "status": "Exact candidate API35 ordinary connected tests passed 28/28; both candidate APK installs succeeded; process-death prepare passed, host confirmed no app PID after force-stop, and fresh-process restore passed. Host/release/lint/package also passed. Physical/OEM durability remains unverified."
   },
-  "pending_source_delta": null
+  "pending_source_delta": {
+    "base_revision": "187466cbec0d80226d692588ade3e61fc8ddd921",
+    "task_ids": [
+      "TASK-A-051",
+      "TASK-C-020"
+    ],
+    "evidence_ids": [
+      "EVID-166"
+    ],
+    "summary": "Strengthen DUCK_TEACH cue-to-response scenario evidence without changing manual runtime semantics; clarify current 42/36 sprite counts and exact-SHA dashboard claims.",
+    "status": "FOCUSED_TEST_CLASS, FULL PYTHON SUITE (1,403), FULL JAVA21 GRADLE GATE (1,330 TESTS, 0 FAILURES), LINT, AND APK/AAB PACKAGE PASS; EXACT-CANDIDATE VERIFICATION PENDING",
+    "next_action": "Commit the reviewed delta to main, then bind hosted verification to the exact new SHA under TASK-C-020."
+  }
 }
