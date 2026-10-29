@@ -139,4 +139,24 @@ The final static ledger self-audit passed (EVID-137): unique IDs/paths, task/evi
 
 - The exact committed candidate `bef4ab354a013892dd0d0289ec3616a20ef0d2d4` completed Android validation run `40629702414`: host/release/lint/package job `122623118133` and API35 connected job `122625349202` both concluded success.
 - Exact-SHA no-trainable-surface workflow `40629702454` (job `122622965372`) and estate certificate workflow `40629702394` (job `122622965322`) also concluded success. Evidence is recorded in `EVID-153`.
-- This hosted candidate predates the uncommitted `TASK-A-047` production GameView ghost-visibility assertion. Commit that bounded test/docs delta and require a new exact-SHA connected run before claiming the assertion passed. The broader scenario catalogue remains partially dispositioned; physical/human acceptance and external release gates remain open.
+- At the time of the preceding subsection, this hosted candidate predated the uncommitted `TASK-A-047` production GameView ghost-visibility assertion. That test/docs delta was subsequently committed and pushed as `81b1adcb9651fe38742716487896831779b6c1ed`; its exact-SHA connected run is tracked separately below. The broader scenario catalogue remains partially dispositioned; physical/human acceptance and external release gates remain open.
+
+
+## TASK-A-047 committed candidate status — 2026-10-28
+
+- The production GameView ghost-visibility assertion and synchronized documentation/ledgers were committed and pushed as `81b1adcb9651fe38742716487896831779b6c1ed`; remote `main` was verified at the same SHA. Only the pre-existing untracked artifacts remain in the worktree.
+- At 2026-10-28 04:18 UTC, the exact-SHA estate certificate (`40631367922`) and no-trainable-surface applicability run (`40631367938`) had succeeded. Android run `40631367991` host/release/lint/package job `122628258562` was compiling/testing; the API35 connected job had not yet reached its stage (EVID-154).
+- The prior committed candidate `bef4ab354a013892dd0d0289ec3616a20ef0d2d4` has terminal success for host and API35 validation plus applicability/certificate workflows (EVID-153). Do not transfer those results to `81b1adcb`.
+- The complete authored scenario catalogue remains partially dispositioned. Physical device access is unavailable; physical performance/readability and human, legal, Play and production-release gates remain open.
+
+
+## Connected LargeTest filtering gap and correction — 2026-10-28
+
+- Exact SHA `81b1adcb9651fe38742716487896831779b6c1ed` passed host/release/lint/package, standard API35 connected, no-trainable-surface, and estate-certificate jobs. Static inspection of the executed workflow revealed that `scripts/run_connected_validation.sh` filters `androidx.test.filters.LargeTest`; `HardwareCoreFlowCaptureTest` is annotated `@LargeTest`, so `captureGhostReadabilityHardwarePass` was compiled but not executed. See `EVID-155`; this does not establish a gameplay defect.
+- Added an explicit single-method `connectedDebugAndroidTest` selection for the production ghost capture test after the ordinary suite, while keeping performance-profile LargeTests excluded. Added connected-runner and capture-contract assertions. `bash -n`, 18 focused contracts, and the full Python scripts suite (1,400 tests) pass (`EVID-156`).
+- The runner change is uncommitted. `TASK-A-048` owns this correction; `TASK-C-018` must inspect a fresh exact-SHA Android workflow and confirm the selected method itself passes. Physical/human/device and external release gates remain open.
+
+
+## OPENING_READABILITY real-spawn integration coverage (2026-10-29)
+
+A bounded scenario review found the opening scenario had no focused assertion that its authored Duck → Lily → Cat → Tit roster reached the real `EncounterDirector`/`EntityManager` spawn path or remained isolated from persistent encounter history in `DEBUG_SCENARIO`. Added `OpeningReadabilityScenarioIntegrationTest`; it advances four fixed seconds, verifies exact roster order and director completion, and verifies no normal persistence flags or saved encounter increments. Focused Gradle execution passed 1/1 under OpenJDK 17.0.20, Gradle 8.13, Robolectric SDK35 (EVID-157). This does not establish the visual onboarding/readability intent or physical/human acceptance. Exact-SHA validation is pending under TASK-C-018.

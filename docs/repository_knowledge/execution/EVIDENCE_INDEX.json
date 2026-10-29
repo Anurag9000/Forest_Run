@@ -734,6 +734,18 @@
       "limitations": "Static repository/source evidence only. Historical conversations beyond accessible records are unknown. Tests, builds, scripts, app workflows, training, inference, benchmarks and runtime validation were not performed."
     },
     {
+      "id": "EVID-056",
+      "type": "targeted production placeholder source review",
+      "path": "app/src/main/java/com/anurag9000/forestrun/engine/ParallaxBackground.kt; scripts production Python/shell; prior static source reports",
+      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + WT-D17D3FBCF2CB3B267FE9",
+      "supports": [
+        "TASK-A-027",
+        "no additional established production source gap"
+      ],
+      "disposition": "Both disjoint production-source reviews completed. Remaining parallax placeholder wording is stale Phase 24 asset-plan commentary; current code-map documents procedural generated layers, and no accessible authoritative requirement establishes asset replacement as mandatory.",
+      "limitations": "Static source/document review only. Search does not prove absence of all conceivable gaps; no tests, scripts, builds, or runtime workflows were executed."
+    },
+    {
       "id": "EVID-057",
       "type": "knowledge-base static consistency check",
       "path": "docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/*.json; docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/execution/NEXT_ACTIONS.md",
@@ -747,18 +759,6 @@
       ],
       "disposition": "All checked JSON ledgers parse; task and evidence identifiers are unique; task dependency references resolve; TASK-A-027 is completed with EVID-056; counts reconcile to 43 tasks (28 completed, 10 deferred, 5 canceled/superseded); git diff --check passes.",
       "limitations": "Static documentation consistency only. This does not validate application behavior, runtime contracts, or tests."
-    },
-    {
-      "id": "EVID-056",
-      "type": "targeted production placeholder source review",
-      "path": "app/src/main/java/com/anurag9000/forestrun/engine/ParallaxBackground.kt; scripts production Python/shell; prior static source reports",
-      "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 + WT-D17D3FBCF2CB3B267FE9",
-      "supports": [
-        "TASK-A-027",
-        "no additional established production source gap"
-      ],
-      "disposition": "Both disjoint production-source reviews completed. Remaining parallax placeholder wording is stale Phase 24 asset-plan commentary; current code-map documents procedural generated layers, and no accessible authoritative requirement establishes asset replacement as mandatory.",
-      "limitations": "Static source/document review only. Search does not prove absence of all conceivable gaps; no tests, scripts, builds, or runtime workflows were executed."
     },
     {
       "id": "EVID-058",
@@ -897,7 +897,7 @@
         "GAP-005",
         "REQ-018"
       ],
-      "disposition": "Four non-overlapping static declaration shards dispositioned 256 production paths and contain 6,050 rows before merge with 91 prior records. The final symbol inventory has 6,137 unique path/name/start-line records; four exact-location overlaps preserve the earlier detailed record, while distinct same-name overloads remain separate. Every merged path exists and every parseable source line/range is in bounds; IDs and declaration-location keys are unique. The A\u2013M shard records counts/reasons for excluded local declarations. This is declaration-level indexing, not a comprehensive caller graph or runtime validation.",
+      "disposition": "Four non-overlapping static declaration shards dispositioned 256 production paths and contain 6,050 rows before merge with 91 prior records. The final symbol inventory has 6,137 unique path/name/start-line records; four exact-location overlaps preserve the earlier detailed record, while distinct same-name overloads remain separate. Every merged path exists and every parseable source line/range is in bounds; IDs and declaration-location keys are unique. The A–M shard records counts/reasons for excluded local declarations. This is declaration-level indexing, not a comprehensive caller graph or runtime validation.",
       "limitations": "Static source and JSON checks only. Some brief purpose descriptions are context/signature-derived and cross-file consumers are incomplete unless established by prior detailed records. Kotlin non-engine member properties are restricted to top-level/direct type-scope declarations. No tests/builds/scripts/app workflows were executed."
     },
     {
@@ -918,7 +918,7 @@
         "TASK-C-011",
         "TASK-E-001"
       ],
-      "disposition": "The matrix maps all 19 requirements, 14 universal mechanism families and 12 verification categories to Forest Run-specific rationale, owners/evidence, current status and future task contracts. Five newly identified focused/full verification tasks C-007\u2013C-011 are DEFERRED because the embedded repository investigation scope prohibits tests/builds/workflows; existing 389 test-contract rows remain NOT_EXECUTED. Existing physical performance and external release work remains in Phase B/D. Independent source-gap audit found no new requirement-backed source change; 162 non-documentation content hashes match the recorded snapshot.",
+      "disposition": "The matrix maps all 19 requirements, 14 universal mechanism families and 12 verification categories to Forest Run-specific rationale, owners/evidence, current status and future task contracts. Five newly identified focused/full verification tasks C-007–C-011 are DEFERRED because the embedded repository investigation scope prohibits tests/builds/workflows; existing 389 test-contract rows remain NOT_EXECUTED. Existing physical performance and external release work remains in Phase B/D. Independent source-gap audit found no new requirement-backed source change; 162 non-documentation content hashes match the recorded snapshot.",
       "limitations": "Documentation and source-hash checks only. No tests, builds, scripts or application workflows executed. Human/device/external acceptance remains unproven; older C tasks remain canceled and are not revived."
     },
     {
@@ -935,7 +935,7 @@
         "REQ-019",
         "CAP-016"
       ],
-      "disposition": "Static checks parsed 15 repository JSON documents; verified 19/19 requirement rows, 14 mechanism rows, 12 verification rows, 55 unique tasks (35 completed/15 deferred/5 canceled), 15 unique findings, six gap records, 6,137 unique located symbol records, and 1,003 file records (950 fully static/17 partial/33 documented/3 excluded). All task evidence/dependency/requirement/capability references resolve, 35 dependency edges are acyclic, 63 local links resolve, new matrix files are in file_inventory, and 162 non-documentation source content hashes match. New C-007\u2013C-011 tasks are deferred; no test/build/script/application workflow executed.",
+      "disposition": "Static checks parsed 15 repository JSON documents; verified 19/19 requirement rows, 14 mechanism rows, 12 verification rows, 55 unique tasks (35 completed/15 deferred/5 canceled), 15 unique findings, six gap records, 6,137 unique located symbol records, and 1,003 file records (950 fully static/17 partial/33 documented/3 excluded). All task evidence/dependency/requirement/capability references resolve, 35 dependency edges are acyclic, 63 local links resolve, new matrix files are in file_inventory, and 162 non-documentation source content hashes match. New C-007–C-011 tasks are deferred; no test/build/script/application workflow executed.",
       "limitations": "Static consistency and source hash comparison only; no runtime or test correctness is established. External release, human/device acceptance and performance gates remain deferred."
     },
     {
@@ -1725,7 +1725,7 @@
         "CAP-004",
         "CAP-015"
       ],
-      "observation": "All 15 Ogg Vorbis files probed and decoded successfully; current hashes match the report. Signal checks found no decoder warnings, nonfinite samples, sample clipping, long internal silence, duplicate hashes, or equal-duration resampled pairs with zero-lag normalized correlation above 0.5. Music durations are 0.39\u20131.39 s; short duration alone is not established as a defect. No listening occurred.",
+      "observation": "All 15 Ogg Vorbis files probed and decoded successfully; current hashes match the report. Signal checks found no decoder warnings, nonfinite samples, sample clipping, long internal silence, duplicate hashes, or equal-duration resampled pairs with zero-lag normalized correlation above 0.5. Music durations are 0.39–1.39 s; short duration alone is not established as a defect. No listening occurred.",
       "commands": [
         "ffprobe -v error -show_format -show_streams -of json <path>",
         "ffmpeg astats and silencedetect to null output",
@@ -1779,7 +1779,7 @@
         "TASK-D-001",
         "GOAL-006"
       ],
-      "observation": "User stated: \u201cNo physical device access yet.\u201d This establishes that physical-device performance/acceptance work cannot be performed in the current environment at this time.",
+      "observation": "User stated: “No physical device access yet.” This establishes that physical-device performance/acceptance work cannot be performed in the current environment at this time.",
       "commands": [],
       "result": "Physical-device gate remains pending; hosted emulator evidence is not a substitute.",
       "limitations": "This is a time-bound user-reported resource fact, not evidence that access can never become available or that any product behavior passed/failed."
@@ -1842,7 +1842,7 @@
       "supports": [
         "TASK-C-017"
       ],
-      "observation": "The requested combined Gradle compile/test/lint/package command reached :app:testDebugUnitTest but existing Robolectric test classes selecting Android SDK36 failed sandbox creation before test methods. The XML reason is: \u201cAndroid SDK 36 requires Java 21 (have Java 17)\u201d. The focused new SDK35 test passed separately.",
+      "observation": "The requested combined Gradle compile/test/lint/package command reached :app:testDebugUnitTest but existing Robolectric test classes selecting Android SDK36 failed sandbox creation before test methods. The XML reason is: “Android SDK 36 requires Java 21 (have Java 17)”. The focused new SDK35 test passed separately.",
       "commands": [
         "./gradlew compileDebugKotlin compileDebugUnitTestKotlin compileReleaseKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug lintRelease assembleDebug assembleDebugAndroidTest bundleRelease"
       ],
@@ -2313,6 +2313,95 @@
       ],
       "result": "All required jobs listed above succeeded on exact committed SHA bef4ab354a013892dd0d0289ec3616a20ef0d2d4.",
       "limitations": "The uncommitted production GameView ghost-visibility assertion is absent from this revision. These hosted jobs do not establish physical device, human creative/accessibility, legal, Play, or production release acceptance."
+    },
+    {
+      "id": "EVID-154",
+      "type": "exact-SHA hosted workflow status snapshot after production ghost assertion commit",
+      "path": "https://github.com/Anurag9000/Forest_Run/actions/runs/40631367991; https://github.com/Anurag9000/Forest_Run/actions/runs/40631367938; https://github.com/Anurag9000/Forest_Run/actions/runs/40631367922",
+      "revision": "81b1adcb9651fe38742716487896831779b6c1ed",
+      "supports": [
+        "TASK-C-017",
+        "TASK-C-018"
+      ],
+      "observation": "At 2026-10-28 04:18 UTC, Android run 40631367991 host/release/lint/package job 122628258562 was in progress at dependency evidence construction; no-trainable-surface run 40631367938 had succeeded; estate certificate run 40631367922 had succeeded.",
+      "commands": [
+        "GitHub Actions runs API filtered by head_sha 81b1adcb9651fe38742716487896831779b6c1ed",
+        "GitHub workflow-run jobs API: 40631367991",
+        "GitHub workflow-run jobs API: 40631367938"
+      ],
+      "result": "One exact-SHA certificate job passed; Android host/API35 and applicability statuses require terminal follow-up.",
+      "limitations": "Point-in-time status only. Do not infer Android host or connected results. Physical/human/external acceptance remains separate."
+    },
+    {
+      "id": "EVID-155",
+      "type": "exact-SHA 81b connected workflow success with LargeTest exclusion boundary",
+      "path": "https://github.com/Anurag9000/Forest_Run/actions/runs/40631367991; scripts/run_connected_validation.sh; app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt",
+      "revision": "81b1adcb9651fe38742716487896831779b6c1ed",
+      "supports": [
+        "FIND-029",
+        "GAP-018",
+        "TASK-C-018"
+      ],
+      "observation": "Exact SHA 81b1adcb host/release/lint/package job 122628258562 and API35 connected job 122630430926 succeeded; no-trainable-surface run 40631367938 and estate certificate run 40631367922 succeeded. The connected workflow invokes run_connected_validation.sh, which passes notAnnotation=androidx.test.filters.LargeTest to connectedDebugAndroidTest. HardwareCoreFlowCaptureTest is annotated LargeTest, and the runner separately selects only ProcessDeathPersistenceInstrumentedTest. The connected log does not list captureGhostReadabilityHardwarePass.",
+      "commands": [
+        "GitHub Actions runs API filtered to head SHA 81b1adcb",
+        "GitHub workflow-run jobs API for 40631367991, 40631367938, and 40631367922",
+        "GitHub workflow job logs for API35 job 122630430926",
+        "Static inspection of scripts/run_connected_validation.sh and HardwareCoreFlowCaptureTest.kt"
+      ],
+      "result": "Workflow success is established, but it does not establish that the new ghost-visibility LargeTest assertion ran. Identified a verification-runner wiring gap; fixed in the current local runner delta for explicit verification on the next candidate.",
+      "limitations": "Hosted workflow success must not be attributed to a filtered test. The new targeted invocation has only focused local contract coverage pending a fresh exact-SHA connected run."
+    },
+    {
+      "id": "EVID-156",
+      "type": "local connected-runner correction contract verification",
+      "path": "scripts/run_connected_validation.sh; scripts/test_connected_validation_runner.py; scripts/test_hardware_core_flow_capture_contract.py",
+      "revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local runner/test delta",
+      "supports": [
+        "TASK-A-048",
+        "TASK-C-018"
+      ],
+      "observation": "Added a targeted connectedDebugAndroidTest invocation selecting HardwareCoreFlowCaptureTest#captureGhostReadabilityHardwarePass after the ordinary suite excludes LargeTest and before the separate process-death stages. Added shell-contract assertions that the selected test is explicitly invoked and the production capture test waits for GameView-owned ghost visibility before PixelCopy captures.",
+      "commands": [
+        "bash -n scripts/run_connected_validation.sh",
+        "PYTHONPATH=scripts python3 -m unittest test_connected_validation_runner test_hardware_core_flow_capture_contract",
+        "python3 -m unittest discover -s scripts -p 'test_*.py'"
+      ],
+      "result": "Bash syntax passed; 18 focused tests passed; full Python scripts suite passed 1,400 tests.",
+      "limitations": "The runner delta is not on a committed SHA and no connected emulator execution has yet exercised the targeted LargeTest selection."
+    },
+    {
+      "id": "EVID-157",
+      "type": "focused OPENING_READABILITY real-spawn integration test",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/OpeningReadabilityScenarioIntegrationTest.kt; app/build/test-results/testDebugUnitTest/TEST-com.anurag9000.forestrun.engine.OpeningReadabilityScenarioIntegrationTest.xml",
+      "revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local test-only delta",
+      "supports": [
+        "FIND-030",
+        "GAP-019",
+        "TASK-A-049",
+        "TASK-C-018"
+      ],
+      "observation": "Added a Robolectric test that advances the real EncounterDirector and EntityManager path for OPENING_READABILITY, verifies the spawned roster order DUCK → LILY_OF_VALLEY → CAT → TIT, confirms the director consumes all authored steps, and checks DEBUG_SCENARIO entities do not record or persist ordinary encounter progression.",
+      "commands": [
+        "./gradlew testDebugUnitTest --tests 'com.anurag9000.forestrun.engine.OpeningReadabilityScenarioIntegrationTest' --no-daemon --max-workers=1 --stacktrace --console=plain"
+      ],
+      "result": "BUILD SUCCESSFUL; focused XML report: 1 test, 0 failures, 0 errors, 0 skipped. OpenJDK 17.0.20, Gradle 8.13, Robolectric SDK 35.",
+      "limitations": "This is a bounded deterministic host integration assertion for spawn order, completion, and debug persistence isolation. It does not validate visual opening readability, player input teaching, physical device feel, or the whole authored scenario catalogue."
+    },
+    {
+      "id": "EVID-158",
+      "type": "environment-blocked accessibility JVM retest with reusable prior Java21 evidence",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProviderTest.kt; app/src/main/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProvider.kt",
+      "revision": "81b1adcb9651fe38742716487896831779b6c1ed plus current test-only delta",
+      "supports": [
+        "TASK-C-018"
+      ],
+      "observation": "A serial focused local Gradle attempt for GameAccessibilityNodeProviderTest stopped before test execution because Robolectric Android SDK 36 requires Java 21 while the current local JVM is Java 17. The accessibility source and test are unchanged since the focused/full Java21 evidence in EVID-140/EVID-142. An earlier concurrent Gradle attempt was invalidated by shared build-cache/output contention and is not treated as test evidence.",
+      "commands": [
+        "./gradlew testDebugUnitTest --tests 'com.anurag9000.forestrun.engine.GameAccessibilityNodeProviderTest' --no-daemon --max-workers=1 --stacktrace --console=plain"
+      ],
+      "result": "BLOCKED BEFORE METHOD EXECUTION: DefaultSdkProvider.java:170 reports Android SDK 36 requires Java 21 (have Java 17).",
+      "limitations": "This is an environment limitation, not a test failure. Reuse prior Java21 evidence only for unchanged accessibility source/tests; rerun on Java21 if a relevant source/test delta occurs. No physical TalkBack/Switch Access acceptance is established."
     }
   ]
 }

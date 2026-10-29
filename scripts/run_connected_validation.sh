@@ -32,6 +32,7 @@ readonly SERIAL="${ANDROID_SERIAL:-emulator-${EMULATOR_PORT:-5554}}"
 readonly READINESS_TIMEOUT_SECONDS="${FOREST_RUN_EMULATOR_READINESS_TIMEOUT_SECONDS:-240}"
 readonly POLL_SECONDS=5
 readonly PHYSICAL_PROFILE_ANNOTATION="androidx.test.filters.LargeTest"
+readonly GHOST_CAPTURE_TEST_CLASS="com.anurag9000.forestrun.HardwareCoreFlowCaptureTest#captureGhostReadabilityHardwarePass"
 readonly PROCESS_TEST_CLASS="com.anurag9000.forestrun.ProcessDeathPersistenceInstrumentedTest"
 readonly PROCESS_TEST_TARGET_PACKAGE="com.anurag9000.forestrun.debug"
 readonly PROCESS_TEST_APP_APK="${ROOT_DIR}/app/build/outputs/apk/debug/app-debug.apk"
@@ -215,6 +216,16 @@ wait_for_android_services
 # its sustained-sample window, so ordinary connected CI excludes @LargeTest.
 ./gradlew connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.notAnnotation="${PHYSICAL_PROFILE_ANNOTATION}" \
+  --no-daemon \
+  --stacktrace \
+  --console=plain
+
+# HardwareCoreFlowCaptureTest is a LargeTest because it captures rendered
+# product evidence. Run the GHOST_READABILITY method explicitly on the API 35
+# emulator so the production GameView visibility assertion is actually covered
+# even though the ordinary connected suite excludes LargeTest classes.
+./gradlew connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class="${GHOST_CAPTURE_TEST_CLASS}" \
   --no-daemon \
   --stacktrace \
   --console=plain

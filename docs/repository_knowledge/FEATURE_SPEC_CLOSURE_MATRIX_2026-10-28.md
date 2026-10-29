@@ -1,6 +1,6 @@
 # Forest Run feature and specification closure matrix
 
-**Snapshot:** repository `Anurag9000/Forest_Run`, source candidate `871467c2437a9949da6bf9c0119a31c405d7fa42` on `main` (2026-10-28). This is a traceability view over existing design, implementation, test, and evidence records; it does not independently re-audit every implementation. Source presence, prior scoped tests, hosted CI, physical acceptance, and human approval remain separate evidence classes. The candidate-bound hosted screenshot capture and Owl visible-state check passed on this revision (EVID-113); physical/human acceptance remains separate.
+**Snapshot:** requirement records originated across prior candidates; latest source candidate is `81b1adcb9651fe38742716487896831779b6c1ed` on `main` (2026-10-29). Latest connected result excluded the ghost capture LargeTest; see `FIND-029`, `GAP-018`, and `TASK-A-048`. This is a traceability view over existing design, implementation, test, and evidence records; it does not independently re-audit every implementation. Source presence, prior scoped tests, hosted CI, physical acceptance, and human approval remain separate evidence classes. The candidate-bound hosted screenshot capture and Owl visible-state check passed on this revision (EVID-113); physical/human acceptance remains separate.
 
 **Status vocabulary used here:** `STATICALLY IMPLEMENTED / SCOPED EVIDENCE` means prior source and/or revision-bounded evidence exists as linked; it does not imply current-head runtime proof. `PARTIAL / EVIDENCE OPEN` means an integration or acceptance layer remains. `EXTERNAL ACCEPTANCE` requires real device, human, rights, policy, signing, Play, or accountable-owner evidence. `UNKNOWN` means the cited records do not settle the question. Completion status and next work refer to the authoritative task ledger, not an inferred defect list.
 
@@ -129,3 +129,8 @@ The current candidate `871467c2437a9949da6bf9c0119a31c405d7fa42` passed exact-SH
 ### GHOST_READABILITY production-path assertion (EVID-147/148)
 
 The scenario reconciliation found that the standalone Robolectric test did not exercise the GameView-owned ghost, while the actual screenshot capture path lacked a visibility assertion. The Android instrumentation capture now waits for the production GameView GhostPlayer to be loaded and reach positive visibility before capture. Its source compiles; hosted exact-SHA connected execution is pending. This does not establish human visual quality or physical readability.
+
+
+### GHOST_READABILITY production capture verification note
+
+The `HardwareCoreFlowCaptureTest` assertion is in a `@LargeTest` class. Exact run `40631367991` succeeded on `81b1adcb`, but `run_connected_validation.sh` filtered that class, so that run does not verify this assertion. `TASK-A-048` adds a targeted one-method invocation; the runner correction is locally tested (EVID-156) and awaits a fresh exact-SHA connected result under `TASK-C-018`.

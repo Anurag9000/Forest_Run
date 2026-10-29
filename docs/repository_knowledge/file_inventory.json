@@ -9,7 +9,7 @@
     "initial_visible_paths_reported": 961,
     "inventory_records": 1011
   },
-  "current_inventory_count": 1019,
+  "current_inventory_count": 1020,
   "scope": "Union of tracked paths and visible workspace paths, excluding .git internals and ignored build/.gradle trees. Tracked release paths hidden by ignore rules are retained. New docs are included.",
   "coverage_semantics": "INVENTORIED means path/classification only; PARTIALLY_INSPECTED means bounded changed regions or prior map consultation; FULLY_STATICALLY_INSPECTED is reserved for complete small-file reading; generated exclusions have reasons. No inventory state implies runtime verification.",
   "records": [
@@ -1644,15 +1644,23 @@
       "id": "FILE-E7D25FE09948",
       "path": "app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt",
       "classification": "Android instrumentation test source",
-      "worktree_status": "tracked_modified",
+      "worktree_status": "tracked_clean",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus current test delta",
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Added production GameView ghost visibility assertion; compiled but not run on Android device.",
+      "inspection_detail": "Entire capture test reviewed; production GHOST_READABILITY scenario obtains the GameView-owned GhostPlayer and waits for loaded state and positive visibility alpha before capture. The exact 81b workflow excluded its @LargeTest class; targeted invocation is being added by TASK-A-048.",
       "symbols_or_consumers": [],
-      "relationships": [],
-      "evidence_ref": "EVID-148",
-      "next_action": "Run exact-SHA hosted API35 connected workflow after commit.",
+      "relationships": [
+        "TASK-A-047",
+        "TASK-A-048",
+        "TASK-C-018",
+        "FIND-029",
+        "GAP-018",
+        "EVID-155",
+        "EVID-156"
+      ],
+      "evidence_ref": "EVID-155",
+      "next_action": "Fresh exact-SHA connected runner must execute captureGhostReadabilityHardwarePass and report the exact test result.",
       "related_goal_ids": [
         "GOAL-001",
         "GOAL-002",
@@ -26887,17 +26895,21 @@
       "classification": "evidence/release/maintenance tooling",
       "worktree_status": "modified_by_this_investigation",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "base 1d1a73451ad59e088d4117216d07162628913ff8 plus current uncommitted delta",
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local runner/test delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Entire shell workflow read; new process-death prepare/verify/cleanup stages reviewed. Raw am instrumentation output is checked for a single passing test result (AOSP status code contract); bash -n passed. Connected workflow has not been executed.",
+      "inspection_detail": "Updated the emulator gate to explicitly re-run only HardwareCoreFlowCaptureTest#captureGhostReadabilityHardwarePass after the ordinary LargeTest-excluding suite; verified exception remains strict and targeted test precedes process-death validation.",
       "symbols_or_consumers": [],
       "relationships": [
         "TASK-C-008",
         "TASK-C-011",
-        "EVID-080"
+        "EVID-080",
+        "TASK-A-048",
+        "TASK-C-018",
+        "EVID-155",
+        "EVID-156"
       ],
-      "evidence_ref": "EVID-080",
-      "next_action": "Run the new connected stage only on an authorized connected runner; do not infer runtime success from static review or compilation.",
+      "evidence_ref": "EVID-156",
+      "next_action": "Fresh exact-SHA API35 connected workflow must execute the targeted ghost capture method.",
       "related_goal_ids": [
         "GOAL-005"
       ],
@@ -26912,8 +26924,8 @@
       ],
       "file_type": "sh",
       "language_or_format": "Shell",
-      "assigned_task_id": "TASK-A-017",
-      "assigned_owner": "/root/scripts_delta",
+      "assigned_task_id": "TASK-A-048",
+      "assigned_owner": "/root",
       "symbol_inventory_task_id": "TASK-A-032",
       "symbol_inventory_owner": null,
       "symbol_inventory_status": "DOCUMENTED",
@@ -27918,17 +27930,20 @@
       "id": "FILE-E8E528393554",
       "path": "scripts/test_connected_validation_runner.py",
       "classification": "Python test source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "modified_by_this_investigation",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local runner/test delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Entire file read at current worktree snapshot (136 lines); test source contract recorded in test_contract_inventory.json; not executed.",
+      "inspection_detail": "Added contract checks that the selected production ghost capture LargeTest is run after the filtered suite and before process-death stages; focused and full Python suites pass.",
       "symbols_or_consumers": [
         "test contract inventory"
       ],
-      "relationships": [],
-      "evidence_ref": "EVID-023",
-      "next_action": "Reuse test-source contract; execute only in an authorized verification phase.",
+      "relationships": [
+        "TASK-A-048",
+        "EVID-156"
+      ],
+      "evidence_ref": "EVID-156",
+      "next_action": "Fresh exact-SHA API35 connected workflow must execute the targeted ghost capture method.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -28729,17 +28744,20 @@
       "id": "FILE-F475A0400BF8",
       "path": "scripts/test_hardware_core_flow_capture_contract.py",
       "classification": "Python test source",
-      "worktree_status": "tracked_clean",
+      "worktree_status": "modified_by_this_investigation",
       "coverage_status": "FULLY_STATICALLY_INSPECTED",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6",
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local runner/test delta",
       "prior_evidence": "docs/REPO_CODEBASE_MAP.md and/or docs/REPO_MEMORY_MAP.md where scope applies; variable depth",
-      "inspection_detail": "Entire file read at current worktree snapshot (42 lines); test source contract recorded in test_contract_inventory.json; not executed.",
+      "inspection_detail": "Added a contract assertion that production GameView ghost visibility is awaited before GHOST_READABILITY PixelCopy captures; focused and full Python suites pass.",
       "symbols_or_consumers": [
         "test contract inventory"
       ],
-      "relationships": [],
-      "evidence_ref": "EVID-023",
-      "next_action": "Reuse test-source contract; execute only in an authorized verification phase.",
+      "relationships": [
+        "TASK-A-048",
+        "EVID-156"
+      ],
+      "evidence_ref": "EVID-156",
+      "next_action": "Fresh exact-SHA API35 connected workflow must execute the targeted ghost capture method.",
       "related_goal_ids": [
         "GOAL-015"
       ],
@@ -32933,6 +32951,44 @@
       "language_or_format": "Kotlin",
       "assigned_task_id": "TASK-A-045",
       "assigned_owner": "/root"
+    },
+    {
+      "id": "FILE-OPENING-READABILITY-20261029",
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/OpeningReadabilityScenarioIntegrationTest.kt",
+      "classification": "JVM/Robolectric scenario integration test",
+      "worktree_status": "UNTRACKED_NEW_SOURCE_TEST",
+      "coverage_status": "FULLY_STATICALLY_INSPECTED",
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local test delta",
+      "prior_evidence": "Existing scenario, EntityManager and run-mode contracts reused; this path closes the specific real-spawn coverage gap identified by FIND-030.",
+      "inspection_detail": "98-line test source read in full; focused Robolectric run passed 1/1 (EVID-157). Assertions cover exact opening roster dispatch, scenario completion, and DEBUG_SCENARIO persistence isolation; no visual or physical acceptance is claimed.",
+      "symbols_or_consumers": [
+        "OpeningReadabilityScenarioIntegrationTest"
+      ],
+      "relationships": [
+        "REQ-020",
+        "TASK-A-049",
+        "EVID-157"
+      ],
+      "evidence_ref": "EVID-157",
+      "next_action": "Exact-SHA host/API35 validation under TASK-C-018; keep physical/human readability separate.",
+      "related_goal_ids": [
+        "GOAL-002",
+        "GOAL-005"
+      ],
+      "related_capability_ids": [
+        "CAP-002",
+        "CAP-006"
+      ],
+      "documentation_refs": [
+        "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
+        "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md"
+      ],
+      "file_type": "kt",
+      "language_or_format": "Kotlin",
+      "assigned_task_id": "TASK-A-049",
+      "assigned_owner": "/root/scenario_asset_completion",
+      "line_count": 98,
+      "worktree_content_sha256": "8b457453db8274db000599e53ce772509ce4b81f56d3bbd774fa27d753dbea7f"
     }
   ],
   "coverage_counts": {
@@ -32942,8 +32998,11 @@
     "DOCUMENTED": 38
   },
   "inspection_update": {
-    "date": "2026-10-28",
-    "delta": "Three new Robolectric scenario integration test files were fully read and passed under the full Java21 suite. EncounterDirector BLOOM_SHOWCASE offsets were inspected and corrected. The inherited original snapshot counts remain historical; exact-SHA hosted result is pending. A newly inspected accessibility provider query path was corrected and the existing provider test was extended; focused and full Java21 Robolectric validation passed (EVID-140/EVID-142). Those two inventory paths are marked tracked_modified for this delta; the working_tree_snapshot_id remains the original audit snapshot and is not claimed to hash this new local delta."
+    "date": "2026-10-29",
+    "delta": "Added and fully inspected the focused OPENING_READABILITY real-spawn integration test; test result EVID-157. Prior inventory snapshot/hash policy is retained; this untracked test has its own SHA-256.",
+    "paths": [
+      "app/src/test/java/com/anurag9000/forestrun/engine/OpeningReadabilityScenarioIntegrationTest.kt"
+    ]
   },
   "working_tree_snapshot_id": "WT-D17D3FBCF2CB3B267FE9",
   "working_tree_hash_policy": {
@@ -32982,7 +33041,7 @@
   "coverage_counts_current": {
     "DOCUMENTED": 39,
     "EXCLUDED_WITH_REASON": 3,
-    "FULLY_STATICALLY_INSPECTED": 975,
+    "FULLY_STATICALLY_INSPECTED": 976,
     "PARTIALLY_INSPECTED": 2
   },
   "snapshot_date": "2026-10-28"

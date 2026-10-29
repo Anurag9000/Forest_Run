@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "current_phase": "Authorized source completion and verification reconciliation",
-  "current_phase_status": "TASK-A-046 is committed/pushed. TASK-A-047 adds a production GameView GhostPlayer visibility assertion and compiles locally; local Python 1,398 and Java21 Gradle 1,328 compile/test/lint/package gates pass (EVID-147/148). On bef4ab35, exact-SHA Android host and API35 connected jobs passed, as did applicability and estate certificate jobs (EVID-153). The test delta awaits commit and a fresh connected run. Scenario, physical/human, legal and release gates remain open.",
+  "current_phase_status": "The 81b1adcb test candidate host/API35 and applicability/certificate workflows succeeded (EVID-153/154), but exact workflow-path inspection found the ghost capture assertion is in a LargeTest class excluded by the ordinary connected invocation (FIND-029/GAP-018, EVID-155). Added a targeted one-method connected test selection and regression contracts; Bash syntax, 18 focused tests and full Python 1,400 pass (EVID-156). Runner correction is uncommitted and requires fresh exact-SHA connected execution. Physical, human, legal and release gates remain open.",
   "phases": [
     {
       "id": "A",
@@ -74,7 +74,7 @@
       "status": "Full local Java21 compile/test/lint/package gate passes (1,327 tests); full Python suite passes (1,398 tests). Exact-candidate hosted verification is TASK-C-018. Physical access is unavailable.",
       "entry_conditions": [
         "Preserve exact candidate/base and the original dirty checkout",
-        "Reuse EVID-072 and EVID-074–EVID-078; do not repeat passing suites without a source or requirement delta",
+        "Reuse EVID-072 and EVID-074\u2013EVID-078; do not repeat passing suites without a source or requirement delta",
         "Use hosted API 35 evidence where applicable; physical-device checks require an authorized device"
       ],
       "exit_conditions": [
@@ -144,5 +144,7 @@
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
   },
-  "baseline": "Current canonical main/origin: bef4ab354a013892dd0d0289ec3616a20ef0d2d4; pre-existing untracked user artifacts remain preserved and excluded."
+  "baseline": "Current canonical main/origin: bef4ab354a013892dd0d0289ec3616a20ef0d2d4; pre-existing untracked user artifacts remain preserved and excluded.",
+  "what_remains": "Commit the targeted runner and contracts; inspect the fresh exact-SHA API35 log for captureGhostReadabilityHardwarePass passing. Broader REQ-020 scenario catalogue remains partially dispositioned. Physical device access is unavailable; physical performance/readability plus human creative/accessibility, rights/licensing, privacy/security/Play, signing/delivery and accountable approval remain external.",
+  "what_exists": "Prior scenario candidate e1e8501451d17996469fc82973076ed0d1fb9d22 and accessibility correction bef4ab354a013892dd0d0289ec3616a20ef0d2d4 are pushed; ghost assertion candidate 81b1adcb9651fe38742716487896831779b6c1ed is pushed. The latest 81b run passed host/API35, applicability and certificate jobs, but did not run the ghost assertion because that LargeTest was filtered. Local fix now explicitly selects the method. Current inventories: 1,019 files, 6,141 declarations, 398 test contracts; 29 findings, 18 gaps, 76 tasks and 154 evidence records."
 }

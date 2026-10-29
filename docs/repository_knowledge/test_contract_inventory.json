@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "repository_revision": "d0eb2f6953951ab29f0a262977a86d0f097b2846 plus current local delta",
-  "snapshot_date": "2026-10-28",
+  "repository_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local test/runner delta",
+  "snapshot_date": "2026-10-29",
   "authority": "Static contract summaries preserve what the test sources assert. Per-source execution dispositions are now reconciled separately against EVID-072 (full Python/JVM suite), EVID-074 (exact-head API 35 connected workflow, excluding @LargeTest), and EVID-075 (focused concurrency). These results are revision- and environment-bounded.",
   "records": [
     {
@@ -116,8 +116,8 @@
     {
       "path": "app/src/androidTest/java/com/anurag9000/forestrun/HardwareCoreFlowCaptureTest.kt",
       "language": "Kotlin",
-      "source_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus current test delta",
-      "inspected_line_range": "1-290",
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed",
+      "inspected_line_range": "1-296",
       "line_count": 296,
       "test_annotation_count_static": 4,
       "test_symbols": [
@@ -126,7 +126,7 @@
         "captureGhostReadabilityHardwarePass",
         "captureRestLoopHardwarePass"
       ],
-      "contract_summary": "Large capture harness launches deterministic screenshot scenarios through production GameView, waits for active state/rendered frames, and uses PixelCopy with blank-image rejection. GHOST_READABILITY now waits for the GameView-owned GhostPlayer to be loaded and visible before captures. Rest-loop captures live, dying, game-over and Garden-return stages. AndroidTest source compiled; new @LargeTest not yet executed.",
+      "contract_summary": "Hardware screenshot evidence tests exercise production ActivityScenario/GameView flows; GHOST_READABILITY now checks its own GhostPlayer is loaded and visible before PixelCopy capture. Exact 81b connected run filtered this @LargeTest class; selected-method runner correction awaits exact-SHA verification.",
       "subjects": [
         "GameView deterministic launch",
         "EncounterScenario",
@@ -135,16 +135,18 @@
         "MediaStore"
       ],
       "evidence_type": "test source assertions and fixtures; AndroidTest compile only for new assertion",
-      "runtime_status": "NOT_EXECUTED_LARGE_TEST_FILTERED_EVID-074",
+      "runtime_status": "NOT_EXECUTED_BY_81B_FILTERED_SUITE_EVID-155; TARGETED_RUN_PENDING",
       "production_links": [
         "app/src/main/java/com/anurag9000/forestrun/engine/GameView.kt",
         "app/src/androidTest/java/com/anurag9000/forestrun/PendingCaptureMediaPublisher.kt"
       ],
-      "task_id": "TASK-A-020",
+      "task_id": "TASK-A-047",
       "latest_execution_evidence_ids": [
-        "EVID-148"
+        "EVID-147",
+        "EVID-148",
+        "EVID-155"
       ],
-      "latest_execution_revision": "bef4ab354a013892dd0d0289ec3616a20ef0d2d4 plus current instrumentation-test delta",
+      "latest_execution_revision": "81b1adcb9651fe38742716487896831779b6c1ed",
       "execution_limit": "New assertion in @LargeTest not run locally; exact-SHA hosted connected workflow required; not physical/human acceptance."
     },
     {
@@ -2539,6 +2541,29 @@
         "EVID-072"
       ],
       "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+    },
+    {
+      "path": "app/src/test/java/com/anurag9000/forestrun/engine/OpeningReadabilityScenarioIntegrationTest.kt",
+      "language": "Kotlin",
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local test delta",
+      "inspected_line_range": "1-98",
+      "line_count": 98,
+      "test_annotation_count_static": 1,
+      "test_symbols": [
+        "OpeningReadabilityScenarioIntegrationTest"
+      ],
+      "subjects": [
+        "OPENING_READABILITY entity dispatch",
+        "debug-scenario persistence isolation"
+      ],
+      "contract_summary": "Drives the real EncounterDirector/EntityManager path for four fixed seconds; requires Duck → Lily of the Valley → Cat → Tit in authored order, all scenario steps consumed, no persistence-enabled entities, and zero stored encounter counts. Does not assert visual onboarding readability or physical acceptance.",
+      "evidence_type": "Robolectric host integration test",
+      "runtime_status": "FOCUSED TEST PASSED 1/1 (EVID-157); EXACT-SHA SUITE PENDING",
+      "task_id": "TASK-A-049",
+      "latest_execution_evidence_ids": [
+        "EVID-157"
+      ],
+      "latest_execution_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local test delta"
     },
     {
       "path": "app/src/test/java/com/anurag9000/forestrun/engine/OpeningSeededGuidanceIntegrationTest.kt",
@@ -6021,19 +6046,19 @@
     {
       "path": "scripts/test_connected_validation_runner.py",
       "language": "Python",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
-      "inspected_line_range": "1-135",
-      "line_count": 135,
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local runner/test delta",
+      "inspected_line_range": "1-168",
+      "line_count": 168,
       "test_annotation_count_static": 0,
-      "contract_summary": "CI/build/dependency contracts: workflow permissions and pins, candidate SHA binding, bounded validation jobs, readiness deadlines, diagnostics and failure propagation.",
+      "contract_summary": "CI/build/dependency contracts: workflow permissions and pins, candidate SHA binding, bounded validation jobs, readiness deadlines, diagnostics and failure propagation; explicitly selects the production GHOST_READABILITY LargeTest method after the filtered ordinary suite.",
       "evidence_type": "test source assertions and fixtures only",
-      "runtime_status": "PASSED_FULL_PYTHON_SUITE_EVID-072",
+      "runtime_status": "PASSED_FOCUSED_AND_FULL_PYTHON_EVID-156",
       "production_links": [],
-      "task_id": "TASK-A-006",
+      "task_id": "TASK-A-048",
       "latest_execution_evidence_ids": [
-        "EVID-072"
+        "EVID-156"
       ],
-      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+      "latest_execution_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local runner/test delta"
     },
     {
       "path": "scripts/test_continuation_governance_contract.py",
@@ -6557,19 +6582,19 @@
     {
       "path": "scripts/test_hardware_core_flow_capture_contract.py",
       "language": "Python",
-      "source_revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus current dirty worktree",
-      "inspected_line_range": "1-41",
-      "line_count": 41,
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local runner/test delta",
+      "inspected_line_range": "1-49",
+      "line_count": 49,
       "test_annotation_count_static": 0,
-      "contract_summary": "Instrumentation/operations contracts: production launch boundaries, quiesced mutation, trusted screenshot roots and telemetry/profile accounting.",
+      "contract_summary": "Instrumentation capture contracts: production deterministic launch boundary; no reflective runtime mutation; waits for GameView-owned ghost visibility before GHOST_READABILITY captures.",
       "evidence_type": "test source assertions and fixtures only",
-      "runtime_status": "PASSED_FULL_PYTHON_SUITE_EVID-072",
+      "runtime_status": "PASSED_FOCUSED_AND_FULL_PYTHON_EVID-156",
       "production_links": [],
-      "task_id": "TASK-A-006",
+      "task_id": "TASK-A-048",
       "latest_execution_evidence_ids": [
-        "EVID-072"
+        "EVID-156"
       ],
-      "latest_execution_revision": "df705c65c7f0a7ef03669a0c6767de5f381b418a; source/test paths unchanged at d1f31d473f5ca9303706164b6cc817703e0e7c7c"
+      "latest_execution_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local runner/test delta"
     },
     {
       "path": "scripts/test_import_final_assets.py",
@@ -8107,14 +8132,14 @@
     }
   ],
   "scope_reconciliation": {
-    "file_inventory_test_related_paths": 398,
-    "contract_records": 398,
+    "file_inventory_test_related_paths": 399,
+    "contract_records": 399,
     "previously_missing_contract_rows": 84,
     "completed_by": [
       "TASK-A-019",
       "TASK-A-020"
     ],
-    "note": "The three added scenario integration classes and the accessibility provider regression are included in current local full Java21 evidence (EVID-142). Static test contracts remain distinct from device/human acceptance; the full 28-scenario catalogue remains partially dispositioned."
+    "note": "The three added scenario integration classes and the accessibility provider regression are included in current local full Java21 evidence (EVID-142). Static test contracts remain distinct from device/human acceptance; the full 28-scenario catalogue remains partially dispositioned. A fourth scenario integration test, OpeningReadabilityScenarioIntegrationTest, was added and passed its focused local check (EVID-157); it validates roster dispatch and debug isolation only."
   },
   "line_count_reconciliation": {
     "checked_date": "2026-10-27",
@@ -8123,11 +8148,12 @@
     "revision": "eeccc677107f69039dbf71053c18a9038d4b5ff6 plus dirty worktree",
     "current_delta_update": {
       "date": "2026-10-28",
-      "path": "app/src/test/java/com/anurag9000/forestrun/engine/GameAccessibilityNodeProviderTest.kt",
-      "line_count": 194,
-      "annotation_count": 5,
-      "revision": "a5bafb28dc3f547dedda6aef8547759719c0bb3e plus local source/test delta",
-      "note": "The source was reread after adding the host-versus-leaf query-scope regression; do not treat the older checked_line_count as current for this file."
+      "paths": {
+        "scripts/test_connected_validation_runner.py": 168,
+        "scripts/test_hardware_core_flow_capture_contract.py": 49
+      },
+      "revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local runner/test delta",
+      "note": "Re-read these changed test contracts after discovering the LargeTest exclusion. Full Python suite passed 1,400; exact-SHA connected verification of the selected test remains required."
     }
   },
   "execution_reconciliation": {
@@ -8192,6 +8218,23 @@
       "jvm_full_suite": "BLOCKED_BEFORE_METHOD_EXECUTION: Robolectric Android SDK 36 requires Java 21; local Java is 17",
       "revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus local EAGLE_MARK integration-test delta",
       "note": "Focused EAGLE_MARK SDK35 Robolectric integration test and full Python suite passed locally. Hosted exact-candidate Java21 validation is required; no full local Gradle/lint/package pass is claimed."
+    },
+    "latest_delta": {
+      "date": "2026-10-29",
+      "source_revision": "81b1adcb9651fe38742716487896831779b6c1ed plus local test/runner delta",
+      "evidence_ids": [
+        "EVID-155",
+        "EVID-156",
+        "EVID-157"
+      ],
+      "counts": {
+        "focused_runner_contract_tests": 18,
+        "full_python_tests": 1400,
+        "focused_jvm_scenario_tests": 1,
+        "targeted_large_test_selection_added": 1
+      },
+      "focused_jvm_result": "OpeningReadabilityScenarioIntegrationTest: 1 passed, 0 failures/errors/skips; Gradle 8.13, OpenJDK 17.0.20, Robolectric SDK35.",
+      "limits": "The exact 81b connected job excluded the production ghost capture @LargeTest; explicit selection is pending exact-SHA execution. The new opening integration test has focused local execution but no current exact-SHA full suite result. Physical/human readability remains pending."
     }
   }
 }

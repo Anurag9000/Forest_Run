@@ -5,68 +5,18 @@
   "edges": [
     {
       "from": "TASK-A-001",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-001",
       "to": "TASK-E-001",
       "reason": "Final residual reconciliation must reuse current delta inspection."
     },
     {
-      "from": "TASK-D-001",
-      "to": "TASK-B-001",
-      "reason": "Physical matrix/candidate readiness is needed for the representative baseline."
-    },
-    {
-      "from": "TASK-B-001",
-      "to": "TASK-B-002",
-      "reason": "Optimization analysis requires measured profile evidence."
-    },
-    {
-      "from": "TASK-D-001",
-      "to": "TASK-D-003",
-      "reason": "Creative review is performed against packaged candidate assets."
-    },
-    {
-      "from": "TASK-D-002",
-      "to": "TASK-D-003",
-      "reason": "Presentation approval incorporates human review."
-    },
-    {
-      "from": "TASK-D-001",
-      "to": "TASK-D-002",
-      "reason": "Human review uses the candidate/device baseline selected for acceptance."
-    },
-    {
-      "from": "TASK-D-001",
-      "to": "TASK-D-007",
-      "reason": "Device acceptance is a governance evidence domain."
-    },
-    {
-      "from": "TASK-D-002",
-      "to": "TASK-D-007",
-      "reason": "Human acceptance is a governance evidence domain."
-    },
-    {
-      "from": "TASK-D-003",
-      "to": "TASK-D-007",
-      "reason": "Creative/rights approvals are governance evidence domains."
-    },
-    {
-      "from": "TASK-D-004",
-      "to": "TASK-D-007",
-      "reason": "Supply-chain/security review is a governance evidence domain."
-    },
-    {
-      "from": "TASK-D-005",
-      "to": "TASK-D-007",
-      "reason": "Privacy/Play declarations are governance evidence domains."
-    },
-    {
-      "from": "TASK-D-006",
-      "to": "TASK-D-007",
-      "reason": "Signing/Play delivery is a governance evidence domain."
-    },
-    {
-      "from": "TASK-D-007",
-      "to": "TASK-E-001",
-      "reason": "Final accountable decision requires reconciled governance evidence."
+      "from": "TASK-A-002",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
     },
     {
       "from": "TASK-A-002",
@@ -77,16 +27,6 @@
       "from": "TASK-A-021",
       "to": "TASK-A-022",
       "reason": "Visual sheet and alias observations define the source-to-frame questions for static consumer tracing."
-    },
-    {
-      "from": "TASK-C-005",
-      "to": "TASK-A-026",
-      "reason": "Static canonicality reconciliation established the repository contract that the targeted source completion applies."
-    },
-    {
-      "from": "TASK-D-005",
-      "to": "TASK-D-006",
-      "reason": "Signing and delivery declarations depend on the selected privacy/Play policy disposition."
     },
     {
       "from": "TASK-A-023",
@@ -100,8 +40,18 @@
     },
     {
       "from": "TASK-A-028",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-028",
       "to": "TASK-E-001",
       "reason": "Complete the current partial central codebase map before final residual reconciliation."
+    },
+    {
+      "from": "TASK-A-029",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
     },
     {
       "from": "TASK-A-029",
@@ -110,8 +60,18 @@
     },
     {
       "from": "TASK-A-030",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-030",
       "to": "TASK-E-001",
       "reason": "Final residual reconciliation depends on full meaningful-symbol inventory and bidirectional traceability."
+    },
+    {
+      "from": "TASK-A-031",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
     },
     {
       "from": "TASK-A-031",
@@ -120,8 +80,18 @@
     },
     {
       "from": "TASK-A-032",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
+    },
+    {
+      "from": "TASK-A-032",
       "to": "TASK-E-001",
       "reason": "Final residual reconciliation depends on full meaningful-symbol inventory and bidirectional traceability."
+    },
+    {
+      "from": "TASK-A-033",
+      "to": "TASK-A-034",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
     },
     {
       "from": "TASK-A-033",
@@ -149,34 +119,9 @@
       "reason": "Verification contract and applicability constraints must be available before any future authorized testing."
     },
     {
-      "from": "TASK-C-007",
-      "to": "TASK-C-011",
-      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
-    },
-    {
-      "from": "TASK-C-008",
-      "to": "TASK-C-011",
-      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
-    },
-    {
-      "from": "TASK-C-009",
-      "to": "TASK-C-011",
-      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
-    },
-    {
-      "from": "TASK-C-010",
-      "to": "TASK-C-011",
-      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
-    },
-    {
-      "from": "TASK-C-011",
-      "to": "TASK-E-001",
-      "reason": "Final residual reconciliation must consider current authorized focused and full verification evidence."
-    },
-    {
       "from": "TASK-A-034",
-      "to": "TASK-E-001",
-      "reason": "Final repository/closure reconciliation must include the requirement-by-requirement applicability matrix."
+      "to": "TASK-C-011",
+      "reason": "Explicit prerequisite declared by the authoritative task contract."
     },
     {
       "from": "TASK-A-034",
@@ -184,54 +129,9 @@
       "reason": "Applicability and authorization constraints must be known before future concurrency verification."
     },
     {
-      "from": "TASK-C-012",
-      "to": "TASK-C-011",
-      "reason": "Concurrency/lifecycle/audio/filesystem race evidence and residual gaps must be reconciled before full regression."
-    },
-    {
-      "from": "TASK-A-001",
-      "to": "TASK-A-034",
-      "reason": "Explicit prerequisite declared by the authoritative task contract."
-    },
-    {
-      "from": "TASK-A-002",
-      "to": "TASK-A-034",
-      "reason": "Explicit prerequisite declared by the authoritative task contract."
-    },
-    {
-      "from": "TASK-A-028",
-      "to": "TASK-A-034",
-      "reason": "Explicit prerequisite declared by the authoritative task contract."
-    },
-    {
-      "from": "TASK-A-029",
-      "to": "TASK-A-034",
-      "reason": "Explicit prerequisite declared by the authoritative task contract."
-    },
-    {
-      "from": "TASK-A-030",
-      "to": "TASK-A-034",
-      "reason": "Explicit prerequisite declared by the authoritative task contract."
-    },
-    {
-      "from": "TASK-A-031",
-      "to": "TASK-A-034",
-      "reason": "Explicit prerequisite declared by the authoritative task contract."
-    },
-    {
-      "from": "TASK-A-032",
-      "to": "TASK-A-034",
-      "reason": "Explicit prerequisite declared by the authoritative task contract."
-    },
-    {
-      "from": "TASK-A-033",
-      "to": "TASK-A-034",
-      "reason": "Explicit prerequisite declared by the authoritative task contract."
-    },
-    {
       "from": "TASK-A-034",
-      "to": "TASK-C-011",
-      "reason": "Explicit prerequisite declared by the authoritative task contract."
+      "to": "TASK-E-001",
+      "reason": "Final repository/closure reconciliation must include the requirement-by-requirement applicability matrix."
     },
     {
       "from": "TASK-A-035",
@@ -239,9 +139,9 @@
       "reason": "Runtime screenshot-state verification requires the deterministic OWL_DIVE input path to be present."
     },
     {
-      "from": "TASK-C-013",
+      "from": "TASK-A-035",
       "to": "TASK-E-001",
-      "reason": "Final release reconciliation must account for whether the named Owl screenshot demonstrates the intended interaction."
+      "reason": "Reconciled from the task record downstream declaration."
     },
     {
       "from": "TASK-A-036",
@@ -249,9 +149,9 @@
       "reason": "The process-death verification cannot complete until the direct instrumentation user-selection failure is corrected."
     },
     {
-      "from": "TASK-C-011",
-      "to": "TASK-C-014",
-      "reason": "Reuse previous full regression scope and rerun only the new source delta on a frozen candidate."
+      "from": "TASK-A-036",
+      "to": "TASK-C-011",
+      "reason": "Reconciled from the task record downstream declaration."
     },
     {
       "from": "TASK-A-036",
@@ -259,19 +159,14 @@
       "reason": "The current exact-candidate verification includes the corrected process-death runner integration and must preserve exact candidate evidence."
     },
     {
-      "from": "TASK-C-014",
-      "to": "TASK-E-001",
-      "reason": "Final residual reconciliation requires current source-delta verification evidence."
-    },
-    {
       "from": "TASK-A-037",
       "to": "TASK-C-015",
       "reason": "Exact-candidate verification follows implementation and focused contracts."
     },
     {
-      "from": "TASK-C-015",
+      "from": "TASK-A-037",
       "to": "TASK-E-001",
-      "reason": "Final reconciliation must include the WOLF_CHARGE source delta and exact-candidate evidence."
+      "reason": "Reconciled from the task record downstream declaration."
     },
     {
       "from": "TASK-A-038",
@@ -279,9 +174,14 @@
       "reason": "Exact-SHA verification follows source/audio reconciliation."
     },
     {
-      "from": "TASK-C-016",
-      "to": "TASK-E-001",
-      "reason": "Final readiness requires evidence on the current source candidate."
+      "from": "TASK-A-038",
+      "to": "TASK-D-002",
+      "reason": "Reconciled from the task record downstream declaration."
+    },
+    {
+      "from": "TASK-A-038",
+      "to": "TASK-D-003",
+      "reason": "Reconciled from the task record downstream declaration."
     },
     {
       "from": "TASK-A-039",
@@ -289,14 +189,14 @@
       "reason": "Exact-candidate verification must include the completed EAGLE_MARK scenario-to-mechanic integration test."
     },
     {
-      "from": "TASK-C-017",
-      "to": "TASK-E-001",
-      "reason": "Final residual reconciliation must account for exact-candidate verification of the EAGLE_MARK scenario integration."
-    },
-    {
       "from": "TASK-A-039",
       "to": "TASK-C-018",
       "reason": "Existing Eagle scenario test is included in exact-candidate verification."
+    },
+    {
+      "from": "TASK-A-039",
+      "to": "TASK-E-001",
+      "reason": "Final residual readiness reconciliation requires the current complete scenario source/task delta dispositioned alongside exact-candidate verification."
     },
     {
       "from": "TASK-A-040",
@@ -319,11 +219,6 @@
       "reason": "Owl/Chickadee scenario tests are verified on exact candidate."
     },
     {
-      "from": "TASK-C-018",
-      "to": "TASK-E-001",
-      "reason": "Final residual reconciliation must reuse exact candidate scenario evidence."
-    },
-    {
       "from": "TASK-A-044",
       "to": "TASK-C-018",
       "reason": "Exact-SHA host/API35 validation must include the Bloom showcase correction and new scenario integration tests."
@@ -340,13 +235,158 @@
     },
     {
       "from": "TASK-A-047",
+      "to": "TASK-A-048",
+      "reason": "Reconciled from the task record downstream declaration."
+    },
+    {
+      "from": "TASK-A-047",
       "to": "TASK-C-018",
       "reason": "Exact candidate connected verification follows the production-path GHOST_READABILITY assertion."
     },
     {
-      "from": "TASK-A-039",
+      "from": "TASK-A-048",
+      "to": "TASK-C-018",
+      "reason": "Fresh exact-candidate verification must execute the newly targeted production GHOST_READABILITY LargeTest method."
+    },
+    {
+      "from": "TASK-A-049",
+      "to": "TASK-C-018",
+      "reason": "Reconciled from task dependency declarations."
+    },
+    {
+      "from": "TASK-B-001",
+      "to": "TASK-B-002",
+      "reason": "Optimization analysis requires measured profile evidence."
+    },
+    {
+      "from": "TASK-C-005",
+      "to": "TASK-A-026",
+      "reason": "Static canonicality reconciliation established the repository contract that the targeted source completion applies."
+    },
+    {
+      "from": "TASK-C-007",
+      "to": "TASK-C-011",
+      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
+    },
+    {
+      "from": "TASK-C-008",
+      "to": "TASK-C-011",
+      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
+    },
+    {
+      "from": "TASK-C-009",
+      "to": "TASK-C-011",
+      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
+    },
+    {
+      "from": "TASK-C-010",
+      "to": "TASK-C-011",
+      "reason": "Focused suite results and residual gaps must be reconciled before the documented full regression gate."
+    },
+    {
+      "from": "TASK-C-011",
+      "to": "TASK-C-014",
+      "reason": "Reuse previous full regression scope and rerun only the new source delta on a frozen candidate."
+    },
+    {
+      "from": "TASK-C-011",
       "to": "TASK-E-001",
-      "reason": "Final residual readiness reconciliation requires the current complete scenario source/task delta dispositioned alongside exact-candidate verification."
+      "reason": "Final residual reconciliation must consider current authorized focused and full verification evidence."
+    },
+    {
+      "from": "TASK-C-012",
+      "to": "TASK-C-011",
+      "reason": "Concurrency/lifecycle/audio/filesystem race evidence and residual gaps must be reconciled before full regression."
+    },
+    {
+      "from": "TASK-C-013",
+      "to": "TASK-E-001",
+      "reason": "Final release reconciliation must account for whether the named Owl screenshot demonstrates the intended interaction."
+    },
+    {
+      "from": "TASK-C-014",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation requires current source-delta verification evidence."
+    },
+    {
+      "from": "TASK-C-015",
+      "to": "TASK-E-001",
+      "reason": "Final reconciliation must include the WOLF_CHARGE source delta and exact-candidate evidence."
+    },
+    {
+      "from": "TASK-C-016",
+      "to": "TASK-E-001",
+      "reason": "Final readiness requires evidence on the current source candidate."
+    },
+    {
+      "from": "TASK-C-017",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation must account for exact-candidate verification of the EAGLE_MARK scenario integration."
+    },
+    {
+      "from": "TASK-C-018",
+      "to": "TASK-E-001",
+      "reason": "Final residual reconciliation must reuse exact candidate scenario evidence."
+    },
+    {
+      "from": "TASK-D-001",
+      "to": "TASK-B-001",
+      "reason": "Physical matrix/candidate readiness is needed for the representative baseline."
+    },
+    {
+      "from": "TASK-D-001",
+      "to": "TASK-D-002",
+      "reason": "Human review uses the candidate/device baseline selected for acceptance."
+    },
+    {
+      "from": "TASK-D-001",
+      "to": "TASK-D-003",
+      "reason": "Creative review is performed against packaged candidate assets."
+    },
+    {
+      "from": "TASK-D-001",
+      "to": "TASK-D-007",
+      "reason": "Device acceptance is a governance evidence domain."
+    },
+    {
+      "from": "TASK-D-002",
+      "to": "TASK-D-003",
+      "reason": "Presentation approval incorporates human review."
+    },
+    {
+      "from": "TASK-D-002",
+      "to": "TASK-D-007",
+      "reason": "Human acceptance is a governance evidence domain."
+    },
+    {
+      "from": "TASK-D-003",
+      "to": "TASK-D-007",
+      "reason": "Creative/rights approvals are governance evidence domains."
+    },
+    {
+      "from": "TASK-D-004",
+      "to": "TASK-D-007",
+      "reason": "Supply-chain/security review is a governance evidence domain."
+    },
+    {
+      "from": "TASK-D-005",
+      "to": "TASK-D-006",
+      "reason": "Signing and delivery declarations depend on the selected privacy/Play policy disposition."
+    },
+    {
+      "from": "TASK-D-005",
+      "to": "TASK-D-007",
+      "reason": "Privacy/Play declarations are governance evidence domains."
+    },
+    {
+      "from": "TASK-D-006",
+      "to": "TASK-D-007",
+      "reason": "Signing/Play delivery is a governance evidence domain."
+    },
+    {
+      "from": "TASK-D-007",
+      "to": "TASK-E-001",
+      "reason": "Final accountable decision requires reconciled governance evidence."
     }
   ],
   "parallel_waves": [
@@ -515,7 +555,7 @@
       "eligible_after_phase_authorization": [
         "TASK-C-006"
       ],
-      "notes": "TASK-C-006 was canceled under the earlier scope. It is not reactivated; new test-planning tasks C-007\u2013C-011 are deferred under REQ-019 pending explicit authorization."
+      "notes": "TASK-C-006 was canceled under the earlier scope. It is not reactivated; new test-planning tasks C-007–C-011 are deferred under REQ-019 pending explicit authorization."
     },
     {
       "wave": "C-risk-based-verification",
@@ -526,7 +566,7 @@
         "TASK-C-010",
         "TASK-C-012"
       ],
-      "notes": "Five focused scopes C-007\u2013C-010 and C-012 can run concurrently after explicit verification authorization and revision freeze. Coordinate Android device ownership across C-010/C-012. C-011 is downstream integration/full-regression and waits for all five focused scopes; TASK-E-001 follows it."
+      "notes": "Five focused scopes C-007–C-010 and C-012 can run concurrently after explicit verification authorization and revision freeze. Coordinate Android device ownership across C-010/C-012. C-011 is downstream integration/full-regression and waits for all five focused scopes; TASK-E-001 follows it."
     },
     {
       "wave_id": "WAVE-WOLF-LOCAL",
@@ -538,6 +578,6 @@
       "note": "C-015 enters exact-SHA queue after A-037 is committed."
     }
   ],
-  "cycle_check": "Acyclic; 69 hard prerequisite edges; DFS validated 2026-10-28 after reconciling task prerequisite parity for TASK-A-039 -> TASK-E-001 and TASK-A-047 -> TASK-C-018.",
+  "cycle_check": "Acyclic; 70 hard prerequisite edges; DFS validated 2026-10-28 after adding TASK-A-048 -> TASK-C-018.",
   "ready_rule": "Only tasks belonging to the explicitly authorized active phase may become READY; all hard prerequisites must be completed with evidence and no ownership/resource conflict may remain."
 }

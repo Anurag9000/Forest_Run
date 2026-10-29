@@ -18,6 +18,14 @@ class HardwareCoreFlowCaptureContractTest(unittest.TestCase):
         self.assertIn("MainActivity.EXTRA_DEBUG_SCENARIO", self.prepare)
         self.assertIn("MainActivity.EXTRA_RUN_MODE", self.prepare)
 
+    def test_ghost_capture_asserts_production_visibility_before_screenshots(self) -> None:
+        start = self.source.index("    fun captureGhostReadabilityHardwarePass()")
+        end = self.source.index("    @Test", start + len("    fun captureGhostReadabilityHardwarePass()"))
+        ghost_test = self.source[start:end]
+        self.assertIn('getPrivateField(gameView, "ghostPlayer") as GhostPlayer', ghost_test)
+        self.assertIn("productionGhost.hasGhost && productionGhost.visibilityAlphaForTest > 0f", ghost_test)
+        self.assertLess(ghost_test.index("waitForCondition("), ghost_test.index("captureAtOffsets("))
+
     def test_capture_never_reflectively_mutates_runtime_scenario_owners(self) -> None:
         forbidden = (
             'setPrivateField(gameView, "runMode"',

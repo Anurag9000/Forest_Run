@@ -106,9 +106,11 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
 
     def test_runner_preserves_connected_test_failures(self) -> None:
         gradle_command = "./gradlew connectedDebugAndroidTest"
-        self.assertEqual(1, self.script.count(gradle_command))
-        command_tail = self.script.split(gradle_command, maxsplit=1)[1]
-        self.assertNotIn("|| true", command_tail)
+        self.assertEqual(2, self.script.count(gradle_command))
+        command_tails = self.script.split(gradle_command)[1:]
+        self.assertEqual(2, len(command_tails))
+        self.assertNotIn("|| true", command_tails[0].split("# HardwareCoreFlowCaptureTest", maxsplit=1)[0])
+        self.assertNotIn("|| true", command_tails[1].split("# This LargeTest is intentionally excluded", maxsplit=1)[0])
         self.assertIn("trap dump_emulator_diagnostics EXIT", self.script)
 
     def test_emulator_gate_excludes_only_physical_device_profiles(self) -> None:
@@ -121,6 +123,20 @@ class ConnectedValidationRunnerContractTest(unittest.TestCase):
         self.assertIn("@LargeTest", self.hardware_profile)
         self.assertIn("class HardwarePerformanceProfileTest", self.hardware_profile)
         self.assertIn("profiling window contains sustained samples", self.hardware_profile)
+
+    def test_runner_selects_production_ghost_capture_large_test_explicitly(self) -> None:
+        ordinary_suite = self.script.index("./gradlew connectedDebugAndroidTest")
+        targeted_suite = self.script.index(
+            '-Pandroid.testInstrumentationRunnerArguments.class="${GHOST_CAPTURE_TEST_CLASS}"'
+        )
+        process_death = self.script.index('PROCESS_TEST_CLEANUP_REQUIRED=1')
+        self.assertLess(ordinary_suite, targeted_suite)
+        self.assertLess(targeted_suite, process_death)
+        self.assertIn(
+            'GHOST_CAPTURE_TEST_CLASS="com.anurag9000.forestrun.HardwareCoreFlowCaptureTest#captureGhostReadabilityHardwarePass"',
+            self.script,
+        )
+        self.assertIn("even though the ordinary connected suite excludes LargeTest classes", self.script)
 
     def test_runner_targets_the_action_emulator_port(self) -> None:
         self.assertIn("emulator-${EMULATOR_PORT:-5554}", self.script)
