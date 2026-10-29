@@ -3353,7 +3353,7 @@
         "target_phase": "E - final reconciliation",
         "objective": "Reconcile only changed source, affected evidence and residual requirements; issue an evidence-backed release disposition for the exact candidate.",
         "motivation": "Earlier audits should be reused, but changes invalidate only their dependent evidence; final closure must account for all remaining gates without repeating the whole audit.",
-        "current_state": "Extensive source and verification work is documented at recorded scopes. Current EAGLE_MARK source coverage is locally implemented but exact hosted verification is pending; physical performance/device and external/human governance gates remain open.",
+        "current_state": "Verified application-source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed detailed exact-SHA host/API35, applicability and estate-certificate workflows (EVID-159). Documentation-only descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 also passed host/API35, applicability and certificate workflow status checks (EVID-161); detailed step logs were rate-limited. Physical performance/device and human/external governance gates remain open.",
         "required_final_state": "All mandatory requirements have evidence-backed disposition, residual/external blockers are explicit, and an accountable owner records go/no-go.",
         "scope": [
           "this knowledge map and all linked ledgers",
@@ -3429,7 +3429,10 @@
           "EVID-122",
           "EVID-123",
           "EVID-124",
-          "EVID-125"
+          "EVID-125",
+          "EVID-159",
+          "EVID-160",
+          "EVID-161"
         ],
         "uncertainty": "Current outstanding scope may change after authorized external decisions.",
         "remaining_work": "Complete after remaining physical performance and external D-gate evidence is supplied or explicitly dispositioned by accountable owners; then perform a targeted candidate/readiness reconciliation and record the accountable go/no-go.",
@@ -3438,8 +3441,8 @@
           "docs/RELEASE_READINESS.md",
           "docs/AUDIT_LEDGER.md"
         ],
-        "last_reconciled_revision": "8f9340d431f7abb84719aef0a5b1174cafb0c437 plus current local delta",
-        "next_action": "Complete TASK-C-016 predecessor API35 poll, then exact-CI TASK-C-017; resume final reconciliation only after applicable external evidence/dispositions.",
+        "last_reconciled_revision": "application source d63cf88c6af819f6e6186a72610df0a31117e2dd; documentation-only descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4",
+        "next_action": "Wait for physical performance/device evidence and genuine external D-gate evidence or accountable owner dispositions. Once prerequisites exist, recheck current candidate and affected evidence only, validate residual requirements/readiness, and record the accountable go/no-go. TASK-C-016, TASK-C-017 and TASK-C-018 are already dispositioned at their recorded scopes.",
         "investigation_coverage": "DOCUMENTED",
         "implementation_or_investigation_status": "PARTIALLY_COMPLETE",
         "evidence_status": "INSUFFICIENT_OR_CONTRADICTORY_EVIDENCE"
@@ -10307,17 +10310,19 @@
       "EVID-157",
       "EVID-158",
       "EVID-159",
-      "EVID-160"
+      "EVID-160",
+      "EVID-161",
+      "EVID-162"
     ],
-    "status": "Exact committed candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed host/API35, no-trainable-surface applicability, and estate certificate workflows. Host Python 1,400 and full Gradle compile/test/lint/package succeeded; API35 28 ordinary tests, targeted one-test LargeTest, process-death test, and 8 raw screenshot verification succeeded.",
-    "documentation_verification_revision": "d63cf88c6af819f6e6186a72610df0a31117e2dd plus docs-only reconciliation (EVID-160)",
+    "status": "Application source d63cf88c6af819f6e6186a72610df0a31117e2dd passed detailed exact-SHA tests/workflows (EVID-159); documentation-only descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 host/API35, applicability and certificate status also passed (EVID-161). Detailed 8a workflow logs were unavailable due API rate limit.",
+    "documentation_verification_revision": "application source d63cf88c6af819f6e6186a72610df0a31117e2dd; documentation-only hosted descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 plus current static reconciliation (EVID-161/EVID-162)",
     "documentation_workflow_run": "Android 40823820982 passed host/API35; applicability 40823820928 and certificate 40823820907 passed. See EVID-159."
   },
   "current_repository_state": {
     "branch": "main",
     "verified_source_candidate_sha": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
-    "candidate_remote_confirmation": "git ls-remote origin refs/heads/main matched d63cf88c6af819f6e6186a72610df0a31117e2dd after push.",
-    "working_tree": "Current authorized documentation reconciliation is in progress; source candidate remains d63cf88c6af819f6e6186a72610df0a31117e2dd. Pre-existing untracked .coverage, .training_control/, artifacts/, docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP_20261027.md, and docs/repository_knowledge/current_worktree_delta_20261027/ remain preserved and excluded.",
+    "candidate_remote_confirmation": "Verified source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd is an ancestor of the exact documentation-only main/origin candidate 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4.",
+    "working_tree": "The current application source equals verified candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; documentation-only updates for TASK-E-001 and exact 8a status are pending commit. Pre-existing untracked user artifacts remain preserved and excluded.",
     "current_delta_task": "TASK-A-048/A-049 and TASK-C-017/C-018 complete for source and automated exact-candidate scope; B/D/E external acceptance and residual release reconciliation remain deferred.",
     "source_completion_delta": "docs/repository_knowledge/source_completion_delta_2026-10-28.md",
     "evidence_ids": [
@@ -10328,11 +10333,14 @@
       "EVID-157",
       "EVID-158",
       "EVID-159",
-      "EVID-160"
+      "EVID-160",
+      "EVID-161",
+      "EVID-162"
     ],
     "latest_documentation_verification_sha": "d63cf88c6af819f6e6186a72610df0a31117e2dd",
-    "latest_documentation_workflow": "Exact Android host/API35 and applicability/certificate workflows succeeded; 28 ordinary API35 tests, targeted one-test ghost LargeTest, and separate process-death test passed.",
-    "latest_documentation_verification": "Static ledger/documentation consistency passed; current reconciliation is documentation-only, EVID-160."
+    "latest_documentation_workflow": "Exact 8a host and API35 jobs plus applicability and certificate checks passed (EVID-161); detailed tests and counts are bound to unchanged source candidate d63 (EVID-159).",
+    "latest_documentation_verification": "EVID-161 verifies terminal hosted checks for 8a; EVID-162 verifies the current static handoff/ledger reconciliation.",
+    "latest_documentation_descendant": "8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4"
   },
   "previous_verified_candidate": {
     "base_revision": "b9a79b23a0cb855ce80c783e94e4b1b44eb0b94b",

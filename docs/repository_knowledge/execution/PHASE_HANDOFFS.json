@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "current_phase": "Automated source completion verified; external acceptance deferred",
-  "current_phase_status": "Exact candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed exact-SHA host/API35 validation, no-trainable-surface and estate certificate workflows (EVID-159). The runner explicitly selected the production ghost capture LargeTest and one selected test passed; ordinary connected tests passed 28/28, process-death 1/1, and 8 raw screenshots verified. The opening scenario integration test is included in the successful host suite. Tasks TASK-C-017 and TASK-C-018 are complete for their automated scope. No physical device is available; physical performance/readability, human creative/accessibility review, external rights/privacy/Play/signing/governance, and final accountable release readiness remain deferred.",
+  "current_phase_status": "Exact candidate d63cf88c6af819f6e6186a72610df0a31117e2dd passed exact-SHA host/API35 validation, no-trainable-surface and estate certificate workflows (EVID-159). The runner explicitly selected the production ghost capture LargeTest and one selected test passed; ordinary connected tests passed 28/28, process-death 1/1, and 8 raw screenshots verified. The opening scenario integration test is included in the successful host suite. Tasks TASK-C-017 and TASK-C-018 are complete for their automated scope. The documentation-only descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 also passed hosted host/API35, applicability and certificate status checks (EVID-161); detailed test totals remain bound to EVID-159. No physical device is available; physical performance/readability, human creative/accessibility review, external rights/privacy/Play/signing/governance, and final accountable release readiness remain deferred.",
   "phases": [
     {
       "id": "A",
@@ -132,19 +132,19 @@
     "resume": "Check current HEAD and worktree; preserve pre-existing untracked artifacts. Reuse evidence EVID-159 and the source/test trace; inspect only changed files or concrete contradictory evidence. Promote deferred tasks only when their phase, prerequisites, resources and external owners are available; retain physical and human review boundaries.",
     "unknowns": "Physical/OEM gameplay and visual behavior, real-device performance, human creative/accessibility/gameplay approval, asset/audio/font rights, privacy/public URL and Play policy decisions, production signing and delivery, governance approval remain unknown or externally owned.",
     "how_to_resume": {
-      "baseline": "At this evidence snapshot, verified source main/origin is d63cf88c6af819f6e6186a72610df0a31117e2dd. Reconcile current HEAD/worktree before acting and preserve pre-existing untracked artifacts.",
+      "baseline": "The detailed verified application-source candidate is d63cf88c6af819f6e6186a72610df0a31117e2dd; the exact documentation-only descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 also passed hosted status checks (EVID-161). Reconcile live HEAD/worktree before acting.",
       "reuse": "Prior code/memory maps and dated audits remain revision-bounded; revisit only changed or contradictory evidence.",
       "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
       "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
     }
   },
   "resume_procedure": {
-    "baseline": "Verified source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; verify current HEAD/worktree and preserve pre-existing untracked artifacts.",
+    "baseline": "Verified application source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; documentation-only main/origin descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 passed hosted status checks (EVID-161). Verify live HEAD/worktree and preserve pre-existing untracked artifacts.",
     "reuse": "Reuse EVID-159 exact-SHA host/API35, applicability and certificate evidence plus prior scoped audits. Revisit only changed or contradictory evidence; physical/human/external acceptance remains outstanding.",
     "authoritative_ledgers": "MASTER_EXECUTION_LEDGER.json for goals/requirements/capabilities/algorithms/tasks; EVIDENCE_INDEX.json for evidence; STATE_HISTORY.jsonl for append-only events using master.event_history_schema.",
     "readiness": "Promote deferred tasks only when their phase is explicitly authorized and hard dependencies plus resource ownership are satisfied. Do not reopen Aug 6 architecture items closed in later records without new conflicting evidence."
   },
-  "baseline": "Current canonical main/origin: bef4ab354a013892dd0d0289ec3616a20ef0d2d4; pre-existing untracked user artifacts remain preserved and excluded.",
+  "baseline": "Verified application source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; latest known documentation-only main/origin descendant 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4. Reconcile current branch and worktree before acting.",
   "what_remains": "Physical-device access is unavailable. Physical performance/readability, human gameplay/creative/accessibility review, rights/licensing, privacy/Play, production signing/delivery, governance and accountable approval remain deferred; TASK-E-001 follows only after prerequisites.",
   "what_exists": "The d63cf88c source candidate passed exact-SHA host/API35, no-trainable-surface, and estate-certificate workflows. The targeted production ghost-capture LargeTest and OPENING_READABILITY integration are included in the successful exact-candidate scope. Current inventories and task state are recorded in MASTER_EXECUTION_LEDGER.json; exact evidence and limits are EVID-159."
 }

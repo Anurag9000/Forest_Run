@@ -2446,6 +2446,42 @@
       ],
       "result": "Static knowledge-base consistency checks passed for the listed documentation and ledgers.",
       "limitations": "Documentation consistency only. Does not add runtime, physical-device, human, legal, store or release acceptance evidence."
+    },
+    {
+      "id": "EVID-161",
+      "type": "documentation-descendant exact-head hosted workflow status",
+      "path": "GitHub Actions Android validation run 40826058799; GitHub Actions no-trainable-surface run 40826058830; GitHub Actions certificate run 40826058589; current docs ledgers",
+      "revision": "documentation-only main/origin candidate 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4; application source remains d63cf88c6af819f6e6186a72610df0a31117e2dd",
+      "supports": [
+        "TASK-C-018 current documentation-descendant workflow status",
+        "TASK-E-001 next-action reconciliation",
+        "current source/doc revision distinction"
+      ],
+      "observation": "The public GitHub Actions run page reports the 8a0edb3a Android validation host/release/lint/package job and API35 connected job completed successfully. Separate no-trainable-surface and certificate runs also completed successfully. The 8a commit is documentation-only relative to the fully evidenced application-source candidate d63cf88c; detailed test counts and step outcomes remain in EVID-159 for d63. The API returned a rate-limit error when requesting detailed job JSON/logs, so no additional test counts are inferred for the 8a run.",
+      "commands": [
+        "Read-only public GitHub Actions run page https://github.com/Anurag9000/Forest_Run/actions/runs/40826058799",
+        "Read-only public GitHub Actions job pages 123289245243 and 123291540682"
+      ],
+      "result": "All three hosted check families for the 8a documentation descendant are terminal success; the detailed source/test evidence remains bound to d63 EVID-159.",
+      "limitations": "Job status page only; detailed 8a logs and per-test totals could not be retrieved due GitHub REST rate limit. No new source changed; no new physical, human, licensing or production-release evidence."
+    },
+    {
+      "id": "EVID-162",
+      "type": "current continuation ledger consistency check",
+      "path": "docs/REPOSITORY_COMPLETE_KNOWLEDGE_MAP.md; docs/repository_knowledge/MASTER_EXECUTION_LEDGER.json; docs/repository_knowledge/execution/PHASE_HANDOFFS.json; docs/repository_knowledge/execution/EXECUTION_DASHBOARD.md; docs/repository_knowledge/execution/NEXT_ACTIONS.md; docs/repository_knowledge/execution/TASK_DEPENDENCIES.json; docs/repository_knowledge/file_inventory.json",
+      "revision": "application source candidate d63cf88c6af819f6e6186a72610df0a31117e2dd; documentation-only base 8a0edb3a6037acdf2d6ad6b5524c1c4762d410a4 plus current static documentation delta",
+      "supports": [
+        "TASK-E-001 current next action",
+        "knowledge-base source/documentation revision distinction",
+        "ledger coverage and task/evidence consistency"
+      ],
+      "observation": "Corrected TASK-E-001 so it no longer depends on completed TASK-C-016/017 work; recorded remaining physical and external gates. Clarified the source-tested d63 revision versus documentation-only 8a revision and its hosted status. Updated the phase handoff. Six JSON ledgers parse; 1,020 file records equal the sum of coverage categories; 218 master record IDs are unique; all referenced evidence IDs exist; all 77 dependency edges resolve and form an acyclic graph; relative Markdown links in the checked knowledge documents resolve; git diff --check passes. Task statuses reconcile to 61 completed, 10 deferred and 6 canceled/superseded.",
+      "commands": [
+        "Python static JSON/count/ID/reference/dependency/link validation",
+        "git diff --check"
+      ],
+      "result": "Static documentation and ledger consistency checks passed.",
+      "limitations": "No application source or test changes were made in this documentation reconciliation. Static consistency does not prove gameplay correctness or physical/human/external acceptance."
     }
   ]
 }
